@@ -150,6 +150,50 @@
 - `npm.cmd exec -- tsc`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
+## 2026-06-19 DAG 顺序一致性门禁
+
+下一个缺口并不是“再加一个泛化 verifier 模型”就能解决的，而是这个项目自己的结构化缺口：当前 DAG 已经被装配进 graph context，但最终回答 reviewer 仍然没有把 DAG 方向当成 release invariant。
+
+这个缺口现在已经在 `src/learning/answerReleaseReview.ts` 中被部分补上，对应的新 gate 是 `claim_graph_order_consistency`。
+
+当前代码已经成立的事实：
+
+- reviewer 现在会消费现有装配好的 DAG 证据，而不是引入新的图运行时：
+  - `connectionPaths`
+  - `knowledgePointRelations`
+  - `predecessorWindow`
+  - `successorWindow`
+- 第一批方向性检查刻意保持窄口径：
+  - `prerequisite`
+  - `sequence`
+- 这个 gate 只会在草稿回答本身显式声明了 grounded title 之间的顺序关系时才触发。
+- 一旦草稿把已支撑的顺序说反，reviewer 现在会输出确定性的纠正句，而不是退回泛化摘要。
+- `src/learning/answerReleaseReview.test.ts` 现在已经固定三类关键行为：
+  - 前置关系反转必须 `revise`
+  - 前置关系方向正确时仍然 clean `release`
+  - sequence 反转必须 `revise`
+- 这一步关闭了此前“项目 DAG 被低利用”的一部分批评：
+  - 现有 DAG 不再只是 answer-planning context，
+  - 现在也成为 release-time contradiction boundary。
+- 这一步本身并不解决右侧原文预览 / 高亮问题：
+  - `workspace_panes.js` 中的点击 / 渲染链路本来就存在，
+  - 当前剩余缺口是 source path 与 matched span 的 payload 契约稳定性。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 已装配 DAG 必须参与最终 release decision，而不只是回答组织 | `answerReleaseReview.ts` 现在会基于 graph-context 方向性执行 `claim_graph_order_consistency`。 | 已实现基线 |
+| 反向的 `prerequisite` 断言必须在 release 前纠正 | reviewer 现在会把 `Ground State is a prerequisite for Bridge Layer.` 这类反向断言改写成 DAG 支撑的纠正句。 | 已实现 |
+| 反向的 `sequence` 断言也必须在 release 前纠正 | reviewer 现在会在 DAG 顺序相反时改写 `Response Validation comes before Baseline Measurement.` 这类草稿。 | 已实现 |
+| 右侧原文 / 高亮失败仍需要独立 owner | graph-focus 渲染路径本身已经存在；未闭合的是 payload 质量，而不是前端点击事件缺失。 | 仍待解决 |
+
+本切片验证：
+
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
 ## 2026-06-18 共享 alias/scope 回归语料与 soft-miss 恢复
 
 截图驱动的 `waterglass` 失败现在已经不再被当作一次性人工检查。项目已经有了共享的确定性回归语料 `src/learning/KnowledgeWorkspaceConversationRegression.ts`，而这批语料的重要性在于两点：

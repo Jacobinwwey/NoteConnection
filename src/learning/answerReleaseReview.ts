@@ -7,6 +7,7 @@ import type {
     AnswerReleaseReview,
     KnowledgeCitation,
     KnowledgeQueryResolvedScope,
+    RelationKind,
 } from './types';
 
 export interface AnswerReleaseReviewContext {
@@ -50,6 +51,20 @@ type PolaritySentence = {
 type PolaritySentenceConflict = {
     answerSentence: PolaritySentence;
     supportSentence: PolaritySentence & { label: string };
+};
+
+type GraphOrderSupportedRelationKind = 'prerequisite' | 'sequence';
+
+type GraphOrderEvidence = {
+    relationKind: GraphOrderSupportedRelationKind;
+    earlierTitle: string;
+    laterTitle: string;
+    source: 'connection_path' | 'knowledge_point_relation' | 'predecessor_window' | 'successor_window';
+};
+
+type GraphOrderConflict = {
+    answerSurface: string;
+    evidence: GraphOrderEvidence;
 };
 
 const INTERNAL_DIAGNOSTIC_FRAGMENTS = [
@@ -149,6 +164,10 @@ const POLARITY_NEGATION_NORMALIZATION_RULES: Array<[RegExp, string]> = [
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function escapeRegExp(value: string): string {
+    return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function containsCjk(value: string): boolean {
@@ -285,6 +304,28 @@ function buildGroundedRevisionAnswer(
     return summary || title || normalizeWhitespace(context.draftAnswer);
 }
 
+function buildGraphOrderRevisionAnswer(
+    context: AnswerReleaseReviewContext,
+    conflict: GraphOrderConflict
+): string {
+    const earlierTitle = normalizeWhitespace(conflict.evidence.earlierTitle);
+    const laterTitle = normalizeWhitespace(conflict.evidence.laterTitle);
+    const useChinese = containsCjk([
+        context.message,
+        context.draftAnswer,
+        earlierTitle,
+        laterTitle,
+    ].join(' '));
+    if (useChinese) {
+        return conflict.evidence.relationKind === 'prerequisite'
+            ? `${earlierTitle}是${laterTitle}的前置条件。`
+            : `${earlierTitle}先于${laterTitle}。`;
+    }
+    return conflict.evidence.relationKind === 'prerequisite'
+        ? `${earlierTitle} is a prerequisite for ${laterTitle}.`
+        : `${earlierTitle} comes before ${laterTitle}.`;
+}
+
 function buildSupportCandidates(
     context: AnswerReleaseReviewContext
 ): AnswerReleaseSupportCandidate[] {
@@ -312,6 +353,123 @@ function buildSupportCandidates(
         }
     });
     return candidates;
+}
+
+function isGraphOrderSupportedRelationKind(
+    value: RelationKind | null | undefined
+): value is GraphOrderSupportedRelationKind {
+    return value === 'prerequisite' || value === 'sequence';
+}
+
+function buildFlexibleTitlePattern(value: string): string {
+    const normalized = normalizeWhitespace(value);
+    if (!normalized) {
+        return '';
+    }
+    const flexible = normalized
+        .split(/\s+/u)
+        .filter(Boolean)
+        .map((part) => escapeRegExp(part))
+        .join('\\s+');
+    return /^[a-z0-9 _-]+$/iu.test(normalized)
+        ? `\\b${flexible}\\b`
+        : flexible;
+}
+
+function resolvePathTitle(
+    path: NonNullable<AgentConversationGraphContext['connectionPaths']>[number],
+    atomId: string
+): string {
+    const normalizedAtomId = normalizeWhitespace(atomId);
+    if (!normalizedAtomId) {
+        return '';
+    }
+    const atomIndex = Array.isArray(path.pathAtomIds)
+        ? path.pathAtomIds.findIndex((candidateAtomId: string) => normalizeWhitespace(candidateAtomId) === normalizedAtomId)
+        : -1;
+    if (atomIndex >= 0 && Array.isArray(path.pathTitles) && path.pathTitles[atomIndex]) {
+        return normalizeWhitespace(String(path.pathTitles[atomIndex] || ''));
+    }
+    if (normalizeWhitespace(path.sourceAtomId) === normalizedAtomId) {
+        return normalizeWhitespace(path.sourceTitle);
+    }
+    if (normalizeWhitespace(path.targetAtomId) === normalizedAtomId) {
+        return normalizeWhitespace(path.targetTitle);
+    }
+    return '';
+}
+
+function buildGraphOrderEvidence(
+    graphContext: AgentConversationGraphContext | null
+): GraphOrderEvidence[] {
+    if (!graphContext) {
+        return [];
+    }
+    const evidenceByKey = new Map<string, GraphOrderEvidence>();
+    const appendEvidence = (
+        relationKind: RelationKind | null | undefined,
+        earlierTitle: string,
+        laterTitle: string,
+        source: GraphOrderEvidence['source']
+    ) => {
+        if (!isGraphOrderSupportedRelationKind(relationKind)) {
+            return;
+        }
+        const normalizedEarlierTitle = normalizeWhitespace(earlierTitle);
+        const normalizedLaterTitle = normalizeWhitespace(laterTitle);
+        if (!normalizedEarlierTitle || !normalizedLaterTitle) {
+            return;
+        }
+        if (normalizedEarlierTitle.toLowerCase() === normalizedLaterTitle.toLowerCase()) {
+            return;
+        }
+        const key = `${relationKind}::${normalizedEarlierTitle.toLowerCase()}::${normalizedLaterTitle.toLowerCase()}`;
+        if (!evidenceByKey.has(key)) {
+            evidenceByKey.set(key, {
+                relationKind,
+                earlierTitle: normalizedEarlierTitle,
+                laterTitle: normalizedLaterTitle,
+                source,
+            });
+        }
+    };
+
+    (graphContext.knowledgePointRelations || []).forEach((relation) => {
+        appendEvidence(
+            relation.relationKind,
+            relation.sourceTitle,
+            relation.targetTitle,
+            'knowledge_point_relation'
+        );
+    });
+    (graphContext.connectionPaths || []).forEach((path) => {
+        (path.pathEdges || []).forEach((edge) => {
+            appendEvidence(
+                edge.relationKind,
+                resolvePathTitle(path, edge.fromAtomId),
+                resolvePathTitle(path, edge.toAtomId),
+                'connection_path'
+            );
+        });
+    });
+    (graphContext.predecessorWindow || []).forEach((node) => {
+        appendEvidence(
+            node.relationKind,
+            node.title,
+            graphContext.anchorTitle,
+            'predecessor_window'
+        );
+    });
+    (graphContext.successorWindow || []).forEach((node) => {
+        appendEvidence(
+            node.relationKind,
+            graphContext.anchorTitle,
+            node.title,
+            'successor_window'
+        );
+    });
+
+    return Array.from(evidenceByKey.values());
 }
 
 function normalizePolaritySentenceSource(value: string): string {
@@ -379,6 +537,65 @@ function buildPolarityConflictMessage(conflicts: PolaritySentenceConflict[]): st
         `"${conflict.answerSentence.surface}" conflicted with "${conflict.supportSentence.surface}" (${conflict.supportSentence.label})`
     ));
     return `Draft answer reversed the grounded polarity of comparable support: ${fragments.join('; ')}.`;
+}
+
+function buildDirectionalGraphOrderPatterns(
+    earlierTitle: string,
+    laterTitle: string,
+    relationKind: GraphOrderSupportedRelationKind
+): RegExp[] {
+    const earlierPattern = buildFlexibleTitlePattern(earlierTitle);
+    const laterPattern = buildFlexibleTitlePattern(laterTitle);
+    if (!earlierPattern || !laterPattern) {
+        return [];
+    }
+    const sentenceGap = '[^.!?\\u3002\\uFF01\\uFF1F\\n\\r]{0,80}?';
+    const patterns: RegExp[] = [
+        new RegExp(`${earlierPattern}${sentenceGap}(?:comes?|came|occurs?|occurred|runs?|ran|happens?|happened)\\s+before${sentenceGap}${laterPattern}`, 'iu'),
+        new RegExp(`${earlierPattern}${sentenceGap}preced(?:es|ed)${sentenceGap}${laterPattern}`, 'iu'),
+        new RegExp(`${laterPattern}${sentenceGap}(?:comes?|came|occurs?|occurred|runs?|ran|happens?|happened)\\s+after${sentenceGap}${earlierPattern}`, 'iu'),
+        new RegExp(`${laterPattern}${sentenceGap}follows?${sentenceGap}${earlierPattern}`, 'iu'),
+        new RegExp(`${earlierPattern}${sentenceGap}先于${sentenceGap}${laterPattern}`, 'u'),
+        new RegExp(`${earlierPattern}${sentenceGap}早于${sentenceGap}${laterPattern}`, 'u'),
+        new RegExp(`${earlierPattern}${sentenceGap}在${sentenceGap}${laterPattern}${sentenceGap}之前`, 'u'),
+        new RegExp(`${laterPattern}${sentenceGap}在${sentenceGap}${earlierPattern}${sentenceGap}之后`, 'u'),
+    ];
+    if (relationKind === 'prerequisite') {
+        patterns.push(
+            new RegExp(`${earlierPattern}${sentenceGap}(?:is|was|acts as|serves as|functions as|remains)?${sentenceGap}(?:an?\\s+)?prerequisite\\s+(?:for|to)${sentenceGap}${laterPattern}`, 'iu'),
+            new RegExp(`${laterPattern}${sentenceGap}depend(?:s|ed|ing)?\\s+on${sentenceGap}${earlierPattern}`, 'iu'),
+            new RegExp(`${laterPattern}${sentenceGap}require(?:s|d)?${sentenceGap}${earlierPattern}`, 'iu'),
+            new RegExp(`${laterPattern}${sentenceGap}依赖${sentenceGap}${earlierPattern}`, 'u'),
+            new RegExp(`${earlierPattern}${sentenceGap}是${sentenceGap}${laterPattern}${sentenceGap}(?:的)?(?:前置条件|前提|先决条件)`, 'u')
+        );
+    }
+    return patterns;
+}
+
+function findDirectionalGraphOrderMatch(
+    answer: string,
+    earlierTitle: string,
+    laterTitle: string,
+    relationKind: GraphOrderSupportedRelationKind
+): string {
+    const normalizedAnswer = String(answer || '');
+    for (const pattern of buildDirectionalGraphOrderPatterns(earlierTitle, laterTitle, relationKind)) {
+        const match = normalizedAnswer.match(pattern);
+        if (match && match[0]) {
+            return normalizeWhitespace(match[0]);
+        }
+    }
+    return '';
+}
+
+function buildGraphOrderConflictMessage(conflicts: GraphOrderConflict[]): string {
+    if (conflicts.length <= 0) {
+        return 'Draft answer stayed consistent with the grounded graph order that could be compared.';
+    }
+    const fragments = conflicts.slice(0, 2).map((conflict) => (
+        `"${conflict.answerSurface}" reversed ${conflict.evidence.earlierTitle} -> ${conflict.evidence.relationKind} -> ${conflict.evidence.laterTitle}`
+    ));
+    return `Draft answer reversed grounded graph order: ${fragments.join('; ')}.`;
 }
 
 function collectLeakedInternalFragments(answer: string): string[] {
@@ -660,6 +877,52 @@ function evaluatePolarityConsistency(context: AnswerReleaseReviewContext): {
     };
 }
 
+function evaluateGraphOrderConsistency(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    comparableClaimCount: number;
+    conflicts: GraphOrderConflict[];
+} {
+    const orderEvidence = buildGraphOrderEvidence(context.graphContext);
+    if (orderEvidence.length <= 0) {
+        return {
+            passed: true,
+            comparableClaimCount: 0,
+            conflicts: [],
+        };
+    }
+    const conflicts: GraphOrderConflict[] = [];
+    let comparableClaimCount = 0;
+    orderEvidence.forEach((evidence) => {
+        const consistentMatch = findDirectionalGraphOrderMatch(
+            context.draftAnswer,
+            evidence.earlierTitle,
+            evidence.laterTitle,
+            evidence.relationKind
+        );
+        const reversedMatch = findDirectionalGraphOrderMatch(
+            context.draftAnswer,
+            evidence.laterTitle,
+            evidence.earlierTitle,
+            evidence.relationKind
+        );
+        if (!consistentMatch && !reversedMatch) {
+            return;
+        }
+        comparableClaimCount += 1;
+        if (reversedMatch && !consistentMatch) {
+            conflicts.push({
+                answerSurface: reversedMatch,
+                evidence,
+            });
+        }
+    });
+    return {
+        passed: conflicts.length <= 0,
+        comparableClaimCount,
+        conflicts,
+    };
+}
+
 function checkPublicSurfaceContraction(answer: string): boolean {
     const normalizedAnswer = String(answer || '');
     if (normalizeWhitespace(normalizedAnswer).length > 320) {
@@ -678,6 +941,7 @@ function buildDecision(
     groundingAlignmentPassed: boolean,
     structuredConsistencyPassed: boolean,
     polarityConsistencyPassed: boolean,
+    graphOrderConsistencyPassed: boolean,
     leakedInternalFragments: string[],
     publicSurfaceContracted: boolean
 ): AnswerReleaseDecision {
@@ -688,6 +952,7 @@ function buildDecision(
         !groundingAlignmentPassed
         || !structuredConsistencyPassed
         || !polarityConsistencyPassed
+        || !graphOrderConsistencyPassed
         || leakedInternalFragments.length > 0
         || !publicSurfaceContracted
     ) {
@@ -745,6 +1010,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             comparableSentenceCount: 0,
             conflicts: [],
         };
+    const graphOrderConsistency = groundedEvidenceAvailable
+        ? evaluateGraphOrderConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            comparableClaimCount: 0,
+            conflicts: [],
+        };
     const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer);
     const graphSupportCount = context.graphContext
         ? (
@@ -759,14 +1034,20 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         groundingAlignment.passed,
         structuredConsistency.passed,
         polarityConsistency.passed,
+        graphOrderConsistency.passed,
         leakedInternalFragments,
         publicSurfaceContracted
     );
+    const primaryGraphOrderConflict = graphOrderConsistency.conflicts[0];
     const publicAnswer = normalizeWhitespace(
         decision === 'abstain'
             ? buildAbstentionAnswer(context.message, context.usedScope)
             : decision === 'revise'
-                ? buildGroundedRevisionAnswer(context)
+                ? (
+                    primaryGraphOrderConflict
+                        ? buildGraphOrderRevisionAnswer(context, primaryGraphOrderConflict)
+                        : buildGroundedRevisionAnswer(context)
+                )
                 : draftAnswer
     );
     const abstentionHygienePassed = decision !== 'abstain'
@@ -822,6 +1103,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : 'No polarity-comparable support sentence was available, so contradiction checking stayed conservative.'
                 )
                 : 'No evidence was available, so polarity contradiction checking was not evaluated.',
+        },
+        {
+            gateId: 'claim_graph_order_consistency',
+            passed: graphOrderConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    graphOrderConsistency.comparableClaimCount > 0
+                        ? buildGraphOrderConflictMessage(graphOrderConsistency.conflicts)
+                        : 'No explicit graph-order claim was present in the draft answer, so DAG-order checking stayed conservative.'
+                )
+                : 'No evidence was available, so graph-order contradiction checking was not evaluated.',
         },
         {
             gateId: 'public_surface_contraction',

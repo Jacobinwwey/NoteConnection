@@ -23,7 +23,9 @@
 - [x] 已修复 `KnowledgeLearningPlatform.ts` 中的 soft-miss planner-scope-recovery 缺陷：当 scope 内噪声候选幸存但没有任何 planner title-hit 文档幸存时，也会触发恢复。
 - [x] 已把 reviewer 从单纯 lexical grounding overlap 扩展到确定性的 `claim_structured_consistency` 门禁，覆盖数值 / 年份矛盾，并用防误报单测约束。
 - [x] 已把 reviewer 从 lexical + structured-fact 门禁继续扩展到确定性的 `claim_polarity_consistency`，覆盖显式正反断言反转，并用防误报单测约束。
-- [ ] 在当前 lexical + structured-fact + polarity 门禁之上，继续扩展到更广的 claim-vs-citation / claim-vs-evidence 矛盾检测，并控制 false positive。
+- [x] 已把 reviewer 从 lexical + structured-fact + polarity 门禁继续扩展到确定性的 `claim_graph_order_consistency`，覆盖与已装配 DAG 相矛盾的 `prerequisite` / `sequence` 方向反转，并用防误报单测约束。
+- [ ] 在当前 lexical + structured-fact + polarity + graph-order 门禁之上，继续扩展到更广的 claim-vs-citation / claim-vs-evidence 矛盾检测，并控制 false positive。
+- [ ] 加固 graph-focus payload 契约，让右侧原文预览 / 命中高亮在 candidate-path fallback 噪声下仍保持确定性。
 
 ### 2026-06-17 Agent Knowledge DAG TODO 重新分类
 

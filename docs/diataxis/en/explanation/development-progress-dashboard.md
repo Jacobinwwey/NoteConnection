@@ -150,6 +150,50 @@ Verification for this slice:
 - `npm.cmd exec -- tsc`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
+## 2026-06-19 DAG Order Consistency Gate
+
+The next gap was not another generic verifier problem. It was specific to this project: the current DAG was already being assembled into graph context, but the final-answer reviewer still was not treating DAG direction as a release invariant.
+
+That gap is now partially closed in `src/learning/answerReleaseReview.ts` by `claim_graph_order_consistency`.
+
+What is now true in code:
+
+- the reviewer now consumes the existing assembled DAG evidence rather than a new graph runtime:
+  - `connectionPaths`,
+  - `knowledgePointRelations`,
+  - `predecessorWindow`,
+  - `successorWindow`.
+- the first supported directional checks are intentionally narrow:
+  - `prerequisite`,
+  - `sequence`.
+- the gate only reacts when the draft itself makes an explicit order claim between grounded titles.
+- when the draft reverses supported order, the reviewer now revises the public answer with a deterministic correction sentence instead of falling back to a generic summary.
+- `src/learning/answerReleaseReview.test.ts` now pins three important behaviors:
+  - prerequisite reversal forces `revise`,
+  - correct prerequisite direction still `release`s cleanly,
+  - sequence reversal forces `revise`.
+- this closes part of the earlier DAG-underuse criticism:
+  - the project DAG is no longer only answer-planning context,
+  - it is now also a release-time contradiction boundary.
+- this slice does not solve the right-pane file-preview/highlight issue by itself:
+  - the click/render path already exists in `workspace_panes.js`,
+  - the remaining gap is payload-contract stability for source paths and matched spans.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| The assembled DAG must influence the final release decision, not only answer composition | `answerReleaseReview.ts` now evaluates `claim_graph_order_consistency` from graph-context directionality. | Implemented baseline |
+| Reversed `prerequisite` claims must be corrected before release | Reviewer now revises drafts such as `Ground State is a prerequisite for Bridge Layer.` into a DAG-grounded correction. | Implemented |
+| Reversed `sequence` claims must also be corrected before release | Reviewer now revises drafts such as `Response Validation comes before Baseline Measurement.` when the DAG says the opposite. | Implemented |
+| Right-pane source/highlight failures still need a separate owner | The graph-focus render path already exists; the unresolved issue is payload quality, not missing frontend click wiring. | Still open |
+
+Verification for this slice:
+
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
 ## 2026-06-18 Shared Alias/Scope Regression Corpus and Soft-Miss Recovery
 
 The screenshot-backed `waterglass` failure is no longer treated as a one-off manual check. The project now has a shared deterministic regression corpus at `src/learning/KnowledgeWorkspaceConversationRegression.ts`, and the first corpus matters for two reasons:

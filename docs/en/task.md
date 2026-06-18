@@ -24,7 +24,10 @@
 - [x] `src/learning/answerReleaseReview.test.ts` now covers deterministic structured-fact contradiction cases: numeric conflict, year conflict, and a multi-value support case that must not raise a false positive.
 - [x] The reviewer now also enforces `claim_polarity_consistency`, so grounded drafts that explicitly reverse supported claims (`is` vs `is not`, including the narrow Chinese negation path) are revised before release.
 - [x] `src/learning/answerReleaseReview.test.ts` now covers deterministic polarity-conflict cases: English reversal, Chinese reversal, and an unrelated-support-negation case that must not raise a false positive.
-- [ ] Next active task: extend contradiction coverage beyond the current lexical + structured-fact + polarity checks into broader claim/citation/evidence conflicts without letting false positives widen.
+- [x] The reviewer now also enforces `claim_graph_order_consistency`, so grounded drafts that reverse `prerequisite` or `sequence` direction against the assembled DAG are revised before release with a deterministic correction sentence.
+- [x] `src/learning/answerReleaseReview.test.ts` now covers deterministic DAG-order cases: prerequisite reversal, correct prerequisite direction, and sequence reversal.
+- [ ] Next active task: extend contradiction coverage beyond the current lexical + structured-fact + polarity + graph-order checks into broader claim/citation/evidence conflicts without letting false positives widen.
+- [ ] Next active task: harden the graph-focus payload contract so clicking a hit file deterministically opens source content and highlight spans in the right pane instead of relying on fragile fallback-only resolution.
 - [ ] Next active task: continue growing the regression corpus with more real cross-scope and synonym failures, while keeping the public answer surface contracted.
 
 ### Current Acceptance Targets
@@ -33,10 +36,12 @@
 2. Reviewer decisions remain additive and backward-compatible for all current clients.
 3. Grounded drafts with conflicting structured numeric/year facts are revised before release instead of slipping through on lexical overlap alone.
 4. Grounded drafts that explicitly reverse supported polarity are revised before release instead of slipping through on lexical overlap alone.
-5. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
-6. Exported `knowledgeRunReports` carry compact reviewer summaries for `release` / `revise` flows and omit the field cleanly when review data is absent.
-7. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card and compare card surface the same reviewer path.
-8. Runtime verification now passes the shared alias/scope corpus, including the screenshot-derived compact/spaced `waterglass` pair and the `financial` cross-scope recovery pair, and confirms `answerReleaseReview.publicAnswer === result.answer`.
+5. Grounded drafts that reverse `prerequisite` or `sequence` direction against the assembled DAG are revised before release instead of leaking inverted order claims to the public answer.
+6. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
+7. Exported `knowledgeRunReports` carry compact reviewer summaries for `release` / `revise` flows and omit the field cleanly when review data is absent.
+8. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card and compare card surface the same reviewer path.
+9. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields rather than fragile fallback-only heuristics.
+10. Runtime verification now passes the shared alias/scope corpus, including the screenshot-derived compact/spaced `waterglass` pair and the `financial` cross-scope recovery pair, and confirms `answerReleaseReview.publicAnswer === result.answer`.
 
 ### 2026-06-17 Active Agent Knowledge DAG Task Sync
 

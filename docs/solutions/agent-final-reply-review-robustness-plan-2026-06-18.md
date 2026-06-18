@@ -123,6 +123,7 @@ The first fix restores evidence. The second fix restores robustness.
 | Grounded drafts must stay aligned with their cited/knowledge-point support | Reviewer now enforces `claim_grounding_alignment` and revises drafts when lexical evidence overlap shows claim drift. | Implemented |
 | Grounded drafts must also be checked for deterministic structured fact conflicts | Reviewer now enforces `claim_structured_consistency`, revising grounded drafts when numeric or year facts conflict with support even though topical lexical overlap still passes. | Implemented baseline |
 | Grounded drafts must also be checked for explicit polarity reversals | Reviewer now enforces `claim_polarity_consistency`, revising grounded drafts when they say `is not` / `不是` against support that still affirms the same claim skeleton. | Implemented baseline |
+| Grounded drafts must also be checked for reversed DAG order claims | Reviewer now enforces `claim_graph_order_consistency`, revising drafts that invert grounded `prerequisite` or `sequence` direction from the assembled DAG. | Implemented baseline |
 | Final review state must be inspectable by developers | `answerReleaseReview` is now stored additively on `AgentConversationResponse`, `AgentConversationTrace`, and `KnowledgeRun`. | Implemented |
 | Operator surfaces must expose reviewer state without widening the main answer area | `src/frontend/agent_workspace.js` sanitizes `answerReleaseReview`, and `src/frontend/workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
 | Reviewer telemetry must survive export/replay surfaces | `src/export/WorkspaceExportBundle.ts` now emits compact `runtime.knowledgeRunReports[*].answerReleaseReview` summaries for durable replay and operator audit. | Implemented |
@@ -298,6 +299,32 @@ Attached additively to:
   - structured consistency catches `same topic, wrong number/year`,
   - polarity consistency catches `same topic, same entity, but the claim was said backwards`.
 
+#### Phase-10 DAG-order contradiction hardening landed on top of the polarity slice
+
+- `src/learning/answerReleaseReview.ts` now adds a fourth contradiction-oriented reviewer gate: `claim_graph_order_consistency`.
+- This gate is intentionally narrower than a generic semantic verifier:
+  - it consumes only the project's existing DAG evidence already assembled into `graphContext`,
+  - the first supported directional relations are `prerequisite` and `sequence`.
+- The gate reads from the structured graph surfaces that already exist in the current architecture:
+  - `connectionPaths`,
+  - `knowledgePointRelations`,
+  - `predecessorWindow`,
+  - `successorWindow`.
+- It remains conservative:
+  - if the draft does not make an explicit order claim, it does nothing,
+  - if the DAG evidence does not expose a high-confidence directional relation, it does nothing.
+- When the draft reverses grounded order, the reviewer now revises with a deterministic corrective sentence instead of falling back to a generic summary.
+- `src/learning/answerReleaseReview.test.ts` now pins three important behaviors:
+  - prerequisite reversal forces `revise`,
+  - correct prerequisite direction still `release`s cleanly,
+  - sequence reversal forces `revise`.
+- This phase closes part of the earlier DAG-underuse criticism:
+  - the existing DAG is no longer only answer-planning context,
+  - it is now also a release-time contradiction boundary.
+- This phase does not solve the right-pane source/highlight issue by itself:
+  - the click/render path already exists in `workspace_panes.js`,
+  - the unresolved gap is payload-contract stability for source paths and matched spans.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -374,16 +401,17 @@ The first two decide capability. The third decides trust.
 
 ### Next Direction
 
-1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + structured-fact + polarity gates, but only where the new checks can stay deterministic enough to avoid false-positive churn.
+1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + structured-fact + polarity + graph-order gates, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
-3. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
-4. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
+3. Treat the right-pane source/highlight issue as a separate payload-contract problem instead of misclassifying it as missing frontend click wiring.
+4. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
+5. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
 
 ### Five-Point Summary
 
 1. The missing mechanism was not graph retrieval; it was final public-answer release review.
 2. The correct owner is a local deterministic reviewer layer, not a new prompt framework.
-3. The current project DAG remains the evidence substrate; the reviewer does not replace graph assembly.
+3. The current project DAG remains the evidence substrate and now also participates in release-time order correction; the reviewer still does not replace graph assembly.
 4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification.
 5. The landed slice is backward-compatible and materially improves robustness without widening the main answer surface.
 
@@ -500,6 +528,7 @@ The first two decide capability. The third decides trust.
 | grounded draft 必须与 citation/knowledge-point 支撑保持一致 | reviewer 现在会执行 `claim_grounding_alignment`，在词法证据重叠不足时强制改写漂移主张。 | 已实现 |
 | grounded draft 还必须检查确定性的结构化事实冲突 | reviewer 现在会执行 `claim_structured_consistency`：即使 topical lexical overlap 仍然通过，只要数值或年份事实与支撑冲突，也会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查显式正反断言反转 | reviewer 现在会执行 `claim_polarity_consistency`：即使 topical lexical overlap 仍然通过，只要把 `is` / `不是` 这类断言方向明确说反，也会触发 revise。 | 已实现基线 |
+| grounded draft 还必须检查与 DAG 相矛盾的顺序断言 | reviewer 现在会执行 `claim_graph_order_consistency`：只要把已装配 DAG 的 `prerequisite` 或 `sequence` 方向说反，就会触发 revise。 | 已实现基线 |
 | 最终审核结果必须可供开发者检查 | `answerReleaseReview` 已加到 `AgentConversationResponse`、`AgentConversationTrace`、`KnowledgeRun`。 | 已实现 |
 | 运维表面必须能看到 reviewer 状态且不扩大主回答区 | `src/frontend/agent_workspace.js` 会净化 `answerReleaseReview`，`src/frontend/workspace_panes.js` 会在 `knowledge_run` 卡片中渲染 release-review 明细 / 历史。 | 已实现 |
 | reviewer 遥测必须能跨 export/replay 表面保留 | `src/export/WorkspaceExportBundle.ts` 现在会在 `runtime.knowledgeRunReports[*].answerReleaseReview` 中输出紧凑 reviewer 摘要，供离线回放与运维审计使用。 | 已实现 |
@@ -675,6 +704,32 @@ The first two decide capability. The third decides trust.
   - structured consistency 负责抓“主题没偏，但数字/年份错了”，
   - polarity consistency 负责抓“主题没偏、实体没偏，但断言方向说反了”。
 
+#### 在正反断言矛盾切片之上继续落地的 Phase-10 DAG 顺序矛盾加固
+
+- `src/learning/answerReleaseReview.ts` 现在新增了第四个面向矛盾检测的 reviewer gate：`claim_graph_order_consistency`。
+- 这个 gate 比泛化语义 verifier 更窄口径：
+  - 它只消费当前架构已经装配好的项目 DAG 证据，
+  - 第一批支持的方向关系只覆盖 `prerequisite` 与 `sequence`。
+- 它直接读取当前已有的结构化图表面：
+  - `connectionPaths`
+  - `knowledgePointRelations`
+  - `predecessorWindow`
+  - `successorWindow`
+- 它仍然保持保守：
+  - 如果草稿没有显式顺序断言，它什么也不做；
+  - 如果 DAG 证据没有暴露高置信度方向关系，它什么也不做。
+- 一旦草稿把 grounded 顺序说反，reviewer 现在会输出确定性的纠正句，而不是退回泛化摘要。
+- `src/learning/answerReleaseReview.test.ts` 现在已经固定三类关键行为：
+  - 前置关系反转必须 `revise`
+  - 前置关系方向正确时仍然 clean `release`
+  - sequence 反转必须 `revise`
+- 这个 Phase 关闭了此前“项目 DAG 利用不足”的一部分批评：
+  - 现有 DAG 不再只是 answer-planning context，
+  - 现在也成为 release-time contradiction boundary。
+- 这个 Phase 本身并不解决右侧原文 / 高亮问题：
+  - `workspace_panes.js` 中的点击 / 渲染路径本来就存在，
+  - 当前剩余缺口是 source path 与 matched span 的 payload 契约稳定性。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -751,15 +806,16 @@ The first two decide capability. The third decides trust.
 
 ### 后续方向
 
-1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + structured-fact + polarity gate 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
+1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + structured-fact + polarity + graph-order gate 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
-3. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
-4. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
+3. 把右侧原文 / 高亮问题收敛为独立 payload 契约工作，而不是继续误判成前端点击事件缺失。
+4. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
+5. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
 
 ### 五点总结
 
 1. 真正缺失的不是图检索，而是最终公开回答的 release review。
 2. 正确 owner 是本地确定性 reviewer layer，不是再引入一层 prompt framework。
-3. 项目现有 DAG 继续作为证据底座，reviewer 不会替代 graph assembly。
+3. 项目现有 DAG 继续作为证据底座，并且已经开始参与 release-time 的顺序纠错；reviewer 不会替代 graph assembly。
 4. `waterglass` 截图已经被编码进正式运行时验收门禁。
 5. 本轮落地保持向前兼容，同时实质提升了 agent 最终回复的鲁棒性。

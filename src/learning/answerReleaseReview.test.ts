@@ -96,6 +96,61 @@ function makeGraphContext(): AgentConversationGraphContext {
     };
 }
 
+function makeOrderedGraphContext(overrides: Partial<AgentConversationGraphContext> = {}): AgentConversationGraphContext {
+    return {
+        anchorAtomId: 'atom_ground_state',
+        anchorTitle: 'Ground State',
+        supportingAtomIds: ['atom_bridge_layer'],
+        supportingTitles: ['Bridge Layer'],
+        relationKinds: ['prerequisite'],
+        relationSummaries: [
+            {
+                relationKind: 'prerequisite',
+                edgeIds: ['edge_bridge_to_ground'],
+                sourceAtomIds: ['atom_bridge_layer'],
+                targetAtomIds: ['atom_ground_state'],
+                averageConfidence: 0.93,
+            },
+        ],
+        connectionPaths: [
+            {
+                sourceAtomId: 'atom_bridge_layer',
+                sourceTitle: 'Bridge Layer',
+                targetAtomId: 'atom_ground_state',
+                targetTitle: 'Ground State',
+                pathAtomIds: ['atom_bridge_layer', 'atom_ground_state'],
+                pathTitles: ['Bridge Layer', 'Ground State'],
+                pathEdges: [
+                    {
+                        fromAtomId: 'atom_bridge_layer',
+                        toAtomId: 'atom_ground_state',
+                        relationKind: 'prerequisite',
+                    },
+                ],
+                length: 1,
+            },
+        ],
+        predecessorWindow: [
+            {
+                atomId: 'atom_bridge_layer',
+                title: 'Bridge Layer',
+                relationKind: 'prerequisite',
+                confidence: 0.93,
+            },
+        ],
+        successorWindow: [],
+        temporalValidity: {
+            checkedAt: '2026-06-19T02:00:00.000Z',
+            allPointsValid: true,
+            warningReasons: [],
+            invalidKnowledgePointTitles: [],
+            edgeKinds: [],
+            details: [],
+        },
+        ...overrides,
+    };
+}
+
 describe('answerReleaseReview', () => {
     test('downgrades unsupported debug-style answers into concise abstentions', () => {
         const review = reviewAnswerRelease({
@@ -363,5 +418,169 @@ describe('answerReleaseReview', () => {
         expect(review.decision).toBe('revise');
         expect(review.failedGateIds).toContain('claim_polarity_consistency');
         expect(review.publicAnswer).toBe('水杯是透明的盛水容器。');
+    });
+
+    test('revises grounded answers when prerequisite order is reversed against the DAG', () => {
+        const point = makeKnowledgePoint({
+            atomId: 'atom_ground_state',
+            atomIds: ['atom_ground_state'],
+            title: 'Ground State',
+            summary: 'Ground State is stabilized after Bridge Layer is established.',
+            evidenceSnippet: 'Ground State is stabilized after Bridge Layer is established.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                atomId: 'atom_ground_state',
+                title: 'Ground State',
+                snippet: 'Ground State is stabilized after Bridge Layer is established.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    atomId: 'atom_ground_state',
+                    title: 'Ground State',
+                    snippet: 'Ground State is stabilized after Bridge Layer is established.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'How are Bridge Layer and Ground State ordered?',
+            draftAnswer: 'Ground State is a prerequisite for Bridge Layer.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeOrderedGraphContext(),
+            reviewedAt: '2026-06-19T02:05:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_graph_order_consistency');
+        expect(review.publicAnswer).toBe('Bridge Layer is a prerequisite for Ground State.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_graph_order_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('keeps grounded answers when prerequisite order matches the DAG', () => {
+        const point = makeKnowledgePoint({
+            atomId: 'atom_ground_state',
+            atomIds: ['atom_ground_state'],
+            title: 'Ground State',
+            summary: 'Ground State is stabilized after Bridge Layer is established.',
+            evidenceSnippet: 'Ground State is stabilized after Bridge Layer is established.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                atomId: 'atom_ground_state',
+                title: 'Ground State',
+                snippet: 'Ground State is stabilized after Bridge Layer is established.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    atomId: 'atom_ground_state',
+                    title: 'Ground State',
+                    snippet: 'Ground State is stabilized after Bridge Layer is established.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'How are Bridge Layer and Ground State ordered?',
+            draftAnswer: 'Bridge Layer is a prerequisite for Ground State.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeOrderedGraphContext(),
+            reviewedAt: '2026-06-19T02:10:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_graph_order_consistency');
+        expect(review.publicAnswer).toBe('Bridge Layer is a prerequisite for Ground State.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_graph_order_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when sequence order is reversed against the DAG', () => {
+        const point = makeKnowledgePoint({
+            atomId: 'atom_response_validation',
+            atomIds: ['atom_response_validation'],
+            title: 'Response Validation',
+            summary: 'Response Validation runs after Baseline Measurement.',
+            evidenceSnippet: 'Response Validation runs after Baseline Measurement.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                atomId: 'atom_response_validation',
+                title: 'Response Validation',
+                snippet: 'Response Validation runs after Baseline Measurement.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    atomId: 'atom_response_validation',
+                    title: 'Response Validation',
+                    snippet: 'Response Validation runs after Baseline Measurement.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'Which step comes first?',
+            draftAnswer: 'Response Validation comes before Baseline Measurement.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeOrderedGraphContext({
+                anchorAtomId: 'atom_response_validation',
+                anchorTitle: 'Response Validation',
+                supportingAtomIds: ['atom_baseline_measurement'],
+                supportingTitles: ['Baseline Measurement'],
+                relationKinds: ['sequence'],
+                relationSummaries: [
+                    {
+                        relationKind: 'sequence',
+                        edgeIds: ['edge_baseline_to_validation'],
+                        sourceAtomIds: ['atom_baseline_measurement'],
+                        targetAtomIds: ['atom_response_validation'],
+                        averageConfidence: 0.91,
+                    },
+                ],
+                connectionPaths: [
+                    {
+                        sourceAtomId: 'atom_baseline_measurement',
+                        sourceTitle: 'Baseline Measurement',
+                        targetAtomId: 'atom_response_validation',
+                        targetTitle: 'Response Validation',
+                        pathAtomIds: ['atom_baseline_measurement', 'atom_response_validation'],
+                        pathTitles: ['Baseline Measurement', 'Response Validation'],
+                        pathEdges: [
+                            {
+                                fromAtomId: 'atom_baseline_measurement',
+                                toAtomId: 'atom_response_validation',
+                                relationKind: 'sequence',
+                            },
+                        ],
+                        length: 1,
+                    },
+                ],
+                predecessorWindow: [
+                    {
+                        atomId: 'atom_baseline_measurement',
+                        title: 'Baseline Measurement',
+                        relationKind: 'sequence',
+                        confidence: 0.91,
+                    },
+                ],
+            }),
+            reviewedAt: '2026-06-19T02:20:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_graph_order_consistency');
+        expect(review.publicAnswer).toBe('Baseline Measurement comes before Response Validation.');
     });
 });

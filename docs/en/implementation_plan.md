@@ -18,6 +18,7 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 - The reviewer now also enforces `claim_grounding_alignment`, so grounded evidence can still force a revision when the draft drifts away from its own citations/knowledge points.
 - The reviewer now also enforces `claim_structured_consistency`, a deterministic structured-fact gate that revises grounded drafts when numeric or year facts conflict with citation/knowledge-point support even though topical lexical overlap still looks acceptable.
 - The reviewer now also enforces `claim_polarity_consistency`, a deterministic polarity gate that revises grounded drafts when they explicitly reverse supported positive/negative claims even though topical lexical overlap still looks acceptable.
+- The reviewer now also enforces `claim_graph_order_consistency`, a deterministic DAG-order gate that uses `connectionPaths`, `knowledgePointRelations`, `predecessorWindow`, and `successorWindow` to catch reversed `prerequisite` or `sequence` claims and rewrite them into a grounded correction sentence.
 - Cross-language abstention hygiene is now explicit: scoped Chinese misses no longer fall back to English diagnostic-heavy abstentions.
 - `KnowledgeLearningPlatform.ts` now persists the review decision into response payloads, traces, and workflow artifacts.
 - Operator-facing inspection now surfaces reviewer state without widening the public answer area: `src/frontend/agent_workspace.js` maps sanitized `answerReleaseReview` payloads, and `src/frontend/workspace_panes.js` renders release-review details in `knowledge_run` detail/history cards.
@@ -31,25 +32,29 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 - That corpus exposed a soft-miss retrieval bug in `KnowledgeLearningPlatform.ts`: planner scope recovery previously triggered only on zero-result misses, and now also triggers when reranked in-scope noise survives but none of the surviving items belong to planner title-hit documents.
 - `src/learning/answerReleaseReview.test.ts` now pins deterministic contradiction cases for numeric conflict, year conflict, and a multi-value support case that must not trigger a false positive.
 - `src/learning/answerReleaseReview.test.ts` now also pins deterministic polarity-conflict cases for English reversal, Chinese reversal, and an unrelated-negative-support case that must not trigger a false positive.
+- The right-pane file-preview/highlight path is still architecturally separate from final-answer review: the click/render pipeline already exists in `workspace_panes.js`, and the remaining gap is payload-contract stability rather than missing frontend event wiring.
 
 #### Next execution order
 
 1. Keep the reviewer deterministic and narrowly scoped to release invariants; do not let prompt templates reclaim ownership of release policy.
-2. Use the explicit alias/scope regression corpus and the new structured-fact + polarity reviewer slices to broaden contradiction coverage beyond the current lexical grounding check without widening false positives.
-3. Keep extending the shared corpus with more real cross-scope, compact-alias, and synonym failures while preserving deterministic expectations in both Jest and runtime verification.
-4. Continue owner reduction only when the new owner hides real decisions or invariants.
+2. Use the explicit alias/scope regression corpus and the new structured-fact + polarity + graph-order reviewer slices to broaden contradiction coverage beyond the current lexical grounding check without widening false positives.
+3. Harden the graph-focus payload contract so clicking a hit file deterministically resolves source markdown and matched-span highlights instead of depending on fallback-only path/snippet recovery.
+4. Keep extending the shared corpus with more real cross-scope, compact-alias, and synonym failures while preserving deterministic expectations in both Jest and runtime verification.
+5. Continue owner reduction only when the new owner hides real decisions or invariants.
 
 #### Acceptance criteria
 
 1. Unsupported draft answers do not leak internal diagnostics such as `No scoped knowledge points matched` or `retrieval_candidates_below_threshold` into the public answer.
 2. Grounded drafts with conflicting structured numeric/year facts are revised before release instead of slipping through on lexical overlap alone.
 3. Grounded drafts that explicitly reverse supported polarity are revised before release instead of slipping through on lexical overlap alone.
-4. `AgentConversationResponse`, trace, and `KnowledgeRun` all retain additive `answerReleaseReview` state.
-5. Operator inspection surfaces render reviewer decision, failed gates, and original/public answer deltas without widening the primary answer area.
-6. Workspace export knowledge-run reports carry compact reviewer summaries for `release` / `revise` flows and stay backward-compatible when review data is absent.
-7. Workspace export also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card renders the same audit shape, and the compare card exposes answer-release deltas without widening the public answer area.
-8. `npm run verify:knowledge-workspace:runtime` passes the shared alias/scope regression corpus, including the screenshot-derived `waterglass` compact/spaced pair and the `financial` cross-scope recovery pair, and confirms reviewer/public-answer parity.
-9. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
+4. Grounded drafts that reverse `prerequisite` or `sequence` direction against the assembled DAG are revised before release instead of leaking inverted order claims.
+5. `AgentConversationResponse`, trace, and `KnowledgeRun` all retain additive `answerReleaseReview` state.
+6. Operator inspection surfaces render reviewer decision, failed gates, and original/public answer deltas without widening the primary answer area.
+7. Workspace export knowledge-run reports carry compact reviewer summaries for `release` / `revise` flows and stay backward-compatible when review data is absent.
+8. Workspace export also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card renders the same audit shape, and the compare card exposes answer-release deltas without widening the public answer area.
+9. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields rather than fragile fallback-only heuristics.
+10. `npm run verify:knowledge-workspace:runtime` passes the shared alias/scope regression corpus, including the screenshot-derived `waterglass` compact/spaced pair and the `financial` cross-scope recovery pair, and confirms reviewer/public-answer parity.
+11. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
 
 ### 2026-06-17 Agent Knowledge DAG Implementation Plan
 
