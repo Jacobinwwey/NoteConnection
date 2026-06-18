@@ -15,6 +15,7 @@ Implemented or documented in this slice:
 - `KnowledgeLearningPlatform` can enrich conversation graph context with explicit store-backed paths between returned knowledge points and the anchor when an ops-capable store is available,
 - `conversationComposer` now keeps public `answer` / `directAnswer` output narrow instead of embedding citation lists, graph paths, memory notices, or knowledge-run diagnostics,
 - `conversationComposer` can use those explicit paths in structured answer sections,
+- `queryBackend.ts` now recognizes Chinese compare/how-to/explain markers in graph intent detection, and direct compare branches (`contrast` / `analogy`) receive a calibrated structural promotion over reference-only notes,
 - `workspace_panes.js` renders connection paths in the evidence pane,
 - `knowledge_run` workflow artifacts now also retain `graphContext`, and the knowledge-run inspection card exposes graph context plus graph diagnostics for operator review,
 - recent-run history and run-to-run comparison cards now also surface compact graph telemetry, so operator review is no longer limited to single-run inspection,
@@ -31,7 +32,7 @@ Code-vs-plan reconciliation:
 | File hit opens right pane with highlighted source | Graph-focus now retries source rendering across payload + matched-span candidate paths, preserves highlighted markdown rendering, and exposes requested/candidate/attempted/resolved-path diagnostics in the pane when fallback behavior occurs. | Implemented broadened P4 slice |
 | Use the current DAG | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, and `findPath` are the active graph substrate. | Confirmed |
 | Let the LLM inspect graph structure | A bounded `graphContextAssembler` now selects the anchor, reorders support nodes, attaches explicit paths, and adds predecessor/successor windows plus diagnostics before answer synthesis. | Implemented P1 foundation |
-| Retrieval uses graph structure instead of shallow degree bonus | `queryBackend.ts` now applies anchor distance, directed path confidence, prerequisite depth, temporal invalidity penalties, and relation-intent bonuses in `local_hybrid` / `local_vector`. | Implemented P2 foundation |
+| Retrieval uses graph structure instead of shallow degree bonus | `queryBackend.ts` now applies anchor distance, directed path confidence, prerequisite depth, temporal invalidity penalties, and relation-intent bonuses in `local_hybrid` / `local_vector`. Chinese compare/how-to/explain markers are now included in intent detection, and direct compare branches are explicitly calibrated against lexically stronger reference notes. | Implemented broader P2 slice |
 | Graph-specific answer quality gates | `knowledgeRun.quality.gates` now checks prerequisite ordering, comparison branches, temporal warnings, graph-op fallback, and bounded graph budgeting. | Implemented P5 foundation |
 | Full DAG-native answer planning | The assembler, graph-aware ranking, graph-quality gates, graph-focus diagnostics, single-run inspection, history, and run-to-run comparison surfaces are real, but the model still needs calibration breadth and longer-run operator evidence. | Calibration pending |
 

@@ -14,6 +14,7 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 - The current slice now has a first-class graph-conditioned context assembler in `src/learning/graphContextAssembler.ts`; it selects the anchor, reorders support nodes, preserves explicit `connectionPaths`, and adds bounded predecessor/successor windows plus graph diagnostics before answer synthesis.
 - Persistence now preserves still-valid store-side relation/temporal edges during auto-save snapshot rebuilds, which prevents read-side query/conversation flows from discarding externally enriched DAG structure before `connectionPaths` are assembled.
 - The retrieval path now uses bounded graph-aware ranking signals instead of leaning mainly on relation degree, but it still needs broader calibration against real regressions.
+- Retrieval-side graph intent detection now includes Chinese compare/how-to/explain markers, and direct compare branches receive an explicit structural promotion over reference-only notes.
 - Operator-facing diagnostics now exist in three concrete surfaces: graph-focus path-fallback diagnostics in the right pane, graph-context plus graph-diagnostics inspection inside durable `knowledge_run` cards, and compact graph telemetry inside knowledge-run history/compare review flows.
 - Prompt-framework research should guide contracts and evaluation, not pull Python frameworks into the app runtime.
 

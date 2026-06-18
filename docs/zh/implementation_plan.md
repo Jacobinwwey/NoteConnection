@@ -15,6 +15,7 @@
 - 当前切片已经有一等 graph-conditioned context assembler：`src/learning/graphContextAssembler.ts` 会在回答合成前选择 anchor、重排 support node、保留显式 `connectionPaths`，并补有界 predecessor/successor window 与 graph diagnostics。
 - 当前持久化会在自动保存重建 snapshot 时保留仍然有效的 store 侧 relation/temporal edges，避免 read-side query/conversation 流程在装配 `connectionPaths` 前丢掉外部增强 DAG 结构。
 - 当前 retrieval 路径已经使用有界 graph-aware ranking signal，而不再主要依赖 relation degree；剩余工作转为更广的真实回归校准。
+- retrieval 侧的 graph intent detection 现在已经补齐中文 compare/how-to/explain 标记，并对 direct compare branch 相对 reference-only note 做了显式结构性加权。
 - 当前运维可见诊断已经有三个具体面：右侧 graph-focus 的路径回退诊断、durable `knowledge_run` 卡片中的 graph context / graph diagnostics 检查面，以及 knowledge-run history/compare 流程中的紧凑 graph telemetry。
 - prompt-framework 研究应指导 contract 与 evaluation，不应把 Python framework 拉入 app runtime。
 

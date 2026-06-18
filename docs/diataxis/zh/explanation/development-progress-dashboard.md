@@ -15,6 +15,7 @@
 - 当 store 具备 ops 能力时，`KnowledgeLearningPlatform` 可以用 store-backed path 查询，把返回 knowledge points 与 anchor 之间的显式路径补入 conversation graph context；
 - `conversationComposer` 现在会保持公开 `answer` / `directAnswer` 窄口径，不再嵌入 citation list、graph path、memory notice 或 knowledge-run diagnostics；
 - `conversationComposer` 可以在结构化回答 section 中使用这些 explicit paths；
+- `queryBackend.ts` 现在已经把中文 compare/how-to/explain 标记纳入 graph intent detection，并对 direct compare branch（`contrast` / `analogy`）相对 reference-only note 做了显式排序校准；
 - `workspace_panes.js` 会在 evidence pane 中渲染 connection paths；
 - `knowledge_run` workflow artifact 现在也会保留 `graphContext`，knowledge-run 检查卡片已能把 graph context 与 graph diagnostics 暴露给运维查看；
 - recent-run history 与 run-to-run comparison 卡片现在也会暴露紧凑 graph telemetry，运维检查不再只停留在单次 run 检查面；
@@ -31,7 +32,7 @@
 | 文件命中打开右侧 pane 并高亮原文 | graph-focus 现在会在 payload + matched-span candidate path 之间重试 source rendering，保留 markdown 高亮渲染，并在 fallback 行为出现时在 pane 内暴露 requested/candidate/attempted/resolved path 诊断。 | 已实现扩展后的 P4 切片 |
 | 使用当前 DAG | `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、store ops 与 `findPath` 是当前活跃图底座。 | 已确认 |
 | 让 LLM 查阅图结构 | 有界 `graphContextAssembler` 已在回答合成前选择 anchor、重排 support node、挂接显式路径，并补 predecessor/successor window 与 diagnostics。 | P1 基础已实现 |
-| retrieval 不再只是浅层 degree 加分 | `queryBackend.ts` 现在已在 `local_hybrid` / `local_vector` 中使用 anchor distance、directed path confidence、prerequisite depth、temporal invalidity penalty 与 relation-intent bonus。 | P2 基础已实现 |
+| retrieval 不再只是浅层 degree 加分 | `queryBackend.ts` 现在已在 `local_hybrid` / `local_vector` 中使用 anchor distance、directed path confidence、prerequisite depth、temporal invalidity penalty 与 relation-intent bonus；中文 compare/how-to/explain 标记也已进入 intent detection，并对 direct compare branch 相对 lexical 更强的 reference note 做了显式校准。 | 更宽的 P2 切片已实现 |
 | 图专项回答质量门禁 | `knowledgeRun.quality.gates` 现在已经检查 prerequisite ordering、comparison branch、temporal warning、graph-op fallback 与 bounded graph budgeting。 | P5 基础已实现 |
 | 完整 DAG-native answer planning | assembler、graph-aware ranking、graph-quality gate、graph-focus diagnostics，以及 single-run inspection / history / run-to-run comparison 这些图检查面都已存在，但模型仍需要更广的校准与更长周期的运维证据。 | 校准待推进 |
 

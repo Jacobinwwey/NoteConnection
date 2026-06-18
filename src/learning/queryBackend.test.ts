@@ -410,6 +410,56 @@ describe('query backend factory', () => {
         ]));
     });
 
+    test('local hybrid ranking uses Chinese compare intent to favor contrast structure over a lexically stronger reference note', async () => {
+        const backend = createGraphQueryBackend({ backend: 'local_hybrid' });
+        const atoms: KnowledgeAtom[] = [
+            makeAtom('atom_anchor_cn', '反射', '反射描述光线返回原介质的现象。', ['反射'], 'zh'),
+            makeAtom('atom_contrast_cn', '吸收', '吸收表示光能被材料消耗。', ['吸收'], 'zh'),
+            makeAtom('atom_reference_cn', '光学概览', '反射 概览 与 现象 说明。', ['概览'], 'zh'),
+        ];
+        const activeEdges: RelationEdge[] = [
+            {
+                id: 'edge_contrast_cn',
+                sourceAtomId: 'atom_contrast_cn',
+                targetAtomId: 'atom_anchor_cn',
+                relationKind: 'contrast',
+                provenance: 'fact',
+                confidence: 0.96,
+                evidenceSpanIds: [],
+                temporal: { validFrom: '2026-01-01T00:00:00.000Z' },
+            },
+            {
+                id: 'edge_reference_cn',
+                sourceAtomId: 'atom_reference_cn',
+                targetAtomId: 'atom_anchor_cn',
+                relationKind: 'reference',
+                provenance: 'fact',
+                confidence: 0.88,
+                evidenceSpanIds: [],
+                temporal: { validFrom: '2026-01-01T00:00:00.000Z' },
+            },
+        ];
+
+        const result = await backend.query({
+            request: {
+                query: '对比反射现象',
+                topK: 3,
+            },
+            query: '对比反射现象',
+            queryTokens: ['对比', '反射', '现象'],
+            asOf: '2026-01-01T00:00:00.000Z',
+            topK: 3,
+            atoms,
+            activeEdges,
+        });
+
+        const rankedAtomIds = result.candidates.map((candidate) => candidate.atomId);
+        expect(rankedAtomIds.indexOf('atom_anchor_cn')).toBeGreaterThanOrEqual(0);
+        expect(rankedAtomIds.indexOf('atom_contrast_cn')).toBeGreaterThanOrEqual(0);
+        expect(rankedAtomIds.indexOf('atom_reference_cn')).toBeGreaterThanOrEqual(0);
+        expect(rankedAtomIds.indexOf('atom_contrast_cn')).toBeLessThan(rankedAtomIds.indexOf('atom_reference_cn'));
+    });
+
     test('local vector ranking penalizes a temporally invalid candidate even when semantic overlap is strong', async () => {
         const backend = createGraphQueryBackend({ backend: 'local_vector' });
         const atoms: KnowledgeAtom[] = [

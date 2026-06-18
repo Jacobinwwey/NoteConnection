@@ -651,6 +651,10 @@ function classifyGraphQueryIntent(query: string): GraphQueryIntent {
         normalized.includes('compare')
         || normalized.includes('difference')
         || normalized.includes('vs')
+        || normalized.includes('对比')
+        || normalized.includes('比较')
+        || normalized.includes('区别')
+        || normalized.includes('差异')
     ) {
         return 'compare';
     }
@@ -659,6 +663,10 @@ function classifyGraphQueryIntent(query: string): GraphQueryIntent {
         || normalized.includes('how do')
         || normalized.includes('steps')
         || normalized.includes('plan')
+        || normalized.includes('如何')
+        || normalized.includes('怎么')
+        || normalized.includes('步骤')
+        || normalized.includes('方案')
     ) {
         return 'how_to';
     }
@@ -666,6 +674,9 @@ function classifyGraphQueryIntent(query: string): GraphQueryIntent {
         normalized.includes('what is')
         || normalized.includes('why')
         || normalized.includes('explain')
+        || normalized.includes('什么是')
+        || normalized.includes('为什么')
+        || normalized.includes('解释')
     ) {
         return 'explain';
     }
@@ -962,10 +973,12 @@ function computeDirectedPathBonus(
     if (signal.relationKinds.includes('application') && direction === 'from_anchor' && intent === 'how_to') {
         relationBonus += 0.06;
     }
-    if ((signal.relationKinds.includes('contrast') || signal.relationKinds.includes('analogy')) && intent === 'compare') {
-        relationBonus += 0.1;
+    const compareBranchSignalPresent = signal.relationKinds.includes('contrast') || signal.relationKinds.includes('analogy');
+    if (compareBranchSignalPresent && intent === 'compare') {
+        relationBonus += signal.distance === 1 ? 0.32 : 0.18;
     }
-    return Number(clamp(baseBonus + confidenceBonus + relationBonus, 0, 0.4).toFixed(6));
+    const maxBonus = compareBranchSignalPresent && intent === 'compare' ? 0.6 : 0.4;
+    return Number(clamp(baseBonus + confidenceBonus + relationBonus, 0, maxBonus).toFixed(6));
 }
 
 function computeRelationIntentBonus(
@@ -978,9 +991,9 @@ function computeRelationIntentBonus(
     }
     let bonus = 0;
     if (graphFeatureIndex.queryIntent === 'compare') {
-        if (relationKinds.has('contrast')) bonus += 0.14;
-        if (relationKinds.has('analogy')) bonus += 0.1;
-        if (relationKinds.has('reference')) bonus += 0.04;
+        if (relationKinds.has('contrast')) bonus += 0.24;
+        if (relationKinds.has('analogy')) bonus += 0.16;
+        if (relationKinds.has('reference')) bonus += 0.02;
     } else if (graphFeatureIndex.queryIntent === 'how_to') {
         if (relationKinds.has('prerequisite')) bonus += 0.1;
         if (relationKinds.has('sequence')) bonus += 0.08;
@@ -1006,6 +1019,28 @@ function computeTemporalValidityBonus(context: GraphQueryBackendContext, atomId:
     }
     if (temporalSignal.isValid === false) {
         return -Number((0.18 + Math.min(temporalSignal.reasonCount, 3) * 0.02).toFixed(6));
+    }
+    return 0;
+}
+
+function computeCompareBranchBonus(atomId: string, graphFeatureIndex: GraphFeatureIndex): number {
+    if (graphFeatureIndex.queryIntent !== 'compare') {
+        return 0;
+    }
+    const toAnchorSignal = graphFeatureIndex.pathToAnchorByAtomId.get(atomId);
+    const fromAnchorSignal = graphFeatureIndex.pathFromAnchorByAtomId.get(atomId);
+    const directContrastToAnchor = Boolean(
+        toAnchorSignal
+        && toAnchorSignal.distance === 1
+        && (toAnchorSignal.relationKinds.includes('contrast') || toAnchorSignal.relationKinds.includes('analogy'))
+    );
+    const directContrastFromAnchor = Boolean(
+        fromAnchorSignal
+        && fromAnchorSignal.distance === 1
+        && (fromAnchorSignal.relationKinds.includes('contrast') || fromAnchorSignal.relationKinds.includes('analogy'))
+    );
+    if (directContrastToAnchor || directContrastFromAnchor) {
+        return 0.24;
     }
     return 0;
 }
@@ -1046,6 +1081,7 @@ function computeGraphFeatureScore(
     );
     const relationIntentBonus = computeRelationIntentBonus(atomId, graphFeatureIndex);
     const temporalValidityBonus = computeTemporalValidityBonus(context, atomId);
+    const compareBranchBonus = computeCompareBranchBonus(atomId, graphFeatureIndex);
     const hubPenalty = computeHubPenalty(atomId, graphFeatureIndex);
     return Number((
         anchorDistanceBonus
@@ -1053,6 +1089,7 @@ function computeGraphFeatureScore(
         + pathFromAnchorBonus
         + relationIntentBonus
         + temporalValidityBonus
+        + compareBranchBonus
         - hubPenalty
     ).toFixed(6));
 }
