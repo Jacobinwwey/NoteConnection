@@ -1,12 +1,16 @@
 import type {
     AnswerReleaseDecision,
+    AnswerReleaseGateId,
     KnowledgeQueryResolvedScope,
 } from './types';
 
 export interface KnowledgeWorkspaceConversationRegressionExpectation {
     minCitations: number;
     scopeSource: NonNullable<KnowledgeQueryResolvedScope['scopeSource']>;
-    answerReleaseDecision: AnswerReleaseDecision;
+    answerReleaseDecision?: AnswerReleaseDecision;
+    acceptedAnswerReleaseDecisions?: AnswerReleaseDecision[];
+    runtimeAnswerReleaseDecision?: AnswerReleaseDecision;
+    runtimeRequiredFailedGateIds?: AnswerReleaseGateId[];
     plannerTitleLikeQueries: string[];
     retrievalModes?: string[];
     primarySourcePath: string;
@@ -62,12 +66,15 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
         expected: {
             minCitations: 1,
             scopeSource: 'explicit_request',
-            answerReleaseDecision: 'release',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
+            runtimeAnswerReleaseDecision: 'revise',
+            runtimeRequiredFailedGateIds: ['query_intent_alignment'],
             plannerTitleLikeQueries: ['waterglass', 'water glass'],
             primarySourcePath: 'Knowledge_Base/waterglass/water glass.md',
             answerMustNotContain: [
                 'No scoped knowledge points matched',
                 'retrieval_candidates_below_threshold',
+                '本技术文档旨在',
             ],
         },
     },
@@ -80,12 +87,13 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
         expected: {
             minCitations: 1,
             scopeSource: 'explicit_request',
-            answerReleaseDecision: 'release',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
             plannerTitleLikeQueries: ['water glass', 'waterglass'],
             primarySourcePath: 'Knowledge_Base/waterglass/water glass.md',
             answerMustNotContain: [
                 'No scoped knowledge points matched',
                 'retrieval_candidates_below_threshold',
+                '本技术文档旨在',
             ],
         },
     },
@@ -98,7 +106,7 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
         expected: {
             minCitations: 1,
             scopeSource: 'planner_scope_recovery',
-            answerReleaseDecision: 'release',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
             plannerTitleLikeQueries: ['water glass', 'waterglass'],
             retrievalModes: ['planner_scope_recovery'],
             primarySourcePath: 'Knowledge_Base/waterglass/water glass.md',
@@ -118,7 +126,7 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
         expected: {
             minCitations: 1,
             scopeSource: 'planner_scope_recovery',
-            answerReleaseDecision: 'release',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
             plannerTitleLikeQueries: ['waterglass', 'water glass'],
             retrievalModes: ['planner_scope_recovery'],
             primarySourcePath: 'Knowledge_Base/waterglass/water glass.md',

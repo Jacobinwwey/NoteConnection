@@ -2286,6 +2286,14 @@ body.agent-workspace-open .agent-workspace-drawer {
   padding-inline: 6px;
 }
 
+.agent-focus-inline-highlight {
+  background: rgba(251, 191, 36, 0.28);
+  color: inherit;
+  border-radius: 3px;
+  box-shadow: inset 0 -1px 0 rgba(251, 191, 36, 0.48);
+  padding-inline: 1px;
+}
+
 .agent-side-work-area {
   display: grid;
   grid-template-columns: 1fr;

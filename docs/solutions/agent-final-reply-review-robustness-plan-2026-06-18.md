@@ -28,7 +28,10 @@ The target is not another prompt framework. The target is a deterministic releas
 
 - Re-audit confirms the original missing-owner problem is already closed in code. The live work now hardens two narrower boundaries rather than reopening framework debates.
 - `src/learning/answerReleaseReview.ts` now adds `claim_state_consistency`, a deterministic same-subject state gate for definition/copula contradictions such as `open system` vs `closed system`.
+- `src/learning/answerReleaseReview.ts` now also adds `query_intent_alignment`, so definition-style queries revise meta-documentary drafts such as `本技术文档旨在...` into direct grounded definitions before release.
 - `src/frontend/markdown_runtime.js` now exposes block-level source-line provenance for rendered markdown, and `src/frontend/workspace_panes.js` now prefers `source_line_provenance` before `line_window` / `snippet_fallback`.
+- The right pane now also projects the matched evidence fragment into inline highlight markup inside the selected rendered node instead of only tinting the larger paragraph/container.
+- Shared alias/scope regressions now separate corpus-stable public-answer invariants from screenshot-specific runtime behavior: synthetic corpora may legitimately `release` or `revise`, while the real `waterglass_explicit_scope_compact_zh` runtime case still requires `revise` with `query_intent_alignment`.
 - The remaining provenance gap is no longer “no source-to-render provenance.” It is deeper exact-span / nested provenance beyond the current block-level mapping.
 
 ### First Principles
@@ -251,6 +254,9 @@ Attached additively to:
   - `financial_scope_recovery_spaced_en`
   - `financial_scope_recovery_compact_en`
 - The screenshot-derived `waterglass_explicit_scope_compact_zh` case is now the durable acceptance owner for `1781782257390.jpg`, not only a one-off manual repro.
+- The corpus contract is now intentionally split by invariant strength:
+  - shared Jest fixtures accept either `release` or `revise` when the final public answer is already contracted and grounded,
+  - runtime verification for the real screenshot-derived note still requires `revise` plus failed gate `query_intent_alignment`.
 - `src/learning/KnowledgeWorkspaceConversationRegression.test.ts` now runs the same corpus in-memory and deliberately injects noisy `financial` documents (`liquidity`, `glass steagall act`, `watered stock`) so recovery has to beat realistic in-scope distractors.
 - `scripts/verify-knowledge-workspace-runtime.js` now loads the built corpus by default when no ad hoc `--query` is supplied, and it also supports targeted `--case` execution without losing backward-compatible ad hoc `--target` or `--query` flows.
 - This corpus exposed a second real bug in `KnowledgeLearningPlatform.ts`: planner scope recovery previously triggered only when reranking returned zero items.
@@ -516,7 +522,10 @@ The first two decide capability. The third decides trust.
 
 - 复审确认：最初的“缺失 owner”问题已经在代码中关闭，当前工作不再是重开 framework 争论，而是继续加固两个更窄的不变量边界。
 - `src/learning/answerReleaseReview.ts` 现在新增 `claim_state_consistency`，用于拦截 `open system` vs `closed system` 这类同主体 definition/copula 状态矛盾。
+- `src/learning/answerReleaseReview.ts` 现在也新增 `query_intent_alignment`，因此定义型问题会把 `本技术文档旨在...` 这类元文档草稿改写成直接定义句后再 release。
 - `src/frontend/markdown_runtime.js` 现在会暴露 block-level 的 source-line provenance，`src/frontend/workspace_panes.js` 则优先消费 `source_line_provenance`，之后才回退到 `line_window` / `snippet_fallback`。
+- 右侧 pane 现在也会在选中的渲染节点内部投影命中的 evidence fragment 内联高亮，而不再只是给更大的段落 / 容器着色。
+- 共享 alias/scope 回归现在已经把“跨语料稳定的公开回答不变量”与“截图驱动的运行时行为”拆开：简化语料允许 `release` 或 `revise`，而真实 `waterglass_explicit_scope_compact_zh` 运行时用例仍然要求 `revise`，且必须命中 `query_intent_alignment`。
 - 当前剩余的 provenance 缺口已经不再是“完全没有 source-to-render provenance”，而是超出当前 block-level mapping 的 exact-span / nested provenance。
 
 ### 第一性原理
@@ -739,6 +748,9 @@ The first two decide capability. The third decides trust.
   - `financial_scope_recovery_spaced_en`
   - `financial_scope_recovery_compact_en`
 - 截图派生的 `waterglass_explicit_scope_compact_zh` 现在已经成为 `1781782257390.jpg` 的 durable 验收 owner，而不再只是一次性手工复现。
+- 这份语料的契约现在也按不变量强度分层：
+  - 共享 Jest 语料只要求最终公开回答保持 grounded 且收缩，因此当合成层已经直接产出好答案时，`release` 与 `revise` 都是可接受结果；
+  - 真实截图派生的运行时验收仍然要求 `waterglass_explicit_scope_compact_zh` 触发 `revise`，并明确失败 gate 为 `query_intent_alignment`。
 - `src/learning/KnowledgeWorkspaceConversationRegression.test.ts` 现在会以内存态运行同一批语料，并故意注入带噪声的 `financial` 文档（`liquidity`、`glass steagall act`、`watered stock`），让恢复逻辑必须击败真实 scope 内干扰项。
 - `scripts/verify-knowledge-workspace-runtime.js` 现在在没有 ad hoc `--query` 时默认加载构建后的共享语料，同时保留向后兼容的 `--target` / `--query` 路径，并支持只跑指定 `--case`。
 - 这批语料还暴露了 `KnowledgeLearningPlatform.ts` 中第二个真实缺陷：planner scope recovery 过去只会在 rerank 后 0 结果时触发。

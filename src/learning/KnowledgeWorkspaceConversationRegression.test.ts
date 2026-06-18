@@ -91,9 +91,15 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
             const retrieval = response.trace.retrieval || {
                 retrievalModes: [],
             };
+            const acceptedDecisions = Array.isArray(expected.acceptedAnswerReleaseDecisions)
+                && expected.acceptedAnswerReleaseDecisions.length > 0
+                ? expected.acceptedAnswerReleaseDecisions
+                : (expected.answerReleaseDecision ? [expected.answerReleaseDecision] : []);
 
             expect(citations.length).toBeGreaterThanOrEqual(expected.minCitations);
-            expect(response.answerReleaseReview?.decision).toBe(expected.answerReleaseDecision);
+            if (acceptedDecisions.length > 0) {
+                expect(acceptedDecisions).toContain(response.answerReleaseReview?.decision);
+            }
             expect(response.answerReleaseReview?.publicAnswer).toBe(response.answer);
             expect(response.trace.usedScope.scopeSource).toBe(expected.scopeSource);
             expect(response.knowledgePoints.length).toBeGreaterThan(0);

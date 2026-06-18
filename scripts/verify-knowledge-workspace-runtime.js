@@ -151,6 +151,8 @@ function validatePositiveConversationResult(summary, options) {
     expectedPrimarySourcePath,
     expectedRecoveredSourcePaths,
     expectedAnswerReleaseDecision,
+    acceptedAnswerReleaseDecisions,
+    requiredFailedGateIds,
     answerMustNotContain,
   } = options;
   const forbiddenFragments = Array.isArray(answerMustNotContain) && answerMustNotContain.length > 0
@@ -188,6 +190,31 @@ function validatePositiveConversationResult(summary, options) {
     throw new Error(
       `answerReleaseReview decision mismatch for query=${query}: expected=${expectedAnswerReleaseDecision} actual=${JSON.stringify(summary.answerReleaseReview)}`
     );
+  }
+  if (
+    !expectedAnswerReleaseDecision
+    && Array.isArray(acceptedAnswerReleaseDecisions)
+    && acceptedAnswerReleaseDecisions.length > 0
+  ) {
+    const observedDecision = String(summary.answerReleaseReview.decision || '');
+    const normalizedAcceptedDecisions = acceptedAnswerReleaseDecisions.map((entry) => String(entry || ''));
+    if (!normalizedAcceptedDecisions.includes(observedDecision)) {
+      throw new Error(
+        `answerReleaseReview decision outside accepted set for query=${query}: accepted=${JSON.stringify(normalizedAcceptedDecisions)} actual=${JSON.stringify(summary.answerReleaseReview)}`
+      );
+    }
+  }
+  if (Array.isArray(requiredFailedGateIds) && requiredFailedGateIds.length > 0) {
+    const failedGateIds = Array.isArray(summary.answerReleaseReview.failedGateIds)
+      ? summary.answerReleaseReview.failedGateIds
+      : [];
+    requiredFailedGateIds.forEach((gateId) => {
+      if (!failedGateIds.includes(gateId)) {
+        throw new Error(
+          `answerReleaseReview failedGateIds missing "${gateId}" for query=${query}: actual=${JSON.stringify(summary.answerReleaseReview)}`
+        );
+      }
+    });
   }
   if (summary.missDiagnostics && summary.missDiagnostics.reason === 'retrieval_candidates_below_threshold') {
     throw new Error(`conversation still fell below retrieval threshold for query=${query}: ${JSON.stringify(summary.missDiagnostics)}`);
@@ -438,7 +465,10 @@ async function main() {
         expectedRetrievalModes: regressionCase.expected.retrievalModes,
         expectedPrimarySourcePath: regressionCase.expected.primarySourcePath,
         expectedRecoveredSourcePaths: regressionCase.expected.recoveredSourcePaths,
-        expectedAnswerReleaseDecision: regressionCase.expected.answerReleaseDecision,
+        expectedAnswerReleaseDecision: regressionCase.expected.runtimeAnswerReleaseDecision
+          || regressionCase.expected.answerReleaseDecision,
+        acceptedAnswerReleaseDecisions: regressionCase.expected.acceptedAnswerReleaseDecisions,
+        requiredFailedGateIds: regressionCase.expected.runtimeRequiredFailedGateIds,
         answerMustNotContain: regressionCase.expected.answerMustNotContain,
       });
       caseResults.push(summary);

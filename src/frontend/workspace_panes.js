@@ -361,6 +361,7 @@
             sourceProvenanceBlockCount: 0,
             sourceProvenanceAttributedNodeCount: 0,
             highlightedNodeCount: 0,
+            inlineHighlightCount: 0,
             highlightStrategy: 'none',
             usedFallback: false,
             failureReason: '',
@@ -736,10 +737,238 @@
         };
     }
 
+    function clearGraphFocusInlineHighlights(root) {
+        if (!root || typeof root.querySelectorAll !== 'function') {
+            return;
+        }
+        Array.from(root.querySelectorAll('[data-agent-focus-inline-highlight="true"]')).forEach((element) => {
+            const parent = element.parentNode;
+            if (!parent) {
+                return;
+            }
+            while (element.firstChild) {
+                parent.insertBefore(element.firstChild, element);
+            }
+            parent.removeChild(element);
+            if (typeof parent.normalize === 'function') {
+                parent.normalize();
+            }
+        });
+    }
+
+    function collectGraphFocusInlineCandidateTexts(anchor) {
+        const candidates = [];
+        const seen = new Set();
+        const append = (value) => {
+            const normalizedValue = normalizeGraphFocusText(value);
+            if (normalizedValue.length < 4) {
+                return;
+            }
+            const lowered = normalizedValue.toLowerCase();
+            if (seen.has(lowered)) {
+                return;
+            }
+            seen.add(lowered);
+            candidates.push(normalizedValue);
+        };
+        append(anchor && anchor.fallbackText);
+        append(anchor && anchor.text);
+        [anchor && anchor.fallbackText, anchor && anchor.text].forEach((value) => {
+            normalizeGraphFocusText(value)
+                .split(/[.;,:()[\]{}!?，。；：！？]/u)
+                .map((fragment) => fragment.trim())
+                .filter((fragment) => fragment.length >= 8)
+                .forEach((fragment) => append(fragment));
+        });
+        return candidates.sort((left, right) => right.length - left.length);
+    }
+
+    function buildGraphFocusNormalizedSearchIndex(rawText) {
+        const ranges = [];
+        const normalizedCharacters = [];
+        const source = String(rawText || '');
+        let rawIndex = 0;
+        while (rawIndex < source.length) {
+            const character = source[rawIndex];
+            if (/\s/u.test(character)) {
+                const whitespaceStart = rawIndex;
+                while (rawIndex < source.length && /\s/u.test(source[rawIndex])) {
+                    rawIndex += 1;
+                }
+                normalizedCharacters.push(' ');
+                ranges.push({
+                    rawStart: whitespaceStart,
+                    rawEnd: rawIndex,
+                });
+                continue;
+            }
+            normalizedCharacters.push(character.toLowerCase());
+            ranges.push({
+                rawStart: rawIndex,
+                rawEnd: rawIndex + 1,
+            });
+            rawIndex += 1;
+        }
+        return {
+            normalizedText: normalizedCharacters.join(''),
+            ranges,
+        };
+    }
+
+    function doGraphFocusRawRangesOverlap(left, right) {
+        if (!left || !right) {
+            return false;
+        }
+        return Number(left.rawStart) < Number(right.rawEnd) && Number(right.rawStart) < Number(left.rawEnd);
+    }
+
+    function findGraphFocusInlineHighlightRange(root, candidateTexts, occupiedRanges) {
+        if (!root || candidateTexts.length <= 0) {
+            return null;
+        }
+        const rawText = String(root.textContent || '');
+        if (!rawText) {
+            return null;
+        }
+        const searchIndex = buildGraphFocusNormalizedSearchIndex(rawText);
+        if (!searchIndex.normalizedText || searchIndex.ranges.length <= 0) {
+            return null;
+        }
+        const usedRanges = Array.isArray(occupiedRanges) ? occupiedRanges : [];
+        for (const candidateText of candidateTexts) {
+            const normalizedCandidate = normalizeGraphFocusText(candidateText).toLowerCase();
+            if (normalizedCandidate.length < 4) {
+                continue;
+            }
+            let searchStart = 0;
+            while (searchStart <= searchIndex.normalizedText.length - normalizedCandidate.length) {
+                const matchIndex = searchIndex.normalizedText.indexOf(normalizedCandidate, searchStart);
+                if (matchIndex < 0) {
+                    break;
+                }
+                const lastIndex = matchIndex + normalizedCandidate.length - 1;
+                const matchRange = {
+                    rawStart: searchIndex.ranges[matchIndex].rawStart,
+                    rawEnd: searchIndex.ranges[lastIndex].rawEnd,
+                };
+                if (!usedRanges.some((usedRange) => doGraphFocusRawRangesOverlap(usedRange, matchRange))) {
+                    return matchRange;
+                }
+                searchStart = matchIndex + normalizedCandidate.length;
+            }
+        }
+        return null;
+    }
+
+    function buildGraphFocusTextNodeIndex(root) {
+        if (!root || typeof document.createTreeWalker !== 'function') {
+            return [];
+        }
+        const textNodes = [];
+        const showText = window.NodeFilter && Number(window.NodeFilter.SHOW_TEXT)
+            ? Number(window.NodeFilter.SHOW_TEXT)
+            : 4;
+        const walker = document.createTreeWalker(root, showText, null);
+        let cursor = 0;
+        let currentNode = walker.nextNode();
+        while (currentNode) {
+            const parentTagName = currentNode.parentNode && currentNode.parentNode.nodeName
+                ? String(currentNode.parentNode.nodeName).toLowerCase()
+                : '';
+            const nodeValue = String(currentNode.nodeValue || '');
+            if (nodeValue && parentTagName !== 'script' && parentTagName !== 'style') {
+                const start = cursor;
+                cursor += nodeValue.length;
+                textNodes.push({
+                    node: currentNode,
+                    start,
+                    end: cursor,
+                });
+            }
+            currentNode = walker.nextNode();
+        }
+        return textNodes;
+    }
+
+    function wrapGraphFocusTextNodeSegment(textNode, startOffset, endOffset) {
+        const value = String(textNode && textNode.nodeValue || '');
+        if (!textNode || startOffset < 0 || endOffset > value.length || startOffset >= endOffset) {
+            return null;
+        }
+        const matchedNode = textNode.splitText(startOffset);
+        matchedNode.splitText(endOffset - startOffset);
+        const highlight = document.createElement('mark');
+        highlight.className = 'agent-focus-inline-highlight';
+        highlight.setAttribute('data-agent-focus-inline-highlight', 'true');
+        const parent = matchedNode.parentNode;
+        if (!parent) {
+            return null;
+        }
+        parent.replaceChild(highlight, matchedNode);
+        highlight.appendChild(matchedNode);
+        return highlight;
+    }
+
+    function applyGraphFocusInlineHighlightRange(root, range) {
+        if (!root || !range) {
+            return 0;
+        }
+        const segments = buildGraphFocusTextNodeIndex(root)
+            .map((entry) => ({
+                node: entry.node,
+                startOffset: Math.max(0, Number(range.rawStart) - entry.start),
+                endOffset: Math.min(Number(range.rawEnd) - entry.start, entry.end - entry.start),
+            }))
+            .filter((segment) => segment.startOffset < segment.endOffset)
+            .reverse();
+        let wrappedCount = 0;
+        segments.forEach((segment) => {
+            if (wrapGraphFocusTextNodeSegment(segment.node, segment.startOffset, segment.endOffset)) {
+                wrappedCount += 1;
+            }
+        });
+        return wrappedCount;
+    }
+
+    function applyGraphFocusInlineHighlights(selectedEntries) {
+        const entries = Array.isArray(selectedEntries) ? selectedEntries : [];
+        if (entries.length <= 0) {
+            return 0;
+        }
+        const entriesByNode = new Map();
+        entries.forEach((entry) => {
+            if (!entry || !entry.node) {
+                return;
+            }
+            const existingEntries = entriesByNode.get(entry.node) || [];
+            existingEntries.push(entry);
+            entriesByNode.set(entry.node, existingEntries);
+        });
+        let inlineHighlightCount = 0;
+        entriesByNode.forEach((nodeEntries, node) => {
+            clearGraphFocusInlineHighlights(node);
+            const occupiedRanges = [];
+            nodeEntries.forEach((entry) => {
+                const candidateTexts = collectGraphFocusInlineCandidateTexts(entry.anchor);
+                const range = findGraphFocusInlineHighlightRange(node, candidateTexts, occupiedRanges);
+                if (!range) {
+                    return;
+                }
+                const wrappedCount = applyGraphFocusInlineHighlightRange(node, range);
+                if (wrappedCount > 0) {
+                    occupiedRanges.push(range);
+                    inlineHighlightCount += 1;
+                }
+            });
+        });
+        return inlineHighlightCount;
+    }
+
     function highlightGraphFocusRenderedMarkdown(container, matchedSpans, markdownSource) {
         if (!container) {
             return {
                 highlightedNodeCount: 0,
+                inlineHighlightCount: 0,
                 highlightStrategy: 'none',
             };
         }
@@ -752,11 +981,12 @@
         if (anchors.length <= 0 || candidates.length <= 0) {
             return {
                 highlightedNodeCount: 0,
+                inlineHighlightCount: 0,
                 highlightStrategy: 'none',
             };
         }
 
-        const selectedNodes = [];
+        const selectedEntries = [];
         let highlightStrategy = 'none';
         anchors.forEach((anchor) => {
             let bestNode = null;
@@ -774,7 +1004,11 @@
             if (!bestNode || bestScore <= 0) {
                 return;
             }
-            selectedNodes.push(bestNode);
+            selectedEntries.push({
+                node: bestNode,
+                anchor,
+                strategy: bestStrategy,
+            });
             if (bestStrategy === 'source_line_provenance') {
                 highlightStrategy = 'source_line_provenance';
             } else if (bestStrategy === 'line_window' && highlightStrategy !== 'source_line_provenance') {
@@ -784,18 +1018,22 @@
             }
         });
 
-        const dedupedNodes = Array.from(new Set(selectedNodes));
+        const dedupedNodes = Array.from(new Set(selectedEntries.map((entry) => entry.node)));
         const prunedNodes = dedupedNodes.filter((candidate) => !dedupedNodes.some((otherCandidate) => (
             otherCandidate !== candidate
             && typeof candidate.contains === 'function'
             && candidate.contains(otherCandidate)
         )));
+        const prunedNodeSet = new Set(prunedNodes);
+        const prunedEntries = selectedEntries.filter((entry) => prunedNodeSet.has(entry.node));
         prunedNodes.forEach((candidate) => {
             candidate.classList.add('agent-focus-match');
             candidate.setAttribute('data-agent-focus-highlight', 'true');
         });
+        const inlineHighlightCount = applyGraphFocusInlineHighlights(prunedEntries);
         return {
             highlightedNodeCount: prunedNodes.length,
+            inlineHighlightCount,
             highlightStrategy,
         };
     }
@@ -902,6 +1140,7 @@
                     resolvedSource.markdownSource
                 );
                 diagnostics.highlightedNodeCount = Number(highlightResult && highlightResult.highlightedNodeCount || 0);
+                diagnostics.inlineHighlightCount = Number(highlightResult && highlightResult.inlineHighlightCount || 0);
                 diagnostics.highlightStrategy = String(highlightResult && highlightResult.highlightStrategy || 'none');
             } else {
                 highlightGraphFocusRenderedMarkdown(

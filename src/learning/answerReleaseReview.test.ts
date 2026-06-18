@@ -219,6 +219,78 @@ describe('answerReleaseReview', () => {
         ]));
     });
 
+    test('revises definition-query answers when the draft describes the document instead of the concept', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'This technical document analyzes water glass as a physical system. Water glass is a transparent container filled with water.',
+            evidenceSnippet: 'This technical document analyzes water glass as a physical system. Water glass is a transparent container filled with water.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass',
+                snippet: 'This technical document analyzes water glass as a physical system. Water glass is a transparent container filled with water.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass',
+                    snippet: 'This technical document analyzes water glass as a physical system. Water glass is a transparent container filled with water.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: 'This technical document analyzes water glass as a physical system.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T00:05:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('query_intent_alignment');
+        expect(review.publicAnswer).toBe('Water Glass is a transparent container filled with water.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'query_intent_alignment',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('revises Chinese definition-query answers when the draft only repeats document framing', () => {
+        const point = makeKnowledgePoint({
+            title: '水杯 (water glass)',
+            summary: '本技术文档旨在对“水杯”这一系统进行全面的科学分析。此处的“水杯”被定义为一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。',
+            evidenceSnippet: '本技术文档旨在对“水杯”这一系统进行全面的科学分析。此处的“水杯”被定义为一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: '水杯 (water glass)',
+                snippet: '本技术文档旨在对“水杯”这一系统进行全面的科学分析。此处的“水杯”被定义为一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: '水杯 (water glass)',
+                    snippet: '本技术文档旨在对“水杯”这一系统进行全面的科学分析。此处的“水杯”被定义为一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '什么是waterglass?',
+            draftAnswer: '水杯 (water glass) 本技术文档旨在对“水杯”这一系统进行全面的科学分析。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T00:07:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('query_intent_alignment');
+        expect(review.publicAnswer).toBe('水杯 (water glass) 是一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。');
+    });
+
     test('revises grounded answers when structured numeric facts conflict with support', () => {
         const densityPoint = makeKnowledgePoint({
             title: 'Water Density',

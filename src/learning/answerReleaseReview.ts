@@ -84,6 +84,13 @@ type GraphOrderConflict = {
     evidence: GraphOrderEvidence;
 };
 
+type QueryIntentAlignmentResult = {
+    passed: boolean;
+    applicable: boolean;
+    comparableFrameCount: number;
+    supportFrame: (StateFrame & { label: string }) | null;
+};
+
 const INTERNAL_DIAGNOSTIC_FRAGMENTS = [
     'No scoped knowledge points matched',
     'retrieval_candidates_below_threshold',
@@ -127,6 +134,10 @@ const STRUCTURED_UNIT_ALIASES: Record<string, string> = {
 const STRUCTURED_FACT_PATTERN = /(-?\d{1,4}(?:,\d{3})*(?:\.\d+)?)(?:\s*(kg\/m(?:³|3)|gpa|mpa|kpa|pa|km\/h|m\/s|km|cm|mm|ml|mb|gb|tb|kw|mw|%|percent|percentage|years?|yrs?|yr|year|°c|℃|℉|年))?/giu;
 
 const YEAR_CONTEXT_PATTERN = /\b(?:year|years|dated|since|until|from|during|after|before|in|on)\b|年/iu;
+const ENGLISH_DEFINITION_QUERY_PATTERN = /\b(?:what\s+is|what'?s|what\s+are|who\s+is|define|definition\s+of|meaning\s+of)\b/iu;
+const CHINESE_DEFINITION_QUERY_PATTERN = /什么是|指的是什么|定义|是什么意思/u;
+const ENGLISH_META_DOCUMENTARY_PATTERN = /\b(?:this|the)\s+(?:technical\s+)?document\b[^.!?\n\r]{0,120}\b(?:aims?|describes?|analy[sz]es?|provides?|outlines?)\b|\bthis\s+(?:section|chapter)\b|\bwe\s+will\b/iu;
+const CHINESE_META_DOCUMENTARY_PATTERN = /(?:本|该)?技术文档|本文档|本节|本章|我们将|旨在(?:对|从|说明|分析)|用于阐述/u;
 
 const STRUCTURED_ANCHOR_STOPWORDS = new Set([
     'a',
@@ -321,6 +332,48 @@ function buildGroundedRevisionAnswer(
         return `${title}: ${summary}`;
     }
     return summary || title || normalizeWhitespace(context.draftAnswer);
+}
+
+function stripTerminalSentencePunctuation(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/[.!?\u3002\uFF01\uFF1F;；:：]+$/u, '')
+        .trim();
+}
+
+function buildDefinitionIntentRevisionAnswer(
+    context: AnswerReleaseReviewContext,
+    supportFrame: StateFrame & { label: string }
+): string {
+    const leadingPoint = context.knowledgePoints[0];
+    const subject = normalizeWhitespace(String(leadingPoint?.title || supportFrame.subject || ''));
+    const value = stripTerminalSentencePunctuation(supportFrame.value);
+    const normalizedSurface = normalizeWhitespace(String(supportFrame.surface || ''));
+    const useChinese = containsCjk([
+        context.message,
+        subject,
+        value,
+        normalizedSurface,
+    ].join(' '));
+    if (!useChinese && normalizedSurface) {
+        const canonicalizedSurface = (
+            subject
+            && supportFrame.subject
+            && normalizedSurface.toLowerCase().startsWith(normalizeWhitespace(supportFrame.subject).toLowerCase())
+        )
+            ? `${subject}${normalizedSurface.slice(normalizeWhitespace(supportFrame.subject).length)}`
+            : normalizedSurface;
+        return /[.!?\u3002\uFF01\uFF1F]$/u.test(canonicalizedSurface)
+            ? canonicalizedSurface
+            : `${canonicalizedSurface}.`;
+    }
+    if (!subject || !value) {
+        return normalizeWhitespace(supportFrame.surface || buildGroundedRevisionAnswer(context));
+    }
+    if (useChinese) {
+        const separator = /[A-Za-z0-9)\]]$/u.test(subject) ? ' 是' : '是';
+        return `${subject}${separator}${value}。`;
+    }
+    return `${subject} is ${value}.`;
 }
 
 function buildGraphOrderRevisionAnswer(
@@ -766,7 +819,15 @@ function buildStateFrame(
 function extractStateFrames(value: string): StateFrame[] {
     const patterns: Array<{ pattern: RegExp; connectorKind: StateFrameConnectorKind }> = [
         {
+            pattern: /^(.{1,80}?)\s+(?:is|are|was|were)\s+defined\s+as\s+(.+)$/iu,
+            connectorKind: 'definition',
+        },
+        {
             pattern: /^(.{1,80}?)\s+(?:is|are|was|were|means|refers to|belongs to)\s+(.+)$/iu,
+            connectorKind: 'definition',
+        },
+        {
+            pattern: /^(.{1,24}?)(?:被定义为|定义为)(.+)$/u,
             connectorKind: 'definition',
         },
         {
@@ -900,6 +961,64 @@ function evaluateGroundingAlignment(context: AnswerReleaseReviewContext): {
         passed: best.score >= 0.3,
         bestScore: best.score,
         bestLabel: best.label,
+    };
+}
+
+function isDefinitionIntentQuery(message: string): boolean {
+    const normalizedMessage = normalizeWhitespace(message);
+    if (!normalizedMessage) {
+        return false;
+    }
+    return (
+        ENGLISH_DEFINITION_QUERY_PATTERN.test(normalizedMessage)
+        || CHINESE_DEFINITION_QUERY_PATTERN.test(normalizedMessage)
+    );
+}
+
+function isMetaDocumentaryAnswer(answer: string): boolean {
+    const normalizedAnswer = normalizeWhitespace(answer);
+    if (!normalizedAnswer) {
+        return false;
+    }
+    return (
+        ENGLISH_META_DOCUMENTARY_PATTERN.test(normalizedAnswer)
+        || CHINESE_META_DOCUMENTARY_PATTERN.test(normalizedAnswer)
+    );
+}
+
+function evaluateQueryIntentAlignment(
+    context: AnswerReleaseReviewContext
+): QueryIntentAlignmentResult {
+    if (!isDefinitionIntentQuery(context.message)) {
+        return {
+            passed: true,
+            applicable: false,
+            comparableFrameCount: 0,
+            supportFrame: null,
+        };
+    }
+    const supportFrames = buildSupportCandidates(context).flatMap((candidate) => (
+        extractStateFrames(candidate.text)
+            .filter((frame) => frame.connectorKind === 'definition')
+            .map((frame) => ({
+                ...frame,
+                label: candidate.label,
+            }))
+    ));
+    const primarySupportFrame = supportFrames[0] || null;
+    if (!primarySupportFrame) {
+        return {
+            passed: true,
+            applicable: true,
+            comparableFrameCount: 0,
+            supportFrame: null,
+        };
+    }
+    return {
+        passed: !isMetaDocumentaryAnswer(context.draftAnswer),
+        applicable: true,
+        comparableFrameCount: supportFrames.length,
+        supportFrame: primarySupportFrame,
     };
 }
 
@@ -1223,6 +1342,7 @@ function checkPublicSurfaceContraction(answer: string): boolean {
 function buildDecision(
     groundedEvidenceAvailable: boolean,
     groundingAlignmentPassed: boolean,
+    queryIntentAlignmentPassed: boolean,
     structuredConsistencyPassed: boolean,
     stateConsistencyPassed: boolean,
     polarityConsistencyPassed: boolean,
@@ -1235,6 +1355,7 @@ function buildDecision(
     }
     if (
         !groundingAlignmentPassed
+        || !queryIntentAlignmentPassed
         || !structuredConsistencyPassed
         || !stateConsistencyPassed
         || !polarityConsistencyPassed
@@ -1275,6 +1396,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             passed: true,
             bestScore: 1,
             bestLabel: '',
+        };
+    const queryIntentAlignment = groundedEvidenceAvailable
+        ? evaluateQueryIntentAlignment({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            applicable: false,
+            comparableFrameCount: 0,
+            supportFrame: null,
         };
     const structuredConsistency = groundedEvidenceAvailable
         ? evaluateStructuredConsistency({
@@ -1328,6 +1460,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     const decision = buildDecision(
         groundedEvidenceAvailable,
         groundingAlignment.passed,
+        queryIntentAlignment.passed,
         structuredConsistency.passed,
         stateConsistency.passed,
         polarityConsistency.passed,
@@ -1343,6 +1476,8 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                 ? (
                     primaryGraphOrderConflict
                         ? buildGraphOrderRevisionAnswer(context, primaryGraphOrderConflict)
+                        : (!queryIntentAlignment.passed && queryIntentAlignment.supportFrame)
+                            ? buildDefinitionIntentRevisionAnswer(context, queryIntentAlignment.supportFrame)
                         : buildGroundedRevisionAnswer(context)
                 )
                 : draftAnswer
@@ -1378,6 +1513,23 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : `Draft answer drifted away from grounded support (best support: ${groundingAlignment.bestLabel || 'primary evidence'}, score ${Math.round(groundingAlignment.bestScore * 100)}%).`
                 )
                 : 'No evidence was available, so claim-grounding alignment was not evaluated.',
+        },
+        {
+            gateId: 'query_intent_alignment',
+            passed: queryIntentAlignment.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    !queryIntentAlignment.applicable
+                        ? 'The current query did not require definition-intent alignment.'
+                        : queryIntentAlignment.comparableFrameCount > 0
+                            ? (
+                                queryIntentAlignment.passed
+                                    ? 'Draft answer stayed aligned with the definition intent of the query.'
+                                    : 'Draft answer described the document instead of directly answering the definition query.'
+                            )
+                            : 'No grounded definition frame was available, so intent alignment stayed conservative.'
+                )
+                : 'No evidence was available, so definition-intent alignment was not evaluated.',
         },
         {
             gateId: 'claim_structured_consistency',

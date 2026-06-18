@@ -5,9 +5,11 @@
 - [x] `src/agent_workspace.frontend.test.ts` 现在已经固定两类关键运维失败：当重复 snippet 同时出现在多个段落里时，必须命中 line-anchored 段落；当行号元数据不可用或不可信时，必须退回 snippet 高亮，而不是误高亮错误段落。
 - [x] `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_state_consistency`，因此 `open system` vs `closed system` 这类同主体状态反转会在中英文路径上被 release gate 拦下并改写。
 - [x] `src/frontend/markdown_runtime.js` 现在会给渲染后的 markdown block 标注 source-line 元数据，`src/frontend/workspace_panes.js` 则会在渲染节点 source range 与可信 matched span 重叠时优先使用 `source_line_provenance`。
+- [x] `src/frontend/workspace_panes.js` 现在还会把命中的 evidence fragment 投影成 graph-focus 选中节点内的内联高亮，而不再只是整段/整块着色。
+- [x] `src/learning/answerReleaseReview.ts` 现在还会执行 `query_intent_alignment`，因此 `什么是waterglass?` 这类定义型问题在已有定义证据时，不会再把 `本技术文档旨在...` 这类文档自述直接放行到主回答区。
 - [x] 用户提供的截图 `1781782257390.jpg` 继续作为正式验收 owner 保留在 `waterglass_explicit_scope_compact_zh`；当前根因已经明确为 planner/retrieval normalization 漂移叠加公开回答诊断泄漏，而不是泛化的“RAG 能力不足”。
-- [ ] 下一活跃缺口：继续扩展确定性的 claim-vs-citation / claim-vs-evidence 矛盾检测，覆盖当前 lexical + structured + state + polarity + graph-order 栈之外的冲突，同时避免把 reviewer 扩张成猜测型 verifier。
-- [ ] 下一活跃缺口：在当前 block-level markdown source mapping 与 `source_line_provenance` 基线之上，继续推进更深的 source-to-render provenance。
+- [ ] 下一活跃缺口：继续扩展确定性的 claim-vs-citation / claim-vs-evidence 矛盾检测，覆盖当前 lexical + query-intent + structured + state + polarity + graph-order 栈之外的冲突，同时避免把 reviewer 扩张成猜测型 verifier。
+- [ ] 下一活跃缺口：在当前 block-level markdown source mapping 与 snippet-projected 内联高亮基线之上，继续推进 source-authenticated 的字符级 provenance。
 - [ ] 下一活跃缺口：继续扩充真实回归语料，覆盖 cross-scope、compact alias 与 synonym failure，同时保持向前兼容。
 
 ## 2026-06-18 最终回复审核活跃任务同步
@@ -51,7 +53,7 @@
 7. 运维检查面必须能看到 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
 8. 导出的 `knowledgeRunReports` 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时干净省略该字段。
 9. 导出的运行时状态还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计遥测，以及同一路径派生出的 review-trend / gate-aging / compare-ready drilldown 摘要，并且 `knowledge_run` 历史卡片与 compare 卡片要消费同一套 reviewer 遥测。
-10. 右侧文件命中预览必须基于稳定 payload 字段解析原文与命中高亮；即使 top-level hit 字段不完整，也必须能消费 citation-backed path/snippet；渲染后的 markdown block 必须保留 source-line 元数据，在渲染节点 range 与可信 span 重叠时优先使用 `source_line_provenance`，否则再回退到 `line_window` / `snippet_fallback`，且不扩大主回答区。
+10. 右侧文件命中预览必须基于稳定 payload 字段解析原文与命中高亮；即使 top-level hit 字段不完整，也必须能消费 citation-backed path/snippet；渲染后的 markdown block 必须保留 source-line 元数据，在渲染节点 range 与可信 span 重叠时优先使用 `source_line_provenance`，选中的节点内部还必须投影出命中片段的内联高亮，否则再回退到 `line_window` / `snippet_fallback`，且不扩大主回答区。
 11. 运行时验证现在必须通过共享的 alias/scope 回归语料，包括截图派生的 `waterglass` compact/spaced 双查询以及 `financial` 下的跨 scope 恢复双查询，并确认 `answerReleaseReview.publicAnswer === result.answer`。
 
 ## 2026-06-17 Agent Knowledge DAG 活跃任务同步

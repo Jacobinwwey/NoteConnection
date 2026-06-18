@@ -4437,6 +4437,62 @@ describe('workspace panes controller', () => {
         }));
     });
 
+    test('adds inline graph focus highlight for the matched evidence fragment', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'A water glass exchanges heat with the environment during the example setup.',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement) => {
+            container.innerHTML = `
+                <article class="reader-block">
+                    <h2>Water Glass</h2>
+                    <p data-case="inline">A water glass exchanges heat with the environment during the example setup.</p>
+                </article>
+            `;
+            return {
+                sourceBlockCount: 2,
+                attributedNodeCount: 0,
+            };
+        });
+
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+
+        controller.init();
+        controller.openGraphFocusPane({
+            atomId: 'atom_water_glass',
+            title: 'Water Glass',
+            sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            matchedSpans: [
+                {
+                    title: 'Heat exchange',
+                    snippet: 'exchanges heat with the environment',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                },
+            ],
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
+        expect(highlighted).toHaveLength(1);
+        expect((highlighted[0] as HTMLElement)?.dataset.case).toBe('inline');
+
+        const inlineHighlights = Array.from(graphBody?.querySelectorAll('[data-agent-focus-inline-highlight="true"]') || []);
+        expect(inlineHighlights).toHaveLength(1);
+        expect(inlineHighlights[0]?.textContent).toBe('exchanges heat with the environment');
+    });
+
     test('keeps reusable card renderers aligned with chat and evidence owners', () => {
         const repoRoot = path.resolve(__dirname, '..');
         const source = fs.readFileSync(
