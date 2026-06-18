@@ -15,6 +15,7 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 - Persistence now preserves still-valid store-side relation/temporal edges during auto-save snapshot rebuilds, which prevents read-side query/conversation flows from discarding externally enriched DAG structure before `connectionPaths` are assembled.
 - The retrieval path now uses bounded graph-aware ranking signals instead of leaning mainly on relation degree, but it still needs broader calibration against real regressions.
 - Retrieval-side graph intent detection now includes Chinese compare/how-to/explain markers, and direct compare branches receive an explicit structural promotion over reference-only notes.
+- The `graph_comparison_branch` quality gate is now calibrated against false positives: compare intent no longer passes on reference-only support without actual contrast/analogy or multi-branch structure.
 - Operator-facing diagnostics now exist in three concrete surfaces: graph-focus path-fallback diagnostics in the right pane, graph-context plus graph-diagnostics inspection inside durable `knowledge_run` cards, and compact graph telemetry inside knowledge-run history/compare review flows.
 - Prompt-framework research should guide contracts and evaluation, not pull Python frameworks into the app runtime.
 

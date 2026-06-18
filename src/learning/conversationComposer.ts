@@ -961,14 +961,24 @@ function buildKnowledgeRunQuality(
             && connectionPath.pathEdges.some((edge) => edge && edge.relationKind === 'prerequisite')
         ));
     const comparisonBranchRequired = intent === 'compare';
+    const comparisonBranchSignalPresent = Boolean(
+        graphContext
+        && (
+            graphContext.relationKinds.includes('contrast')
+            || graphContext.relationKinds.includes('analogy')
+            || (
+                Array.isArray(graphContext.knowledgePointRelations)
+                && graphContext.knowledgePointRelations.some((relation) => (
+                    relation
+                    && (relation.relationKind === 'contrast' || relation.relationKind === 'analogy')
+                ))
+            )
+            || (Array.isArray(graphContext.supportingTitles) && graphContext.supportingTitles.length >= 2)
+            || connectionPaths.length >= 2
+        )
+    );
     const comparisonBranchPassed = !comparisonBranchRequired
-        || (
-            Boolean(graphContext && (
-                (Array.isArray(graphContext.supportingTitles) && graphContext.supportingTitles.length > 0)
-                || (Array.isArray(graphContext.knowledgePointRelations) && graphContext.knowledgePointRelations.length > 0)
-                || connectionPaths.length > 0
-            ))
-        );
+        || comparisonBranchSignalPresent;
     const temporalWarningRequired = Boolean(
         graphContext
         && (

@@ -747,4 +747,103 @@ describe('conversationComposer', () => {
             knowledgeRun: reply.knowledgeRun,
         }));
     });
+
+    test('fails graph comparison gate when compare intent only has reference context and no real branch signal', () => {
+        const knowledgePoints: AgentConversationKnowledgePoint[] = [
+            {
+                atomId: 'atom_compare_anchor',
+                atomIds: ['atom_compare_anchor'],
+                documentId: 'doc_compare_anchor',
+                sourcePath: 'Knowledge_Base/test/compare-anchor.md',
+                title: 'Reflection',
+                summary: 'Reflection redirects optical energy.',
+                evidenceSnippet: 'Reflection redirects optical energy.',
+                score: 0.91,
+                citation: null,
+                citations: [],
+                matchedSpans: [],
+                matchCount: 0,
+                relationPath: [],
+                relationPathAtomIds: [],
+                relationKinds: [],
+                temporalValidity: {
+                    isValid: true,
+                    checkedAt: '2026-06-11T00:00:00.000Z',
+                    reasons: [],
+                    details: [],
+                } as any,
+                capabilities: [],
+            },
+        ];
+
+        let blockCounter = 0;
+        const reply = buildScopedConversationReply({
+            message: '对比反射与吸收',
+            knowledgePoints,
+            citations: [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            graphContext: {
+                anchorAtomId: 'atom_compare_anchor',
+                anchorTitle: 'Reflection',
+                anchorDocumentId: 'doc_compare_anchor',
+                supportingAtomIds: ['atom_reference_only'],
+                supportingTitles: ['Reference Note'],
+                relationKinds: ['reference'],
+                relationSummaries: [
+                    {
+                        relationKind: 'reference',
+                        edgeIds: ['edge_reference_only'],
+                        sourceAtomIds: ['atom_compare_anchor'],
+                        targetAtomIds: ['atom_reference_only'],
+                        averageConfidence: 0.74,
+                    },
+                ],
+                knowledgePointRelations: [
+                    {
+                        edgeId: 'edge_reference_only',
+                        relationKind: 'reference',
+                        sourceAtomId: 'atom_compare_anchor',
+                        sourceTitle: 'Reflection',
+                        targetAtomId: 'atom_reference_only',
+                        targetTitle: 'Reference Note',
+                        confidence: 0.74,
+                    },
+                ],
+                connectionPaths: [],
+                predecessorWindow: [],
+                successorWindow: [],
+                evidenceSourceRefs: ['Knowledge_Base/test/compare-anchor.md:4'],
+                diagnostics: {
+                    graphOpsAvailable: true,
+                    usedFallback: false,
+                    selectedAnchorReason: 'title_mention',
+                    candidateCount: 2,
+                    supportNodeCount: 1,
+                    supportNodeLimit: 2,
+                    pathDepthLimit: 6,
+                    missingConnectionPathSourceAtomIds: [],
+                    missingPredecessorAtomIds: [],
+                    missingSuccessorAtomIds: [],
+                },
+                temporalValidity: {
+                    checkedAt: '2026-06-11T00:00:00.000Z',
+                    allPointsValid: true,
+                    warningReasons: [],
+                    invalidKnowledgePointTitles: [],
+                    edgeKinds: [],
+                    details: [],
+                },
+            } as any,
+        });
+
+        expect(reply.knowledgeRun.quality.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'graph_comparison_branch',
+                passed: false,
+            }),
+        ]));
+    });
 });

@@ -266,7 +266,7 @@ The best fix still remains payload/path normalization plus highlight diagnostics
 Implemented foundation in the current working tree through `knowledgeRun.quality.gates`. The active graph-specific gates now cover:
 
 - prerequisite questions include upstream path order,
-- comparison questions preserve branch differences,
+- comparison questions preserve branch differences and no longer treat reference-only support as sufficient branch evidence,
 - stale/superseded nodes trigger temporal warnings,
 - graph ops failure falls back cleanly,
 - oversized graphs are budgeted deterministically.
