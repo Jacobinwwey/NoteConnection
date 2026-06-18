@@ -9,8 +9,8 @@
 - [x] DSPy、Guidance、Semantic Kernel、LangChain Core 与 LiteLLM 作为 `ref/` 下的已研究设计参考处理，不作为 app runtime 依赖。
 - [x] 可选 `AgentConversationGraphContext.connectionPaths` 已贯穿 conversation trace、结构化回答组织、evidence pane 渲染、workspace export 与聚焦回归测试。
 - [x] 已将有界 graph-conditioned context assembly layer 抽到 `src/learning/graphContextAssembler.ts`，并接入 anchor/support 选择、显式路径、predecessor/successor window、evidence ref 与 graph diagnostics。
-- [~] 右侧 source rendering 按已实现处理，但仍需要围绕路径 canonicalization、storage-provider 读取、markdown render fallback 与 highlight matching 增加诊断。
-- [ ] 将 ranking 从 relation-degree bonus 扩展到 distance、path-confidence、prerequisite-depth、temporal-validity、relation-intent features。
+- [x] `queryBackend.ts` 的 ranking 已从 relation-degree bonus 扩展到 anchor distance、path-confidence、prerequisite-depth、temporal-invalidity penalty 与 relation-intent bonus。
+- [~] 右侧 source rendering 已补第一层 graph-focus diagnostics，但仍需要把路径 canonicalization、storage-provider 读取、markdown render fallback 与 highlight matching 诊断扩展到更广的运维面。
 - [ ] 在宣称 DAG-native answer planning 完成前，补齐图回答专用质量门禁。
 
 ### 2026-06-10 知识工作区与 DAG TODO 重新分类

@@ -29,9 +29,10 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 - The agent knowledge graph requirement is now narrowed to this project's existing DAG-shaped `KnowledgeAtom` / `RelationEdge` / `TemporalEdge` substrate.
 - The current slice now includes a bounded graph-conditioned context assembly owner: `src/learning/graphContextAssembler.ts` selects the anchor, reorders support nodes, carries explicit store-backed graph paths through trace/export/evidence rendering, and adds predecessor/successor windows plus graph diagnostics before answer synthesis.
+- Retrieval is now more graph-native than simple degree bonuses: `queryBackend.ts` uses bounded anchor-distance, directed-path-confidence, prerequisite-depth, temporal-invalidity, and relation-intent signals in both `local_hybrid` and `local_vector`.
 - Auto-save persistence now keeps the graph substrate from regressing: rebuilt learning snapshots merge still-valid store-side relation/temporal edges so query/conversation reads do not erase externally enriched DAG paths before graph-context enrichment runs.
 - Public answer rendering is now contracted at both composer and frontend boundaries: `answer` / `directAnswer` stays targeted, while graph paths, temporal detail, citations, durable artifacts, and developer traces belong in secondary evidence/export surfaces unless requested.
-- The next architecture move is graph-aware ranking beyond relation-degree bonuses, then right-pane diagnostics and graph-specific quality gates on top of the new assembler boundary.
+- The next architecture move is graph-specific quality gates plus broader right-pane/operator diagnostics on top of the new assembler and graph-aware ranking boundaries.
 - DSPy, Guidance, Semantic Kernel, LangChain Core, and LiteLLM remain researched design references under `ref/`; the app runtime should stay TypeScript-native.
 - Current code-vs-plan details: [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](../solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md), [Knowledge Workspace and DAG Alignment Plan (2026-06-10)](../solutions/knowledge-workspace-dag-alignment-2026-06-10.md), and the [Development Progress Dashboard](../diataxis/en/explanation/development-progress-dashboard.md).
 

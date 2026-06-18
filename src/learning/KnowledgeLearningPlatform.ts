@@ -4165,6 +4165,32 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return activeEdges.filter((edge) => scopedAtomIds.has(edge.sourceAtomId) && scopedAtomIds.has(edge.targetAtomId));
     }
 
+    private buildQueryBackendTemporalSignals(
+        atoms: KnowledgeAtom[],
+        asOf: string
+    ): Record<string, {
+        isValid: boolean;
+        reasonCount: number;
+        supersedesCount: number;
+    }> {
+        const temporalSignals: Record<string, {
+            isValid: boolean;
+            reasonCount: number;
+            supersedesCount: number;
+        }> = {};
+        atoms.forEach((atom) => {
+            const temporalValidity = this.evaluateTemporalValidity(atom.id, asOf);
+            temporalSignals[atom.id] = {
+                isValid: temporalValidity.isValid !== false,
+                reasonCount: Array.isArray(temporalValidity.reasons) ? temporalValidity.reasons.length : 0,
+                supersedesCount: Array.isArray(temporalValidity.details)
+                    ? temporalValidity.details.filter((detail) => detail.edgeKind === 'supersedes').length
+                    : 0,
+            };
+        });
+        return temporalSignals;
+    }
+
     private buildQueryBackendContext(
         request: KnowledgeQueryRequest,
         backend: GraphQueryBackendType
@@ -4183,6 +4209,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             topK: number;
             atoms: KnowledgeAtom[];
             activeEdges: RelationEdge[];
+            atomTemporalValidity: Record<string, {
+                isValid: boolean;
+                reasonCount: number;
+                supersedesCount: number;
+            }>;
         };
         titleLikeQueries: string[];
         titleHitDocumentIds: string[];
@@ -4254,6 +4285,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             this.collectActiveRelationEdges(asOf),
             scopedAtomsResult.atoms
         );
+        const atomTemporalValidity = this.buildQueryBackendTemporalSignals(scopedAtomsResult.atoms, asOf);
         return {
             query,
             asOf,
@@ -4280,6 +4312,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 topK,
                 atoms: scopedAtomsResult.atoms,
                 activeEdges,
+                atomTemporalValidity,
             },
         };
     }

@@ -186,7 +186,7 @@ Implemented rules in the current slice:
 
 #### P2: Make retrieval graph-aware without overfitting to degree
 
-Current `queryBackend.ts` relation-degree bonuses are not enough. Replace or augment them with bounded graph features:
+Implemented foundation in the current working tree. `queryBackend.ts` no longer leans on raw relation-degree bonus as the main graph signal. The active bounded feature set now includes:
 
 - candidate distance to title/document anchor,
 - prerequisite depth relative to anchor,
@@ -194,7 +194,15 @@ Current `queryBackend.ts` relation-degree bonuses are not enough. Replace or aug
 - temporal validity score,
 - relation-kind intent match.
 
-Do not make degree centrality the main signal. High-degree notes are often hubs, indexes, or broad references; they can drown out the precise answer.
+Current behavior:
+
+- `local_hybrid` and `local_vector` infer title/document anchors from the query,
+- graph bonuses are only applied when an anchor can be inferred,
+- directed path confidence and prerequisite depth now reward structurally relevant support nodes,
+- temporal invalidity now acts as a penalty instead of a blind positive freshness reward,
+- unrelated high-degree hubs are no longer allowed to win just because they have many edges.
+
+Remaining gap: the feature mix still needs calibration through graph-specific quality gates and more real-world ranking regressions.
 
 #### P3: Keep answer-surface contraction strict
 
@@ -219,16 +227,18 @@ This separation solves the user's first and third concerns better than trying to
 
 #### P4: Harden right-pane source focus
 
-Before changing UI shape, add diagnostics around the existing path:
+First-pass diagnostics are now present in `workspace_panes.js` through graph-focus render diagnostics. The current controller records:
 
-- file button payload construction,
-- canonical `sourcePath`,
-- storage provider read result,
-- markdown runtime render success/fallback,
-- highlight term extraction,
-- matched-span hit count in rendered DOM.
+- requested `sourcePath`,
+- markdown runtime availability,
+- storage-provider availability,
+- source read success,
+- markdown render success or fallback,
+- highlight-term count,
+- highlighted node count,
+- failure reason classification.
 
-Expected failure classes:
+Expected failure classes remain:
 
 - Windows path separator or KB-root prefix mismatch,
 - `sourcePath` absent but citation/matchedSpan path present,
@@ -236,7 +246,7 @@ Expected failure classes:
 - old runtime file path still used by a legacy entrypoint,
 - markdown rendering succeeds but highlight terms are too narrow.
 
-The best fix is likely payload/path normalization plus highlight diagnostics, not a second rendering stack.
+The best fix remains payload/path normalization plus highlight diagnostics, not a second rendering stack. Remaining gap: diagnostics are still mainly local to the graph-focus pane/controller path and should later feed broader operator-facing inspection surfaces.
 
 #### P5: Add graph answer quality gates
 
@@ -290,7 +300,7 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 2. The public answer must stay targeted; this slice now keeps `answer` / `directAnswer` free of evidence/debug lists while preserving those details in evidence panes, traces, and exports.
 3. The 2026-06-17 code slice now has a first-class assembler boundary with anchor/support/path/window decisions before answer synthesis, but ranking and quality gates are still partial.
 4. The referenced open-source projects are best used as design patterns, not new runtime dependencies.
-5. The next robust direction is bounded DAG context packs, graph-aware ranking features, right-pane diagnostics, and graph-specific regression tests.
+5. The next robust direction is graph-specific quality gates plus wider operator-facing diagnostics on top of the new assembler and graph-aware ranking boundaries.
 
 ## 中文文档
 
@@ -468,7 +478,7 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 
 #### P2：让 retrieval 真正 graph-aware，但不要过拟合 degree
 
-当前 `queryBackend.ts` 的关系度数加分不够。应补充有界图特征：
+当前工作区已经落下 P2 基础实现。`queryBackend.ts` 不再把原始 relation-degree bonus 当作主要图信号，而是改为有界图特征组合：
 
 - candidate 到 title/document anchor 的距离；
 - 相对 anchor 的 prerequisite depth；
@@ -476,7 +486,15 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 - temporal validity score；
 - relation-kind intent match。
 
-不要把 degree centrality 作为主信号。高出入度笔记常常是 hub、索引或宽泛引用，容易淹没精确答案。
+当前行为：
+
+- `local_hybrid` 与 `local_vector` 会先从 query 中推断 title/document anchor；
+- 只有当 anchor 可推断时，图加分才会介入；
+- directed path confidence 与 prerequisite depth 会提升结构上真正相关的 support node；
+- temporal invalidity 现在是惩罚项，而不是盲目的“新鲜度正奖励”；
+- 与 anchor 无关的高出入度 hub 不会再仅靠边多而取胜。
+
+剩余缺口：这套特征还需要通过图专项质量门禁和更多真实 ranking regression 继续校准。
 
 #### P3：严格保持回答主表面收缩
 
@@ -501,14 +519,16 @@ Evidence pane 应渲染：
 
 #### P4：加固右侧 source focus
 
-在改变 UI 形态前，应先给现有链路加诊断：
+第一层诊断已经落到 `workspace_panes.js` 的 graph-focus 渲染链路。当前 controller 会记录：
 
-- file button payload construction；
-- canonical `sourcePath`；
-- storage provider read result；
-- markdown runtime render success/fallback；
-- highlight term extraction；
-- rendered DOM 中 matched-span 命中数量。
+- requested `sourcePath`；
+- markdown runtime availability；
+- storage-provider availability；
+- source read success；
+- markdown render success / fallback；
+- highlight-term count；
+- highlighted node count；
+- failure reason classification。
 
 预期失败类型：
 
@@ -518,7 +538,7 @@ Evidence pane 应渲染：
 - legacy entrypoint 仍在使用旧 runtime 文件；
 - markdown 渲染成功，但 highlight terms 太窄。
 
-最佳修复大概率是 payload/path normalization + highlight diagnostics，而不是再造一套渲染栈。
+最佳修复仍然更可能是 payload/path normalization + highlight diagnostics，而不是再造一套渲染栈。剩余缺口是这些诊断还主要停留在 graph-focus pane/controller 层，后续应继续接到更广的运维检查面。
 
 #### P5：增加图回答质量门禁
 
@@ -572,4 +592,4 @@ Evidence pane 应渲染：
 2. 公开回答必须保持 targeted；本切片已让 `answer` / `directAnswer` 不再携带 evidence/debug 列表，同时把这些细节保留在 evidence pane、trace 与 export。
 3. 2026-06-17 代码切片已经有回答前的一等 assembler 边界，会做 anchor/support/path/window 决策，但 ranking 与质量门禁仍是部分实现。
 4. 参考开源库更适合作为设计模式，不适合作为新的运行时依赖。
-5. 下一步应推进 bounded DAG context pack、graph-aware ranking features、right-pane diagnostics 与 graph-specific regression tests。
+5. 下一步应把重心转到图专项质量门禁，以及更广的 operator-facing diagnostics，而不是继续停留在“有没有 assembler / 有没有 graph-aware ranking”这个层级。

@@ -6,7 +6,16 @@ import type {
     KnowledgeQueryModeWeights,
     KnowledgeQueryRequest,
     RelationEdge,
+    RelationKind,
 } from './types';
+
+type GraphQueryIntent = 'explain' | 'compare' | 'how_to' | 'generic';
+
+type GraphQueryTemporalSignal = {
+    isValid: boolean;
+    reasonCount: number;
+    supersedesCount: number;
+};
 
 export interface GraphQueryBackendContext {
     request: KnowledgeQueryRequest;
@@ -16,6 +25,7 @@ export interface GraphQueryBackendContext {
     topK: number;
     atoms: KnowledgeAtom[];
     activeEdges: RelationEdge[];
+    atomTemporalValidity?: Record<string, GraphQueryTemporalSignal>;
 }
 
 export interface GraphQueryCandidate {
@@ -609,6 +619,444 @@ function computeJaccard(left: string[], right: string[]): number {
     return intersection / union;
 }
 
+type DirectedGraphNeighbor = {
+    to: string;
+    relationKind: RelationKind;
+    confidence: number;
+};
+
+type DirectedPathSignal = {
+    distance: number;
+    averageConfidence: number;
+    relationKinds: RelationKind[];
+};
+
+type GraphFeatureIndex = {
+    queryIntent: GraphQueryIntent;
+    anchorAtomIds: Set<string>;
+    degreeByAtomId: Map<string, number>;
+    maxDegree: number;
+    incidentRelationKindsByAtomId: Map<string, Set<RelationKind>>;
+    undirectedDistanceByAtomId: Map<string, number>;
+    pathToAnchorByAtomId: Map<string, DirectedPathSignal>;
+    pathFromAnchorByAtomId: Map<string, DirectedPathSignal>;
+};
+
+function classifyGraphQueryIntent(query: string): GraphQueryIntent {
+    const normalized = String(query || '').trim().toLowerCase();
+    if (!normalized) {
+        return 'generic';
+    }
+    if (
+        normalized.includes('compare')
+        || normalized.includes('difference')
+        || normalized.includes('vs')
+    ) {
+        return 'compare';
+    }
+    if (
+        normalized.includes('how to')
+        || normalized.includes('how do')
+        || normalized.includes('steps')
+        || normalized.includes('plan')
+    ) {
+        return 'how_to';
+    }
+    if (
+        normalized.includes('what is')
+        || normalized.includes('why')
+        || normalized.includes('explain')
+    ) {
+        return 'explain';
+    }
+    return 'generic';
+}
+
+function buildAtomAnchorTokens(atom: KnowledgeAtom): string[] {
+    return uniqueTokens([
+        ...extractSemanticTokens(atom.title, Math.max(SEMANTIC_TITLE_TOKEN_LIMIT, 10)),
+        ...extractSemanticTokens(atom.sourcePath, 10),
+        ...extractSemanticTokens(atom.documentId, 6),
+    ]);
+}
+
+function inferGraphAnchorAtomIds(
+    context: GraphQueryBackendContext,
+    querySemanticTokens: string[]
+): Set<string> {
+    const queryLower = String(context.query || '').trim().toLowerCase();
+    const rankedAnchors = context.atoms
+        .map((atom, index) => {
+            const titleLower = String(atom.title || '').trim().toLowerCase();
+            const directMatchScore = titleLower && queryLower && queryLower.includes(titleLower)
+                ? 1
+                : 0;
+            const anchorTokenOverlap = computeJaccard(querySemanticTokens, buildAtomAnchorTokens(atom));
+            const keywordOverlap = computeJaccard(
+                querySemanticTokens,
+                uniqueTokens((atom.keywords || []).map((keyword) => stemSemanticToken(keyword)).filter(Boolean))
+            );
+            const score = Number((
+                directMatchScore
+                + anchorTokenOverlap
+                + (keywordOverlap * 0.35)
+            ).toFixed(6));
+            return {
+                atomId: atom.id,
+                score,
+                index,
+            };
+        })
+        .filter((entry) => entry.score > 0)
+        .sort((left, right) => (
+            right.score - left.score
+            || left.index - right.index
+        ));
+    if (rankedAnchors.length <= 0) {
+        return new Set<string>();
+    }
+    const topScore = rankedAnchors[0].score;
+    return new Set(
+        rankedAnchors
+            .filter((entry, index) => index < 3 && entry.score >= Math.max(0.2, topScore - 0.08))
+            .map((entry) => entry.atomId)
+    );
+}
+
+function buildGraphAdjacency(activeEdges: RelationEdge[]): {
+    outgoingByAtomId: Map<string, DirectedGraphNeighbor[]>;
+    incomingByAtomId: Map<string, DirectedGraphNeighbor[]>;
+    undirectedNeighborsByAtomId: Map<string, string[]>;
+    degreeByAtomId: Map<string, number>;
+    incidentRelationKindsByAtomId: Map<string, Set<RelationKind>>;
+} {
+    const outgoingByAtomId = new Map<string, DirectedGraphNeighbor[]>();
+    const incomingByAtomId = new Map<string, DirectedGraphNeighbor[]>();
+    const undirectedNeighborsByAtomId = new Map<string, string[]>();
+    const degreeByAtomId = new Map<string, number>();
+    const incidentRelationKindsByAtomId = new Map<string, Set<RelationKind>>();
+
+    activeEdges.forEach((edge) => {
+        const confidence = clamp(Number(edge.confidence || 0), 0, 1);
+        const outgoing = outgoingByAtomId.get(edge.sourceAtomId) || [];
+        outgoing.push({
+            to: edge.targetAtomId,
+            relationKind: edge.relationKind,
+            confidence,
+        });
+        outgoingByAtomId.set(edge.sourceAtomId, outgoing);
+
+        const incoming = incomingByAtomId.get(edge.targetAtomId) || [];
+        incoming.push({
+            to: edge.sourceAtomId,
+            relationKind: edge.relationKind,
+            confidence,
+        });
+        incomingByAtomId.set(edge.targetAtomId, incoming);
+
+        const sourceUndirected = undirectedNeighborsByAtomId.get(edge.sourceAtomId) || [];
+        sourceUndirected.push(edge.targetAtomId);
+        undirectedNeighborsByAtomId.set(edge.sourceAtomId, sourceUndirected);
+        const targetUndirected = undirectedNeighborsByAtomId.get(edge.targetAtomId) || [];
+        targetUndirected.push(edge.sourceAtomId);
+        undirectedNeighborsByAtomId.set(edge.targetAtomId, targetUndirected);
+
+        degreeByAtomId.set(edge.sourceAtomId, (degreeByAtomId.get(edge.sourceAtomId) || 0) + 1);
+        degreeByAtomId.set(edge.targetAtomId, (degreeByAtomId.get(edge.targetAtomId) || 0) + 1);
+
+        const sourceKinds = incidentRelationKindsByAtomId.get(edge.sourceAtomId) || new Set<RelationKind>();
+        sourceKinds.add(edge.relationKind);
+        incidentRelationKindsByAtomId.set(edge.sourceAtomId, sourceKinds);
+        const targetKinds = incidentRelationKindsByAtomId.get(edge.targetAtomId) || new Set<RelationKind>();
+        targetKinds.add(edge.relationKind);
+        incidentRelationKindsByAtomId.set(edge.targetAtomId, targetKinds);
+    });
+
+    return {
+        outgoingByAtomId,
+        incomingByAtomId,
+        undirectedNeighborsByAtomId,
+        degreeByAtomId,
+        incidentRelationKindsByAtomId,
+    };
+}
+
+function buildUndirectedDistanceSignals(
+    anchorAtomIds: Set<string>,
+    undirectedNeighborsByAtomId: Map<string, string[]>,
+    maxDepth: number
+): Map<string, number> {
+    const distances = new Map<string, number>();
+    const queue: Array<{ atomId: string; distance: number }> = [];
+    anchorAtomIds.forEach((anchorAtomId) => {
+        distances.set(anchorAtomId, 0);
+        queue.push({ atomId: anchorAtomId, distance: 0 });
+    });
+    while (queue.length > 0) {
+        const current = queue.shift();
+        if (!current) {
+            continue;
+        }
+        if (current.distance >= maxDepth) {
+            continue;
+        }
+        const neighbors = undirectedNeighborsByAtomId.get(current.atomId) || [];
+        neighbors.forEach((neighborAtomId) => {
+            const nextDistance = current.distance + 1;
+            const existingDistance = distances.get(neighborAtomId);
+            if (typeof existingDistance === 'number' && existingDistance <= nextDistance) {
+                return;
+            }
+            distances.set(neighborAtomId, nextDistance);
+            queue.push({
+                atomId: neighborAtomId,
+                distance: nextDistance,
+            });
+        });
+    }
+    return distances;
+}
+
+function shouldReplaceDirectedPathSignal(
+    current: DirectedPathSignal | undefined,
+    next: DirectedPathSignal
+): boolean {
+    if (!current) {
+        return true;
+    }
+    if (next.distance < current.distance) {
+        return true;
+    }
+    return next.distance === current.distance && next.averageConfidence > current.averageConfidence;
+}
+
+function buildDirectedPathSignals(
+    anchorAtomIds: Set<string>,
+    adjacencyByAtomId: Map<string, DirectedGraphNeighbor[]>,
+    maxDepth: number
+): Map<string, DirectedPathSignal> {
+    const signals = new Map<string, DirectedPathSignal>();
+    const queue: Array<{
+        atomId: string;
+        distance: number;
+        confidenceSum: number;
+        relationKinds: RelationKind[];
+    }> = [];
+    anchorAtomIds.forEach((anchorAtomId) => {
+        signals.set(anchorAtomId, {
+            distance: 0,
+            averageConfidence: 1,
+            relationKinds: [],
+        });
+        queue.push({
+            atomId: anchorAtomId,
+            distance: 0,
+            confidenceSum: 0,
+            relationKinds: [],
+        });
+    });
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+        if (!current) {
+            continue;
+        }
+        if (current.distance >= maxDepth) {
+            continue;
+        }
+        const neighbors = adjacencyByAtomId.get(current.atomId) || [];
+        neighbors.forEach((neighbor) => {
+            const nextDistance = current.distance + 1;
+            const nextConfidenceSum = current.confidenceSum + clamp(Number(neighbor.confidence || 0), 0, 1);
+            const nextSignal: DirectedPathSignal = {
+                distance: nextDistance,
+                averageConfidence: Number((nextConfidenceSum / nextDistance).toFixed(4)),
+                relationKinds: current.relationKinds.includes(neighbor.relationKind)
+                    ? current.relationKinds
+                    : [...current.relationKinds, neighbor.relationKind],
+            };
+            const currentSignal = signals.get(neighbor.to);
+            if (!shouldReplaceDirectedPathSignal(currentSignal, nextSignal)) {
+                return;
+            }
+            signals.set(neighbor.to, nextSignal);
+            queue.push({
+                atomId: neighbor.to,
+                distance: nextDistance,
+                confidenceSum: nextConfidenceSum,
+                relationKinds: nextSignal.relationKinds,
+            });
+        });
+    }
+
+    return signals;
+}
+
+function buildGraphFeatureIndex(
+    context: GraphQueryBackendContext,
+    querySemanticTokens: string[]
+): GraphFeatureIndex {
+    const queryIntent = classifyGraphQueryIntent(context.query);
+    const anchorAtomIds = inferGraphAnchorAtomIds(context, querySemanticTokens);
+    const {
+        outgoingByAtomId,
+        incomingByAtomId,
+        undirectedNeighborsByAtomId,
+        degreeByAtomId,
+        incidentRelationKindsByAtomId,
+    } = buildGraphAdjacency(context.activeEdges);
+    const maxDegree = Array.from(degreeByAtomId.values()).reduce((maxValue, degree) => Math.max(maxValue, degree), 0);
+    return {
+        queryIntent,
+        anchorAtomIds,
+        degreeByAtomId,
+        maxDegree,
+        incidentRelationKindsByAtomId,
+        undirectedDistanceByAtomId: buildUndirectedDistanceSignals(anchorAtomIds, undirectedNeighborsByAtomId, 4),
+        pathToAnchorByAtomId: buildDirectedPathSignals(anchorAtomIds, incomingByAtomId, 4),
+        pathFromAnchorByAtomId: buildDirectedPathSignals(anchorAtomIds, outgoingByAtomId, 4),
+    };
+}
+
+function computeAnchorDistanceBonus(atomId: string, graphFeatureIndex: GraphFeatureIndex): number {
+    const distance = graphFeatureIndex.undirectedDistanceByAtomId.get(atomId);
+    if (typeof distance !== 'number') {
+        return 0;
+    }
+    if (distance <= 0) {
+        return graphFeatureIndex.queryIntent === 'compare' ? 0.22 : 0.3;
+    }
+    if (distance === 1) {
+        return 0.18;
+    }
+    if (distance === 2) {
+        return 0.1;
+    }
+    if (distance === 3) {
+        return 0.05;
+    }
+    return 0;
+}
+
+function computeDirectedPathBonus(
+    signal: DirectedPathSignal | undefined,
+    intent: GraphQueryIntent,
+    direction: 'to_anchor' | 'from_anchor'
+): number {
+    if (!signal || signal.distance <= 0) {
+        return 0;
+    }
+    const baseBonus = signal.distance === 1
+        ? 0.14
+        : signal.distance === 2
+            ? 0.09
+            : 0.05;
+    const confidenceBonus = clamp(signal.averageConfidence, 0, 1) * 0.12;
+    let relationBonus = 0;
+    if (signal.relationKinds.includes('prerequisite') && direction === 'to_anchor' && intent !== 'compare') {
+        relationBonus += intent === 'how_to' ? 0.12 : 0.07;
+    }
+    if (signal.relationKinds.includes('sequence') && direction === 'from_anchor' && intent === 'how_to') {
+        relationBonus += 0.08;
+    }
+    if (signal.relationKinds.includes('application') && direction === 'from_anchor' && intent === 'how_to') {
+        relationBonus += 0.06;
+    }
+    if ((signal.relationKinds.includes('contrast') || signal.relationKinds.includes('analogy')) && intent === 'compare') {
+        relationBonus += 0.1;
+    }
+    return Number(clamp(baseBonus + confidenceBonus + relationBonus, 0, 0.4).toFixed(6));
+}
+
+function computeRelationIntentBonus(
+    atomId: string,
+    graphFeatureIndex: GraphFeatureIndex
+): number {
+    const relationKinds = graphFeatureIndex.incidentRelationKindsByAtomId.get(atomId);
+    if (!relationKinds || relationKinds.size <= 0) {
+        return 0;
+    }
+    let bonus = 0;
+    if (graphFeatureIndex.queryIntent === 'compare') {
+        if (relationKinds.has('contrast')) bonus += 0.14;
+        if (relationKinds.has('analogy')) bonus += 0.1;
+        if (relationKinds.has('reference')) bonus += 0.04;
+    } else if (graphFeatureIndex.queryIntent === 'how_to') {
+        if (relationKinds.has('prerequisite')) bonus += 0.1;
+        if (relationKinds.has('sequence')) bonus += 0.08;
+        if (relationKinds.has('application')) bonus += 0.08;
+        if (relationKinds.has('causal')) bonus += 0.04;
+    } else if (graphFeatureIndex.queryIntent === 'explain') {
+        if (relationKinds.has('causal')) bonus += 0.1;
+        if (relationKinds.has('reference')) bonus += 0.06;
+        if (relationKinds.has('prerequisite')) bonus += 0.05;
+    } else {
+        if (relationKinds.has('reference')) bonus += 0.04;
+        if (relationKinds.has('causal')) bonus += 0.04;
+    }
+    return Number(clamp(bonus, 0, 0.18).toFixed(6));
+}
+
+function computeTemporalValidityBonus(context: GraphQueryBackendContext, atomId: string): number {
+    const temporalSignal = context.atomTemporalValidity && typeof context.atomTemporalValidity === 'object'
+        ? context.atomTemporalValidity[atomId]
+        : undefined;
+    if (!temporalSignal) {
+        return 0;
+    }
+    if (temporalSignal.isValid === false) {
+        return -Number((0.18 + Math.min(temporalSignal.reasonCount, 3) * 0.02).toFixed(6));
+    }
+    return 0;
+}
+
+function computeHubPenalty(atomId: string, graphFeatureIndex: GraphFeatureIndex): number {
+    if (graphFeatureIndex.maxDegree <= 0) {
+        return 0;
+    }
+    if (graphFeatureIndex.undirectedDistanceByAtomId.has(atomId)) {
+        return 0;
+    }
+    const degree = graphFeatureIndex.degreeByAtomId.get(atomId) || 0;
+    const normalizedDegree = degree / graphFeatureIndex.maxDegree;
+    if (normalizedDegree <= 0.7) {
+        return 0;
+    }
+    return Number(clamp((normalizedDegree - 0.7) * 0.25, 0, 0.12).toFixed(6));
+}
+
+function computeGraphFeatureScore(
+    context: GraphQueryBackendContext,
+    atomId: string,
+    graphFeatureIndex: GraphFeatureIndex
+): number {
+    if (graphFeatureIndex.anchorAtomIds.size <= 0) {
+        return 0;
+    }
+    const anchorDistanceBonus = computeAnchorDistanceBonus(atomId, graphFeatureIndex);
+    const pathToAnchorBonus = computeDirectedPathBonus(
+        graphFeatureIndex.pathToAnchorByAtomId.get(atomId),
+        graphFeatureIndex.queryIntent,
+        'to_anchor'
+    );
+    const pathFromAnchorBonus = computeDirectedPathBonus(
+        graphFeatureIndex.pathFromAnchorByAtomId.get(atomId),
+        graphFeatureIndex.queryIntent,
+        'from_anchor'
+    );
+    const relationIntentBonus = computeRelationIntentBonus(atomId, graphFeatureIndex);
+    const temporalValidityBonus = computeTemporalValidityBonus(context, atomId);
+    const hubPenalty = computeHubPenalty(atomId, graphFeatureIndex);
+    return Number((
+        anchorDistanceBonus
+        + pathToAnchorBonus
+        + pathFromAnchorBonus
+        + relationIntentBonus
+        + temporalValidityBonus
+        - hubPenalty
+    ).toFixed(6));
+}
+
 function buildTokenFrequency(tokens: string[]): Map<string, number> {
     const frequency = new Map<string, number>();
     tokens.forEach((token) => {
@@ -1023,11 +1471,7 @@ export class LocalHybridGraphQueryBackend implements GraphQueryBackend {
     public async query(context: GraphQueryBackendContext): Promise<GraphQueryBackendResult> {
         const queryLower = context.query.toLowerCase();
         const querySemanticTokens = buildQuerySemanticTokens(context);
-        const connectionDegreeByAtomId = new Map<string, number>();
-        context.activeEdges.forEach((edge) => {
-            connectionDegreeByAtomId.set(edge.sourceAtomId, (connectionDegreeByAtomId.get(edge.sourceAtomId) || 0) + 1);
-            connectionDegreeByAtomId.set(edge.targetAtomId, (connectionDegreeByAtomId.get(edge.targetAtomId) || 0) + 1);
-        });
+        const graphFeatureIndex = buildGraphFeatureIndex(context, querySemanticTokens);
 
         const candidates: GraphQueryCandidate[] = [];
         context.atoms.forEach((atom) => {
@@ -1036,11 +1480,11 @@ export class LocalHybridGraphQueryBackend implements GraphQueryBackend {
             const keywordMatches = context.queryTokens.filter((token) => atom.keywords.includes(token)).length;
             const titleMatchBonus = queryLower && titleLower.includes(queryLower) ? 2 : 0;
             const contentMatchBonus = context.queryTokens.filter((token) => contentLower.includes(token)).length * 0.25;
-            const relationBonus = (connectionDegreeByAtomId.get(atom.id) || 0) * 0.08;
             const atomSemanticTokens = buildAtomSemanticTokens(atom);
             const semanticSimilarity = computeJaccard(querySemanticTokens, atomSemanticTokens);
             const semanticBonus = semanticSimilarity * 1.6;
-            const score = keywordMatches + titleMatchBonus + contentMatchBonus + relationBonus + semanticBonus;
+            const graphFeatureBonus = computeGraphFeatureScore(context, atom.id, graphFeatureIndex);
+            const score = keywordMatches + titleMatchBonus + contentMatchBonus + semanticBonus + graphFeatureBonus;
             if (score > 0) {
                 candidates.push({
                     atomId: atom.id,
@@ -1055,7 +1499,7 @@ export class LocalHybridGraphQueryBackend implements GraphQueryBackend {
         return {
             candidates: candidates.slice(0, maxCandidates),
             trace: {
-                retrievalModes: ['keyword', 'semantic_similarity', 'graph_traversal', 'temporal_filter'],
+                retrievalModes: ['keyword', 'semantic_similarity', 'graph_anchor_distance', 'graph_path_confidence', 'graph_intent_match', 'temporal_filter'],
                 modeWeights: {
                     keyword: 0.32,
                     semantic: 0.2,
@@ -1244,11 +1688,7 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
         const index = await this.ensureIndex(context.atoms);
         const querySemanticTokens = buildQuerySemanticTokens(context);
         const queryFrequency = buildTokenFrequency(querySemanticTokens);
-        const connectionDegreeByAtomId = new Map<string, number>();
-        context.activeEdges.forEach((edge) => {
-            connectionDegreeByAtomId.set(edge.sourceAtomId, (connectionDegreeByAtomId.get(edge.sourceAtomId) || 0) + 1);
-            connectionDegreeByAtomId.set(edge.targetAtomId, (connectionDegreeByAtomId.get(edge.targetAtomId) || 0) + 1);
-        });
+        const graphFeatureIndex = buildGraphFeatureIndex(context, querySemanticTokens);
 
         const totalDocs = Math.max(1, index.atomCount);
         const queryWeights = buildTfIdfWeights(queryFrequency, index.documentFrequency, totalDocs);
@@ -1340,11 +1780,11 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
             }
             const cosineSimilarity = computeCosineSimilarity(queryWeights, entry.weights);
             const semanticOverlap = computeJaccard(querySemanticTokens, entry.tokens);
-            const relationBonus = (connectionDegreeByAtomId.get(atomId) || 0) * 0.06;
+            const graphFeatureBonus = computeGraphFeatureScore(context, atomId, graphFeatureIndex);
             const signatureBonus = entry.signaturePrefix === querySignaturePrefix
                 ? LOCAL_VECTOR_ANN_SIGNATURE_SCORE_BONUS
                 : 0;
-            const score = (cosineSimilarity * 4.2) + (semanticOverlap * 1.1) + relationBonus + signatureBonus;
+            const score = (cosineSimilarity * 4.2) + (semanticOverlap * 1.1) + graphFeatureBonus + signatureBonus;
             if (score <= 0) {
                 return;
             }
@@ -1363,7 +1803,9 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
                 retrievalModes: [
                     'vector_similarity',
                     'semantic_similarity',
-                    'graph_traversal',
+                    'graph_anchor_distance',
+                    'graph_path_confidence',
+                    'graph_intent_match',
                     'temporal_filter',
                     ...(annCandidateSelection.used ? ['ann_prefilter'] : []),
                 ],

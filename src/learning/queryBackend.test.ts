@@ -319,6 +319,138 @@ describe('query backend factory', () => {
         expect(localResult.trace?.retrievalModes).toContain('semantic_similarity');
     });
 
+    test('local hybrid ranking favors anchor-connected prerequisite structure over an unrelated high-degree hub', async () => {
+        const backend = createGraphQueryBackend({ backend: 'local_hybrid' });
+        const atoms: KnowledgeAtom[] = [
+            makeAtom('atom_anchor', 'Ground State', 'ground state calibration target for the optics workflow', ['ground', 'state', 'calibration']),
+            makeAtom('atom_prerequisite', 'Foundation Step', 'foundation prerequisite for calibration and setup', ['foundation', 'calibration', 'setup']),
+            makeAtom('atom_hub', 'Optics Index', 'broad optics index with calibration overview references', ['optics', 'calibration', 'overview']),
+            makeAtom('atom_extra_a', 'Reference A', 'generic optics reference', ['reference']),
+            makeAtom('atom_extra_b', 'Reference B', 'generic optics reference', ['reference']),
+            makeAtom('atom_extra_c', 'Reference C', 'generic optics reference', ['reference']),
+            makeAtom('atom_extra_d', 'Reference D', 'generic optics reference', ['reference']),
+        ];
+        const activeEdges: RelationEdge[] = [
+            {
+                id: 'edge_prerequisite_anchor',
+                sourceAtomId: 'atom_prerequisite',
+                targetAtomId: 'atom_anchor',
+                relationKind: 'prerequisite',
+                provenance: 'fact',
+                confidence: 0.94,
+                evidenceSpanIds: [],
+                temporal: { validFrom: '2026-01-01T00:00:00.000Z' },
+            },
+            {
+                id: 'edge_hub_a',
+                sourceAtomId: 'atom_hub',
+                targetAtomId: 'atom_extra_a',
+                relationKind: 'reference',
+                provenance: 'fact',
+                confidence: 0.81,
+                evidenceSpanIds: [],
+                temporal: { validFrom: '2026-01-01T00:00:00.000Z' },
+            },
+            {
+                id: 'edge_hub_b',
+                sourceAtomId: 'atom_hub',
+                targetAtomId: 'atom_extra_b',
+                relationKind: 'reference',
+                provenance: 'fact',
+                confidence: 0.81,
+                evidenceSpanIds: [],
+                temporal: { validFrom: '2026-01-01T00:00:00.000Z' },
+            },
+            {
+                id: 'edge_hub_c',
+                sourceAtomId: 'atom_hub',
+                targetAtomId: 'atom_extra_c',
+                relationKind: 'reference',
+                provenance: 'fact',
+                confidence: 0.81,
+                evidenceSpanIds: [],
+                temporal: { validFrom: '2026-01-01T00:00:00.000Z' },
+            },
+            {
+                id: 'edge_hub_d',
+                sourceAtomId: 'atom_hub',
+                targetAtomId: 'atom_extra_d',
+                relationKind: 'reference',
+                provenance: 'fact',
+                confidence: 0.81,
+                evidenceSpanIds: [],
+                temporal: { validFrom: '2026-01-01T00:00:00.000Z' },
+            },
+        ];
+        const result = await backend.query({
+            request: {
+                query: 'how to calibrate ground state',
+                topK: 4,
+            },
+            query: 'how to calibrate ground state',
+            queryTokens: ['how', 'to', 'calibrate', 'ground', 'state'],
+            asOf: '2026-01-01T00:00:00.000Z',
+            topK: 4,
+            atoms,
+            activeEdges,
+        });
+
+        const rankedAtomIds = result.candidates.map((candidate) => candidate.atomId);
+        expect(rankedAtomIds.indexOf('atom_anchor')).toBeGreaterThanOrEqual(0);
+        expect(rankedAtomIds.indexOf('atom_prerequisite')).toBeGreaterThanOrEqual(0);
+        expect(rankedAtomIds.slice(0, 2)).toEqual(expect.arrayContaining(['atom_anchor', 'atom_prerequisite']));
+        if (rankedAtomIds.includes('atom_hub')) {
+            expect(rankedAtomIds.indexOf('atom_anchor')).toBeLessThan(rankedAtomIds.indexOf('atom_hub'));
+            expect(rankedAtomIds.indexOf('atom_prerequisite')).toBeLessThan(rankedAtomIds.indexOf('atom_hub'));
+        }
+        expect(result.trace?.retrievalModes).toEqual(expect.arrayContaining([
+            'graph_anchor_distance',
+            'graph_path_confidence',
+            'graph_intent_match',
+        ]));
+    });
+
+    test('local vector ranking penalizes a temporally invalid candidate even when semantic overlap is strong', async () => {
+        const backend = createGraphQueryBackend({ backend: 'local_vector' });
+        const atoms: KnowledgeAtom[] = [
+            makeAtom('atom_fresh', 'Ground State', 'ground state calibration target with verified optics semantics', ['ground', 'state', 'calibration']),
+            makeAtom('atom_stale', 'Ground State Draft', 'ground state calibration target with verified optics semantics', ['ground', 'state', 'calibration']),
+        ];
+        const result = await backend.query({
+            request: {
+                query: 'ground state calibration',
+                topK: 3,
+            },
+            query: 'ground state calibration',
+            queryTokens: ['ground', 'state', 'calibration'],
+            asOf: '2026-01-01T00:00:00.000Z',
+            topK: 3,
+            atoms,
+            activeEdges: [],
+            atomTemporalValidity: {
+                atom_fresh: {
+                    isValid: true,
+                    reasonCount: 1,
+                    supersedesCount: 1,
+                },
+                atom_stale: {
+                    isValid: false,
+                    reasonCount: 2,
+                    supersedesCount: 0,
+                },
+            },
+        });
+
+        expect(result.candidates[0]?.atomId).toBe('atom_fresh');
+        expect(result.candidates.map((candidate) => candidate.atomId)).toContain('atom_stale');
+        expect(result.trace?.retrievalModes).toEqual(expect.arrayContaining([
+            'graph_anchor_distance',
+            'graph_path_confidence',
+            'graph_intent_match',
+            'temporal_filter',
+        ]));
+    });
+
     test('local vector backend enables ann prefilter on large corpora', async () => {
         const backend = createGraphQueryBackend({ backend: 'local_vector' });
         const atoms: KnowledgeAtom[] = [];

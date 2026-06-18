@@ -11,8 +11,8 @@ Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer cont
 - [x] The current implementation slice now includes `src/learning/graphContextAssembler.ts`, which selects the anchor, reorders support nodes, preserves explicit path chains, and adds predecessor/successor windows plus graph diagnostics before answer synthesis.
 - [x] The primary answer surface now enforces the targeted-answer contract in `answer` / `directAnswer`; graph/evidence/developer details stay in typed blocks, the evidence pane, trace, or export unless explicitly requested.
 - [x] The DAG answer path now has a first-class graph-conditioned context assembly stage instead of only post-retrieval enrichment.
-- [~] Right-pane source rendering and matched-span highlighting exist, but failures should be diagnosed through source-path canonicalization, storage-provider, markdown-render, and highlight-hit telemetry before changing UI shape.
-- [ ] Extend ranking beyond relation-degree bonuses with graph distance, path confidence, prerequisite depth, temporal validity, and relation-kind intent features.
+- [x] Query backend ranking now goes beyond relation-degree bonus: `queryBackend.ts` uses anchor distance, directed path confidence, prerequisite depth, temporal invalidity penalties, and relation-kind intent bonuses for `local_hybrid` / `local_vector`.
+- [~] Right-pane source rendering and matched-span highlighting now record graph-focus diagnostics for runtime/storage/render/highlight failure classes, but those diagnostics are still local to the pane/controller path and not yet widened into broader operator-facing surfaces.
 - [ ] Add graph-specific quality gates for prerequisite ordering, comparison branches, supersession warnings, graph-op failure fallback, and deterministic large-graph budgeting.
 - [ ] Continue reducing ownership pressure in `KnowledgeLearningPlatform.ts`, `conversationComposer.ts`, `agent_workspace.js`, and `workspace_panes.js` only where a new owner enforces real decisions or invariants.
 
@@ -27,8 +27,8 @@ Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer cont
 - [x] 当前实现切片已经包含 `src/learning/graphContextAssembler.ts`，会在回答合成前选择 anchor、重排 support node、保留显式路径链，并补 predecessor/successor window 与 graph diagnostics。
 - [x] 主回答区现在已在 `answer` / `directAnswer` 中强制执行 targeted-answer 契约；graph/evidence/developer 细节默认留在 typed blocks、evidence pane、trace 或 export 中，除非用户显式要求查看。
 - [x] 当前 DAG 回答链路已经拥有一等 graph-conditioned context assembly 阶段，而不再只是 retrieval 之后的显式路径增强。
-- [~] 右侧原文渲染与 matched-span 高亮已经存在，但遇到失败时应先通过 source-path canonicalization、storage provider、markdown render 与 highlight hit telemetry 定位，而不是直接改 UI 形态。
-- [ ] 将排序能力从 relation-degree bonus 扩展到 graph distance、path confidence、prerequisite depth、temporal validity 与 relation-kind intent features。
+- [x] `queryBackend.ts` 的排序现在已经超出 relation-degree bonus：`local_hybrid` / `local_vector` 已接入 anchor distance、directed path confidence、prerequisite depth、temporal invalidity penalty 与 relation-kind intent bonus。
+- [~] 右侧原文渲染与 matched-span 高亮现在已经记录 graph-focus diagnostics，可区分 runtime/storage/render/highlight 失败类型；但这些诊断还主要停留在 pane/controller 层，尚未扩展到更广的运维检查面。
 - [ ] 增加图回答质量门禁，覆盖 prerequisite ordering、comparison branch、supersession warning、graph-op failure fallback 与大图确定性预算裁剪。
 - [ ] 继续缩减 `KnowledgeLearningPlatform.ts`、`conversationComposer.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力，但只在新 owner 能做真实决策或强制不变量时推进。
 

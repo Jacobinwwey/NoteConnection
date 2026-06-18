@@ -5,8 +5,8 @@
 - [x] 当前实现已经让可选 explicit graph connection paths 贯穿 graph context、回答组织、evidence pane 渲染、export serialization 与回归测试。
 - [x] 开源库研究边界已明确：借鉴 DSPy / Guidance / Semantic Kernel / LangChain Core / LiteLLM 的模式，但不把这些框架加入 app runtime。
 - [x] 当前 DAG-aware answer planning 已经包含一等 graph-conditioned context assembly layer：`src/learning/graphContextAssembler.ts`。
-- [~] 右侧原文/高亮行为按已实现基线处理，但仍需要补路径与 snippet mismatch 诊断。
-- [ ] 下一活跃任务：在新 assembler 边界之上继续扩展 graph-aware ranking feature 与右侧诊断。
+- [~] 右侧原文/高亮行为现在已经记录第一层 graph-focus diagnostics，但仍需要把路径与 snippet mismatch 诊断扩展到更广的检查面。
+- [ ] 下一活跃任务：在新的 assembler + graph-aware ranking 边界之上补图专项质量门禁，并继续扩展右侧 / 运维诊断。
 - [ ] 继续保持公开回答区收缩，把 graph evidence、temporal details 与 developer trace 路由到次级表面。
 
 ### 当前验收目标

@@ -19,8 +19,8 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 #### Next execution order
 
 1. Keep the new assembler surface additive and backward-compatible.
-2. Expand graph-aware ranking features beyond relation-degree bonus.
-3. Add right-pane diagnostics for path/source/highlight mismatches without introducing a second rendering stack.
+2. Keep graph-aware ranking bounded and calibrate it against regression cases instead of drifting back toward degree-driven hubs.
+3. Expand right-pane diagnostics beyond the local graph-focus controller path without introducing a second rendering stack.
 4. Keep graph/debug/evidence detail in evidence/export surfaces, not in the public answer.
 5. Add graph-specific answer quality gates for ordering, comparison, temporal validity, fallback, and large-graph budgeting.
 6. Continue owner reduction only when the new module owns real decisions or invariants.
@@ -51,7 +51,7 @@ Extend the current mainline alignment with a Knowledge Workspace and DAG-specifi
 2. Preserve the contracted visible answer contract while routing supporting graph/evidence data to secondary surfaces.
 3. Converge left-side knowledge hits on a right-pane-first reading model.
 4. Treat `knowledge_run` and `flashcard_batch` as the first durable evidence surfaces.
-5. Build graph-aware ranking and right-pane diagnostics on top of the new assembler boundary.
+5. Build graph-specific quality gates and broader right-pane diagnostics on top of the new assembler and graph-aware ranking boundaries.
 6. Continue ownership reduction across the major server and frontend hosts.
 
 ### 2026-06-06 Mainline Architecture Alignment Plan

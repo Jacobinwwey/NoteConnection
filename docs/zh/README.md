@@ -25,9 +25,10 @@
 
 - agent knowledge 图结构需求现在已收敛为本项目现有 DAG 形态的 `KnowledgeAtom` / `RelationEdge` / `TemporalEdge` 底座。
 - 当前切片已经包含一个有界 graph-conditioned context assembly owner：`src/learning/graphContextAssembler.ts` 会在回答合成前选择 anchor、重排 support node、让显式 store-backed graph path 贯穿 trace/export/evidence 渲染，并补 predecessor/successor window 与 graph diagnostics。
+- retrieval 现在也已经超出“关系度数加分”层级：`queryBackend.ts` 已在 `local_hybrid` / `local_vector` 中接入有界 anchor distance、directed path confidence、prerequisite depth、temporal invalidity 与 relation-intent 信号。
 - 自动保存持久化现在不会让图底座回退：重建 learning snapshot 时会合并仍然有效的 store 侧 relation/temporal edges，避免 query/conversation 读路径在 graph-context enrichment 执行前抹掉外部增强的 DAG 路径。
 - 公开回答渲染现在已在 composer 与前端边界同时收缩：`answer` / `directAnswer` 保持 targeted，graph paths、temporal detail、citations、durable artifacts 与 developer traces 默认进入次级 evidence/export surfaces，除非用户显式要求查看。
-- 下一步架构动作已经转到新 assembler 边界之上：继续扩展 graph-aware ranking feature、右侧原文诊断，以及图专项质量门禁。
+- 下一步架构动作已经转到新 assembler 与 graph-aware ranking 边界之上：继续补图专项质量门禁，并把右侧原文诊断扩展到更广的运维检查面。
 - DSPy、Guidance、Semantic Kernel、LangChain Core 与 LiteLLM 继续作为 `ref/` 下的已研究设计参考；app runtime 应保持 TypeScript-native。
 - 当前代码 / 方案详细对齐请查看 [Agent Knowledge DAG 回答契约方案（2026-06-17）](../solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md)、[知识工作区与 DAG 对齐推进方案（2026-06-10）](../solutions/knowledge-workspace-dag-alignment-2026-06-10.md) 与 [开发进度看板](../diataxis/zh/explanation/development-progress-dashboard.md)。
 

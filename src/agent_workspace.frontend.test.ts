@@ -3623,6 +3623,56 @@ describe('workspace panes controller', () => {
         const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
         expect(highlighted.length).toBeGreaterThan(0);
         expect(String(highlighted[0]?.textContent || '')).toContain('A water glass is a physical system');
+        expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
+            requestedSourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            matchedSpanCount: 1,
+            markdownRuntimeAvailable: true,
+            storageProviderAvailable: true,
+            readSucceeded: true,
+            renderSucceeded: true,
+            usedFallback: false,
+            highlightedNodeCount: expect.any(Number),
+            failureReason: '',
+        }));
+    });
+
+    test('records graph focus diagnostics when source rendering falls back before markdown render', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        delete (window as any).NoteConnectionMarkdownRuntime;
+        delete (window as any).NoteConnectionStorage;
+        controller.init();
+        controller.openGraphFocusPane({
+            atomId: 'atom_water_glass',
+            title: 'Water Glass',
+            sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            summary: 'Fallback summary for graph focus diagnostics.',
+            matchedSpans: [
+                {
+                    atomId: 'atom_water_glass',
+                    title: 'Water Glass',
+                    snippet: 'A water glass is a physical system often used in examples.',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    startLine: 3,
+                    endLine: 3,
+                },
+            ],
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        expect(String(graphBody?.textContent || '')).toContain('Water Glass');
+        expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
+            requestedSourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            matchedSpanCount: 1,
+            markdownRuntimeAvailable: false,
+            storageProviderAvailable: false,
+            readSucceeded: false,
+            renderSucceeded: false,
+            usedFallback: true,
+            failureReason: 'missing_markdown_runtime',
+        }));
     });
 
     test('keeps reusable card renderers aligned with chat and evidence owners', () => {

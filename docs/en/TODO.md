@@ -9,8 +9,8 @@
 - [x] Treat DSPy, Guidance, Semantic Kernel, LangChain Core, and LiteLLM as researched design references under `ref/`, not app-runtime dependencies.
 - [x] Preserve optional `AgentConversationGraphContext.connectionPaths` through conversation trace, structured answer composition, evidence-pane rendering, workspace export, and focused regression tests.
 - [x] Extract the bounded graph-conditioned context assembly layer into `src/learning/graphContextAssembler.ts`, with anchor/support selection, explicit paths, predecessor/successor windows, evidence refs, and graph diagnostics.
-- [~] Treat right-pane source rendering as implemented but still needing diagnostics around path canonicalization, storage-provider reads, markdown render fallback, and highlight matching.
-- [ ] Move ranking beyond relation-degree bonuses into distance/path-confidence/prerequisite-depth/temporal-validity/relation-intent features.
+- [x] Move ranking beyond relation-degree bonuses: `queryBackend.ts` now scores bounded graph features such as anchor distance, path confidence, prerequisite depth, temporal invalidity penalties, and relation-kind intent bonuses.
+- [~] Treat right-pane source rendering as implemented with first-pass graph-focus diagnostics, but still needing broader operator-facing diagnostics around path canonicalization, storage-provider reads, markdown render fallback, and highlight matching.
 - [ ] Add graph-specific answer quality gates before calling DAG-native answer planning complete.
 
 ### 2026-06-10 Knowledge Workspace and DAG TODO Reclassification

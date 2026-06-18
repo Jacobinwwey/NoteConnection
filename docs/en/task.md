@@ -9,8 +9,8 @@
 - [x] The current implementation carries optional explicit graph connection paths through graph context, answer composition, evidence-pane rendering, export serialization, and regression tests.
 - [x] The open-source review has a firm boundary: use DSPy / Guidance / Semantic Kernel / LangChain Core / LiteLLM patterns without adding those frameworks to the app runtime.
 - [x] Current DAG-aware answer planning now includes a first-class graph-conditioned context assembly layer in `src/learning/graphContextAssembler.ts`.
-- [~] Right-pane source/highlight behavior is implemented baseline but still needs diagnostics for path and snippet mismatches.
-- [ ] Next active task: extend graph-aware ranking features and right-pane diagnostics on top of the new assembler boundary.
+- [~] Right-pane source/highlight behavior now records first-pass graph-focus diagnostics, but still needs broader path/snippet mismatch coverage beyond the local pane/controller path.
+- [ ] Next active task: add graph-specific quality gates and widen right-pane/operator diagnostics on top of the new assembler and graph-aware ranking boundaries.
 - [ ] Keep the public answer contracted while routing graph evidence, temporal details, and developer trace to secondary surfaces.
 
 ### Current Acceptance Targets

@@ -28,14 +28,14 @@
 | 文件命中打开右侧 pane 并高亮原文 | 现有 graph-focus source rendering 与 matched-span highlighting 仍是权威路径。 | 已实现基线；仍需诊断 |
 | 使用当前 DAG | `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、store ops 与 `findPath` 是当前活跃图底座。 | 已确认 |
 | 让 LLM 查阅图结构 | 有界 `graphContextAssembler` 已在回答合成前选择 anchor、重排 support node、挂接显式路径，并补 predecessor/successor window 与 diagnostics。 | P1 基础已实现 |
-| 完整 DAG-native answer planning | assembler 边界已经真实存在，但 graph-aware ranking feature 与图专项质量门禁仍未完成。 | P2-P5 待推进 |
+| retrieval 不再只是浅层 degree 加分 | `queryBackend.ts` 现在已在 `local_hybrid` / `local_vector` 中使用 anchor distance、directed path confidence、prerequisite depth、temporal invalidity penalty 与 relation-intent bonus。 | P2 基础已实现 |
+| 完整 DAG-native answer planning | assembler 与 graph-aware ranking 边界都已存在，但图专项质量门禁仍未完成。 | P5 待推进 |
 
 即时后续方向：
 
-1. 将 graph-aware ranking feature 从 relation-degree bonus 扩展到 graph distance、path confidence、prerequisite depth、temporal validity 与 relation-kind intent。
-2. 增加图专项质量门禁，覆盖 prerequisite ordering、comparison branches、supersession warnings、graph-op fallback 与大图确定性预算裁剪。
-3. 在不分叉 markdown 渲染链的前提下，为右侧 source focus 增加路径 / 原文 / 高亮诊断。
-4. 继续保持公开回答聚焦，同时让 graph/evidence/developer detail 通过 evidence pane、trace、artifact 与 export bundle 可检查。
+1. 增加图专项质量门禁，覆盖 prerequisite ordering、comparison branches、supersession warnings、graph-op fallback 与大图确定性预算裁剪。
+2. 在不分叉 markdown 渲染链的前提下，把右侧 source focus 诊断从本地 graph-focus controller 路径继续扩展出去。
+3. 继续保持公开回答聚焦，同时让 graph/evidence/developer detail 通过 evidence pane、trace、artifact 与 export bundle 可检查。
 
 ## 2026-06-10 知识工作区与 DAG 对齐切片
 

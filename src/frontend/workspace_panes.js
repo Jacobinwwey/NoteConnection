@@ -248,6 +248,28 @@
         };
     }
 
+    function buildGraphFocusDiagnostics(payload, matchedSpans, renderToken) {
+        return {
+            renderToken: Number(renderToken || 0),
+            title: buildGraphFocusTitle(payload),
+            requestedSourcePath: String(payload && payload.sourcePath || '').trim(),
+            matchedSpanCount: matchedSpans.length,
+            highlightTermCount: collectGraphFocusHighlightTerms(matchedSpans).length,
+            markdownRuntimeAvailable: false,
+            storageProviderAvailable: false,
+            readSucceeded: false,
+            renderSucceeded: false,
+            highlightedNodeCount: 0,
+            usedFallback: false,
+            failureReason: '',
+        };
+    }
+
+    function setLastGraphFocusDiagnostics(diagnostics) {
+        state.graphFocusDiagnostics = diagnostics ? JSON.parse(JSON.stringify(diagnostics)) : null;
+        window.__NC_LAST_AGENT_GRAPH_FOCUS_DIAGNOSTICS = state.graphFocusDiagnostics;
+    }
+
     function buildGraphFocusTitle(payload) {
         return String(
             payload.title
@@ -373,14 +395,38 @@
         return highlighted;
     }
 
-    async function renderMarkdownPreviewIntoHost(renderedHost, sourcePath, matchedSpans, renderToken) {
+    async function renderMarkdownPreviewIntoHost(renderedHost, sourcePath, matchedSpans, renderToken, diagnostics) {
         const previewRuntime = resolveMarkdownPreviewRuntime();
+        if (diagnostics) {
+            diagnostics.markdownRuntimeAvailable = Boolean(
+                previewRuntime
+                && previewRuntime.markdownRuntime
+                && typeof previewRuntime.markdownRuntime.renderMarkdownInto === 'function'
+            );
+            diagnostics.storageProviderAvailable = Boolean(
+                previewRuntime
+                && previewRuntime.storageProvider
+                && typeof previewRuntime.storageProvider.readContent === 'function'
+            );
+        }
         if (!renderedHost || !sourcePath || !previewRuntime) {
+            if (diagnostics && !diagnostics.failureReason) {
+                diagnostics.failureReason = !sourcePath
+                    ? 'missing_source_path'
+                    : !diagnostics.markdownRuntimeAvailable
+                        ? 'missing_markdown_runtime'
+                        : !diagnostics.storageProviderAvailable
+                            ? 'missing_storage_provider'
+                            : 'missing_render_host';
+            }
             return false;
         }
 
         try {
             const markdownSource = await previewRuntime.storageProvider.readContent(sourcePath);
+            if (diagnostics) {
+                diagnostics.readSucceeded = true;
+            }
             if (
                 !renderedHost.isConnected
                 || String(renderedHost.getAttribute('data-agent-preview-render-token') || '') !== String(renderToken)
@@ -388,32 +434,51 @@
                 return true;
             }
             await previewRuntime.markdownRuntime.renderMarkdownInto(renderedHost, String(markdownSource || ''));
+            if (diagnostics) {
+                diagnostics.renderSucceeded = true;
+            }
             if (
                 !renderedHost.isConnected
                 || String(renderedHost.getAttribute('data-agent-preview-render-token') || '') !== String(renderToken)
             ) {
                 return true;
             }
-            highlightGraphFocusRenderedMarkdown(renderedHost, matchedSpans);
+            if (diagnostics) {
+                diagnostics.highlightedNodeCount = highlightGraphFocusRenderedMarkdown(renderedHost, matchedSpans);
+            } else {
+                highlightGraphFocusRenderedMarkdown(renderedHost, matchedSpans);
+            }
             return true;
-        } catch (_error) {
+        } catch (error) {
+            if (diagnostics && !diagnostics.failureReason) {
+                diagnostics.failureReason = diagnostics.readSucceeded
+                    ? 'markdown_render_failed'
+                    : 'source_read_failed';
+                diagnostics.errorMessage = String(error && error.message || error || '').trim();
+            }
             return false;
         }
     }
 
-    async function renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken) {
+    async function renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken, diagnostics) {
         const sourcePath = String(payload.sourcePath || '').trim();
         if (!body || !sourcePath) {
+            if (diagnostics && !diagnostics.failureReason) {
+                diagnostics.failureReason = !body ? 'missing_graph_focus_body' : 'missing_source_path';
+            }
             return false;
         }
 
         body.innerHTML = buildGraphFocusRenderedHtml(payload, matchedSpans);
         const renderedHost = body.querySelector('[data-agent-focus-rendered-markdown="true"]');
         if (!renderedHost) {
+            if (diagnostics && !diagnostics.failureReason) {
+                diagnostics.failureReason = 'missing_render_host';
+            }
             return false;
         }
         renderedHost.setAttribute('data-agent-preview-render-token', String(renderToken));
-        const rendered = await renderMarkdownPreviewIntoHost(renderedHost, sourcePath, matchedSpans, renderToken);
+        const rendered = await renderMarkdownPreviewIntoHost(renderedHost, sourcePath, matchedSpans, renderToken, diagnostics);
         if (rendered && (renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open)) {
             return true;
         }
@@ -428,12 +493,20 @@
         const matchedSpans = normalizeMatchedSpans(payload.matchedSpans);
         state.graphFocusRenderToken += 1;
         const renderToken = state.graphFocusRenderToken;
+        const diagnostics = buildGraphFocusDiagnostics(payload, matchedSpans, renderToken);
         body.innerHTML = buildGraphFocusLoadingHtml(payload);
-        const rendered = await renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken);
+        const rendered = await renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken, diagnostics);
         if (rendered || renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open) {
+            diagnostics.usedFallback = false;
+            setLastGraphFocusDiagnostics(diagnostics);
             return;
         }
+        diagnostics.usedFallback = true;
+        if (!diagnostics.failureReason) {
+            diagnostics.failureReason = 'graph_focus_fallback';
+        }
         body.innerHTML = buildGraphFocusFallbackHtml(payload, matchedSpans);
+        setLastGraphFocusDiagnostics(diagnostics);
     }
 
     function resolveKnowledgePointSourcePath(item) {
@@ -3416,6 +3489,7 @@
         initialized: false,
         promotionPane: null,
         graphFocusRenderToken: 0,
+        graphFocusDiagnostics: null,
         learningPathWorkspace: {
             mounted: false,
             nodes: {},
@@ -4171,6 +4245,9 @@
         getState: function () {
             return JSON.parse(JSON.stringify(state));
         },
+        getLastGraphFocusDiagnostics: function () {
+            return state.graphFocusDiagnostics ? JSON.parse(JSON.stringify(state.graphFocusDiagnostics)) : null;
+        },
         openGraphFocusPane: function (payload) {
             ensureWorkspaceVisible();
             state.panes['graph-focus'].open = true;
@@ -4194,6 +4271,8 @@
             state.panes['graph-focus'].open = false;
             state.panes['graph-focus'].fullscreen = false;
             state.panes['graph-focus'].payload = null;
+            state.graphFocusDiagnostics = null;
+            window.__NC_LAST_AGENT_GRAPH_FOCUS_DIAGNOSTICS = null;
             const body = getPaneBodyElement('graph-focus');
             if (body) {
                 body.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.graphFocus.emptyIdle', 'Graph focus pane is idle.'))}</div>`;
