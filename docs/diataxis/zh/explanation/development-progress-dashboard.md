@@ -194,6 +194,51 @@
 - `npm.cmd exec -- tsc --noEmit`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
+## 2026-06-19 Graph-Focus Payload 契约加固
+
+下一个被关闭的缺口并不是 final-answer release review 本身，而是旁边那条证据可用性边界。点击 / 渲染链路原本就存在，真正失败的是：按文档聚合后的知识命中，有时只在 citation-backed 字段里还保留了真实 source path 或 evidence snippet，而 `workspace_panes.js` 过去主要信任原始 top-level `sourcePath` / `matchedSpan.sourcePath`。
+
+当前代码已经成立的事实：
+
+- `src/frontend/workspace_panes.js` 现在会同时从原始 span 字段与 `span.citation` 归一化 `matchedSpans`，覆盖：
+  - `title`
+  - `snippet`
+  - `sourcePath`
+  - `startLine`
+  - `endLine`
+- `buildKnowledgePointFocusPayload(...)` 现在会在打开 graph focus 之前派生 additive `candidateSourcePaths`。
+- `resolveKnowledgePointSourcePath(...)` 不再在第一个原始字段处提前停止，而是会扫描：
+  - top-level `sourcePath`
+  - top-level `citation.sourcePath`
+  - `citations[*].sourcePath`
+  - `matchedSpan.sourcePath`
+  - `matchedSpan.citation.sourcePath`
+- `resolveGraphFocusCandidatePaths(...)` 现在会消费这份 additive candidate list，因此即使 grouped knowledge hit 没有单一 canonical top-level path，右侧原文也仍然可预览。
+- `src/agent_workspace.frontend.test.ts` 现在已经固定两类具体失败模式：
+  - citation-backed snippet 在 markdown render 之后仍然必须能触发高亮；
+  - top-level hit path 缺失时，citation-backed path 仍然必须能打开原始文档。
+- 截图派生的 `waterglass` 运行时 verifier 继续作为主回答验收 owner；新增的前端契约测试是在其旁边补上 operator evidence surface 的保护，而不是替代它。
+
+为什么这一步重要：
+
+- release-review 鲁棒性与右侧 evidence 可用性是两个不同 owner；
+- 主回答再干净，如果运维/开发者打不开支撑原文，系统依旧不够稳；
+- 这也再次说明 `ref/` 里的框架不是这个问题的修复 owner：这里坏掉的是本地 payload invariant，不是 prompt orchestration。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 右侧预览不能依赖单个原始 top-level hit path | `workspace_panes.js` 现在会从 item、citation、citation list、span 与 span-citation 多个表面派生 additive `candidateSourcePaths`。 | 已实现 |
+| citation 里仍有 evidence text 时，高亮不能因 snippet 缺口失效 | `normalizeMatchedSpans(...)` 现在会先从 `span.citation.snippet` 回填 `snippet`，再进入 highlight-term 提取。 | 已实现 |
+| top-level path 缺失的 grouped knowledge hit 仍然必须能打开原始文档 | `resolveKnowledgePointSourcePath(...)` 现在会扫描 citation-backed path 来源，而不再停在第一个原始 span path。 | 已实现 |
+| 截图驱动的运行时验收仍需保持正式门禁 | `verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` 仍然是正式要求；新增前端 graph-focus 测试只是补充，而不是替代。 | 已保持 |
+
+本切片验证：
+
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+
 ## 2026-06-18 共享 alias/scope 回归语料与 soft-miss 恢复
 
 截图驱动的 `waterglass` 失败现在已经不再被当作一次性人工检查。项目已经有了共享的确定性回归语料 `src/learning/KnowledgeWorkspaceConversationRegression.ts`，而这批语料的重要性在于两点：

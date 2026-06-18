@@ -224,11 +224,79 @@
     }
 
     function normalizeMatchedSpans(spans) {
+        const normalizeLineNumber = function (primaryValue, fallbackValue) {
+            const candidates = [primaryValue, fallbackValue];
+            for (let index = 0; index < candidates.length; index += 1) {
+                const numericValue = Number(candidates[index]);
+                if (Number.isFinite(numericValue) && numericValue > 0) {
+                    return Math.trunc(numericValue);
+                }
+            }
+            return undefined;
+        };
         return Array.isArray(spans)
             ? spans
-                .map((span) => span && typeof span === 'object' ? span : null)
+                .map((span) => {
+                    if (!span || typeof span !== 'object') {
+                        return null;
+                    }
+                    const citation = span.citation && typeof span.citation === 'object'
+                        ? { ...span.citation }
+                        : null;
+                    return {
+                        ...span,
+                        citation,
+                        title: String(span.title || citation && citation.title || '').trim(),
+                        snippet: String(span.snippet || citation && citation.snippet || '').trim(),
+                        sourcePath: String(span.sourcePath || citation && citation.sourcePath || '').trim(),
+                        startLine: normalizeLineNumber(span.startLine, citation && citation.startLine),
+                        endLine: normalizeLineNumber(span.endLine, citation && citation.endLine),
+                    };
+                })
                 .filter(Boolean)
             : [];
+    }
+
+    function collectKnowledgePointCandidateSourcePaths(item, matchedSpans) {
+        const candidates = [];
+        const seen = new Set();
+        const appendPath = function (value) {
+            const candidate = String(value || '').trim();
+            if (!candidate || seen.has(candidate)) {
+                return;
+            }
+            seen.add(candidate);
+            candidates.push(candidate);
+        };
+        const citation = item && typeof item.citation === 'object' ? item.citation : null;
+        appendPath(item && item.sourcePath);
+        appendPath(citation && citation.sourcePath);
+        const citations = Array.isArray(item && item.citations) ? item.citations : [];
+        citations.forEach((entry) => {
+            appendPath(entry && entry.sourcePath);
+        });
+        const normalizedMatchedSpans = Array.isArray(matchedSpans)
+            ? matchedSpans
+            : normalizeMatchedSpans(item && item.matchedSpans);
+        normalizedMatchedSpans.forEach((span) => {
+            appendPath(span && span.sourcePath);
+            const spanCitation = span && typeof span.citation === 'object' ? span.citation : null;
+            appendPath(spanCitation && spanCitation.sourcePath);
+        });
+        return candidates;
+    }
+
+    function buildKnowledgePointMatchedSpans(item) {
+        const matchedSpans = normalizeMatchedSpans(item && item.matchedSpans);
+        const fallbackTitle = String(item && item.title || '').trim();
+        const fallbackSnippet = String(item && (item.evidenceSnippet || item.summary) || '').trim();
+        const fallbackSourcePath = collectKnowledgePointCandidateSourcePaths(item, matchedSpans)[0] || '';
+        return matchedSpans.map((span) => ({
+            ...span,
+            title: String(span.title || fallbackTitle).trim(),
+            snippet: String(span.snippet || fallbackSnippet).trim(),
+            sourcePath: String(span.sourcePath || fallbackSourcePath).trim(),
+        }));
     }
 
     function resolveMarkdownPreviewRuntime() {
@@ -260,8 +328,16 @@
             candidates.push(candidate);
         };
         appendPath(payload && payload.sourcePath);
+        const payloadCandidateSourcePaths = Array.isArray(payload && payload.candidateSourcePaths)
+            ? payload.candidateSourcePaths
+            : [];
+        payloadCandidateSourcePaths.forEach((candidateSourcePath) => {
+            appendPath(candidateSourcePath);
+        });
         matchedSpans.forEach((span) => {
             appendPath(span && span.sourcePath);
+            const citation = span && typeof span.citation === 'object' ? span.citation : null;
+            appendPath(citation && citation.sourcePath);
         });
         return candidates;
     }
@@ -642,18 +718,7 @@
     }
 
     function resolveKnowledgePointSourcePath(item) {
-        const sourcePath = String(item && item.sourcePath || '').trim();
-        if (sourcePath) {
-            return sourcePath;
-        }
-        const citation = item && typeof item.citation === 'object' ? item.citation : null;
-        const citationPath = String(citation && citation.sourcePath || '').trim();
-        if (citationPath) {
-            return citationPath;
-        }
-        const matchedSpans = Array.isArray(item && item.matchedSpans) ? item.matchedSpans : [];
-        const firstMatchedSpanPath = String(matchedSpans[0] && matchedSpans[0].sourcePath || '').trim();
-        return firstMatchedSpanPath;
+        return collectKnowledgePointCandidateSourcePaths(item)[0] || '';
     }
 
     function resolveKnowledgePointFileName(item) {
@@ -667,11 +732,8 @@
     }
 
     function buildKnowledgePointFocusPayload(item) {
-        const matchedSpans = Array.isArray(item && item.matchedSpans)
-            ? item.matchedSpans
-                .map((span) => span && typeof span === 'object' ? span : null)
-                .filter(Boolean)
-            : [];
+        const matchedSpans = buildKnowledgePointMatchedSpans(item);
+        const candidateSourcePaths = collectKnowledgePointCandidateSourcePaths(item, matchedSpans);
         const atomIds = Array.isArray(item && item.atomIds) && item.atomIds.length > 0
             ? item.atomIds
             : [item && item.atomId].filter(Boolean);
@@ -680,7 +742,8 @@
             nodeId: String(item && item.documentId || atomIds[0] || '').trim(),
             title: String(item && item.title || resolveKnowledgePointFileName(item)).trim(),
             summary: String(item && (item.summary || item.evidenceSnippet) || '').trim(),
-            sourcePath: resolveKnowledgePointSourcePath(item),
+            sourcePath: candidateSourcePaths[0] || '',
+            candidateSourcePaths,
             matchedSpans,
         };
     }

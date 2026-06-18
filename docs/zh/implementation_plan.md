@@ -33,13 +33,13 @@
 - 这份语料还暴露了 `KnowledgeLearningPlatform.ts` 中的一个 soft-miss 检索缺陷：planner scope recovery 先前只会在 0 结果 miss 时触发，现在改为在“scope 内 rerank 噪声候选仍在，但没有任何 planner title-hit 文档幸存”时也会触发。
 - `src/learning/answerReleaseReview.test.ts` 现在已经钉住确定性的 structured contradiction 用例：数值冲突、年份冲突，以及“支撑里有多个候选值但其中一个就是正确值”的防误报场景。
 - `src/learning/answerReleaseReview.test.ts` 现在还固定了确定性的 polarity contradiction 用例：英文反转、中文反转，以及“support 带有无关否定句但不能误报”的防误报场景。
-- 右侧文件预览/高亮链路与最终回答审核是两个独立 owner：`workspace_panes.js` 的点击/渲染路径已经存在，当前剩余缺口是 payload 契约稳定性，而不是前端事件未接线。
+- 右侧文件预览/高亮链路与最终回答审核仍是两个独立 owner，但第一段 payload 契约加固已经落地到 `src/frontend/workspace_panes.js`：citation-backed `sourcePath` / `snippet` 回退会先被归一化进 `matchedSpans` 与 additive `candidateSourcePaths`，因此按文档聚合的知识命中不再依赖单个原始 top-level hit path。
 
 #### 下一步执行顺序
 
 1. 保持 reviewer 窄口径，只拥有 release invariant，不让 prompt template 重新接管 release policy。
 2. 基于这份显式 alias/scope 回归语料以及新落地的 structured-fact + polarity + graph-order reviewer 切片，继续把当前 lexical grounding check 扩展到更深的 claim-vs-citation / claim-vs-evidence 矛盾检测，同时控制 false positive。
-3. 加固 graph-focus payload 契约，让点击命中文件时右侧原文与命中高亮由稳定字段驱动，而不是依赖 fallback-only 的路径/片段恢复。
+3. 在已加固的 graph-focus payload 契约之上，继续把高亮收紧到更 line-anchored / provenance-precise 的语义层级，前提是当前 markdown 渲染路径允许，同时不要把 release policy 挪到前端。
 4. 持续扩充共享语料，覆盖更多真实的跨 scope、紧凑别名与同义表达失败场景，并保持 Jest 与运行时 verifier 的确定性预期一致。
 5. 继续做 owner reduction，但前提仍然是“新 owner 持有真实决策或不变量”。
 
@@ -53,7 +53,7 @@
 6. 运维检查面必须能渲染 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
 7. Workspace export 的 knowledge-run report 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时保持向前兼容。
 8. Workspace export 还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计摘要，以及同一路径派生出的 review-trend / gate-aging / compare-ready drilldown 摘要；运维 history 卡片与 compare 卡片都必须消费同一套 reviewer telemetry，而不扩大主回答区。
-9. 右侧文件命中预览必须基于稳定 payload 字段解析原文与命中高亮，而不是依赖脆弱的 fallback-only 解析。
+9. 右侧文件命中预览必须基于稳定 payload 字段解析原文与命中高亮；即使 top-level hit 字段不完整，也必须能消费 citation-backed path/snippet。
 10. `npm run verify:knowledge-workspace:runtime` 必须通过共享 alias/scope 回归语料，包括截图派生的 `waterglass` compact/spaced 双查询与 `financial` 下的跨 scope 恢复双查询，并确认 reviewer/public-answer 一致性。
 11. 现有 `assistantMessage`、`answer`、`assistantBlocks` 与下游 client 必须保持向前兼容。
 

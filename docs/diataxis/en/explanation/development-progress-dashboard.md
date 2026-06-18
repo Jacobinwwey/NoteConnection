@@ -194,6 +194,51 @@ Verification for this slice:
 - `npm.cmd exec -- tsc --noEmit`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
+## 2026-06-19 Graph-Focus Payload Contract Hardening
+
+The next closed gap was not public-answer release review itself but the evidence-usability boundary beside it. The click/render path already existed. The failure was that grouped knowledge hits could still carry the real source path or evidence snippet only inside citation-backed fields, while `workspace_panes.js` mainly trusted raw top-level `sourcePath` / `matchedSpan.sourcePath` data.
+
+What is now true in code:
+
+- `src/frontend/workspace_panes.js` now normalizes `matchedSpans` from both raw span fields and `span.citation`, including:
+  - `title`,
+  - `snippet`,
+  - `sourcePath`,
+  - `startLine`,
+  - `endLine`.
+- `buildKnowledgePointFocusPayload(...)` now derives additive `candidateSourcePaths` before opening graph focus.
+- `resolveKnowledgePointSourcePath(...)` no longer stops at the first raw field. It now scans:
+  - top-level `sourcePath`,
+  - top-level `citation.sourcePath`,
+  - `citations[*].sourcePath`,
+  - `matchedSpan.sourcePath`,
+  - `matchedSpan.citation.sourcePath`.
+- `resolveGraphFocusCandidatePaths(...)` now consumes the additive candidate list, so grouped knowledge hits remain previewable even when they do not carry a single canonical top-level path.
+- `src/agent_workspace.frontend.test.ts` now pins two concrete failure modes:
+  - citation-backed snippets must still highlight after markdown render,
+  - citation-backed paths must still open source content when the top-level hit path is missing.
+- The screenshot-derived `waterglass` runtime verifier remains the public-answer acceptance owner; these new frontend contract tests complement it by protecting the operator evidence surface.
+
+Why this matters:
+
+- release-review robustness and right-pane evidence usability are different owners;
+- a clean public answer is still not enough if operators cannot open the supporting source reliably;
+- this is also why the `ref/` frameworks are not the fix owner here: the problem was local payload invariants, not prompt orchestration.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Right-pane preview must not depend on one raw top-level hit path | `workspace_panes.js` now derives additive `candidateSourcePaths` from item, citation, citation list, span, and span-citation surfaces. | Implemented |
+| Highlighting must survive snippet gaps when citation still carries the evidence text | `normalizeMatchedSpans(...)` now backfills `snippet` from `span.citation.snippet` before highlight-term extraction. | Implemented |
+| Grouped knowledge hits with missing top-level path must still open the original document | `resolveKnowledgePointSourcePath(...)` now scans citation-backed path sources instead of stopping at the first raw span path. | Implemented |
+| Screenshot-backed runtime acceptance must remain formal | `verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` remains required; the new frontend graph-focus tests complement that gate instead of replacing it. | Preserved |
+
+Verification for this slice:
+
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+
 ## 2026-06-18 Shared Alias/Scope Regression Corpus and Soft-Miss Recovery
 
 The screenshot-backed `waterglass` failure is no longer treated as a one-off manual check. The project now has a shared deterministic regression corpus at `src/learning/KnowledgeWorkspaceConversationRegression.ts`, and the first corpus matters for two reasons:

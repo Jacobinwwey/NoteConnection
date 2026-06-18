@@ -25,7 +25,8 @@
 - [x] 已把 reviewer 从 lexical + structured-fact 门禁继续扩展到确定性的 `claim_polarity_consistency`，覆盖显式正反断言反转，并用防误报单测约束。
 - [x] 已把 reviewer 从 lexical + structured-fact + polarity 门禁继续扩展到确定性的 `claim_graph_order_consistency`，覆盖与已装配 DAG 相矛盾的 `prerequisite` / `sequence` 方向反转，并用防误报单测约束。
 - [ ] 在当前 lexical + structured-fact + polarity + graph-order 门禁之上，继续扩展到更广的 claim-vs-citation / claim-vs-evidence 矛盾检测，并控制 false positive。
-- [ ] 加固 graph-focus payload 契约，让右侧原文预览 / 命中高亮在 candidate-path fallback 噪声下仍保持确定性。
+- [x] 加固 graph-focus payload 契约，让右侧原文预览 / 命中高亮在 candidate-path fallback 噪声下仍保持确定性。
+- [ ] 在 payload 稳定性之上，把 graph-focus 高亮继续收紧到更 line-anchored / provenance-precise 的语义层级，前提是当前 markdown 渲染路径暴露足够结构。
 
 ### 2026-06-17 Agent Knowledge DAG TODO 重新分类
 

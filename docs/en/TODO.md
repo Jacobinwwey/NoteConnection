@@ -25,7 +25,8 @@
 - [x] Extend the reviewer beyond lexical + structured-fact overlap with a deterministic `claim_polarity_consistency` gate for explicit positive/negative claim reversals, and cover it with false-positive-resistant unit cases.
 - [x] Extend the reviewer beyond lexical + structured-fact + polarity checks with a deterministic `claim_graph_order_consistency` gate for reversed `prerequisite` / `sequence` claims against the assembled DAG, and cover it with false-positive-resistant unit cases.
 - [ ] Extend contradiction coverage beyond the current lexical + structured-fact + polarity + graph-order gates into broader claim-vs-citation / claim-vs-evidence conflicts without raising false positives.
-- [ ] Harden the graph-focus payload contract so right-pane source preview/highlight is deterministic even when candidate-path fallback is noisy.
+- [x] Harden the graph-focus payload contract so right-pane source preview/highlight is deterministic even when candidate-path fallback is noisy.
+- [ ] Tighten graph-focus highlighting from payload stability toward more line-anchored / provenance-precise highlighting when the markdown-render path exposes enough structure.
 
 ### 2026-06-17 Agent Knowledge DAG TODO Reclassification
 

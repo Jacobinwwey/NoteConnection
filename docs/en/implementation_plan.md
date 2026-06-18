@@ -32,13 +32,13 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 - That corpus exposed a soft-miss retrieval bug in `KnowledgeLearningPlatform.ts`: planner scope recovery previously triggered only on zero-result misses, and now also triggers when reranked in-scope noise survives but none of the surviving items belong to planner title-hit documents.
 - `src/learning/answerReleaseReview.test.ts` now pins deterministic contradiction cases for numeric conflict, year conflict, and a multi-value support case that must not trigger a false positive.
 - `src/learning/answerReleaseReview.test.ts` now also pins deterministic polarity-conflict cases for English reversal, Chinese reversal, and an unrelated-negative-support case that must not trigger a false positive.
-- The right-pane file-preview/highlight path is still architecturally separate from final-answer review: the click/render pipeline already exists in `workspace_panes.js`, and the remaining gap is payload-contract stability rather than missing frontend event wiring.
+- The right-pane file-preview/highlight path remains architecturally separate from final-answer review, but the first payload-contract hardening slice is now landed in `src/frontend/workspace_panes.js`: citation-backed `sourcePath` / `snippet` fallback is normalized into `matchedSpans` plus additive `candidateSourcePaths`, so grouped knowledge hits no longer rely on a single raw top-level hit path.
 
 #### Next execution order
 
 1. Keep the reviewer deterministic and narrowly scoped to release invariants; do not let prompt templates reclaim ownership of release policy.
 2. Use the explicit alias/scope regression corpus and the new structured-fact + polarity + graph-order reviewer slices to broaden contradiction coverage beyond the current lexical grounding check without widening false positives.
-3. Harden the graph-focus payload contract so clicking a hit file deterministically resolves source markdown and matched-span highlights instead of depending on fallback-only path/snippet recovery.
+3. Build on the hardened graph-focus payload contract with more line-anchored / provenance-precise highlight semantics where the markdown-render path allows it, without moving release policy into the frontend.
 4. Keep extending the shared corpus with more real cross-scope, compact-alias, and synonym failures while preserving deterministic expectations in both Jest and runtime verification.
 5. Continue owner reduction only when the new owner hides real decisions or invariants.
 
@@ -52,7 +52,7 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 6. Operator inspection surfaces render reviewer decision, failed gates, and original/public answer deltas without widening the primary answer area.
 7. Workspace export knowledge-run reports carry compact reviewer summaries for `release` / `revise` flows and stay backward-compatible when review data is absent.
 8. Workspace export also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card renders the same audit shape, and the compare card exposes answer-release deltas without widening the public answer area.
-9. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields rather than fragile fallback-only heuristics.
+9. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields, including citation-backed paths/snippets when top-level hit fields are incomplete.
 10. `npm run verify:knowledge-workspace:runtime` passes the shared alias/scope regression corpus, including the screenshot-derived `waterglass` compact/spaced pair and the `financial` cross-scope recovery pair, and confirms reviewer/public-answer parity.
 11. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
 

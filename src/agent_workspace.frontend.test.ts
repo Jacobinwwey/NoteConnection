@@ -4095,6 +4095,174 @@ describe('workspace panes controller', () => {
         }));
     });
 
+    test('normalizes citation-backed knowledge hits before opening graph focus', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'A water glass is a physical system often used in basic thermodynamics examples.',
+            '',
+            'The water glass exchanges heat with the environment.',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement) => {
+            container.innerHTML = `
+                <article class="reader-block">
+                    <h2>Water Glass</h2>
+                    <p>A water glass is a physical system often used in basic thermodynamics examples.</p>
+                    <p>The water glass exchanges heat with the environment.</p>
+                </article>
+            `;
+        });
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+
+        controller.init();
+        controller.renderKnowledgePoints([
+            {
+                atomId: 'atom_water_glass',
+                documentId: 'doc_water_glass',
+                title: 'Water Glass',
+                summary: 'A water glass is a transparent container plus water.',
+                evidenceSnippet: 'A water glass is a transparent container plus water.',
+                score: 0.93,
+                citation: {
+                    title: 'Definition',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    snippet: 'A water glass is a physical system often used in basic thermodynamics examples.',
+                    startLine: 3,
+                    endLine: 3,
+                },
+                matchedSpans: [
+                    {
+                        atomId: 'atom_water_glass',
+                        title: 'Definition',
+                        snippet: '',
+                        sourcePath: '',
+                        startLine: undefined,
+                        endLine: undefined,
+                        score: 0.93,
+                        citation: {
+                            title: 'Definition',
+                            sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                            snippet: 'A water glass is a physical system often used in basic thermodynamics examples.',
+                            startLine: 3,
+                            endLine: 3,
+                        },
+                    },
+                ],
+                capabilities: [],
+            },
+        ], {
+            onCapability: jest.fn(),
+        });
+
+        const fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
+        const sourcePathNode = document.querySelector('.agent-knowledge-source-path') as HTMLElement | null;
+        expect(fileButton?.textContent).toBe('water glass.md');
+        expect(String(sourcePathNode?.textContent || '')).toContain('Knowledge_Base/waterglass/water glass.md');
+
+        fileButton?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        expect(readContent).toHaveBeenCalledWith('Knowledge_Base/waterglass/water glass.md');
+        expect(renderMarkdownInto).toHaveBeenCalled();
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        expect(String(graphBody?.textContent || '')).toContain('A water glass is a physical system often used in basic thermodynamics examples.');
+        const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
+        expect(highlighted.length).toBeGreaterThan(0);
+        expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
+            requestedSourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            candidateSourcePaths: ['Knowledge_Base/waterglass/water glass.md'],
+            resolvedSourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            renderSucceeded: true,
+            highlightedNodeCount: expect.any(Number),
+        }));
+    });
+
+    test('resolves graph focus source paths from matched-span citations when the top-level hit path is missing', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'A water glass is a physical system often used in basic thermodynamics examples.',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement) => {
+            container.innerHTML = `
+                <article class="reader-block">
+                    <h2>Water Glass</h2>
+                    <p>A water glass is a physical system often used in basic thermodynamics examples.</p>
+                </article>
+            `;
+        });
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+
+        controller.init();
+        controller.renderKnowledgePoints([
+            {
+                atomId: 'atom_water_glass',
+                documentId: 'doc_water_glass',
+                title: 'Water Glass',
+                summary: 'A water glass is a transparent container plus water.',
+                evidenceSnippet: 'A water glass is a transparent container plus water.',
+                score: 0.93,
+                citation: null,
+                matchedSpans: [
+                    {
+                        atomId: 'atom_water_glass',
+                        title: 'Definition',
+                        snippet: '',
+                        sourcePath: '',
+                        startLine: undefined,
+                        endLine: undefined,
+                        score: 0.93,
+                        citation: {
+                            title: 'Definition',
+                            sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                            snippet: 'A water glass is a physical system often used in basic thermodynamics examples.',
+                            startLine: 3,
+                            endLine: 3,
+                        },
+                    },
+                ],
+                capabilities: [],
+            },
+        ], {
+            onCapability: jest.fn(),
+        });
+
+        const fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
+        const sourcePathNode = document.querySelector('.agent-knowledge-source-path') as HTMLElement | null;
+        expect(fileButton?.textContent).toBe('water glass.md');
+        expect(String(sourcePathNode?.textContent || '')).toContain('Knowledge_Base/waterglass/water glass.md');
+
+        fileButton?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        expect(readContent).toHaveBeenCalledWith('Knowledge_Base/waterglass/water glass.md');
+        expect(renderMarkdownInto).toHaveBeenCalled();
+        expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
+            requestedSourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            candidateSourcePaths: ['Knowledge_Base/waterglass/water glass.md'],
+            resolvedSourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            renderSucceeded: true,
+        }));
+    });
+
     test('keeps reusable card renderers aligned with chat and evidence owners', () => {
         const repoRoot = path.resolve(__dirname, '..');
         const source = fs.readFileSync(

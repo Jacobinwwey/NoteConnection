@@ -27,7 +27,9 @@
 - [x] The reviewer now also enforces `claim_graph_order_consistency`, so grounded drafts that reverse `prerequisite` or `sequence` direction against the assembled DAG are revised before release with a deterministic correction sentence.
 - [x] `src/learning/answerReleaseReview.test.ts` now covers deterministic DAG-order cases: prerequisite reversal, correct prerequisite direction, and sequence reversal.
 - [ ] Next active task: extend contradiction coverage beyond the current lexical + structured-fact + polarity + graph-order checks into broader claim/citation/evidence conflicts without letting false positives widen.
-- [ ] Next active task: harden the graph-focus payload contract so clicking a hit file deterministically opens source content and highlight spans in the right pane instead of relying on fragile fallback-only resolution.
+- [x] The graph-focus payload contract is now hardened: citation-backed `sourcePath` / `snippet` fallback is normalized before opening graph focus, and right-pane source preview/highlight no longer depends on a single raw top-level hit path.
+- [ ] Next active task: extend contradiction coverage beyond the current lexical + structured-fact + polarity + graph-order checks into broader claim/citation/evidence conflicts without letting false positives widen.
+- [ ] Next active task: tighten graph-focus highlighting from payload stability into more line-anchored / provenance-precise highlight semantics where the markdown-render path allows it.
 - [ ] Next active task: continue growing the regression corpus with more real cross-scope and synonym failures, while keeping the public answer surface contracted.
 
 ### Current Acceptance Targets
@@ -40,7 +42,7 @@
 6. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
 7. Exported `knowledgeRunReports` carry compact reviewer summaries for `release` / `revise` flows and omit the field cleanly when review data is absent.
 8. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card and compare card surface the same reviewer path.
-9. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields rather than fragile fallback-only heuristics.
+9. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields, including citation-backed paths/snippets when top-level hit fields are incomplete.
 10. Runtime verification now passes the shared alias/scope corpus, including the screenshot-derived compact/spaced `waterglass` pair and the `financial` cross-scope recovery pair, and confirms `answerReleaseReview.publicAnswer === result.answer`.
 
 ### 2026-06-17 Active Agent Knowledge DAG Task Sync

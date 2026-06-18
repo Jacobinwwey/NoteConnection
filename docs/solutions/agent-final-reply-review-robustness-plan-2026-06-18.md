@@ -325,6 +325,25 @@ Attached additively to:
   - the click/render path already exists in `workspace_panes.js`,
   - the unresolved gap is payload-contract stability for source paths and matched spans.
 
+#### Phase-11 graph-focus payload-contract hardening landed on top of the DAG-order slice
+
+- `src/frontend/workspace_panes.js` now treats citation-backed evidence fields as first-class fallback inputs for graph focus rather than trusting only raw `item.sourcePath` / `span.sourcePath`.
+- `normalizeMatchedSpans()` now backfills:
+  - `title`,
+  - `snippet`,
+  - `sourcePath`,
+  - `startLine`,
+  - `endLine`
+  from `span.citation` whenever the raw span fields are incomplete.
+- `buildKnowledgePointFocusPayload()` now derives additive `candidateSourcePaths` and normalized matched spans before opening the right pane.
+- `resolveKnowledgePointSourcePath()` now scans top-level source path, top-level citation, citation list, span paths, and span-citation paths instead of stopping at the first raw path.
+- `resolveGraphFocusCandidatePaths()` now consumes the additive candidate list, so preview resolution stays stable even when grouped knowledge hits lack a canonical top-level path.
+- `src/agent_workspace.frontend.test.ts` now pins two concrete failure modes:
+  - citation-backed snippets still highlight after markdown render,
+  - citation-backed paths still open source content when the top-level hit path is missing.
+- This phase does not change the answer-release reviewer.
+- It closes a separate but necessary boundary: evidence usability for operators/developers after the public answer has already been contracted.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -343,6 +362,7 @@ Critical conclusion:
 - **Semantic Kernel** and **LangChain Core** can organize calls, but they do not solve evidence-policy ownership.
 - **LiteLLM** helps provider routing, not answer correctness.
 - **AhaDiff** is the most relevant conceptual reference because it separates public conclusion from evidence and verification state. The new local reviewer layer follows that direction without importing its runtime model.
+- The graph-focus payload fix reinforces the same lesson on the frontend side: local evidence-path invariants still need a local owner even when framework-assisted prompting exists elsewhere.
 
 Therefore the better design is:
 
@@ -403,7 +423,7 @@ The first two decide capability. The third decides trust.
 
 1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + structured-fact + polarity + graph-order gates, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
-3. Treat the right-pane source/highlight issue as a separate payload-contract problem instead of misclassifying it as missing frontend click wiring.
+3. Build on the now-hardened graph-focus payload contract with more line-anchored / provenance-precise highlight semantics where the markdown-render path allows it.
 4. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
 5. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
 
@@ -411,7 +431,7 @@ The first two decide capability. The third decides trust.
 
 1. The missing mechanism was not graph retrieval; it was final public-answer release review.
 2. The correct owner is a local deterministic reviewer layer, not a new prompt framework.
-3. The current project DAG remains the evidence substrate and now also participates in release-time order correction; the reviewer still does not replace graph assembly.
+3. The current project DAG remains the evidence substrate and now also participates in release-time order correction; graph-focus evidence usability still needs its own payload owner and is not solved by reviewer policy alone.
 4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification.
 5. The landed slice is backward-compatible and materially improves robustness without widening the main answer surface.
 
@@ -730,6 +750,24 @@ The first two decide capability. The third decides trust.
   - `workspace_panes.js` 中的点击 / 渲染路径本来就存在，
   - 当前剩余缺口是 source path 与 matched span 的 payload 契约稳定性。
 
+#### 在 DAG 顺序矛盾切片之上继续落地的 Phase-11 graph-focus payload 契约加固
+
+- `src/frontend/workspace_panes.js` 现在已经把 citation-backed evidence 字段视为 graph focus 的一等回退输入，而不再只信任原始 `item.sourcePath` / `span.sourcePath`。
+- `normalizeMatchedSpans()` 现在会在原始 span 字段不完整时，从 `span.citation` 回填：
+  - `title`
+  - `snippet`
+  - `sourcePath`
+  - `startLine`
+  - `endLine`
+- `buildKnowledgePointFocusPayload()` 现在会在打开右侧 pane 之前派生 additive `candidateSourcePaths` 与归一化后的 matched spans。
+- `resolveKnowledgePointSourcePath()` 不再在第一个原始 path 处提前停止，而是会扫描 top-level source path、top-level citation、citation list、span path 与 span-citation path。
+- `resolveGraphFocusCandidatePaths()` 现在会消费这份 additive candidate list，因此即使 grouped knowledge hit 没有 canonical top-level path，预览解析也能保持稳定。
+- `src/agent_workspace.frontend.test.ts` 现在已经固定两类具体失败模式：
+  - citation-backed snippet 在 markdown render 之后仍然必须能高亮，
+  - top-level hit path 缺失时，citation-backed path 仍然必须能打开原始内容。
+- 这个 Phase 不改变 final-answer reviewer 本身。
+- 它关闭的是另一条必要边界：在主回答已经收缩后，运维/开发者对证据原文的可用性。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -748,6 +786,7 @@ The first two decide capability. The third decides trust.
 - **Semantic Kernel** / **LangChain Core** 能组织调用，但不能替代 evidence-policy owner。
 - **LiteLLM** 管的是 provider routing，不管答案正确性。
 - **AhaDiff** 最有启发，因为它把公开结论、证据、验证状态分层；本地 reviewer 现在沿着这个方向实现，但不引入它的运行时依赖。
+- graph-focus payload 这次修复又在前端侧重复证明了同一个结论：即便别处存在 framework-assisted prompting，本地 evidence-path invariant 仍然需要本地 owner。
 
 所以更优方向是：
 
@@ -808,7 +847,7 @@ The first two decide capability. The third decides trust.
 
 1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + structured-fact + polarity + graph-order gate 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
-3. 把右侧原文 / 高亮问题收敛为独立 payload 契约工作，而不是继续误判成前端点击事件缺失。
+3. 在已经加固的 graph-focus payload 契约之上，继续把高亮收紧到更 line-anchored / provenance-precise 的语义层级，前提是当前 markdown 渲染路径允许。
 4. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
 5. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
 
@@ -816,6 +855,6 @@ The first two decide capability. The third decides trust.
 
 1. 真正缺失的不是图检索，而是最终公开回答的 release review。
 2. 正确 owner 是本地确定性 reviewer layer，不是再引入一层 prompt framework。
-3. 项目现有 DAG 继续作为证据底座，并且已经开始参与 release-time 的顺序纠错；reviewer 不会替代 graph assembly。
+3. 项目现有 DAG 继续作为证据底座，并且已经开始参与 release-time 的顺序纠错；而 graph-focus 证据可用性仍需要独立 payload owner，不能靠 reviewer policy 代偿。
 4. `waterglass` 截图已经被编码进正式运行时验收门禁。
 5. 本轮落地保持向前兼容，同时实质提升了 agent 最终回复的鲁棒性。
