@@ -29,6 +29,7 @@ The target is not another prompt framework. The target is a deterministic releas
 - Re-audit confirms the original missing-owner problem is already closed in code. The live work now hardens two narrower boundaries rather than reopening framework debates.
 - `src/learning/answerReleaseReview.ts` now adds `claim_state_consistency`, a deterministic same-subject state gate for definition/copula contradictions such as `open system` vs `closed system`.
 - `src/learning/answerReleaseReview.ts` now also adds `query_intent_alignment`, so definition-style queries revise meta-documentary drafts such as `本技术文档旨在...` into direct grounded definitions before release.
+- `src/learning/answerReleaseReview.ts` now also adds `claim_containment_consistency`, so grounded drafts that keep the same explicit containment relation but swap the contained material, such as `Water glass contains water` to `Water glass contains oil`, are revised before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_subject_consistency`, so drafts that preserve a supported fact tail but swap the grounded subject, such as `Water density` to `Glass density`, are revised before release.
 - `src/frontend/markdown_runtime.js` now exposes block-level source-line provenance for rendered markdown, and `src/frontend/workspace_panes.js` now prefers `source_line_provenance` before `line_window` / `snippet_fallback`.
 - The right pane now also projects the matched evidence fragment into inline highlight markup inside the selected rendered node instead of only tinting the larger paragraph/container.
@@ -99,6 +100,7 @@ The correct architecture is a pipeline of owners, not a single "RAG" blob:
    - evidence sufficiency,
    - graph support sufficiency,
    - structured consistency,
+   - containment consistency,
    - public-surface contraction,
    - internal diagnostic leakage,
    - subject consistency,
@@ -141,6 +143,7 @@ The first fix restores evidence. The second fix restores robustness.
 | Empty-result answers must abstain cleanly instead of exposing runtime detail | Reviewer now downgrades unsupported drafts into concise abstentions. | Implemented |
 | Grounded drafts must stay aligned with their cited/knowledge-point support | Reviewer now enforces `claim_grounding_alignment` and revises drafts when lexical evidence overlap shows claim drift. | Implemented |
 | Grounded drafts must also be checked for deterministic structured fact conflicts | Reviewer now enforces `claim_structured_consistency`, revising grounded drafts when numeric or year facts conflict with support even though topical lexical overlap still passes. | Implemented baseline |
+| Grounded drafts must also be checked for explicit containment/content contradictions | Reviewer now enforces `claim_containment_consistency`, revising grounded drafts when the same grounded subject keeps the same explicit containment relation but swaps the supported contained material in English or Chinese. | Implemented baseline |
 | Grounded drafts must also be checked for grounded-subject drift even when the supported fact tail still matches | Reviewer now enforces `claim_subject_consistency`, revising drafts that keep the supported fact tail but swap the subject/entity from the grounded support. | Implemented baseline |
 | Grounded drafts must also be checked for same-subject state contradictions | Reviewer now enforces `claim_state_consistency`, revising grounded drafts when comparable definition/copula state claims conflict with grounded support in English or Chinese. | Implemented baseline |
 | Grounded drafts must also be checked for explicit polarity reversals | Reviewer now enforces `claim_polarity_consistency`, revising grounded drafts when they say `is not` / `不是` against support that still affirms the same claim skeleton. | Implemented baseline |
@@ -463,6 +466,28 @@ Attached additively to:
 - This phase does not replace the earlier contradiction owners.
 - It closes a narrower but real remaining gap: `same fact tail, wrong grounded subject`.
 
+#### Phase-17 containment contradiction hardening landed on top of the grounded-subject slice
+
+- `src/learning/answerReleaseReview.ts` now adds a seventh contradiction-oriented reviewer gate: `claim_containment_consistency`.
+- This gate closes a narrower but real hole left by the current stack:
+  - the draft can keep the same grounded subject,
+  - keep the same explicit containment/content relation,
+  - yet still swap the contained material.
+- The first supported contradiction family intentionally stays narrow and deterministic:
+  - English: `contains`, `is/are/was/were filled with`
+  - Chinese: `装有`, `盛有`, `含有`, `包含`
+- The normalization bias is intentional:
+  - trailing environment clauses such as `during the example setup` or `在示例过程中` are stripped before object comparison,
+  - compatible refinements such as `water` -> `cold water` still cleanly `release`,
+  - non-comparable containment wording does not trigger revision.
+- This is the correct bias. A containment gate that invents contradictions from weak overlap would degrade trust faster than a narrow gate that only catches high-confidence swaps.
+- `src/learning/answerReleaseReview.test.ts` now pins three key behaviors:
+  - English containment contradictions force `revise`,
+  - Chinese containment contradictions force `revise`,
+  - compatible contained-material refinements still cleanly `release`.
+- This phase does not replace the earlier contradiction owners.
+- It closes the remaining gap where `the subject stayed the same, the relation stayed the same, but the contained material drifted`.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -540,7 +565,7 @@ The first two decide capability. The third decides trust.
 
 ### Next Direction
 
-1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + query-intent + structured-fact + subject + state + polarity + graph-order gate stack, but only where the new checks can stay deterministic enough to avoid false-positive churn.
+1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + query-intent + structured-fact + containment + subject + state + polarity + graph-order gate stack, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
 3. Treat the current block-level markdown source mapping plus `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` graph-focus stack as the implemented baseline, then focus the next provenance step on repeated-fragment disambiguation via explicit offsets or richer AST provenance.
 4. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
@@ -551,7 +576,7 @@ The first two decide capability. The third decides trust.
 1. The missing mechanism was not graph retrieval; it was final public-answer release review.
 2. The correct owner is a local deterministic reviewer layer, not a new prompt framework.
 3. The current project DAG remains the evidence substrate and now also participates in release-time order correction; graph-focus now also has a block-level provenance baseline plus `source_line_provenance` / source-authenticated fragment projection / `line_window` / `snippet_fallback`, so the remaining evidence gap has narrowed to repeated-fragment disambiguation inside one authenticated block rather than basic pane opening.
-4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification.
+4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification, and the reviewer stack now also blocks same-subject containment-content drift before release.
 5. The landed slice is backward-compatible and materially improves robustness without widening the main answer surface; the next work is broader contradiction coverage, not replacing the current reviewer owner.
 
 ## 中文文档
@@ -573,6 +598,7 @@ The first two decide capability. The third decides trust.
 - 复审确认：最初的“缺失 owner”问题已经在代码中关闭，当前工作不再是重开 framework 争论，而是继续加固两个更窄的不变量边界。
 - `src/learning/answerReleaseReview.ts` 现在新增 `claim_state_consistency`，用于拦截 `open system` vs `closed system` 这类同主体 definition/copula 状态矛盾。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `query_intent_alignment`，因此定义型问题会把 `本技术文档旨在...` 这类元文档草稿改写成直接定义句后再 release。
+- `src/learning/answerReleaseReview.ts` 现在也新增 `claim_containment_consistency`，因此像把 `Water glass contains water` 偷换成 `Water glass contains oil` 这类“同一主体、同一显式容纳关系、但内容物漂移”的草稿会在 release 前被拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_subject_consistency`，因此像把 `Water density` 偷换成 `Glass density` 这种“事实尾部还对，但 grounded subject 已漂移”的草稿会在 release 前被拦截并改写。
 - `src/frontend/markdown_runtime.js` 现在会暴露 block-level 的 source-line provenance，`src/frontend/workspace_panes.js` 则优先消费 `source_line_provenance`，之后才回退到 `line_window` / `snippet_fallback`。
 - 右侧 pane 现在也会在选中的渲染节点内部投影命中的 evidence fragment 内联高亮，而不再只是给更大的段落 / 容器着色。
@@ -642,6 +668,7 @@ The first two decide capability. The third decides trust.
    - evidence sufficiency
    - graph support sufficiency
    - structured consistency
+   - containment consistency
    - public-surface contraction
    - internal diagnostic leakage
    - subject consistency
@@ -684,6 +711,7 @@ The first two decide capability. The third decides trust.
 | 空结果回答必须 clean abstain，而不是暴露 runtime 细节 | reviewer 现在会把 unsupported draft 降级成简洁 abstention。 | 已实现 |
 | grounded draft 必须与 citation/knowledge-point 支撑保持一致 | reviewer 现在会执行 `claim_grounding_alignment`，在词法证据重叠不足时强制改写漂移主张。 | 已实现 |
 | grounded draft 还必须检查确定性的结构化事实冲突 | reviewer 现在会执行 `claim_structured_consistency`：即使 topical lexical overlap 仍然通过，只要数值或年份事实与支撑冲突，也会触发 revise。 | 已实现基线 |
+| grounded draft 还必须检查显式容纳关系里的内容物矛盾 | reviewer 现在会执行 `claim_containment_consistency`：对于中英文可比容纳关系，只要主体不变、关系不变、但内容物被偷换，就会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查“事实尾部一致但主体漂移”的 grounded-subject 冲突 | reviewer 现在会执行 `claim_subject_consistency`：即使数值/事实尾部仍与支撑一致，只要 grounded subject / entity 被偷换，也会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查同主体状态矛盾 | reviewer 现在会执行 `claim_state_consistency`：对于中英文可比的 definition/copula 状态断言，只要同主体状态与支撑冲突，就会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查显式正反断言反转 | reviewer 现在会执行 `claim_polarity_consistency`：即使 topical lexical overlap 仍然通过，只要把 `is` / `不是` 这类断言方向明确说反，也会触发 revise。 | 已实现基线 |
@@ -1006,6 +1034,28 @@ The first two decide capability. The third decides trust.
 - 这个 Phase 不替代之前的矛盾 gate owner。
 - 它补上的剩余缺口是：“事实尾部没错，但 grounded 主体错了”。
 
+#### 在 grounded-subject 切片之上继续落地的 Phase-17 containment 矛盾加固
+
+- `src/learning/answerReleaseReview.ts` 现在新增了第七个面向矛盾检测的 reviewer gate：`claim_containment_consistency`。
+- 这个 gate 补的是一个更窄、但真实存在的缺口：
+  - 草稿可以保持同一 grounded subject，
+  - 保持同一显式容纳/承载关系，
+  - 但仍然偷偷把被容纳内容换掉。
+- 当前支持的第一批矛盾类型刻意保持窄口径、确定性优先：
+  - 英文：`contains`、`is/are/was/were filled with`
+  - 中文：`装有`、`盛有`、`含有`、`包含`
+- 这个 gate 的归一化偏置也是刻意设计出来的：
+  - 会先剥离 `during the example setup`、`在示例过程中` 这类尾随环境语境，再比较内容物；
+  - `water` -> `cold water` 这类兼容细化必须继续 clean `release`；
+  - 不可比或重叠过弱的容纳表述，不允许强行触发 revision。
+- 这是正确偏置。一个会从弱重叠里凭空制造“内容物矛盾”的 gate，比一个只抓高置信度偷换的窄 gate 更糟。
+- `src/learning/answerReleaseReview.test.ts` 现在已经固定三类关键行为：
+  - 英文 containment contradiction 必须 `revise`；
+  - 中文 containment contradiction 必须 `revise`；
+  - 内容物兼容细化表述必须继续 clean `release`。
+- 这个 Phase 不替代之前的矛盾 gate owner。
+- 它补上的剩余缺口是：“主体没变、关系没变，但内容物错了”。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -1083,7 +1133,7 @@ The first two decide capability. The third decides trust.
 
 ### 后续方向
 
-1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + query-intent + structured-fact + subject + state + polarity + graph-order gate 栈之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
+1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + query-intent + structured-fact + containment + subject + state + polarity + graph-order gate 栈之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
 3. 把当前 block-level markdown source mapping 与 `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` 的 graph-focus 栈视为已落地基线；后续重点转到基于显式 offset 或更丰富 AST provenance 的重复片段去歧义。
 4. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
@@ -1094,5 +1144,5 @@ The first two decide capability. The third decides trust.
 1. 本轮切片起点真正缺失的不是图检索，而是最终公开回答的 release review；复审现在已经确认这个 owner 已落地。
 2. 正确 owner 是本地确定性 reviewer layer，不是再引入一层 prompt framework。
 3. 项目现有 DAG 继续作为证据底座，并且已经开始参与 release-time 的顺序纠错；graph-focus 现在也已经具备 block-level provenance 加上 `source_line_provenance` / source-authenticated fragment projection / `line_window` / `snippet_fallback` 的高亮基线，剩余缺口已经收窄到同一认证 block 内重复片段的去歧义。
-4. `waterglass` 截图已经被编码进正式运行时验收门禁。
+4. `waterglass` 截图已经被编码进正式运行时验收门禁，而 reviewer 栈现在也会在 release 前拦截“同一主体、同一显式容纳关系、但内容物漂移”的草稿。
 5. 本轮落地保持向前兼容，同时实质提升了 agent 最终回复的鲁棒性；后续重点已经转移到更广的矛盾检测，而不是更换 reviewer owner。

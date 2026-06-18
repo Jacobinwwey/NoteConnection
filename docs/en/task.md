@@ -9,10 +9,11 @@
 - [x] `src/agent_workspace.frontend.test.ts` now pins two operator-relevant failures: repeated snippet text must resolve to the line-anchored paragraph when the line window is trustworthy, and unusable line metadata must fall back to snippet highlighting instead of highlighting the wrong paragraph.
 - [x] `src/learning/answerReleaseReview.ts` now also enforces `claim_state_consistency`, so same-subject state reversals such as `open system` vs `closed system` are revised in both English and Chinese rather than slipping through the release gate.
 - [x] `src/learning/answerReleaseReview.ts` now also enforces `query_intent_alignment`, so `what is` / `什么是` queries no longer release document-self-description drafts such as `本技术文档旨在...` when grounded definition frames are available.
+- [x] `src/learning/answerReleaseReview.ts` now also enforces `claim_containment_consistency`, so grounded drafts that keep the same subject and explicit containment relation but swap the contained material, such as `contains water` to `contains oil`, are revised before release.
 - [x] `src/frontend/markdown_runtime.js` now annotates rendered markdown blocks with source-line metadata, and `src/frontend/workspace_panes.js` now prefers `source_line_provenance` when rendered-node source ranges overlap trusted matched spans.
 - [x] `src/frontend/workspace_panes.js` now projects the matched evidence fragment into inline highlight markup inside the selected graph-focus node instead of only tinting the entire paragraph/container.
 - [x] The user-provided screenshot `1781782257390.jpg` remains a formal acceptance owner through `waterglass_explicit_scope_compact_zh`; the root cause is now documented as planner/retrieval normalization drift plus public-answer diagnostic leakage, not a generic "RAG weakness".
-- [ ] Next active gap: broaden deterministic claim-vs-citation / claim-vs-evidence contradiction coverage beyond the current lexical + query-intent + structured + state + polarity + graph-order reviewer stack without turning the reviewer into a speculative verifier.
+- [ ] Next active gap: broaden deterministic claim-vs-citation / claim-vs-evidence contradiction coverage beyond the current lexical + query-intent + structured + containment + state + polarity + graph-order reviewer stack without turning the reviewer into a speculative verifier.
 - [ ] Next active gap: deepen source-to-render provenance beyond today's block-level markdown source mapping plus snippet-projected inline highlights, toward source-authenticated character offsets.
 - [ ] Next active gap: keep growing the real regression corpus with cross-scope, compact-alias, and synonym failures while preserving backward compatibility.
 
@@ -40,7 +41,8 @@
 - [x] `src/learning/answerReleaseReview.test.ts` now covers deterministic polarity-conflict cases: English reversal, Chinese reversal, and an unrelated-support-negation case that must not raise a false positive.
 - [x] The reviewer now also enforces `claim_graph_order_consistency`, so grounded drafts that reverse `prerequisite` or `sequence` direction against the assembled DAG are revised before release with a deterministic correction sentence.
 - [x] `src/learning/answerReleaseReview.test.ts` now covers deterministic DAG-order cases: prerequisite reversal, correct prerequisite direction, and sequence reversal.
-- [ ] Next active task: extend contradiction coverage beyond the current lexical + structured-fact + polarity + graph-order checks into broader claim/citation/evidence conflicts without letting false positives widen.
+- [x] The reviewer now also enforces `claim_containment_consistency`, so grounded drafts that keep the same subject and explicit containment relation but swap the contained material are revised before release, and `src/learning/answerReleaseReview.test.ts` now covers English conflict, Chinese conflict, and a compatible-refinement false-positive control.
+- [ ] Next active task: extend contradiction coverage beyond the current lexical + structured-fact + containment + polarity + graph-order checks into broader claim/citation/evidence conflicts without letting false positives widen.
 - [x] The graph-focus payload contract is now hardened: citation-backed `sourcePath` / `snippet` fallback is normalized before opening graph focus, and right-pane source preview/highlight no longer depends on a single raw top-level hit path.
 - [x] Right-pane highlight precision is now tighter than payload stability alone: trusted line windows are preferred, stale line metadata is distrusted, snippet fallback remains available, and `highlightStrategy` diagnostics expose which path won.
 - [ ] Next active task: strengthen source-to-render provenance mapping once the markdown runtime can expose stable source-line / DOM metadata beyond today's line-window and snippet-fallback heuristics.
@@ -51,14 +53,15 @@
 1. Public answers never expose `No scoped knowledge points matched`-style internal failure strings.
 2. Reviewer decisions remain additive and backward-compatible for all current clients.
 3. Grounded drafts with conflicting structured numeric/year facts are revised before release instead of slipping through on lexical overlap alone.
-4. Grounded drafts that assert the wrong same-subject state are revised before release instead of leaking contradictions such as `open system` vs `closed system`.
-5. Grounded drafts that explicitly reverse supported polarity are revised before release instead of slipping through on lexical overlap alone.
-6. Grounded drafts that reverse `prerequisite` or `sequence` direction against the assembled DAG are revised before release instead of leaking inverted order claims to the public answer.
-7. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
-8. Exported `knowledgeRunReports` carry compact reviewer summaries for `release` / `revise` flows and omit the field cleanly when review data is absent.
-9. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card and compare card surface the same reviewer path.
-10. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields, including citation-backed paths/snippets when top-level hit fields are incomplete; rendered markdown blocks retain source-line metadata, `source_line_provenance` wins when rendered-node ranges overlap trusted spans, the selected node receives inline matched-fragment highlight markup, and the system falls back to `line_window` / `snippet_fallback` without widening the main answer area.
-11. Runtime verification now passes the shared alias/scope corpus, including the screenshot-derived compact/spaced `waterglass` pair and the `financial` cross-scope recovery pair, and confirms `answerReleaseReview.publicAnswer === result.answer`.
+4. Grounded drafts that keep the same subject and explicit containment relation but swap the contained material are revised before release instead of leaking content drift such as `contains water` vs `contains oil`.
+5. Grounded drafts that assert the wrong same-subject state are revised before release instead of leaking contradictions such as `open system` vs `closed system`.
+6. Grounded drafts that explicitly reverse supported polarity are revised before release instead of slipping through on lexical overlap alone.
+7. Grounded drafts that reverse `prerequisite` or `sequence` direction against the assembled DAG are revised before release instead of leaking inverted order claims to the public answer.
+8. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
+9. Exported `knowledgeRunReports` carry compact reviewer summaries for `release` / `revise` flows and omit the field cleanly when review data is absent.
+10. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card and compare card surface the same reviewer path.
+11. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields, including citation-backed paths/snippets when top-level hit fields are incomplete; rendered markdown blocks retain source-line metadata, `source_line_provenance` wins when rendered-node ranges overlap trusted spans, the selected node receives inline matched-fragment highlight markup, and the system falls back to `line_window` / `snippet_fallback` without widening the main answer area.
+12. Runtime verification now passes the shared alias/scope corpus, including the screenshot-derived compact/spaced `waterglass` pair and the `financial` cross-scope recovery pair, and confirms `answerReleaseReview.publicAnswer === result.answer`.
 
 ### 2026-06-17 Active Agent Knowledge DAG Task Sync
 

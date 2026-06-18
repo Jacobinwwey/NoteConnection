@@ -479,6 +479,122 @@ describe('answerReleaseReview', () => {
         ]));
     });
 
+    test('revises grounded answers when containment relations conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass Contents',
+            summary: 'Water glass contains water during the example setup.',
+            evidenceSnippet: 'Water glass contains water during the example setup.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass Contents',
+                snippet: 'Water glass contains water during the example setup.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass Contents',
+                    snippet: 'Water glass contains water during the example setup.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what does the example water glass contain',
+            draftAnswer: 'Water glass contains oil during the example setup.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T03:00:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_containment_consistency');
+        expect(review.publicAnswer).toBe('Water Glass Contents: Water glass contains water during the example setup.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_containment_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when Chinese containment relations conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: '水杯内容物',
+            summary: '水杯盛有清水。',
+            evidenceSnippet: '水杯盛有清水。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: '水杯内容物',
+                snippet: '水杯盛有清水。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: '水杯内容物',
+                    snippet: '水杯盛有清水。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '水杯里装的是什么？',
+            draftAnswer: '水杯盛有机油。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T03:05:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_containment_consistency');
+        expect(review.publicAnswer).toBe('水杯内容物: 水杯盛有清水。');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_containment_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('does not raise a containment conflict when the draft is a compatible refinement of the supported content', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass Contents',
+            summary: 'Water glass contains water.',
+            evidenceSnippet: 'Water glass contains water.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass Contents',
+                snippet: 'Water glass contains water.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass Contents',
+                    snippet: 'Water glass contains water.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what does water glass contain',
+            draftAnswer: 'Water glass contains cold water.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T03:10:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_containment_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_containment_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
     test('revises grounded answers when same-subject state conflicts with cited support', () => {
         const point = makeKnowledgePoint({
             title: 'Water Glass Thermodynamics',

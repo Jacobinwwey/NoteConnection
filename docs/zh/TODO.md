@@ -24,10 +24,11 @@
 - [x] 已修复 `KnowledgeLearningPlatform.ts` 中的 soft-miss planner-scope-recovery 缺陷：当 scope 内噪声候选幸存但没有任何 planner title-hit 文档幸存时，也会触发恢复。
 - [x] 已把 reviewer 从单纯 lexical grounding overlap 扩展到确定性的 `claim_structured_consistency` 门禁，覆盖数值 / 年份矛盾，并用防误报单测约束。
 - [x] 已把 reviewer 从 lexical + structured-fact 检查继续扩展到确定性的 `claim_state_consistency`，覆盖 `open system` vs `closed system` 这类同主体状态矛盾，并用中英文防误报单测约束。
+- [x] 已把 reviewer 从 lexical + structured-fact 检查继续扩展到确定性的 `claim_containment_consistency`，覆盖 `contains water` vs `contains oil` 这类同主体显式容纳/内容关系矛盾，并用中英文防误报单测约束。
 - [x] 已把 reviewer 从 lexical + structured-fact 门禁继续扩展到确定性的 `claim_polarity_consistency`，覆盖显式正反断言反转，并用防误报单测约束。
 - [x] 已把 reviewer 从 lexical + structured-fact + polarity 门禁继续扩展到确定性的 `claim_graph_order_consistency`，覆盖与已装配 DAG 相矛盾的 `prerequisite` / `sequence` 方向反转，并用防误报单测约束。
 - [x] 已新增确定性的 `query_intent_alignment`：当 `what is` / `什么是` 类问题命中了定义证据，但草稿回答成了“本文档旨在……”这类文档自述时，reviewer 会在 release 前强制改写成直接定义句。
-- [ ] 在当前 lexical + structured-fact + state + polarity + graph-order 门禁之上，继续扩展到更广的 claim-vs-citation / claim-vs-evidence 矛盾检测，并控制 false positive。
+- [ ] 在当前 lexical + structured-fact + containment + state + polarity + graph-order 门禁之上，继续扩展到更广的 claim-vs-citation / claim-vs-evidence 矛盾检测，并控制 false positive。
 - [x] 加固 graph-focus payload 契约，让右侧原文预览 / 命中高亮在 candidate-path fallback 噪声下仍保持确定性。
 - [x] 已把 graph-focus 高亮进一步收紧到 payload 稳定性之上：可信 `line_window` 优先，行号缺失或陈旧时回退到 `snippet_fallback`，并保留 additive `highlightStrategy` 诊断。
 - [x] 已把 block-level markdown source provenance 下沉到 `src/frontend/markdown_runtime.js`，并让 graph focus 在渲染节点 source range 与可信 span 重叠时优先使用 `source_line_provenance`，之后才回退到 `line_window` / `snippet_fallback`。

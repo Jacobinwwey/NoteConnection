@@ -70,6 +70,19 @@ type SubjectFrameConflict = {
     supportFrame: SubjectFrame & { label: string };
 };
 
+type ContainmentFrame = {
+    surface: string;
+    subject: string;
+    subjectFeatures: string[];
+    object: string;
+    objectFeatures: string[];
+};
+
+type ContainmentFrameConflict = {
+    answerFrame: ContainmentFrame;
+    supportFrame: ContainmentFrame & { label: string };
+};
+
 type SentencePolarity = 'positive' | 'negative';
 
 type PolaritySentence = {
@@ -791,6 +804,13 @@ function buildSubjectFrameFeatures(value: string): string[] {
         .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
 }
 
+function buildContainmentFrameFeatures(value: string): string[] {
+    return collectOrderedLexicalFeatures(value)
+        .map((feature) => String(feature || '').trim().toLowerCase())
+        .filter((feature) => feature.length >= 2)
+        .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
+}
+
 function normalizeStateFrameSubject(value: string): string {
     return normalizeWhitespace(String(value || ''))
         .replace(/^(?:a|an|the)\s+/i, '')
@@ -815,6 +835,22 @@ function normalizeStateFrameValue(value: string): string {
 function normalizeSubjectFrameTail(value: string): string {
     return normalizeWhitespace(String(value || ''))
         .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function normalizeContainmentFrameSubject(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function normalizeContainmentFrameObject(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/\s+(?:during|under|within|inside|outside|near|around|across|throughout|through|at|on|in)\s+.+$/iu, '')
+        .replace(/(?:在|于).+$/u, '')
         .replace(/[,:;]+$/g, '')
         .trim();
 }
@@ -942,6 +978,61 @@ function extractSubjectFrames(value: string): SubjectFrame[] {
         });
 }
 
+function buildContainmentFrame(
+    surface: string,
+    subject: string,
+    object: string
+): ContainmentFrame | null {
+    const normalizedSurface = normalizeWhitespace(surface);
+    const normalizedSubject = normalizeContainmentFrameSubject(subject);
+    const normalizedObject = normalizeContainmentFrameObject(object);
+    if (!normalizedSurface || !normalizedSubject || !normalizedObject) {
+        return null;
+    }
+    if (/\d/u.test(normalizedObject)) {
+        return null;
+    }
+    const subjectFeatures = buildContainmentFrameFeatures(normalizedSubject);
+    const objectFeatures = buildContainmentFrameFeatures(normalizedObject);
+    if (subjectFeatures.length <= 0 || objectFeatures.length <= 0) {
+        return null;
+    }
+    return {
+        surface: normalizedSurface,
+        subject: normalizedSubject,
+        subjectFeatures,
+        object: normalizedObject,
+        objectFeatures,
+    };
+}
+
+function extractContainmentFrames(value: string): ContainmentFrame[] {
+    const patterns: RegExp[] = [
+        /^(.{1,80}?)\s+contains?\s+(.+)$/iu,
+        /^(.{1,80}?)\s+(?:is|are|was|were)\s+filled\s+with\s+(.+)$/iu,
+        /^(.{1,24}?)(?:装有|盛有|含有|包含)(.+)$/u,
+    ];
+    return String(value || '')
+        .split(POLARITY_SENTENCE_SPLIT_PATTERN)
+        .map((sentence) => normalizeWhitespace(sentence))
+        .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
+        .flatMap((sentence) => {
+            for (const pattern of patterns) {
+                const match = sentence.match(pattern);
+                if (!match) {
+                    continue;
+                }
+                const frame = buildContainmentFrame(
+                    sentence,
+                    String(match[1] || ''),
+                    String(match[2] || '')
+                );
+                return frame ? [frame] : [];
+            }
+            return [];
+        });
+}
+
 function subjectFramesShareTail(answerFrame: SubjectFrame, supportFrame: SubjectFrame): boolean {
     const overlapRatio = computeFeatureOverlapRatio(answerFrame.tailFeatures, supportFrame.tailFeatures);
     const jaccard = computeFeatureJaccard(answerFrame.tailFeatures, supportFrame.tailFeatures);
@@ -972,6 +1063,63 @@ function buildSubjectConflictMessage(conflicts: SubjectFrameConflict[]): string 
         `"${conflict.answerFrame.surface}" kept the supported fact tail but changed the subject from "${conflict.supportFrame.subject}" (${conflict.supportFrame.label})`
     ));
     return `Draft answer changed the grounded subject of comparable support: ${fragments.join('; ')}.`;
+}
+
+function containmentFrameSubjectsComparable(
+    answerFrame: ContainmentFrame,
+    supportFrame: ContainmentFrame
+): boolean {
+    const normalizedAnswerSubject = normalizeWhitespace(answerFrame.subject).toLowerCase();
+    const normalizedSupportSubject = normalizeWhitespace(supportFrame.subject).toLowerCase();
+    if (!normalizedAnswerSubject || !normalizedSupportSubject) {
+        return false;
+    }
+    if (
+        normalizedAnswerSubject.includes(normalizedSupportSubject)
+        || normalizedSupportSubject.includes(normalizedAnswerSubject)
+    ) {
+        return true;
+    }
+    return computeFeatureOverlapRatio(answerFrame.subjectFeatures, supportFrame.subjectFeatures) >= 0.6;
+}
+
+function containmentFrameObjectsEquivalent(
+    answerFrame: ContainmentFrame,
+    supportFrame: ContainmentFrame
+): boolean {
+    const normalizedAnswerObject = normalizeWhitespace(answerFrame.object).toLowerCase();
+    const normalizedSupportObject = normalizeWhitespace(supportFrame.object).toLowerCase();
+    if (!normalizedAnswerObject || !normalizedSupportObject) {
+        return false;
+    }
+    if (
+        normalizedAnswerObject === normalizedSupportObject
+        || normalizedAnswerObject.includes(normalizedSupportObject)
+        || normalizedSupportObject.includes(normalizedAnswerObject)
+    ) {
+        return true;
+    }
+    return (
+        computeFeatureOverlapRatio(answerFrame.objectFeatures, supportFrame.objectFeatures) >= 0.75
+        || computeFeatureJaccard(answerFrame.objectFeatures, supportFrame.objectFeatures) >= 0.75
+    );
+}
+
+function containmentFrameObjectOverlap(
+    answerFrame: ContainmentFrame,
+    supportFrame: ContainmentFrame
+): number {
+    return computeFeatureOverlapRatio(answerFrame.objectFeatures, supportFrame.objectFeatures);
+}
+
+function buildContainmentConflictMessage(conflicts: ContainmentFrameConflict[]): string {
+    if (conflicts.length <= 0) {
+        return 'Draft answer stayed containment-consistent with the grounded support that could be compared.';
+    }
+    const fragments = conflicts.slice(0, 2).map((conflict) => (
+        `"${conflict.answerFrame.surface}" conflicted with "${conflict.supportFrame.surface}" (${conflict.supportFrame.label})`
+    ));
+    return `Draft answer contradicted comparable grounded containment relations: ${fragments.join('; ')}.`;
 }
 
 function stateFrameSubjectsComparable(answerFrame: StateFrame, supportFrame: StateFrame): boolean {
@@ -1344,6 +1492,61 @@ function evaluateSubjectConsistency(context: AnswerReleaseReviewContext): {
     };
 }
 
+function evaluateContainmentConsistency(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    comparableFrameCount: number;
+    conflicts: ContainmentFrameConflict[];
+} {
+    const answerFrames = extractContainmentFrames(context.draftAnswer);
+    if (answerFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const supportFrames = buildSupportCandidates(context).flatMap((candidate) => (
+        extractContainmentFrames(candidate.text).map((frame) => ({
+            ...frame,
+            label: candidate.label,
+        }))
+    ));
+    if (supportFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const conflicts: ContainmentFrameConflict[] = [];
+    let comparableFrameCount = 0;
+    answerFrames.forEach((answerFrame) => {
+        const comparableSupportFrames = supportFrames.filter((supportFrame) => (
+            containmentFrameSubjectsComparable(answerFrame, supportFrame)
+        ));
+        if (comparableSupportFrames.length <= 0) {
+            return;
+        }
+        comparableFrameCount += 1;
+        if (comparableSupportFrames.some((supportFrame) => containmentFrameObjectsEquivalent(answerFrame, supportFrame))) {
+            return;
+        }
+        conflicts.push({
+            answerFrame,
+            supportFrame: comparableSupportFrames
+                .slice()
+                .sort((left, right) => (
+                    containmentFrameObjectOverlap(answerFrame, right) - containmentFrameObjectOverlap(answerFrame, left)
+                ))[0],
+        });
+    });
+    return {
+        passed: conflicts.length <= 0,
+        comparableFrameCount,
+        conflicts: conflicts.filter((conflict) => Boolean(conflict.supportFrame)),
+    };
+}
+
 function evaluateStateConsistency(context: AnswerReleaseReviewContext): {
     passed: boolean;
     comparableFrameCount: number;
@@ -1517,6 +1720,7 @@ function buildDecision(
     groundingAlignmentPassed: boolean,
     queryIntentAlignmentPassed: boolean,
     structuredConsistencyPassed: boolean,
+    containmentConsistencyPassed: boolean,
     subjectConsistencyPassed: boolean,
     stateConsistencyPassed: boolean,
     polarityConsistencyPassed: boolean,
@@ -1531,6 +1735,7 @@ function buildDecision(
         !groundingAlignmentPassed
         || !queryIntentAlignmentPassed
         || !structuredConsistencyPassed
+        || !containmentConsistencyPassed
         || !subjectConsistencyPassed
         || !stateConsistencyPassed
         || !polarityConsistencyPassed
@@ -1593,6 +1798,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             comparableFactCount: 0,
             conflicts: [],
         };
+    const containmentConsistency = groundedEvidenceAvailable
+        ? evaluateContainmentConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
     const subjectConsistency = groundedEvidenceAvailable
         ? evaluateSubjectConsistency({
             ...context,
@@ -1647,6 +1862,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         groundingAlignment.passed,
         queryIntentAlignment.passed,
         structuredConsistency.passed,
+        containmentConsistency.passed,
         subjectConsistency.passed,
         stateConsistency.passed,
         polarityConsistency.passed,
@@ -1727,6 +1943,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : 'No high-confidence structured fact comparison was available, so contradiction checking stayed conservative.'
                 )
                 : 'No evidence was available, so structured contradiction checking was not evaluated.',
+        },
+        {
+            gateId: 'claim_containment_consistency',
+            passed: containmentConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    containmentConsistency.comparableFrameCount > 0
+                        ? buildContainmentConflictMessage(containmentConsistency.conflicts)
+                        : 'No comparable containment relation was available, so containment contradiction checking stayed conservative.'
+                )
+                : 'No evidence was available, so containment contradiction checking was not evaluated.',
         },
         {
             gateId: 'claim_subject_consistency',
