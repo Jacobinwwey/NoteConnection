@@ -96,6 +96,31 @@
 - 后续 graph-native answer planning 应在 retrieval 与 answer synthesis 之间实现有界 graph-conditioned context assembly，并使用 `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、evidence spans 与 store-level path operations。
 - graph ops 不可用或失败时，运行时必须带 diagnostics fail open 到当前 retrieval-grounded answer 路径。
 
+## 0.0D 最终回答审核与证据投影补充（2026-06-19）
+
+- `AnswerReleaseReview` 现在已经是一级运行时契约，而不是方案占位。
+  - `AnswerReleaseDecision` 继续保持 `release` | `revise` | `abstain`。
+  - 当前 gate 覆盖 `evidence_sufficiency`、`graph_support_sufficiency`、`claim_grounding_alignment`、`claim_structured_consistency`、`claim_polarity_consistency`、`claim_graph_order_consistency`、`public_surface_contraction`、`internal_diagnostic_leakage` 与 `abstention_hygiene`。
+- `src/learning/conversationComposer.ts` 在对外暴露 public `answer` / `directAnswer` 之前，必须把 scoped draft answer、按文档聚合的 knowledge points、citations、resolved scope 与可选 graph context 一并送入 `reviewAnswerRelease(...)`。
+- `src/learning/KnowledgeLearningPlatform.ts`、workspace export 与前端 reply 渲染必须把 answer-release telemetry 视为 additive inspection material：
+  - public answer text，
+  - review decision，
+  - failed gate IDs，
+  - leaked internal fragments，
+  - per-gate diagnostics。
+- 右侧 evidence pane 的 source projection 现在明确采用两阶段策略：
+  - 在 source-line 元数据可信时优先使用 markdown `line_window` 锚点，
+  - 当行号陈旧或重叠度过低时退回 `snippet_fallback`，
+  - 通过 additive `highlightStrategy` diagnostics 显式暴露策略，而不是伪装成绝对精确投影。
+- 截图回归路径现在已进入正式运行时契约：
+  - 参考失败截图：`E:\微信传输\WeChat Files\wxid_zywfbxxiwwir22\FileStorage\Temp\1781782257390.jpg`
+  - 回归用例：`waterglass_explicit_scope_compact_zh`
+  - 验证脚本：`scripts/verify-knowledge-workspace-runtime.js`
+  - 验收规则：只要 scoped evidence 存在，public answer 就不得泄漏 `No scoped knowledge points matched` 或 `retrieval_candidates_below_threshold`。
+- 当前剩余架构缺口：
+  - 把 contradiction coverage 从高置信 structured fact 扩展到更广的 claim-vs-citation / claim-vs-evidence 级别，
+  - 把 source-to-render provenance 更深地下沉到 markdown runtime，使右侧高亮从当前启发式提升为确定性投影。
+
 兼容性规则：
 
 - 新响应字段必须保持 additive 且 optional。

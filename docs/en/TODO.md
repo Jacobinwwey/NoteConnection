@@ -6,6 +6,7 @@
 
 - [x] Land the new source-of-truth note in `docs/solutions/agent-final-reply-review-robustness-plan-2026-06-18.md`.
 - [x] Reclassify the current agent gap as missing final-answer release review rather than missing prompt-framework adoption.
+- [x] Re-audit the slice and confirm that the missing-owner phase is closed; the active gap has moved to broader contradiction coverage and deeper evidence provenance.
 - [x] Add `src/learning/answerReleaseReview.ts` as an explicit owner for public-answer `release` / `revise` / `abstain`.
 - [x] Extend `src/learning/types.ts` with additive `AnswerReleaseReview` contracts on the response, trace, and `KnowledgeRun`.
 - [x] Route composed draft answers through deterministic release gates inside `conversationComposer.ts`.
@@ -26,7 +27,8 @@
 - [x] Extend the reviewer beyond lexical + structured-fact + polarity checks with a deterministic `claim_graph_order_consistency` gate for reversed `prerequisite` / `sequence` claims against the assembled DAG, and cover it with false-positive-resistant unit cases.
 - [ ] Extend contradiction coverage beyond the current lexical + structured-fact + polarity + graph-order gates into broader claim-vs-citation / claim-vs-evidence conflicts without raising false positives.
 - [x] Harden the graph-focus payload contract so right-pane source preview/highlight is deterministic even when candidate-path fallback is noisy.
-- [ ] Tighten graph-focus highlighting from payload stability toward more line-anchored / provenance-precise highlighting when the markdown-render path exposes enough structure.
+- [x] Tighten graph-focus highlighting beyond payload stability: prefer trusted `line_window` anchors, fall back to `snippet_fallback` when line metadata is absent or stale, and expose additive `highlightStrategy` diagnostics.
+- [ ] Strengthen source-to-render provenance mapping once the markdown runtime can expose stable source-line / DOM metadata beyond the current line-window/snippet-fallback heuristics.
 
 ### 2026-06-17 Agent Knowledge DAG TODO Reclassification
 

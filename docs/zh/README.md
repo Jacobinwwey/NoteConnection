@@ -21,6 +21,17 @@
 
 ---
 
+## 当前主线架构状态（2026-06-19）
+
+- 公开回答审核层现在已经是实际运行时 owner，而不是未来方案占位：`src/learning/answerReleaseReview.ts` 会在 scoped retrieval 与 graph-context assembly 之后执行，负责从 public surface 剥离内部诊断、校验证据充分性，以及 structured / polarity / graph-order 一致性，并把 gate 结果持久化到 conversation trace / export 流程中。
+- 右侧证据预览现在也不再是朴素 snippet 匹配：`src/frontend/workspace_panes.js` 会优先使用来自 markdown source 的可信 `line_window` 锚点；当行号元数据漂移时退回 `snippet_fallback`；当 line window 与 snippet 的特征重叠塌缩时主动降权陈旧行号；同时把 `highlightStrategy` 作为 additive diagnostics 暴露给运维面。
+- 截图 `E:\微信传输\WeChat Files\wxid_zywfbxxiwwir22\FileStorage\Temp\1781782257390.jpg` 对应的失败路径现在已经落成正式运行时验收用例：`src/learning/KnowledgeWorkspaceConversationRegression.ts` 中的 `waterglass_explicit_scope_compact_zh` 要求至少返回 1 条 citation，并明确禁止在 public answer 泄漏 `No scoped knowledge points matched` / `retrieval_candidates_below_threshold`。
+- 当前缺口已经不再是“没有 reviewer owner”。真正剩余的是更广的 claim-vs-citation / claim-vs-evidence contradiction coverage，以及更深的 source-to-render provenance：只有当 markdown runtime 后续暴露稳定的 source-line 或 DOM metadata 时，右侧高亮才能从当前的有界启发式提升为严格投影。
+- `ref/dspy`、`ref/guidance`、`ref/semantic-kernel`、`ref/langchain` 与 `ref/litellm` 继续保留为设计参考，而不是运行时所有权归属。可借鉴的是 typed LM subprogram、受约束输出契约与评测回路；明确拒绝的是把 Python-heavy 或 orchestration-heavy 框架直接塞进已经自带 retrieval、graph assembly、export 与 UI compatibility 责任的 TypeScript DAG runtime。
+- 当前代码 / 方案详细对齐请查看 [Agent Final Reply Review Robustness Plan（2026-06-18）](../solutions/agent-final-reply-review-robustness-plan-2026-06-18.md)、[Agent Knowledge DAG 回答契约方案（2026-06-17）](../solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md)、[知识工作区与 DAG 对齐推进方案（2026-06-10）](../solutions/knowledge-workspace-dag-alignment-2026-06-10.md) 与 [开发进度看板](../diataxis/zh/explanation/development-progress-dashboard.md)。
+
+---
+
 ## 当前主线架构状态（2026-06-17）
 
 - agent knowledge 图结构需求现在已收敛为本项目现有 DAG 形态的 `KnowledgeAtom` / `RelationEdge` / `TemporalEdge` 底座。

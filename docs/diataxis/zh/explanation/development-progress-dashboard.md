@@ -3,6 +3,45 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-06-19 复审：reviewer owner 已落地，缺口已转移
+
+最新复审改变了这一切片的诊断结论。
+项目已经不再缺少最终公开回答的 reviewer；该 owner 已经真实落在 `src/learning/answerReleaseReview.ts`。
+当前活跃缺口已经转移到更广的矛盾检测与更深的证据 provenance。
+
+当前代码已经成立的事实：
+
+- 最终公开回答的 release 决策已经由 `answerReleaseReview.ts` 持有，而不是藏在 prompt template 里，也不是交给前端兜底，
+- 项目现有 DAG 已经被使用了两次：
+  - 回答规划阶段由 `src/learning/graphContextAssembler.ts` 消费，
+  - release-review 阶段由 `claim_graph_order_consistency` 消费，
+- `src/frontend/workspace_panes.js` 现在已经把右侧证据聚焦从“仅 payload 稳定”推进到“高亮精度可控”：
+  - 在 `startLine` / `endLine` 可信时优先使用 `line_window` 锚点，
+  - 在行窗缺失或陈旧时回退到 `snippet_fallback`，
+  - 通过 additive `highlightStrategy` 诊断显式暴露命中的高亮路径（`line_window`、`snippet_fallback`、`none`），
+  - 对过宽的容器节点做惩罚，避免重复 snippet 导致整块文章被高亮，
+- `src/agent_workspace.frontend.test.ts` 现在已经固定两类运维相关回归：
+  - 当同一 snippet 在多个段落重复出现时，必须命中可信 line window 对应的正确段落，
+  - 当行号元数据不可用或不可信时，必须回退到 snippet 高亮，而不是误高亮错误段落，
+- 用户提供的截图 `1781782257390.jpg` 继续作为正式运行时验收 owner 保留在 `waterglass_explicit_scope_compact_zh`；当前根因已固化为 planner/retrieval normalization 漂移叠加公开回答诊断泄漏。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 最终公开回答审核必须有耐久的后端 owner | `src/learning/answerReleaseReview.ts` 已经在 answer synthesis 之后持有 `release` / `revise` / `abstain` 决策。 | 已实现 |
+| 现有 DAG 必须参与回答正确性，而不只是 retrieval 排序 | `graphContextAssembler.ts` 在 synthesis 前装配图上下文，`claim_graph_order_consistency` 在 release 时消费 DAG 证据。 | 已实现基线 |
+| 右侧原文预览在 snippet 重复时仍必须高亮正确段落 | `workspace_panes.js` 现在优先使用可信 `line_window` 锚点，并用 specificity/container penalty 给候选节点打分。 | 已实现基线 |
+| 陈旧行号不能强行把高亮带偏 | `workspace_panes.js` 现在会主动怀疑 stale line window，并回退到 `snippet_fallback`；前端测试已固定这类失败模式。 | 已实现基线 |
+| 截图驱动的 `waterglass` 失败必须继续作为正式验收项 | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` 现在要求 grounded 输出、reviewer/public-answer 一致性，以及无诊断泄漏。 | 已实现 |
+| 当前剩余缺口必须明确转移到更广矛盾检测与更深 provenance | 现有代码仍需继续补 claim-vs-citation / claim-vs-evidence conflict 检测，并等待 markdown runtime 暴露更稳定的 source-line/DOM provenance。 | 未完成 |
+
+本次复审验证：
+
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
 ## 2026-06-18 最终回复 release review 与纠错层
 
 本切片关闭的是 agent 路径里的一个结构性鲁棒性缺口：系统已经具备 retrieval、DAG context assembly、answer composition、evidence pane 和 workflow artifact，但在把答案真正发给用户之前，还没有一个一等 owner 负责做最后的公开发布决策。

@@ -4263,6 +4263,120 @@ describe('workspace panes controller', () => {
         }));
     });
 
+    test('prefers line-anchored graph focus highlights when repeated snippet text appears in multiple paragraphs', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'Water glass is used in thermodynamics as a closed-system example.',
+            '',
+            'Water glass is used in thermodynamics as an open-system example.',
+            '',
+            'Water glass can also describe a sodium silicate material.',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement) => {
+            container.innerHTML = `
+                <article class="reader-block">
+                    <h2>Water Glass</h2>
+                    <p data-case="closed">Water glass is used in thermodynamics as a closed-system example.</p>
+                    <p data-case="open">Water glass is used in thermodynamics as an open-system example.</p>
+                    <p data-case="material">Water glass can also describe a sodium silicate material.</p>
+                </article>
+            `;
+        });
+
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+
+        controller.init();
+        controller.openGraphFocusPane({
+            atomId: 'atom_water_glass',
+            title: 'Water Glass',
+            sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            matchedSpans: [
+                {
+                    title: 'Closed-system definition',
+                    snippet: 'Water glass is used in thermodynamics.',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    startLine: 3,
+                    endLine: 3,
+                },
+            ],
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
+        expect(highlighted).toHaveLength(1);
+        expect((highlighted[0] as HTMLElement)?.dataset.case).toBe('closed');
+        expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
+            matchedSpanCount: 1,
+            highlightedNodeCount: 1,
+            highlightStrategy: 'line_window',
+        }));
+    });
+
+    test('falls back to snippet-based graph focus highlights when no usable line window exists', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'A water glass exchanges heat with the environment during the example setup.',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement) => {
+            container.innerHTML = `
+                <article class="reader-block">
+                    <h2>Water Glass</h2>
+                    <p data-case="fallback">A water glass exchanges heat with the environment during the example setup.</p>
+                </article>
+            `;
+        });
+
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+
+        controller.init();
+        controller.openGraphFocusPane({
+            atomId: 'atom_water_glass',
+            title: 'Water Glass',
+            sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            matchedSpans: [
+                {
+                    title: 'Heat exchange',
+                    snippet: 'exchanges heat with the environment',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                },
+            ],
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
+        expect(highlighted).toHaveLength(1);
+        expect((highlighted[0] as HTMLElement)?.dataset.case).toBe('fallback');
+        expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
+            matchedSpanCount: 1,
+            highlightedNodeCount: 1,
+            highlightStrategy: 'snippet_fallback',
+        }));
+    });
+
     test('keeps reusable card renderers aligned with chat and evidence owners', () => {
         const repoRoot = path.resolve(__dirname, '..');
         const source = fs.readFileSync(

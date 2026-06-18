@@ -1,3 +1,13 @@
+## 2026-06-19 复审纠偏
+
+- [x] 最新源码复审确认：最终公开回答的 reviewer 已经真实落地在 `src/learning/answerReleaseReview.ts`，当前缺口已经不再是“缺少 release-review owner”。
+- [x] 最新源码复审也确认：右侧 graph-focus 高亮已经超出单纯 payload 加固阶段；`src/frontend/workspace_panes.js` 现在会优先使用可信的 `line_window` 锚点，在行窗缺失或可疑时回退到 `snippet_fallback`，保留 additive `highlightStrategy` 诊断，并抑制容器级过宽高亮。
+- [x] `src/agent_workspace.frontend.test.ts` 现在已经固定两类关键运维失败：当重复 snippet 同时出现在多个段落里时，必须命中 line-anchored 段落；当行号元数据不可用或不可信时，必须退回 snippet 高亮，而不是误高亮错误段落。
+- [x] 用户提供的截图 `1781782257390.jpg` 继续作为正式验收 owner 保留在 `waterglass_explicit_scope_compact_zh`；当前根因已经明确为 planner/retrieval normalization 漂移叠加公开回答诊断泄漏，而不是泛化的“RAG 能力不足”。
+- [ ] 下一活跃缺口：继续扩展确定性的 claim-vs-citation / claim-vs-evidence 矛盾检测，同时避免把 reviewer 扩张成猜测型 verifier。
+- [ ] 下一活跃缺口：在当前 line-window 与 snippet-fallback 基线之上，等待 markdown runtime 暴露稳定的 source-line / DOM metadata，再继续收紧 source-to-render provenance。
+- [ ] 下一活跃缺口：继续扩充真实回归语料，覆盖 cross-scope、compact alias 与 synonym failure，同时保持向前兼容。
+
 ## 2026-06-18 最终回复审核活跃任务同步
 
 - [x] 新的事实源文档已落盘：`docs/solutions/agent-final-reply-review-robustness-plan-2026-06-18.md`。
@@ -24,8 +34,8 @@
 - [x] `src/learning/answerReleaseReview.test.ts` 现在已经覆盖确定性的 DAG 顺序用例：前置关系反转、前置关系方向正确、以及 sequence 反转。
 - [ ] 下一活跃任务：把当前 lexical + structured-fact + polarity + graph-order 检查继续扩展到更广的 claim/citation/evidence 矛盾检测，同时控制 false positive。
 - [x] graph-focus payload 契约现在已经加固：在打开 graph focus 前，会先归一化 citation-backed `sourcePath` / `snippet` 回退，因此右侧原文预览 / 高亮不再依赖单个原始 top-level hit path。
-- [ ] 下一活跃任务：把当前 lexical + structured-fact + polarity + graph-order 检查继续扩展到更广的 claim/citation/evidence 矛盾检测，同时控制 false positive。
-- [ ] 下一活跃任务：在 payload 稳定性之上，把 graph-focus 高亮继续收紧到更 line-anchored / provenance-precise 的语义层级，前提是当前 markdown 渲染路径允许。
+- [x] 右侧高亮精度现在已经超出 payload 稳定性本身：可信 line window 会被优先采用，陈旧行号会被主动降权，snippet fallback 继续可用，并通过 `highlightStrategy` 显式暴露命中的高亮路径。
+- [ ] 下一活跃任务：在当前 line-window / snippet-fallback 基线之上，等待 markdown runtime 暴露稳定 source-line / DOM metadata 后，继续推进更深的 source-to-render provenance。
 - [ ] 下一活跃任务：继续扩充回归语料，覆盖更多真实的跨 scope 与同义别名失败场景，同时保持公开回答区收缩。
 
 ### 当前验收目标
@@ -38,7 +48,7 @@
 6. 运维检查面必须能看到 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
 7. 导出的 `knowledgeRunReports` 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时干净省略该字段。
 8. 导出的运行时状态还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计遥测，以及同一路径派生出的 review-trend / gate-aging / compare-ready drilldown 摘要，并且 `knowledge_run` 历史卡片与 compare 卡片要消费同一套 reviewer 遥测。
-9. 右侧文件命中预览必须基于稳定 payload 字段解析原文与命中高亮；即使 top-level hit 字段不完整，也必须能消费 citation-backed path/snippet。
+9. 右侧文件命中预览必须基于稳定 payload 字段解析原文与命中高亮；即使 top-level hit 字段不完整，也必须能消费 citation-backed path/snippet；在有可信行窗时优先使用 `line_window`，在行号缺失或陈旧时回退到 `snippet_fallback`，并保留 additive `highlightStrategy` 诊断而不扩大主回答区。
 10. 运行时验证现在必须通过共享的 alias/scope 回归语料，包括截图派生的 `waterglass` compact/spaced 双查询以及 `financial` 下的跨 scope 恢复双查询，并确认 `answerReleaseReview.publicAnswer === result.answer`。
 
 ## 2026-06-17 Agent Knowledge DAG 活跃任务同步

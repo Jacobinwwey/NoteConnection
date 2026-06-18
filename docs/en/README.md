@@ -25,6 +25,17 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
+## Current Mainline Architecture Status (2026-06-19)
+
+- The public-answer reviewer is now a real runtime owner, not a future idea: `src/learning/answerReleaseReview.ts` runs after scoped retrieval and graph-context assembly, strips internal diagnostics from the public surface, checks evidence sufficiency plus structured/polarity/graph-order consistency, and persists gate outcomes through conversation trace/export flows.
+- The right-pane evidence preview is now more source-aware than naive snippet matching: `src/frontend/workspace_panes.js` prefers trustworthy `line_window` anchors from the markdown source, falls back to `snippet_fallback` when line metadata drifts, distrusts stale line windows when feature overlap collapses, and exposes additive `highlightStrategy` diagnostics for operators.
+- The screenshot-backed failure at `E:\微信传输\WeChat Files\wxid_zywfbxxiwwir22\FileStorage\Temp\1781782257390.jpg` is now a formal runtime acceptance case: `waterglass_explicit_scope_compact_zh` in `src/learning/KnowledgeWorkspaceConversationRegression.ts` requires at least one citation and forbids public leakage of `No scoped knowledge points matched` / `retrieval_candidates_below_threshold`.
+- The current gap is no longer “missing reviewer ownership.” The remaining work is broader contradiction coverage across claim-vs-citation / claim-vs-evidence pairs and deeper source-to-render provenance once the markdown runtime exposes stable source-line or DOM metadata; until then, right-pane highlighting remains a bounded heuristic rather than a strict projection.
+- `ref/dspy`, `ref/guidance`, `ref/semantic-kernel`, `ref/langchain`, and `ref/litellm` remain design references, not runtime owners. The useful takeaways are typed LM subprograms, constrained output contracts, and evaluation loops. The rejected move is importing a Python-heavy or orchestration-heavy framework into a TypeScript DAG runtime that already owns retrieval, graph assembly, export, and UI compatibility.
+- Current code-vs-plan details: [Agent Final Reply Review Robustness Plan (2026-06-18)](../solutions/agent-final-reply-review-robustness-plan-2026-06-18.md), [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](../solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md), [Knowledge Workspace and DAG Alignment Plan (2026-06-10)](../solutions/knowledge-workspace-dag-alignment-2026-06-10.md), and the [Development Progress Dashboard](../diataxis/en/explanation/development-progress-dashboard.md).
+
+---
+
 ## Current Mainline Architecture Status (2026-06-17)
 
 - The agent knowledge graph requirement is now narrowed to this project's existing DAG-shaped `KnowledgeAtom` / `RelationEdge` / `TemporalEdge` substrate.

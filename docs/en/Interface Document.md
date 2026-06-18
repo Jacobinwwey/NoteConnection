@@ -97,6 +97,31 @@ Current contract surfaces:
 - Future graph-native answer planning should be implemented as bounded graph-conditioned context assembly between retrieval and answer synthesis, using `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, evidence spans, and store-level path operations.
 - If graph ops are unavailable or fail, the runtime must fail open to the current retrieval-grounded answer path with observable diagnostics.
 
+## 0.0D Final Reply Review and Evidence Provenance Addendum (2026-06-19)
+
+- `AnswerReleaseReview` is now a first-class additive runtime contract rather than a planning placeholder.
+  - `AnswerReleaseDecision` remains `release` | `revise` | `abstain`.
+  - Gate coverage currently includes `evidence_sufficiency`, `graph_support_sufficiency`, `claim_grounding_alignment`, `claim_structured_consistency`, `claim_polarity_consistency`, `claim_graph_order_consistency`, `public_surface_contraction`, `internal_diagnostic_leakage`, and `abstention_hygiene`.
+- `src/learning/conversationComposer.ts` must pass the scoped draft answer, grouped knowledge points, citations, resolved scope, and optional graph context through `reviewAnswerRelease(...)` before exposing the public `answer` / `directAnswer` surface.
+- `src/learning/KnowledgeLearningPlatform.ts`, workspace export, and frontend reply rendering must treat answer-release telemetry as additive inspection material:
+  - public answer text,
+  - review decision,
+  - failed gate IDs,
+  - leaked internal fragments,
+  - per-gate diagnostics.
+- Evidence-pane source projection is now explicitly two-stage:
+  - prefer markdown `line_window` anchors when source-line metadata is trustworthy,
+  - fall back to `snippet_fallback` when line metadata is stale or low-overlap,
+  - expose additive `highlightStrategy` diagnostics instead of pretending the projection is exact.
+- The screenshot-backed acceptance path is now part of the formal runtime contract:
+  - reference failure image: `E:\微信传输\WeChat Files\wxid_zywfbxxiwwir22\FileStorage\Temp\1781782257390.jpg`
+  - regression case: `waterglass_explicit_scope_compact_zh`
+  - verifier: `scripts/verify-knowledge-workspace-runtime.js`
+  - acceptance rule: the public answer must not leak `No scoped knowledge points matched` or `retrieval_candidates_below_threshold` when scoped evidence exists.
+- Remaining architecture gap:
+  - broaden contradiction coverage from high-confidence structured facts into richer claim-vs-citation / claim-vs-evidence contradiction classes,
+  - push source-to-render provenance deeper into the markdown runtime so right-pane highlighting can become deterministic rather than heuristic.
+
 Compatibility rules:
 
 - New response fields must remain additive and optional.

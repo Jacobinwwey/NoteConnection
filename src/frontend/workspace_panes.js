@@ -359,6 +359,7 @@
             readSucceeded: false,
             renderSucceeded: false,
             highlightedNodeCount: 0,
+            highlightStrategy: 'none',
             usedFallback: false,
             failureReason: '',
         };
@@ -511,14 +512,106 @@
             .map((snippet) => snippet.slice(0, 240));
     }
 
+    function normalizeGraphFocusText(value) {
+        return String(value || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function sanitizeGraphFocusSourceLine(line) {
+        return normalizeGraphFocusText(
+            String(line || '')
+                .replace(/^\s{0,3}(?:#{1,6}|>+|[-*+]|(?:\d+)[.)])\s+/u, '')
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+                .replace(/[*_~`|]/g, ' ')
+        );
+    }
+
+    function collectGraphFocusFeatures(value) {
+        return normalizeGraphFocusText(value)
+            .toLowerCase()
+            .split(/[^a-z0-9\u3400-\u9fff]+/u)
+            .map((part) => part.trim())
+            .filter((part) => part.length >= 2 || /[\u3400-\u9fff]/u.test(part));
+    }
+
+    function computeGraphFocusFeatureOverlap(primaryText, secondaryText) {
+        const primaryFeatures = collectGraphFocusFeatures(primaryText);
+        const secondaryFeatures = new Set(collectGraphFocusFeatures(secondaryText));
+        if (primaryFeatures.length <= 0 || secondaryFeatures.size <= 0) {
+            return 0;
+        }
+        const overlapCount = primaryFeatures.filter((feature) => secondaryFeatures.has(feature)).length;
+        return Number((overlapCount / primaryFeatures.length).toFixed(4));
+    }
+
+    function buildGraphFocusLineWindowText(markdownSource, span) {
+        const startLine = Number(span && span.startLine);
+        if (!Number.isFinite(startLine) || startLine <= 0) {
+            return '';
+        }
+        const endCandidate = Number(span && span.endLine);
+        const endLine = Number.isFinite(endCandidate) && endCandidate >= startLine
+            ? Math.trunc(endCandidate)
+            : Math.trunc(startLine);
+        const lines = String(markdownSource || '').split(/\r?\n/);
+        if (lines.length <= 0) {
+            return '';
+        }
+        const boundedEndLine = Math.min(endLine, Math.trunc(startLine) + 4);
+        const excerpt = lines
+            .slice(Math.max(0, Math.trunc(startLine) - 1), Math.min(lines.length, boundedEndLine))
+            .map((line) => sanitizeGraphFocusSourceLine(line))
+            .filter(Boolean)
+            .join(' ');
+        const normalizedExcerpt = normalizeGraphFocusText(excerpt);
+        return normalizedExcerpt.length >= 8
+            ? normalizedExcerpt.slice(0, 240)
+            : '';
+    }
+
+    function collectGraphFocusHighlightAnchors(matchedSpans, markdownSource) {
+        const anchors = [];
+        const seen = new Set();
+        matchedSpans.forEach((span) => {
+            const lineWindowText = buildGraphFocusLineWindowText(markdownSource, span);
+            const snippetText = normalizeGraphFocusText(String(span && span.snippet || '')).slice(0, 240);
+            const fallbackText = snippetText.length >= 8 ? snippetText : '';
+            const shouldTrustLineWindow = !lineWindowText
+                || !fallbackText
+                || computeGraphFocusFeatureOverlap(fallbackText, lineWindowText) >= 0.45;
+            const anchor = lineWindowText && shouldTrustLineWindow
+                ? {
+                    strategy: 'line_window',
+                    text: lineWindowText,
+                    fallbackText,
+                }
+                : fallbackText
+                    ? {
+                        strategy: 'snippet_fallback',
+                        text: fallbackText,
+                        fallbackText: '',
+                    }
+                    : null;
+            if (!anchor) {
+                return;
+            }
+            const key = `${anchor.strategy}::${anchor.text}::${anchor.fallbackText || ''}`;
+            if (seen.has(key)) {
+                return;
+            }
+            seen.add(key);
+            anchors.push(anchor);
+        });
+        return anchors;
+    }
+
     function scoreGraphFocusNodeText(text, terms) {
-        const normalizedText = String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        const normalizedText = normalizeGraphFocusText(text).toLowerCase();
         if (!normalizedText) {
             return 0;
         }
         let score = 0;
         terms.forEach((term) => {
-            const normalizedTerm = String(term || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const normalizedTerm = normalizeGraphFocusText(term).toLowerCase();
             if (!normalizedTerm) {
                 return;
             }
@@ -527,7 +620,7 @@
                 return;
             }
             normalizedTerm
-                .split(/[.;,:()[\]{}]/)
+                .split(/[.;,:()[\]{}，。；：]/)
                 .map((part) => part.trim())
                 .filter((part) => part.length >= 8)
                 .forEach((fragment) => {
@@ -539,28 +632,106 @@
         return score;
     }
 
-    function highlightGraphFocusRenderedMarkdown(container, matchedSpans) {
-        if (!container) {
-            return 0;
+    function scoreGraphFocusNodeAgainstAnchor(candidate, anchor) {
+        const nodeText = normalizeGraphFocusText(candidate && candidate.textContent || '');
+        if (!nodeText || !anchor || !anchor.text) {
+            return {
+                score: 0,
+                strategy: 'none',
+            };
         }
-        const highlightTerms = collectGraphFocusHighlightTerms(matchedSpans);
-        if (highlightTerms.length <= 0) {
-            return 0;
+        const descendantCandidateCount = typeof candidate.querySelectorAll === 'function'
+            ? candidate.querySelectorAll('p, li, blockquote, pre, h1, h2, h3, h4, h5, h6').length
+            : 0;
+        const specificityBonus = Math.max(0, 200 - Math.abs(nodeText.length - String(anchor.text).length));
+        const containerPenalty = descendantCandidateCount > 0
+            ? Math.min(400, descendantCandidateCount * 120)
+            : 0;
+        const lineWindowScore = scoreGraphFocusNodeText(nodeText, [anchor.text]);
+        if (lineWindowScore > 0) {
+            return {
+                score: lineWindowScore
+                    + (anchor.strategy === 'line_window' ? 5000 : 2500)
+                    + specificityBonus
+                    - containerPenalty,
+                strategy: anchor.strategy,
+            };
+        }
+        if (anchor.fallbackText) {
+            const fallbackScore = scoreGraphFocusNodeText(nodeText, [anchor.fallbackText]);
+            if (fallbackScore > 0) {
+                return {
+                    score: fallbackScore + 1500 + specificityBonus - containerPenalty,
+                    strategy: 'snippet_fallback',
+                };
+            }
+        }
+        return {
+            score: 0,
+            strategy: 'none',
+        };
+    }
+
+    function highlightGraphFocusRenderedMarkdown(container, matchedSpans, markdownSource) {
+        if (!container) {
+            return {
+                highlightedNodeCount: 0,
+                highlightStrategy: 'none',
+            };
         }
         const candidates = Array.from(container.querySelectorAll('p, li, blockquote, pre, .reader-block, h1, h2, h3, h4, h5, h6'));
-        let highlighted = 0;
         candidates.forEach((candidate) => {
             candidate.classList.remove('agent-focus-match');
             candidate.removeAttribute('data-agent-focus-highlight');
-            const score = scoreGraphFocusNodeText(candidate.textContent || '', highlightTerms);
-            if (score <= 0) {
+        });
+        const anchors = collectGraphFocusHighlightAnchors(matchedSpans, markdownSource);
+        if (anchors.length <= 0 || candidates.length <= 0) {
+            return {
+                highlightedNodeCount: 0,
+                highlightStrategy: 'none',
+            };
+        }
+
+        const selectedNodes = [];
+        let highlightStrategy = 'none';
+        anchors.forEach((anchor) => {
+            let bestNode = null;
+            let bestScore = 0;
+            let bestStrategy = 'none';
+            candidates.forEach((candidate) => {
+                const scoredCandidate = scoreGraphFocusNodeAgainstAnchor(candidate, anchor);
+                if (scoredCandidate.score <= bestScore) {
+                    return;
+                }
+                bestNode = candidate;
+                bestScore = scoredCandidate.score;
+                bestStrategy = scoredCandidate.strategy;
+            });
+            if (!bestNode || bestScore <= 0) {
                 return;
             }
+            selectedNodes.push(bestNode);
+            if (bestStrategy === 'line_window') {
+                highlightStrategy = 'line_window';
+            } else if (highlightStrategy === 'none') {
+                highlightStrategy = 'snippet_fallback';
+            }
+        });
+
+        const dedupedNodes = Array.from(new Set(selectedNodes));
+        const prunedNodes = dedupedNodes.filter((candidate) => !dedupedNodes.some((otherCandidate) => (
+            otherCandidate !== candidate
+            && typeof candidate.contains === 'function'
+            && candidate.contains(otherCandidate)
+        )));
+        prunedNodes.forEach((candidate) => {
             candidate.classList.add('agent-focus-match');
             candidate.setAttribute('data-agent-focus-highlight', 'true');
-            highlighted += 1;
         });
-        return highlighted;
+        return {
+            highlightedNodeCount: prunedNodes.length,
+            highlightStrategy,
+        };
     }
 
     async function readGraphFocusMarkdownSource(previewRuntime, candidateSourcePaths, diagnostics) {
@@ -646,9 +817,19 @@
                 return true;
             }
             if (diagnostics) {
-                diagnostics.highlightedNodeCount = highlightGraphFocusRenderedMarkdown(renderedHost, matchedSpans);
+                const highlightResult = highlightGraphFocusRenderedMarkdown(
+                    renderedHost,
+                    matchedSpans,
+                    resolvedSource.markdownSource
+                );
+                diagnostics.highlightedNodeCount = Number(highlightResult && highlightResult.highlightedNodeCount || 0);
+                diagnostics.highlightStrategy = String(highlightResult && highlightResult.highlightStrategy || 'none');
             } else {
-                highlightGraphFocusRenderedMarkdown(renderedHost, matchedSpans);
+                highlightGraphFocusRenderedMarkdown(
+                    renderedHost,
+                    matchedSpans,
+                    resolvedSource.markdownSource
+                );
             }
             return true;
         } catch (error) {

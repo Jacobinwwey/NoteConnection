@@ -344,6 +344,23 @@ Attached additively to:
 - This phase does not change the answer-release reviewer.
 - It closes a separate but necessary boundary: evidence usability for operators/developers after the public answer has already been contracted.
 
+#### Phase-12 graph-focus highlight precision landed on top of payload hardening
+
+- `src/frontend/workspace_panes.js` now builds a `line_window` anchor from `startLine` / `endLine` when source-markdown lines and snippet text agree closely enough to trust the line metadata.
+- That trust is deliberately conditional:
+  - if the line window is absent, it does nothing,
+  - if the line window overlaps weakly with the snippet, it is treated as stale and not allowed to force the highlight.
+- Candidate rendered nodes are now scored with:
+  - normalized `line_window` text when available,
+  - `snippet_fallback` text otherwise,
+  - specificity bonuses so the narrow paragraph wins over a generic container,
+  - penalties for container-wide matches that would over-highlight too much content.
+- The chosen path now stays inspectable through additive `highlightStrategy` diagnostics: `line_window`, `snippet_fallback`, or `none`.
+- `src/agent_workspace.frontend.test.ts` now pins two higher-value failures:
+  - repeated snippet text must resolve to the correct paragraph when the line window is trustworthy,
+  - unusable line metadata must fall back to snippet highlighting instead of highlighting the wrong paragraph.
+- This phase still does not move release policy into the frontend. It closes a different invariant: evidence-preview precision after the answer has already been contracted.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -423,7 +440,7 @@ The first two decide capability. The third decides trust.
 
 1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + structured-fact + polarity + graph-order gates, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
-3. Build on the now-hardened graph-focus payload contract with more line-anchored / provenance-precise highlight semantics where the markdown-render path allows it.
+3. Treat the current `line_window` + `snippet_fallback` graph-focus highlighter as the implemented baseline, then push deeper source-to-render provenance only when the markdown runtime can expose stable source-line / DOM metadata.
 4. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
 5. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
 
@@ -431,9 +448,9 @@ The first two decide capability. The third decides trust.
 
 1. The missing mechanism was not graph retrieval; it was final public-answer release review.
 2. The correct owner is a local deterministic reviewer layer, not a new prompt framework.
-3. The current project DAG remains the evidence substrate and now also participates in release-time order correction; graph-focus evidence usability still needs its own payload owner and is not solved by reviewer policy alone.
+3. The current project DAG remains the evidence substrate and now also participates in release-time order correction; graph-focus now also has a tighter `line_window` / `snippet_fallback` evidence-precision baseline, so the remaining evidence gap is deeper source-to-render provenance rather than basic pane opening.
 4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification.
-5. The landed slice is backward-compatible and materially improves robustness without widening the main answer surface.
+5. The landed slice is backward-compatible and materially improves robustness without widening the main answer surface; the next work is broader contradiction coverage, not replacing the current reviewer owner.
 
 ## 中文文档
 
@@ -768,6 +785,24 @@ The first two decide capability. The third decides trust.
 - 这个 Phase 不改变 final-answer reviewer 本身。
 - 它关闭的是另一条必要边界：在主回答已经收缩后，运维/开发者对证据原文的可用性。
 
+#### 在 graph-focus payload 加固之上继续落地的 Phase-12 高亮精度收紧
+
+- `src/frontend/workspace_panes.js` 现在会在 `startLine` / `endLine` 与 snippet 文本足够一致时，构造可信的 `line_window` 锚点。
+- 这份信任是条件化的：
+  - 如果行窗本身不存在，它不会强行生效；
+  - 如果行窗与 snippet 的重叠过弱，它会被视为 stale，不允许把高亮强行带偏。
+- 当前渲染候选节点的打分已经同时考虑：
+  - 可用时的 `line_window` 文本，
+  - 否则回退到 `snippet_fallback` 文本，
+  - specificity bonus，保证窄段落优先于泛化容器，
+  - container penalty，避免整块容器被过宽高亮。
+- 最终命中的路径现在会通过 additive `highlightStrategy` 诊断显式暴露：`line_window`、`snippet_fallback` 或 `none`。
+- `src/agent_workspace.frontend.test.ts` 现在已经固定两类更高价值的失败：
+  - 当同一 snippet 在多个段落重复出现时，必须依靠可信 line window 命中正确段落；
+  - 当行号元数据不可用或不可信时，必须回退到 snippet 高亮，而不是误高亮错误段落。
+- 这个 Phase 依然不把 release policy 挪到前端。
+- 它关闭的是另一条局部不变量：在主回答已经收缩之后，证据原文预览的高亮精度。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -847,14 +882,14 @@ The first two decide capability. The third decides trust.
 
 1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + structured-fact + polarity + graph-order gate 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
-3. 在已经加固的 graph-focus payload 契约之上，继续把高亮收紧到更 line-anchored / provenance-precise 的语义层级，前提是当前 markdown 渲染路径允许。
+3. 把当前 `line_window` + `snippet_fallback` 的 graph-focus 高亮器视为已落地基线；后续只在 markdown runtime 能暴露稳定 source-line / DOM metadata 时，继续推进更深的 source-to-render provenance。
 4. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
 5. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
 
 ### 五点总结
 
-1. 真正缺失的不是图检索，而是最终公开回答的 release review。
+1. 本轮切片起点真正缺失的不是图检索，而是最终公开回答的 release review；复审现在已经确认这个 owner 已落地。
 2. 正确 owner 是本地确定性 reviewer layer，不是再引入一层 prompt framework。
-3. 项目现有 DAG 继续作为证据底座，并且已经开始参与 release-time 的顺序纠错；而 graph-focus 证据可用性仍需要独立 payload owner，不能靠 reviewer policy 代偿。
+3. 项目现有 DAG 继续作为证据底座，并且已经开始参与 release-time 的顺序纠错；graph-focus 现在也已经具备更紧的 `line_window` / `snippet_fallback` 高亮基线，剩余缺口转移到更深的 source-to-render provenance。
 4. `waterglass` 截图已经被编码进正式运行时验收门禁。
-5. 本轮落地保持向前兼容，同时实质提升了 agent 最终回复的鲁棒性。
+5. 本轮落地保持向前兼容，同时实质提升了 agent 最终回复的鲁棒性；后续重点已经转移到更广的矛盾检测，而不是更换 reviewer owner。

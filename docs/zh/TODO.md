@@ -6,6 +6,7 @@
 
 - [x] 已将新的事实源文档落盘到 `docs/solutions/agent-final-reply-review-robustness-plan-2026-06-18.md`。
 - [x] 已把当前 agent 缺口重新定义为“缺失最终公开回答 release review”，而不是“尚未引入 prompt framework”。
+- [x] 已完成本轮复审并确认：缺失 owner 的阶段已经关闭；当前剩余缺口已经转移到更广的矛盾检测与更深的证据 provenance。
 - [x] 已新增 `src/learning/answerReleaseReview.ts` 作为公开回答 `release` / `revise` / `abstain` 的显式 owner。
 - [x] 已在 `src/learning/types.ts` 中补齐 additive 的 `AnswerReleaseReview` 契约，并接到 response、trace 与 `KnowledgeRun`。
 - [x] `conversationComposer.ts` 产出的草稿回答现在会进入确定性 release gate，而不是直接公开释放。
@@ -26,7 +27,8 @@
 - [x] 已把 reviewer 从 lexical + structured-fact + polarity 门禁继续扩展到确定性的 `claim_graph_order_consistency`，覆盖与已装配 DAG 相矛盾的 `prerequisite` / `sequence` 方向反转，并用防误报单测约束。
 - [ ] 在当前 lexical + structured-fact + polarity + graph-order 门禁之上，继续扩展到更广的 claim-vs-citation / claim-vs-evidence 矛盾检测，并控制 false positive。
 - [x] 加固 graph-focus payload 契约，让右侧原文预览 / 命中高亮在 candidate-path fallback 噪声下仍保持确定性。
-- [ ] 在 payload 稳定性之上，把 graph-focus 高亮继续收紧到更 line-anchored / provenance-precise 的语义层级，前提是当前 markdown 渲染路径暴露足够结构。
+- [x] 已把 graph-focus 高亮进一步收紧到 payload 稳定性之上：可信 `line_window` 优先，行号缺失或陈旧时回退到 `snippet_fallback`，并保留 additive `highlightStrategy` 诊断。
+- [ ] 在当前 line-window/snippet-fallback 基线之上，等待 markdown runtime 暴露稳定 source-line / DOM metadata 后，继续推进更深的 source-to-render provenance。
 
 ### 2026-06-17 Agent Knowledge DAG TODO 重新分类
 
