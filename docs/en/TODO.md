@@ -17,8 +17,8 @@
 - [x] Export compact reviewer summaries through `runtime.knowledgeRunReports[*].answerReleaseReview` so replay/audit surfaces can inspect release decisions without duplicating full answer text.
 - [x] Build the first longer-horizon operator audit on top of the exported reviewer summaries: `runtime.knowledgeRunAnswerReleaseAuditSummary` now aggregates reviewer counts, decisions, failed gates, and leakage signals, and the `knowledge_run` history card renders the same multi-run audit shape.
 - [x] Extend that aggregate audit into the first review-trend and gate-aging baselines, still derived from the same reviewer telemetry path.
+- [x] Extend the same reviewer telemetry path into compare-ready operator drilldowns: recent/prior metric shifts, gate shifts, latest-pair deltas, and compare-card answer-release deltas.
 - [ ] Extend the reviewer from the current lexical grounding check into deeper claim-vs-citation contradiction detection once an explicit regression corpus exists.
-- [ ] Extend the current trend-window and gate-aging baseline into compare-ready operator drilldowns instead of adding a second telemetry path.
 
 ### 2026-06-17 Agent Knowledge DAG TODO Reclassification
 

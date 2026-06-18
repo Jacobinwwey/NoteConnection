@@ -165,6 +165,14 @@ function createI18nStub() {
             'agentWorkspace.reply.answerReleaseAuditTrendRecentWindowLabel': 'Recent reviewed window',
             'agentWorkspace.reply.answerReleaseAuditTrendPriorWindowLabel': 'Prior reviewed window',
             'agentWorkspace.reply.answerReleaseAuditTrendWindowSummary': '{reviewed} run(s); {decisions}; revised {revised}; failed {failed}; leaked {leaked}; {latest} -> {earliest}',
+            'agentWorkspace.reply.answerReleaseAuditComparisonHeading': 'Review comparison',
+            'agentWorkspace.reply.answerReleaseAuditComparisonMetricSummary': 'recent {recent}; prior {prior}; delta {delta}',
+            'agentWorkspace.reply.answerReleaseAuditComparisonLatestPairHeading': 'Latest pair',
+            'agentWorkspace.reply.answerReleaseAuditComparisonLatestPairSummary': 'decision {previousDecision} -> {latestDecision}; revised {previousRevised} -> {latestRevised}; leak delta {leakDelta}; new {newlyFailed}; resolved {resolved}; persistent {persistent}',
+            'agentWorkspace.reply.answerReleaseAuditComparisonGateShiftHeading': 'Gate shifts',
+            'agentWorkspace.reply.answerReleaseAuditComparisonGateShiftSummary': 'recent {recent}; prior {prior}; delta {delta}; total {total}; since last failure {runsSince}',
+            'agentWorkspace.reply.answerReleaseAuditComparisonFailedGateRunsLabel': 'Failed-gate runs',
+            'agentWorkspace.reply.answerReleaseAuditComparisonLeakedRunsLabel': 'Leaked runs',
             'agentWorkspace.reply.answerReleaseAuditGateAgingHeading': 'Gate aging',
             'agentWorkspace.reply.answerReleaseAuditGateAgingSummary': '{count} fail(s); recent {latest}; since last failure {runsSince}; recent window {windowCount}',
             'agentWorkspace.reply.knowledgeRunHistoryRunsHeading': 'Recent Runs',
@@ -184,6 +192,13 @@ function createI18nStub() {
             'agentWorkspace.reply.knowledgeRunComparePathDeltaLabel': 'Path delta',
             'agentWorkspace.reply.knowledgeRunCompareTemporalWarningDeltaLabel': 'Temporal-warning delta',
             'agentWorkspace.reply.knowledgeRunCompareGraphFallbackDeltaLabel': 'Graph fallback delta',
+            'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseHeading': 'Answer release',
+            'agentWorkspace.reply.knowledgeRunCompareLatestAnswerReleaseLabel': 'Latest release review',
+            'agentWorkspace.reply.knowledgeRunCompareCandidateAnswerReleaseLabel': 'Compared release review',
+            'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseDeltaLabel': 'Release delta',
+            'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseDeltaSummary': 'decision {previousDecision} -> {latestDecision}; revised {previousRevised} -> {latestRevised}; leak delta {leakDelta}',
+            'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseGateDeltaLabel': 'Gate delta',
+            'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseGateDeltaSummary': 'new {newlyFailed}; resolved {resolved}; persistent {persistent}',
             'agentWorkspace.reply.knowledgeRunNone': 'none',
             'agentWorkspace.tutorAction.cardTitle': 'Tutor Action',
             'agentWorkspace.tutorAction.quizTitle': 'Quiz Prompt',
@@ -561,6 +576,13 @@ function createI18nStub() {
             'agentWorkspace.reply.knowledgeRunComparePathDeltaLabel': '路径差值',
             'agentWorkspace.reply.knowledgeRunCompareTemporalWarningDeltaLabel': '时序告警差值',
             'agentWorkspace.reply.knowledgeRunCompareGraphFallbackDeltaLabel': '图回退差值',
+            'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseHeading': '发布审核',
+            'agentWorkspace.reply.knowledgeRunCompareLatestAnswerReleaseLabel': '最新发布审核',
+            'agentWorkspace.reply.knowledgeRunCompareCandidateAnswerReleaseLabel': '对比发布审核',
+            'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseDeltaLabel': '发布差值',
+            'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseDeltaSummary': '决策 {previousDecision} -> {latestDecision}；改写 {previousRevised} -> {latestRevised}；泄漏差值 {leakDelta}',
+            'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseGateDeltaLabel': '门禁差值',
+            'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseGateDeltaSummary': '新增 {newlyFailed}；已解决 {resolved}；持续 {persistent}',
             'agentWorkspace.reply.knowledgeRunNone': '无',
             'agentWorkspace.tutorAction.cardTitle': '导师动作',
             'agentWorkspace.tutorAction.quizTitle': '测验提示',
@@ -939,6 +961,14 @@ function createI18nStub() {
             'agentWorkspace.reply.answerReleaseAuditTrendRecentWindowLabel': '近期已审窗口',
             'agentWorkspace.reply.answerReleaseAuditTrendPriorWindowLabel': '前序已审窗口',
             'agentWorkspace.reply.answerReleaseAuditTrendWindowSummary': '{reviewed} 次运行；{decisions}；改写 {revised}；失败 {failed}；泄漏 {leaked}；{latest} -> {earliest}',
+            'agentWorkspace.reply.answerReleaseAuditComparisonHeading': '审核对比',
+            'agentWorkspace.reply.answerReleaseAuditComparisonMetricSummary': '近期 {recent}；前序 {prior}；差值 {delta}',
+            'agentWorkspace.reply.answerReleaseAuditComparisonLatestPairHeading': '最近两次审核',
+            'agentWorkspace.reply.answerReleaseAuditComparisonLatestPairSummary': '决策 {previousDecision} -> {latestDecision}；改写 {previousRevised} -> {latestRevised}；泄漏差值 {leakDelta}；新增 {newlyFailed}；已解决 {resolved}；持续 {persistent}',
+            'agentWorkspace.reply.answerReleaseAuditComparisonGateShiftHeading': '门禁变化',
+            'agentWorkspace.reply.answerReleaseAuditComparisonGateShiftSummary': '近期 {recent}；前序 {prior}；差值 {delta}；总计 {total}；距上次失败 {runsSince}',
+            'agentWorkspace.reply.answerReleaseAuditComparisonFailedGateRunsLabel': '失败门禁运行',
+            'agentWorkspace.reply.answerReleaseAuditComparisonLeakedRunsLabel': '泄漏运行',
             'agentWorkspace.reply.answerReleaseAuditGateAgingHeading': '门禁老化',
             'agentWorkspace.reply.answerReleaseAuditGateAgingSummary': '{count} 次失败；最近 {latest}；距上次失败 {runsSince} 次已审运行；近期窗口 {windowCount}',
             'agentWorkspace.reply.answerReleaseHistoryLabel': '发布审核',
@@ -5515,6 +5545,12 @@ describe('agent workspace learning-path integration', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('Recent reviewed window');
         expect(String(evidenceBody?.textContent || '')).toContain('2 run(s); release 1, revise 1, abstain 0, other 0; revised 1; failed 1; leaked 0; 2026-04-13T00:01:01.000Z -> 2026-04-12T23:55:01.000Z');
         expect(String(evidenceBody?.textContent || '')).toContain('Prior reviewed window');
+        expect(String(evidenceBody?.textContent || '')).toContain('Review comparison');
+        expect(String(evidenceBody?.textContent || '')).toContain('recent 2; prior 0; delta +2');
+        expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_2 -> knowledge_run_blocks_1');
+        expect(String(evidenceBody?.textContent || '')).toContain('decision revise -> release; revised yes -> no; leak delta 0; new none; resolved public_surface_contraction; persistent none');
+        expect(String(evidenceBody?.textContent || '')).toContain('Gate shifts');
+        expect(String(evidenceBody?.textContent || '')).toContain('recent 1; prior 0; delta +1; total 1; since last failure 1');
         expect(String(evidenceBody?.textContent || '')).toContain('Gate aging');
         expect(String(evidenceBody?.textContent || '')).toContain('1 fail(s); recent 2026-04-12T23:55:01.000Z; since last failure 1; recent window 1');
         expect(String(evidenceBody?.textContent || '')).toContain('Recent Runs');
@@ -5538,6 +5574,13 @@ describe('agent workspace learning-path integration', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('Path delta');
         expect(String(evidenceBody?.textContent || '')).toContain('Temporal-warning delta');
         expect(String(evidenceBody?.textContent || '')).toContain('Graph fallback delta');
+        expect(String(evidenceBody?.textContent || '')).toContain('Answer release');
+        expect(String(evidenceBody?.textContent || '')).toContain('Latest release review');
+        expect(String(evidenceBody?.textContent || '')).toContain('Compared release review');
+        expect(String(evidenceBody?.textContent || '')).toContain('Release delta');
+        expect(String(evidenceBody?.textContent || '')).toContain('Gate delta');
+        expect(String(evidenceBody?.textContent || '')).toContain('decision revise -> release; revised yes -> no; leak delta 0');
+        expect(String(evidenceBody?.textContent || '')).toContain('new none; resolved public_surface_contraction; persistent none');
         expect(String(evidenceBody?.textContent || '')).toContain('+1');
 
         await (window as any).NoteConnectionAgentWorkspace.executeCapability({

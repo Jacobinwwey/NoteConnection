@@ -23,15 +23,15 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 - `WorkspaceExportBundle.ts` now also derives a durable aggregate reviewer audit at `runtime.knowledgeRunAnswerReleaseAuditSummary`, covering reviewed/unreviewed counts, decision buckets, revised runs, failed-gate counts, leak counts, and latest reviewed timestamp.
 - The aggregate reviewer audit now also carries `reviewTrend` window summaries and `failedGateAging` entries, both derived from the same reviewer telemetry path rather than a second audit owner.
 - The operator history surface now renders the same longer-horizon release-audit shape inside `knowledge_run` history, including review-trend windows and gate-aging summaries, so multi-run reviewer drift is visible without widening the main answer area or inventing a second telemetry path.
+- That same aggregate audit path now also carries compare-ready drilldowns: metric shifts between recent/prior reviewed windows, per-gate window shifts, and the latest reviewed-pair delta. The knowledge-run compare card now surfaces answer-release deltas on top of the existing quality/graph comparison.
 - `scripts/verify-knowledge-workspace-runtime.js` now treats reviewer presence and public-answer hygiene as runtime acceptance gates for the screenshot-backed `waterglass` case.
 
 #### Next execution order
 
 1. Keep the reviewer deterministic and narrowly scoped to release invariants; do not let prompt templates reclaim ownership of release policy.
 2. Broaden contradiction coverage beyond the current lexical grounding check only after explicit regression corpora exist for false-positive control.
-3. Extend the current trend-window and gate-aging baseline into compare-ready operator drilldowns instead of adding another parallel telemetry surface.
-4. Extend the alias/scope regression corpus beyond `waterglass`.
-5. Continue owner reduction only when the new owner hides real decisions or invariants.
+3. Extend the alias/scope regression corpus beyond `waterglass`.
+4. Continue owner reduction only when the new owner hides real decisions or invariants.
 
 #### Acceptance criteria
 
@@ -39,7 +39,7 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 2. `AgentConversationResponse`, trace, and `KnowledgeRun` all retain additive `answerReleaseReview` state.
 3. Operator inspection surfaces render reviewer decision, failed gates, and original/public answer deltas without widening the primary answer area.
 4. Workspace export knowledge-run reports carry compact reviewer summaries for `release` / `revise` flows and stay backward-compatible when review data is absent.
-5. Workspace export also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows and gate-aging summaries, and the operator history card renders the same audit shape.
+5. Workspace export also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card renders the same audit shape, and the compare card exposes answer-release deltas without widening the public answer area.
 6. `npm run verify:knowledge-workspace:runtime` passes the `waterglass` compact/spaced matrix and confirms reviewer/public-answer parity.
 7. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
 

@@ -127,6 +127,23 @@ export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditTrend {
     priorWindow: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow;
 }
 
+export type WorkspaceExportKnowledgeRunAnswerReleaseAuditMetricId =
+    | 'reviewed_runs'
+    | 'release_decisions'
+    | 'revise_decisions'
+    | 'abstain_decisions'
+    | 'other_decisions'
+    | 'revised_runs'
+    | 'failed_gate_runs'
+    | 'leaked_runs';
+
+export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditMetricShift {
+    metricId: WorkspaceExportKnowledgeRunAnswerReleaseAuditMetricId | string;
+    recentValue: number;
+    priorValue: number;
+    delta: number;
+}
+
 export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditGateAging {
     gateId: AnswerReleaseGateId | string;
     failureCount: number;
@@ -134,6 +151,41 @@ export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditGateAging {
     oldestReviewedAt: string;
     reviewedRunsSinceLastFailure: number;
     occurrencesInRecentWindow: number;
+}
+
+export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditGateShift {
+    gateId: AnswerReleaseGateId | string;
+    recentWindowCount: number;
+    priorWindowCount: number;
+    delta: number;
+    failureCount: number;
+    latestReviewedAt: string;
+    reviewedRunsSinceLastFailure: number;
+}
+
+export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditLatestPair {
+    latestRunId: string;
+    previousRunId: string;
+    latestReviewedAt: string;
+    previousReviewedAt: string;
+    latestDecision: AnswerReleaseDecision | string;
+    previousDecision: AnswerReleaseDecision | string;
+    decisionChanged: boolean;
+    latestRevised: boolean;
+    previousRevised: boolean;
+    revisedChanged: boolean;
+    latestLeakedInternalFragmentCount: number;
+    previousLeakedInternalFragmentCount: number;
+    leakedInternalFragmentDelta: number;
+    newlyFailedGateIds: Array<AnswerReleaseGateId | string>;
+    resolvedFailedGateIds: Array<AnswerReleaseGateId | string>;
+    persistentFailedGateIds: Array<AnswerReleaseGateId | string>;
+}
+
+export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditComparison {
+    metricShifts: WorkspaceExportKnowledgeRunAnswerReleaseAuditMetricShift[];
+    gateShifts: WorkspaceExportKnowledgeRunAnswerReleaseAuditGateShift[];
+    latestPair: WorkspaceExportKnowledgeRunAnswerReleaseAuditLatestPair | null;
 }
 
 export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary {
@@ -149,6 +201,7 @@ export interface WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary {
     latestReviewedAt: string;
     reviewTrend: WorkspaceExportKnowledgeRunAnswerReleaseAuditTrend;
     failedGateAging: WorkspaceExportKnowledgeRunAnswerReleaseAuditGateAging[];
+    comparison: WorkspaceExportKnowledgeRunAnswerReleaseAuditComparison;
 }
 
 export interface WorkspaceExportKnowledgeRunReport {

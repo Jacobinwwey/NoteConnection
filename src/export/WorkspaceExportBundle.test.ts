@@ -767,6 +767,96 @@ describe('WorkspaceExportBundle', () => {
                     occurrencesInRecentWindow: 1,
                 },
             ],
+            comparison: {
+                metricShifts: [
+                    {
+                        metricId: 'reviewed_runs',
+                        recentValue: 2,
+                        priorValue: 0,
+                        delta: 2,
+                    },
+                    {
+                        metricId: 'release_decisions',
+                        recentValue: 1,
+                        priorValue: 0,
+                        delta: 1,
+                    },
+                    {
+                        metricId: 'revise_decisions',
+                        recentValue: 1,
+                        priorValue: 0,
+                        delta: 1,
+                    },
+                    {
+                        metricId: 'abstain_decisions',
+                        recentValue: 0,
+                        priorValue: 0,
+                        delta: 0,
+                    },
+                    {
+                        metricId: 'other_decisions',
+                        recentValue: 0,
+                        priorValue: 0,
+                        delta: 0,
+                    },
+                    {
+                        metricId: 'revised_runs',
+                        recentValue: 1,
+                        priorValue: 0,
+                        delta: 1,
+                    },
+                    {
+                        metricId: 'failed_gate_runs',
+                        recentValue: 1,
+                        priorValue: 0,
+                        delta: 1,
+                    },
+                    {
+                        metricId: 'leaked_runs',
+                        recentValue: 1,
+                        priorValue: 0,
+                        delta: 1,
+                    },
+                ],
+                gateShifts: [
+                    {
+                        gateId: 'claim_grounding_alignment',
+                        recentWindowCount: 1,
+                        priorWindowCount: 0,
+                        delta: 1,
+                        failureCount: 1,
+                        latestReviewedAt: '2026-05-27T00:00:00.000Z',
+                        reviewedRunsSinceLastFailure: 1,
+                    },
+                    {
+                        gateId: 'internal_diagnostic_leakage',
+                        recentWindowCount: 1,
+                        priorWindowCount: 0,
+                        delta: 1,
+                        failureCount: 1,
+                        latestReviewedAt: '2026-05-27T00:00:00.000Z',
+                        reviewedRunsSinceLastFailure: 1,
+                    },
+                ],
+                latestPair: {
+                    latestRunId: 'knowledge_run_1',
+                    previousRunId: 'knowledge_run_2',
+                    latestReviewedAt: '2026-05-28T00:00:00.000Z',
+                    previousReviewedAt: '2026-05-27T00:00:00.000Z',
+                    latestDecision: 'release',
+                    previousDecision: 'revise',
+                    decisionChanged: true,
+                    latestRevised: false,
+                    previousRevised: true,
+                    revisedChanged: true,
+                    latestLeakedInternalFragmentCount: 0,
+                    previousLeakedInternalFragmentCount: 1,
+                    leakedInternalFragmentDelta: -1,
+                    newlyFailedGateIds: [],
+                    resolvedFailedGateIds: ['claim_grounding_alignment', 'internal_diagnostic_leakage'],
+                    persistentFailedGateIds: [],
+                },
+            },
         });
     });
 
@@ -942,6 +1032,60 @@ describe('WorkspaceExportBundle', () => {
                 },
             },
             failedGateAging: [],
+            comparison: {
+                metricShifts: [
+                    {
+                        metricId: 'reviewed_runs',
+                        recentValue: 0,
+                        priorValue: 0,
+                        delta: 0,
+                    },
+                    {
+                        metricId: 'release_decisions',
+                        recentValue: 0,
+                        priorValue: 0,
+                        delta: 0,
+                    },
+                    {
+                        metricId: 'revise_decisions',
+                        recentValue: 0,
+                        priorValue: 0,
+                        delta: 0,
+                    },
+                    {
+                        metricId: 'abstain_decisions',
+                        recentValue: 0,
+                        priorValue: 0,
+                        delta: 0,
+                    },
+                    {
+                        metricId: 'other_decisions',
+                        recentValue: 0,
+                        priorValue: 0,
+                        delta: 0,
+                    },
+                    {
+                        metricId: 'revised_runs',
+                        recentValue: 0,
+                        priorValue: 0,
+                        delta: 0,
+                    },
+                    {
+                        metricId: 'failed_gate_runs',
+                        recentValue: 0,
+                        priorValue: 0,
+                        delta: 0,
+                    },
+                    {
+                        metricId: 'leaked_runs',
+                        recentValue: 0,
+                        priorValue: 0,
+                        delta: 0,
+                    },
+                ],
+                gateShifts: [],
+                latestPair: null,
+            },
         });
     });
 

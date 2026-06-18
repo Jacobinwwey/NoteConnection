@@ -4,7 +4,11 @@ import { resolveRenderMaterializationDecision } from '../platform/RenderMaterial
 import type {
     WorkspaceExportBundle,
     WorkspaceExportGraphFocusReport,
+    WorkspaceExportKnowledgeRunAnswerReleaseAuditComparison,
     WorkspaceExportKnowledgeRunAnswerReleaseAuditGateAging,
+    WorkspaceExportKnowledgeRunAnswerReleaseAuditGateShift,
+    WorkspaceExportKnowledgeRunAnswerReleaseAuditLatestPair,
+    WorkspaceExportKnowledgeRunAnswerReleaseAuditMetricShift,
     WorkspaceExportKnowledgeRunAnswerReleaseAuditSummary,
     WorkspaceExportKnowledgeRunAnswerReleaseAuditTrend,
     WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow,
@@ -632,6 +636,69 @@ function buildAnswerReleaseAuditTrend(
     };
 }
 
+function buildAnswerReleaseAuditMetricShifts(
+    recentWindow: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow,
+    priorWindow: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow
+): WorkspaceExportKnowledgeRunAnswerReleaseAuditMetricShift[] {
+    const metricDefinitions = [
+        {
+            metricId: 'reviewed_runs',
+            readValue: (windowSummary: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow) => windowSummary.reviewedRunCount,
+        },
+        {
+            metricId: 'release_decisions',
+            readValue: (windowSummary: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow) => windowSummary.decisionCounts.release,
+        },
+        {
+            metricId: 'revise_decisions',
+            readValue: (windowSummary: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow) => windowSummary.decisionCounts.revise,
+        },
+        {
+            metricId: 'abstain_decisions',
+            readValue: (windowSummary: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow) => windowSummary.decisionCounts.abstain,
+        },
+        {
+            metricId: 'other_decisions',
+            readValue: (windowSummary: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow) => windowSummary.decisionCounts.other,
+        },
+        {
+            metricId: 'revised_runs',
+            readValue: (windowSummary: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow) => windowSummary.revisedRunCount,
+        },
+        {
+            metricId: 'failed_gate_runs',
+            readValue: (windowSummary: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow) => windowSummary.runsWithFailedGates,
+        },
+        {
+            metricId: 'leaked_runs',
+            readValue: (windowSummary: WorkspaceExportKnowledgeRunAnswerReleaseAuditWindow) => windowSummary.runsWithLeakedInternalFragments,
+        },
+    ] as const;
+
+    return metricDefinitions.map(({ metricId, readValue }) => {
+        const recentValue = normalizeCount(readValue(recentWindow));
+        const priorValue = normalizeCount(readValue(priorWindow));
+        return {
+            metricId,
+            recentValue,
+            priorValue,
+            delta: recentValue - priorValue,
+        };
+    });
+}
+
+function buildAnswerReleaseAuditWindowGateCounts(
+    entries: AnswerReleaseAuditTimelineEntry[]
+): Map<string, number> {
+    const gateCounts = new Map<string, number>();
+    entries.forEach((entry) => {
+        entry.uniqueFailedGateIds.forEach((gateId) => {
+            gateCounts.set(gateId, (gateCounts.get(gateId) || 0) + 1);
+        });
+    });
+    return gateCounts;
+}
+
 function buildAnswerReleaseAuditGateAging(
     entries: AnswerReleaseAuditTimelineEntry[]
 ): WorkspaceExportKnowledgeRunAnswerReleaseAuditGateAging[] {
@@ -676,6 +743,118 @@ function buildAnswerReleaseAuditGateAging(
         }
         return compareStrings(left.gateId, right.gateId);
     });
+}
+
+function buildAnswerReleaseAuditGateShifts(
+    entries: AnswerReleaseAuditTimelineEntry[]
+): WorkspaceExportKnowledgeRunAnswerReleaseAuditGateShift[] {
+    const recentWindowEntries = entries.slice(0, ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE);
+    const priorWindowEntries = entries.slice(
+        ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE,
+        ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE * 2
+    );
+    const recentGateCounts = buildAnswerReleaseAuditWindowGateCounts(recentWindowEntries);
+    const priorGateCounts = buildAnswerReleaseAuditWindowGateCounts(priorWindowEntries);
+    const gateAgingById = new Map(
+        buildAnswerReleaseAuditGateAging(entries).map((entry) => [entry.gateId, entry] as const)
+    );
+    const gateIds = Array.from(new Set([
+        ...recentGateCounts.keys(),
+        ...priorGateCounts.keys(),
+        ...gateAgingById.keys(),
+    ]));
+
+    return gateIds
+        .map((gateId) => {
+            const recentWindowCount = normalizeCount(recentGateCounts.get(gateId) || 0);
+            const priorWindowCount = normalizeCount(priorGateCounts.get(gateId) || 0);
+            const gateAging = gateAgingById.get(gateId);
+            return {
+                gateId,
+                recentWindowCount,
+                priorWindowCount,
+                delta: recentWindowCount - priorWindowCount,
+                failureCount: normalizeCount(gateAging?.failureCount || 0),
+                latestReviewedAt: normalizeString(gateAging?.latestReviewedAt || ''),
+                reviewedRunsSinceLastFailure: normalizeCount(gateAging?.reviewedRunsSinceLastFailure || 0),
+            };
+        })
+        .sort((left, right) => {
+            const leftHasRecentWindowFailure = left.recentWindowCount > 0 ? 0 : 1;
+            const rightHasRecentWindowFailure = right.recentWindowCount > 0 ? 0 : 1;
+            if (leftHasRecentWindowFailure !== rightHasRecentWindowFailure) {
+                return leftHasRecentWindowFailure - rightHasRecentWindowFailure;
+            }
+            const deltaMagnitudeOrder = Math.abs(right.delta) - Math.abs(left.delta);
+            if (deltaMagnitudeOrder !== 0) {
+                return deltaMagnitudeOrder;
+            }
+            if (left.reviewedRunsSinceLastFailure !== right.reviewedRunsSinceLastFailure) {
+                return left.reviewedRunsSinceLastFailure - right.reviewedRunsSinceLastFailure;
+            }
+            if (left.failureCount !== right.failureCount) {
+                return right.failureCount - left.failureCount;
+            }
+            if (left.recentWindowCount !== right.recentWindowCount) {
+                return right.recentWindowCount - left.recentWindowCount;
+            }
+            const latestReviewedAtOrder = compareStrings(right.latestReviewedAt, left.latestReviewedAt);
+            if (latestReviewedAtOrder !== 0) {
+                return latestReviewedAtOrder;
+            }
+            return compareStrings(left.gateId, right.gateId);
+        });
+}
+
+function buildAnswerReleaseAuditLatestPair(
+    entries: AnswerReleaseAuditTimelineEntry[]
+): WorkspaceExportKnowledgeRunAnswerReleaseAuditLatestPair | null {
+    if (entries.length < 2) {
+        return null;
+    }
+    const latestEntry = entries[0];
+    const previousEntry = entries[1];
+    const latestFailedGateIds = new Set(latestEntry.uniqueFailedGateIds);
+    const previousFailedGateIds = new Set(previousEntry.uniqueFailedGateIds);
+
+    return {
+        latestRunId: normalizeString(latestEntry.runId),
+        previousRunId: normalizeString(previousEntry.runId),
+        latestReviewedAt: normalizeString(latestEntry.reviewedAt),
+        previousReviewedAt: normalizeString(previousEntry.reviewedAt),
+        latestDecision: normalizeAnswerReleaseDecisionBucket(latestEntry.review.decision),
+        previousDecision: normalizeAnswerReleaseDecisionBucket(previousEntry.review.decision),
+        decisionChanged: normalizeAnswerReleaseDecisionBucket(latestEntry.review.decision)
+            !== normalizeAnswerReleaseDecisionBucket(previousEntry.review.decision),
+        latestRevised: latestEntry.review.revised === true,
+        previousRevised: previousEntry.review.revised === true,
+        revisedChanged: (latestEntry.review.revised === true) !== (previousEntry.review.revised === true),
+        latestLeakedInternalFragmentCount: normalizeCount(latestEntry.leakedInternalFragmentCount),
+        previousLeakedInternalFragmentCount: normalizeCount(previousEntry.leakedInternalFragmentCount),
+        leakedInternalFragmentDelta: normalizeCount(latestEntry.leakedInternalFragmentCount)
+            - normalizeCount(previousEntry.leakedInternalFragmentCount),
+        newlyFailedGateIds: latestEntry.uniqueFailedGateIds.filter((gateId) => !previousFailedGateIds.has(gateId)),
+        resolvedFailedGateIds: previousEntry.uniqueFailedGateIds.filter((gateId) => !latestFailedGateIds.has(gateId)),
+        persistentFailedGateIds: latestEntry.uniqueFailedGateIds.filter((gateId) => previousFailedGateIds.has(gateId)),
+    };
+}
+
+function buildAnswerReleaseAuditComparison(
+    entries: AnswerReleaseAuditTimelineEntry[]
+): WorkspaceExportKnowledgeRunAnswerReleaseAuditComparison {
+    const recentWindowEntries = entries.slice(0, ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE);
+    const priorWindowEntries = entries.slice(
+        ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE,
+        ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE * 2
+    );
+    const recentWindow = buildAnswerReleaseAuditWindow(recentWindowEntries);
+    const priorWindow = buildAnswerReleaseAuditWindow(priorWindowEntries);
+
+    return {
+        metricShifts: buildAnswerReleaseAuditMetricShifts(recentWindow, priorWindow),
+        gateShifts: buildAnswerReleaseAuditGateShifts(entries),
+        latestPair: buildAnswerReleaseAuditLatestPair(entries),
+    };
 }
 
 function buildKnowledgeRunAnswerReleaseAuditSummary(
@@ -751,6 +930,7 @@ function buildKnowledgeRunAnswerReleaseAuditSummary(
         latestReviewedAt,
         reviewTrend: buildAnswerReleaseAuditTrend(timelineEntries),
         failedGateAging: buildAnswerReleaseAuditGateAging(timelineEntries),
+        comparison: buildAnswerReleaseAuditComparison(timelineEntries),
     };
 }
 

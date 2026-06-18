@@ -32,6 +32,7 @@ What is now true in code:
 - `WorkspaceExportBundle.ts` now also derives `runtime.knowledgeRunAnswerReleaseAuditSummary`, a longer-horizon aggregate built from the exported knowledge-run reports rather than from a second telemetry path.
 - the operator history surface now renders the same aggregate `Release audit` shape from returned runs, covering reviewed/unreviewed counts, decision buckets, failed-gate counts, leak counts, revised runs, and latest review time.
 - that same aggregate path now also carries `reviewTrend` windows and `failedGateAging` entries, so reviewer drift can be inspected as sequence data instead of only totals.
+- that same aggregate path now also carries compare-ready drilldowns: recent/prior metric shifts, gate shifts, and the latest reviewed-pair delta; the run-compare card now surfaces answer-release deltas on top of the existing quality/graph comparison.
 - `scripts/verify-knowledge-workspace-runtime.js` now treats reviewer presence and `publicAnswer === result.answer` parity as part of the runtime contract.
 
 Why this matters:
@@ -52,6 +53,7 @@ Code-vs-plan reconciliation:
 | Replay/export surfaces must retain reviewer state durably | `WorkspaceExportBundle.ts` now emits compact `answerReleaseReview` summaries inside `runtime.knowledgeRunReports`. | Implemented |
 | Longer-horizon operator audit must reuse exported reviewer telemetry instead of adding another telemetry path | `WorkspaceExportBundle.ts` now derives `runtime.knowledgeRunAnswerReleaseAuditSummary`, and the history card renders the same multi-run release-audit shape. | Implemented baseline |
 | Review trends and gate aging must also stay on the same audit path | `runtime.knowledgeRunAnswerReleaseAuditSummary` now carries `reviewTrend` and `failedGateAging`, and the history card renders both. | Implemented baseline |
+| Operators must be able to compare recent reviewer drift without opening raw traces | The same audit path now derives metric shifts, gate shifts, and latest-pair deltas; the compare card also shows answer-release deltas between runs. | Implemented baseline |
 | `waterglass` screenshot must become a formal regression gate | Runtime verifier now requires reviewer presence and rejects public-answer diagnostic leakage. | Implemented |
 | Backward compatibility must remain explicit | `assistantMessage`, `answer`, and `assistantBlocks` remain valid; reviewer fields are additive. | Preserved |
 
@@ -59,7 +61,7 @@ Verification for this slice:
 
 - `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
-- `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts src/agent_workspace.frontend.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/export/WorkspaceExportBundle.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- tsc --noEmit`
 - `npm run verify:knowledge-workspace:runtime`
 

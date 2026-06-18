@@ -17,8 +17,8 @@
 - [x] 现在已通过 `runtime.knowledgeRunReports[*].answerReleaseReview` 导出紧凑 reviewer 摘要，使 replay/audit 表面可以检查 release decision，而不必重复携带完整回答文本。
 - [x] 现在已经基于上述 reviewer 摘要补出第一层长周期运维审计：`runtime.knowledgeRunAnswerReleaseAuditSummary` 会聚合 reviewer 计数、decision、failed gate 与 leakage 信号，`knowledge_run` 历史卡片也会渲染同一份多 run audit 形态。
 - [x] 现在已经在该聚合审计之上补出第一版 review-trend 与 gate-aging 基线，并继续复用同一条 reviewer telemetry 路径。
+- [x] 现在已经继续沿用同一条 reviewer telemetry 路径补出 compare-ready operator drilldown：近期/前序指标差值、gate 变化、最近两次审核 delta，以及 compare 卡片里的 answer-release 对比。
 - [ ] 在显式回归语料存在后，将 reviewer 从当前 lexical grounding check 继续扩展到更深的 claim-vs-citation 矛盾检测。
-- [ ] 在当前 trend-window 与 gate-aging 基线之上继续补 compare-ready operator drilldown，而不是再新增第二条 telemetry 路径。
 
 ### 2026-06-17 Agent Knowledge DAG TODO 重新分类
 

@@ -3695,6 +3695,83 @@
         };
     }
 
+    function buildAnswerReleaseAuditMetricShifts(recentWindow, priorWindow) {
+        const safeRecentWindow = recentWindow && typeof recentWindow === 'object'
+            ? recentWindow
+            : buildEmptyAnswerReleaseAuditWindow();
+        const safePriorWindow = priorWindow && typeof priorWindow === 'object'
+            ? priorWindow
+            : buildEmptyAnswerReleaseAuditWindow();
+        const metricDefinitions = [
+            {
+                metricId: 'reviewed_runs',
+                readValue: (windowSummary) => Number(windowSummary && windowSummary.reviewedRunCount || 0),
+            },
+            {
+                metricId: 'release_decisions',
+                readValue: (windowSummary) => Number(windowSummary && windowSummary.decisionCounts && windowSummary.decisionCounts.release || 0),
+            },
+            {
+                metricId: 'revise_decisions',
+                readValue: (windowSummary) => Number(windowSummary && windowSummary.decisionCounts && windowSummary.decisionCounts.revise || 0),
+            },
+            {
+                metricId: 'abstain_decisions',
+                readValue: (windowSummary) => Number(windowSummary && windowSummary.decisionCounts && windowSummary.decisionCounts.abstain || 0),
+            },
+            {
+                metricId: 'other_decisions',
+                readValue: (windowSummary) => Number(windowSummary && windowSummary.decisionCounts && windowSummary.decisionCounts.other || 0),
+            },
+            {
+                metricId: 'revised_runs',
+                readValue: (windowSummary) => Number(windowSummary && windowSummary.revisedRunCount || 0),
+            },
+            {
+                metricId: 'failed_gate_runs',
+                readValue: (windowSummary) => Number(windowSummary && windowSummary.runsWithFailedGates || 0),
+            },
+            {
+                metricId: 'leaked_runs',
+                readValue: (windowSummary) => Number(windowSummary && windowSummary.runsWithLeakedInternalFragments || 0),
+            },
+        ];
+        return metricDefinitions.map(({ metricId, readValue }) => {
+            const recentValue = Number.isFinite(Number(readValue(safeRecentWindow)))
+                ? Number(readValue(safeRecentWindow))
+                : 0;
+            const priorValue = Number.isFinite(Number(readValue(safePriorWindow)))
+                ? Number(readValue(safePriorWindow))
+                : 0;
+            return {
+                metricId,
+                recentValue,
+                priorValue,
+                delta: recentValue - priorValue,
+            };
+        });
+    }
+
+    function buildAnswerReleaseAuditWindowGateCounts(entries) {
+        const safeEntries = Array.isArray(entries)
+            ? entries.filter((entry) => entry && typeof entry === 'object')
+            : [];
+        const gateCounts = {};
+        safeEntries.forEach((entry) => {
+            const failedGateIds = Array.isArray(entry.uniqueFailedGateIds)
+                ? entry.uniqueFailedGateIds
+                : [];
+            failedGateIds.forEach((gateId) => {
+                const normalizedGateId = String(gateId || '').trim();
+                if (!normalizedGateId) {
+                    return;
+                }
+                gateCounts[normalizedGateId] = Number(gateCounts[normalizedGateId] || 0) + 1;
+            });
+        });
+        return gateCounts;
+    }
+
     function buildAnswerReleaseAuditGateAging(entries) {
         const safeEntries = Array.isArray(entries)
             ? entries.filter((entry) => entry && typeof entry === 'object')
@@ -3749,6 +3826,142 @@
                 }
                 return String(left.gateId || '').localeCompare(String(right.gateId || ''));
             });
+    }
+
+    function buildAnswerReleaseAuditGateShifts(entries) {
+        const safeEntries = Array.isArray(entries)
+            ? entries.filter((entry) => entry && typeof entry === 'object')
+            : [];
+        const recentWindowEntries = safeEntries.slice(0, ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE);
+        const priorWindowEntries = safeEntries.slice(
+            ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE,
+            ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE * 2
+        );
+        const recentGateCounts = buildAnswerReleaseAuditWindowGateCounts(recentWindowEntries);
+        const priorGateCounts = buildAnswerReleaseAuditWindowGateCounts(priorWindowEntries);
+        const gateAgingById = {};
+        buildAnswerReleaseAuditGateAging(safeEntries).forEach((entry) => {
+            const gateId = String(entry && entry.gateId || '').trim();
+            if (!gateId) {
+                return;
+            }
+            gateAgingById[gateId] = entry;
+        });
+        const gateIds = Array.from(new Set([
+            ...Object.keys(recentGateCounts),
+            ...Object.keys(priorGateCounts),
+            ...Object.keys(gateAgingById),
+        ]));
+        return gateIds
+            .map((gateId) => {
+                const gateAging = gateAgingById[gateId] || {};
+                const recentWindowCount = Number.isFinite(Number(recentGateCounts[gateId]))
+                    ? Number(recentGateCounts[gateId])
+                    : 0;
+                const priorWindowCount = Number.isFinite(Number(priorGateCounts[gateId]))
+                    ? Number(priorGateCounts[gateId])
+                    : 0;
+                return {
+                    gateId,
+                    recentWindowCount,
+                    priorWindowCount,
+                    delta: recentWindowCount - priorWindowCount,
+                    failureCount: Number.isFinite(Number(gateAging.failureCount))
+                        ? Number(gateAging.failureCount)
+                        : 0,
+                    latestReviewedAt: String(gateAging.latestReviewedAt || '').trim(),
+                    reviewedRunsSinceLastFailure: Number.isFinite(Number(gateAging.reviewedRunsSinceLastFailure))
+                        ? Number(gateAging.reviewedRunsSinceLastFailure)
+                        : 0,
+                };
+            })
+            .sort((left, right) => {
+                const leftHasRecentWindowFailure = Number(left.recentWindowCount) > 0 ? 0 : 1;
+                const rightHasRecentWindowFailure = Number(right.recentWindowCount) > 0 ? 0 : 1;
+                if (leftHasRecentWindowFailure !== rightHasRecentWindowFailure) {
+                    return leftHasRecentWindowFailure - rightHasRecentWindowFailure;
+                }
+                const deltaMagnitudeOrder = Math.abs(Number(right.delta)) - Math.abs(Number(left.delta));
+                if (deltaMagnitudeOrder !== 0) {
+                    return deltaMagnitudeOrder;
+                }
+                if (Number(left.reviewedRunsSinceLastFailure) !== Number(right.reviewedRunsSinceLastFailure)) {
+                    return Number(left.reviewedRunsSinceLastFailure) - Number(right.reviewedRunsSinceLastFailure);
+                }
+                if (Number(left.failureCount) !== Number(right.failureCount)) {
+                    return Number(right.failureCount) - Number(left.failureCount);
+                }
+                if (Number(left.recentWindowCount) !== Number(right.recentWindowCount)) {
+                    return Number(right.recentWindowCount) - Number(left.recentWindowCount);
+                }
+                const latestReviewedAtOrder = String(right.latestReviewedAt || '').localeCompare(String(left.latestReviewedAt || ''));
+                if (latestReviewedAtOrder !== 0) {
+                    return latestReviewedAtOrder;
+                }
+                return String(left.gateId || '').localeCompare(String(right.gateId || ''));
+            });
+    }
+
+    function buildAnswerReleaseAuditLatestPair(entries) {
+        const safeEntries = Array.isArray(entries)
+            ? entries.filter((entry) => entry && typeof entry === 'object')
+            : [];
+        if (safeEntries.length < 2) {
+            return null;
+        }
+        const latestEntry = safeEntries[0];
+        const previousEntry = safeEntries[1];
+        const latestFailedGateIds = new Set(Array.isArray(latestEntry.uniqueFailedGateIds) ? latestEntry.uniqueFailedGateIds : []);
+        const previousFailedGateIds = new Set(Array.isArray(previousEntry.uniqueFailedGateIds) ? previousEntry.uniqueFailedGateIds : []);
+        return {
+            latestRunId: String(latestEntry.runId || '').trim(),
+            previousRunId: String(previousEntry.runId || '').trim(),
+            latestReviewedAt: String(latestEntry.reviewedAt || '').trim(),
+            previousReviewedAt: String(previousEntry.reviewedAt || '').trim(),
+            latestDecision: normalizeAnswerReleaseDecisionBucket(latestEntry.review && latestEntry.review.decision),
+            previousDecision: normalizeAnswerReleaseDecisionBucket(previousEntry.review && previousEntry.review.decision),
+            decisionChanged: normalizeAnswerReleaseDecisionBucket(latestEntry.review && latestEntry.review.decision)
+                !== normalizeAnswerReleaseDecisionBucket(previousEntry.review && previousEntry.review.decision),
+            latestRevised: latestEntry.review && latestEntry.review.revised === true,
+            previousRevised: previousEntry.review && previousEntry.review.revised === true,
+            revisedChanged: (latestEntry.review && latestEntry.review.revised === true)
+                !== (previousEntry.review && previousEntry.review.revised === true),
+            latestLeakedInternalFragmentCount: Number.isFinite(Number(latestEntry.leakedInternalFragmentCount))
+                ? Number(latestEntry.leakedInternalFragmentCount)
+                : 0,
+            previousLeakedInternalFragmentCount: Number.isFinite(Number(previousEntry.leakedInternalFragmentCount))
+                ? Number(previousEntry.leakedInternalFragmentCount)
+                : 0,
+            leakedInternalFragmentDelta: (Number.isFinite(Number(latestEntry.leakedInternalFragmentCount))
+                ? Number(latestEntry.leakedInternalFragmentCount)
+                : 0) - (Number.isFinite(Number(previousEntry.leakedInternalFragmentCount))
+                ? Number(previousEntry.leakedInternalFragmentCount)
+                : 0),
+            newlyFailedGateIds: (Array.isArray(latestEntry.uniqueFailedGateIds) ? latestEntry.uniqueFailedGateIds : [])
+                .filter((gateId) => !previousFailedGateIds.has(gateId)),
+            resolvedFailedGateIds: (Array.isArray(previousEntry.uniqueFailedGateIds) ? previousEntry.uniqueFailedGateIds : [])
+                .filter((gateId) => !latestFailedGateIds.has(gateId)),
+            persistentFailedGateIds: (Array.isArray(latestEntry.uniqueFailedGateIds) ? latestEntry.uniqueFailedGateIds : [])
+                .filter((gateId) => previousFailedGateIds.has(gateId)),
+        };
+    }
+
+    function buildAnswerReleaseAuditComparison(entries) {
+        const safeEntries = Array.isArray(entries)
+            ? entries.filter((entry) => entry && typeof entry === 'object')
+            : [];
+        const recentWindowEntries = safeEntries.slice(0, ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE);
+        const priorWindowEntries = safeEntries.slice(
+            ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE,
+            ANSWER_RELEASE_AUDIT_TREND_WINDOW_SIZE * 2
+        );
+        const recentWindow = buildAnswerReleaseAuditWindow(recentWindowEntries);
+        const priorWindow = buildAnswerReleaseAuditWindow(priorWindowEntries);
+        return {
+            metricShifts: buildAnswerReleaseAuditMetricShifts(recentWindow, priorWindow),
+            gateShifts: buildAnswerReleaseAuditGateShifts(safeEntries),
+            latestPair: buildAnswerReleaseAuditLatestPair(safeEntries),
+        };
     }
 
     function buildKnowledgeRunAnswerReleaseAuditSummary(runs) {
@@ -3826,10 +4039,11 @@
                         return right.count - left.count;
                     }
                     return String(left.gateId || '').localeCompare(String(right.gateId || ''));
-                }),
+            }),
             latestReviewedAt,
             reviewTrend: buildAnswerReleaseAuditTrend(timelineEntries),
             failedGateAging: buildAnswerReleaseAuditGateAging(timelineEntries),
+            comparison: buildAnswerReleaseAuditComparison(timelineEntries),
         };
     }
 

@@ -1758,6 +1758,9 @@
         const reviewTrend = answerReleaseAuditSummary && typeof answerReleaseAuditSummary.reviewTrend === 'object'
             ? answerReleaseAuditSummary.reviewTrend
             : {};
+        const comparison = answerReleaseAuditSummary && typeof answerReleaseAuditSummary.comparison === 'object'
+            ? answerReleaseAuditSummary.comparison
+            : {};
         const recentTrendWindow = reviewTrend && typeof reviewTrend.recentWindow === 'object'
             ? reviewTrend.recentWindow
             : {};
@@ -1767,6 +1770,15 @@
         const failedGateAging = Array.isArray(answerReleaseAuditSummary.failedGateAging)
             ? answerReleaseAuditSummary.failedGateAging.filter((entry) => entry && typeof entry === 'object')
             : [];
+        const comparisonMetricShifts = Array.isArray(comparison.metricShifts)
+            ? comparison.metricShifts.filter((entry) => entry && typeof entry === 'object')
+            : [];
+        const comparisonGateShifts = Array.isArray(comparison.gateShifts)
+            ? comparison.gateShifts.filter((entry) => entry && typeof entry === 'object')
+            : [];
+        const comparisonLatestPair = comparison.latestPair && typeof comparison.latestPair === 'object'
+            ? comparison.latestPair
+            : null;
         const totalRuns = Number.isFinite(Number(answerReleaseAuditSummary.totalRuns))
             ? Number(answerReleaseAuditSummary.totalRuns)
             : runs.length;
@@ -1778,6 +1790,9 @@
             : Math.max(0, totalRuns - reviewedRunCount);
         const auditHeading = translate('agentWorkspace.reply.answerReleaseAuditSummaryHeading', 'Release audit');
         const trendHeading = translate('agentWorkspace.reply.answerReleaseAuditTrendHeading', 'Review trend');
+        const comparisonHeading = translate('agentWorkspace.reply.answerReleaseAuditComparisonHeading', 'Review comparison');
+        const comparisonLatestPairHeading = translate('agentWorkspace.reply.answerReleaseAuditComparisonLatestPairHeading', 'Latest pair');
+        const comparisonGateShiftHeading = translate('agentWorkspace.reply.answerReleaseAuditComparisonGateShiftHeading', 'Gate shifts');
         const gateAgingHeading = translate('agentWorkspace.reply.answerReleaseAuditGateAgingHeading', 'Gate aging');
         const buildDecisionCountsSummary = (countsLike) => {
             const counts = countsLike && typeof countsLike === 'object'
@@ -1789,6 +1804,34 @@
                 `${translate('agentWorkspace.reply.answerReleaseDecisionAbstain', 'abstain')} ${String(Number.isFinite(Number(counts.abstain)) ? Number(counts.abstain) : 0)}`,
                 `${translate('agentWorkspace.reply.answerReleaseDecisionOther', 'other')} ${String(Number.isFinite(Number(counts.other)) ? Number(counts.other) : 0)}`,
             ].join(', ');
+        };
+        const resolveAnswerReleaseAuditMetricShiftLabel = (metricId) => {
+            const normalizedMetricId = String(metricId || '').trim().toLowerCase();
+            if (normalizedMetricId === 'reviewed_runs') {
+                return translate('agentWorkspace.reply.answerReleaseAuditReviewedRunsLabel', 'Reviewed runs');
+            }
+            if (normalizedMetricId === 'release_decisions') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionRelease', 'release');
+            }
+            if (normalizedMetricId === 'revise_decisions') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionRevise', 'revise');
+            }
+            if (normalizedMetricId === 'abstain_decisions') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionAbstain', 'abstain');
+            }
+            if (normalizedMetricId === 'other_decisions') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionOther', 'other');
+            }
+            if (normalizedMetricId === 'revised_runs') {
+                return translate('agentWorkspace.reply.answerReleaseAuditRevisedRunsLabel', 'Revised runs');
+            }
+            if (normalizedMetricId === 'failed_gate_runs') {
+                return translate('agentWorkspace.reply.answerReleaseAuditComparisonFailedGateRunsLabel', 'Failed-gate runs');
+            }
+            if (normalizedMetricId === 'leaked_runs') {
+                return translate('agentWorkspace.reply.answerReleaseAuditComparisonLeakedRunsLabel', 'Leaked runs');
+            }
+            return normalizedMetricId || noneLabel;
         };
         const buildTrendWindowSummary = (windowLike) => {
             const windowSummary = windowLike && typeof windowLike === 'object'
@@ -1813,6 +1856,16 @@
                     earliest: String(windowSummary.earliestReviewedAt || '').trim() || noneLabel,
                 }
             );
+        };
+        const buildAnswerReleaseGateListSummary = (gateIds) => {
+            const safeGateIds = Array.isArray(gateIds)
+                ? gateIds
+                    .map((gateId) => String(gateId || '').trim())
+                    .filter(Boolean)
+                : [];
+            return safeGateIds.length > 0
+                ? safeGateIds.join(', ')
+                : noneLabel;
         };
         const auditItems = [
             {
@@ -1886,6 +1939,65 @@
                 <div class="agent-chat-card-list-meta">${escapeHtml(item.value)}</div>
             </li>
         `).join('');
+        const comparisonMetricHtml = comparisonMetricShifts.length > 0
+            ? comparisonMetricShifts.map((entry) => `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(resolveAnswerReleaseAuditMetricShiftLabel(entry.metricId))}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(translate(
+                        'agentWorkspace.reply.answerReleaseAuditComparisonMetricSummary',
+                        'recent {recent}; prior {prior}; delta {delta}',
+                        {
+                            recent: String(Number.isFinite(Number(entry.recentValue)) ? Number(entry.recentValue) : 0),
+                            prior: String(Number.isFinite(Number(entry.priorValue)) ? Number(entry.priorValue) : 0),
+                            delta: formatKnowledgeRunCompareDelta(entry.delta),
+                        }
+                    ))}</div>
+                </li>
+            `).join('')
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
+        const comparisonLatestPairHtml = comparisonLatestPair
+            ? `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(`${String(comparisonLatestPair.previousRunId || '').trim() || noneLabel} -> ${String(comparisonLatestPair.latestRunId || '').trim() || noneLabel}`)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(translate(
+                        'agentWorkspace.reply.answerReleaseAuditComparisonLatestPairSummary',
+                        'decision {previousDecision} -> {latestDecision}; revised {previousRevised} -> {latestRevised}; leak delta {leakDelta}; new {newlyFailed}; resolved {resolved}; persistent {persistent}',
+                        {
+                            previousDecision: formatAnswerReleaseDecision(comparisonLatestPair.previousDecision),
+                            latestDecision: formatAnswerReleaseDecision(comparisonLatestPair.latestDecision),
+                            previousRevised: comparisonLatestPair.previousRevised === true
+                                ? translate('agentWorkspace.reply.answerReleaseBoolYes', 'yes')
+                                : translate('agentWorkspace.reply.answerReleaseBoolNo', 'no'),
+                            latestRevised: comparisonLatestPair.latestRevised === true
+                                ? translate('agentWorkspace.reply.answerReleaseBoolYes', 'yes')
+                                : translate('agentWorkspace.reply.answerReleaseBoolNo', 'no'),
+                            leakDelta: formatKnowledgeRunCompareDelta(comparisonLatestPair.leakedInternalFragmentDelta),
+                            newlyFailed: buildAnswerReleaseGateListSummary(comparisonLatestPair.newlyFailedGateIds),
+                            resolved: buildAnswerReleaseGateListSummary(comparisonLatestPair.resolvedFailedGateIds),
+                            persistent: buildAnswerReleaseGateListSummary(comparisonLatestPair.persistentFailedGateIds),
+                        }
+                    ))}</div>
+                </li>
+            `
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
+        const comparisonGateShiftHtml = comparisonGateShifts.length > 0
+            ? comparisonGateShifts.map((entry) => `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(String(entry.gateId || '').trim() || noneLabel)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(translate(
+                        'agentWorkspace.reply.answerReleaseAuditComparisonGateShiftSummary',
+                        'recent {recent}; prior {prior}; delta {delta}; total {total}; since last failure {runsSince}',
+                        {
+                            recent: String(Number.isFinite(Number(entry.recentWindowCount)) ? Number(entry.recentWindowCount) : 0),
+                            prior: String(Number.isFinite(Number(entry.priorWindowCount)) ? Number(entry.priorWindowCount) : 0),
+                            delta: formatKnowledgeRunCompareDelta(entry.delta),
+                            total: String(Number.isFinite(Number(entry.failureCount)) ? Number(entry.failureCount) : 0),
+                            runsSince: String(Number.isFinite(Number(entry.reviewedRunsSinceLastFailure)) ? Number(entry.reviewedRunsSinceLastFailure) : 0),
+                        }
+                    ))}</div>
+                </li>
+            `).join('')
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
         const gateAgingHtml = failedGateAging.length > 0
             ? failedGateAging.map((entry) => `
                 <li class="agent-chat-card-list-item">
@@ -1925,6 +2037,12 @@
                 <ul class="agent-chat-card-list">${auditHtml}</ul>
                 <div class="agent-chat-card-section-title">${escapeHtml(trendHeading)}</div>
                 <ul class="agent-chat-card-list">${trendHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(comparisonHeading)}</div>
+                <ul class="agent-chat-card-list">${comparisonMetricHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(comparisonLatestPairHeading)}</div>
+                <ul class="agent-chat-card-list">${comparisonLatestPairHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(comparisonGateShiftHeading)}</div>
+                <ul class="agent-chat-card-list">${comparisonGateShiftHtml}</ul>
                 <div class="agent-chat-card-section-title">${escapeHtml(gateAgingHeading)}</div>
                 <ul class="agent-chat-card-list">${gateAgingHtml}</ul>
                 <div class="agent-chat-card-section-title">${escapeHtml(runsHeading)}</div>
@@ -1986,8 +2104,45 @@
     function buildKnowledgeRunComparePayload(latestRun, comparedRun) {
         const safeLatest = latestRun && typeof latestRun === 'object' ? latestRun : {};
         const safeCompared = comparedRun && typeof comparedRun === 'object' ? comparedRun : {};
+        const normalizeAnswerReleaseDecision = (decisionLike) => {
+            const normalizedDecision = String(decisionLike || '').trim().toLowerCase();
+            if (normalizedDecision === 'release' || normalizedDecision === 'revise' || normalizedDecision === 'abstain') {
+                return normalizedDecision;
+            }
+            return normalizedDecision || 'other';
+        };
         const latestQualityScore = Number.isFinite(Number(safeLatest.qualityScore)) ? Number(safeLatest.qualityScore) : null;
         const comparedQualityScore = Number.isFinite(Number(safeCompared.qualityScore)) ? Number(safeCompared.qualityScore) : null;
+        const latestAnswerReleaseReview = safeLatest.answerReleaseReview && typeof safeLatest.answerReleaseReview === 'object'
+            ? safeLatest.answerReleaseReview
+            : null;
+        const comparedAnswerReleaseReview = safeCompared.answerReleaseReview && typeof safeCompared.answerReleaseReview === 'object'
+            ? safeCompared.answerReleaseReview
+            : null;
+        const latestFailedGateIds = Array.isArray(latestAnswerReleaseReview && latestAnswerReleaseReview.failedGateIds)
+            ? latestAnswerReleaseReview.failedGateIds
+                .map((gateId) => String(gateId || '').trim())
+                .filter(Boolean)
+            : [];
+        const comparedFailedGateIds = Array.isArray(comparedAnswerReleaseReview && comparedAnswerReleaseReview.failedGateIds)
+            ? comparedAnswerReleaseReview.failedGateIds
+                .map((gateId) => String(gateId || '').trim())
+                .filter(Boolean)
+            : [];
+        const latestFailedGateSet = new Set(latestFailedGateIds);
+        const comparedFailedGateSet = new Set(comparedFailedGateIds);
+        const latestLeakedInternalFragmentCount = Array.isArray(latestAnswerReleaseReview && latestAnswerReleaseReview.leakedInternalFragments)
+            ? latestAnswerReleaseReview.leakedInternalFragments
+                .map((fragment) => String(fragment || '').trim())
+                .filter(Boolean)
+                .length
+            : 0;
+        const comparedLeakedInternalFragmentCount = Array.isArray(comparedAnswerReleaseReview && comparedAnswerReleaseReview.leakedInternalFragments)
+            ? comparedAnswerReleaseReview.leakedInternalFragments
+                .map((fragment) => String(fragment || '').trim())
+                .filter(Boolean)
+                .length
+            : 0;
         return {
             latestRunId: String(safeLatest.runId || '').trim(),
             latestArtifactTitle: String(safeLatest.artifactTitle || '').trim(),
@@ -2024,6 +2179,18 @@
                 - (Number.isFinite(Number(safeLatest.temporalWarningCount)) ? Number(safeLatest.temporalWarningCount) : 0),
             graphFallbackDelta: (safeCompared.usedFallback === true ? 1 : 0)
                 - (safeLatest.usedFallback === true ? 1 : 0),
+            latestAnswerReleaseReview,
+            comparedAnswerReleaseReview,
+            answerReleaseDecisionChanged: normalizeAnswerReleaseDecision(latestAnswerReleaseReview && latestAnswerReleaseReview.decision)
+                !== normalizeAnswerReleaseDecision(comparedAnswerReleaseReview && comparedAnswerReleaseReview.decision),
+            answerReleaseRevisedChanged: (latestAnswerReleaseReview && latestAnswerReleaseReview.revised === true)
+                !== (comparedAnswerReleaseReview && comparedAnswerReleaseReview.revised === true),
+            latestLeakedInternalFragmentCount,
+            comparedLeakedInternalFragmentCount,
+            answerReleaseLeakedInternalFragmentDelta: latestLeakedInternalFragmentCount - comparedLeakedInternalFragmentCount,
+            newlyFailedGateIds: latestFailedGateIds.filter((gateId) => !comparedFailedGateSet.has(gateId)),
+            resolvedFailedGateIds: comparedFailedGateIds.filter((gateId) => !latestFailedGateSet.has(gateId)),
+            persistentFailedGateIds: latestFailedGateIds.filter((gateId) => comparedFailedGateSet.has(gateId)),
         };
     }
 
@@ -2041,10 +2208,56 @@
             }
         );
         const noneLabel = translate('agentWorkspace.reply.knowledgeRunNone', 'none');
+        const formatAnswerReleaseDecision = (decisionLike) => {
+            const normalizedDecision = String(decisionLike || '').trim().toLowerCase();
+            if (normalizedDecision === 'release') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionRelease', 'release');
+            }
+            if (normalizedDecision === 'revise') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionRevise', 'revise');
+            }
+            if (normalizedDecision === 'abstain') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionAbstain', 'abstain');
+            }
+            return translate('agentWorkspace.reply.answerReleaseDecisionOther', 'other');
+        };
         const metricsHeading = translate('agentWorkspace.reply.knowledgeRunMetricsHeading', 'Key Metrics');
+        const releaseHeading = translate('agentWorkspace.reply.knowledgeRunCompareAnswerReleaseHeading', 'Answer release');
         const qualityDelta = summary.qualityScoreDelta == null
             ? noneLabel
             : formatKnowledgeRunCompareDelta(summary.qualityScoreDelta);
+        const latestAnswerReleaseReview = summary.latestAnswerReleaseReview && typeof summary.latestAnswerReleaseReview === 'object'
+            ? summary.latestAnswerReleaseReview
+            : null;
+        const comparedAnswerReleaseReview = summary.comparedAnswerReleaseReview && typeof summary.comparedAnswerReleaseReview === 'object'
+            ? summary.comparedAnswerReleaseReview
+            : null;
+        const buildAnswerReleaseCompareSummary = (reviewLike) => {
+            const review = reviewLike && typeof reviewLike === 'object'
+                ? reviewLike
+                : null;
+            if (!review) {
+                return noneLabel;
+            }
+            const failedGateIds = Array.isArray(review.failedGateIds)
+                ? review.failedGateIds
+                    .map((gateId) => String(gateId || '').trim())
+                    .filter(Boolean)
+                : [];
+            return translate(
+                'agentWorkspace.reply.answerReleaseHistorySummary',
+                '{decision}; revised {revised}; failed {failedGates}',
+                {
+                    decision: formatAnswerReleaseDecision(review.decision),
+                    revised: review.revised === true
+                        ? translate('agentWorkspace.reply.answerReleaseBoolYes', 'yes')
+                        : translate('agentWorkspace.reply.answerReleaseBoolNo', 'no'),
+                    failedGates: failedGateIds.length > 0
+                        ? failedGateIds.join(', ')
+                        : noneLabel,
+                }
+            );
+        };
         const metrics = [
             {
                 title: translate('agentWorkspace.reply.knowledgeRunCompareLatestLabel', 'Latest run'),
@@ -2083,10 +2296,62 @@
                 value: formatKnowledgeRunCompareDelta(summary.graphFallbackDelta),
             },
         ];
+        const releaseItems = [
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareLatestAnswerReleaseLabel', 'Latest release review'),
+                value: buildAnswerReleaseCompareSummary(latestAnswerReleaseReview),
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareCandidateAnswerReleaseLabel', 'Compared release review'),
+                value: buildAnswerReleaseCompareSummary(comparedAnswerReleaseReview),
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareAnswerReleaseDeltaLabel', 'Release delta'),
+                value: translate(
+                    'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseDeltaSummary',
+                    'decision {previousDecision} -> {latestDecision}; revised {previousRevised} -> {latestRevised}; leak delta {leakDelta}',
+                    {
+                        previousDecision: formatAnswerReleaseDecision(comparedAnswerReleaseReview && comparedAnswerReleaseReview.decision),
+                        latestDecision: formatAnswerReleaseDecision(latestAnswerReleaseReview && latestAnswerReleaseReview.decision),
+                        previousRevised: comparedAnswerReleaseReview && comparedAnswerReleaseReview.revised === true
+                            ? translate('agentWorkspace.reply.answerReleaseBoolYes', 'yes')
+                            : translate('agentWorkspace.reply.answerReleaseBoolNo', 'no'),
+                        latestRevised: latestAnswerReleaseReview && latestAnswerReleaseReview.revised === true
+                            ? translate('agentWorkspace.reply.answerReleaseBoolYes', 'yes')
+                            : translate('agentWorkspace.reply.answerReleaseBoolNo', 'no'),
+                        leakDelta: formatKnowledgeRunCompareDelta(summary.answerReleaseLeakedInternalFragmentDelta),
+                    }
+                ),
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareAnswerReleaseGateDeltaLabel', 'Gate delta'),
+                value: translate(
+                    'agentWorkspace.reply.knowledgeRunCompareAnswerReleaseGateDeltaSummary',
+                    'new {newlyFailed}; resolved {resolved}; persistent {persistent}',
+                    {
+                        newlyFailed: Array.isArray(summary.newlyFailedGateIds) && summary.newlyFailedGateIds.length > 0
+                            ? summary.newlyFailedGateIds.join(', ')
+                            : noneLabel,
+                        resolved: Array.isArray(summary.resolvedFailedGateIds) && summary.resolvedFailedGateIds.length > 0
+                            ? summary.resolvedFailedGateIds.join(', ')
+                            : noneLabel,
+                        persistent: Array.isArray(summary.persistentFailedGateIds) && summary.persistentFailedGateIds.length > 0
+                            ? summary.persistentFailedGateIds.join(', ')
+                            : noneLabel,
+                    }
+                ),
+            },
+        ];
         const metricsHtml = metrics.map((metric) => `
             <li class="agent-chat-card-list-item">
                 <div class="agent-chat-card-list-title">${escapeHtml(metric.title)}</div>
                 <div class="agent-chat-card-list-meta">${escapeHtml(metric.value)}</div>
+            </li>
+        `).join('');
+        const releaseHtml = releaseItems.map((item) => `
+            <li class="agent-chat-card-list-item">
+                <div class="agent-chat-card-list-title">${escapeHtml(item.title)}</div>
+                <div class="agent-chat-card-list-meta">${escapeHtml(item.value)}</div>
             </li>
         `).join('');
         node.innerHTML = `
@@ -2095,6 +2360,8 @@
                 <div class="agent-chat-card-summary">${escapeHtml(summaryText)}</div>
                 <div class="agent-chat-card-section-title">${escapeHtml(metricsHeading)}</div>
                 <ul class="agent-chat-card-list">${metricsHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(releaseHeading)}</div>
+                <ul class="agent-chat-card-list">${releaseHtml}</ul>
             </div>
         `;
     }
