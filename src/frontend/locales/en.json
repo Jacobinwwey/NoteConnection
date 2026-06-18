@@ -426,7 +426,16 @@
     "graphFocus": {
       "title": "Knowledge Focus",
       "emptyIdle": "Graph focus pane is idle.",
-      "noSummary": "No summary available."
+      "noSummary": "No summary available.",
+      "diagnosticsTitle": "Render diagnostics",
+      "failureReasonLabel": "Failure reason",
+      "candidatePathsLabel": "Candidate paths",
+      "attemptedPathsLabel": "Attempted paths",
+      "resolvedPathLabel": "Resolved path",
+      "fallbackPathLabel": "Path fallback",
+      "highlightedNodesLabel": "Highlighted nodes",
+      "pathFallbackUsed": "used",
+      "pathFallbackNotUsed": "not used"
     },
     "evidence": {
       "title": "Evidence Inspector",

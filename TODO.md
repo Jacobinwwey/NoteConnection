@@ -12,8 +12,9 @@ Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer cont
 - [x] The primary answer surface now enforces the targeted-answer contract in `answer` / `directAnswer`; graph/evidence/developer details stay in typed blocks, the evidence pane, trace, or export unless explicitly requested.
 - [x] The DAG answer path now has a first-class graph-conditioned context assembly stage instead of only post-retrieval enrichment.
 - [x] Query backend ranking now goes beyond relation-degree bonus: `queryBackend.ts` uses anchor distance, directed path confidence, prerequisite depth, temporal invalidity penalties, and relation-kind intent bonuses for `local_hybrid` / `local_vector`.
-- [~] Right-pane source rendering and matched-span highlighting now record graph-focus diagnostics for runtime/storage/render/highlight failure classes, but those diagnostics are still local to the pane/controller path and not yet widened into broader operator-facing surfaces.
+- [x] Right-pane source rendering and matched-span highlighting now retry candidate source paths, expose graph-focus diagnostics in the pane, and surface stored graph context/graph diagnostics inside durable knowledge-run inspection cards.
 - [x] `knowledgeRun.quality.gates` now includes graph-specific checks for prerequisite ordering, comparison branches, temporal warnings, graph-op fallback, and bounded graph budgeting.
+- [ ] Decide whether the new pane-local graph diagnostics should also be promoted into replay/export-oriented operator surfaces.
 - [ ] Continue reducing ownership pressure in `KnowledgeLearningPlatform.ts`, `conversationComposer.ts`, `agent_workspace.js`, and `workspace_panes.js` only where a new owner enforces real decisions or invariants.
 
 ## 中文文档
@@ -28,8 +29,9 @@ Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer cont
 - [x] 主回答区现在已在 `answer` / `directAnswer` 中强制执行 targeted-answer 契约；graph/evidence/developer 细节默认留在 typed blocks、evidence pane、trace 或 export 中，除非用户显式要求查看。
 - [x] 当前 DAG 回答链路已经拥有一等 graph-conditioned context assembly 阶段，而不再只是 retrieval 之后的显式路径增强。
 - [x] `queryBackend.ts` 的排序现在已经超出 relation-degree bonus：`local_hybrid` / `local_vector` 已接入 anchor distance、directed path confidence、prerequisite depth、temporal invalidity penalty 与 relation-kind intent bonus。
-- [~] 右侧原文渲染与 matched-span 高亮现在已经记录 graph-focus diagnostics，可区分 runtime/storage/render/highlight 失败类型；但这些诊断还主要停留在 pane/controller 层，尚未扩展到更广的运维检查面。
+- [x] 右侧原文渲染与 matched-span 高亮现在已经支持 candidate source path 重试，并在 pane 内暴露 graph-focus diagnostics，同时把持久化的 graph context / graph diagnostics 暴露到 durable knowledge-run 检查卡片中。
 - [x] `knowledgeRun.quality.gates` 现在已经包含图专项门禁：prerequisite ordering、comparison branch、temporal warning、graph-op fallback 与有界 graph budgeting。
+- [ ] 决定这批新的 pane-local graph diagnostics 是否还要继续提升到 replay/export-oriented 运维 surface。
 - [ ] 继续缩减 `KnowledgeLearningPlatform.ts`、`conversationComposer.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力，但只在新 owner 能做真实决策或强制不变量时推进。
 
 ---
@@ -47,7 +49,7 @@ Keep the root TODO aligned with the 2026-06-10 Knowledge Workspace and DAG code-
 - [x] The current codebase already has a real DAG-backed learning substrate: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and mastery/session graph logic are implemented.
 - [x] The visible answer area is now contracted to the targeted answer path; supporting blocks remain available through secondary panes, traces, artifacts, and exports.
 - [~] Knowledge-hit interaction is file-first, but still not fully right-pane-first. Left-side preview/action behavior should converge on the right pane as the canonical reading surface.
-- [ ] Add a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate rather than only a retrieval-side aid.
+- [x] The graph-conditioned context-assembly layer between retrieval and answer synthesis is now implemented, so the current DAG is a first-class answer-planning substrate rather than only a retrieval-side aid.
 - [ ] Continue ownership reduction in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
 - [ ] Keep `assistantMessage` compatibility while evolving richer optional `assistantBlocks` and durable artifact inspection surfaces.
 
@@ -62,7 +64,7 @@ Keep the root TODO aligned with the 2026-06-10 Knowledge Workspace and DAG code-
 - [x] 当前代码已经具备真实的 DAG 学习底座：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query、mastery/session 图逻辑都已落地。
 - [x] 用户可见回答区现在已收缩到 targeted answer 路径；supporting block 继续通过次级 pane、trace、artifact 与 export 保留。
 - [~] 知识命中已经是 file-first，但还没有完全收敛为 right-pane-first；左侧 preview/action 行为仍需向“右侧 pane 才是权威阅读面”继续收口。
-- [ ] 在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 成为一等 answer-planning substrate，而不只是 retrieval 侧辅助信号。
+- [x] retrieval 与 answer synthesis 之间的 graph-conditioned context-assembly layer 已经落地，当前 DAG 已成为一等 answer-planning substrate，而不只是 retrieval 侧辅助信号。
 - [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。
 - [ ] 在演进 richer optional `assistantBlocks` 与 durable artifact inspection surface 时，继续保持 `assistantMessage` 兼容。
 

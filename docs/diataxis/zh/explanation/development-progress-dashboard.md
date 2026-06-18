@@ -16,6 +16,8 @@
 - `conversationComposer` 现在会保持公开 `answer` / `directAnswer` 窄口径，不再嵌入 citation list、graph path、memory notice 或 knowledge-run diagnostics；
 - `conversationComposer` 可以在结构化回答 section 中使用这些 explicit paths；
 - `workspace_panes.js` 会在 evidence pane 中渲染 connection paths；
+- `knowledge_run` workflow artifact 现在也会保留 `graphContext`，knowledge-run 检查卡片已能把 graph context 与 graph diagnostics 暴露给运维查看；
+- `workspace_panes.js` 现在会基于 payload + matched-span candidate path 重试 graph-focus 原文读取，记录 requested/candidate/attempted/resolved path 诊断，并在 fallback 或路径回退发生时把这些诊断显示在右侧 pane；
 - `WorkspaceExportBundle` 会在导出的 conversation trace graph context 中保留 connection paths；
 - 聚焦测试覆盖 graph-path composition、platform enrichment、frontend evidence rendering、locale labels 与 export serialization。
 
@@ -25,17 +27,17 @@
 |---|---|---|
 | 公开回答区不能堆内部产物 | `answer` / `directAnswer` 现在保持 targeted；graph connection paths、citations、temporal detail 与 knowledge-run diagnostics 属于次级 inspection 数据。 | 当前切片已实现 |
 | 暂时隐藏开发者导向 support material | graph paths、temporal details、citations 与 traces 默认进入 evidence/export surface，除非用户显式要求查看。 | 方向保持 |
-| 文件命中打开右侧 pane 并高亮原文 | 现有 graph-focus source rendering 与 matched-span highlighting 仍是权威路径。 | 已实现基线；仍需诊断 |
+| 文件命中打开右侧 pane 并高亮原文 | graph-focus 现在会在 payload + matched-span candidate path 之间重试 source rendering，保留 markdown 高亮渲染，并在 fallback 行为出现时在 pane 内暴露 requested/candidate/attempted/resolved path 诊断。 | 已实现扩展后的 P4 切片 |
 | 使用当前 DAG | `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、store ops 与 `findPath` 是当前活跃图底座。 | 已确认 |
 | 让 LLM 查阅图结构 | 有界 `graphContextAssembler` 已在回答合成前选择 anchor、重排 support node、挂接显式路径，并补 predecessor/successor window 与 diagnostics。 | P1 基础已实现 |
 | retrieval 不再只是浅层 degree 加分 | `queryBackend.ts` 现在已在 `local_hybrid` / `local_vector` 中使用 anchor distance、directed path confidence、prerequisite depth、temporal invalidity penalty 与 relation-intent bonus。 | P2 基础已实现 |
 | 图专项回答质量门禁 | `knowledgeRun.quality.gates` 现在已经检查 prerequisite ordering、comparison branch、temporal warning、graph-op fallback 与 bounded graph budgeting。 | P5 基础已实现 |
-| 完整 DAG-native answer planning | assembler、graph-aware ranking 与 graph-quality-gate 边界都已存在，但模型仍需要更广的校准与运维诊断。 | 校准待推进 |
+| 完整 DAG-native answer planning | assembler、graph-aware ranking、graph-quality gate、graph-focus diagnostics 与 knowledge-run 图检查面都已存在，但模型仍需要更广的校准与更长周期的运维证据。 | 校准待推进 |
 
 即时后续方向：
 
-1. 在不分叉 markdown 渲染链的前提下，把右侧 source focus 诊断从本地 graph-focus controller 路径继续扩展出去。
-2. 用更多真实回归与运维证据继续校准新的图排序 / 质量门禁模型。
+1. 用更多真实回归与运维证据继续校准新的图排序 / 质量门禁模型。
+2. 决定 pane-local 的 graph-focus diagnostics 是否还要继续提升到 replay/export/operator-report surface，还是继续保留在当前前端检查面。
 3. 继续保持公开回答聚焦，同时让 graph/evidence/developer detail 通过 evidence pane、trace、artifact 与 export bundle 可检查。
 
 ## 2026-06-10 知识工作区与 DAG 对齐切片

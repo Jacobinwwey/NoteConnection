@@ -5,8 +5,8 @@
 - [x] 当前实现已经让可选 explicit graph connection paths 贯穿 graph context、回答组织、evidence pane 渲染、export serialization 与回归测试。
 - [x] 开源库研究边界已明确：借鉴 DSPy / Guidance / Semantic Kernel / LangChain Core / LiteLLM 的模式，但不把这些框架加入 app runtime。
 - [x] 当前 DAG-aware answer planning 已经包含一等 graph-conditioned context assembly layer：`src/learning/graphContextAssembler.ts`。
-- [~] 右侧原文/高亮行为现在已经记录第一层 graph-focus diagnostics，但仍需要把路径与 snippet mismatch 诊断扩展到更广的检查面。
-- [ ] 下一活跃任务：在新的 assembler + graph-aware ranking 边界之上校准图专项质量门禁，并继续扩展右侧 / 运维诊断。
+- [x] 右侧原文/高亮行为现在已经支持 candidate source path 重试，记录 requested/candidate/attempted/resolved path 诊断，并在 graph-focus 与 durable knowledge-run 检查面中暴露这些诊断。
+- [ ] 下一活跃任务：在新的 assembler + graph-aware ranking 边界之上继续校准图专项质量门禁，并决定这些 pane-local 运维诊断是否还要提升到 replay/export surface。
 - [ ] 继续保持公开回答区收缩，把 graph evidence、temporal details 与 developer trace 路由到次级表面。
 
 ### 当前验收目标
@@ -24,14 +24,14 @@
 - [x] 当前 DAG 学习底座已在代码中确认存在：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query 与 prerequisite 驱动的学习流都已落地。
 - [x] 用户可见回答区已在当前切片完成收缩：用户优先看到 targeted `answer` / `directAnswer`，graph path、evidence、diagnostic 与 durable artifact 保持在次级表面。
 - [~] 左侧 knowledge hit 虽已是 file-first，但仍需继续收敛为 right-pane-first 阅读模型。
-- [ ] 需要在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 成为一等 answer-planning substrate。
+- [x] retrieval 与 answer synthesis 之间的 graph-conditioned context-assembly layer 已经落地，当前 DAG 已成为一等 answer-planning substrate，而不只是 retrieval 侧辅助信号。
 - [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。
 
 ### 当前验收目标
 
 1. 所有活跃看板文档都指向同一份 2026-06-10 知识工作区 / DAG 对齐说明。
 2. 文档能明确区分“已经代码落地的基线”和“仍未满足的产品行为”。
-3. 当前分支完成验证、推进到 `main`、推送并在结束后保持工作区 clean。
+3. 当前代码在 `main` 上完成验证并完成文档对账，结束后工作区保持 clean。
 4. 向前兼容性保持明确：legacy `assistantMessage` 与当前公开运行时 API 不发生破坏性变化。
 
 ## 2026-06-06 活跃任务同步

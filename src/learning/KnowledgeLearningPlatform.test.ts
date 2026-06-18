@@ -1711,6 +1711,13 @@ describe('KnowledgeLearningPlatform', () => {
         const knowledgeRunArtifact = artifacts.artifacts.find((artifact) => artifact.kind === 'knowledge_run');
         expect(flashcardArtifact).toBeDefined();
         expect(knowledgeRunArtifact).toBeDefined();
+        expect((knowledgeRunArtifact?.payload as any)?.graphContext).toEqual(expect.objectContaining({
+            anchorTitle: 'Water Glass',
+            diagnostics: expect.objectContaining({
+                graphOpsAvailable: false,
+                usedFallback: true,
+            }),
+        }));
 
         const reviewCards = ((flashcardArtifact?.payload || {}) as any).reviewCards || [];
         expect(reviewCards).toHaveLength(1);

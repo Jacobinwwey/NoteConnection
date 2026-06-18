@@ -1959,6 +1959,60 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                                 remainingReviewCardCount: 1,
                                             },
                                         },
+                                        graphContext: {
+                                            anchorAtomId: 'atom_blocks_1',
+                                            anchorTitle: 'Blocks Citation',
+                                            supportingAtomIds: ['atom_blocks_1_foundation'],
+                                            supportingTitles: ['Blocks Foundation'],
+                                            relationKinds: ['prerequisite'],
+                                            relationSummaries: [],
+                                            connectionPaths: [
+                                                {
+                                                    sourceAtomId: 'atom_blocks_1_foundation',
+                                                    sourceTitle: 'Blocks Foundation',
+                                                    targetAtomId: 'atom_blocks_1',
+                                                    targetTitle: 'Blocks Citation',
+                                                    pathAtomIds: ['atom_blocks_1_foundation', 'atom_blocks_1'],
+                                                    pathTitles: ['Blocks Foundation', 'Blocks Citation'],
+                                                    pathEdges: [
+                                                        {
+                                                            fromAtomId: 'atom_blocks_1_foundation',
+                                                            toAtomId: 'atom_blocks_1',
+                                                            relationKind: 'prerequisite',
+                                                        },
+                                                    ],
+                                                    length: 1,
+                                                },
+                                            ],
+                                            predecessorWindow: [
+                                                {
+                                                    atomId: 'atom_blocks_1_foundation',
+                                                    title: 'Blocks Foundation',
+                                                    relationKind: 'prerequisite',
+                                                    confidence: 0.91,
+                                                },
+                                            ],
+                                            successorWindow: [],
+                                            evidenceSourceRefs: ['Knowledge_Base/optics/blocks.md:18'],
+                                            diagnostics: {
+                                                graphOpsAvailable: true,
+                                                usedFallback: false,
+                                                selectedAnchorReason: 'title_mention',
+                                                candidateCount: 1,
+                                                supportNodeCount: 1,
+                                                supportNodeLimit: 2,
+                                                pathDepthLimit: 6,
+                                                missingConnectionPathSourceAtomIds: [],
+                                                missingPredecessorAtomIds: [],
+                                                missingSuccessorAtomIds: [],
+                                            },
+                                            temporalValidity: {
+                                                checkedAt: '2026-04-13T00:01:00.000Z',
+                                                allPointsValid: true,
+                                                warningReasons: [],
+                                                invalidKnowledgePointTitles: [],
+                                            },
+                                        },
                                     },
                                 },
                             ]
@@ -3663,6 +3717,8 @@ describe('workspace panes controller', () => {
 
         const graphBody = document.getElementById('agent-graph-focus-body');
         expect(String(graphBody?.textContent || '')).toContain('Water Glass');
+        expect(String(graphBody?.textContent || '')).toContain('Render diagnostics');
+        expect(String(graphBody?.textContent || '')).toContain('missing_markdown_runtime');
         expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
             requestedSourcePath: 'Knowledge_Base/waterglass/water glass.md',
             matchedSpanCount: 1,
@@ -3672,6 +3728,68 @@ describe('workspace panes controller', () => {
             renderSucceeded: false,
             usedFallback: true,
             failureReason: 'missing_markdown_runtime',
+        }));
+    });
+
+    test('falls back to matched-span source paths before giving up on graph focus rendering', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const readContent = jest.fn(async (sourcePath: string) => {
+            if (sourcePath === 'Knowledge_Base/old/location.md') {
+                throw new Error('stale_path');
+            }
+            return '# Water Glass\n\nA water glass is a physical system often used in basic thermodynamics examples.';
+        });
+        const renderMarkdownInto = jest.fn(async (host: HTMLElement, markdown: string) => {
+            host.innerHTML = `<p>${markdown}</p>`;
+        });
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+
+        controller.init();
+        controller.openGraphFocusPane({
+            atomId: 'atom_water_glass',
+            title: 'Water Glass',
+            sourcePath: 'Knowledge_Base/old/location.md',
+            matchedSpans: [
+                {
+                    title: 'Definition',
+                    snippet: 'A water glass is a physical system often used in basic thermodynamics examples.',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    startLine: 3,
+                },
+            ],
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        expect(readContent).toHaveBeenNthCalledWith(1, 'Knowledge_Base/old/location.md');
+        expect(readContent).toHaveBeenNthCalledWith(2, 'Knowledge_Base/waterglass/water glass.md');
+        expect(renderMarkdownInto).toHaveBeenCalled();
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        expect(String(graphBody?.textContent || '')).toContain('A water glass is a physical system often used in basic thermodynamics examples.');
+        expect(String(graphBody?.textContent || '')).toContain('Render diagnostics');
+        expect(String(graphBody?.textContent || '')).toContain('Knowledge_Base/waterglass/water glass.md');
+        expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
+            requestedSourcePath: 'Knowledge_Base/old/location.md',
+            candidateSourcePaths: [
+                'Knowledge_Base/old/location.md',
+                'Knowledge_Base/waterglass/water glass.md',
+            ],
+            attemptedSourcePaths: [
+                'Knowledge_Base/old/location.md',
+                'Knowledge_Base/waterglass/water glass.md',
+            ],
+            resolvedSourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            fallbackSourcePathUsed: true,
+            usedFallback: false,
+            renderSucceeded: true,
         }));
     });
 
@@ -4931,6 +5049,11 @@ describe('agent workspace learning-path integration', () => {
         expect(evidencePane?.getAttribute('data-open')).toBe('true');
         expect(String(evidenceBody?.textContent || '')).toContain('Knowledge Run Details');
         expect(String(evidenceBody?.textContent || '')).toContain('Run knowledge_run_blocks_1: 1 claims, quality pass/100.');
+        expect(String(evidenceBody?.textContent || '')).toContain('Graph context');
+        expect(String(evidenceBody?.textContent || '')).toContain('Blocks Citation');
+        expect(String(evidenceBody?.textContent || '')).toContain('Blocks Foundation -> Blocks Citation');
+        expect(String(evidenceBody?.textContent || '')).toContain('Graph diagnostics');
+        expect(String(evidenceBody?.textContent || '')).toContain('title_mention');
         expect(String(evidenceBody?.textContent || '')).toContain('Blocks Citation');
         expect(String(evidenceBody?.textContent || '')).toContain('Knowledge_Base/optics/blocks.md:18');
         expect(String(evidenceBody?.textContent || '')).toContain('Quality gates');

@@ -9,8 +9,8 @@
 - [x] The current implementation carries optional explicit graph connection paths through graph context, answer composition, evidence-pane rendering, export serialization, and regression tests.
 - [x] The open-source review has a firm boundary: use DSPy / Guidance / Semantic Kernel / LangChain Core / LiteLLM patterns without adding those frameworks to the app runtime.
 - [x] Current DAG-aware answer planning now includes a first-class graph-conditioned context assembly layer in `src/learning/graphContextAssembler.ts`.
-- [~] Right-pane source/highlight behavior now records first-pass graph-focus diagnostics, but still needs broader path/snippet mismatch coverage beyond the local pane/controller path.
-- [ ] Next active task: calibrate the new graph-quality-gate model and widen right-pane/operator diagnostics on top of the new assembler and graph-aware ranking boundaries.
+- [x] Right-pane source/highlight behavior now retries candidate source paths, records requested/candidate/attempted/resolved-path diagnostics, and exposes those diagnostics in graph-focus plus durable knowledge-run inspection surfaces.
+- [ ] Next active task: calibrate the new graph-quality-gate model and decide whether the new pane-local operator diagnostics should also be promoted into replay/export-oriented surfaces.
 - [ ] Keep the public answer contracted while routing graph evidence, temporal details, and developer trace to secondary surfaces.
 
 ### Current Acceptance Targets
@@ -28,14 +28,14 @@
 - [x] The current DAG-backed learning substrate is confirmed in code: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows already exist.
 - [x] The visible answer area is contracted in the current slice: users see the targeted `answer` / `directAnswer` first, while graph paths, evidence, diagnostics, and durable artifacts stay on secondary surfaces.
 - [~] Left-side knowledge hits are file-first, but still need to converge on a right-pane-first reading model.
-- [ ] Add a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate.
+- [x] The graph-conditioned context-assembly layer between retrieval and answer synthesis is now implemented, so the current DAG is a first-class answer-planning substrate instead of only a retrieval-side aid.
 - [ ] Continue ownership reduction in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
 
 ### Current Acceptance Targets
 
 1. All active tracker docs point to the same 2026-06-10 Knowledge Workspace and DAG alignment note.
 2. The documented current state distinguishes implemented code-backed baselines from unfinished product-surface behavior.
-3. The current branch is verified, promoted to `main`, pushed, and the worktree is clean afterward.
+3. The current code is verified on `main`, documented as such, and the worktree is clean afterward.
 4. Backward compatibility remains explicit: legacy `assistantMessage` and current public runtime APIs are unchanged.
 
 ### 2026-06-06 Active Task Sync

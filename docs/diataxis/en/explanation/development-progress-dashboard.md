@@ -16,6 +16,8 @@ Implemented or documented in this slice:
 - `conversationComposer` now keeps public `answer` / `directAnswer` output narrow instead of embedding citation lists, graph paths, memory notices, or knowledge-run diagnostics,
 - `conversationComposer` can use those explicit paths in structured answer sections,
 - `workspace_panes.js` renders connection paths in the evidence pane,
+- `knowledge_run` workflow artifacts now also retain `graphContext`, and the knowledge-run inspection card exposes graph context plus graph diagnostics for operator review,
+- `workspace_panes.js` now retries graph-focus source rendering against matched-span candidate paths, records requested/candidate/attempted/resolved source-path diagnostics, and exposes those diagnostics inside the right pane when fallback or path fallback occurs,
 - `WorkspaceExportBundle` preserves connection paths in exported conversation trace graph context,
 - focused tests cover graph-path composition, platform enrichment, frontend evidence rendering, locale labels, and export serialization.
 
@@ -25,17 +27,17 @@ Code-vs-plan reconciliation:
 |---|---|---|
 | Public answer should not dump every internal artifact | `answer` / `directAnswer` now stays targeted; graph connection paths, citations, temporal detail, and knowledge-run diagnostics are secondary inspection data. | Implemented current slice |
 | Hide developer-heavy support material for now | Graph paths, temporal details, citations, and traces belong in evidence/export surfaces unless explicitly requested. | Preserved direction |
-| File hit opens right pane with highlighted source | Existing graph-focus source rendering and matched-span highlighting remain the canonical path. | Implemented baseline; diagnostics still needed |
+| File hit opens right pane with highlighted source | Graph-focus now retries source rendering across payload + matched-span candidate paths, preserves highlighted markdown rendering, and exposes requested/candidate/attempted/resolved-path diagnostics in the pane when fallback behavior occurs. | Implemented broadened P4 slice |
 | Use the current DAG | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, and `findPath` are the active graph substrate. | Confirmed |
 | Let the LLM inspect graph structure | A bounded `graphContextAssembler` now selects the anchor, reorders support nodes, attaches explicit paths, and adds predecessor/successor windows plus diagnostics before answer synthesis. | Implemented P1 foundation |
 | Retrieval uses graph structure instead of shallow degree bonus | `queryBackend.ts` now applies anchor distance, directed path confidence, prerequisite depth, temporal invalidity penalties, and relation-intent bonuses in `local_hybrid` / `local_vector`. | Implemented P2 foundation |
 | Graph-specific answer quality gates | `knowledgeRun.quality.gates` now checks prerequisite ordering, comparison branches, temporal warnings, graph-op fallback, and bounded graph budgeting. | Implemented P5 foundation |
-| Full DAG-native answer planning | The assembler, graph-aware ranking, and graph-quality-gate boundaries are real, but the model still needs calibration breadth and broader operator-facing diagnostics. | Calibration pending |
+| Full DAG-native answer planning | The assembler, graph-aware ranking, graph-quality gates, graph-focus diagnostics, and knowledge-run graph inspection surfaces are real, but the model still needs calibration breadth and longer-run operator evidence. | Calibration pending |
 
 Immediate next direction:
 
-1. Broaden right-pane diagnostics beyond the local graph-focus controller path without forking the markdown rendering stack.
-2. Calibrate the new graph-aware ranking and graph-quality-gate model against more real-world regressions and operator evidence.
+1. Calibrate the new graph-aware ranking and graph-quality-gate model against more real-world regressions and operator evidence.
+2. Decide whether pane-local graph-focus diagnostics should also be promoted into replay/export/operator-report surfaces, or remain frontend-only inspection data.
 3. Keep the public answer focused while graph/evidence/developer detail remains inspectable through evidence panes, traces, artifacts, and export bundles.
 
 ## 2026-06-10 Knowledge Workspace Durable Artifact and DAG Alignment

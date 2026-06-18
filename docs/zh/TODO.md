@@ -10,7 +10,7 @@
 - [x] 可选 `AgentConversationGraphContext.connectionPaths` 已贯穿 conversation trace、结构化回答组织、evidence pane 渲染、workspace export 与聚焦回归测试。
 - [x] 已将有界 graph-conditioned context assembly layer 抽到 `src/learning/graphContextAssembler.ts`，并接入 anchor/support 选择、显式路径、predecessor/successor window、evidence ref 与 graph diagnostics。
 - [x] `queryBackend.ts` 的 ranking 已从 relation-degree bonus 扩展到 anchor distance、path-confidence、prerequisite-depth、temporal-invalidity penalty 与 relation-intent bonus。
-- [~] 右侧 source rendering 已补第一层 graph-focus diagnostics，但仍需要把路径 canonicalization、storage-provider 读取、markdown render fallback 与 highlight matching 诊断扩展到更广的运维面。
+- [x] 右侧 source rendering 现在已经具备 candidate-path 重试、pane 内可见的 graph-focus diagnostics，以及 durable knowledge-run 图诊断检查面。
 - [x] 已在 `knowledgeRun.quality.gates` 中补齐图回答专用质量门禁，覆盖 prerequisite ordering、comparison branch、temporal warning、graph-op fallback 与有界 graph budgeting。
 
 ### 2026-06-10 知识工作区与 DAG TODO 重新分类
@@ -20,7 +20,8 @@
 - [x] 已将现有 DAG 学习底座重新标记为“已在代码中真实存在”，而不再只是后续意图：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query 与 prerequisite 驱动学习流都已落地。
 - [x] 当前用户可见回答区在本切片中已收缩：`answer` / `directAnswer` 现在保持 targeted，supporting block 继续通过次级 pane、trace、artifact 与 export 保留。
 - [~] 左侧 knowledge-hit 交互仍应视为部分完成：已经是 file-first，但还未完全收敛为 right-pane-first 阅读模型。
-- [ ] 需要在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 成为一等 answer-planning substrate。
+- [x] retrieval 与 answer synthesis 之间的 graph-conditioned context-assembly layer 已经落地，当前 DAG 已成为一等 answer-planning substrate。
+- [ ] 决定这批新的 pane-local graph diagnostics 是否还要继续提升到 replay/export-oriented 运维 surface。
 - [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。
 - [ ] 当本切片状态变化时，继续同步根目录与 `docs/en|zh` 的 README、TODO、task、implementation plan、walkthrough、Interface、dashboard 与 TEST_REPORT 文档。
 

@@ -248,11 +248,34 @@
         };
     }
 
+    function resolveGraphFocusCandidatePaths(payload, matchedSpans) {
+        const candidates = [];
+        const seen = new Set();
+        const appendPath = function (value) {
+            const candidate = String(value || '').trim();
+            if (!candidate || seen.has(candidate)) {
+                return;
+            }
+            seen.add(candidate);
+            candidates.push(candidate);
+        };
+        appendPath(payload && payload.sourcePath);
+        matchedSpans.forEach((span) => {
+            appendPath(span && span.sourcePath);
+        });
+        return candidates;
+    }
+
     function buildGraphFocusDiagnostics(payload, matchedSpans, renderToken) {
+        const candidateSourcePaths = resolveGraphFocusCandidatePaths(payload, matchedSpans);
         return {
             renderToken: Number(renderToken || 0),
             title: buildGraphFocusTitle(payload),
             requestedSourcePath: String(payload && payload.sourcePath || '').trim(),
+            candidateSourcePaths,
+            attemptedSourcePaths: [],
+            resolvedSourcePath: '',
+            fallbackSourcePathUsed: false,
             matchedSpanCount: matchedSpans.length,
             highlightTermCount: collectGraphFocusHighlightTerms(matchedSpans).length,
             markdownRuntimeAvailable: false,
@@ -303,7 +326,60 @@
         `;
     }
 
-    function buildGraphFocusFallbackHtml(payload, matchedSpans) {
+    function buildGraphFocusDiagnosticsHtml(diagnostics) {
+        if (!diagnostics || (!diagnostics.usedFallback && !diagnostics.fallbackSourcePathUsed)) {
+            return '';
+        }
+        const noneLabel = translate('agentWorkspace.reply.knowledgeRunNone', 'none');
+        const candidateSourcePaths = Array.isArray(diagnostics.candidateSourcePaths)
+            ? diagnostics.candidateSourcePaths
+            : [];
+        const attemptedSourcePaths = Array.isArray(diagnostics.attemptedSourcePaths)
+            ? diagnostics.attemptedSourcePaths
+            : [];
+        const diagnosticsItems = [
+            {
+                title: translate('agentWorkspace.graphFocus.failureReasonLabel', 'Failure reason'),
+                value: String(diagnostics.failureReason || '').trim() || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.graphFocus.resolvedPathLabel', 'Resolved path'),
+                value: String(diagnostics.resolvedSourcePath || '').trim() || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.graphFocus.candidatePathsLabel', 'Candidate paths'),
+                value: candidateSourcePaths.length > 0 ? candidateSourcePaths.join(', ') : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.graphFocus.attemptedPathsLabel', 'Attempted paths'),
+                value: attemptedSourcePaths.length > 0 ? attemptedSourcePaths.join(', ') : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.graphFocus.fallbackPathLabel', 'Path fallback'),
+                value: diagnostics.fallbackSourcePathUsed
+                    ? translate('agentWorkspace.graphFocus.pathFallbackUsed', 'used')
+                    : translate('agentWorkspace.graphFocus.pathFallbackNotUsed', 'not used'),
+            },
+            {
+                title: translate('agentWorkspace.graphFocus.highlightedNodesLabel', 'Highlighted nodes'),
+                value: String(Number.isFinite(Number(diagnostics.highlightedNodeCount)) ? Number(diagnostics.highlightedNodeCount) : 0),
+            },
+        ];
+        const diagnosticsHtml = diagnosticsItems.map((item) => `
+            <li class="agent-chat-card-list-item">
+                <div class="agent-chat-card-list-title">${escapeHtml(item.title)}</div>
+                <div class="agent-chat-card-list-meta">${escapeHtml(item.value)}</div>
+            </li>
+        `).join('');
+        return `
+            <div class="agent-focus-hit-list agent-focus-diagnostics">
+                <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.graphFocus.diagnosticsTitle', 'Render diagnostics'))}</div>
+                <ul class="agent-chat-card-list">${diagnosticsHtml}</ul>
+            </div>
+        `;
+    }
+
+    function buildGraphFocusFallbackHtml(payload, matchedSpans, diagnostics) {
         const summary = String(payload.summary || '').trim();
         return `
             <div class="agent-pane-block">
@@ -311,6 +387,7 @@
                 <div class="agent-pane-meta">${escapeHtml(String(payload.atomId || payload.nodeId || ''))}</div>
                 <p class="agent-pane-summary">${escapeHtml(summary || translate('agentWorkspace.graphFocus.noSummary', 'No summary available.'))}</p>
                 ${buildGraphFocusEvidenceListHtml(matchedSpans)}
+                ${buildGraphFocusDiagnosticsHtml(diagnostics)}
             </div>
         `;
     }
@@ -395,7 +472,36 @@
         return highlighted;
     }
 
-    async function renderMarkdownPreviewIntoHost(renderedHost, sourcePath, matchedSpans, renderToken, diagnostics) {
+    async function readGraphFocusMarkdownSource(previewRuntime, candidateSourcePaths, diagnostics) {
+        const paths = Array.isArray(candidateSourcePaths) ? candidateSourcePaths : [];
+        let lastError = null;
+        for (const candidateSourcePath of paths) {
+            if (diagnostics && !diagnostics.attemptedSourcePaths.includes(candidateSourcePath)) {
+                diagnostics.attemptedSourcePaths.push(candidateSourcePath);
+            }
+            try {
+                const markdownSource = await previewRuntime.storageProvider.readContent(candidateSourcePath);
+                if (diagnostics) {
+                    diagnostics.readSucceeded = true;
+                    diagnostics.resolvedSourcePath = candidateSourcePath;
+                    diagnostics.fallbackSourcePathUsed = !diagnostics.requestedSourcePath
+                        || diagnostics.requestedSourcePath !== candidateSourcePath;
+                }
+                return {
+                    markdownSource,
+                    sourcePath: candidateSourcePath,
+                };
+            } catch (error) {
+                lastError = error;
+            }
+        }
+        if (diagnostics && lastError) {
+            diagnostics.errorMessage = String(lastError && lastError.message || lastError || '').trim();
+        }
+        return null;
+    }
+
+    async function renderMarkdownPreviewIntoHost(renderedHost, candidateSourcePaths, matchedSpans, renderToken, diagnostics) {
         const previewRuntime = resolveMarkdownPreviewRuntime();
         if (diagnostics) {
             diagnostics.markdownRuntimeAvailable = Boolean(
@@ -409,9 +515,9 @@
                 && typeof previewRuntime.storageProvider.readContent === 'function'
             );
         }
-        if (!renderedHost || !sourcePath || !previewRuntime) {
+        if (!renderedHost || !previewRuntime || !Array.isArray(candidateSourcePaths) || candidateSourcePaths.length <= 0) {
             if (diagnostics && !diagnostics.failureReason) {
-                diagnostics.failureReason = !sourcePath
+                diagnostics.failureReason = !Array.isArray(candidateSourcePaths) || candidateSourcePaths.length <= 0
                     ? 'missing_source_path'
                     : !diagnostics.markdownRuntimeAvailable
                         ? 'missing_markdown_runtime'
@@ -423,9 +529,14 @@
         }
 
         try {
-            const markdownSource = await previewRuntime.storageProvider.readContent(sourcePath);
-            if (diagnostics) {
-                diagnostics.readSucceeded = true;
+            const resolvedSource = await readGraphFocusMarkdownSource(previewRuntime, candidateSourcePaths, diagnostics);
+            if (!resolvedSource) {
+                if (diagnostics && !diagnostics.failureReason) {
+                    diagnostics.failureReason = diagnostics.attemptedSourcePaths.length > 0
+                        ? 'source_read_failed'
+                        : 'missing_source_path';
+                }
+                return false;
             }
             if (
                 !renderedHost.isConnected
@@ -433,7 +544,7 @@
             ) {
                 return true;
             }
-            await previewRuntime.markdownRuntime.renderMarkdownInto(renderedHost, String(markdownSource || ''));
+            await previewRuntime.markdownRuntime.renderMarkdownInto(renderedHost, String(resolvedSource.markdownSource || ''));
             if (diagnostics) {
                 diagnostics.renderSucceeded = true;
             }
@@ -461,8 +572,8 @@
     }
 
     async function renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken, diagnostics) {
-        const sourcePath = String(payload.sourcePath || '').trim();
-        if (!body || !sourcePath) {
+        const candidateSourcePaths = resolveGraphFocusCandidatePaths(payload, matchedSpans);
+        if (!body || candidateSourcePaths.length <= 0) {
             if (diagnostics && !diagnostics.failureReason) {
                 diagnostics.failureReason = !body ? 'missing_graph_focus_body' : 'missing_source_path';
             }
@@ -478,7 +589,7 @@
             return false;
         }
         renderedHost.setAttribute('data-agent-preview-render-token', String(renderToken));
-        const rendered = await renderMarkdownPreviewIntoHost(renderedHost, sourcePath, matchedSpans, renderToken, diagnostics);
+        const rendered = await renderMarkdownPreviewIntoHost(renderedHost, candidateSourcePaths, matchedSpans, renderToken, diagnostics);
         if (rendered && (renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open)) {
             return true;
         }
@@ -498,6 +609,10 @@
         const rendered = await renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken, diagnostics);
         if (rendered || renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open) {
             diagnostics.usedFallback = false;
+            const diagnosticsHtml = buildGraphFocusDiagnosticsHtml(diagnostics);
+            if (diagnosticsHtml && body.isConnected) {
+                body.insertAdjacentHTML('beforeend', diagnosticsHtml);
+            }
             setLastGraphFocusDiagnostics(diagnostics);
             return;
         }
@@ -505,7 +620,7 @@
         if (!diagnostics.failureReason) {
             diagnostics.failureReason = 'graph_focus_fallback';
         }
-        body.innerHTML = buildGraphFocusFallbackHtml(payload, matchedSpans);
+        body.innerHTML = buildGraphFocusFallbackHtml(payload, matchedSpans, diagnostics);
         setLastGraphFocusDiagnostics(diagnostics);
     }
 
@@ -1346,6 +1461,104 @@
                 </li>
             `).join('')
             : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
+        const graphContext = summary.graphContext && typeof summary.graphContext === 'object'
+            ? summary.graphContext
+            : null;
+        const graphContextHeading = translate('agentWorkspace.evidence.graphContextLabel', 'Graph context');
+        const graphContextItems = graphContext ? [
+            {
+                title: translate('agentWorkspace.evidence.graphAnchorLabel', 'Anchor'),
+                value: String(graphContext.anchorTitle || '').trim() || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphSupportingTitlesLabel', 'Supporting titles'),
+                value: Array.isArray(graphContext.supportingTitles) && graphContext.supportingTitles.length > 0
+                    ? graphContext.supportingTitles.join(', ')
+                    : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphConnectionPathsLabel', 'Connection paths'),
+                value: Array.isArray(graphContext.connectionPaths) && graphContext.connectionPaths.length > 0
+                    ? graphContext.connectionPaths.join(' | ')
+                    : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphPredecessorsLabel', 'Immediate predecessors'),
+                value: Number.isFinite(Number(graphContext.predecessorCount))
+                    ? String(graphContext.predecessorCount)
+                    : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphSuccessorsLabel', 'Immediate successors'),
+                value: Number.isFinite(Number(graphContext.successorCount))
+                    ? String(graphContext.successorCount)
+                    : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphTemporalReasonsLabel', 'Warning reasons'),
+                value: Array.isArray(graphContext.temporalWarnings) && graphContext.temporalWarnings.length > 0
+                    ? graphContext.temporalWarnings.join(', ')
+                    : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphEvidenceRefsLabel', 'Source references'),
+                value: Array.isArray(graphContext.evidenceSourceRefs) && graphContext.evidenceSourceRefs.length > 0
+                    ? graphContext.evidenceSourceRefs.join(', ')
+                    : noneLabel,
+            },
+        ] : [];
+        const graphContextHtml = graphContextItems.length > 0
+            ? graphContextItems.map((item) => `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(item.title)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(item.value)}</div>
+                </li>
+            `).join('')
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
+        const graphDiagnostics = summary.graphDiagnostics && typeof summary.graphDiagnostics === 'object'
+            ? summary.graphDiagnostics
+            : null;
+        const graphDiagnosticsHeading = translate('agentWorkspace.evidence.graphDiagnosticsLabel', 'Graph diagnostics');
+        const graphDiagnosticsItems = graphDiagnostics ? [
+            {
+                title: translate('agentWorkspace.evidence.graphDiagnosticsOpsLabel', 'Graph ops'),
+                value: graphDiagnostics.graphOpsAvailable === true
+                    ? translate('agentWorkspace.evidence.graphDiagnosticsAvailableLabel', 'available')
+                    : translate('agentWorkspace.evidence.graphDiagnosticsUnavailableLabel', 'unavailable'),
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphDiagnosticsFallbackLabel', 'Fallback'),
+                value: graphDiagnostics.usedFallback === true ? 'true' : 'false',
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphDiagnosticsAnchorReasonLabel', 'Anchor reason'),
+                value: String(graphDiagnostics.selectedAnchorReason || '').trim() || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphDiagnosticsSupportCountLabel', 'Support nodes'),
+                value: Number.isFinite(Number(graphDiagnostics.supportNodeLimit)) && Number(graphDiagnostics.supportNodeLimit) > 0
+                    ? `${String(graphDiagnostics.supportNodeCount || 0)}/${String(graphDiagnostics.supportNodeLimit || 0)}`
+                    : String(graphDiagnostics.supportNodeCount || 0),
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphDiagnosticsBudgetLabel', 'Path depth budget'),
+                value: Number.isFinite(Number(graphDiagnostics.pathDepthLimit))
+                    ? String(graphDiagnostics.pathDepthLimit)
+                    : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphDiagnosticsMissingLookupsLabel', 'Missing graph lookups'),
+                value: String(graphDiagnostics.missingLookupSummary || '').trim() || noneLabel,
+            },
+        ] : [];
+        const graphDiagnosticsHtml = graphDiagnosticsItems.length > 0
+            ? graphDiagnosticsItems.map((item) => `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(item.title)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(item.value)}</div>
+                </li>
+            `).join('')
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
 
         node.innerHTML = `
             <div class="agent-chat-card">
@@ -1353,6 +1566,10 @@
                 <div class="agent-chat-card-summary">${escapeHtml(summaryText)}</div>
                 <div class="agent-chat-card-section-title">${escapeHtml(metricsHeading)}</div>
                 <ul class="agent-chat-card-list">${metricsHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(graphContextHeading)}</div>
+                <ul class="agent-chat-card-list">${graphContextHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(graphDiagnosticsHeading)}</div>
+                <ul class="agent-chat-card-list">${graphDiagnosticsHtml}</ul>
                 <div class="agent-chat-card-section-title">${escapeHtml(claimsHeading)}</div>
                 <ul class="agent-chat-card-list">${claimsHtml}</ul>
                 <div class="agent-chat-card-section-title">${escapeHtml(gatesHeading)}</div>

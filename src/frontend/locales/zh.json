@@ -426,7 +426,16 @@
     "graphFocus": {
       "title": "知识聚焦",
       "emptyIdle": "图谱聚焦面板当前为空。",
-      "noSummary": "暂无摘要。"
+      "noSummary": "暂无摘要。",
+      "diagnosticsTitle": "渲染诊断",
+      "failureReasonLabel": "失败原因",
+      "candidatePathsLabel": "候选路径",
+      "attemptedPathsLabel": "尝试路径",
+      "resolvedPathLabel": "实际路径",
+      "fallbackPathLabel": "路径回退",
+      "highlightedNodesLabel": "高亮节点数",
+      "pathFallbackUsed": "已使用",
+      "pathFallbackNotUsed": "未使用"
     },
     "evidence": {
       "title": "证据面板",

@@ -8877,6 +8877,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             summary: `Generated ${reply.knowledgeRun.summary.claimCount} evidence claim(s) and ${reply.knowledgeRun.summary.reviewCardCount} review card(s) with status ${reply.knowledgeRun.status}.`,
             payload: {
                 knowledgeRun: reply.knowledgeRun,
+                graphContext: graphContext || reply.graphContext || undefined,
                 citations,
                 recalledMemories,
                 memoryActions,

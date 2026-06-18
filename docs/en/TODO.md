@@ -10,7 +10,7 @@
 - [x] Preserve optional `AgentConversationGraphContext.connectionPaths` through conversation trace, structured answer composition, evidence-pane rendering, workspace export, and focused regression tests.
 - [x] Extract the bounded graph-conditioned context assembly layer into `src/learning/graphContextAssembler.ts`, with anchor/support selection, explicit paths, predecessor/successor windows, evidence refs, and graph diagnostics.
 - [x] Move ranking beyond relation-degree bonuses: `queryBackend.ts` now scores bounded graph features such as anchor distance, path confidence, prerequisite depth, temporal invalidity penalties, and relation-kind intent bonuses.
-- [~] Treat right-pane source rendering as implemented with first-pass graph-focus diagnostics, but still needing broader operator-facing diagnostics around path canonicalization, storage-provider reads, markdown render fallback, and highlight matching.
+- [x] Treat right-pane source rendering as implemented with candidate-path retry, pane-visible graph-focus diagnostics, and durable knowledge-run graph diagnostics for operator review.
 - [x] Add graph-specific answer quality gates inside `knowledgeRun.quality.gates` for prerequisite ordering, comparison branches, temporal warnings, graph-op fallback, and bounded graph budgeting.
 
 ### 2026-06-10 Knowledge Workspace and DAG TODO Reclassification
@@ -20,7 +20,8 @@
 - [x] Reclassify the existing DAG-backed learning substrate as implemented reality rather than future intent: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows already exist in code.
 - [x] Treat the current visible answer area as contracted for this slice: `answer` / `directAnswer` now stays targeted while supporting blocks remain available through secondary panes, traces, artifacts, and exports.
 - [~] Treat left-side knowledge-hit interaction as partially complete: it is file-first, but still not fully converged on a right-pane-first reading model.
-- [ ] Add a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate.
+- [x] The graph-conditioned context-assembly layer between retrieval and answer synthesis is now implemented, so the current DAG is a first-class answer-planning substrate.
+- [ ] Decide whether the new pane-local graph diagnostics should also be promoted into replay/export-oriented operator surfaces.
 - [ ] Continue reducing ownership pressure in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
 - [ ] Keep root/docs bilingual README, TODO, task, implementation plan, walkthrough, interface, dashboard, and test-report docs aligned whenever this slice changes.
 

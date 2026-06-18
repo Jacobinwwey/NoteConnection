@@ -3198,6 +3198,15 @@
         const qualityGates = Array.isArray(quality.gates)
             ? quality.gates.filter((gate) => gate && typeof gate === 'object')
             : [];
+        const graphContext = artifactPayload.graphContext && typeof artifactPayload.graphContext === 'object'
+            ? artifactPayload.graphContext
+            : {};
+        const graphDiagnostics = graphContext.diagnostics && typeof graphContext.diagnostics === 'object'
+            ? graphContext.diagnostics
+            : {};
+        const temporalValidity = graphContext.temporalValidity && typeof graphContext.temporalValidity === 'object'
+            ? graphContext.temporalValidity
+            : {};
         const firstClaim = claims[0] && typeof claims[0] === 'object' ? claims[0] : {};
         const scopeLabel = [
             String(scope.workspaceId || '').trim(),
@@ -3205,6 +3214,36 @@
         ].filter(Boolean).join(' / ')
             || String(scope.source || '').trim()
             || 'global';
+        const supportingTitles = Array.isArray(graphContext.supportingTitles)
+            ? graphContext.supportingTitles.map((value) => String(value || '').trim()).filter(Boolean)
+            : [];
+        const connectionPaths = Array.isArray(graphContext.connectionPaths)
+            ? graphContext.connectionPaths.filter((connectionPath) => connectionPath && typeof connectionPath === 'object')
+            : [];
+        const predecessorWindow = Array.isArray(graphContext.predecessorWindow)
+            ? graphContext.predecessorWindow.filter((node) => node && typeof node === 'object')
+            : [];
+        const successorWindow = Array.isArray(graphContext.successorWindow)
+            ? graphContext.successorWindow.filter((node) => node && typeof node === 'object')
+            : [];
+        const evidenceSourceRefs = Array.isArray(graphContext.evidenceSourceRefs)
+            ? graphContext.evidenceSourceRefs.map((value) => String(value || '').trim()).filter(Boolean)
+            : [];
+        const temporalWarnings = Array.isArray(temporalValidity.warningReasons)
+            ? temporalValidity.warningReasons.map((value) => String(value || '').trim()).filter(Boolean)
+            : [];
+        const missingConnectionPathSourceAtomIds = Array.isArray(graphDiagnostics.missingConnectionPathSourceAtomIds)
+            ? graphDiagnostics.missingConnectionPathSourceAtomIds.map((value) => String(value || '').trim()).filter(Boolean)
+            : [];
+        const missingPredecessorAtomIds = Array.isArray(graphDiagnostics.missingPredecessorAtomIds)
+            ? graphDiagnostics.missingPredecessorAtomIds.map((value) => String(value || '').trim()).filter(Boolean)
+            : [];
+        const missingSuccessorAtomIds = Array.isArray(graphDiagnostics.missingSuccessorAtomIds)
+            ? graphDiagnostics.missingSuccessorAtomIds.map((value) => String(value || '').trim()).filter(Boolean)
+            : [];
+        const missingLookupCount = missingConnectionPathSourceAtomIds.length
+            + missingPredecessorAtomIds.length
+            + missingSuccessorAtomIds.length;
         return {
             returnedArtifacts: Number.isFinite(Number(summary.returnedArtifacts))
                 ? Number(summary.returnedArtifacts)
@@ -3260,6 +3299,48 @@
                         : [],
                 };
             }),
+            graphContext: (
+                String(graphContext.anchorTitle || '').trim()
+                || supportingTitles.length > 0
+                || connectionPaths.length > 0
+                || predecessorWindow.length > 0
+                || successorWindow.length > 0
+                || temporalWarnings.length > 0
+                || evidenceSourceRefs.length > 0
+            ) ? {
+                anchorTitle: String(graphContext.anchorTitle || '').trim(),
+                supportingTitles: supportingTitles.slice(0, 4),
+                connectionPaths: connectionPaths.slice(0, 3).map(function (connectionPath) {
+                    const pathTitles = Array.isArray(connectionPath.pathTitles)
+                        ? connectionPath.pathTitles.map((value) => String(value || '').trim()).filter(Boolean)
+                        : [];
+                    return pathTitles.join(' -> ');
+                }).filter(Boolean),
+                predecessorCount: predecessorWindow.length,
+                successorCount: successorWindow.length,
+                temporalWarnings: temporalWarnings.slice(0, 3),
+                evidenceSourceRefs: evidenceSourceRefs.slice(0, 4),
+            } : null,
+            graphDiagnostics: (
+                Object.keys(graphDiagnostics).length > 0
+                || missingLookupCount > 0
+            ) ? {
+                graphOpsAvailable: graphDiagnostics.graphOpsAvailable === true,
+                usedFallback: graphDiagnostics.usedFallback === true,
+                selectedAnchorReason: String(graphDiagnostics.selectedAnchorReason || '').trim(),
+                supportNodeCount: Number.isFinite(Number(graphDiagnostics.supportNodeCount))
+                    ? Number(graphDiagnostics.supportNodeCount)
+                    : 0,
+                supportNodeLimit: Number.isFinite(Number(graphDiagnostics.supportNodeLimit))
+                    ? Number(graphDiagnostics.supportNodeLimit)
+                    : 0,
+                pathDepthLimit: Number.isFinite(Number(graphDiagnostics.pathDepthLimit))
+                    ? Number(graphDiagnostics.pathDepthLimit)
+                    : null,
+                missingLookupSummary: missingLookupCount > 0
+                    ? `paths ${missingConnectionPathSourceAtomIds.length}, predecessors ${missingPredecessorAtomIds.length}, successors ${missingSuccessorAtomIds.length}`
+                    : '',
+            } : null,
         };
     }
 
