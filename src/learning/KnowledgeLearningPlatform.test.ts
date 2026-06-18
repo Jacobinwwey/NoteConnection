@@ -1838,6 +1838,12 @@ describe('KnowledgeLearningPlatform', () => {
                 : ''
         ).toContain('Follow the direct graph path between Reflection and Transmission');
         expect((response.knowledgePoints[0] as any).relationKinds).toContain('reference');
+        expect(response.knowledgeRun?.quality.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'graph_comparison_branch',
+                passed: true,
+            }),
+        ]));
     });
 
     test('agent conversation enriches graph context with explicit store path chains between returned knowledge points', async () => {

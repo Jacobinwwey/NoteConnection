@@ -29,12 +29,13 @@ Code-vs-plan reconciliation:
 | Use the current DAG | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, and `findPath` are the active graph substrate. | Confirmed |
 | Let the LLM inspect graph structure | A bounded `graphContextAssembler` now selects the anchor, reorders support nodes, attaches explicit paths, and adds predecessor/successor windows plus diagnostics before answer synthesis. | Implemented P1 foundation |
 | Retrieval uses graph structure instead of shallow degree bonus | `queryBackend.ts` now applies anchor distance, directed path confidence, prerequisite depth, temporal invalidity penalties, and relation-intent bonuses in `local_hybrid` / `local_vector`. | Implemented P2 foundation |
-| Full DAG-native answer planning | The assembler and graph-aware ranking boundaries are real, but graph-specific quality gates are still missing. | P5 pending |
+| Graph-specific answer quality gates | `knowledgeRun.quality.gates` now checks prerequisite ordering, comparison branches, temporal warnings, graph-op fallback, and bounded graph budgeting. | Implemented P5 foundation |
+| Full DAG-native answer planning | The assembler, graph-aware ranking, and graph-quality-gate boundaries are real, but the model still needs calibration breadth and broader operator-facing diagnostics. | Calibration pending |
 
 Immediate next direction:
 
-1. Add graph-specific quality gates for prerequisite ordering, comparison branches, supersession warnings, graph-op fallback, and deterministic large-graph budgeting.
-2. Broaden right-pane diagnostics beyond the local graph-focus controller path without forking the markdown rendering stack.
+1. Broaden right-pane diagnostics beyond the local graph-focus controller path without forking the markdown rendering stack.
+2. Calibrate the new graph-aware ranking and graph-quality-gate model against more real-world regressions and operator evidence.
 3. Keep the public answer focused while graph/evidence/developer detail remains inspectable through evidence panes, traces, artifacts, and export bundles.
 
 ## 2026-06-10 Knowledge Workspace Durable Artifact and DAG Alignment

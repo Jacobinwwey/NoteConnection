@@ -120,7 +120,7 @@ This order matters. If graph expansion happens before scope normalization, it ca
 | Hide developer-heavy evidence and purple-box-style support material for now | Evidence pane and runtime/export traces carry supporting context. | Direction is correct | Any new graph details must default to secondary surfaces unless explicitly requested. |
 | Clicking a file hit should open right-side content and highlight matched text | `workspace_panes.js` routes file entries through graph focus, reads markdown via storage, renders through shared markdown runtime, and highlights matched spans. | Implemented baseline | Failures usually come from path canonicalization, missing storage provider, stale runtime path, or snippet/highlight mismatch. Add diagnostics before rewriting the UI. |
 | Use this project's existing DAG, not a generic graph database abstraction | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, `findPath`, path/session logic, and `Graph.ts` DAG helpers already exist. | Confirmed | The prior "graph database + prompt framework" framing was too generic. |
-| Let LLM inspect high-quality graph structure | 2026-06-17 code now uses `graphContextAssembler.ts` to choose the anchor, reorder support nodes, preserve explicit store path chains, add predecessor/successor windows, and expose graph diagnostics through trace/export/evidence pane. | Implemented P1 foundation | Graph-aware ranking features and graph-specific quality gates still need to build on this boundary. |
+| Let LLM inspect high-quality graph structure | 2026-06-17 code now uses `graphContextAssembler.ts` to choose the anchor, reorder support nodes, preserve explicit store path chains, add predecessor/successor windows, and expose graph diagnostics through trace/export/evidence pane. | Implemented P1 foundation | Graph-aware ranking and graph quality gates now exist; remaining work is calibration breadth and broader operator-facing diagnostics. |
 | Preserve compatibility | `assistantMessage` remains valid; new `graphContext.connectionPaths` is optional and additive; snapshot merging keeps existing relation/temporal edges only when both endpoints remain active. | Preserved | Keep optional fields optional in all clients and exports. Add edge ownership metadata before treating missing persisted edges as intentional deletes. |
 
 ### Open-Source Library Review Result
@@ -202,7 +202,7 @@ Current behavior:
 - temporal invalidity now acts as a penalty instead of a blind positive freshness reward,
 - unrelated high-degree hubs are no longer allowed to win just because they have many edges.
 
-Remaining gap: the feature mix still needs calibration through graph-specific quality gates and more real-world ranking regressions.
+Remaining gap: the feature mix now has graph-specific gates, but still needs calibration through more real-world ranking regressions and broader operator evidence.
 
 #### P3: Keep answer-surface contraction strict
 
@@ -250,13 +250,15 @@ The best fix remains payload/path normalization plus highlight diagnostics, not 
 
 #### P5: Add graph answer quality gates
 
-The next test layer should not only assert that fields exist. It should test graph reasoning behavior:
+Implemented foundation in the current working tree through `knowledgeRun.quality.gates`. The active graph-specific gates now cover:
 
 - prerequisite questions include upstream path order,
 - comparison questions preserve branch differences,
 - stale/superseded nodes trigger temporal warnings,
-- graph ops failure falls back to retrieval-only answer,
+- graph ops failure falls back cleanly,
 - oversized graphs are budgeted deterministically.
+
+Remaining gap: add more regression coverage breadth and operator-facing evidence before treating the quality model as fully calibrated.
 
 ### Tradeoffs
 
@@ -300,7 +302,7 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 2. The public answer must stay targeted; this slice now keeps `answer` / `directAnswer` free of evidence/debug lists while preserving those details in evidence panes, traces, and exports.
 3. The 2026-06-17 code slice now has a first-class assembler boundary with anchor/support/path/window decisions before answer synthesis, but ranking and quality gates are still partial.
 4. The referenced open-source projects are best used as design patterns, not new runtime dependencies.
-5. The next robust direction is graph-specific quality gates plus wider operator-facing diagnostics on top of the new assembler and graph-aware ranking boundaries.
+5. The next robust direction is wider operator-facing diagnostics plus deeper calibration of the new graph-aware ranking and quality-gate model.
 
 ## 中文文档
 
@@ -412,7 +414,7 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 | 暂时隐藏开发者导向 evidence 与紫框类 support material | evidence pane 与 runtime/export trace 已承接支持上下文。 | 方向正确 | 新增图细节默认应进次级 surface，除非用户显式要求。 |
 | 文件命中单击后打开右侧内容并高亮命中 | `workspace_panes.js` 已通过 graph focus 路由文件项，读取 markdown，经共享 markdown runtime 渲染，并用 matched spans 高亮。 | 已实现基线 | 失败通常来自路径 canonicalization、storage provider 缺失、旧 runtime 路径、snippet/highlight 不匹配。应先加诊断而不是重写 UI。 |
 | 使用项目现有 DAG，而不是泛图数据库抽象 | `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、store ops、`findPath`、path/session logic、`Graph.ts` DAG helper 都已存在。 | 已确认 | 先前“图数据库 + prompt framework”的表述过泛。 |
-| 让 LLM 查阅高质量图结构 | 2026-06-17 代码现在通过 `graphContextAssembler.ts` 在回答合成前选择 anchor、重排 support node、保留显式 store path chain、补 predecessor/successor window，并通过 trace/export/evidence pane 暴露 graph diagnostics。 | P1 基础已实现 | 仍需在这个边界之上补 graph-aware ranking feature 与图专项质量门禁。 |
+| 让 LLM 查阅高质量图结构 | 2026-06-17 代码现在通过 `graphContextAssembler.ts` 在回答合成前选择 anchor、重排 support node、保留显式 store path chain、补 predecessor/successor window，并通过 trace/export/evidence pane 暴露 graph diagnostics。 | P1 基础已实现 | graph-aware ranking 与图专项质量门禁现在都已存在，剩余工作转为校准广度与更广的运维诊断。 |
 | 保持兼容 | `assistantMessage` 仍有效；新增 `graphContext.connectionPaths` 是 optional additive field；snapshot merge 只在两端 atom 仍 active 时保留既有 relation/temporal edges。 | 已保持 | 所有客户端和导出路径都要继续把新增字段视为可选。后续需要 edge ownership metadata，才能区分“用户有意删除的边”和“外部增强但内存快照未携带的边”。 |
 
 ### 开源库研究结论
@@ -494,7 +496,7 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 - temporal invalidity 现在是惩罚项，而不是盲目的“新鲜度正奖励”；
 - 与 anchor 无关的高出入度 hub 不会再仅靠边多而取胜。
 
-剩余缺口：这套特征还需要通过图专项质量门禁和更多真实 ranking regression 继续校准。
+剩余缺口：这套特征已经有图专项质量门禁，但还需要通过更多真实 ranking regression 与运维证据继续校准。
 
 #### P3：严格保持回答主表面收缩
 
@@ -542,13 +544,15 @@ Evidence pane 应渲染：
 
 #### P5：增加图回答质量门禁
 
-下一层测试不应只断言字段存在，还要测图推理行为：
+当前工作区已经通过 `knowledgeRun.quality.gates` 落下第一版图回答质量门禁，覆盖：
 
 - prerequisite 问题应包含上游路径顺序；
 - comparison 问题应保留分支差异；
 - stale/superseded 节点应触发 temporal warnings；
-- graph ops 失败时能回退 retrieval-only answer；
+- graph ops 失败时应保持 clean fallback；
 - oversized graph 经过确定性预算裁剪。
+
+剩余缺口：继续补回归覆盖广度和运维侧证据，再决定是否把这套质量模型视为完全校准。
 
 ### 权衡
 
@@ -592,4 +596,4 @@ Evidence pane 应渲染：
 2. 公开回答必须保持 targeted；本切片已让 `answer` / `directAnswer` 不再携带 evidence/debug 列表，同时把这些细节保留在 evidence pane、trace 与 export。
 3. 2026-06-17 代码切片已经有回答前的一等 assembler 边界，会做 anchor/support/path/window 决策，但 ranking 与质量门禁仍是部分实现。
 4. 参考开源库更适合作为设计模式，不适合作为新的运行时依赖。
-5. 下一步应把重心转到图专项质量门禁，以及更广的 operator-facing diagnostics，而不是继续停留在“有没有 assembler / 有没有 graph-aware ranking”这个层级。
+5. 下一步应把重心转到更广的 operator-facing diagnostics，以及对新图排序 / 质量门禁模型的持续校准，而不是继续停留在“有没有 assembler / 有没有 graph-aware ranking”这个层级。

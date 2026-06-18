@@ -917,7 +917,8 @@ function buildKnowledgeRunReviewCards(
 function buildKnowledgeRunQuality(
     claims: KnowledgeRunEvidenceClaim[],
     reviewCards: KnowledgeRunReviewCard[],
-    params: ScopedConversationReplyParams
+    params: ScopedConversationReplyParams,
+    graphContext: AgentConversationGraphContext | null
 ): KnowledgeRunQuality {
     const coveredClaimCount = claims.filter((claim) => claim.status === 'verified' || claim.status === 'weak').length;
     const evidenceCoverage = claims.length > 0 ? coveredClaimCount / claims.length : 0;
@@ -933,6 +934,73 @@ function buildKnowledgeRunQuality(
         && Boolean(action.layer)
         && Boolean(action.namespace)
     ));
+    const intent = classifyScopedConversationIntent(params.message);
+    const predecessorWindow = graphContext && Array.isArray(graphContext.predecessorWindow)
+        ? graphContext.predecessorWindow
+        : [];
+    const successorWindow = graphContext && Array.isArray(graphContext.successorWindow)
+        ? graphContext.successorWindow
+        : [];
+    const connectionPaths = graphContext && Array.isArray(graphContext.connectionPaths)
+        ? graphContext.connectionPaths
+        : [];
+    const diagnostics = graphContext && graphContext.diagnostics && typeof graphContext.diagnostics === 'object'
+        ? graphContext.diagnostics
+        : null;
+    const prerequisiteSignalPresent = predecessorWindow.length > 0
+        || connectionPaths.some((connectionPath) => (
+            Array.isArray(connectionPath.pathEdges)
+            && connectionPath.pathEdges.some((edge) => edge && edge.relationKind === 'prerequisite')
+        ))
+        || Boolean(graphContext && graphContext.relationKinds.includes('prerequisite'));
+    const prerequisiteOrderRequired = intent === 'how_to' || (intent === 'explain' && prerequisiteSignalPresent);
+    const prerequisiteOrderPassed = !prerequisiteOrderRequired
+        || predecessorWindow.length > 0
+        || connectionPaths.some((connectionPath) => (
+            Array.isArray(connectionPath.pathEdges)
+            && connectionPath.pathEdges.some((edge) => edge && edge.relationKind === 'prerequisite')
+        ));
+    const comparisonBranchRequired = intent === 'compare';
+    const comparisonBranchPassed = !comparisonBranchRequired
+        || (
+            Boolean(graphContext && (
+                (Array.isArray(graphContext.supportingTitles) && graphContext.supportingTitles.length > 0)
+                || (Array.isArray(graphContext.knowledgePointRelations) && graphContext.knowledgePointRelations.length > 0)
+                || connectionPaths.length > 0
+            ))
+        );
+    const temporalWarningRequired = Boolean(
+        graphContext
+        && (
+            graphContext.temporalValidity.allPointsValid === false
+            || (
+                Array.isArray(graphContext.temporalValidity.details)
+                && graphContext.temporalValidity.details.some((detail) => detail.edgeKind === 'supersedes')
+            )
+        )
+    );
+    const temporalWarningPassed = !temporalWarningRequired
+        || Boolean(
+            graphContext
+            && Array.isArray(graphContext.temporalValidity.warningReasons)
+            && graphContext.temporalValidity.warningReasons.length > 0
+        );
+    const graphOpFallbackPassed = !diagnostics
+        || diagnostics.graphOpsAvailable === true
+        || diagnostics.usedFallback === true;
+    const supportNodeCount = diagnostics
+        ? Math.max(0, Math.floor(Number(diagnostics.supportNodeCount || 0)))
+        : (graphContext && Array.isArray(graphContext.supportingAtomIds) ? graphContext.supportingAtomIds.length : 0);
+    const supportNodeLimit = diagnostics
+        ? Math.max(1, Math.floor(Number(diagnostics.supportNodeLimit || supportNodeCount || 1)))
+        : Math.max(supportNodeCount || 1, 1);
+    const pathDepthLimit = diagnostics
+        ? Math.max(1, Math.floor(Number(diagnostics.pathDepthLimit || 1)))
+        : 6;
+    const graphBudgetPassed = connectionPaths.every((connectionPath) => Math.max(0, Math.floor(Number(connectionPath.length || 0))) <= pathDepthLimit)
+        && predecessorWindow.length <= Math.max(0, supportNodeLimit)
+        && successorWindow.length <= Math.max(0, supportNodeLimit)
+        && supportNodeCount <= supportNodeLimit;
     const gates: KnowledgeRunQualityGate[] = [
         {
             gateId: 'evidence_coverage',
@@ -970,6 +1038,69 @@ function buildKnowledgeRunQuality(
                 ? 'Memory actions include the governance fields needed for audit.'
                 : 'At least one memory action is missing governance metadata.',
         },
+        {
+            gateId: 'graph_prerequisite_order',
+            passed: prerequisiteOrderPassed,
+            observedValue: prerequisiteOrderPassed ? 1 : 0,
+            threshold: prerequisiteOrderRequired ? 1 : 0,
+            message: prerequisiteOrderRequired
+                ? (
+                    prerequisiteOrderPassed
+                        ? 'Prerequisite-oriented queries retained upstream path order or predecessor context.'
+                        : 'The current graph context did not preserve enough prerequisite ordering for this query.'
+                )
+                : 'No prerequisite-ordering requirement was active for this query.',
+        },
+        {
+            gateId: 'graph_comparison_branch',
+            passed: comparisonBranchPassed,
+            observedValue: comparisonBranchPassed ? 1 : 0,
+            threshold: comparisonBranchRequired ? 1 : 0,
+            message: comparisonBranchRequired
+                ? (
+                    comparisonBranchPassed
+                        ? 'Comparison intent retained support nodes or branch structure in the graph context.'
+                        : 'Comparison intent did not retain enough branch structure in the graph context.'
+                )
+                : 'No comparison-branch requirement was active for this query.',
+        },
+        {
+            gateId: 'graph_temporal_warning',
+            passed: temporalWarningPassed,
+            observedValue: temporalWarningPassed ? 1 : 0,
+            threshold: temporalWarningRequired ? 1 : 0,
+            message: temporalWarningRequired
+                ? (
+                    temporalWarningPassed
+                        ? 'Temporal invalidity or supersession was surfaced as an explicit warning.'
+                        : 'Temporal invalidity was present but not surfaced as an explicit warning.'
+                )
+                : 'No temporal warning was required for this query.',
+        },
+        {
+            gateId: 'graph_op_fallback',
+            passed: graphOpFallbackPassed,
+            observedValue: graphOpFallbackPassed ? 1 : 0,
+            threshold: 1,
+            message: diagnostics
+                ? (
+                    diagnostics.graphOpsAvailable === true
+                        ? 'Graph operations were available for this turn.'
+                        : diagnostics.usedFallback === true
+                            ? 'Graph operations fell back cleanly without breaking the answer contract.'
+                            : 'Graph operation availability and fallback state were inconsistent.'
+                )
+                : 'No graph diagnostics payload was available; compatibility fallback accepted.',
+        },
+        {
+            gateId: 'graph_budget',
+            passed: graphBudgetPassed,
+            observedValue: graphBudgetPassed ? 1 : 0,
+            threshold: 1,
+            message: graphBudgetPassed
+                ? 'Graph context stayed within bounded support/path/window budgets.'
+                : 'Graph context exceeded the bounded support/path/window budgets for this turn.',
+        },
     ];
     const passedGateCount = gates.filter((gate) => gate.passed).length;
     const score = Number(((passedGateCount / gates.length) * 100).toFixed(2));
@@ -995,13 +1126,16 @@ function buildKnowledgeRunReviewState(reviewCards: KnowledgeRunReviewCard[]): Kn
     };
 }
 
-function buildKnowledgeRun(params: ScopedConversationReplyParams): KnowledgeRun {
+function buildKnowledgeRun(
+    params: ScopedConversationReplyParams,
+    graphContext: AgentConversationGraphContext | null
+): KnowledgeRun {
     const generatedAt = String(params.generatedAt || new Date().toISOString()).trim();
     const runId = params.nextRunId ? params.nextRunId() : buildFallbackKnowledgeRunId(params, generatedAt);
     const evidenceClaims = buildKnowledgeRunEvidenceClaims(runId, params);
     const reviewCards = buildKnowledgeRunReviewCards(runId, generatedAt, evidenceClaims);
     const reviewState = buildKnowledgeRunReviewState(reviewCards);
-    const quality = buildKnowledgeRunQuality(evidenceClaims, reviewCards, params);
+    const quality = buildKnowledgeRunQuality(evidenceClaims, reviewCards, params, graphContext);
     const countStatus = (status: KnowledgeRunEvidenceClaim['status']) => (
         evidenceClaims.filter((claim) => claim.status === status).length
     );
@@ -1045,8 +1179,8 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
 } {
     const blocks: AgentConversationAssistantBlock[] = [];
     const answer = buildScopedConversationAnswer(params);
-    const knowledgeRun = buildKnowledgeRun(params);
     const graphContext = params.graphContext || buildAgentConversationGraphContextFromKnowledgePoints(params.knowledgePoints);
+    const knowledgeRun = buildKnowledgeRun(params, graphContext);
     const overviewMarkdown = buildScopedConversationOverviewMarkdown(params, graphContext);
     const explanationMarkdown = buildScopedConversationExplanationMarkdown(params, graphContext);
     const evidenceMarkdown = buildScopedConversationEvidenceMarkdown(params);

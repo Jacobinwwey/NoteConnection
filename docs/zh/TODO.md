@@ -11,7 +11,7 @@
 - [x] 已将有界 graph-conditioned context assembly layer 抽到 `src/learning/graphContextAssembler.ts`，并接入 anchor/support 选择、显式路径、predecessor/successor window、evidence ref 与 graph diagnostics。
 - [x] `queryBackend.ts` 的 ranking 已从 relation-degree bonus 扩展到 anchor distance、path-confidence、prerequisite-depth、temporal-invalidity penalty 与 relation-intent bonus。
 - [~] 右侧 source rendering 已补第一层 graph-focus diagnostics，但仍需要把路径 canonicalization、storage-provider 读取、markdown render fallback 与 highlight matching 诊断扩展到更广的运维面。
-- [ ] 在宣称 DAG-native answer planning 完成前，补齐图回答专用质量门禁。
+- [x] 已在 `knowledgeRun.quality.gates` 中补齐图回答专用质量门禁，覆盖 prerequisite ordering、comparison branch、temporal warning、graph-op fallback 与有界 graph budgeting。
 
 ### 2026-06-10 知识工作区与 DAG TODO 重新分类
 

@@ -22,7 +22,7 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 2. Keep graph-aware ranking bounded and calibrate it against regression cases instead of drifting back toward degree-driven hubs.
 3. Expand right-pane diagnostics beyond the local graph-focus controller path without introducing a second rendering stack.
 4. Keep graph/debug/evidence detail in evidence/export surfaces, not in the public answer.
-5. Add graph-specific answer quality gates for ordering, comparison, temporal validity, fallback, and large-graph budgeting.
+5. Calibrate the new graph-specific answer quality gates against more regression cases and operator evidence.
 6. Continue owner reduction only when the new module owns real decisions or invariants.
 
 #### Acceptance criteria
@@ -51,7 +51,7 @@ Extend the current mainline alignment with a Knowledge Workspace and DAG-specifi
 2. Preserve the contracted visible answer contract while routing supporting graph/evidence data to secondary surfaces.
 3. Converge left-side knowledge hits on a right-pane-first reading model.
 4. Treat `knowledge_run` and `flashcard_batch` as the first durable evidence surfaces.
-5. Build graph-specific quality gates and broader right-pane diagnostics on top of the new assembler and graph-aware ranking boundaries.
+5. Broaden right-pane/operator diagnostics and calibrate the new graph quality gates on top of the assembler and ranking boundaries.
 6. Continue ownership reduction across the major server and frontend hosts.
 
 ### 2026-06-06 Mainline Architecture Alignment Plan

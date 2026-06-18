@@ -13,7 +13,7 @@ Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer cont
 - [x] The DAG answer path now has a first-class graph-conditioned context assembly stage instead of only post-retrieval enrichment.
 - [x] Query backend ranking now goes beyond relation-degree bonus: `queryBackend.ts` uses anchor distance, directed path confidence, prerequisite depth, temporal invalidity penalties, and relation-kind intent bonuses for `local_hybrid` / `local_vector`.
 - [~] Right-pane source rendering and matched-span highlighting now record graph-focus diagnostics for runtime/storage/render/highlight failure classes, but those diagnostics are still local to the pane/controller path and not yet widened into broader operator-facing surfaces.
-- [ ] Add graph-specific quality gates for prerequisite ordering, comparison branches, supersession warnings, graph-op failure fallback, and deterministic large-graph budgeting.
+- [x] `knowledgeRun.quality.gates` now includes graph-specific checks for prerequisite ordering, comparison branches, temporal warnings, graph-op fallback, and bounded graph budgeting.
 - [ ] Continue reducing ownership pressure in `KnowledgeLearningPlatform.ts`, `conversationComposer.ts`, `agent_workspace.js`, and `workspace_panes.js` only where a new owner enforces real decisions or invariants.
 
 ## 中文文档
@@ -29,7 +29,7 @@ Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer cont
 - [x] 当前 DAG 回答链路已经拥有一等 graph-conditioned context assembly 阶段，而不再只是 retrieval 之后的显式路径增强。
 - [x] `queryBackend.ts` 的排序现在已经超出 relation-degree bonus：`local_hybrid` / `local_vector` 已接入 anchor distance、directed path confidence、prerequisite depth、temporal invalidity penalty 与 relation-kind intent bonus。
 - [~] 右侧原文渲染与 matched-span 高亮现在已经记录 graph-focus diagnostics，可区分 runtime/storage/render/highlight 失败类型；但这些诊断还主要停留在 pane/controller 层，尚未扩展到更广的运维检查面。
-- [ ] 增加图回答质量门禁，覆盖 prerequisite ordering、comparison branch、supersession warning、graph-op failure fallback 与大图确定性预算裁剪。
+- [x] `knowledgeRun.quality.gates` 现在已经包含图专项门禁：prerequisite ordering、comparison branch、temporal warning、graph-op fallback 与有界 graph budgeting。
 - [ ] 继续缩减 `KnowledgeLearningPlatform.ts`、`conversationComposer.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力，但只在新 owner 能做真实决策或强制不变量时推进。
 
 ---

@@ -11,7 +11,7 @@
 - [x] Extract the bounded graph-conditioned context assembly layer into `src/learning/graphContextAssembler.ts`, with anchor/support selection, explicit paths, predecessor/successor windows, evidence refs, and graph diagnostics.
 - [x] Move ranking beyond relation-degree bonuses: `queryBackend.ts` now scores bounded graph features such as anchor distance, path confidence, prerequisite depth, temporal invalidity penalties, and relation-kind intent bonuses.
 - [~] Treat right-pane source rendering as implemented with first-pass graph-focus diagnostics, but still needing broader operator-facing diagnostics around path canonicalization, storage-provider reads, markdown render fallback, and highlight matching.
-- [ ] Add graph-specific answer quality gates before calling DAG-native answer planning complete.
+- [x] Add graph-specific answer quality gates inside `knowledgeRun.quality.gates` for prerequisite ordering, comparison branches, temporal warnings, graph-op fallback, and bounded graph budgeting.
 
 ### 2026-06-10 Knowledge Workspace and DAG TODO Reclassification
 

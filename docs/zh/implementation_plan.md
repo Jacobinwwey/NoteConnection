@@ -23,7 +23,7 @@
 2. 保持 graph-aware ranking 有界，并用回归用例持续校准，避免回到 degree-driven hub 排序。
 3. 在不引入第二套渲染栈的前提下，把右侧 source focus 诊断从本地 controller 路径继续扩展出去。
 4. 将 graph/debug/evidence 细节留在 evidence/export surface，而不是公开回答区。
-5. 增加图专项回答质量门禁，覆盖 ordering、comparison、temporal validity、fallback 与 large-graph budgeting。
+5. 继续校准新的图专项回答质量门禁，并补更多回归证据与运维证据。
 6. 只有当新模块拥有真实决策或不变量时，才继续做 owner reduction。
 
 #### 验收标准
@@ -52,7 +52,7 @@
 2. 保持已收缩的用户可见回答契约，同时把 supporting graph/evidence data 路由到次级表面。
 3. 让左侧 knowledge hit 收敛为 right-pane-first 阅读模型。
 4. 把 `knowledge_run` 与 `flashcard_batch` 视为第一批 durable evidence surface。
-5. 在新的 assembler + graph-aware ranking 边界之上继续补图专项质量门禁与更广的右侧诊断。
+5. 在新的 assembler + graph-aware ranking 边界之上继续扩展右侧 / 运维诊断，并校准图专项质量门禁。
 6. 继续缩减主要 server 与 frontend host 文件的所有权压力。
 
 ### 2026-06-06 主线架构对齐实施计划

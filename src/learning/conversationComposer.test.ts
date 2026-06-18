@@ -617,6 +617,11 @@ describe('conversationComposer', () => {
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Review the path order: Foundation Note -> Bridge Layer -> Ground State');
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Inspect prerequisite context from Bridge Layer');
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Use likely next-step nodes such as Application Example');
+        expect(reply.knowledgeRun.quality.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({ gateId: 'graph_prerequisite_order', passed: true }),
+            expect.objectContaining({ gateId: 'graph_op_fallback', passed: true }),
+            expect.objectContaining({ gateId: 'graph_budget', passed: true }),
+        ]));
     });
 
     test('builds a verified knowledge run with evidence quality gates and review cards', () => {
@@ -716,6 +721,8 @@ describe('conversationComposer', () => {
                 expect.objectContaining({ gateId: 'evidence_coverage', passed: true }),
                 expect.objectContaining({ gateId: 'scope_discipline', passed: true }),
                 expect.objectContaining({ gateId: 'recall_transfer', passed: true }),
+                expect.objectContaining({ gateId: 'graph_temporal_warning', passed: true }),
+                expect.objectContaining({ gateId: 'graph_budget', passed: true }),
             ])
         );
         expect(reply.knowledgeRun.reviewCards).toEqual([

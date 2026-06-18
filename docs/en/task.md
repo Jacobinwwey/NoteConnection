@@ -10,7 +10,7 @@
 - [x] The open-source review has a firm boundary: use DSPy / Guidance / Semantic Kernel / LangChain Core / LiteLLM patterns without adding those frameworks to the app runtime.
 - [x] Current DAG-aware answer planning now includes a first-class graph-conditioned context assembly layer in `src/learning/graphContextAssembler.ts`.
 - [~] Right-pane source/highlight behavior now records first-pass graph-focus diagnostics, but still needs broader path/snippet mismatch coverage beyond the local pane/controller path.
-- [ ] Next active task: add graph-specific quality gates and widen right-pane/operator diagnostics on top of the new assembler and graph-aware ranking boundaries.
+- [ ] Next active task: calibrate the new graph-quality-gate model and widen right-pane/operator diagnostics on top of the new assembler and graph-aware ranking boundaries.
 - [ ] Keep the public answer contracted while routing graph evidence, temporal details, and developer trace to secondary surfaces.
 
 ### Current Acceptance Targets

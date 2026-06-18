@@ -1270,7 +1270,12 @@ export type KnowledgeRunQualityGateId =
     | 'evidence_coverage'
     | 'scope_discipline'
     | 'recall_transfer'
-    | 'memory_governance';
+    | 'memory_governance'
+    | 'graph_prerequisite_order'
+    | 'graph_comparison_branch'
+    | 'graph_temporal_warning'
+    | 'graph_op_fallback'
+    | 'graph_budget';
 
 export interface KnowledgeRunEvidenceClaim {
     claimId: string;
