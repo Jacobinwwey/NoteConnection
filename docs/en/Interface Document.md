@@ -122,7 +122,7 @@ Current contract surfaces:
   - verifier: `scripts/verify-knowledge-workspace-runtime.js`
   - acceptance rule: the public answer must not leak `No scoped knowledge points matched`, `retrieval_candidates_below_threshold`, or the meta-documentary fragment `本技术文档旨在` when scoped evidence exists.
 - Remaining architecture gap:
-- broaden contradiction coverage from the current lexical + query-intent + structured + containment + subject + state + polarity + graph-causal + graph-order stack into richer claim-vs-citation / claim-vs-evidence contradiction classes,
+- broaden contradiction coverage from the current lexical + query-intent + structured + attribute + containment + subject + state + polarity + graph-causal + graph-order stack into richer claim-vs-citation / claim-vs-evidence contradiction classes,
   - push source-to-render provenance beyond the current block-level mapping plus snippet-projected inline highlights so right-pane highlighting can become source-authenticated at the character-offset level rather than merely bounded.
 
 Compatibility rules:

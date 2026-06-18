@@ -479,6 +479,122 @@ describe('answerReleaseReview', () => {
         ]));
     });
 
+    test('revises grounded answers when same-subject attribute claims conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water glass has moderate thermal insulation.',
+            evidenceSnippet: 'Water glass has moderate thermal insulation.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass',
+                snippet: 'Water glass has moderate thermal insulation.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass',
+                    snippet: 'Water glass has moderate thermal insulation.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'What thermal insulation does water glass have?',
+            draftAnswer: 'Water glass has high thermal insulation.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T02:20:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_attribute_consistency');
+        expect(review.publicAnswer).toBe('Water glass has moderate thermal insulation.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_attribute_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when Chinese same-subject attribute claims conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: '水杯',
+            summary: '水杯具有中等热绝缘性能。',
+            evidenceSnippet: '水杯具有中等热绝缘性能。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: '水杯',
+                snippet: '水杯具有中等热绝缘性能。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: '水杯',
+                    snippet: '水杯具有中等热绝缘性能。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '水杯有什么热绝缘性能？',
+            draftAnswer: '水杯具有高热绝缘性能。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T02:25:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_attribute_consistency');
+        expect(review.publicAnswer).toBe('水杯具有中等热绝缘性能。');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_attribute_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('does not raise an attribute conflict when the draft is a compatible refinement of the supported attribute', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water glass has a transparent glass wall.',
+            evidenceSnippet: 'Water glass has a transparent glass wall.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass',
+                snippet: 'Water glass has a transparent glass wall.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass',
+                    snippet: 'Water glass has a transparent glass wall.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'What wall does the water glass have?',
+            draftAnswer: 'Water glass has a transparent wall.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T02:30:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_attribute_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_attribute_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
     test('revises grounded answers when containment relations conflict with cited support', () => {
         const point = makeKnowledgePoint({
             title: 'Water Glass Contents',

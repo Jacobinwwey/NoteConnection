@@ -121,7 +121,7 @@
   - 验证脚本：`scripts/verify-knowledge-workspace-runtime.js`
   - 验收规则：只要 scoped evidence 存在，public answer 就不得泄漏 `No scoped knowledge points matched`、`retrieval_candidates_below_threshold`，也不得继续输出 `本技术文档旨在` 这类文档自述片段。
 - 当前剩余架构缺口：
-  - 把 contradiction coverage 从当前 lexical + query-intent + structured + containment + subject + state + polarity + graph-causal + graph-order 栈扩展到更广的 claim-vs-citation / claim-vs-evidence 级别，
+  - 把 contradiction coverage 从当前 lexical + query-intent + structured + attribute + containment + subject + state + polarity + graph-causal + graph-order 栈扩展到更广的 claim-vs-citation / claim-vs-evidence 级别，
   - 把 source-to-render provenance 推进到当前 block-level mapping 与 snippet-projected 内联高亮之上，使右侧高亮进一步提升到 source-authenticated 的字符级确定性投影。
 
 兼容性规则：
