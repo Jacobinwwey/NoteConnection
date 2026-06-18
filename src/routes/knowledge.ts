@@ -567,6 +567,17 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
         },
         {
             method: 'POST',
+            path: api('/session/graph-focus-diagnostics'),
+            handler: async (req, res) => {
+                try {
+                    const body = await readBody(req);
+                    const result = await knowledgeLearningPlatform.recordGraphFocusRenderDiagnostics(JSON.parse(body));
+                    ok(res, { result });
+                } catch (e) { fail(res, e, 'POST /api/knowledge/session/graph-focus-diagnostics'); }
+            },
+        },
+        {
+            method: 'POST',
             path: api('/export/workspace'),
             handler: async (req, res) => {
                 try {

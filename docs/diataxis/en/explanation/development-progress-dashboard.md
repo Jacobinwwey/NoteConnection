@@ -22,6 +22,9 @@ Implemented or documented in this slice:
 - recent-run history and run-to-run comparison cards now also surface compact graph telemetry, so operator review is no longer limited to single-run inspection,
 - `WorkspaceExportBundle` now exposes durable `runtime.knowledgeRunReports`, carrying compare-ready graph signal summaries for offline replay and operator analysis,
 - `workspace_panes.js` now retries graph-focus source rendering against matched-span candidate paths, records requested/candidate/attempted/resolved source-path diagnostics, and exposes those diagnostics inside the right pane when fallback or path fallback occurs,
+- the agent workspace now persists interesting graph-focus diagnostics into session state instead of leaving them frontend-local only,
+- later conversation/study-session session-state updates now preserve prior graph-focus report history instead of overwriting unrelated `panelState` domains,
+- `WorkspaceExportBundle` now also derives durable `runtime.graphFocusReports`, so graph-focus failures and path-fallback events can be replayed without scraping raw `panelState`,
 - `WorkspaceExportBundle` preserves connection paths in exported conversation trace graph context,
 - focused tests cover graph-path composition, platform enrichment, frontend evidence rendering, locale labels, and export serialization.
 
@@ -31,7 +34,7 @@ Code-vs-plan reconciliation:
 |---|---|---|
 | Public answer should not dump every internal artifact | `answer` / `directAnswer` now stays targeted; graph connection paths, citations, temporal detail, and knowledge-run diagnostics are secondary inspection data. | Implemented current slice |
 | Hide developer-heavy support material for now | Graph paths, temporal details, citations, and traces belong in evidence/export surfaces unless explicitly requested. | Preserved direction |
-| File hit opens right pane with highlighted source | Graph-focus now retries source rendering across payload + matched-span candidate paths, preserves highlighted markdown rendering, and exposes requested/candidate/attempted/resolved-path diagnostics in the pane when fallback behavior occurs. | Implemented broadened P4 slice |
+| File hit opens right pane with highlighted source | Graph-focus now retries source rendering across payload + matched-span candidate paths, preserves highlighted markdown rendering, exposes requested/candidate/attempted/resolved-path diagnostics in the pane, persists interesting diagnostics into session state, and exports stable summaries as `runtime.graphFocusReports`. | Implemented broadened P4 slice |
 | Use the current DAG | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, and `findPath` are the active graph substrate. | Confirmed |
 | Let the LLM inspect graph structure | A bounded `graphContextAssembler` now selects the anchor, reorders support nodes, attaches explicit paths, and adds predecessor/successor windows plus diagnostics before answer synthesis. | Implemented P1 foundation |
 | Retrieval uses graph structure instead of shallow degree bonus | `queryBackend.ts` now applies anchor distance, directed path confidence, prerequisite depth, temporal invalidity penalties, and relation-intent bonuses in `local_hybrid` / `local_vector`. Chinese compare/how-to/explain markers are now included in intent detection, and direct compare branches are explicitly calibrated against lexically stronger reference notes. | Implemented broader P2 slice |
@@ -41,7 +44,7 @@ Code-vs-plan reconciliation:
 Immediate next direction:
 
 1. Calibrate the new graph-aware ranking and graph-quality-gate model against more real-world regressions and operator evidence.
-2. Decide whether graph-focus render diagnostics specifically should also be promoted into replay/export/operator-report surfaces, now that `knowledge_run` telemetry already has a durable export surface.
+2. Calibrate the replay/export operator surfaces now that `knowledge_run` telemetry is exported as `runtime.knowledgeRunReports` and graph-focus diagnostics are exported as `runtime.graphFocusReports`.
 3. Keep the public answer focused while graph/evidence/developer detail remains inspectable through evidence panes, traces, artifacts, and export bundles.
 
 ## 2026-06-10 Knowledge Workspace Durable Artifact and DAG Alignment
@@ -601,7 +604,7 @@ A 12-phase refactoring (A→L) was executed against the baseline. The following 
 
 | Module | Files | Purpose |
 |---|---|---|
-| `src/routes/` | 10 | Modular API route handlers (65 routes across knowledge, notemd, markdown, render, data, diagnostics) |
+| `src/routes/` | 10 | Modular API route handlers (66 routes across knowledge, notemd, markdown, render, data, diagnostics) |
 | `src/middleware/` | 5 | HTTP middleware (cors, auth, body-parser, request-trace) |
 | `src/learning/domains/` | 8 | Domain classes extracted from KnowledgeLearningPlatform (7 classes + 7 Platform interfaces) |
 | `src/frontend/*.mjs` | 4 | ES module versions of i18n, runtime_bridge, main entry, worker bridge |
@@ -617,7 +620,7 @@ A 12-phase refactoring (A→L) was executed against the baseline. The following 
 
 | Metric | Before | After |
 |---|---|---|
-| Route modules | 0 (inline if/else chain) | 10 modules, 65 routes |
+| Route modules | 0 (inline if/else chain) | 10 modules, 66 routes |
 | Middleware modules | 0 (inline functions) | 5 independent modules |
 | Domain classes | 1 (13,370-line monolith) | 7 classes with typed Platform interfaces |
 | Frontend module system | `<script>` tag chain | ES modules + Vite 4-chunk |

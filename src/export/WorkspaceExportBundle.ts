@@ -3,6 +3,7 @@ import { resolvePlatformCapabilities } from '../platform/PlatformCapabilities';
 import { resolveRenderMaterializationDecision } from '../platform/RenderMaterializer';
 import type {
     WorkspaceExportBundle,
+    WorkspaceExportGraphFocusReport,
     WorkspaceExportKnowledgeRunReport,
     WorkspaceExportBundleRequest,
     WorkspaceScopedMemoryExportRecord,
@@ -342,12 +343,30 @@ function sortAndCloneWorkflowArtifacts(records: WorkflowArtifactRecord[]): Workf
         }));
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
 function normalizeCount(value: unknown): number {
     return Number.isFinite(Number(value)) ? Math.max(0, Math.floor(Number(value))) : 0;
 }
 
 function normalizeOptionalScore(value: unknown): number | null {
     return Number.isFinite(Number(value)) ? Number(Number(value).toFixed(2)) : null;
+}
+
+function normalizeBoolean(value: unknown): boolean {
+    return value === true;
+}
+
+function normalizeString(value: unknown): string {
+    return String(value || '').trim();
+}
+
+function normalizeStringArray(value: unknown): string[] {
+    return Array.isArray(value)
+        ? value.map((entry) => normalizeString(entry)).filter(Boolean)
+        : [];
 }
 
 function buildKnowledgeRunReports(records: WorkflowArtifactRecord[]): WorkspaceExportKnowledgeRunReport[] {
@@ -428,6 +447,57 @@ function buildKnowledgeRunReports(records: WorkflowArtifactRecord[]): WorkspaceE
         });
 }
 
+function buildGraphFocusReports(sessionStates: LearningSessionStateRecord[]): WorkspaceExportGraphFocusReport[] {
+    return sessionStates
+        .flatMap((state) => {
+            const panelState = isRecord(state.panelState) ? state.panelState : {};
+            const reports = Array.isArray(panelState.graphFocusReports)
+                ? panelState.graphFocusReports.filter((entry) => isRecord(entry))
+                : [];
+            return reports.map((entry) => {
+                const candidateSourcePaths = normalizeStringArray(entry.candidateSourcePaths);
+                const attemptedSourcePaths = normalizeStringArray(entry.attemptedSourcePaths);
+                return {
+                    sessionStateId: state.sessionStateId,
+                    sessionId: state.sessionId,
+                    userId: state.userId,
+                    workspaceId: state.workspaceId,
+                    corpusId: state.corpusId,
+                    mode: state.mode,
+                    recordedAt: normalizeString(entry.recordedAt) || state.updatedAt,
+                    title: normalizeString(entry.title),
+                    requestedSourcePath: normalizeString(entry.requestedSourcePath),
+                    resolvedSourcePath: normalizeString(entry.resolvedSourcePath),
+                    signal: {
+                        usedFallback: normalizeBoolean(entry.usedFallback),
+                        fallbackSourcePathUsed: normalizeBoolean(entry.fallbackSourcePathUsed),
+                        matchedSpanCount: normalizeCount(entry.matchedSpanCount),
+                        highlightTermCount: normalizeCount(entry.highlightTermCount),
+                        highlightedNodeCount: normalizeCount(entry.highlightedNodeCount),
+                        candidateSourcePathCount: candidateSourcePaths.length,
+                        attemptedSourcePathCount: attemptedSourcePaths.length,
+                        markdownRuntimeAvailable: normalizeBoolean(entry.markdownRuntimeAvailable),
+                        storageProviderAvailable: normalizeBoolean(entry.storageProviderAvailable),
+                        readSucceeded: normalizeBoolean(entry.readSucceeded),
+                        renderSucceeded: normalizeBoolean(entry.renderSucceeded),
+                        failureReason: normalizeString(entry.failureReason),
+                    },
+                };
+            });
+        })
+        .sort((left, right) => {
+            const recordedAtOrder = compareStrings(left.recordedAt, right.recordedAt);
+            if (recordedAtOrder !== 0) {
+                return recordedAtOrder;
+            }
+            const sessionOrder = compareStrings(left.sessionStateId, right.sessionStateId);
+            if (sessionOrder !== 0) {
+                return sessionOrder;
+            }
+            return compareStrings(left.requestedSourcePath, right.requestedSourcePath);
+        });
+}
+
 function sortAndCloneMemoryEntries(records: WorkspaceScopedMemoryExportRecord[]): WorkspaceScopedMemoryExportRecord[] {
     return records
         .slice()
@@ -505,6 +575,7 @@ export function buildWorkspaceExportBundle(input: {
     const conversationInvocations = sortAndCloneConversationInvocations(input.conversationInvocations);
     const workflowArtifacts = sortAndCloneWorkflowArtifacts(input.workflowArtifacts);
     const knowledgeRunReports = buildKnowledgeRunReports(workflowArtifacts);
+    const graphFocusReports = buildGraphFocusReports(sessionStates);
     const memoryEntries = sortAndCloneMemoryEntries(input.memoryEntries);
     const memoryAuditRecords = sortAndCloneMemoryAuditRecords(input.memoryAuditRecords);
 
@@ -553,6 +624,7 @@ export function buildWorkspaceExportBundle(input: {
             conversationInvocations,
             workflowArtifacts,
             knowledgeRunReports,
+            graphFocusReports,
         },
         memory: {
             entries: memoryEntries,
@@ -639,6 +711,7 @@ export function buildWorkspaceExportBundle(input: {
             conversationInvocations,
             workflowArtifacts,
             knowledgeRunReports,
+            graphFocusReports,
         },
         memory: {
             entries: memoryEntries,

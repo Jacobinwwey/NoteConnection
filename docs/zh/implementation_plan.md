@@ -18,16 +18,17 @@
 - retrieval 侧的 graph intent detection 现在已经补齐中文 compare/how-to/explain 标记，并对 direct compare branch 相对 reference-only note 做了显式结构性加权。
 - `graph_comparison_branch` 质量门禁现在已经对假阳性做了校准：compare intent 不会再仅凭 reference-only support 就通过，而必须出现 contrast/analogy 或多分支结构。
 - 当前运维可见诊断已经有三个具体面：右侧 graph-focus 的路径回退诊断、durable `knowledge_run` 卡片中的 graph context / graph diagnostics 检查面，以及 knowledge-run history/compare 流程中的紧凑 graph telemetry。
+- 有价值的 graph-focus diagnostics 现在也已经跨过运行时边界：agent workspace 会把它们写入 session state，后续 conversation/study-session 写入会保留这段历史，workspace export 则会派生 durable `runtime.graphFocusReports`。
 - prompt-framework 研究应指导 contract 与 evaluation，不应把 Python framework 拉入 app runtime。
 
 #### 下一步执行顺序
 
 1. 保持新的 assembler surface additive，并继续保证向前兼容。
 2. 保持 graph-aware ranking 有界，并用回归用例持续校准，避免回到 degree-driven hub 排序。
-3. 在 `knowledge_run` history/compare telemetry 已通过 `runtime.knowledgeRunReports` 进入 export 之后，继续决定 graph-focus render diagnostics 是否也要提升到 replay/export-oriented surface。
+3. 现在 `knowledge_run` history/compare telemetry 已通过 `runtime.knowledgeRunReports`、graph-focus diagnostics 也已通过 `runtime.graphFocusReports` 进入 export，下一步转为校准这些 replay/export-oriented 运维检查面的信号质量。
 4. 将 graph/debug/evidence 细节留在 evidence/export surface，而不是公开回答区。
 5. 继续校准新的图专项回答质量门禁，并补更多回归证据与运维证据。
-6. 只有当新模块拥有真实决策或不变量时，才继续做 owner reduction。
+6. 只有当新模块拥有真实决策、状态或不变量时，才继续做 owner reduction；避免新增泛化 panel-state 透传端点。
 
 #### 验收标准
 

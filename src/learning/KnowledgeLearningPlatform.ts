@@ -312,6 +312,48 @@ type StudySessionPlanQualityHistoryRecord = {
     failedGateIds: string[];
 };
 
+type GraphFocusRenderDiagnosticsRequest = {
+    sessionId: string;
+    userId: string;
+    workspaceId?: string | null;
+    corpusId?: string | null;
+    title?: string;
+    requestedSourcePath?: string;
+    resolvedSourcePath?: string;
+    candidateSourcePaths?: string[];
+    attemptedSourcePaths?: string[];
+    fallbackSourcePathUsed?: boolean;
+    matchedSpanCount?: number;
+    highlightTermCount?: number;
+    highlightedNodeCount?: number;
+    markdownRuntimeAvailable?: boolean;
+    storageProviderAvailable?: boolean;
+    readSucceeded?: boolean;
+    renderSucceeded?: boolean;
+    usedFallback?: boolean;
+    failureReason?: string;
+    recordedAt?: string;
+};
+
+type GraphFocusRenderDiagnosticsRecord = {
+    recordedAt: string;
+    title: string;
+    requestedSourcePath: string;
+    resolvedSourcePath: string;
+    candidateSourcePaths: string[];
+    attemptedSourcePaths: string[];
+    fallbackSourcePathUsed: boolean;
+    matchedSpanCount: number;
+    highlightTermCount: number;
+    highlightedNodeCount: number;
+    markdownRuntimeAvailable: boolean;
+    storageProviderAvailable: boolean;
+    readSucceeded: boolean;
+    renderSucceeded: boolean;
+    usedFallback: boolean;
+    failureReason: string;
+};
+
 export type KnowledgeLearningPlatformOptions = {
     nowProvider?: () => Date;
     store?: KnowledgeGraphStore;
@@ -410,6 +452,7 @@ const INGEST_LATENCY_HISTORY_LIMIT = 2000;
 const SESSION_EXECUTION_HISTORY_LIMIT = 400;
 const CONVERSATION_TURN_HISTORY_LIMIT = 400;
 const CONVERSATION_INVOCATION_HISTORY_LIMIT = 400;
+const GRAPH_FOCUS_REPORT_HISTORY_LIMIT = 8;
 
 function createEmptySessionActionTelemetry(): KnowledgeSystemState['sessionActionTelemetry'] {
     return {
@@ -8170,6 +8213,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         panelState?: Record<string, unknown>;
         recordedAt: string;
     }): void {
+        const existing = this.sessionStateStore.get(params.sessionId);
         this.sessionStateStore.upsert({
             sessionId: params.sessionId,
             userId: params.userId,
@@ -8188,9 +8232,174 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 enabled: params.persistMemory,
             },
             exportProfileId: params.exportProfileId || null,
-            panelState: params.panelState || {},
+            panelState: {
+                ...(existing?.panelState || {}),
+                ...(params.panelState || {}),
+            },
             recordedAt: params.recordedAt,
         });
+    }
+
+    private normalizeWorkspaceScopedSessionValue(value: unknown): string | null {
+        const normalized = String(value || '').trim().toLowerCase();
+        return normalized || null;
+    }
+
+    private normalizeGraphFocusSourcePath(value: unknown): string {
+        return String(value || '').trim().replace(/\\/g, '/');
+    }
+
+    private normalizeGraphFocusSourcePathList(value: unknown): string[] {
+        return Array.from(new Set(
+            (Array.isArray(value) ? value : [])
+                .map((entry) => this.normalizeGraphFocusSourcePath(entry))
+                .filter(Boolean)
+        ));
+    }
+
+    private inferWorkspaceIdFromKnowledgeBaseSourcePath(sourcePath: string): string | null {
+        const normalized = this.normalizeGraphFocusSourcePath(sourcePath);
+        if (!normalized) {
+            return null;
+        }
+        const segments = normalized.split('/').filter(Boolean);
+        if (segments.length < 2 || String(segments[0] || '').toLowerCase() !== 'knowledge_base') {
+            return null;
+        }
+        const workspaceId = String(segments[1] || '').trim().toLowerCase();
+        return workspaceId || null;
+    }
+
+    private buildGraphFocusRenderDiagnosticsRecord(
+        request: Partial<GraphFocusRenderDiagnosticsRequest>,
+        recordedAt: string
+    ): GraphFocusRenderDiagnosticsRecord {
+        const requestedSourcePath = this.normalizeGraphFocusSourcePath(request.requestedSourcePath);
+        const resolvedSourcePath = this.normalizeGraphFocusSourcePath(request.resolvedSourcePath);
+        return {
+            recordedAt,
+            title: String(request.title || '').trim(),
+            requestedSourcePath,
+            resolvedSourcePath,
+            candidateSourcePaths: this.normalizeGraphFocusSourcePathList(request.candidateSourcePaths),
+            attemptedSourcePaths: this.normalizeGraphFocusSourcePathList(request.attemptedSourcePaths),
+            fallbackSourcePathUsed: request.fallbackSourcePathUsed === true,
+            matchedSpanCount: Number.isFinite(Number(request.matchedSpanCount)) ? Math.max(0, Math.floor(Number(request.matchedSpanCount))) : 0,
+            highlightTermCount: Number.isFinite(Number(request.highlightTermCount)) ? Math.max(0, Math.floor(Number(request.highlightTermCount))) : 0,
+            highlightedNodeCount: Number.isFinite(Number(request.highlightedNodeCount)) ? Math.max(0, Math.floor(Number(request.highlightedNodeCount))) : 0,
+            markdownRuntimeAvailable: request.markdownRuntimeAvailable === true,
+            storageProviderAvailable: request.storageProviderAvailable === true,
+            readSucceeded: request.readSucceeded === true,
+            renderSucceeded: request.renderSucceeded === true,
+            usedFallback: request.usedFallback === true,
+            failureReason: String(request.failureReason || '').trim(),
+        };
+    }
+
+    private readGraphFocusRenderDiagnosticsRecords(panelState: Record<string, unknown>): GraphFocusRenderDiagnosticsRecord[] {
+        const rawReports = Array.isArray(panelState.graphFocusReports) ? panelState.graphFocusReports : [];
+        return rawReports
+            .map((entry) => {
+                if (!entry || typeof entry !== 'object') {
+                    return null;
+                }
+                const record = entry as Record<string, unknown>;
+                const recordedAt = this.resolveOptionalTimestamp(record.recordedAt) || this.resolveTimestamp(undefined);
+                return this.buildGraphFocusRenderDiagnosticsRecord({
+                    title: String(record.title || '').trim(),
+                    requestedSourcePath: this.normalizeGraphFocusSourcePath(record.requestedSourcePath),
+                    resolvedSourcePath: this.normalizeGraphFocusSourcePath(record.resolvedSourcePath),
+                    candidateSourcePaths: this.normalizeGraphFocusSourcePathList(record.candidateSourcePaths),
+                    attemptedSourcePaths: this.normalizeGraphFocusSourcePathList(record.attemptedSourcePaths),
+                    fallbackSourcePathUsed: record.fallbackSourcePathUsed === true,
+                    matchedSpanCount: Number(record.matchedSpanCount),
+                    highlightTermCount: Number(record.highlightTermCount),
+                    highlightedNodeCount: Number(record.highlightedNodeCount),
+                    markdownRuntimeAvailable: record.markdownRuntimeAvailable === true,
+                    storageProviderAvailable: record.storageProviderAvailable === true,
+                    readSucceeded: record.readSucceeded === true,
+                    renderSucceeded: record.renderSucceeded === true,
+                    usedFallback: record.usedFallback === true,
+                    failureReason: String(record.failureReason || '').trim(),
+                }, recordedAt);
+            })
+            .filter((entry): entry is GraphFocusRenderDiagnosticsRecord => Boolean(entry));
+    }
+
+    public async recordGraphFocusRenderDiagnostics(request: GraphFocusRenderDiagnosticsRequest): Promise<{
+        sessionStateId: string;
+        sessionId: string;
+        reportCount: number;
+        stored: GraphFocusRenderDiagnosticsRecord;
+    }> {
+        await this.ensureHydrated();
+        const sessionId = String(request.sessionId || '').trim();
+        if (!sessionId) {
+            throw new Error('Graph-focus diagnostics require a non-empty sessionId.');
+        }
+        const userId = String(request.userId || '').trim();
+        if (!userId) {
+            throw new Error('Graph-focus diagnostics require a non-empty userId.');
+        }
+        const recordedAt = this.resolveTimestamp(request.recordedAt);
+        const storedReport = this.buildGraphFocusRenderDiagnosticsRecord(request, recordedAt);
+        const existing = this.sessionStateStore.get(sessionId);
+        if (existing && existing.userId !== userId) {
+            throw new Error(`Graph-focus diagnostics session "${sessionId}" is already owned by another user.`);
+        }
+        const inferredWorkspaceId = this.inferWorkspaceIdFromKnowledgeBaseSourcePath(
+            storedReport.resolvedSourcePath || storedReport.requestedSourcePath
+        );
+        const workspaceId = existing?.workspaceId
+            || this.normalizeWorkspaceScopedSessionValue(request.workspaceId)
+            || inferredWorkspaceId;
+        const corpusId = existing?.corpusId
+            || this.normalizeWorkspaceScopedSessionValue(request.corpusId)
+            || workspaceId;
+        const workspace = workspaceId ? this.workspaceRegistry.getWorkspaceById(workspaceId) : null;
+        const existingPanelState = existing?.panelState && typeof existing.panelState === 'object'
+            ? existing.panelState as Record<string, unknown>
+            : {};
+        const nextGraphFocusReports = [
+            ...this.readGraphFocusRenderDiagnosticsRecords(existingPanelState),
+            storedReport,
+        ].slice(-GRAPH_FOCUS_REPORT_HISTORY_LIMIT);
+        const nextPanelState = {
+            ...existingPanelState,
+            graphFocusReports: nextGraphFocusReports,
+        };
+        const nextSessionState = this.sessionStateStore.upsert({
+            sessionId,
+            userId,
+            workspaceId,
+            corpusId,
+            mode: existing?.mode || 'grounded_conversation',
+            activeResourceIds: existing?.activeResourceIds || [],
+            activeProjectionIds: existing?.activeProjectionIds || [],
+            retrievalSettings: existing?.retrievalSettings
+                ? { ...existing.retrievalSettings }
+                : {
+                    topK: 0,
+                    queryBackend: null,
+                    persistMemory: false,
+                },
+            memorySettings: existing?.memorySettings
+                ? { ...existing.memorySettings }
+                : {
+                    namespace: null,
+                    enabled: false,
+                },
+            exportProfileId: existing?.exportProfileId || workspace?.exportProfileId || null,
+            panelState: nextPanelState,
+            recordedAt,
+        });
+        await this.persistIfNeeded();
+        return {
+            sessionStateId: nextSessionState.sessionStateId,
+            sessionId: nextSessionState.sessionId,
+            reportCount: nextGraphFocusReports.length,
+            stored: storedReport,
+        };
     }
 
     private recordWorkflowArtifact(params: {

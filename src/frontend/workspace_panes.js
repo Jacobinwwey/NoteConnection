@@ -293,6 +293,21 @@
         window.__NC_LAST_AGENT_GRAPH_FOCUS_DIAGNOSTICS = state.graphFocusDiagnostics;
     }
 
+    function publishGraphFocusDiagnostics(payload, diagnostics) {
+        if (
+            typeof window.dispatchEvent !== 'function'
+            || typeof window.CustomEvent !== 'function'
+        ) {
+            return;
+        }
+        window.dispatchEvent(new CustomEvent('noteconnection:agent-graph-focus-diagnostics', {
+            detail: {
+                payload: payload ? JSON.parse(JSON.stringify(payload)) : null,
+                diagnostics: diagnostics ? JSON.parse(JSON.stringify(diagnostics)) : null,
+            },
+        }));
+    }
+
     function buildGraphFocusTitle(payload) {
         return String(
             payload.title
@@ -614,6 +629,7 @@
                 body.insertAdjacentHTML('beforeend', diagnosticsHtml);
             }
             setLastGraphFocusDiagnostics(diagnostics);
+            publishGraphFocusDiagnostics(payload, diagnostics);
             return;
         }
         diagnostics.usedFallback = true;
@@ -622,6 +638,7 @@
         }
         body.innerHTML = buildGraphFocusFallbackHtml(payload, matchedSpans, diagnostics);
         setLastGraphFocusDiagnostics(diagnostics);
+        publishGraphFocusDiagnostics(payload, diagnostics);
     }
 
     function resolveKnowledgePointSourcePath(item) {

@@ -1,4 +1,4 @@
-# 2026-06-17 v1.7.0 - Agent Knowledge DAG Answer Contract TODO
+# 2026-06-18 v1.7.0 - Agent Knowledge DAG Answer Contract TODO
 
 ## English Document
 
@@ -14,7 +14,8 @@ Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer cont
 - [x] Query backend ranking now goes beyond relation-degree bonus: `queryBackend.ts` uses anchor distance, directed path confidence, prerequisite depth, temporal invalidity penalties, and relation-kind intent bonuses for `local_hybrid` / `local_vector`.
 - [x] Right-pane source rendering and matched-span highlighting now retry candidate source paths, expose graph-focus diagnostics in the pane, and surface stored graph context/graph diagnostics inside durable knowledge-run inspection cards.
 - [x] `knowledgeRun.quality.gates` now includes graph-specific checks for prerequisite ordering, comparison branches, temporal warnings, graph-op fallback, and bounded graph budgeting.
-- [~] `knowledge_run` pane/history/compare graph telemetry is now promoted into export through `runtime.knowledgeRunReports`; remaining question is whether graph-focus render diagnostics should also be externalized.
+- [x] `knowledge_run` pane/history/compare graph telemetry is exported through `runtime.knowledgeRunReports`, and graph-focus render diagnostics now also persist through session-state write-back and export as durable `runtime.graphFocusReports`.
+- [x] Session-state updates now preserve previously recorded graph-focus report history instead of overwriting unrelated `panelState` domains during later conversation/study-session writes.
 - [ ] Continue reducing ownership pressure in `KnowledgeLearningPlatform.ts`, `conversationComposer.ts`, `agent_workspace.js`, and `workspace_panes.js` only where a new owner enforces real decisions or invariants.
 
 ## 中文文档

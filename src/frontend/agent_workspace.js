@@ -39,6 +39,9 @@
     const ACTIVE_SOURCE_TARGET_STORAGE_KEY = 'nc_last_target';
     const ACTIVE_SOURCE_TARGET_EVENT = 'noteconnection:active-target-changed';
     const AGENT_CONVERSATION_ENDPOINT = '/api/knowledge/conversation';
+    const GRAPH_FOCUS_DIAGNOSTICS_EVENT = 'noteconnection:agent-graph-focus-diagnostics';
+    const GRAPH_FOCUS_DIAGNOSTICS_ENDPOINT = '/api/knowledge/session/graph-focus-diagnostics';
+    let lastGraphFocusDiagnosticsPersistenceKey = '';
 
     function normalizeActiveSourceTarget(value) {
         const normalized = String(value || '').trim();
@@ -103,6 +106,25 @@
             target: normalizedTarget,
             source: String(source || 'agent-workspace').trim() || 'agent-workspace',
             scope: buildScopeForTarget(normalizedTarget),
+        };
+    }
+
+    function inferKnowledgeWorkspaceScopeFromSourcePath(sourcePath) {
+        const normalizedSourcePath = String(sourcePath || '').trim().replace(/\\/g, '/');
+        if (!normalizedSourcePath) {
+            return null;
+        }
+        const segments = normalizedSourcePath.split('/').filter(Boolean);
+        if (segments.length < 2 || String(segments[0] || '').toLowerCase() !== 'knowledge_base') {
+            return null;
+        }
+        const workspaceId = String(segments[1] || '').trim().toLowerCase();
+        if (!workspaceId) {
+            return null;
+        }
+        return {
+            workspaceId,
+            corpusId: workspaceId,
         };
     }
 
@@ -518,6 +540,114 @@
             return payload;
         }
         return payload.result;
+    }
+
+    function shouldPersistGraphFocusDiagnostics(detail) {
+        const diagnostics = detail && typeof detail === 'object' && detail.diagnostics && typeof detail.diagnostics === 'object'
+            ? detail.diagnostics
+            : {};
+        return diagnostics.usedFallback === true
+            || diagnostics.fallbackSourcePathUsed === true
+            || String(diagnostics.failureReason || '').trim().length > 0;
+    }
+
+    function buildGraphFocusDiagnosticsPersistenceRequest(detail) {
+        if (!detail || typeof detail !== 'object') {
+            return null;
+        }
+        const payload = detail.payload && typeof detail.payload === 'object' ? detail.payload : {};
+        const diagnostics = detail.diagnostics && typeof detail.diagnostics === 'object' ? detail.diagnostics : {};
+        const sourcePathScope = inferKnowledgeWorkspaceScopeFromSourcePath(
+            String(diagnostics.resolvedSourcePath || diagnostics.requestedSourcePath || payload.sourcePath || '').trim()
+        );
+        const requestContext = resolveKnowledgeWorkspaceRequestContext();
+        const scope = sourcePathScope || requestContext.scope || {};
+        const userId = getUserId();
+        const requestPayload = {
+            userId,
+            sessionId: getOrCreateConversationSessionId(userId),
+            workspaceId: typeof scope.workspaceId === 'string' && scope.workspaceId.trim()
+                ? scope.workspaceId.trim().toLowerCase()
+                : undefined,
+            corpusId: typeof scope.corpusId === 'string' && scope.corpusId.trim()
+                ? scope.corpusId.trim().toLowerCase()
+                : undefined,
+            title: String(payload.title || diagnostics.title || '').trim() || undefined,
+            requestedSourcePath: String(diagnostics.requestedSourcePath || payload.sourcePath || '').trim() || undefined,
+            resolvedSourcePath: String(diagnostics.resolvedSourcePath || '').trim() || undefined,
+            candidateSourcePaths: Array.isArray(diagnostics.candidateSourcePaths)
+                ? diagnostics.candidateSourcePaths.map((entry) => String(entry || '').trim()).filter(Boolean)
+                : [],
+            attemptedSourcePaths: Array.isArray(diagnostics.attemptedSourcePaths)
+                ? diagnostics.attemptedSourcePaths.map((entry) => String(entry || '').trim()).filter(Boolean)
+                : [],
+            fallbackSourcePathUsed: diagnostics.fallbackSourcePathUsed === true,
+            matchedSpanCount: Number.isFinite(Number(diagnostics.matchedSpanCount)) ? Number(diagnostics.matchedSpanCount) : 0,
+            highlightTermCount: Number.isFinite(Number(diagnostics.highlightTermCount)) ? Number(diagnostics.highlightTermCount) : 0,
+            highlightedNodeCount: Number.isFinite(Number(diagnostics.highlightedNodeCount)) ? Number(diagnostics.highlightedNodeCount) : 0,
+            markdownRuntimeAvailable: diagnostics.markdownRuntimeAvailable === true,
+            storageProviderAvailable: diagnostics.storageProviderAvailable === true,
+            readSucceeded: diagnostics.readSucceeded === true,
+            renderSucceeded: diagnostics.renderSucceeded === true,
+            usedFallback: diagnostics.usedFallback === true,
+            failureReason: String(diagnostics.failureReason || '').trim(),
+            recordedAt: new Date().toISOString(),
+        };
+        if (!requestPayload.requestedSourcePath && !requestPayload.resolvedSourcePath && !requestPayload.title) {
+            return null;
+        }
+        return requestPayload;
+    }
+
+    function buildGraphFocusDiagnosticsPersistenceKey(requestPayload) {
+        if (!requestPayload || typeof requestPayload !== 'object') {
+            return '';
+        }
+        return JSON.stringify({
+            sessionId: requestPayload.sessionId,
+            workspaceId: requestPayload.workspaceId || '',
+            corpusId: requestPayload.corpusId || '',
+            title: requestPayload.title || '',
+            requestedSourcePath: requestPayload.requestedSourcePath || '',
+            resolvedSourcePath: requestPayload.resolvedSourcePath || '',
+            candidateSourcePaths: requestPayload.candidateSourcePaths || [],
+            attemptedSourcePaths: requestPayload.attemptedSourcePaths || [],
+            fallbackSourcePathUsed: requestPayload.fallbackSourcePathUsed === true,
+            matchedSpanCount: requestPayload.matchedSpanCount || 0,
+            highlightTermCount: requestPayload.highlightTermCount || 0,
+            highlightedNodeCount: requestPayload.highlightedNodeCount || 0,
+            markdownRuntimeAvailable: requestPayload.markdownRuntimeAvailable === true,
+            storageProviderAvailable: requestPayload.storageProviderAvailable === true,
+            readSucceeded: requestPayload.readSucceeded === true,
+            renderSucceeded: requestPayload.renderSucceeded === true,
+            usedFallback: requestPayload.usedFallback === true,
+            failureReason: requestPayload.failureReason || '',
+        });
+    }
+
+    async function persistGraphFocusDiagnostics(detail) {
+        if (!shouldPersistGraphFocusDiagnostics(detail)) {
+            return;
+        }
+        const requestPayload = buildGraphFocusDiagnosticsPersistenceRequest(detail);
+        if (!requestPayload) {
+            return;
+        }
+        const persistenceKey = buildGraphFocusDiagnosticsPersistenceKey(requestPayload);
+        if (persistenceKey && persistenceKey === lastGraphFocusDiagnosticsPersistenceKey) {
+            return;
+        }
+        try {
+            await requestJson(GRAPH_FOCUS_DIAGNOSTICS_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestPayload),
+            });
+            lastGraphFocusDiagnosticsPersistenceKey = persistenceKey;
+        } catch (_error) {
+        }
     }
 
     const AGENT_CONVERSATION_TURN_ID_HEADER = 'X-Agent-Conversation-Turn-Id';
@@ -4220,6 +4350,12 @@
             window.addEventListener(ACTIVE_SOURCE_TARGET_EVENT, function () {
                 renderWorkspaceScopeSelector();
             });
+            if (window.__NC_AGENT_WORKSPACE_GRAPH_FOCUS_DIAGNOSTICS_BOUND !== true) {
+                window.__NC_AGENT_WORKSPACE_GRAPH_FOCUS_DIAGNOSTICS_BOUND = true;
+                window.addEventListener(GRAPH_FOCUS_DIAGNOSTICS_EVENT, function (event) {
+                    void persistGraphFocusDiagnostics(event && event.detail ? event.detail : null);
+                });
+            }
         }
         appendLocalizedAssistantMessage(
             'agentWorkspace.messages.ready',

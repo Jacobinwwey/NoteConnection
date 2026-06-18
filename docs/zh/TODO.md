@@ -12,6 +12,8 @@
 - [x] `queryBackend.ts` 的 ranking 已从 relation-degree bonus 扩展到 anchor distance、path-confidence、prerequisite-depth、temporal-invalidity penalty 与 relation-intent bonus。
 - [x] 右侧 source rendering 现在已经具备 candidate-path 重试、pane 内可见的 graph-focus diagnostics，以及 durable knowledge-run 图诊断检查面。
 - [x] 已在 `knowledgeRun.quality.gates` 中补齐图回答专用质量门禁，覆盖 prerequisite ordering、comparison branch、temporal warning、graph-op fallback 与有界 graph budgeting。
+- [x] graph-focus render diagnostics 已通过运行时边界外化：agent workspace 现在会把有价值的 graph-focus 事件写入 session state，workspace export 会进一步派生 durable `runtime.graphFocusReports`。
+- [x] 后续 conversation / study-session 写入现在会保留已记录的 graph-focus 报告历史，不再整块覆盖无关 `panelState` 域。
 
 ### 2026-06-10 知识工作区与 DAG TODO 重新分类
 
@@ -21,7 +23,7 @@
 - [x] 当前用户可见回答区在本切片中已收缩：`answer` / `directAnswer` 现在保持 targeted，supporting block 继续通过次级 pane、trace、artifact 与 export 保留。
 - [~] 左侧 knowledge-hit 交互仍应视为部分完成：已经是 file-first，但还未完全收敛为 right-pane-first 阅读模型。
 - [x] retrieval 与 answer synthesis 之间的 graph-conditioned context-assembly layer 已经落地，当前 DAG 已成为一等 answer-planning substrate。
-- [~] `knowledge_run` 的 pane/history/compare graph telemetry 现在已经通过 `runtime.knowledgeRunReports` 进入 export；剩余问题是 graph-focus render diagnostics 是否也要外化。
+- [x] `knowledge_run` 的 pane/history/compare graph telemetry 现在已经通过 `runtime.knowledgeRunReports` 进入 export；graph-focus render diagnostics 也已经通过 `runtime.graphFocusReports` 外化。
 - [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。
 - [ ] 当本切片状态变化时，继续同步根目录与 `docs/en|zh` 的 README、TODO、task、implementation plan、walkthrough、Interface、dashboard 与 TEST_REPORT 文档。
 

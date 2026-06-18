@@ -8,7 +8,8 @@
 - [x] 右侧原文/高亮行为现在已经支持 candidate source path 重试，记录 requested/candidate/attempted/resolved path 诊断，并在 graph-focus 与 durable knowledge-run 检查面中暴露这些诊断。
 - [x] retrieval 侧的 graph intent detection 现在已经覆盖中文 compare/how-to/explain 标记，并且 compare-branch 排序已经有“lexical 更强的 reference note 仍应落后于 direct contrast branch”的回归测试。
 - [x] `graph_comparison_branch` 质量门禁现在已经能拒绝 reference-only support 误报；compare intent 若没有真实 branch-difference signal，将不再通过该 gate。
-- [ ] 下一活跃任务：在新的 assembler + graph-aware ranking 边界之上继续校准图专项质量门禁，并决定 graph-focus render diagnostics 是否也要继续提升到 replay/export surface；`knowledge_run` telemetry 已经有 durable export 面。
+- [x] graph-focus render diagnostics 现在已经跨过运行时边界：有价值的 pane 诊断会写入 session state，并在 export 中派生为 durable `runtime.graphFocusReports`。
+- [ ] 下一活跃任务：在新的 assembler + graph-aware ranking 边界之上继续校准图专项质量门禁，并只在新模块拥有真实状态或不变量时继续推进 owner reduction。
 - [ ] 继续保持公开回答区收缩，把 graph evidence、temporal details 与 developer trace 路由到次级表面。
 
 ### 当前验收目标

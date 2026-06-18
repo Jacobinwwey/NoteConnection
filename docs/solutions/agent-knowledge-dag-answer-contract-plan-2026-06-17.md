@@ -3,9 +3,9 @@ module: architecture
 tags: [agent-workspace, dag, rag, graph-context, answer-contract, compatibility, robustness]
 problem_type: implementation-plan
 created: 2026-06-17
-updated: 2026-06-17
-status: active
-version: 2026.06.17
+updated: 2026-06-18
+status: completed
+version: 2026.06.18
 ---
 
 # 2026-06-17 v1.7.0 - Agent Knowledge DAG Answer Contract Plan
@@ -74,7 +74,7 @@ The project already has multiple graph-bearing layers. The implementation must r
    - Current 2026-06-17 slice: now advanced into a first-class owner by `src/learning/graphContextAssembler.ts`, which selects the anchor, reorders support nodes, carries explicit `connectionPaths`, adds bounded predecessor/successor windows, and records evidence refs plus graph diagnostics before answer synthesis.
    - The same slice protects the current graph substrate during read-side auto-save by merging still-valid store-side relation/temporal edges into rebuilt snapshots before persisting.
    - The same slice contracts the public `answer` / `directAnswer` string so it no longer embeds citation lists, connection paths, memory notices, or knowledge-run diagnostics.
-   - Remaining gap: retrieval ranking still relies too heavily on shallow degree-style signals, and the right-pane source-focus path still needs explicit diagnostics for path/highlight mismatches.
+   - 2026-06-18 update: right-pane source-focus diagnostics now also cross the runtime boundary through session-state persistence and export-derived `runtime.graphFocusReports`; the remaining work is calibration, not missing plumbing.
 
 6. **Answer synthesis layer**
    - Owner: `src/learning/conversationComposer.ts` plus future composer/assembler modules.
@@ -118,9 +118,9 @@ This order matters. If graph expansion happens before scope normalization, it ca
 |---|---|---|---|
 | Public answer should answer the user's question, not list every internal artifact | `buildScopedConversationAnswer()` now returns a single targeted answer string; citation lists, graph paths, memory notices, and knowledge-run diagnostics stay in typed blocks, traces, panes, or exports. | Implemented current slice | Keep future DAG context from re-inflating the answer area. |
 | Hide developer-heavy evidence and purple-box-style support material for now | Evidence pane and runtime/export traces carry supporting context. | Direction is correct | Any new graph details must default to secondary surfaces unless explicitly requested. |
-| Clicking a file hit should open right-side content and highlight matched text | `workspace_panes.js` routes file entries through graph focus, retries source reads across payload + matched-span candidate paths, renders through the shared markdown runtime, highlights matched spans, and records requested/candidate/attempted/resolved-path diagnostics. | Implemented broadened P4 slice | Remaining gap is whether graph-focus render diagnostics should also be promoted into replay/export-oriented operator surfaces. |
+| Clicking a file hit should open right-side content and highlight matched text | `workspace_panes.js` routes file entries through graph focus, retries source reads across payload + matched-span candidate paths, renders through the shared markdown runtime, highlights matched spans, records requested/candidate/attempted/resolved-path diagnostics, and now emits interesting diagnostics through the agent-workspace runtime for durable session/export capture. | Implemented broadened P4 slice | Remaining risk is calibration quality, not missing persistence plumbing. |
 | Use this project's existing DAG, not a generic graph database abstraction | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, `findPath`, path/session logic, and `Graph.ts` DAG helpers already exist. Retrieval-side graph intent detection now also aligns with the rest of the stack by covering Chinese compare/how-to/explain markers. | Confirmed | The prior "graph database + prompt framework" framing was too generic. |
-| Let LLM inspect high-quality graph structure | 2026-06-17 code now uses `graphContextAssembler.ts` to choose the anchor, reorder support nodes, preserve explicit store path chains, add predecessor/successor windows, and expose graph diagnostics through trace/export/evidence pane. Durable `knowledge_run` artifacts now also retain `graphContext`, operator inspection/history/compare cards surface graph context plus graph diagnostics, and `WorkspaceExportBundle` now emits `runtime.knowledgeRunReports` for offline replay/operator analysis. | Implemented broader P1/P4/P5 foundation | Remaining work is calibration breadth and deciding whether graph-focus render diagnostics should also become replay/export-oriented operator data. |
+| Let LLM inspect high-quality graph structure | 2026-06-17/18 code now uses `graphContextAssembler.ts` to choose the anchor, reorder support nodes, preserve explicit store path chains, add predecessor/successor windows, and expose graph diagnostics through trace/export/evidence pane. Durable `knowledge_run` artifacts now also retain `graphContext`, operator inspection/history/compare cards surface graph context plus graph diagnostics, `WorkspaceExportBundle` emits `runtime.knowledgeRunReports`, and graph-focus render diagnostics are exported as `runtime.graphFocusReports`. | Implemented broader P1/P4/P5 foundation | Remaining work is calibration breadth and owner reduction, not runtime-surface absence. |
 | Preserve compatibility | `assistantMessage` remains valid; new `graphContext.connectionPaths` is optional and additive; snapshot merging keeps existing relation/temporal edges only when both endpoints remain active. | Preserved | Keep optional fields optional in all clients and exports. Add edge ownership metadata before treating missing persisted edges as intentional deletes. |
 
 ### Open-Source Library Review Result
@@ -252,15 +252,16 @@ Expected failure classes remain:
 - old runtime file path still used by a legacy entrypoint,
 - markdown rendering succeeds but highlight terms are too narrow.
 
-The current code now uses those diagnostics in two operator-facing places without forking the rendering stack:
+The current code now uses those diagnostics in three operator-facing places without forking the rendering stack:
 
 - graph focus retries candidate paths collected from both payload and matched spans before falling back,
 - the graph-focus pane renders diagnostics when fallback or path-fallback behavior occurs,
 - durable `knowledge_run` artifacts retain `graphContext`, and the knowledge-run inspection card shows graph context plus graph diagnostics for operator review.
 - knowledge-run history now shows compact graph telemetry per run, and run-to-run comparison cards expose path / temporal-warning / graph-fallback deltas for calibration review.
-- `WorkspaceExportBundle` now emits durable `runtime.knowledgeRunReports`, so the same `knowledge_run` graph telemetry can be replayed and analyzed offline without reimplementing the frontend summary logic.
+- the agent workspace now persists interesting graph-focus diagnostics into session state and later conversation/study-session writes preserve that history instead of overwriting unrelated `panelState` domains,
+- `WorkspaceExportBundle` now emits durable `runtime.knowledgeRunReports` and `runtime.graphFocusReports`, so the same graph telemetry can be replayed and analyzed offline without reimplementing the frontend summary logic.
 
-The best fix still remains payload/path normalization plus highlight diagnostics, not a second rendering stack. Remaining gap: decide whether graph-focus render diagnostics should later feed broader replay/export-oriented operator surfaces.
+The best fix still remains payload/path normalization plus highlight diagnostics, not a second rendering stack. The remaining gap is calibration quality: decide what additional operator summaries are justified only after current `knowledgeRunReports` + `graphFocusReports` prove insufficient.
 
 #### P5: Add graph answer quality gates
 
@@ -312,11 +313,11 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 
 ### Five-Point Summary
 
-1. The project already has a real DAG substrate; the missing piece has now moved from “extract the assembler” to “make ranking and quality gates graph-native.”
-2. The public answer must stay targeted; this slice now keeps `answer` / `directAnswer` free of evidence/debug lists while preserving those details in evidence panes, traces, and exports.
-3. The 2026-06-17 code slice now has a first-class assembler boundary with anchor/support/path/window decisions before answer synthesis, but ranking and quality gates are still partial.
+1. The project already has a real DAG substrate; the missing piece has moved from “extract the assembler” to “calibrate graph-aware ranking and quality gates.”
+2. The public answer must stay targeted; this slice keeps `answer` / `directAnswer` free of evidence/debug lists while preserving those details in evidence panes, traces, and exports.
+3. The graph-focus path is now durable end to end: pane diagnostics cross the runtime boundary, survive later session-state writes, and export as `runtime.graphFocusReports`.
 4. The referenced open-source projects are best used as design patterns, not new runtime dependencies.
-5. The next robust direction is wider operator-facing diagnostics plus deeper calibration of the new graph-aware ranking and quality-gate model.
+5. The next robust direction is deeper calibration and carefully scoped owner reduction, not broader framework adoption.
 
 ## 中文文档
 
@@ -554,7 +555,7 @@ Evidence pane 应渲染：
 - legacy entrypoint 仍在使用旧 runtime 文件；
 - markdown 渲染成功，但 highlight terms 太窄。
 
-最佳修复仍然更可能是 payload/path normalization + highlight diagnostics，而不是再造一套渲染栈。剩余缺口是这些诊断还主要停留在 graph-focus pane/controller 层，后续应继续接到更广的运维检查面。
+最佳修复仍然更可能是 payload/path normalization + highlight diagnostics，而不是再造一套渲染栈。2026-06-18 之后，这些诊断已不再只停留在 graph-focus pane/controller 层，而是通过 session state 与 `runtime.graphFocusReports` 进入更广的运维检查面；剩余缺口转为“是否还需要更高阶汇总”的校准问题。
 
 #### P5：增加图回答质量门禁
 
@@ -606,8 +607,8 @@ Evidence pane 应渲染：
 
 ### 五点总结
 
-1. 项目已经有真实 DAG 底座；当前缺口已经从“抽出 assembler”转成“让 ranking 与质量门禁 graph-native”。
-2. 公开回答必须保持 targeted；本切片已让 `answer` / `directAnswer` 不再携带 evidence/debug 列表，同时把这些细节保留在 evidence pane、trace 与 export。
-3. 2026-06-17 代码切片已经有回答前的一等 assembler 边界，会做 anchor/support/path/window 决策，但 ranking 与质量门禁仍是部分实现。
+1. 项目已经有真实 DAG 底座；当前缺口已经从“抽出 assembler”转成“校准 graph-aware ranking 与质量门禁”。
+2. 公开回答必须保持 targeted；本切片让 `answer` / `directAnswer` 不再携带 evidence/debug 列表，同时把这些细节保留在 evidence pane、trace 与 export。
+3. graph-focus 路径现在已经形成端到端的 durable 链路：pane 诊断会跨过运行时边界，保留到后续 session-state 写入中，并导出为 `runtime.graphFocusReports`。
 4. 参考开源库更适合作为设计模式，不适合作为新的运行时依赖。
-5. 下一步应把重心转到更广的 operator-facing diagnostics，以及对新图排序 / 质量门禁模型的持续校准，而不是继续停留在“有没有 assembler / 有没有 graph-aware ranking”这个层级。
+5. 下一步应把重心转到更深的校准与克制的 owner reduction，而不是继续扩大框架面。

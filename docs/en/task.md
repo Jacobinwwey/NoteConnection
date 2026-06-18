@@ -12,7 +12,8 @@
 - [x] Right-pane source/highlight behavior now retries candidate source paths, records requested/candidate/attempted/resolved-path diagnostics, and exposes those diagnostics in graph-focus plus durable knowledge-run inspection surfaces.
 - [x] Retrieval-side graph intent detection now covers Chinese compare/how-to/explain markers, and compare-branch ranking is regression-tested against lexically stronger reference notes.
 - [x] The `graph_comparison_branch` quality gate now rejects reference-only support when compare intent lacks real branch-difference signals.
-- [ ] Next active task: calibrate the new graph-quality-gate model and decide whether graph-focus render diagnostics should also be promoted into replay/export-oriented surfaces, now that `knowledge_run` telemetry is exported durably.
+- [x] Graph-focus render diagnostics now cross the runtime boundary: interesting pane diagnostics are persisted in session state and exported as durable `runtime.graphFocusReports`.
+- [ ] Next active task: calibrate the new graph-quality-gate model and continue owner reduction only where a new module owns real invariants or state.
 - [ ] Keep the public answer contracted while routing graph evidence, temporal details, and developer trace to secondary surfaces.
 
 ### Current Acceptance Targets

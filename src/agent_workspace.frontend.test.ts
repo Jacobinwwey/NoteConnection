@@ -8137,6 +8137,69 @@ describe('agent workspace learning-path integration', () => {
         expect(cardAfter?.textContent).toContain('2 个动作，约 12 分钟。');
     });
 
+    test('persists interesting graph-focus diagnostics through the agent workspace runtime boundary', async () => {
+        const {
+            controller,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness();
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+
+        const readContent = jest.fn(async (sourcePath: string) => {
+            if (sourcePath === 'Knowledge_Base/old/location.md') {
+                throw new Error('stale_path');
+            }
+            return '# Persistence\n\nRecovered source path content.';
+        });
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement, markdown: string) => {
+            container.innerHTML = `<p>${markdown}</p>`;
+        });
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+
+        controller.openGraphFocusPane({
+            atomId: 'atom_blocks',
+            title: 'Blocks Citation',
+            sourcePath: 'Knowledge_Base/old/location.md',
+            matchedSpans: [
+                {
+                    title: 'Blocks Citation',
+                    snippet: 'Recovered source path content.',
+                    sourcePath: 'Knowledge_Base/optics/blocks.md',
+                    startLine: 3,
+                },
+            ],
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const graphFocusDiagnosticsCall = fetchMock.mock.calls.find((call) => call?.[0] === '/api/knowledge/session/graph-focus-diagnostics');
+        expect(graphFocusDiagnosticsCall).toBeDefined();
+        const requestBody = JSON.parse(String(graphFocusDiagnosticsCall?.[1]?.body || '{}'));
+        expect(requestBody.userId).toBe('path_user_default');
+        expect(String(requestBody.sessionId || '')).toContain('session_client_path_user_default_');
+        expect(requestBody.workspaceId).toBe('optics');
+        expect(requestBody.corpusId).toBe('optics');
+        expect(requestBody.title).toBe('Blocks Citation');
+        expect(requestBody.requestedSourcePath).toBe('Knowledge_Base/old/location.md');
+        expect(requestBody.resolvedSourcePath).toBe('Knowledge_Base/optics/blocks.md');
+        expect(requestBody.fallbackSourcePathUsed).toBe(true);
+        expect(requestBody.usedFallback).toBe(false);
+        expect(requestBody.candidateSourcePaths).toEqual([
+            'Knowledge_Base/old/location.md',
+            'Knowledge_Base/optics/blocks.md',
+        ]);
+    });
+
     test('rerenders localized system messages with params when language changes', async () => {
         const { document, window, graphView } = loadAgentWorkspaceHarness({ withI18n: true });
         graphView?.resolveNodeById.mockReturnValue(null);

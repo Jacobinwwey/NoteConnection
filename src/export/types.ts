@@ -107,6 +107,35 @@ export interface WorkspaceExportKnowledgeRunReport {
     graphSignal: WorkspaceExportKnowledgeRunGraphSignal;
 }
 
+export interface WorkspaceExportGraphFocusSignal {
+    usedFallback: boolean;
+    fallbackSourcePathUsed: boolean;
+    matchedSpanCount: number;
+    highlightTermCount: number;
+    highlightedNodeCount: number;
+    candidateSourcePathCount: number;
+    attemptedSourcePathCount: number;
+    markdownRuntimeAvailable: boolean;
+    storageProviderAvailable: boolean;
+    readSucceeded: boolean;
+    renderSucceeded: boolean;
+    failureReason: string;
+}
+
+export interface WorkspaceExportGraphFocusReport {
+    sessionStateId: string;
+    sessionId: string;
+    userId: string;
+    workspaceId: string | null;
+    corpusId: string | null;
+    mode: string;
+    recordedAt: string;
+    title: string;
+    requestedSourcePath: string;
+    resolvedSourcePath: string;
+    signal: WorkspaceExportGraphFocusSignal;
+}
+
 export interface WorkspaceExportBundle {
     manifest: WorkspaceExportBundleManifest;
     workspace: WorkspaceRecord;
@@ -133,6 +162,7 @@ export interface WorkspaceExportBundle {
         conversationInvocations: AgentConversationInvocationRecord[];
         workflowArtifacts: WorkflowArtifactRecord[];
         knowledgeRunReports: WorkspaceExportKnowledgeRunReport[];
+        graphFocusReports: WorkspaceExportGraphFocusReport[];
     };
     memory: {
         entries: WorkspaceScopedMemoryExportRecord[];

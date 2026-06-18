@@ -81,6 +81,34 @@ describe('KnowledgeLearningPlatform persistence', () => {
             persistMemory: true,
         });
         expect(firstConversation.summary.appliedMemoryCount).toBeGreaterThan(0);
+        await platformA.recordGraphFocusRenderDiagnostics({
+            userId: 'user_persist',
+            sessionId: 'persist_session_scope',
+            workspaceId: 'persist',
+            corpusId: 'persist',
+            title: 'Persistence Layer',
+            requestedSourcePath: 'Knowledge_Base/persist-old.md',
+            resolvedSourcePath: 'Knowledge_Base/persist.md',
+            candidateSourcePaths: [
+                'Knowledge_Base/persist-old.md',
+                'Knowledge_Base/persist.md',
+            ],
+            attemptedSourcePaths: [
+                'Knowledge_Base/persist-old.md',
+                'Knowledge_Base/persist.md',
+            ],
+            fallbackSourcePathUsed: true,
+            matchedSpanCount: 1,
+            highlightTermCount: 1,
+            highlightedNodeCount: 1,
+            markdownRuntimeAvailable: true,
+            storageProviderAvailable: true,
+            readSucceeded: true,
+            renderSucceeded: true,
+            usedFallback: false,
+            failureReason: '',
+            recordedAt: nowIso,
+        });
         await platformA.executeStudySessionAction({
             userId: 'user_persist',
             action: {
@@ -128,6 +156,16 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(snapshotJson.workflowArtifacts.artifacts.some((artifact: { kind?: string }) => artifact.kind === 'knowledge_run')).toBe(true);
         expect(snapshotJson.workflowArtifacts.artifacts.some((artifact: { kind?: string }) => artifact.kind === 'flashcard_batch')).toBe(true);
         expect(snapshotJson.conversationTurns[0]?.response?.trace?.graphContext).toBeDefined();
+        expect(snapshotJson.sessionStateSnapshot.sessionStates[0]?.panelState?.graphFocusReports).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    title: 'Persistence Layer',
+                    requestedSourcePath: 'Knowledge_Base/persist-old.md',
+                    resolvedSourcePath: 'Knowledge_Base/persist.md',
+                    fallbackSourcePathUsed: true,
+                }),
+            ])
+        );
 
         nowIso = '2026-03-31T11:00:00.000Z';
         const platformB = new KnowledgeLearningPlatform({
@@ -186,6 +224,20 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(restoredBundle.runtime.workflowArtifacts.some((artifact) => artifact.kind === 'flashcard_batch')).toBe(true);
         expect(restoredBundle.memory.auditRecords.length).toBeGreaterThan(0);
         expect(restoredBundle.runtime.conversationTurns.some((turn) => Boolean((turn as any).response.trace.graphContext))).toBe(true);
+        expect((restoredBundle.runtime as any).graphFocusReports).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    sessionId: 'persist_session_scope',
+                    title: 'Persistence Layer',
+                    requestedSourcePath: 'Knowledge_Base/persist-old.md',
+                    resolvedSourcePath: 'Knowledge_Base/persist.md',
+                    signal: expect.objectContaining({
+                        fallbackSourcePathUsed: true,
+                        usedFallback: false,
+                    }),
+                }),
+            ])
+        );
 
         const storeDiagnostics = await platformB.getStoreDiagnostics();
         expect(storeDiagnostics.storeType).toBe('file');

@@ -22,6 +22,9 @@
 - recent-run history 与 run-to-run comparison 卡片现在也会暴露紧凑 graph telemetry，运维检查不再只停留在单次 run 检查面；
 - `WorkspaceExportBundle` 现在已经暴露 durable 的 `runtime.knowledgeRunReports`，可为离线回放与运维分析提供 compare-ready graph signal summary；
 - `workspace_panes.js` 现在会基于 payload + matched-span candidate path 重试 graph-focus 原文读取，记录 requested/candidate/attempted/resolved path 诊断，并在 fallback 或路径回退发生时把这些诊断显示在右侧 pane；
+- agent workspace 现在会把有价值的 graph-focus diagnostics 写入 session state，而不再让它们只停留在前端控制器内存里；
+- 后续 conversation/study-session 的 session-state 写入现在会保留既有 graph-focus 报告历史，而不是覆盖无关 `panelState` 域；
+- `WorkspaceExportBundle` 现在也会派生 durable 的 `runtime.graphFocusReports`，因此 graph-focus 的失败与路径回退事件可以在不解析原始 `panelState` 的情况下离线回放；
 - `WorkspaceExportBundle` 会在导出的 conversation trace graph context 中保留 connection paths；
 - 聚焦测试覆盖 graph-path composition、platform enrichment、frontend evidence rendering、locale labels 与 export serialization。
 
@@ -31,7 +34,7 @@
 |---|---|---|
 | 公开回答区不能堆内部产物 | `answer` / `directAnswer` 现在保持 targeted；graph connection paths、citations、temporal detail 与 knowledge-run diagnostics 属于次级 inspection 数据。 | 当前切片已实现 |
 | 暂时隐藏开发者导向 support material | graph paths、temporal details、citations 与 traces 默认进入 evidence/export surface，除非用户显式要求查看。 | 方向保持 |
-| 文件命中打开右侧 pane 并高亮原文 | graph-focus 现在会在 payload + matched-span candidate path 之间重试 source rendering，保留 markdown 高亮渲染，并在 fallback 行为出现时在 pane 内暴露 requested/candidate/attempted/resolved path 诊断。 | 已实现扩展后的 P4 切片 |
+| 文件命中打开右侧 pane 并高亮原文 | graph-focus 现在会在 payload + matched-span candidate path 之间重试 source rendering，保留 markdown 高亮渲染，在 pane 内暴露 requested/candidate/attempted/resolved path 诊断，并把有价值的诊断写入 session state、派生为 `runtime.graphFocusReports`。 | 已实现扩展后的 P4 切片 |
 | 使用当前 DAG | `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、store ops 与 `findPath` 是当前活跃图底座。 | 已确认 |
 | 让 LLM 查阅图结构 | 有界 `graphContextAssembler` 已在回答合成前选择 anchor、重排 support node、挂接显式路径，并补 predecessor/successor window 与 diagnostics。 | P1 基础已实现 |
 | retrieval 不再只是浅层 degree 加分 | `queryBackend.ts` 现在已在 `local_hybrid` / `local_vector` 中使用 anchor distance、directed path confidence、prerequisite depth、temporal invalidity penalty 与 relation-intent bonus；中文 compare/how-to/explain 标记也已进入 intent detection，并对 direct compare branch 相对 lexical 更强的 reference note 做了显式校准。 | 更宽的 P2 切片已实现 |
@@ -41,7 +44,7 @@
 即时后续方向：
 
 1. 用更多真实回归与运维证据继续校准新的图排序 / 质量门禁模型。
-2. 在 `knowledge_run` telemetry 已有 durable export surface 之后，继续决定 graph-focus render diagnostics 是否也要提升到 replay/export/operator-report surface。
+2. 现在 `knowledge_run` telemetry 已通过 `runtime.knowledgeRunReports`、graph-focus diagnostics 已通过 `runtime.graphFocusReports` 进入 export，下一步转为校准这些 replay/export 运维检查面的信号质量。
 3. 继续保持公开回答聚焦，同时让 graph/evidence/developer detail 通过 evidence pane、trace、artifact 与 export bundle 可检查。
 
 ## 2026-06-10 知识工作区与 DAG 对齐切片
@@ -611,7 +614,7 @@ Tauri-first reply rendering 基线已交付：
 
 | 模块 | 文件数 | 用途 |
 |---|---|---|
-| `src/routes/` | 10 | 模块化 API 路由处理器（65 条路由） |
+| `src/routes/` | 10 | 模块化 API 路由处理器（66 条路由） |
 | `src/middleware/` | 5 | HTTP 中间件（cors, auth, body-parser, request-trace） |
 | `src/learning/domains/` | 8 | 领域类（7 类 + 7 Platform 接口） |
 | `src/frontend/*.mjs` | 4 | ES module 版 i18n, runtime_bridge, main, worker bridge |
@@ -625,7 +628,7 @@ Tauri-first reply rendering 基线已交付：
 
 | 指标 | 之前 | 之后 |
 |---|---|---|
-| 路由模块 | 0（内联 if/else 链） | 10 模块, 65 路由 |
+| 路由模块 | 0（内联 if/else 链） | 10 模块, 66 路由 |
 | 中间件 | 0（内联函数） | 5 独立模块 |
 | 领域类 | 1（13,370 行单体） | 7 类 + 7 Platform 接口 |
 | 前端模块系统 | `<script>` 标签链 | ES modules + Vite 4-chunk |

@@ -17,16 +17,17 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 - Retrieval-side graph intent detection now includes Chinese compare/how-to/explain markers, and direct compare branches receive an explicit structural promotion over reference-only notes.
 - The `graph_comparison_branch` quality gate is now calibrated against false positives: compare intent no longer passes on reference-only support without actual contrast/analogy or multi-branch structure.
 - Operator-facing diagnostics now exist in three concrete surfaces: graph-focus path-fallback diagnostics in the right pane, graph-context plus graph-diagnostics inspection inside durable `knowledge_run` cards, and compact graph telemetry inside knowledge-run history/compare review flows.
+- Interesting graph-focus diagnostics now also cross the runtime boundary: the agent workspace persists them into session state, later conversation/study-session writes preserve that history, and workspace export derives durable `runtime.graphFocusReports`.
 - Prompt-framework research should guide contracts and evaluation, not pull Python frameworks into the app runtime.
 
 #### Next execution order
 
 1. Keep the new assembler surface additive and backward-compatible.
 2. Keep graph-aware ranking bounded and calibrate it against regression cases instead of drifting back toward degree-driven hubs.
-3. Decide whether graph-focus render diagnostics should also be promoted into replay/export-oriented surfaces, now that `knowledge_run` history/compare telemetry is already exported through `runtime.knowledgeRunReports`.
+3. Calibrate the new replay/export-oriented operator surfaces now that `knowledge_run` history/compare telemetry is exported through `runtime.knowledgeRunReports` and graph-focus diagnostics are exported through `runtime.graphFocusReports`.
 4. Keep graph/debug/evidence detail in evidence/export surfaces, not in the public answer.
 5. Calibrate the new graph-specific answer quality gates against more regression cases and operator evidence.
-6. Continue owner reduction only when the new module owns real decisions or invariants.
+6. Continue owner reduction only when the new module owns real decisions, state, or invariants; avoid generic panel-state pass-through endpoints.
 
 #### Acceptance criteria
 

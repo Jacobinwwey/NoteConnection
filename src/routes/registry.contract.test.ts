@@ -57,6 +57,7 @@ describe('Route Registry', () => {
         expect(paths.has('POST /api/knowledge/ingest')).toBe(true);
         expect(paths.has('POST /api/knowledge/query')).toBe(true);
         expect(paths.has('POST /api/knowledge/export/workspace')).toBe(true);
+        expect(paths.has('POST /api/knowledge/session/graph-focus-diagnostics')).toBe(true);
         expect(paths.has('POST /api/knowledge/conversation')).toBe(false);
     });
 
