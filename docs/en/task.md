@@ -13,6 +13,8 @@
 - [x] Retrieval-side graph intent detection now covers Chinese compare/how-to/explain markers, and compare-branch ranking is regression-tested against lexically stronger reference notes.
 - [x] The `graph_comparison_branch` quality gate now rejects reference-only support when compare intent lacks real branch-difference signals.
 - [x] Graph-focus render diagnostics now cross the runtime boundary: interesting pane diagnostics are persisted in session state and exported as durable `runtime.graphFocusReports`.
+- [x] The screenshot-backed compact-alias regression for `什么是waterglass?` has been reproduced, traced to planner/retrieval normalization drift, and fixed by passing planner-derived query variants into retrieval scoring.
+- [x] `verify-knowledge-workspace-runtime.js` now treats the compact/spaced `waterglass` pair as the default runtime acceptance matrix, and `npm run verify:knowledge-workspace:runtime` formalizes that gate.
 - [ ] Next active task: calibrate the new graph-quality-gate model and continue owner reduction only where a new module owns real invariants or state.
 - [ ] Keep the public answer contracted while routing graph evidence, temporal details, and developer trace to secondary surfaces.
 
@@ -22,6 +24,7 @@
 2. Public conversation compatibility remains additive: `assistantMessage` stays valid and new graph context fields are optional.
 3. Evidence-pane/export surfaces preserve graph connection paths without crowding the main answer.
 4. Follow-up implementation starts from context assembly and graph-specific tests, not from prompt-framework adoption.
+5. The compact/spaced `waterglass` runtime matrix passes for both `什么是waterglass?` and `什么是water glass`.
 
 ### 2026-06-10 Active Knowledge Workspace and DAG Task Sync
 

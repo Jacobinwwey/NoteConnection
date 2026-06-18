@@ -19,15 +19,17 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 - Operator-facing diagnostics now exist in three concrete surfaces: graph-focus path-fallback diagnostics in the right pane, graph-context plus graph-diagnostics inspection inside durable `knowledge_run` cards, and compact graph telemetry inside knowledge-run history/compare review flows.
 - Interesting graph-focus diagnostics now also cross the runtime boundary: the agent workspace persists them into session state, later conversation/study-session writes preserve that history, and workspace export derives durable `runtime.graphFocusReports`.
 - Prompt-framework research should guide contracts and evaluation, not pull Python frameworks into the app runtime.
+- A 2026-06-18 screenshot-backed runtime regression showed that planner alias normalization and retrieval scoring had drifted apart for compact mixed-language queries such as `什么是waterglass?`; the current slice fixes this by carrying planner-derived query variants into retrieval and by promoting the compact/spaced `waterglass` pair into the runtime verifier.
 
 #### Next execution order
 
 1. Keep the new assembler surface additive and backward-compatible.
-2. Keep graph-aware ranking bounded and calibrate it against regression cases instead of drifting back toward degree-driven hubs.
-3. Calibrate the new replay/export-oriented operator surfaces now that `knowledge_run` history/compare telemetry is exported through `runtime.knowledgeRunReports` and graph-focus diagnostics are exported through `runtime.graphFocusReports`.
-4. Keep graph/debug/evidence detail in evidence/export surfaces, not in the public answer.
-5. Calibrate the new graph-specific answer quality gates against more regression cases and operator evidence.
-6. Continue owner reduction only when the new module owns real decisions, state, or invariants; avoid generic panel-state pass-through endpoints.
+2. Keep planner and retrieval query normalization under one contract so document-title hits and evidence-bearing retrieval cannot drift apart again.
+3. Keep graph-aware ranking bounded and calibrate it against regression cases instead of drifting back toward degree-driven hubs.
+4. Calibrate the new replay/export-oriented operator surfaces now that `knowledge_run` history/compare telemetry is exported through `runtime.knowledgeRunReports` and graph-focus diagnostics are exported through `runtime.graphFocusReports`.
+5. Keep graph/debug/evidence detail in evidence/export surfaces, not in the public answer.
+6. Calibrate the new graph-specific answer quality gates against more regression cases and operator evidence.
+7. Continue owner reduction only when the new module owns real decisions, state, or invariants; avoid generic panel-state pass-through endpoints.
 
 #### Acceptance criteria
 
@@ -35,6 +37,7 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 2. Graph ops failure falls back to current retrieval-grounded behavior with diagnostics.
 3. Right-pane file hits keep source markdown and matched-span highlight behavior.
 4. No new broad prompt-framework dependency is introduced into the Tauri/Node runtime.
+5. `npm run verify:knowledge-workspace:runtime` passes the default `waterglass` matrix for both `什么是waterglass?` and `什么是water glass`, without zero-citation results or `retrieval_candidates_below_threshold`.
 
 ### 2026-06-10 Knowledge Workspace and DAG Implementation Plan
 

@@ -9,6 +9,8 @@
 - [x] retrieval 侧的 graph intent detection 现在已经覆盖中文 compare/how-to/explain 标记，并且 compare-branch 排序已经有“lexical 更强的 reference note 仍应落后于 direct contrast branch”的回归测试。
 - [x] `graph_comparison_branch` 质量门禁现在已经能拒绝 reference-only support 误报；compare intent 若没有真实 branch-difference signal，将不再通过该 gate。
 - [x] graph-focus render diagnostics 现在已经跨过运行时边界：有价值的 pane 诊断会写入 session state，并在 export 中派生为 durable `runtime.graphFocusReports`。
+- [x] 截图驱动的 `什么是waterglass?` 紧凑别名回归已经复现并定位为 planner / retrieval normalization 漂移；当前切片已通过把 planner-derived query variants 下发到 retrieval scoring 完成修复。
+- [x] `verify-knowledge-workspace-runtime.js` 现在会把 `waterglass` 的 compact/spaced 双查询作为默认运行时验收矩阵，`npm run verify:knowledge-workspace:runtime` 已成为正式门禁。
 - [ ] 下一活跃任务：在新的 assembler + graph-aware ranking 边界之上继续校准图专项质量门禁，并只在新模块拥有真实状态或不变量时继续推进 owner reduction。
 - [ ] 继续保持公开回答区收缩，把 graph evidence、temporal details 与 developer trace 路由到次级表面。
 
@@ -18,6 +20,7 @@
 2. 公开 conversation 兼容性保持 additive：`assistantMessage` 仍有效，新增 graph context 字段均为可选。
 3. evidence pane / export surface 能保留 graph connection paths，同时不挤占主回答区。
 4. 后续实现从 context assembly 与图专项测试启动，而不是从引入 prompt framework 启动。
+5. `waterglass` 的 compact/spaced 运行时矩阵必须同时通过：`什么是waterglass?` 与 `什么是water glass` 均能返回证据。
 
 ## 2026-06-10 知识工作区与 DAG 活跃任务同步
 

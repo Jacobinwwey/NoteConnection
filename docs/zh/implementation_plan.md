@@ -20,15 +20,17 @@
 - 当前运维可见诊断已经有三个具体面：右侧 graph-focus 的路径回退诊断、durable `knowledge_run` 卡片中的 graph context / graph diagnostics 检查面，以及 knowledge-run history/compare 流程中的紧凑 graph telemetry。
 - 有价值的 graph-focus diagnostics 现在也已经跨过运行时边界：agent workspace 会把它们写入 session state，后续 conversation/study-session 写入会保留这段历史，workspace export 则会派生 durable `runtime.graphFocusReports`。
 - prompt-framework 研究应指导 contract 与 evaluation，不应把 Python framework 拉入 app runtime。
+- 2026-06-18 的截图驱动运行时回归说明：`什么是waterglass?` 这类紧凑混合 query 上，planner 的 alias normalization 与 retrieval scoring 曾经发生漂移；当前切片已通过把 planner-derived query variants 显式下发到 retrieval，并把 compact/spaced `waterglass` 双查询提升为运行时 verifier，修复这一缺口。
 
 #### 下一步执行顺序
 
 1. 保持新的 assembler surface additive，并继续保证向前兼容。
-2. 保持 graph-aware ranking 有界，并用回归用例持续校准，避免回到 degree-driven hub 排序。
-3. 现在 `knowledge_run` history/compare telemetry 已通过 `runtime.knowledgeRunReports`、graph-focus diagnostics 也已通过 `runtime.graphFocusReports` 进入 export，下一步转为校准这些 replay/export-oriented 运维检查面的信号质量。
-4. 将 graph/debug/evidence 细节留在 evidence/export surface，而不是公开回答区。
-5. 继续校准新的图专项回答质量门禁，并补更多回归证据与运维证据。
-6. 只有当新模块拥有真实决策、状态或不变量时，才继续做 owner reduction；避免新增泛化 panel-state 透传端点。
+2. 保持 planner 与 retrieval 的 query normalization 由同一契约拥有，避免“文档标题已命中但证据检索仍断开”的问题再次出现。
+3. 保持 graph-aware ranking 有界，并用回归用例持续校准，避免回到 degree-driven hub 排序。
+4. 现在 `knowledge_run` history/compare telemetry 已通过 `runtime.knowledgeRunReports`、graph-focus diagnostics 也已通过 `runtime.graphFocusReports` 进入 export，下一步转为校准这些 replay/export-oriented 运维检查面的信号质量。
+5. 将 graph/debug/evidence 细节留在 evidence/export surface，而不是公开回答区。
+6. 继续校准新的图专项回答质量门禁，并补更多回归证据与运维证据。
+7. 只有当新模块拥有真实决策、状态或不变量时，才继续做 owner reduction；避免新增泛化 panel-state 透传端点。
 
 #### 验收标准
 
@@ -36,6 +38,7 @@
 2. graph ops 失败时能带 diagnostics 回退到当前 retrieval-grounded behavior。
 3. 右侧文件命中继续保留 source markdown 与 matched-span highlight 行为。
 4. 不向 Tauri/Node runtime 引入新的宽 prompt-framework 依赖。
+5. `npm run verify:knowledge-workspace:runtime` 必须通过默认 `waterglass` 矩阵：`什么是waterglass?` 与 `什么是water glass` 两个查询都不能出现 0 citations 或 `retrieval_candidates_below_threshold`。
 
 ### 2026-06-10 知识工作区与 DAG 实施计划
 

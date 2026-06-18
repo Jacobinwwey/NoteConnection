@@ -4248,6 +4248,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             request: KnowledgeQueryRequest;
             query: string;
             queryTokens: string[];
+            queryVariants: string[];
             asOf: string;
             topK: number;
             atoms: KnowledgeAtom[];
@@ -4273,6 +4274,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         });
         const titleLikeQueries = this.derivePlannerTitleLikeQueries(query);
         const titleHitDocumentIds = this.findDocumentIdsByTitleLikeQueries(titleLikeQueries);
+        const queryTokens = Array.from(new Set(
+            [query, ...titleLikeQueries].flatMap((entry) => tokenize(entry))
+        ));
         const unscopedAtoms = Array.from(this.activeAtomIds.values())
             .map((atomId) => this.atoms.get(atomId))
             .filter((atom): atom is KnowledgeAtom => Boolean(atom));
@@ -4350,7 +4354,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     scope: effectiveScope,
                 },
                 query,
-                queryTokens: tokenize(query),
+                queryTokens,
+                queryVariants: [...titleLikeQueries],
                 asOf,
                 topK,
                 atoms: scopedAtomsResult.atoms,

@@ -192,6 +192,74 @@ describe('query backend factory', () => {
         expect(result.trace?.retrievalModes).toContain('vector_similarity');
     });
 
+    test('local hybrid backend consumes planner query variants for compact mixed-language aliases', async () => {
+        const backend = createGraphQueryBackend({ backend: 'local_hybrid' });
+        const atoms: KnowledgeAtom[] = [
+            makeAtom(
+                'atom_water_glass',
+                'Water Glass',
+                'A water glass is a transparent container filled with water.',
+                ['water', 'glass', 'waterglass']
+            ),
+            makeAtom(
+                'atom_other',
+                'Liquidity',
+                'Liquidity analysis explains cash conversion and working capital timing.',
+                ['liquidity']
+            ),
+        ];
+        const result = await backend.query({
+            request: {
+                query: '什么是waterglass?',
+                topK: 3,
+            },
+            query: '什么是waterglass?',
+            queryTokens: ['什么是waterglass'],
+            queryVariants: ['什么是waterglass', 'waterglass', 'water glass', '水玻璃'],
+            asOf: '2026-01-01T00:00:00.000Z',
+            topK: 3,
+            atoms,
+            activeEdges: [],
+        });
+
+        expect(result.candidates.length).toBeGreaterThan(0);
+        expect(result.candidates[0]?.atomId).toBe('atom_water_glass');
+    });
+
+    test('local vector backend consumes planner query variants for compact mixed-language aliases', async () => {
+        const backend = createGraphQueryBackend({ backend: 'local_vector' });
+        const atoms: KnowledgeAtom[] = [
+            makeAtom(
+                'atom_water_glass',
+                'Water Glass',
+                'A water glass is a transparent container filled with water.',
+                ['water', 'glass', 'waterglass']
+            ),
+            makeAtom(
+                'atom_other',
+                'Liquidity',
+                'Liquidity analysis explains cash conversion and working capital timing.',
+                ['liquidity']
+            ),
+        ];
+        const result = await backend.query({
+            request: {
+                query: '什么是waterglass?',
+                topK: 3,
+            },
+            query: '什么是waterglass?',
+            queryTokens: ['什么是waterglass'],
+            queryVariants: ['什么是waterglass', 'waterglass', 'water glass', '水玻璃'],
+            asOf: '2026-01-01T00:00:00.000Z',
+            topK: 3,
+            atoms,
+            activeEdges: [],
+        });
+
+        expect(result.candidates.length).toBeGreaterThan(0);
+        expect(result.candidates[0]?.atomId).toBe('atom_water_glass');
+    });
+
     test('local vector backend persists and reuses vector index snapshot', async () => {
         const tempDir = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'query-vector-index-'));
         const indexPath = path.join(tempDir, 'local_vector_index.v1.json');

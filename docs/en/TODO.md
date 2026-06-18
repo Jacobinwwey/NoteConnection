@@ -14,6 +14,9 @@
 - [x] Add graph-specific answer quality gates inside `knowledgeRun.quality.gates` for prerequisite ordering, comparison branches, temporal warnings, graph-op fallback, and bounded graph budgeting.
 - [x] Externalize graph-focus render diagnostics through the runtime boundary: the agent workspace now persists interesting graph-focus events into session state, and workspace export derives durable `runtime.graphFocusReports`.
 - [x] Preserve graph-focus report history across later session updates by merging `panelState` domains instead of overwriting them wholesale.
+- [x] Reproduce and fix the screenshot-backed `什么是waterglass?` compact-alias regression by sharing planner-derived query variants with retrieval scoring instead of loosening the evidence gate.
+- [x] Promote the compact/spaced `waterglass` verifier pair into the formal runtime gate via `npm run verify:knowledge-workspace:runtime`.
+- [ ] Extend the same normalization-contract regression corpus beyond `waterglass`, using explicit alias cases rather than prompt-framework or threshold workarounds.
 
 ### 2026-06-10 Knowledge Workspace and DAG TODO Reclassification
 

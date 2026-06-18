@@ -821,7 +821,7 @@ describe('server migration settings routes', () => {
         userId: 'server_auto_hydrate_user',
         sessionId: 'server_auto_hydrate_session',
         activeTarget: 'waterglass',
-        message: '什么是water glass',
+        message: '什么是waterglass?',
         persistMemory: false
       },
       {

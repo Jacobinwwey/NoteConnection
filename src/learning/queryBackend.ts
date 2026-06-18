@@ -21,6 +21,7 @@ export interface GraphQueryBackendContext {
     request: KnowledgeQueryRequest;
     query: string;
     queryTokens: string[];
+    queryVariants?: string[];
     asOf: string;
     topK: number;
     atoms: KnowledgeAtom[];
@@ -576,6 +577,31 @@ function uniqueTokens(tokens: string[]): string[] {
     return unique;
 }
 
+function uniqueNormalizedStrings(values: unknown[]): string[] {
+    const unique: string[] = [];
+    const seen = new Set<string>();
+    values.forEach((value) => {
+        const normalized = String(value || '')
+            .normalize('NFKC')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!normalized || seen.has(normalized)) {
+            return;
+        }
+        seen.add(normalized);
+        unique.push(normalized);
+    });
+    return unique;
+}
+
+function buildQueryTextVariants(context: GraphQueryBackendContext): string[] {
+    return uniqueNormalizedStrings([
+        context.query,
+        ...(Array.isArray(context.queryVariants) ? context.queryVariants : []),
+    ]);
+}
+
 function buildAtomSemanticTokens(atom: KnowledgeAtom): string[] {
     const keywordTokens = uniqueTokens(
         (atom.keywords || [])
@@ -594,8 +620,11 @@ function buildQuerySemanticTokens(context: GraphQueryBackendContext): string[] {
             .map((token) => stemSemanticToken(token))
             .filter((token) => token.length > 0)
     );
+    const variantTokens = buildQueryTextVariants(context).flatMap((variant) => (
+        extractSemanticTokens(variant, SEMANTIC_QUERY_TOKEN_LIMIT)
+    ));
     const fallbackTokens = extractSemanticTokens(context.query, SEMANTIC_QUERY_TOKEN_LIMIT);
-    return uniqueTokens([...directTokens, ...fallbackTokens]).slice(0, SEMANTIC_QUERY_TOKEN_LIMIT);
+    return uniqueTokens([...directTokens, ...variantTokens, ...fallbackTokens]).slice(0, SEMANTIC_QUERY_TOKEN_LIMIT);
 }
 
 function computeJaccard(left: string[], right: string[]): number {
@@ -695,11 +724,11 @@ function inferGraphAnchorAtomIds(
     context: GraphQueryBackendContext,
     querySemanticTokens: string[]
 ): Set<string> {
-    const queryLower = String(context.query || '').trim().toLowerCase();
+    const queryVariants = buildQueryTextVariants(context);
     const rankedAnchors = context.atoms
         .map((atom, index) => {
             const titleLower = String(atom.title || '').trim().toLowerCase();
-            const directMatchScore = titleLower && queryLower && queryLower.includes(titleLower)
+            const directMatchScore = titleLower && queryVariants.some((variant) => variant.includes(titleLower))
                 ? 1
                 : 0;
             const anchorTokenOverlap = computeJaccard(querySemanticTokens, buildAtomAnchorTokens(atom));
@@ -1506,7 +1535,7 @@ export class LocalHybridGraphQueryBackend implements GraphQueryBackend {
     public readonly id = 'local-hybrid-v1';
 
     public async query(context: GraphQueryBackendContext): Promise<GraphQueryBackendResult> {
-        const queryLower = context.query.toLowerCase();
+        const queryVariants = buildQueryTextVariants(context);
         const querySemanticTokens = buildQuerySemanticTokens(context);
         const graphFeatureIndex = buildGraphFeatureIndex(context, querySemanticTokens);
 
@@ -1515,7 +1544,7 @@ export class LocalHybridGraphQueryBackend implements GraphQueryBackend {
             const titleLower = atom.title.toLowerCase();
             const contentLower = atom.content.toLowerCase();
             const keywordMatches = context.queryTokens.filter((token) => atom.keywords.includes(token)).length;
-            const titleMatchBonus = queryLower && titleLower.includes(queryLower) ? 2 : 0;
+            const titleMatchBonus = queryVariants.some((variant) => titleLower.includes(variant)) ? 2 : 0;
             const contentMatchBonus = context.queryTokens.filter((token) => contentLower.includes(token)).length * 0.25;
             const atomSemanticTokens = buildAtomSemanticTokens(atom);
             const semanticSimilarity = computeJaccard(querySemanticTokens, atomSemanticTokens);
@@ -1559,13 +1588,13 @@ export class KeywordOnlyGraphQueryBackend implements GraphQueryBackend {
     public readonly id = 'keyword-only-v1';
 
     public async query(context: GraphQueryBackendContext): Promise<GraphQueryBackendResult> {
-        const queryLower = context.query.toLowerCase();
+        const queryVariants = buildQueryTextVariants(context);
         const candidates: GraphQueryCandidate[] = [];
         context.atoms.forEach((atom) => {
             const titleLower = atom.title.toLowerCase();
             const contentLower = atom.content.toLowerCase();
             const keywordMatches = context.queryTokens.filter((token) => atom.keywords.includes(token)).length;
-            const titleMatchBonus = queryLower && titleLower.includes(queryLower) ? 2 : 0;
+            const titleMatchBonus = queryVariants.some((variant) => titleLower.includes(variant)) ? 2 : 0;
             const contentMatchBonus = context.queryTokens.filter((token) => contentLower.includes(token)).length * 0.22;
             const score = keywordMatches + titleMatchBonus + contentMatchBonus;
             if (score > 0) {

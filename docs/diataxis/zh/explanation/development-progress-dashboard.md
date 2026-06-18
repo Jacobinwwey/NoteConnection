@@ -3,6 +3,34 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-06-18 紧凑别名作用域检索回归
+
+本切片关闭的是截图驱动的运行时失败：当 `scope=waterglass` 且提问为 `什么是waterglass?` 时，系统会返回：
+
+- `No scoped knowledge points matched "..."`
+- trace 中 planner 仍有 title/document 命中，
+- 但 rerank 后没有 evidence-bearing retrieval candidates。
+
+这次结论是架构层面的，不是 UI 表象层面的：
+
+- scope normalization 本来就工作正常，
+- planner 的 title-like expansion 本来就工作正常，
+- 真正断裂的是 planner normalization 与 retrieval scoring 之间的词法契约。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 显式 scope 下的紧凑混合别名必须能召回证据 | `KnowledgeLearningPlatform.buildQueryBackendContext()` 现在会基于原始 query 与 planner-derived title-like variant 扩展 retrieval `queryTokens`，并显式传入 `queryVariants`。`queryBackend.ts` 会在 semantic token、anchor inference 与 title matching 中消费这些 variant。 | 已实现 |
+| 运行时验证必须覆盖真实回归，而不只是带空格控制组 | `scripts/verify-knowledge-workspace-runtime.js` 现在默认使用 `waterglass` 查询矩阵 `["什么是waterglass?", "什么是water glass"]`，`package.json` 也已暴露 `npm run verify:knowledge-workspace:runtime`。 | 已实现 |
+| 修复方向必须留在 retrieval boundary，而不是漂到 prompt framework 采纳 | 本次修复是本地 TypeScript runtime normalization。DSPy/Guidance/Semantic Kernel/LangChain/LiteLLM 继续作为设计参考，而不是运行时依赖或补丁手段。 | 已确认 |
+
+本切片验证：
+
+- `npm.cmd exec -- jest src/learning/queryBackend.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/server.migration.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd run verify:knowledge-workspace:runtime`
+
 ## 2026-06-17 Agent Knowledge DAG 回答契约
 
 本切片在澄清“图结构”指本项目现有 DAG 形态学习数据、而不是泛化图数据库替换方案之后，更新知识工作区 graph/RAG 推进方向。

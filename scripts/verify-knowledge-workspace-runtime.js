@@ -75,6 +75,17 @@ function requestJson(port, method, requestPath, body, timeoutMs = 90000) {
   });
 }
 
+function collectFlagValues(args, flag) {
+  const values = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== flag || !args[index + 1]) {
+      continue;
+    }
+    values.push(String(args[index + 1]).trim());
+  }
+  return values.filter(Boolean);
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const mode = args.includes('--full') ? 'full' : 'conversation';
@@ -82,10 +93,14 @@ async function main() {
   const target = targetArgIndex >= 0 && args[targetArgIndex + 1]
     ? String(args[targetArgIndex + 1]).trim()
     : 'waterglass';
-  const queryArgIndex = args.findIndex((arg) => arg === '--query');
-  const query = queryArgIndex >= 0 && args[queryArgIndex + 1]
-    ? String(args[queryArgIndex + 1]).trim()
-    : '什么是water glass';
+  const explicitQueries = collectFlagValues(args, '--query');
+  const queries = explicitQueries.length > 0
+    ? explicitQueries
+    : (
+      String(target || '').trim().toLowerCase() === 'waterglass'
+        ? ['什么是waterglass?', '什么是water glass']
+        : ['什么是water glass']
+    );
   const projectRoot = process.cwd();
   const frontendDir = path.join(projectRoot, 'dist', 'src', 'frontend');
   const kbRoot = path.join(projectRoot, 'Knowledge_Base');
@@ -123,57 +138,70 @@ async function main() {
       }
     }
 
-    console.log('[verify-knowledge-workspace-runtime] step=conversation');
-    const conversationResponse = await requestJson(port, 'POST', '/api/knowledge/conversation', {
-      userId: 'runtime_verify_user',
-      sessionId: 'runtime_verify_session',
-      activeTarget: target,
-      message: query,
-      persistMemory: false,
-    }, 90000);
-    if (conversationResponse.status !== 200 || !conversationResponse.body || !conversationResponse.body.success) {
-      throw new Error(`conversation failed: status=${conversationResponse.status} body=${JSON.stringify(conversationResponse.body)}`);
-    }
+    const conversations = [];
+    for (const query of queries) {
+      console.log(`[verify-knowledge-workspace-runtime] step=conversation query=${query}`);
+      const conversationResponse = await requestJson(port, 'POST', '/api/knowledge/conversation', {
+        userId: 'runtime_verify_user',
+        sessionId: `runtime_verify_session_${Buffer.from(query).toString('hex').slice(0, 16)}`,
+        activeTarget: target,
+        message: query,
+        persistMemory: false,
+      }, 90000);
+      if (conversationResponse.status !== 200 || !conversationResponse.body || !conversationResponse.body.success) {
+        throw new Error(`conversation failed for query=${query}: status=${conversationResponse.status} body=${JSON.stringify(conversationResponse.body)}`);
+      }
 
-    const result = conversationResponse.body.result || {};
-    const citations = Array.isArray(result.citations) ? result.citations : [];
-    const workspaceReadiness = result.trace && result.trace.workspaceReadiness ? result.trace.workspaceReadiness : null;
-    const usedScope = result.trace && result.trace.usedScope ? result.trace.usedScope : null;
-    const planner = result.trace && result.trace.planner ? result.trace.planner : null;
+      const result = conversationResponse.body.result || {};
+      const citations = Array.isArray(result.citations) ? result.citations : [];
+      const workspaceReadiness = result.trace && result.trace.workspaceReadiness ? result.trace.workspaceReadiness : null;
+      const usedScope = result.trace && result.trace.usedScope ? result.trace.usedScope : null;
+      const planner = result.trace && result.trace.planner ? result.trace.planner : null;
+      const missDiagnostics = result.trace && result.trace.missDiagnostics ? result.trace.missDiagnostics : null;
 
-    if (citations.length <= 0) {
-      throw new Error(`expected citations for waterglass conversation, got body=${JSON.stringify(conversationResponse.body)}`);
-    }
-    if (!workspaceReadiness || workspaceReadiness.status !== 'ready') {
-      throw new Error(`workspace readiness not ready: ${JSON.stringify(workspaceReadiness)}`);
-    }
-    if (!usedScope || usedScope.workspaceId !== String(target || '').toLowerCase()) {
-      throw new Error(`used scope mismatch: ${JSON.stringify(usedScope)}`);
-    }
-    if (!usedScope || !Array.isArray(usedScope.documentIds) || usedScope.documentIds.length <= 0) {
-      throw new Error(`used scope is missing scoped documentIds: ${JSON.stringify(usedScope)}`);
-    }
-    if (String(result.answer || '').includes('No scoped knowledge points matched')) {
-      throw new Error(`conversation still returned empty-scope answer: ${String(result.answer || '')}`);
+      if (citations.length <= 0) {
+        throw new Error(`expected citations for query=${query}, got body=${JSON.stringify(conversationResponse.body)}`);
+      }
+      if (!workspaceReadiness || workspaceReadiness.status !== 'ready') {
+        throw new Error(`workspace readiness not ready for query=${query}: ${JSON.stringify(workspaceReadiness)}`);
+      }
+      if (!usedScope || usedScope.workspaceId !== String(target || '').toLowerCase()) {
+        throw new Error(`used scope mismatch for query=${query}: ${JSON.stringify(usedScope)}`);
+      }
+      if (!usedScope || !Array.isArray(usedScope.documentIds) || usedScope.documentIds.length <= 0) {
+        throw new Error(`used scope is missing scoped documentIds for query=${query}: ${JSON.stringify(usedScope)}`);
+      }
+      if (String(result.answer || '').includes('No scoped knowledge points matched')) {
+        throw new Error(`conversation still returned empty-scope answer for query=${query}: ${String(result.answer || '')}`);
+      }
+      if (missDiagnostics && missDiagnostics.reason === 'retrieval_candidates_below_threshold') {
+        throw new Error(`conversation still fell below retrieval threshold for query=${query}: ${JSON.stringify(missDiagnostics)}`);
+      }
+
+      conversations.push({
+        query,
+        citationCount: citations.length,
+        topCitation: citations[0],
+        workspaceReadiness,
+        usedScope,
+        planner,
+        missDiagnostics,
+        answer: result.answer,
+      });
     }
 
     console.log(JSON.stringify({
       ok: true,
       mode,
       target,
-      query,
+      query: conversations[0] ? conversations[0].query : null,
+      queries,
       bridgePort,
       runtimeDataDir,
       build: buildResponse ? buildResponse.body : null,
       restore: restoreResponse ? restoreResponse.body : null,
-      conversation: {
-        citationCount: citations.length,
-        topCitation: citations[0],
-        workspaceReadiness,
-        usedScope,
-        planner,
-        answer: result.answer,
-      },
+      conversation: conversations[0] || null,
+      conversations,
     }, null, 2));
   } finally {
     await new Promise((resolve, reject) => {

@@ -190,7 +190,7 @@ describe('KnowledgeLearningPlatform', () => {
         }));
     });
 
-    test('query planner resolves mixed-language title queries inside an explicit workspace scope', async () => {
+    test('query planner resolves compact mixed-language title queries inside an explicit workspace scope', async () => {
         await platform.ingestKnowledge({
             incremental: true,
             documents: [
@@ -206,7 +206,7 @@ describe('KnowledgeLearningPlatform', () => {
         });
 
         const queryResult = await platform.queryKnowledge({
-            query: '什么是water glass',
+            query: '什么是waterglass?',
             topK: 5,
             scope: {
                 workspaceId: 'waterglass',
@@ -1558,7 +1558,7 @@ describe('KnowledgeLearningPlatform', () => {
         expect(persistedMemory.results[0]?.tags).toContain('scope_corpus:optics');
     });
 
-    test('agent conversation groups matched sections under one knowledge point with evidence spans', async () => {
+    test('agent conversation groups matched sections under one knowledge point with evidence spans for compact alias queries', async () => {
         await platform.ingestKnowledge({
             incremental: true,
             documents: [
@@ -1585,7 +1585,7 @@ describe('KnowledgeLearningPlatform', () => {
         const response = await platform.agentConversation({
             userId: 'agent_grouped_user',
             sessionId: 'session_water_glass_grouped',
-            message: 'what is water glass?',
+            message: '什么是waterglass?',
             scope: {
                 workspaceId: 'waterglass',
                 corpusId: 'waterglass',

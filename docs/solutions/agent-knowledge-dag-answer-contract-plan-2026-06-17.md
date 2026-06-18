@@ -4,7 +4,7 @@ tags: [agent-workspace, dag, rag, graph-context, answer-contract, compatibility,
 problem_type: implementation-plan
 created: 2026-06-17
 updated: 2026-06-18
-status: completed
+status: in_progress
 version: 2026.06.18
 ---
 
@@ -121,6 +121,7 @@ This order matters. If graph expansion happens before scope normalization, it ca
 | Clicking a file hit should open right-side content and highlight matched text | `workspace_panes.js` routes file entries through graph focus, retries source reads across payload + matched-span candidate paths, renders through the shared markdown runtime, highlights matched spans, records requested/candidate/attempted/resolved-path diagnostics, and now emits interesting diagnostics through the agent-workspace runtime for durable session/export capture. | Implemented broadened P4 slice | Remaining risk is calibration quality, not missing persistence plumbing. |
 | Use this project's existing DAG, not a generic graph database abstraction | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, `findPath`, path/session logic, and `Graph.ts` DAG helpers already exist. Retrieval-side graph intent detection now also aligns with the rest of the stack by covering Chinese compare/how-to/explain markers. | Confirmed | The prior "graph database + prompt framework" framing was too generic. |
 | Let LLM inspect high-quality graph structure | 2026-06-17/18 code now uses `graphContextAssembler.ts` to choose the anchor, reorder support nodes, preserve explicit store path chains, add predecessor/successor windows, and expose graph diagnostics through trace/export/evidence pane. Durable `knowledge_run` artifacts now also retain `graphContext`, operator inspection/history/compare cards surface graph context plus graph diagnostics, `WorkspaceExportBundle` emits `runtime.knowledgeRunReports`, and graph-focus render diagnostics are exported as `runtime.graphFocusReports`. | Implemented broader P1/P4/P5 foundation | Remaining work is calibration breadth and owner reduction, not runtime-surface absence. |
+| Compact mixed-language alias queries inside an explicit scope must still retrieve evidence | 2026-06-18 fix: planner-derived title-like variants are now passed into retrieval as expanded `queryTokens` plus explicit `queryVariants`; `queryBackend.ts` consumes those variants for semantic tokens, anchor inference, and title matching; the runtime verifier now defaults to the `什么是waterglass?` + `什么是water glass` matrix. | Implemented current slice | Keep alias normalization centralized. Do not relax the evidence gate to hide normalization bugs. |
 | Preserve compatibility | `assistantMessage` remains valid; new `graphContext.connectionPaths` is optional and additive; snapshot merging keeps existing relation/temporal edges only when both endpoints remain active. | Preserved | Keep optional fields optional in all clients and exports. Add edge ownership metadata before treating missing persisted edges as intentional deletes. |
 
 ### Open-Source Library Review Result
@@ -136,6 +137,38 @@ The referenced repositories were cloned under `ref/` and reviewed as design inpu
 | LiteLLM | `ref/litellm` `cf2db41` | Provider routing, fallback, and model-call boundary normalization. | Do not let provider routing decide graph semantics. |
 
 Best conclusion: use these projects as architectural references, not runtime dependencies. The implementation should stay native to this codebase: TypeScript types, local graph store operations, optional JSON/schema-constrained model calls, and existing export/diagnostic surfaces.
+
+### 2026-06-18 Runtime Regression: Compact Alias Retrieval Contract Gap
+
+A screenshot-backed runtime failure exposed a remaining cross-layer defect for the scoped `waterglass` corpus. The failing user prompt was the compact mixed-language form `什么是waterglass?`, not the spaced control form `什么是water glass`.
+
+Observed runtime facts before the fix:
+
+- `node scripts/verify-knowledge-workspace-runtime.js --full --target waterglass --query "什么是waterglass?"` failed.
+- `node scripts/verify-knowledge-workspace-runtime.js --full --target waterglass --query "什么是water glass"` passed.
+- `workspaceReadiness.status` was still `ready`.
+- `usedScope.workspaceId` / `corpusId` were still `waterglass`.
+- the planner still found the right title-like document hit and `matchedAtomCount` stayed positive.
+- the final miss reason still collapsed to `retrieval_candidates_below_threshold`.
+
+Root cause:
+
+- the planner already expanded compact/spaced/title aliases (`waterglass`, `water glass`, `水玻璃`, `水杯`),
+- but retrieval scoring still depended mainly on the raw query string and raw query tokens,
+- so the compact mixed-script form remained too opaque for keyword/vector scoring even after the planner hit the document.
+
+Correction in the current slice:
+
+- `KnowledgeLearningPlatform.buildQueryBackendContext()` now expands retrieval `queryTokens` from the raw query plus planner-derived title-like variants and passes explicit `queryVariants` into the backend context.
+- `queryBackend.ts` now consumes `queryVariants` for semantic token construction, anchor inference, and title matching.
+- `scripts/verify-knowledge-workspace-runtime.js` now treats the compact/spaced `waterglass` pair as the default runtime acceptance matrix and fails if either query falls back to `retrieval_candidates_below_threshold` or returns zero citations.
+
+Why this matters for the framework discussion:
+
+- This is not primarily a prompt-composition problem.
+- DSPy, Guidance, Semantic Kernel, LangChain Core, and LiteLLM can help with structured outputs, evaluation, or provider routing.
+- None of them fixes a broken lexical contract between planner normalization and retrieval scoring.
+- The right owner is the local learning-runtime retrieval boundary, not a new orchestration framework.
 
 ### Concrete Implementation Plan
 
@@ -197,6 +230,7 @@ Implemented foundation in the current working tree. `queryBackend.ts` no longer 
 Current behavior:
 
 - `local_hybrid` and `local_vector` infer title/document anchors from the query,
+- planner-derived compact/spaced alias variants now also flow into retrieval semantic tokens and title/anchor scoring, so scoped prompts such as `什么是waterglass?` no longer fail after the planner already found the document,
 - graph bonuses are only applied when an anchor can be inferred,
 - directed path confidence and prerequisite depth now reward structurally relevant support nodes,
 - temporal invalidity now acts as a penalty instead of a blind positive freshness reward,
@@ -430,6 +464,7 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 | 文件命中单击后打开右侧内容并高亮命中 | `workspace_panes.js` 已通过 graph focus 路由文件项，读取 markdown，经共享 markdown runtime 渲染，并用 matched spans 高亮。 | 已实现基线 | 失败通常来自路径 canonicalization、storage provider 缺失、旧 runtime 路径、snippet/highlight 不匹配。应先加诊断而不是重写 UI。 |
 | 使用项目现有 DAG，而不是泛图数据库抽象 | `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、store ops、`findPath`、path/session logic、`Graph.ts` DAG helper 都已存在。 | 已确认 | 先前“图数据库 + prompt framework”的表述过泛。 |
 | 让 LLM 查阅高质量图结构 | 2026-06-17 代码现在通过 `graphContextAssembler.ts` 在回答合成前选择 anchor、重排 support node、保留显式 store path chain、补 predecessor/successor window，并通过 trace/export/evidence pane 暴露 graph diagnostics。 | P1 基础已实现 | graph-aware ranking 与图专项质量门禁现在都已存在，剩余工作转为校准广度与更广的运维诊断。 |
+| 显式 scope 下的紧凑混合别名查询也必须召回证据 | 2026-06-18 修复：planner 推导出的 title-like variant 现在会以扩展 `queryTokens` 与显式 `queryVariants` 的形式进入 retrieval；`queryBackend.ts` 会在 semantic token、anchor inference 与 title matching 中消费这些 variant；runtime verifier 默认以 `什么是waterglass?` + `什么是water glass` 作为验收矩阵。 | 当前切片已实现 | 必须把 alias normalization 维持为集中契约，不能靠放宽 evidence gate 掩盖归一化缺陷。 |
 | 保持兼容 | `assistantMessage` 仍有效；新增 `graphContext.connectionPaths` 是 optional additive field；snapshot merge 只在两端 atom 仍 active 时保留既有 relation/temporal edges。 | 已保持 | 所有客户端和导出路径都要继续把新增字段视为可选。后续需要 edge ownership metadata，才能区分“用户有意删除的边”和“外部增强但内存快照未携带的边”。 |
 
 ### 开源库研究结论
@@ -445,6 +480,38 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 | LiteLLM | `ref/litellm` `cf2db41` | provider routing、fallback、model-call boundary normalization。 | provider routing 不应决定图语义。 |
 
 最佳结论：把这些项目当架构参考，而不是运行时依赖。实现应保持本项目原生：TypeScript 类型、本地图 store ops、可选 JSON/schema-constrained 模型调用、现有 export/diagnostics surfaces。
+
+### 2026-06-18 运行时回归：紧凑别名检索契约断裂
+
+一条带截图的运行时失败暴露了 scoped `waterglass` 语料中的剩余跨层缺陷。失败的不是带空格控制组 `什么是water glass`，而是紧凑混合写法 `什么是waterglass?`。
+
+修复前的运行时事实：
+
+- `node scripts/verify-knowledge-workspace-runtime.js --full --target waterglass --query "什么是waterglass?"` 会失败。
+- `node scripts/verify-knowledge-workspace-runtime.js --full --target waterglass --query "什么是water glass"` 会通过。
+- `workspaceReadiness.status` 仍然是 `ready`。
+- `usedScope.workspaceId` / `corpusId` 仍然是 `waterglass`。
+- planner 仍然能找到正确的 title-like 文档命中，`matchedAtomCount` 也仍然大于 0。
+- 最终 miss reason 仍然落到 `retrieval_candidates_below_threshold`。
+
+根因：
+
+- planner 已经扩展出 compact/spaced/title alias（`waterglass`、`water glass`、`水玻璃`、`水杯`），
+- 但 retrieval scoring 仍然主要依赖原始 query 字符串与原始 query tokens，
+- 导致 compact mixed-script 写法即使在 planner 命中文档后，仍对 keyword/vector scoring 过于不透明。
+
+本切片修正：
+
+- `KnowledgeLearningPlatform.buildQueryBackendContext()` 现在会基于原始 query 与 planner 推导出的 title-like variant 扩展 retrieval `queryTokens`，并向后端上下文显式传入 `queryVariants`。
+- `queryBackend.ts` 现在会在 semantic token 构建、anchor 推断与 title matching 中消费这些 `queryVariants`。
+- `scripts/verify-knowledge-workspace-runtime.js` 现在会把 `waterglass` 的 compact/spaced 双查询作为默认运行时验收矩阵；只要任何一个 query 再次落回 `retrieval_candidates_below_threshold` 或返回 0 citations，就会失败。
+
+这对框架选择的含义：
+
+- 这不是 prompt composition 的主问题。
+- DSPy、Guidance、Semantic Kernel、LangChain Core 与 LiteLLM 可以帮助 structured output、evaluation 或 provider routing。
+- 但它们都无法修复 planner normalization 与 retrieval scoring 之间断裂的词法契约。
+- 正确 owner 是本地 learning-runtime 的 retrieval boundary，而不是再引入一层 orchestration framework。
 
 ### 具体实施计划
 
@@ -506,6 +573,7 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 当前行为：
 
 - `local_hybrid` 与 `local_vector` 会先从 query 中推断 title/document anchor；
+- planner 推导出的 compact/spaced alias variant 现在也会进入 retrieval semantic token 与 title/anchor scoring，因此 `什么是waterglass?` 这类 scoped prompt 不会再出现“planner 已命中文档但 retrieval 仍空转”的断裂；
 - 只有当 anchor 可推断时，图加分才会介入；
 - directed path confidence 与 prerequisite depth 会提升结构上真正相关的 support node；
 - temporal invalidity 现在是惩罚项，而不是盲目的“新鲜度正奖励”；

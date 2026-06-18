@@ -14,6 +14,9 @@
 - [x] 已在 `knowledgeRun.quality.gates` 中补齐图回答专用质量门禁，覆盖 prerequisite ordering、comparison branch、temporal warning、graph-op fallback 与有界 graph budgeting。
 - [x] graph-focus render diagnostics 已通过运行时边界外化：agent workspace 现在会把有价值的 graph-focus 事件写入 session state，workspace export 会进一步派生 durable `runtime.graphFocusReports`。
 - [x] 后续 conversation / study-session 写入现在会保留已记录的 graph-focus 报告历史，不再整块覆盖无关 `panelState` 域。
+- [x] 已复现并修复截图驱动的 `什么是waterglass?` 紧凑别名回归：修复方式是让 planner-derived query variants 与 retrieval scoring 共享同一契约，而不是放宽 evidence gate。
+- [x] 已把 `waterglass` 的 compact/spaced 双查询提升为正式运行时门禁：`npm run verify:knowledge-workspace:runtime`。
+- [ ] 将同类 normalization-contract 回归语料扩展到 `waterglass` 之外，优先补显式 alias 用例，而不是依赖 prompt framework 或阈值放宽规避问题。
 
 ### 2026-06-10 知识工作区与 DAG TODO 重新分类
 

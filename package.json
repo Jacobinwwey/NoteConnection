@@ -92,6 +92,7 @@
     "test:conversation-turn-cache:durability": "jest src/notemd.server.integration.test.ts --runInBand --testNamePattern=\"turn-cache alert trend restart durability\"",
     "test:license:contract": "jest src/license.policy.contract.test.ts --runInBand",
     "verify:agent-workspace:runtime": "node scripts/verify-agent-workspace-runtime.js",
+    "verify:knowledge-workspace:runtime": "npm run build && node scripts/verify-knowledge-workspace-runtime.js --full",
     "verify:foundation:ann-runtime": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-ann-runtime.js",
     "verify:foundation:ann-runtime:matrix": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-ann-runtime.js --matrix",
     "verify:foundation:ann-runtime:release": "npm run build && node scripts/ensure-sidecar-ready.js && node scripts/verify-foundation-ann-runtime.js --matrix --release-gates",
