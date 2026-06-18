@@ -5,15 +5,19 @@
 - [x] 后端已新增独立 owner：`src/learning/answerReleaseReview.ts`。
 - [x] response、trace 与 `KnowledgeRun` 现在都已通过 additive 字段保留 `answerReleaseReview` 状态。
 - [x] `conversationComposer.ts` 现在会先产出草稿回答，再通过确定性 release gate 决定最终主回答，而不是直接放出 draft。
+- [x] reviewer 现在会执行 `claim_grounding_alignment`，因此“有证据但主张漂移”的草稿不会再原样放行。
+- [x] 中文 scoped miss 现在会返回中文 abstention，而不是退化成 English diagnostic-heavy fallback 文本。
 - [x] 截图驱动的 `waterglass` 运行时场景现在已经纳入正式 verifier：验收要求 reviewer 存在，并拒绝公开回答中的诊断泄漏。
-- [ ] 下一活跃任务：在不扩大主回答区的前提下，继续补 public claim 与 citation 之间更深的矛盾检测。
-- [ ] 下一活跃任务：把 reviewer 结果更明确地推到运维检查面，但不重新塞回主回答区。
+- [x] reviewer 结果现在已经进入 `knowledge_run` 明细 / 历史检查卡片，但不会重新塞回主回答区。
+- [ ] 下一活跃任务：在显式回归语料存在后，继续把当前 lexical grounding check 扩展为更深的 claim/citation/evidence 矛盾检测。
+- [ ] 下一活跃任务：把 reviewer 摘要从当前 `knowledge_run` 检查面继续扩展到 export bundle 与更长周期的运维审计。
 
 ### 当前验收目标
 
 1. 主回答区不得再出现 `No scoped knowledge points matched` 这类内部失败字符串。
 2. reviewer 决策必须保持 additive，并继续对现有 client 向前兼容。
-3. `waterglass` 的 compact/spaced 双查询运行时验证必须通过，并确认 `answerReleaseReview.publicAnswer === result.answer`。
+3. 运维检查面必须能看到 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
+4. `waterglass` 的 compact/spaced 双查询运行时验证必须通过，并确认 `answerReleaseReview.publicAnswer === result.answer`。
 
 ## 2026-06-17 Agent Knowledge DAG 活跃任务同步
 

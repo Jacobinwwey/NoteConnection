@@ -15,14 +15,17 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 - The landed slice adds `src/learning/answerReleaseReview.ts` as a first-class owner for `release` / `revise` / `abstain`.
 - `src/learning/types.ts` now carries additive `AnswerReleaseReview` contracts on the response, trace, and `KnowledgeRun`.
 - `conversationComposer.ts` now drafts the answer and then delegates the public release decision to the reviewer instead of releasing the draft directly.
+- The reviewer now also enforces `claim_grounding_alignment`, so grounded evidence can still force a revision when the draft drifts away from its own citations/knowledge points.
+- Cross-language abstention hygiene is now explicit: scoped Chinese misses no longer fall back to English diagnostic-heavy abstentions.
 - `KnowledgeLearningPlatform.ts` now persists the review decision into response payloads, traces, and workflow artifacts.
+- Operator-facing inspection now surfaces reviewer state without widening the public answer area: `src/frontend/agent_workspace.js` maps sanitized `answerReleaseReview` payloads, and `src/frontend/workspace_panes.js` renders release-review details in `knowledge_run` detail/history cards.
 - `scripts/verify-knowledge-workspace-runtime.js` now treats reviewer presence and public-answer hygiene as runtime acceptance gates for the screenshot-backed `waterglass` case.
 
 #### Next execution order
 
-1. Keep the reviewer deterministic and narrowly scoped to release invariants.
-2. Add deeper claim-vs-citation contradiction checks only after explicit regression coverage exists.
-3. Surface the reviewer result more clearly inside operator inspection panes without widening the public answer area.
+1. Keep the reviewer deterministic and narrowly scoped to release invariants; do not let prompt templates reclaim ownership of release policy.
+2. Broaden contradiction coverage beyond the current lexical grounding check only after explicit regression corpora exist for false-positive control.
+3. Extend reviewer telemetry from current `knowledge_run` detail/history panes into export summaries and longer-horizon operator audits.
 4. Extend the alias/scope regression corpus beyond `waterglass`.
 5. Continue owner reduction only when the new owner hides real decisions or invariants.
 
@@ -30,8 +33,9 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 
 1. Unsupported draft answers do not leak internal diagnostics such as `No scoped knowledge points matched` or `retrieval_candidates_below_threshold` into the public answer.
 2. `AgentConversationResponse`, trace, and `KnowledgeRun` all retain additive `answerReleaseReview` state.
-3. `npm run verify:knowledge-workspace:runtime` passes the `waterglass` compact/spaced matrix and confirms reviewer/public-answer parity.
-4. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
+3. Operator inspection surfaces render reviewer decision, failed gates, and original/public answer deltas without widening the primary answer area.
+4. `npm run verify:knowledge-workspace:runtime` passes the `waterglass` compact/spaced matrix and confirms reviewer/public-answer parity.
+5. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
 
 ### 2026-06-17 Agent Knowledge DAG Implementation Plan
 

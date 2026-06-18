@@ -1272,6 +1272,7 @@ export type AnswerReleaseDecision = 'release' | 'revise' | 'abstain';
 export type AnswerReleaseGateId =
     | 'evidence_sufficiency'
     | 'graph_support_sufficiency'
+    | 'claim_grounding_alignment'
     | 'public_surface_contraction'
     | 'internal_diagnostic_leakage'
     | 'abstention_hygiene';

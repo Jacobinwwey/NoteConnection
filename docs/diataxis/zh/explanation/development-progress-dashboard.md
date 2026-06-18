@@ -19,11 +19,14 @@
   - internal diagnostic leakage
   - abstention hygiene
 - reviewer 现在可以做 `release`、`revise`、`abstain` 三类决策。
+- reviewer 现在也会执行 `claim_grounding_alignment`：通过轻量的 ASCII/CJK 词法重叠检查，识别“有证据但草稿主张已漂移”的情况，并强制改写。
+- 中文 scoped miss 现在会返回中文 abstention，而不是退化成 English diagnostic-heavy fallback 文本。
 - reviewer 状态现在已经以 additive 方式保留在：
   - `AgentConversationResponse.answerReleaseReview`
   - `AgentConversationTrace.answerReleaseReview`
   - `KnowledgeRun.answerReleaseReview`
 - `KnowledgeLearningPlatform.ts` 现在会把这份状态写进运行时响应与 workflow artifact payload。
+- 运维检查面现在已经能通过 `src/frontend/agent_workspace.js` 与 `src/frontend/workspace_panes.js` 在 `knowledge_run` 明细 / 历史卡片里查看净化后的 reviewer 状态，同时不扩大主回答区。
 - `scripts/verify-knowledge-workspace-runtime.js` 现在已经把 reviewer 存在性与 `publicAnswer === result.answer` 一致性纳入运行时契约。
 
 这件事为什么重要：
@@ -38,13 +41,16 @@
 |---|---|---|
 | 最终公开回答必须经过 release review | `src/learning/answerReleaseReview.ts` 现在已经拥有 post-synthesis release decision。 | 已实现 |
 | 不支持的回答必须 clean abstain | empty-result 的 debug-style 草稿现在会被降级成简洁 abstention。 | 已实现 |
+| 有证据的草稿主张必须与支撑保持一致 | `claim_grounding_alignment` 现在会在 citation/knowledge point 的词法支撑不足时强制改写 grounded draft。 | 已实现 |
 | 开发者必须能检查 release decision | review 状态已保留到 response、trace 与 `KnowledgeRun`。 | 已实现 |
+| 运维侧必须能看到 reviewer 状态且不扩大主回答区 | `agent_workspace.js` 会净化 `answerReleaseReview`，`workspace_panes.js` 会在 `knowledge_run` 卡片里渲染 release-review 明细 / 历史。 | 已实现 |
 | `waterglass` 截图必须成为正式回归门禁 | runtime verifier 现在要求 reviewer 存在，并拒绝公开回答中的诊断泄漏。 | 已实现 |
 | 向前兼容必须保持显式 | `assistantMessage`、`answer`、`assistantBlocks` 保持有效；reviewer 字段都是 additive。 | 已保持 |
 
 本切片验证：
 
 - `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- tsc --noEmit`
 - `npm run verify:knowledge-workspace:runtime`
 

@@ -91,6 +91,7 @@ describe('answerReleaseReview', () => {
 
         expect(review.decision).toBe('abstain');
         expect(review.publicAnswer).toContain('waterglass');
+        expect(review.publicAnswer).toContain('当前范围');
         expect(review.publicAnswer).not.toContain('No scoped knowledge points matched');
         expect(review.publicAnswer).not.toContain('retrieval');
         expect(review.failedGateIds).toEqual(expect.arrayContaining([
@@ -136,5 +137,42 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).toBe('Water glass is a transparent container filled with water.');
         expect(review.failedGateIds).toContain('public_surface_contraction');
         expect(review.leakedInternalFragments).toHaveLength(0);
+    });
+
+    test('revises grounded answers when draft claims drift away from cited support', () => {
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: 'Water glass is a copper energy-storage device used for industrial voltage buffering.',
+            knowledgePoints: [makeKnowledgePoint()],
+            citations: [makeKnowledgePoint().citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: {
+                anchorAtomId: 'atom_water_glass',
+                anchorTitle: 'Water Glass',
+                supportingAtomIds: [],
+                supportingTitles: [],
+                relationKinds: [],
+                relationSummaries: [],
+                temporalValidity: {
+                    checkedAt: '2026-06-18T00:00:00.000Z',
+                    allPointsValid: true,
+                    warningReasons: [],
+                    invalidKnowledgePointTitles: [],
+                    edgeKinds: [],
+                    details: [],
+                },
+            },
+            reviewedAt: '2026-06-18T09:10:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_grounding_alignment');
+        expect(review.publicAnswer).toBe('Water glass is a transparent container filled with water.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_grounding_alignment',
+                passed: false,
+            }),
+        ]));
     });
 });

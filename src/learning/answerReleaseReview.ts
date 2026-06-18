@@ -32,6 +32,10 @@ function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+function containsCjk(value: string): boolean {
+    return /[\u3400-\u9fff]/u.test(String(value || ''));
+}
+
 function resolveScopeLabel(scope: KnowledgeQueryResolvedScope): string {
     if (scope.workspaceId) {
         return String(scope.workspaceId).trim();
@@ -51,9 +55,40 @@ function resolveScopeLabel(scope: KnowledgeQueryResolvedScope): string {
 function buildFriendlyScopeFailureHint(
     scope: KnowledgeQueryResolvedScope
 ): string {
+    const scopeLabel = resolveScopeLabel(scope);
     const readinessStatus = String(scope.readiness?.status || '').trim();
     const missReason = String(scope.missDiagnostics?.reason || '').trim();
-    const scopeLabel = resolveScopeLabel(scope);
+
+    if (containsCjk(scopeLabel) || containsCjk(scope.missDiagnostics?.query || '')) {
+        if (readinessStatus === 'empty_store') {
+            return scopeLabel
+                ? `当前范围“${scopeLabel}”还没有可检索知识。`
+                : '当前范围还没有可检索知识。';
+        }
+        if (readinessStatus === 'workspace_not_found') {
+            return scopeLabel
+                ? `当前范围“${scopeLabel}”还不存在。`
+                : '当前范围还不存在。';
+        }
+        if (readinessStatus === 'workspace_unbound') {
+            return scopeLabel
+                ? `当前范围“${scopeLabel}”还没有绑定知识语料。`
+                : '当前范围还没有绑定知识语料。';
+        }
+        if (missReason === 'scope_has_no_indexed_segments') {
+            return scopeLabel
+                ? `当前范围“${scopeLabel}”里还没有建立可检索索引。`
+                : '当前范围里还没有建立可检索索引。';
+        }
+        if (missReason === 'query_no_title_or_alias_hit') {
+            return scopeLabel
+                ? `当前范围“${scopeLabel}”里没有找到足够接近这个问题的标题或别名。`
+                : '当前范围里没有找到足够接近这个问题的标题或别名。';
+        }
+        return scopeLabel
+            ? `我还不能在当前范围“${scopeLabel}”内把这个回答落到证据上。`
+            : '我还不能把这个回答落到证据上。';
+    }
 
     if (readinessStatus === 'empty_store') {
         return scopeLabel
@@ -91,6 +126,13 @@ function buildAbstentionAnswer(
 ): string {
     const normalizedMessage = normalizeWhitespace(message);
     const hint = buildFriendlyScopeFailureHint(scope);
+    if (containsCjk(normalizedMessage)) {
+        return normalizeWhitespace(
+            normalizedMessage
+                ? `${hint} 我暂时不能对“${normalizedMessage}”给出有依据的回答。请换个说法、放宽范围，或补充相关笔记。`
+                : `${hint} 请换个说法、放宽范围，或补充相关笔记。`
+        );
+    }
     return normalizeWhitespace(
         normalizedMessage
             ? `${hint} I cannot give a grounded answer to "${normalizedMessage}" yet. Refine the wording, widen the scope, or add the missing note.`
@@ -119,6 +161,99 @@ function collectLeakedInternalFragments(answer: string): string[] {
     return INTERNAL_DIAGNOSTIC_FRAGMENTS.filter((fragment) => normalizedAnswer.includes(fragment));
 }
 
+function collectLexicalFeatures(value: string): string[] {
+    const normalized = String(value || '').toLowerCase();
+    const features = new Set<string>();
+    const asciiTokens = normalized.match(/[a-z0-9]+/g) || [];
+    asciiTokens.forEach((token) => {
+        if (token.length >= 2) {
+            features.add(token);
+        }
+    });
+    const cjkRuns = normalized.match(/[\u3400-\u9fff]+/gu) || [];
+    cjkRuns.forEach((run) => {
+        const trimmed = String(run || '').trim();
+        if (!trimmed) {
+            return;
+        }
+        if (trimmed.length <= 2) {
+            features.add(trimmed);
+            return;
+        }
+        for (let index = 0; index < trimmed.length - 1; index += 1) {
+            features.add(trimmed.slice(index, index + 2));
+        }
+    });
+    return [...features];
+}
+
+function computeGroundingAlignmentScore(answer: string, supportText: string): number {
+    const normalizedAnswer = normalizeWhitespace(answer).toLowerCase();
+    const normalizedSupport = normalizeWhitespace(supportText).toLowerCase();
+    if (!normalizedAnswer || !normalizedSupport) {
+        return 0;
+    }
+    if (normalizedSupport.includes(normalizedAnswer) || normalizedAnswer.includes(normalizedSupport)) {
+        return 1;
+    }
+    const answerFeatures = collectLexicalFeatures(normalizedAnswer);
+    const supportFeatures = new Set(collectLexicalFeatures(normalizedSupport));
+    if (answerFeatures.length <= 0 || supportFeatures.size <= 0) {
+        return 0;
+    }
+    const overlapCount = answerFeatures.filter((feature) => supportFeatures.has(feature)).length;
+    return Number((overlapCount / answerFeatures.length).toFixed(4));
+}
+
+function evaluateGroundingAlignment(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    bestScore: number;
+    bestLabel: string;
+} {
+    const candidates: Array<{ label: string; text: string }> = [];
+    context.citations.forEach((citation, index) => {
+        const title = normalizeWhitespace(String(citation.title || '').trim()) || `citation_${index + 1}`;
+        const snippet = normalizeWhitespace(String(citation.snippet || '').trim());
+        const text = [title, snippet].filter(Boolean).join(' ');
+        if (text) {
+            candidates.push({
+                label: title,
+                text,
+            });
+        }
+    });
+    context.knowledgePoints.forEach((point, index) => {
+        const title = normalizeWhitespace(String(point.title || '').trim()) || `knowledge_point_${index + 1}`;
+        const snippet = normalizeWhitespace(String(point.evidenceSnippet || point.summary || '').trim());
+        const text = [title, snippet].filter(Boolean).join(' ');
+        if (text) {
+            candidates.push({
+                label: title,
+                text,
+            });
+        }
+    });
+    if (candidates.length <= 0) {
+        return {
+            passed: false,
+            bestScore: 0,
+            bestLabel: '',
+        };
+    }
+    const scored = candidates
+        .map((candidate) => ({
+            label: candidate.label,
+            score: computeGroundingAlignmentScore(context.draftAnswer, candidate.text),
+        }))
+        .sort((left, right) => right.score - left.score);
+    const best = scored[0] || { label: '', score: 0 };
+    return {
+        passed: best.score >= 0.3,
+        bestScore: best.score,
+        bestLabel: best.label,
+    };
+}
+
 function checkPublicSurfaceContraction(answer: string): boolean {
     const normalizedAnswer = String(answer || '');
     if (normalizeWhitespace(normalizedAnswer).length > 320) {
@@ -134,13 +269,14 @@ function checkPublicSurfaceContraction(answer: string): boolean {
 
 function buildDecision(
     groundedEvidenceAvailable: boolean,
+    groundingAlignmentPassed: boolean,
     leakedInternalFragments: string[],
     publicSurfaceContracted: boolean
 ): AnswerReleaseDecision {
     if (!groundedEvidenceAvailable) {
         return 'abstain';
     }
-    if (leakedInternalFragments.length > 0 || !publicSurfaceContracted) {
+    if (!groundingAlignmentPassed || leakedInternalFragments.length > 0 || !publicSurfaceContracted) {
         return 'revise';
     }
     return 'release';
@@ -165,6 +301,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     const draftAnswer = normalizeWhitespace(context.draftAnswer);
     const groundedEvidenceAvailable = context.knowledgePoints.length > 0 || context.citations.length > 0;
     const leakedInternalFragments = collectLeakedInternalFragments(draftAnswer);
+    const groundingAlignment = groundedEvidenceAvailable
+        ? evaluateGroundingAlignment({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            bestScore: 1,
+            bestLabel: '',
+        };
     const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer);
     const graphSupportCount = context.graphContext
         ? (
@@ -174,7 +320,12 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         )
         : 0;
     const graphSupportSufficient = context.knowledgePoints.length <= 0 || graphSupportCount > 0 || Boolean(context.graphContext?.anchorAtomId);
-    const decision = buildDecision(groundedEvidenceAvailable, leakedInternalFragments, publicSurfaceContracted);
+    const decision = buildDecision(
+        groundedEvidenceAvailable,
+        groundingAlignment.passed,
+        leakedInternalFragments,
+        publicSurfaceContracted
+    );
     const publicAnswer = normalizeWhitespace(
         decision === 'abstain'
             ? buildAbstentionAnswer(context.message, context.usedScope)
@@ -202,6 +353,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             message: graphSupportSufficient
                 ? 'Graph context stayed sufficient for the current answer shape.'
                 : 'Graph context was too thin for a confident grounded answer.',
+        },
+        {
+            gateId: 'claim_grounding_alignment',
+            passed: groundingAlignment.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    groundingAlignment.passed
+                        ? `Draft answer stayed aligned with grounded support (best support: ${groundingAlignment.bestLabel || 'primary evidence'}, score ${Math.round(groundingAlignment.bestScore * 100)}%).`
+                        : `Draft answer drifted away from grounded support (best support: ${groundingAlignment.bestLabel || 'primary evidence'}, score ${Math.round(groundingAlignment.bestScore * 100)}%).`
+                )
+                : 'No evidence was available, so claim-grounding alignment was not evaluated.',
         },
         {
             gateId: 'public_surface_contraction',

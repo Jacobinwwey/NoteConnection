@@ -9,10 +9,13 @@
 - [x] 已新增 `src/learning/answerReleaseReview.ts` 作为公开回答 `release` / `revise` / `abstain` 的显式 owner。
 - [x] 已在 `src/learning/types.ts` 中补齐 additive 的 `AnswerReleaseReview` 契约，并接到 response、trace 与 `KnowledgeRun`。
 - [x] `conversationComposer.ts` 产出的草稿回答现在会进入确定性 release gate，而不是直接公开释放。
+- [x] 已新增 `claim_grounding_alignment`，因此“有 grounded evidence 但草稿主张漂移”的回答会在 release 前被改写。
+- [x] 已补齐中文 abstention hygiene：中文 scoped miss 不再退化成 English diagnostic-heavy fallback 文本。
 - [x] `KnowledgeLearningPlatform.ts` 与 workflow artifact payload 现在已经保留 reviewer 状态。
 - [x] 截图驱动的 `waterglass` 失败现在已经升级为正式运行时验收规则：`scripts/verify-knowledge-workspace-runtime.js` 要求 reviewer 存在，并拒绝主回答中的诊断泄漏。
-- [ ] 将 reviewer 从当前的 leakage/contraction 检查继续扩展到更深的 claim-vs-citation 矛盾检测。
-- [ ] 把 reviewer 状态更明确地暴露到运维 evidence pane 和 export 摘要。
+- [x] reviewer 状态现在已经通过 `knowledge_run` 明细 / 历史卡片暴露到运维 evidence pane，但不会重新挤占主回答区。
+- [ ] 在显式回归语料存在后，将 reviewer 从当前 lexical grounding check 继续扩展到更深的 claim-vs-citation 矛盾检测。
+- [ ] 把 reviewer 摘要从当前运维检查面继续扩展到 export 摘要与更长周期的运维审计。
 
 ### 2026-06-17 Agent Knowledge DAG TODO 重新分类
 

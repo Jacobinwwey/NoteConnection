@@ -9,10 +9,13 @@
 - [x] Add `src/learning/answerReleaseReview.ts` as an explicit owner for public-answer `release` / `revise` / `abstain`.
 - [x] Extend `src/learning/types.ts` with additive `AnswerReleaseReview` contracts on the response, trace, and `KnowledgeRun`.
 - [x] Route composed draft answers through deterministic release gates inside `conversationComposer.ts`.
+- [x] Add `claim_grounding_alignment` so grounded drafts that drift away from their own citation/knowledge-point support are revised before release.
+- [x] Add Chinese abstention hygiene so scoped Chinese misses no longer degrade into English diagnostic-heavy fallback text.
 - [x] Persist reviewer state through `KnowledgeLearningPlatform.ts` and workflow-artifact payloads.
 - [x] Promote the screenshot-backed `waterglass` failure into a runtime acceptance rule by requiring reviewer presence and by rejecting public-answer diagnostic leakage in `scripts/verify-knowledge-workspace-runtime.js`.
-- [ ] Extend the reviewer from leakage/contraction checks into deeper claim-vs-citation contradiction detection.
-- [ ] Surface reviewer state more explicitly in operator evidence panes and export summaries.
+- [x] Surface reviewer state inside operator evidence panes through `knowledge_run` detail/history cards without widening the public answer area.
+- [ ] Extend the reviewer from the current lexical grounding check into deeper claim-vs-citation contradiction detection once an explicit regression corpus exists.
+- [ ] Extend reviewer summaries from the current operator panes into export summaries and longer-horizon audits.
 
 ### 2026-06-17 Agent Knowledge DAG TODO Reclassification
 

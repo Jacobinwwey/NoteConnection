@@ -2051,7 +2051,8 @@ describe('KnowledgeLearningPlatform', () => {
         expect(response.trace.missDiagnostics).toEqual(expect.objectContaining({
             reason: 'empty_store',
         }));
-        expect(response.answer).toContain('current scope "waterglass" does not contain indexed knowledge yet');
+        expect(response.answer).toContain('当前范围');
+        expect(response.answer).toContain('什么是water glass');
         expect(response.answer).not.toContain('No scoped knowledge points matched');
         expect(response.answerReleaseReview).toEqual(expect.objectContaining({
             decision: 'abstain',

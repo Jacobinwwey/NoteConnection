@@ -1442,6 +1442,83 @@
                 <div class="agent-chat-card-list-meta">${escapeHtml(metric.value)}</div>
             </li>
         `).join('');
+        const formatAnswerReleaseDecision = (decisionLike) => {
+            const decision = String(decisionLike || '').trim().toLowerCase();
+            if (decision === 'release') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionRelease', 'release');
+            }
+            if (decision === 'revise') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionRevise', 'revise');
+            }
+            if (decision === 'abstain') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionAbstain', 'abstain');
+            }
+            return decision || noneLabel;
+        };
+        const answerReleaseReview = summary.answerReleaseReview && typeof summary.answerReleaseReview === 'object'
+            ? summary.answerReleaseReview
+            : null;
+        const answerReleaseReviewHeading = translate('agentWorkspace.reply.answerReleaseReviewHeading', 'Answer release review');
+        const answerReleaseReviewItems = answerReleaseReview ? [
+            {
+                title: translate('agentWorkspace.reply.answerReleaseDecisionLabel', 'Decision'),
+                value: formatAnswerReleaseDecision(answerReleaseReview.decision),
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseReviewedAtLabel', 'Reviewed at'),
+                value: String(answerReleaseReview.reviewedAt || '').trim() || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseRevisedLabel', 'Revised'),
+                value: answerReleaseReview.revised === true
+                    ? translate('agentWorkspace.reply.answerReleaseBoolYes', 'yes')
+                    : translate('agentWorkspace.reply.answerReleaseBoolNo', 'no'),
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseFailedGatesLabel', 'Failed gates'),
+                value: Array.isArray(answerReleaseReview.failedGateIds) && answerReleaseReview.failedGateIds.length > 0
+                    ? answerReleaseReview.failedGateIds.join(', ')
+                    : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseLeakedFragmentsLabel', 'Leaked fragments'),
+                value: Array.isArray(answerReleaseReview.leakedInternalFragments) && answerReleaseReview.leakedInternalFragments.length > 0
+                    ? answerReleaseReview.leakedInternalFragments.join(', ')
+                    : noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseReasonLabel', 'Reason'),
+                value: String(answerReleaseReview.reason || '').trim() || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleaseOriginalAnswerLabel', 'Original answer'),
+                value: String(answerReleaseReview.originalAnswer || '').trim() || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.reply.answerReleasePublicAnswerLabel', 'Public answer'),
+                value: String(answerReleaseReview.publicAnswer || '').trim() || noneLabel,
+            },
+        ] : [];
+        const answerReleaseReviewHtml = answerReleaseReviewItems.length > 0
+            ? answerReleaseReviewItems.map((item) => `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(item.title)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(item.value)}</div>
+                </li>
+            `).join('')
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
+        const answerReleaseReviewGates = Array.isArray(answerReleaseReview && answerReleaseReview.gates)
+            ? answerReleaseReview.gates
+            : [];
+        const answerReleaseReviewGatesHeading = translate('agentWorkspace.reply.answerReleaseReviewGatesLabel', 'Release gates');
+        const answerReleaseReviewGatesHtml = answerReleaseReviewGates.length > 0
+            ? answerReleaseReviewGates.map((gate) => `
+                <li class="agent-chat-card-list-item">
+                    <div class="agent-chat-card-list-title">${escapeHtml(`${gate.passed ? 'PASS' : 'CHECK'} ${String(gate.gateId || '').trim() || noneLabel}`)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(String(gate.message || '').trim() || noneLabel)}</div>
+                </li>
+            `).join('')
+            : `<li class="agent-chat-card-list-empty">${escapeHtml(noneLabel)}</li>`;
 
         const claims = Array.isArray(summary.claims) ? summary.claims : [];
         const claimsHeading = translate('agentWorkspace.reply.knowledgeRunClaims', 'Evidence claims');
@@ -1583,6 +1660,10 @@
                 <div class="agent-chat-card-summary">${escapeHtml(summaryText)}</div>
                 <div class="agent-chat-card-section-title">${escapeHtml(metricsHeading)}</div>
                 <ul class="agent-chat-card-list">${metricsHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(answerReleaseReviewHeading)}</div>
+                <ul class="agent-chat-card-list">${answerReleaseReviewHtml}</ul>
+                <div class="agent-chat-card-section-title">${escapeHtml(answerReleaseReviewGatesHeading)}</div>
+                <ul class="agent-chat-card-list">${answerReleaseReviewGatesHtml}</ul>
                 <div class="agent-chat-card-section-title">${escapeHtml(graphContextHeading)}</div>
                 <ul class="agent-chat-card-list">${graphContextHtml}</ul>
                 <div class="agent-chat-card-section-title">${escapeHtml(graphDiagnosticsHeading)}</div>
@@ -1624,6 +1705,41 @@
         const runsHeading = translate('agentWorkspace.reply.knowledgeRunHistoryRunsHeading', 'Recent Runs');
         const runs = Array.isArray(summary.runs) ? summary.runs : [];
         const latestRun = runs[0] && typeof runs[0] === 'object' ? runs[0] : null;
+        const formatAnswerReleaseDecision = (decisionLike) => {
+            const decision = String(decisionLike || '').trim().toLowerCase();
+            if (decision === 'release') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionRelease', 'release');
+            }
+            if (decision === 'revise') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionRevise', 'revise');
+            }
+            if (decision === 'abstain') {
+                return translate('agentWorkspace.reply.answerReleaseDecisionAbstain', 'abstain');
+            }
+            return decision || noneLabel;
+        };
+        const buildAnswerReleaseHistorySummary = (reviewLike) => {
+            const review = reviewLike && typeof reviewLike === 'object'
+                ? reviewLike
+                : null;
+            if (!review) {
+                return noneLabel;
+            }
+            const failedGates = Array.isArray(review.failedGateIds) && review.failedGateIds.length > 0
+                ? review.failedGateIds.join(', ')
+                : noneLabel;
+            return translate(
+                'agentWorkspace.reply.answerReleaseHistorySummary',
+                '{decision}; revised {revised}; failed {failedGates}',
+                {
+                    decision: formatAnswerReleaseDecision(review.decision),
+                    revised: review.revised === true
+                        ? translate('agentWorkspace.reply.answerReleaseBoolYes', 'yes')
+                        : translate('agentWorkspace.reply.answerReleaseBoolNo', 'no'),
+                    failedGates,
+                }
+            );
+        };
         const runsHtml = runs.length > 0
             ? runs.map((run, index) => `
                 <li class="agent-chat-card-list-item">
@@ -1632,6 +1748,7 @@
                     <div class="agent-chat-card-list-meta">${escapeHtml(String(run.scopeLabel || '').trim() || noneLabel)}</div>
                     <div class="agent-chat-card-list-meta">${escapeHtml(`claims ${String(run.claimCount == null ? 0 : run.claimCount)}, quality ${String(run.qualityStatus || '').trim() || noneLabel}${Number.isFinite(Number(run.qualityScore)) ? `/${String(run.qualityScore)}` : ''}`)}</div>
                     <div class="agent-chat-card-list-meta">${escapeHtml(`${translate('agentWorkspace.reply.knowledgeRunHistoryGraphSignalLabel', 'Graph signal')}: ${String(run.graphSignalSummary || '').trim() || noneLabel}`)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(`${translate('agentWorkspace.reply.answerReleaseHistoryLabel', 'Release review')}: ${buildAnswerReleaseHistorySummary(run.answerReleaseReview)}`)}</div>
                     ${String(run.artifactId || '').trim() ? `<div class="agent-chat-card-actions"><button type="button" data-agent-knowledge-run-history-inspect="${index}">${escapeHtml(translate('agentWorkspace.reply.knowledgeRunHistoryInspectRun', 'Inspect Run'))}</button>${latestRun && index > 0 ? `<button type="button" data-agent-knowledge-run-history-compare="${index}">${escapeHtml(translate('agentWorkspace.reply.knowledgeRunHistoryCompareLatest', 'Compare Latest'))}</button>` : ''}</div>` : ''}
                 </li>
             `).join('')

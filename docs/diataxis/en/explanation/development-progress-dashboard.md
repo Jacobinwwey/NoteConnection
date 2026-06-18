@@ -19,11 +19,14 @@ What is now true in code:
   - internal diagnostic leakage,
   - abstention hygiene.
 - the reviewer can now `release`, `revise`, or `abstain`.
+- the reviewer now also enforces `claim_grounding_alignment`, using lightweight lexical overlap across ASCII and CJK support features so evidence-backed draft drift can trigger revision instead of release.
+- scoped Chinese misses now produce Chinese abstentions instead of falling back to English diagnostic-heavy text.
 - reviewer state is retained additively in:
   - `AgentConversationResponse.answerReleaseReview`,
   - `AgentConversationTrace.answerReleaseReview`,
   - `KnowledgeRun.answerReleaseReview`.
 - `KnowledgeLearningPlatform.ts` persists that state into runtime responses and workflow-artifact payloads.
+- operator-facing inspection now surfaces sanitized reviewer state in `knowledge_run` detail/history cards through `src/frontend/agent_workspace.js` and `src/frontend/workspace_panes.js`, without widening the main answer surface.
 - `scripts/verify-knowledge-workspace-runtime.js` now treats reviewer presence and `publicAnswer === result.answer` parity as part of the runtime contract.
 
 Why this matters:
@@ -38,13 +41,16 @@ Code-vs-plan reconciliation:
 |---|---|---|
 | Final public answer must be reviewed before release | `src/learning/answerReleaseReview.ts` now owns the post-synthesis release decision. | Implemented |
 | Unsupported answers must abstain cleanly | Empty-result debug-style drafts are now downgraded into concise abstentions. | Implemented |
+| Grounded draft claims must stay aligned with their own support | `claim_grounding_alignment` now revises grounded drafts when lexical support overlap shows the answer drifting away from citations/knowledge points. | Implemented |
 | Developers must be able to inspect the release decision | Review state is now stored on response, trace, and `KnowledgeRun`. | Implemented |
+| Operators must see reviewer state without widening the main answer area | `agent_workspace.js` sanitizes `answerReleaseReview`, and `workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
 | `waterglass` screenshot must become a formal regression gate | Runtime verifier now requires reviewer presence and rejects public-answer diagnostic leakage. | Implemented |
 | Backward compatibility must remain explicit | `assistantMessage`, `answer`, and `assistantBlocks` remain valid; reviewer fields are additive. | Preserved |
 
 Verification for this slice:
 
 - `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- tsc --noEmit`
 - `npm run verify:knowledge-workspace:runtime`
 

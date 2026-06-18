@@ -3293,6 +3293,54 @@
         return buildFlashcardBatchCardPayloadFromArtifacts(summary.artifacts, summary.returnedArtifacts);
     }
 
+    function sanitizeAnswerReleaseReview(reviewLike) {
+        const review = reviewLike && typeof reviewLike === 'object'
+            ? reviewLike
+            : null;
+        if (!review) {
+            return null;
+        }
+        const failedGateIds = Array.isArray(review.failedGateIds)
+            ? review.failedGateIds.map((value) => String(value || '').trim()).filter(Boolean)
+            : [];
+        const leakedInternalFragments = Array.isArray(review.leakedInternalFragments)
+            ? review.leakedInternalFragments.map((value) => String(value || '').trim()).filter(Boolean)
+            : [];
+        const gates = Array.isArray(review.gates)
+            ? review.gates
+                .filter((gate) => gate && typeof gate === 'object')
+                .slice(0, 6)
+                .map((gate) => ({
+                    gateId: String(gate.gateId || '').trim(),
+                    passed: gate.passed === true,
+                    message: String(gate.message || '').trim(),
+                }))
+            : [];
+        const sanitized = {
+            reviewedAt: String(review.reviewedAt || '').trim(),
+            decision: String(review.decision || '').trim().toLowerCase(),
+            revised: review.revised === true,
+            originalAnswer: String(review.originalAnswer || '').trim(),
+            publicAnswer: String(review.publicAnswer || '').trim(),
+            reason: String(review.reason || '').trim(),
+            failedGateIds,
+            leakedInternalFragments,
+            gates,
+        };
+        return (
+            sanitized.reviewedAt
+            || sanitized.decision
+            || sanitized.originalAnswer
+            || sanitized.publicAnswer
+            || sanitized.reason
+            || sanitized.failedGateIds.length > 0
+            || sanitized.leakedInternalFragments.length > 0
+            || sanitized.gates.length > 0
+        )
+            ? sanitized
+            : null;
+    }
+
     function buildKnowledgeRunCardPayload(result) {
         const summary = result && typeof result === 'object'
             ? result
@@ -3325,6 +3373,9 @@
         const reviewCards = Array.isArray(knowledgeRun.reviewCards)
             ? knowledgeRun.reviewCards.filter((card) => card && typeof card === 'object')
             : [];
+        const answerReleaseReview = sanitizeAnswerReleaseReview(
+            knowledgeRun.answerReleaseReview || artifactPayload.answerReleaseReview || null
+        );
         const qualityGates = Array.isArray(quality.gates)
             ? quality.gates.filter((gate) => gate && typeof gate === 'object')
             : [];
@@ -3429,6 +3480,7 @@
                         : [],
                 };
             }),
+            answerReleaseReview,
             graphContext: (
                 String(graphContext.anchorTitle || '').trim()
                 || supportingTitles.length > 0
@@ -3536,6 +3588,9 @@
                     ? knowledgeRun.scope
                     : {};
                 const graphSignal = summarizeKnowledgeRunGraphSignal(payload);
+                const answerReleaseReview = sanitizeAnswerReleaseReview(
+                    knowledgeRun.answerReleaseReview || payload.answerReleaseReview || null
+                );
                 return {
                     artifactId: String(artifact.artifactId || '').trim(),
                     workspaceId: String(artifact.workspaceId || '').trim(),
@@ -3558,6 +3613,7 @@
                     temporalWarningCount: graphSignal.temporalWarningCount,
                     selectedAnchorReason: graphSignal.selectedAnchorReason,
                     graphSignalSummary: graphSignal.graphSignalSummary,
+                    answerReleaseReview,
                 };
             }),
         };

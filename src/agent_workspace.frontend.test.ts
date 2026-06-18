@@ -133,12 +133,29 @@ function createI18nStub() {
             'agentWorkspace.reply.knowledgeRunReviewProgressLabel': 'Review progress',
             'agentWorkspace.reply.knowledgeRunInspectEvidence': 'Inspect Evidence',
             'agentWorkspace.reply.knowledgeRunBrowseRuns': 'Recent Runs',
+            'agentWorkspace.reply.answerReleaseReviewHeading': 'Answer release review',
+            'agentWorkspace.reply.answerReleaseReviewGatesLabel': 'Release gates',
+            'agentWorkspace.reply.answerReleaseDecisionLabel': 'Decision',
+            'agentWorkspace.reply.answerReleaseReviewedAtLabel': 'Reviewed at',
+            'agentWorkspace.reply.answerReleaseRevisedLabel': 'Revised',
+            'agentWorkspace.reply.answerReleaseFailedGatesLabel': 'Failed gates',
+            'agentWorkspace.reply.answerReleaseLeakedFragmentsLabel': 'Leaked fragments',
+            'agentWorkspace.reply.answerReleaseReasonLabel': 'Reason',
+            'agentWorkspace.reply.answerReleaseOriginalAnswerLabel': 'Original answer',
+            'agentWorkspace.reply.answerReleasePublicAnswerLabel': 'Public answer',
+            'agentWorkspace.reply.answerReleaseDecisionRelease': 'release',
+            'agentWorkspace.reply.answerReleaseDecisionRevise': 'revise',
+            'agentWorkspace.reply.answerReleaseDecisionAbstain': 'abstain',
+            'agentWorkspace.reply.answerReleaseBoolYes': 'yes',
+            'agentWorkspace.reply.answerReleaseBoolNo': 'no',
             'agentWorkspace.reply.knowledgeRunHistoryCardTitle': 'Knowledge Run History',
             'agentWorkspace.reply.knowledgeRunHistoryCardSummary': '{returnedArtifacts} run artifact(s) returned.',
             'agentWorkspace.reply.knowledgeRunHistoryRunsHeading': 'Recent Runs',
             'agentWorkspace.reply.knowledgeRunHistoryGraphSignalLabel': 'Graph signal',
             'agentWorkspace.reply.knowledgeRunHistoryInspectRun': 'Inspect Run',
             'agentWorkspace.reply.knowledgeRunHistoryCompareLatest': 'Compare Latest',
+            'agentWorkspace.reply.answerReleaseHistoryLabel': 'Release review',
+            'agentWorkspace.reply.answerReleaseHistorySummary': '{decision}; revised {revised}; failed {failedGates}',
             'agentWorkspace.reply.knowledgeRunCompareCardTitle': 'Knowledge Run Comparison',
             'agentWorkspace.reply.knowledgeRunCompareCardSummary': 'Comparing {comparedRunId} against latest {latestRunId}.',
             'agentWorkspace.reply.knowledgeRunCompareLatestLabel': 'Latest run',
@@ -875,6 +892,23 @@ function createI18nStub() {
             'agentWorkspace.reply.knowledgeRunClaimUntitled': '未命名主张',
             'agentWorkspace.reply.knowledgeRunReviewCards': '复习卡片',
             'agentWorkspace.reply.knowledgeRunReviewPrompt': '复习被引用的主张。',
+            'agentWorkspace.reply.answerReleaseReviewHeading': '最终回答发布审核',
+            'agentWorkspace.reply.answerReleaseReviewGatesLabel': '发布门禁',
+            'agentWorkspace.reply.answerReleaseDecisionLabel': '决策',
+            'agentWorkspace.reply.answerReleaseReviewedAtLabel': '审核时间',
+            'agentWorkspace.reply.answerReleaseRevisedLabel': '是否改写',
+            'agentWorkspace.reply.answerReleaseFailedGatesLabel': '失败门禁',
+            'agentWorkspace.reply.answerReleaseLeakedFragmentsLabel': '泄漏片段',
+            'agentWorkspace.reply.answerReleaseReasonLabel': '原因',
+            'agentWorkspace.reply.answerReleaseOriginalAnswerLabel': '原始回答',
+            'agentWorkspace.reply.answerReleasePublicAnswerLabel': '公开回答',
+            'agentWorkspace.reply.answerReleaseDecisionRelease': '放行',
+            'agentWorkspace.reply.answerReleaseDecisionRevise': '改写',
+            'agentWorkspace.reply.answerReleaseDecisionAbstain': '拒答',
+            'agentWorkspace.reply.answerReleaseBoolYes': '是',
+            'agentWorkspace.reply.answerReleaseBoolNo': '否',
+            'agentWorkspace.reply.answerReleaseHistoryLabel': '发布审核',
+            'agentWorkspace.reply.answerReleaseHistorySummary': '{decision}；已改写 {revised}；失败门禁 {failedGates}',
         },
     };
 
@@ -1680,6 +1714,28 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                                 remainingReviewCardCount: 1,
                                                 completedAt: null,
                                             },
+                                            answerReleaseReview: {
+                                                reviewedAt: '2026-04-13T00:01:01.000Z',
+                                                decision: 'release',
+                                                revised: false,
+                                                originalAnswer: 'Scoped snippet',
+                                                publicAnswer: 'Scoped snippet',
+                                                reason: 'Draft answer satisfied the public-release gates.',
+                                                failedGateIds: [],
+                                                leakedInternalFragments: [],
+                                                gates: [
+                                                    {
+                                                        gateId: 'evidence_sufficiency',
+                                                        passed: true,
+                                                        message: 'Grounded evidence was available for public release.',
+                                                    },
+                                                    {
+                                                        gateId: 'public_surface_contraction',
+                                                        passed: true,
+                                                        message: 'Draft answer stayed within the public-surface contraction budget.',
+                                                    },
+                                                ],
+                                            },
                                             summary: {
                                                 claimCount: 1,
                                                 verifiedClaimCount: 1,
@@ -1783,6 +1839,28 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                                 completedReviewCardCount: 0,
                                                 remainingReviewCardCount: 1,
                                                 completedAt: null,
+                                            },
+                                            answerReleaseReview: {
+                                                reviewedAt: '2026-04-12T23:55:01.000Z',
+                                                decision: 'revise',
+                                                revised: true,
+                                                originalAnswer: 'Absorption is grounded by two claims and one weak citation note.',
+                                                publicAnswer: 'Absorption depends on material interaction with incident radiation.',
+                                                reason: 'Draft answer had usable evidence but required contraction before public release.',
+                                                failedGateIds: ['public_surface_contraction'],
+                                                leakedInternalFragments: [],
+                                                gates: [
+                                                    {
+                                                        gateId: 'evidence_sufficiency',
+                                                        passed: true,
+                                                        message: 'Grounded evidence was available for public release.',
+                                                    },
+                                                    {
+                                                        gateId: 'public_surface_contraction',
+                                                        passed: false,
+                                                        message: 'Draft answer carried too much support or formatting detail for the public answer surface.',
+                                                    },
+                                                ],
                                             },
                                             summary: {
                                                 claimCount: 2,
@@ -1928,6 +2006,28 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                                 remainingReviewCardCount: 1,
                                                 completedAt: null,
                                             },
+                                            answerReleaseReview: {
+                                                reviewedAt: '2026-04-12T23:55:01.000Z',
+                                                decision: 'revise',
+                                                revised: true,
+                                                originalAnswer: 'Absorption is grounded by two claims and one weak citation note.',
+                                                publicAnswer: 'Absorption depends on material interaction with incident radiation.',
+                                                reason: 'Draft answer had usable evidence but required contraction before public release.',
+                                                failedGateIds: ['public_surface_contraction'],
+                                                leakedInternalFragments: [],
+                                                gates: [
+                                                    {
+                                                        gateId: 'evidence_sufficiency',
+                                                        passed: true,
+                                                        message: 'Grounded evidence was available for public release.',
+                                                    },
+                                                    {
+                                                        gateId: 'public_surface_contraction',
+                                                        passed: false,
+                                                        message: 'Draft answer carried too much support or formatting detail for the public answer surface.',
+                                                    },
+                                                ],
+                                            },
                                             summary: {
                                                 claimCount: 2,
                                                 verifiedClaimCount: 1,
@@ -2063,6 +2163,28 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                                 completedReviewCardCount: 0,
                                                 remainingReviewCardCount: 1,
                                                 completedAt: null,
+                                            },
+                                            answerReleaseReview: {
+                                                reviewedAt: '2026-04-13T00:01:01.000Z',
+                                                decision: 'release',
+                                                revised: false,
+                                                originalAnswer: 'Scoped snippet',
+                                                publicAnswer: 'Scoped snippet',
+                                                reason: 'Draft answer satisfied the public-release gates.',
+                                                failedGateIds: [],
+                                                leakedInternalFragments: [],
+                                                gates: [
+                                                    {
+                                                        gateId: 'evidence_sufficiency',
+                                                        passed: true,
+                                                        message: 'Grounded evidence was available for public release.',
+                                                    },
+                                                    {
+                                                        gateId: 'public_surface_contraction',
+                                                        passed: true,
+                                                        message: 'Draft answer stayed within the public-surface contraction budget.',
+                                                    },
+                                                ],
                                             },
                                             summary: {
                                                 claimCount: 1,
@@ -5165,6 +5287,11 @@ describe('agent workspace learning-path integration', () => {
         expect(evidencePane?.getAttribute('data-open')).toBe('true');
         expect(String(evidenceBody?.textContent || '')).toContain('Knowledge Run Details');
         expect(String(evidenceBody?.textContent || '')).toContain('Run knowledge_run_blocks_1: 1 claims, quality pass/100.');
+        expect(String(evidenceBody?.textContent || '')).toContain('Answer release review');
+        expect(String(evidenceBody?.textContent || '')).toContain('Decision');
+        expect(String(evidenceBody?.textContent || '')).toContain('release');
+        expect(String(evidenceBody?.textContent || '')).toContain('Scoped snippet');
+        expect(String(evidenceBody?.textContent || '')).toContain('Release gates');
         expect(String(evidenceBody?.textContent || '')).toContain('Graph context');
         expect(String(evidenceBody?.textContent || '')).toContain('Blocks Citation');
         expect(String(evidenceBody?.textContent || '')).toContain('Blocks Foundation -> Blocks Citation');
@@ -5346,6 +5473,8 @@ describe('agent workspace learning-path integration', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_2');
         expect(String(evidenceBody?.textContent || '')).toContain('Recent Runs');
         expect(String(evidenceBody?.textContent || '')).toContain('Graph signal');
+        expect(String(evidenceBody?.textContent || '')).toContain('Release review');
+        expect(String(evidenceBody?.textContent || '')).toContain('revise; revised yes; failed public_surface_contraction');
         expect(String(evidenceBody?.textContent || '')).toContain('available, paths 1, warnings 0');
         expect(String(evidenceBody?.textContent || '')).toContain('fallback, paths 0, warnings 1');
 
@@ -5397,6 +5526,8 @@ describe('agent workspace learning-path integration', () => {
 
         expect(String(evidenceBody?.textContent || '')).toContain('Knowledge Run Details');
         expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_2');
+        expect(String(evidenceBody?.textContent || '')).toContain('Answer release review');
+        expect(String(evidenceBody?.textContent || '')).toContain('Absorption depends on material interaction with incident radiation.');
     });
 
     test('updates the knowledge API status panel after a successful conversation call', async () => {

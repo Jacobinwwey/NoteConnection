@@ -394,6 +394,7 @@ describe('conversationComposer', () => {
         });
 
         expect(reply.answer).toContain('waterglass');
+        expect(reply.answer).toContain('当前范围');
         expect(reply.answer).not.toContain('No scoped knowledge points matched');
         expect(reply.answer).not.toContain('retrieval');
         expect(reply.answerReleaseReview).toEqual(expect.objectContaining({

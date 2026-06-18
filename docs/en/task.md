@@ -9,15 +9,19 @@
 - [x] A dedicated backend owner now exists at `src/learning/answerReleaseReview.ts`.
 - [x] The response contract now carries additive `answerReleaseReview` state on the response, trace, and `KnowledgeRun`.
 - [x] `conversationComposer.ts` now drafts the answer and then passes it through deterministic release gates before the public answer is released.
+- [x] The reviewer now enforces `claim_grounding_alignment`, so grounded but drifting draft claims are revised instead of being released unchanged.
+- [x] Scoped Chinese misses now abstain in Chinese instead of leaking English diagnostic-heavy fallback text.
 - [x] The screenshot-backed `waterglass` runtime case is now part of the formal verifier: runtime acceptance requires reviewer presence and rejects public-answer diagnostic leakage.
-- [ ] Next active task: deepen contradiction detection between public claims and citations without widening the main answer surface.
-- [ ] Next active task: expose reviewer results more clearly in operator inspection surfaces while keeping them out of the primary answer area.
+- [x] Reviewer results are now surfaced in operator inspection through `knowledge_run` detail/history cards without widening the primary answer area.
+- [ ] Next active task: deepen contradiction detection beyond the current lexical grounding check once an explicit regression corpus exists.
+- [ ] Next active task: extend reviewer summaries from current `knowledge_run` inspection into export bundles and longer-horizon operator audits.
 
 ### Current Acceptance Targets
 
 1. Public answers never expose `No scoped knowledge points matched`-style internal failure strings.
 2. Reviewer decisions remain additive and backward-compatible for all current clients.
-3. Runtime verification on `waterglass` passes for both compact and spaced aliases and confirms `answerReleaseReview.publicAnswer === result.answer`.
+3. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
+4. Runtime verification on `waterglass` passes for both compact and spaced aliases and confirms `answerReleaseReview.publicAnswer === result.answer`.
 
 ### 2026-06-17 Active Agent Knowledge DAG Task Sync
 
