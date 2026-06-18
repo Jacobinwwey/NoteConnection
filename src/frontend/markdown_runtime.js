@@ -21,6 +21,309 @@
         return source.replace(/\$\$[ \t]*```mermaid\b/g, '$$\n```mermaid');
     }
 
+    function normalizeMarkdownBlockText(value) {
+        return String(value || '')
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+            .replace(/<br\s*\/?>/giu, ' ')
+            .replace(/&nbsp;/giu, ' ')
+            .replace(/[*_~`|]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function stripMarkdownBlockPrefix(line) {
+        return String(line || '')
+            .replace(/^\s{0,3}>+\s?/u, '')
+            .replace(/^\s{0,3}#{1,6}\s+/u, '')
+            .replace(/^\s{0,3}(?:[-*+]|(?:\d+)[.)])\s+/u, '')
+            .trim();
+    }
+
+    function isBlankMarkdownLine(line) {
+        return String(line || '').trim().length <= 0;
+    }
+
+    function getMarkdownIndentWidth(line) {
+        const match = String(line || '').match(/^\s*/u);
+        return match ? match[0].length : 0;
+    }
+
+    function isMarkdownFenceLine(line) {
+        return /^\s*(?:```+|~~~+)/u.test(String(line || ''));
+    }
+
+    function isMarkdownHeadingLine(line) {
+        return /^\s{0,3}#{1,6}\s+/u.test(String(line || ''));
+    }
+
+    function isMarkdownBlockquoteLine(line) {
+        return /^\s{0,3}>/u.test(String(line || ''));
+    }
+
+    function isMarkdownListItemLine(line) {
+        return /^\s{0,3}(?:[-*+]|(?:\d+)[.)])\s+/u.test(String(line || ''));
+    }
+
+    function buildMarkdownSourceBlock(kind, startLine, endLine, text) {
+        const normalizedText = normalizeMarkdownBlockText(text);
+        if (!normalizedText) {
+            return null;
+        }
+        return {
+            kind,
+            startLine: Math.max(1, Number(startLine) || 1),
+            endLine: Math.max(Math.max(1, Number(startLine) || 1), Number(endLine) || Number(startLine) || 1),
+            text: normalizedText,
+        };
+    }
+
+    function collectMarkdownSourceBlocks(markdownText) {
+        const lines = String(markdownText || '').split(/\r?\n/u);
+        const blocks = [];
+        let lineIndex = 0;
+        while (lineIndex < lines.length) {
+            const currentLine = String(lines[lineIndex] || '');
+            if (isBlankMarkdownLine(currentLine)) {
+                lineIndex += 1;
+                continue;
+            }
+
+            if (isMarkdownFenceLine(currentLine)) {
+                const startLine = lineIndex + 1;
+                const fenceMarkerMatch = currentLine.match(/^\s*(```+|~~~+)/u);
+                const fenceMarker = fenceMarkerMatch ? fenceMarkerMatch[1] : '```';
+                const bodyLines = [];
+                lineIndex += 1;
+                let endLine = startLine;
+                while (lineIndex < lines.length) {
+                    const candidateLine = String(lines[lineIndex] || '');
+                    endLine = lineIndex + 1;
+                    if (new RegExp(`^\\s*${fenceMarker}\\s*$`, 'u').test(candidateLine)) {
+                        lineIndex += 1;
+                        break;
+                    }
+                    bodyLines.push(candidateLine);
+                    lineIndex += 1;
+                }
+                const preBlock = buildMarkdownSourceBlock('pre', startLine, endLine, bodyLines.join(' '));
+                if (preBlock) {
+                    blocks.push(preBlock);
+                }
+                continue;
+            }
+
+            if (isMarkdownHeadingLine(currentLine)) {
+                const headingBlock = buildMarkdownSourceBlock(
+                    'heading',
+                    lineIndex + 1,
+                    lineIndex + 1,
+                    stripMarkdownBlockPrefix(currentLine)
+                );
+                if (headingBlock) {
+                    blocks.push(headingBlock);
+                }
+                lineIndex += 1;
+                continue;
+            }
+
+            if (isMarkdownBlockquoteLine(currentLine)) {
+                const startLine = lineIndex + 1;
+                const bodyLines = [];
+                let endLine = startLine;
+                while (lineIndex < lines.length && isMarkdownBlockquoteLine(lines[lineIndex])) {
+                    bodyLines.push(stripMarkdownBlockPrefix(lines[lineIndex]));
+                    endLine = lineIndex + 1;
+                    lineIndex += 1;
+                }
+                const blockquoteBlock = buildMarkdownSourceBlock('blockquote', startLine, endLine, bodyLines.join(' '));
+                if (blockquoteBlock) {
+                    blocks.push(blockquoteBlock);
+                }
+                continue;
+            }
+
+            if (isMarkdownListItemLine(currentLine)) {
+                const startLine = lineIndex + 1;
+                const startIndent = getMarkdownIndentWidth(currentLine);
+                const bodyLines = [stripMarkdownBlockPrefix(currentLine)];
+                let endLine = startLine;
+                lineIndex += 1;
+                while (lineIndex < lines.length) {
+                    const candidateLine = String(lines[lineIndex] || '');
+                    if (isBlankMarkdownLine(candidateLine)) {
+                        break;
+                    }
+                    if (
+                        isMarkdownFenceLine(candidateLine)
+                        || isMarkdownHeadingLine(candidateLine)
+                        || isMarkdownBlockquoteLine(candidateLine)
+                    ) {
+                        break;
+                    }
+                    if (
+                        isMarkdownListItemLine(candidateLine)
+                        && getMarkdownIndentWidth(candidateLine) <= startIndent
+                    ) {
+                        break;
+                    }
+                    bodyLines.push(stripMarkdownBlockPrefix(candidateLine));
+                    endLine = lineIndex + 1;
+                    lineIndex += 1;
+                }
+                const listItemBlock = buildMarkdownSourceBlock('list_item', startLine, endLine, bodyLines.join(' '));
+                if (listItemBlock) {
+                    blocks.push(listItemBlock);
+                }
+                continue;
+            }
+
+            const startLine = lineIndex + 1;
+            const bodyLines = [currentLine];
+            let endLine = startLine;
+            lineIndex += 1;
+            while (lineIndex < lines.length) {
+                const candidateLine = String(lines[lineIndex] || '');
+                if (
+                    isBlankMarkdownLine(candidateLine)
+                    || isMarkdownFenceLine(candidateLine)
+                    || isMarkdownHeadingLine(candidateLine)
+                    || isMarkdownBlockquoteLine(candidateLine)
+                    || isMarkdownListItemLine(candidateLine)
+                ) {
+                    break;
+                }
+                bodyLines.push(candidateLine);
+                endLine = lineIndex + 1;
+                lineIndex += 1;
+            }
+            const paragraphBlock = buildMarkdownSourceBlock('paragraph', startLine, endLine, bodyLines.join(' '));
+            if (paragraphBlock) {
+                blocks.push(paragraphBlock);
+            }
+        }
+        return blocks;
+    }
+
+    function collectMarkdownBlockFeatures(value) {
+        return normalizeMarkdownBlockText(value)
+            .toLowerCase()
+            .split(/[^a-z0-9\u3400-\u9fff]+/u)
+            .map((part) => part.trim())
+            .filter((part) => part.length >= 2 || /[\u3400-\u9fff]/u.test(part));
+    }
+
+    function computeMarkdownBlockTextScore(renderedText, sourceText) {
+        const normalizedRendered = normalizeMarkdownBlockText(renderedText).toLowerCase();
+        const normalizedSource = normalizeMarkdownBlockText(sourceText).toLowerCase();
+        if (!normalizedRendered || !normalizedSource) {
+            return 0;
+        }
+        if (normalizedRendered === normalizedSource) {
+            return 10000;
+        }
+        if (
+            normalizedRendered.includes(normalizedSource)
+            || normalizedSource.includes(normalizedRendered)
+        ) {
+            return 8000 - Math.abs(normalizedRendered.length - normalizedSource.length);
+        }
+        const renderedFeatures = collectMarkdownBlockFeatures(normalizedRendered);
+        const sourceFeatures = new Set(collectMarkdownBlockFeatures(normalizedSource));
+        if (renderedFeatures.length <= 0 || sourceFeatures.size <= 0) {
+            return 0;
+        }
+        const overlapCount = renderedFeatures.filter((feature) => sourceFeatures.has(feature)).length;
+        const overlapRatio = overlapCount / renderedFeatures.length;
+        if (overlapRatio < 0.6) {
+            return 0;
+        }
+        return Math.round(overlapRatio * 1000);
+    }
+
+    function resolveRenderedMarkdownBlockKind(element) {
+        const tagName = String(element && element.tagName || '').toLowerCase();
+        if (/^h[1-6]$/u.test(tagName)) {
+            return 'heading';
+        }
+        if (tagName === 'p') {
+            return 'paragraph';
+        }
+        if (tagName === 'li') {
+            return 'list_item';
+        }
+        if (tagName === 'blockquote') {
+            return 'blockquote';
+        }
+        if (tagName === 'pre') {
+            return 'pre';
+        }
+        return '';
+    }
+
+    function collectRenderedMarkdownBlockCandidates(container) {
+        if (!container || typeof container.querySelectorAll !== 'function') {
+            return [];
+        }
+        return Array.from(container.querySelectorAll('p, li, blockquote, pre, h1, h2, h3, h4, h5, h6'));
+    }
+
+    function clearRenderedMarkdownBlockProvenance(container) {
+        collectRenderedMarkdownBlockCandidates(container).forEach((element) => {
+            element.removeAttribute('data-agent-markdown-source-start-line');
+            element.removeAttribute('data-agent-markdown-source-end-line');
+            element.removeAttribute('data-agent-markdown-source-kind');
+        });
+    }
+
+    function annotateRenderedMarkdownBlocks(container, rawMarkdown) {
+        const renderedCandidates = collectRenderedMarkdownBlockCandidates(container);
+        const sourceBlocks = collectMarkdownSourceBlocks(rawMarkdown);
+        clearRenderedMarkdownBlockProvenance(container);
+        if (renderedCandidates.length <= 0 || sourceBlocks.length <= 0) {
+            return {
+                sourceBlockCount: sourceBlocks.length,
+                attributedNodeCount: 0,
+            };
+        }
+        let sourceCursor = 0;
+        let attributedNodeCount = 0;
+        renderedCandidates.forEach((candidate) => {
+            const renderedKind = resolveRenderedMarkdownBlockKind(candidate);
+            const renderedText = normalizeMarkdownBlockText(candidate && candidate.textContent || '');
+            if (!renderedKind || !renderedText) {
+                return;
+            }
+            let bestMatchIndex = -1;
+            let bestMatchScore = 0;
+            const searchEnd = Math.min(sourceBlocks.length, sourceCursor + 24);
+            for (let index = sourceCursor; index < searchEnd; index += 1) {
+                const sourceBlock = sourceBlocks[index];
+                if (!sourceBlock || sourceBlock.kind !== renderedKind) {
+                    continue;
+                }
+                const score = computeMarkdownBlockTextScore(renderedText, sourceBlock.text);
+                if (score <= bestMatchScore) {
+                    continue;
+                }
+                bestMatchIndex = index;
+                bestMatchScore = score;
+            }
+            if (bestMatchIndex < 0 || bestMatchScore < 600) {
+                return;
+            }
+            const matchedSourceBlock = sourceBlocks[bestMatchIndex];
+            candidate.setAttribute('data-agent-markdown-source-start-line', String(matchedSourceBlock.startLine));
+            candidate.setAttribute('data-agent-markdown-source-end-line', String(matchedSourceBlock.endLine));
+            candidate.setAttribute('data-agent-markdown-source-kind', matchedSourceBlock.kind);
+            sourceCursor = bestMatchIndex + 1;
+            attributedNodeCount += 1;
+        });
+        return {
+            sourceBlockCount: sourceBlocks.length,
+            attributedNodeCount,
+        };
+    }
+
     function getRuntimeUrl(resourcePath) {
         const runtime = window.NoteConnectionRuntime;
         if (runtime && typeof runtime.buildUrl === 'function') {
@@ -496,17 +799,21 @@
 
     async function renderMarkdownInto(container, rawMarkdown) {
         if (!container) {
-            return;
+            return {
+                sourceBlockCount: 0,
+                attributedNodeCount: 0,
+            };
         }
         const source = sanitizeMarkdownSource(rawMarkdown);
         if (!window.marked || typeof window.marked.parse !== 'function') {
             renderPlainTextInto(container, source);
-            return;
+            return annotateRenderedMarkdownBlocks(container, source);
         }
         container.innerHTML = window.marked.parse(source);
         sanitizeRenderedHtml(container);
         renderMathInContainer(container);
         await renderMermaidInContainer(container);
+        return annotateRenderedMarkdownBlocks(container, source);
     }
 
     window.NoteConnectionMarkdownRuntime = {

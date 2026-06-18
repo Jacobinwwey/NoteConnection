@@ -40,6 +40,23 @@ type StructuredFactConflict = {
     supportFacts: Array<StructuredFact & { label: string }>;
 };
 
+type StateFrameConnectorKind = 'copula' | 'definition';
+
+type StateFrame = {
+    surface: string;
+    subject: string;
+    subjectFeatures: string[];
+    connectorKind: StateFrameConnectorKind;
+    value: string;
+    valueFeatures: string[];
+    tailFeatures: string[];
+};
+
+type StateFrameConflict = {
+    answerFrame: StateFrame;
+    supportFrame: StateFrame & { label: string };
+};
+
 type SentencePolarity = 'positive' | 'negative';
 
 type PolaritySentence = {
@@ -161,6 +178,8 @@ const POLARITY_NEGATION_NORMALIZATION_RULES: Array<[RegExp, string]> = [
     [/\b(shan)(?:'t)\b/gi, 'shall not'],
     [/\b([a-z]+)n['’]t\b/gi, '$1 not'],
 ];
+
+const STATE_FRAME_SKIP_VALUE_PATTERN = /\b(?:prerequisite|before|after|depends?\s+on|requires?|sequence)\b|先于|早于|之前|之后|前置条件|前提|依赖/u;
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -629,6 +648,216 @@ function collectLexicalFeatures(value: string): string[] {
     return [...features];
 }
 
+function collectOrderedLexicalFeatures(value: string): string[] {
+    const normalized = String(value || '').toLowerCase();
+    const features: string[] = [];
+    const seen = new Set<string>();
+    const append = (feature: string) => {
+        const normalizedFeature = String(feature || '').trim();
+        if (!normalizedFeature || seen.has(normalizedFeature)) {
+            return;
+        }
+        seen.add(normalizedFeature);
+        features.push(normalizedFeature);
+    };
+    const asciiTokens = normalized.match(/[a-z0-9]+/g) || [];
+    asciiTokens.forEach((token) => {
+        if (token.length >= 2) {
+            append(token);
+        }
+    });
+    const cjkRuns = normalized.match(/[\u3400-\u9fff]+/gu) || [];
+    cjkRuns.forEach((run) => {
+        const trimmed = String(run || '').trim();
+        if (!trimmed) {
+            return;
+        }
+        if (trimmed.length <= 2) {
+            append(trimmed);
+            return;
+        }
+        for (let index = 0; index < trimmed.length - 1; index += 1) {
+            append(trimmed.slice(index, index + 2));
+        }
+    });
+    return features;
+}
+
+function computeFeatureOverlapRatio(left: string[], right: string[]): number {
+    if (left.length <= 0 || right.length <= 0) {
+        return 0;
+    }
+    const rightSet = new Set(right);
+    const overlapCount = left.filter((feature) => rightSet.has(feature)).length;
+    return Number((overlapCount / left.length).toFixed(4));
+}
+
+function computeFeatureJaccard(left: string[], right: string[]): number {
+    if (left.length <= 0 || right.length <= 0) {
+        return 0;
+    }
+    const leftSet = new Set(left);
+    const rightSet = new Set(right);
+    let overlapCount = 0;
+    leftSet.forEach((feature) => {
+        if (rightSet.has(feature)) {
+            overlapCount += 1;
+        }
+    });
+    const unionCount = leftSet.size + rightSet.size - overlapCount;
+    if (unionCount <= 0) {
+        return 0;
+    }
+    return Number((overlapCount / unionCount).toFixed(4));
+}
+
+function buildStateFrameFeatures(value: string): string[] {
+    return collectOrderedLexicalFeatures(value)
+        .map((feature) => String(feature || '').trim().toLowerCase())
+        .filter((feature) => feature.length >= 2)
+        .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
+}
+
+function normalizeStateFrameSubject(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function normalizeStateFrameValue(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function buildStateFrame(
+    surface: string,
+    subject: string,
+    connectorKind: StateFrameConnectorKind,
+    value: string
+): StateFrame | null {
+    const normalizedSurface = normalizeWhitespace(surface);
+    const normalizedSubject = normalizeStateFrameSubject(subject);
+    const normalizedValue = normalizeStateFrameValue(value);
+    if (!normalizedSurface || !normalizedSubject || !normalizedValue) {
+        return null;
+    }
+    if (/\d/u.test(normalizedValue) || STATE_FRAME_SKIP_VALUE_PATTERN.test(normalizedValue)) {
+        return null;
+    }
+    const subjectFeatures = buildStateFrameFeatures(normalizedSubject);
+    const valueFeatures = buildStateFrameFeatures(normalizedValue);
+    if (subjectFeatures.length <= 0 || valueFeatures.length <= 0) {
+        return null;
+    }
+    return {
+        surface: normalizedSurface,
+        subject: normalizedSubject,
+        subjectFeatures,
+        connectorKind,
+        value: normalizedValue,
+        valueFeatures,
+        tailFeatures: valueFeatures.slice(-2),
+    };
+}
+
+function extractStateFrames(value: string): StateFrame[] {
+    const patterns: Array<{ pattern: RegExp; connectorKind: StateFrameConnectorKind }> = [
+        {
+            pattern: /^(.{1,80}?)\s+(?:is|are|was|were|means|refers to|belongs to)\s+(.+)$/iu,
+            connectorKind: 'definition',
+        },
+        {
+            pattern: /^(.{1,24}?)(?:是|指|属于)(.+)$/u,
+            connectorKind: 'definition',
+        },
+    ];
+    return String(value || '')
+        .split(POLARITY_SENTENCE_SPLIT_PATTERN)
+        .map((sentence) => normalizeWhitespace(sentence))
+        .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
+        .flatMap((sentence) => {
+            for (const candidate of patterns) {
+                const match = sentence.match(candidate.pattern);
+                if (!match) {
+                    continue;
+                }
+                const frame = buildStateFrame(
+                    sentence,
+                    String(match[1] || ''),
+                    candidate.connectorKind,
+                    String(match[2] || '')
+                );
+                return frame ? [frame] : [];
+            }
+            return [];
+        });
+}
+
+function stateFrameSubjectsComparable(answerFrame: StateFrame, supportFrame: StateFrame): boolean {
+    const normalizedAnswerSubject = normalizeWhitespace(answerFrame.subject).toLowerCase();
+    const normalizedSupportSubject = normalizeWhitespace(supportFrame.subject).toLowerCase();
+    if (!normalizedAnswerSubject || !normalizedSupportSubject) {
+        return false;
+    }
+    if (
+        normalizedAnswerSubject.includes(normalizedSupportSubject)
+        || normalizedSupportSubject.includes(normalizedAnswerSubject)
+    ) {
+        return true;
+    }
+    return computeFeatureOverlapRatio(answerFrame.subjectFeatures, supportFrame.subjectFeatures) >= 0.6;
+}
+
+function stateFrameValuesEquivalent(answerFrame: StateFrame, supportFrame: StateFrame): boolean {
+    const normalizedAnswerValue = normalizeWhitespace(answerFrame.value).toLowerCase();
+    const normalizedSupportValue = normalizeWhitespace(supportFrame.value).toLowerCase();
+    if (!normalizedAnswerValue || !normalizedSupportValue) {
+        return false;
+    }
+    if (
+        normalizedAnswerValue === normalizedSupportValue
+        || normalizedAnswerValue.includes(normalizedSupportValue)
+        || normalizedSupportValue.includes(normalizedAnswerValue)
+    ) {
+        return true;
+    }
+    return computeFeatureJaccard(answerFrame.valueFeatures, supportFrame.valueFeatures) >= 0.85;
+}
+
+function stateFrameTailOverlapCount(answerFrame: StateFrame, supportFrame: StateFrame): number {
+    if (answerFrame.tailFeatures.length <= 0 || supportFrame.tailFeatures.length <= 0) {
+        return 0;
+    }
+    const supportTailSet = new Set(supportFrame.tailFeatures);
+    return answerFrame.tailFeatures.filter((feature) => supportTailSet.has(feature)).length;
+}
+
+function stateFramesComparable(answerFrame: StateFrame, supportFrame: StateFrame): boolean {
+    if (!stateFrameSubjectsComparable(answerFrame, supportFrame)) {
+        return false;
+    }
+    if (answerFrame.connectorKind !== supportFrame.connectorKind) {
+        return false;
+    }
+    if (stateFrameValuesEquivalent(answerFrame, supportFrame)) {
+        return true;
+    }
+    return stateFrameTailOverlapCount(answerFrame, supportFrame) > 0;
+}
+
+function buildStateConflictMessage(conflicts: StateFrameConflict[]): string {
+    if (conflicts.length <= 0) {
+        return 'Draft answer stayed state-consistent with the grounded support that could be compared.';
+    }
+    const fragments = conflicts.slice(0, 2).map((conflict) => (
+        `"${conflict.answerFrame.surface}" conflicted with "${conflict.supportFrame.surface}" (${conflict.supportFrame.label})`
+    ));
+    return `Draft answer contradicted comparable grounded state frames: ${fragments.join('; ')}.`;
+}
+
 function computeGroundingAlignmentScore(answer: string, supportText: string): number {
     const normalizedAnswer = normalizeWhitespace(answer).toLowerCase();
     const normalizedSupport = normalizeWhitespace(supportText).toLowerCase();
@@ -823,6 +1052,61 @@ function evaluateStructuredConsistency(context: AnswerReleaseReviewContext): {
     };
 }
 
+function evaluateStateConsistency(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    comparableFrameCount: number;
+    conflicts: StateFrameConflict[];
+} {
+    const answerFrames = extractStateFrames(context.draftAnswer);
+    if (answerFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const supportFrames = buildSupportCandidates(context).flatMap((candidate) => (
+        extractStateFrames(candidate.text).map((frame) => ({
+            ...frame,
+            label: candidate.label,
+        }))
+    ));
+    if (supportFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const conflicts: StateFrameConflict[] = [];
+    let comparableFrameCount = 0;
+    answerFrames.forEach((answerFrame) => {
+        const comparableSupportFrames = supportFrames.filter((supportFrame) => (
+            stateFramesComparable(answerFrame, supportFrame)
+        ));
+        if (comparableSupportFrames.length <= 0) {
+            return;
+        }
+        comparableFrameCount += 1;
+        if (comparableSupportFrames.some((supportFrame) => stateFrameValuesEquivalent(answerFrame, supportFrame))) {
+            return;
+        }
+        conflicts.push({
+            answerFrame,
+            supportFrame: comparableSupportFrames
+                .slice()
+                .sort((left, right) => (
+                    stateFrameTailOverlapCount(answerFrame, right) - stateFrameTailOverlapCount(answerFrame, left)
+                ))[0],
+        });
+    });
+    return {
+        passed: conflicts.length <= 0,
+        comparableFrameCount,
+        conflicts: conflicts.filter((conflict) => Boolean(conflict.supportFrame)),
+    };
+}
+
 function evaluatePolarityConsistency(context: AnswerReleaseReviewContext): {
     passed: boolean;
     comparableSentenceCount: number;
@@ -940,6 +1224,7 @@ function buildDecision(
     groundedEvidenceAvailable: boolean,
     groundingAlignmentPassed: boolean,
     structuredConsistencyPassed: boolean,
+    stateConsistencyPassed: boolean,
     polarityConsistencyPassed: boolean,
     graphOrderConsistencyPassed: boolean,
     leakedInternalFragments: string[],
@@ -951,6 +1236,7 @@ function buildDecision(
     if (
         !groundingAlignmentPassed
         || !structuredConsistencyPassed
+        || !stateConsistencyPassed
         || !polarityConsistencyPassed
         || !graphOrderConsistencyPassed
         || leakedInternalFragments.length > 0
@@ -1000,6 +1286,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             comparableFactCount: 0,
             conflicts: [],
         };
+    const stateConsistency = groundedEvidenceAvailable
+        ? evaluateStateConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
     const polarityConsistency = groundedEvidenceAvailable
         ? evaluatePolarityConsistency({
             ...context,
@@ -1033,6 +1329,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         groundedEvidenceAvailable,
         groundingAlignment.passed,
         structuredConsistency.passed,
+        stateConsistency.passed,
         polarityConsistency.passed,
         graphOrderConsistency.passed,
         leakedInternalFragments,
@@ -1092,6 +1389,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : 'No high-confidence structured fact comparison was available, so contradiction checking stayed conservative.'
                 )
                 : 'No evidence was available, so structured contradiction checking was not evaluated.',
+        },
+        {
+            gateId: 'claim_state_consistency',
+            passed: stateConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    stateConsistency.comparableFrameCount > 0
+                        ? buildStateConflictMessage(stateConsistency.conflicts)
+                        : 'No comparable state frame was available, so same-subject state contradiction checking stayed conservative.'
+                )
+                : 'No evidence was available, so same-subject state contradiction checking was not evaluated.',
         },
         {
             gateId: 'claim_polarity_consistency',

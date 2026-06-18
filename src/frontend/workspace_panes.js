@@ -358,6 +358,8 @@
             storageProviderAvailable: false,
             readSucceeded: false,
             renderSucceeded: false,
+            sourceProvenanceBlockCount: 0,
+            sourceProvenanceAttributedNodeCount: 0,
             highlightedNodeCount: 0,
             highlightStrategy: 'none',
             usedFallback: false,
@@ -568,6 +570,41 @@
             : '';
     }
 
+    function resolveGraphFocusRenderedSourceRange(candidate) {
+        const dataset = candidate && candidate.dataset ? candidate.dataset : null;
+        const startLine = Number(dataset && dataset.agentMarkdownSourceStartLine);
+        if (!Number.isFinite(startLine) || startLine <= 0) {
+            return null;
+        }
+        const endCandidate = Number(dataset && dataset.agentMarkdownSourceEndLine);
+        return {
+            startLine: Math.trunc(startLine),
+            endLine: Number.isFinite(endCandidate) && endCandidate >= startLine
+                ? Math.trunc(endCandidate)
+                : Math.trunc(startLine),
+        };
+    }
+
+    function doGraphFocusLineRangesOverlap(leftStartLine, leftEndLine, rightStartLine, rightEndLine) {
+        const normalizedLeftStart = Number(leftStartLine);
+        const normalizedLeftEnd = Number.isFinite(Number(leftEndLine)) && Number(leftEndLine) >= normalizedLeftStart
+            ? Number(leftEndLine)
+            : normalizedLeftStart;
+        const normalizedRightStart = Number(rightStartLine);
+        const normalizedRightEnd = Number.isFinite(Number(rightEndLine)) && Number(rightEndLine) >= normalizedRightStart
+            ? Number(rightEndLine)
+            : normalizedRightStart;
+        if (
+            !Number.isFinite(normalizedLeftStart)
+            || !Number.isFinite(normalizedLeftEnd)
+            || !Number.isFinite(normalizedRightStart)
+            || !Number.isFinite(normalizedRightEnd)
+        ) {
+            return false;
+        }
+        return normalizedLeftStart <= normalizedRightEnd && normalizedRightStart <= normalizedLeftEnd;
+    }
+
     function collectGraphFocusHighlightAnchors(matchedSpans, markdownSource) {
         const anchors = [];
         const seen = new Set();
@@ -583,12 +620,16 @@
                     strategy: 'line_window',
                     text: lineWindowText,
                     fallbackText,
+                    startLine: Number.isFinite(Number(span && span.startLine)) ? Math.trunc(Number(span.startLine)) : null,
+                    endLine: Number.isFinite(Number(span && span.endLine)) ? Math.trunc(Number(span.endLine)) : null,
                 }
                 : fallbackText
                     ? {
                         strategy: 'snippet_fallback',
                         text: fallbackText,
                         fallbackText: '',
+                        startLine: null,
+                        endLine: null,
                     }
                     : null;
             if (!anchor) {
@@ -647,6 +688,29 @@
         const containerPenalty = descendantCandidateCount > 0
             ? Math.min(400, descendantCandidateCount * 120)
             : 0;
+        const renderedSourceRange = resolveGraphFocusRenderedSourceRange(candidate);
+        if (
+            renderedSourceRange
+            && Number.isFinite(Number(anchor.startLine))
+            && Number(anchor.startLine) > 0
+            && doGraphFocusLineRangesOverlap(
+                Number(anchor.startLine),
+                Number(anchor.endLine),
+                renderedSourceRange.startLine,
+                renderedSourceRange.endLine
+            )
+        ) {
+            const provenanceScore = scoreGraphFocusNodeText(
+                nodeText,
+                [anchor.text, anchor.fallbackText].filter(Boolean)
+            );
+            if (provenanceScore > 0) {
+                return {
+                    score: provenanceScore + 8000 + specificityBonus - containerPenalty,
+                    strategy: 'source_line_provenance',
+                };
+            }
+        }
         const lineWindowScore = scoreGraphFocusNodeText(nodeText, [anchor.text]);
         if (lineWindowScore > 0) {
             return {
@@ -711,7 +775,9 @@
                 return;
             }
             selectedNodes.push(bestNode);
-            if (bestStrategy === 'line_window') {
+            if (bestStrategy === 'source_line_provenance') {
+                highlightStrategy = 'source_line_provenance';
+            } else if (bestStrategy === 'line_window' && highlightStrategy !== 'source_line_provenance') {
                 highlightStrategy = 'line_window';
             } else if (highlightStrategy === 'none') {
                 highlightStrategy = 'snippet_fallback';
@@ -806,9 +872,22 @@
             ) {
                 return true;
             }
-            await previewRuntime.markdownRuntime.renderMarkdownInto(renderedHost, String(resolvedSource.markdownSource || ''));
+            const renderResult = await previewRuntime.markdownRuntime.renderMarkdownInto(
+                renderedHost,
+                String(resolvedSource.markdownSource || '')
+            );
             if (diagnostics) {
                 diagnostics.renderSucceeded = true;
+                diagnostics.sourceProvenanceBlockCount = Number(
+                    Number.isFinite(Number(renderResult && renderResult.sourceBlockCount))
+                        ? Number(renderResult.sourceBlockCount)
+                        : 0
+                );
+                diagnostics.sourceProvenanceAttributedNodeCount = Number(
+                    Number.isFinite(Number(renderResult && renderResult.attributedNodeCount))
+                        ? Number(renderResult.attributedNodeCount)
+                        : 0
+                );
             }
             if (
                 !renderedHost.isConnected

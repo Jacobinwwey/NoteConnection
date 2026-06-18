@@ -7,9 +7,11 @@
 - [x] A fresh code audit confirms that the final public-answer reviewer is already implemented in `src/learning/answerReleaseReview.ts`; the active gap is no longer "missing release-review ownership".
 - [x] A fresh code audit also confirms that right-pane graph-focus highlighting is now tighter than payload hardening alone: `src/frontend/workspace_panes.js` prefers trustworthy `line_window` anchors, falls back to `snippet_fallback` when the line window is absent or stale, records additive `highlightStrategy` diagnostics, and prunes container-wide over-highlighting.
 - [x] `src/agent_workspace.frontend.test.ts` now pins two operator-relevant failures: repeated snippet text must resolve to the line-anchored paragraph when the line window is trustworthy, and unusable line metadata must fall back to snippet highlighting instead of highlighting the wrong paragraph.
+- [x] `src/learning/answerReleaseReview.ts` now also enforces `claim_state_consistency`, so same-subject state reversals such as `open system` vs `closed system` are revised in both English and Chinese rather than slipping through the release gate.
+- [x] `src/frontend/markdown_runtime.js` now annotates rendered markdown blocks with source-line metadata, and `src/frontend/workspace_panes.js` now prefers `source_line_provenance` when rendered-node source ranges overlap trusted matched spans.
 - [x] The user-provided screenshot `1781782257390.jpg` remains a formal acceptance owner through `waterglass_explicit_scope_compact_zh`; the root cause is now documented as planner/retrieval normalization drift plus public-answer diagnostic leakage, not a generic "RAG weakness".
-- [ ] Next active gap: broaden deterministic claim-vs-citation / claim-vs-evidence contradiction coverage without turning the reviewer into a speculative verifier.
-- [ ] Next active gap: improve source-to-render provenance once the markdown runtime can expose stable source-line / DOM metadata beyond today's line-window and snippet-fallback heuristics.
+- [ ] Next active gap: broaden deterministic claim-vs-citation / claim-vs-evidence contradiction coverage beyond the current lexical + structured + state + polarity + graph-order reviewer stack without turning the reviewer into a speculative verifier.
+- [ ] Next active gap: deepen source-to-render provenance beyond today's block-level markdown source mapping and `source_line_provenance` baseline.
 - [ ] Next active gap: keep growing the real regression corpus with cross-scope, compact-alias, and synonym failures while preserving backward compatibility.
 
 ### 2026-06-18 Active Final Reply Review Task Sync
@@ -47,13 +49,14 @@
 1. Public answers never expose `No scoped knowledge points matched`-style internal failure strings.
 2. Reviewer decisions remain additive and backward-compatible for all current clients.
 3. Grounded drafts with conflicting structured numeric/year facts are revised before release instead of slipping through on lexical overlap alone.
-4. Grounded drafts that explicitly reverse supported polarity are revised before release instead of slipping through on lexical overlap alone.
-5. Grounded drafts that reverse `prerequisite` or `sequence` direction against the assembled DAG are revised before release instead of leaking inverted order claims to the public answer.
-6. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
-7. Exported `knowledgeRunReports` carry compact reviewer summaries for `release` / `revise` flows and omit the field cleanly when review data is absent.
-8. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card and compare card surface the same reviewer path.
-9. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields, including citation-backed paths/snippets when top-level hit fields are incomplete; it prefers trustworthy `line_window` anchors, falls back to `snippet_fallback` when line metadata is stale or absent, and retains additive `highlightStrategy` diagnostics without widening the main answer area.
-10. Runtime verification now passes the shared alias/scope corpus, including the screenshot-derived compact/spaced `waterglass` pair and the `financial` cross-scope recovery pair, and confirms `answerReleaseReview.publicAnswer === result.answer`.
+4. Grounded drafts that assert the wrong same-subject state are revised before release instead of leaking contradictions such as `open system` vs `closed system`.
+5. Grounded drafts that explicitly reverse supported polarity are revised before release instead of slipping through on lexical overlap alone.
+6. Grounded drafts that reverse `prerequisite` or `sequence` direction against the assembled DAG are revised before release instead of leaking inverted order claims to the public answer.
+7. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
+8. Exported `knowledgeRunReports` carry compact reviewer summaries for `release` / `revise` flows and omit the field cleanly when review data is absent.
+9. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card and compare card surface the same reviewer path.
+10. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields, including citation-backed paths/snippets when top-level hit fields are incomplete; rendered markdown blocks retain source-line metadata, `source_line_provenance` wins when rendered-node ranges overlap trusted spans, and the system falls back to `line_window` / `snippet_fallback` without widening the main answer area.
+11. Runtime verification now passes the shared alias/scope corpus, including the screenshot-derived compact/spaced `waterglass` pair and the `financial` cross-scope recovery pair, and confirms `answerReleaseReview.publicAnswer === result.answer`.
 
 ### 2026-06-17 Active Agent Knowledge DAG Task Sync
 

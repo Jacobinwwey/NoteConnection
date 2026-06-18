@@ -101,7 +101,7 @@ Current contract surfaces:
 
 - `AnswerReleaseReview` is now a first-class additive runtime contract rather than a planning placeholder.
   - `AnswerReleaseDecision` remains `release` | `revise` | `abstain`.
-  - Gate coverage currently includes `evidence_sufficiency`, `graph_support_sufficiency`, `claim_grounding_alignment`, `claim_structured_consistency`, `claim_polarity_consistency`, `claim_graph_order_consistency`, `public_surface_contraction`, `internal_diagnostic_leakage`, and `abstention_hygiene`.
+  - Gate coverage currently includes `evidence_sufficiency`, `graph_support_sufficiency`, `claim_grounding_alignment`, `claim_structured_consistency`, `claim_state_consistency`, `claim_polarity_consistency`, `claim_graph_order_consistency`, `public_surface_contraction`, `internal_diagnostic_leakage`, and `abstention_hygiene`.
 - `src/learning/conversationComposer.ts` must pass the scoped draft answer, grouped knowledge points, citations, resolved scope, and optional graph context through `reviewAnswerRelease(...)` before exposing the public `answer` / `directAnswer` surface.
 - `src/learning/KnowledgeLearningPlatform.ts`, workspace export, and frontend reply rendering must treat answer-release telemetry as additive inspection material:
   - public answer text,
@@ -109,18 +109,20 @@ Current contract surfaces:
   - failed gate IDs,
   - leaked internal fragments,
   - per-gate diagnostics.
-- Evidence-pane source projection is now explicitly two-stage:
-  - prefer markdown `line_window` anchors when source-line metadata is trustworthy,
-  - fall back to `snippet_fallback` when line metadata is stale or low-overlap,
-  - expose additive `highlightStrategy` diagnostics instead of pretending the projection is exact.
+- Evidence-pane source projection is now explicitly layered:
+  - `src/frontend/markdown_runtime.js` annotates rendered markdown blocks with `data-agent-markdown-source-start-line`, `data-agent-markdown-source-end-line`, and `data-agent-markdown-source-kind`,
+  - graph focus prefers `source_line_provenance` when rendered-node source ranges overlap trusted evidence spans,
+  - it falls back to markdown `line_window` anchors when rendered-source metadata is absent but citation line metadata is still trustworthy,
+  - it falls back to `snippet_fallback` when line metadata is stale or low-overlap,
+  - it exposes additive `highlightStrategy`, `sourceProvenanceBlockCount`, and `sourceProvenanceAttributedNodeCount` diagnostics instead of pretending the projection is exact.
 - The screenshot-backed acceptance path is now part of the formal runtime contract:
   - reference failure image: `E:\微信传输\WeChat Files\wxid_zywfbxxiwwir22\FileStorage\Temp\1781782257390.jpg`
   - regression case: `waterglass_explicit_scope_compact_zh`
   - verifier: `scripts/verify-knowledge-workspace-runtime.js`
   - acceptance rule: the public answer must not leak `No scoped knowledge points matched` or `retrieval_candidates_below_threshold` when scoped evidence exists.
 - Remaining architecture gap:
-  - broaden contradiction coverage from high-confidence structured facts into richer claim-vs-citation / claim-vs-evidence contradiction classes,
-  - push source-to-render provenance deeper into the markdown runtime so right-pane highlighting can become deterministic rather than heuristic.
+  - broaden contradiction coverage from the current lexical + structured + state + polarity + graph-order stack into richer claim-vs-citation / claim-vs-evidence contradiction classes,
+  - push source-to-render provenance beyond the current block-level markdown mapping so right-pane highlighting can become exact-span / nested-span deterministic rather than merely bounded.
 
 Compatibility rules:
 

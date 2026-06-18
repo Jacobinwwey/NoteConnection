@@ -4324,6 +4324,66 @@ describe('workspace panes controller', () => {
         }));
     });
 
+    test('uses markdown source-line provenance when identical rendered paragraphs repeat', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'Water glass is used for calibration.',
+            '',
+            'Water glass is used for calibration.',
+        ].join('\n'));
+
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        (window as any).marked = {
+            parse: jest.fn(() => (
+                '<h1>Water Glass</h1>'
+                + '<p data-case="first">Water glass is used for calibration.</p>'
+                + '<p data-case="second">Water glass is used for calibration.</p>'
+            )),
+        };
+
+        controller.init();
+        controller.openGraphFocusPane({
+            atomId: 'atom_water_glass',
+            title: 'Water Glass',
+            sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            matchedSpans: [
+                {
+                    title: 'Calibration note',
+                    snippet: 'Water glass is used for calibration.',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    startLine: 3,
+                    endLine: 3,
+                },
+            ],
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        const renderedParagraphs = Array.from(graphBody?.querySelectorAll('p[data-case]') || []);
+        expect(renderedParagraphs).toHaveLength(2);
+        expect((renderedParagraphs[0] as HTMLElement)?.dataset.agentMarkdownSourceStartLine).toBe('3');
+        expect((renderedParagraphs[1] as HTMLElement)?.dataset.agentMarkdownSourceStartLine).toBe('5');
+
+        const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
+        expect(highlighted).toHaveLength(1);
+        expect((highlighted[0] as HTMLElement)?.dataset.case).toBe('first');
+        expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
+            matchedSpanCount: 1,
+            highlightedNodeCount: 1,
+            highlightStrategy: 'source_line_provenance',
+            sourceProvenanceBlockCount: 3,
+            sourceProvenanceAttributedNodeCount: 3,
+        }));
+    });
+
     test('falls back to snippet-based graph focus highlights when no usable line window exists', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness();
         const readContent = jest.fn(async () => [

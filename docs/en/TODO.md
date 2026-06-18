@@ -23,12 +23,14 @@
 - [x] Drive both Jest and `scripts/verify-knowledge-workspace-runtime.js` from that same deterministic corpus so alias/scope expectations stay aligned across unit and runtime verification.
 - [x] Fix the soft-miss planner-scope-recovery bug in `KnowledgeLearningPlatform.ts`: recovery now also runs when noisy in-scope candidates survive reranking but none of them belong to planner title-hit documents.
 - [x] Extend the reviewer beyond lexical grounding overlap with a deterministic `claim_structured_consistency` gate for numeric/year contradictions, and cover it with false-positive-resistant unit cases.
+- [x] Extend the reviewer beyond lexical + structured-fact overlap with a deterministic `claim_state_consistency` gate for same-subject state contradictions such as `open system` vs `closed system`, and cover it with English/Chinese false-positive-resistant unit cases.
 - [x] Extend the reviewer beyond lexical + structured-fact overlap with a deterministic `claim_polarity_consistency` gate for explicit positive/negative claim reversals, and cover it with false-positive-resistant unit cases.
 - [x] Extend the reviewer beyond lexical + structured-fact + polarity checks with a deterministic `claim_graph_order_consistency` gate for reversed `prerequisite` / `sequence` claims against the assembled DAG, and cover it with false-positive-resistant unit cases.
-- [ ] Extend contradiction coverage beyond the current lexical + structured-fact + polarity + graph-order gates into broader claim-vs-citation / claim-vs-evidence conflicts without raising false positives.
+- [ ] Extend contradiction coverage beyond the current lexical + structured-fact + state + polarity + graph-order gates into broader claim-vs-citation / claim-vs-evidence conflicts without raising false positives.
 - [x] Harden the graph-focus payload contract so right-pane source preview/highlight is deterministic even when candidate-path fallback is noisy.
 - [x] Tighten graph-focus highlighting beyond payload stability: prefer trusted `line_window` anchors, fall back to `snippet_fallback` when line metadata is absent or stale, and expose additive `highlightStrategy` diagnostics.
-- [ ] Strengthen source-to-render provenance mapping once the markdown runtime can expose stable source-line / DOM metadata beyond the current line-window/snippet-fallback heuristics.
+- [x] Push block-level markdown source provenance into `src/frontend/markdown_runtime.js`, and let graph focus prefer `source_line_provenance` before `line_window` / `snippet_fallback` when rendered-node source ranges overlap trusted spans.
+- [ ] Strengthen source-to-render provenance mapping beyond the current block-level markdown source metadata and `source_line_provenance` baseline.
 
 ### 2026-06-17 Agent Knowledge DAG TODO Reclassification
 

@@ -24,6 +24,13 @@ The target is not another prompt framework. The target is a deterministic releas
 4. uses the current project DAG as structured evidence input rather than treating graph data as prompt decoration,
 5. remains additive and backward-compatible.
 
+### 2026-06-19 Delta
+
+- Re-audit confirms the original missing-owner problem is already closed in code. The live work now hardens two narrower boundaries rather than reopening framework debates.
+- `src/learning/answerReleaseReview.ts` now adds `claim_state_consistency`, a deterministic same-subject state gate for definition/copula contradictions such as `open system` vs `closed system`.
+- `src/frontend/markdown_runtime.js` now exposes block-level source-line provenance for rendered markdown, and `src/frontend/workspace_panes.js` now prefers `source_line_provenance` before `line_window` / `snippet_fallback`.
+- The remaining provenance gap is no longer “no source-to-render provenance.” It is deeper exact-span / nested provenance beyond the current block-level mapping.
+
 ### First Principles
 
 #### Term Definitions
@@ -122,6 +129,7 @@ The first fix restores evidence. The second fix restores robustness.
 | Empty-result answers must abstain cleanly instead of exposing runtime detail | Reviewer now downgrades unsupported drafts into concise abstentions. | Implemented |
 | Grounded drafts must stay aligned with their cited/knowledge-point support | Reviewer now enforces `claim_grounding_alignment` and revises drafts when lexical evidence overlap shows claim drift. | Implemented |
 | Grounded drafts must also be checked for deterministic structured fact conflicts | Reviewer now enforces `claim_structured_consistency`, revising grounded drafts when numeric or year facts conflict with support even though topical lexical overlap still passes. | Implemented baseline |
+| Grounded drafts must also be checked for same-subject state contradictions | Reviewer now enforces `claim_state_consistency`, revising grounded drafts when comparable definition/copula state claims conflict with grounded support in English or Chinese. | Implemented baseline |
 | Grounded drafts must also be checked for explicit polarity reversals | Reviewer now enforces `claim_polarity_consistency`, revising grounded drafts when they say `is not` / `不是` against support that still affirms the same claim skeleton. | Implemented baseline |
 | Grounded drafts must also be checked for reversed DAG order claims | Reviewer now enforces `claim_graph_order_consistency`, revising drafts that invert grounded `prerequisite` or `sequence` direction from the assembled DAG. | Implemented baseline |
 | Final review state must be inspectable by developers | `answerReleaseReview` is now stored additively on `AgentConversationResponse`, `AgentConversationTrace`, and `KnowledgeRun`. | Implemented |
@@ -361,6 +369,44 @@ Attached additively to:
   - unusable line metadata must fall back to snippet highlighting instead of highlighting the wrong paragraph.
 - This phase still does not move release policy into the frontend. It closes a different invariant: evidence-preview precision after the answer has already been contracted.
 
+#### Phase-13 same-subject state contradiction hardening landed on top of the graph-order slice
+
+- `src/learning/answerReleaseReview.ts` now adds a fifth contradiction-oriented reviewer gate: `claim_state_consistency`.
+- This gate is intentionally narrower than a generic semantic verifier:
+  - it only compares definition/copula-style state frames that look like the same subject,
+  - it skips numeric facts and DAG-order language that are already owned by `claim_structured_consistency` and `claim_graph_order_consistency`.
+- The first supported contradiction family is same-subject state reversal:
+  - English shapes such as `X is an open system` vs `X is a closed system`,
+  - Chinese shapes such as `X 是开放系统` vs `X 是封闭系统`.
+- The gate stays conservative for false-positive control:
+  - if the draft exposes no comparable state frame, it does nothing,
+  - if support exposes no comparable state frame, it does nothing,
+  - if subject overlap is weak or the value tails still materially overlap, it does not force revision.
+- `src/learning/answerReleaseReview.test.ts` now pins three important behaviors:
+  - English same-subject state conflict forces `revise`,
+  - Chinese same-subject state conflict forces `revise`,
+  - compatible refinement of the same state still `release`s cleanly.
+- This phase does not replace lexical, structured, polarity, or DAG-order gates.
+- It closes a narrower gap: `same topic, same subject, but the answer asserts the wrong state`.
+
+#### Phase-14 block-level markdown provenance landed on top of graph-focus highlight precision
+
+- `src/frontend/markdown_runtime.js` now extracts markdown source blocks and annotates rendered nodes with:
+  - `data-agent-markdown-source-start-line`,
+  - `data-agent-markdown-source-end-line`,
+  - `data-agent-markdown-source-kind`.
+- `renderMarkdownInto(...)` now returns additive provenance diagnostics so callers can inspect:
+  - `sourceBlockCount`,
+  - `attributedNodeCount`.
+- `src/frontend/workspace_panes.js` now consumes that metadata before text heuristics:
+  - `resolveGraphFocusRenderedSourceRange(...)` reads rendered-node source ranges,
+  - `source_line_provenance` wins when those ranges overlap trusted evidence spans,
+  - `line_window` and `snippet_fallback` remain the bounded fallback path.
+- `src/agent_workspace.frontend.test.ts` now pins the repeated-paragraph case where two rendered paragraphs have identical text but only one matches the trusted source-line span.
+- This phase narrows the earlier provenance criticism:
+  - the right pane no longer depends only on payload snippets,
+  - but the mapping is still block-level rather than exact-span / nested-span precise.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -376,8 +422,8 @@ Critical conclusion:
 
 - **DSPy** is useful for evaluation/program structure, but it does not own runtime invariants unless you externalize them into explicit gates first.
 - **Guidance** is useful for constrained structured outputs, but structured output is not the same as a release decision.
-- **Semantic Kernel** and **LangChain Core** can organize calls, but they do not solve evidence-policy ownership.
-- **LiteLLM** helps provider routing, not answer correctness.
+- **Semantic Kernel** and **LangChain Core** can organize calls, but they do not solve evidence-policy ownership; Semantic Kernel's current repo direction toward Microsoft Agent Framework is further evidence that it is an orchestration surface, not a local verifier.
+- **LiteLLM** helps provider routing, not answer correctness; it is a gateway, not a release-review owner.
 - **AhaDiff** is the most relevant conceptual reference because it separates public conclusion from evidence and verification state. The new local reviewer layer follows that direction without importing its runtime model.
 - The graph-focus payload fix reinforces the same lesson on the frontend side: local evidence-path invariants still need a local owner even when framework-assisted prompting exists elsewhere.
 
@@ -438,9 +484,9 @@ The first two decide capability. The third decides trust.
 
 ### Next Direction
 
-1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + structured-fact + polarity + graph-order gates, but only where the new checks can stay deterministic enough to avoid false-positive churn.
+1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + structured-fact + state + polarity + graph-order gates, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
-3. Treat the current `line_window` + `snippet_fallback` graph-focus highlighter as the implemented baseline, then push deeper source-to-render provenance only when the markdown runtime can expose stable source-line / DOM metadata.
+3. Treat the current block-level markdown source mapping plus `source_line_provenance` -> `line_window` -> `snippet_fallback` graph-focus stack as the implemented baseline, then push deeper exact-span / nested provenance.
 4. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
 5. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
 
@@ -448,7 +494,7 @@ The first two decide capability. The third decides trust.
 
 1. The missing mechanism was not graph retrieval; it was final public-answer release review.
 2. The correct owner is a local deterministic reviewer layer, not a new prompt framework.
-3. The current project DAG remains the evidence substrate and now also participates in release-time order correction; graph-focus now also has a tighter `line_window` / `snippet_fallback` evidence-precision baseline, so the remaining evidence gap is deeper source-to-render provenance rather than basic pane opening.
+3. The current project DAG remains the evidence substrate and now also participates in release-time order correction; graph-focus now also has a block-level provenance baseline plus `source_line_provenance` / `line_window` / `snippet_fallback`, so the remaining evidence gap is deeper exact-span / nested provenance rather than basic pane opening.
 4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification.
 5. The landed slice is backward-compatible and materially improves robustness without widening the main answer surface; the next work is broader contradiction coverage, not replacing the current reviewer owner.
 
@@ -465,6 +511,13 @@ The first two decide capability. The third decides trust.
 3. 把开发者细节留在 trace、`knowledge_run`、evidence pane 和 export；
 4. 继续使用项目现有 DAG 作为结构化证据，而不是把图结构当成 prompt 装饰；
 5. 保持 additive 和向前兼容。
+
+### 2026-06-19 增量结果
+
+- 复审确认：最初的“缺失 owner”问题已经在代码中关闭，当前工作不再是重开 framework 争论，而是继续加固两个更窄的不变量边界。
+- `src/learning/answerReleaseReview.ts` 现在新增 `claim_state_consistency`，用于拦截 `open system` vs `closed system` 这类同主体 definition/copula 状态矛盾。
+- `src/frontend/markdown_runtime.js` 现在会暴露 block-level 的 source-line provenance，`src/frontend/workspace_panes.js` 则优先消费 `source_line_provenance`，之后才回退到 `line_window` / `snippet_fallback`。
+- 当前剩余的 provenance 缺口已经不再是“完全没有 source-to-render provenance”，而是超出当前 block-level mapping 的 exact-span / nested provenance。
 
 ### 第一性原理
 
@@ -564,6 +617,7 @@ The first two decide capability. The third decides trust.
 | 空结果回答必须 clean abstain，而不是暴露 runtime 细节 | reviewer 现在会把 unsupported draft 降级成简洁 abstention。 | 已实现 |
 | grounded draft 必须与 citation/knowledge-point 支撑保持一致 | reviewer 现在会执行 `claim_grounding_alignment`，在词法证据重叠不足时强制改写漂移主张。 | 已实现 |
 | grounded draft 还必须检查确定性的结构化事实冲突 | reviewer 现在会执行 `claim_structured_consistency`：即使 topical lexical overlap 仍然通过，只要数值或年份事实与支撑冲突，也会触发 revise。 | 已实现基线 |
+| grounded draft 还必须检查同主体状态矛盾 | reviewer 现在会执行 `claim_state_consistency`：对于中英文可比的 definition/copula 状态断言，只要同主体状态与支撑冲突，就会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查显式正反断言反转 | reviewer 现在会执行 `claim_polarity_consistency`：即使 topical lexical overlap 仍然通过，只要把 `is` / `不是` 这类断言方向明确说反，也会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查与 DAG 相矛盾的顺序断言 | reviewer 现在会执行 `claim_graph_order_consistency`：只要把已装配 DAG 的 `prerequisite` 或 `sequence` 方向说反，就会触发 revise。 | 已实现基线 |
 | 最终审核结果必须可供开发者检查 | `answerReleaseReview` 已加到 `AgentConversationResponse`、`AgentConversationTrace`、`KnowledgeRun`。 | 已实现 |
@@ -803,6 +857,44 @@ The first two decide capability. The third decides trust.
 - 这个 Phase 依然不把 release policy 挪到前端。
 - 它关闭的是另一条局部不变量：在主回答已经收缩之后，证据原文预览的高亮精度。
 
+#### 在 DAG 顺序矛盾切片之上继续落地的 Phase-13 同主体状态矛盾加固
+
+- `src/learning/answerReleaseReview.ts` 现在新增了第五个面向矛盾检测的 reviewer gate：`claim_state_consistency`。
+- 这个 gate 依然比泛化语义 verifier 更窄口径：
+  - 它只比较看起来属于同一主体的 definition/copula 状态框架，
+  - 它会跳过已经分别由 `claim_structured_consistency` 与 `claim_graph_order_consistency` 持有的数值事实与 DAG 顺序语言。
+- 当前支持的第一批矛盾类型是同主体状态反转：
+  - 英文形态，例如 `X is an open system` vs `X is a closed system`，
+  - 中文形态，例如 `X 是开放系统` vs `X 是封闭系统`。
+- 这个 gate 为了控制 false positive，继续保持保守：
+  - 如果草稿没有可比 state frame，它什么也不做，
+  - 如果支撑里没有可比 state frame，它什么也不做，
+  - 如果主体重叠过弱，或 value tail 仍然存在实质重叠，它不会强制 revise。
+- `src/learning/answerReleaseReview.test.ts` 现在已经固定三类关键行为：
+  - 英文同主体状态冲突必须 `revise`，
+  - 中文同主体状态冲突必须 `revise`，
+  - 同一状态的兼容细化表述必须继续 clean `release`。
+- 这个 Phase 不替代 lexical、structured、polarity 或 DAG-order gate。
+- 它补上的窄缺口是：“主题没偏、主体没偏，但状态说反了”。
+
+#### 在 graph-focus 高亮精度之上继续落地的 Phase-14 block-level markdown provenance
+
+- `src/frontend/markdown_runtime.js` 现在会抽取 markdown source blocks，并给渲染节点标注：
+  - `data-agent-markdown-source-start-line`
+  - `data-agent-markdown-source-end-line`
+  - `data-agent-markdown-source-kind`
+- `renderMarkdownInto(...)` 现在还会返回 additive provenance 诊断，供调用方查看：
+  - `sourceBlockCount`
+  - `attributedNodeCount`
+- `src/frontend/workspace_panes.js` 现在会在文本启发式之前先消费这份元数据：
+  - `resolveGraphFocusRenderedSourceRange(...)` 负责读取渲染节点 source range，
+  - 当这些 range 与可信 evidence span 重叠时，`source_line_provenance` 会优先胜出，
+  - `line_window` 与 `snippet_fallback` 继续作为有界回退路径存在。
+- `src/agent_workspace.frontend.test.ts` 现在已经固定“两个渲染段落文本完全相同，但只有一个命中可信 source-line span”这一重复段落回归。
+- 这个 Phase 也进一步收紧了此前的 provenance 批评：
+  - 右侧 pane 不再只依赖 payload snippet，
+  - 但当前映射仍然是 block-level，而不是 exact-span / nested-span 精度。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -818,8 +910,8 @@ The first two decide capability. The third decides trust.
 
 - **DSPy** 适合做 evaluation/program 结构，但前提是你先把 runtime invariants 明确成 gate。
 - **Guidance** 适合约束结构化输出，但“输出是 JSON”不等于“公开回答值得发布”。
-- **Semantic Kernel** / **LangChain Core** 能组织调用，但不能替代 evidence-policy owner。
-- **LiteLLM** 管的是 provider routing，不管答案正确性。
+- **Semantic Kernel** / **LangChain Core** 能组织调用，但不能替代 evidence-policy owner；Semantic Kernel 当前仓库朝 Microsoft Agent Framework 收敛这一点，反而进一步证明它是 orchestration surface，而不是本地 verifier。
+- **LiteLLM** 管的是 provider routing，不管答案正确性；它是 gateway，不是 release-review owner。
 - **AhaDiff** 最有启发，因为它把公开结论、证据、验证状态分层；本地 reviewer 现在沿着这个方向实现，但不引入它的运行时依赖。
 - graph-focus payload 这次修复又在前端侧重复证明了同一个结论：即便别处存在 framework-assisted prompting，本地 evidence-path invariant 仍然需要本地 owner。
 
@@ -880,9 +972,9 @@ The first two decide capability. The third decides trust.
 
 ### 后续方向
 
-1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + structured-fact + polarity + graph-order gate 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
+1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + structured-fact + state + polarity + graph-order gate 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
-3. 把当前 `line_window` + `snippet_fallback` 的 graph-focus 高亮器视为已落地基线；后续只在 markdown runtime 能暴露稳定 source-line / DOM metadata 时，继续推进更深的 source-to-render provenance。
+3. 把当前 block-level markdown source mapping 与 `source_line_provenance` -> `line_window` -> `snippet_fallback` 的 graph-focus 栈视为已落地基线；后续继续推进更深的 exact-span / nested provenance。
 4. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
 5. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
 
@@ -890,6 +982,6 @@ The first two decide capability. The third decides trust.
 
 1. 本轮切片起点真正缺失的不是图检索，而是最终公开回答的 release review；复审现在已经确认这个 owner 已落地。
 2. 正确 owner 是本地确定性 reviewer layer，不是再引入一层 prompt framework。
-3. 项目现有 DAG 继续作为证据底座，并且已经开始参与 release-time 的顺序纠错；graph-focus 现在也已经具备更紧的 `line_window` / `snippet_fallback` 高亮基线，剩余缺口转移到更深的 source-to-render provenance。
+3. 项目现有 DAG 继续作为证据底座，并且已经开始参与 release-time 的顺序纠错；graph-focus 现在也已经具备 block-level provenance 加上 `source_line_provenance` / `line_window` / `snippet_fallback` 的高亮基线，剩余缺口转移到更深的 exact-span / nested provenance。
 4. `waterglass` 截图已经被编码进正式运行时验收门禁。
 5. 本轮落地保持向前兼容，同时实质提升了 agent 最终回复的鲁棒性；后续重点已经转移到更广的矛盾检测，而不是更换 reviewer owner。

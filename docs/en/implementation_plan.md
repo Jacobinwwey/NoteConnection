@@ -17,6 +17,7 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 - `conversationComposer.ts` now drafts the answer and then delegates the public release decision to the reviewer instead of releasing the draft directly.
 - The reviewer now also enforces `claim_grounding_alignment`, so grounded evidence can still force a revision when the draft drifts away from its own citations/knowledge points.
 - The reviewer now also enforces `claim_structured_consistency`, a deterministic structured-fact gate that revises grounded drafts when numeric or year facts conflict with citation/knowledge-point support even though topical lexical overlap still looks acceptable.
+- The reviewer now also enforces `claim_state_consistency`, a deterministic same-subject state gate that revises grounded drafts when definition/copula-style state claims such as `open system` vs `closed system` conflict with support in English or Chinese.
 - The reviewer now also enforces `claim_polarity_consistency`, a deterministic polarity gate that revises grounded drafts when they explicitly reverse supported positive/negative claims even though topical lexical overlap still looks acceptable.
 - The reviewer now also enforces `claim_graph_order_consistency`, a deterministic DAG-order gate that uses `connectionPaths`, `knowledgePointRelations`, `predecessorWindow`, and `successorWindow` to catch reversed `prerequisite` or `sequence` claims and rewrite them into a grounded correction sentence.
 - Cross-language abstention hygiene is now explicit: scoped Chinese misses no longer fall back to English diagnostic-heavy abstentions.
@@ -32,15 +33,15 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 - That corpus exposed a soft-miss retrieval bug in `KnowledgeLearningPlatform.ts`: planner scope recovery previously triggered only on zero-result misses, and now also triggers when reranked in-scope noise survives but none of the surviving items belong to planner title-hit documents.
 - `src/learning/answerReleaseReview.test.ts` now pins deterministic contradiction cases for numeric conflict, year conflict, and a multi-value support case that must not trigger a false positive.
 - `src/learning/answerReleaseReview.test.ts` now also pins deterministic polarity-conflict cases for English reversal, Chinese reversal, and an unrelated-negative-support case that must not trigger a false positive.
-- The right-pane file-preview/highlight path remains architecturally separate from final-answer review, but the graph-focus contract is now stronger than payload hardening alone in `src/frontend/workspace_panes.js`: citation-backed `sourcePath` / `snippet` fallback is normalized into `matchedSpans` plus additive `candidateSourcePaths`, trusted `line_window` anchors are preferred when `startLine` / `endLine` agree with the snippet, stale line metadata is distrusted, and additive `highlightStrategy` diagnostics expose whether the winning path was `line_window`, `snippet_fallback`, or `none`.
+- The right-pane file-preview/highlight path remains architecturally separate from final-answer review, but the graph-focus contract is now stronger than payload hardening alone: `src/frontend/markdown_runtime.js` annotates rendered markdown blocks with source-line metadata, `src/frontend/workspace_panes.js` prefers `source_line_provenance` when rendered-node ranges overlap trusted spans, then falls back to `line_window` and `snippet_fallback`, and additive diagnostics expose both the winning highlight strategy and provenance coverage.
 - `src/agent_workspace.frontend.test.ts` now pins repeated-snippet ambiguity and unusable-line-window fallback cases, so right-pane evidence preview no longer depends on one fragile snippet-only heuristic.
-- A 2026-06-19 re-audit confirms that the missing-owner phase is already closed. The active gap has moved to broader claim-vs-citation / claim-vs-evidence contradiction coverage and deeper source-to-render provenance, not prompt-framework adoption.
+- A 2026-06-19 re-audit confirms that the missing-owner phase is already closed. The active gap has moved to broader claim-vs-citation / claim-vs-evidence contradiction coverage beyond the current lexical + structured + state + polarity + graph-order stack, and to deeper source-to-render provenance beyond the current block-level markdown mapping, not prompt-framework adoption.
 
 #### Next execution order
 
 1. Keep the reviewer deterministic and narrowly scoped to release invariants; do not let prompt templates reclaim ownership of release policy.
-2. Use the explicit alias/scope regression corpus and the new structured-fact + polarity + graph-order reviewer slices to broaden contradiction coverage beyond the current lexical grounding check without widening false positives.
-3. Treat the current `line_window` + `snippet_fallback` highlighter as the implemented baseline; the next evidence-preview step is stronger source-to-render provenance once the markdown runtime can expose stable source-line / DOM metadata, without moving release policy into the frontend.
+2. Use the explicit alias/scope regression corpus and the current structured-fact + state + polarity + graph-order reviewer slices to broaden contradiction coverage beyond lexical grounding without widening false positives.
+3. Treat the current block-level markdown source mapping plus `source_line_provenance` -> `line_window` -> `snippet_fallback` highlighter stack as the implemented baseline; the next evidence-preview step is deeper exact-span / nested provenance without moving release policy into the frontend.
 4. Keep extending the shared corpus with more real cross-scope, compact-alias, and synonym failures while preserving deterministic expectations in both Jest and runtime verification.
 5. Continue owner reduction only when the new owner hides real decisions or invariants.
 
@@ -48,15 +49,16 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 
 1. Unsupported draft answers do not leak internal diagnostics such as `No scoped knowledge points matched` or `retrieval_candidates_below_threshold` into the public answer.
 2. Grounded drafts with conflicting structured numeric/year facts are revised before release instead of slipping through on lexical overlap alone.
-3. Grounded drafts that explicitly reverse supported polarity are revised before release instead of slipping through on lexical overlap alone.
-4. Grounded drafts that reverse `prerequisite` or `sequence` direction against the assembled DAG are revised before release instead of leaking inverted order claims.
-5. `AgentConversationResponse`, trace, and `KnowledgeRun` all retain additive `answerReleaseReview` state.
-6. Operator inspection surfaces render reviewer decision, failed gates, and original/public answer deltas without widening the primary answer area.
-7. Workspace export knowledge-run reports carry compact reviewer summaries for `release` / `revise` flows and stay backward-compatible when review data is absent.
-8. Workspace export also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card renders the same audit shape, and the compare card exposes answer-release deltas without widening the public answer area.
-9. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields, including citation-backed paths/snippets when top-level hit fields are incomplete; it prefers trustworthy `line_window` anchors, falls back to `snippet_fallback` when line metadata is stale or absent, and keeps additive `highlightStrategy` diagnostics for operators.
-10. `npm run verify:knowledge-workspace:runtime` passes the shared alias/scope regression corpus, including the screenshot-derived `waterglass` compact/spaced pair and the `financial` cross-scope recovery pair, and confirms reviewer/public-answer parity.
-11. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
+3. Grounded drafts that assert the wrong same-subject state are revised before release instead of leaking contradictions such as `open system` vs `closed system`.
+4. Grounded drafts that explicitly reverse supported polarity are revised before release instead of slipping through on lexical overlap alone.
+5. Grounded drafts that reverse `prerequisite` or `sequence` direction against the assembled DAG are revised before release instead of leaking inverted order claims.
+6. `AgentConversationResponse`, trace, and `KnowledgeRun` all retain additive `answerReleaseReview` state.
+7. Operator inspection surfaces render reviewer decision, failed gates, and original/public answer deltas without widening the primary answer area.
+8. Workspace export knowledge-run reports carry compact reviewer summaries for `release` / `revise` flows and stay backward-compatible when review data is absent.
+9. Workspace export also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card renders the same audit shape, and the compare card exposes answer-release deltas without widening the public answer area.
+10. Right-pane file-hit preview resolves source markdown and matched-span highlights from stable payload fields, including citation-backed paths/snippets when top-level hit fields are incomplete; rendered markdown blocks retain source-line metadata, `source_line_provenance` wins when rendered-node ranges overlap trusted spans, and the system falls back to `line_window` / `snippet_fallback` while preserving operator diagnostics.
+11. `npm run verify:knowledge-workspace:runtime` passes the shared alias/scope regression corpus, including the screenshot-derived `waterglass` compact/spaced pair and the `financial` cross-scope recovery pair, and confirms reviewer/public-answer parity.
+12. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
 
 ### 2026-06-17 Agent Knowledge DAG Implementation Plan
 

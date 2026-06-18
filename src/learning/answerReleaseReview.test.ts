@@ -330,6 +330,83 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).toBe('The Glass-Steagall Act was enacted in 1933.');
     });
 
+    test('revises grounded answers when same-subject state conflicts with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass Thermodynamics',
+            summary: 'Water glass is an open system during the example setup.',
+            evidenceSnippet: 'Water glass is an open system during the example setup.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass Thermodynamics',
+                snippet: 'Water glass is an open system during the example setup.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass Thermodynamics',
+                    snippet: 'Water glass is an open system during the example setup.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'Is the example water glass open or closed?',
+            draftAnswer: 'Water glass is a closed system during the example setup.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T00:40:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_state_consistency');
+        expect(review.publicAnswer).toBe('Water Glass Thermodynamics: Water glass is an open system during the example setup.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_state_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('does not raise a state conflict when the draft is a compatible refinement', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water glass is a transparent container.',
+            evidenceSnippet: 'Water glass is a transparent container.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass',
+                snippet: 'Water glass is a transparent container.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Glass',
+                    snippet: 'Water glass is a transparent container.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: 'Water glass is a transparent container filled with water.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T00:50:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_state_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_state_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
     test('revises grounded answers when draft polarity conflicts with cited support', () => {
         const review = reviewAnswerRelease({
             message: 'what is water glass',
@@ -418,6 +495,39 @@ describe('answerReleaseReview', () => {
         expect(review.decision).toBe('revise');
         expect(review.failedGateIds).toContain('claim_polarity_consistency');
         expect(review.publicAnswer).toBe('水杯是透明的盛水容器。');
+    });
+
+    test('revises grounded answers when Chinese same-subject state conflicts with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: '水杯热力学',
+            summary: '水杯是开放系统。',
+            evidenceSnippet: '水杯是开放系统。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: '水杯热力学',
+                snippet: '水杯是开放系统。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: '水杯热力学',
+                    snippet: '水杯是开放系统。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '水杯是开放系统还是封闭系统？',
+            draftAnswer: '水杯是封闭系统。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T01:25:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_state_consistency');
+        expect(review.publicAnswer).toBe('水杯热力学: 水杯是开放系统。');
     });
 
     test('revises grounded answers when prerequisite order is reversed against the DAG', () => {

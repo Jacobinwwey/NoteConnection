@@ -15,11 +15,14 @@
 - 项目现有 DAG 已经被使用了两次：
   - 回答规划阶段由 `src/learning/graphContextAssembler.ts` 消费，
   - release-review 阶段由 `claim_graph_order_consistency` 消费，
-- `src/frontend/workspace_panes.js` 现在已经把右侧证据聚焦从“仅 payload 稳定”推进到“高亮精度可控”：
-  - 在 `startLine` / `endLine` 可信时优先使用 `line_window` 锚点，
-  - 在行窗缺失或陈旧时回退到 `snippet_fallback`，
-  - 通过 additive `highlightStrategy` 诊断显式暴露命中的高亮路径（`line_window`、`snippet_fallback`、`none`），
-  - 对过宽的容器节点做惩罚，避免重复 snippet 导致整块文章被高亮，
+- `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_state_consistency`，因此 `open system` vs `closed system` 这类同主体状态反转会在进入公开回答前被改写，
+- `src/frontend/markdown_runtime.js` 现在会给渲染后的 markdown block 标注 block-level source-line 元数据，
+- `src/frontend/workspace_panes.js` 现在已经把右侧证据聚焦从“仅 payload 稳定”推进到“高亮精度可控 + provenance 可观测”：
+  - 当渲染节点 source range 与可信 evidence span 重叠时优先使用 `source_line_provenance`，
+  - 当渲染 provenance 暂不可用但 citation 行窗仍可信时回退到 `line_window`，
+  - 在行窗缺失或陈旧时继续回退到 `snippet_fallback`，
+  - 通过 additive `highlightStrategy` 诊断显式暴露命中的高亮路径（`source_line_provenance`、`line_window`、`snippet_fallback`、`none`），
+  - 记录 additive 的 provenance 覆盖计数，并对过宽的容器节点做惩罚，避免重复 snippet 导致整块文章被高亮，
 - `src/agent_workspace.frontend.test.ts` 现在已经固定两类运维相关回归：
   - 当同一 snippet 在多个段落重复出现时，必须命中可信 line window 对应的正确段落，
   - 当行号元数据不可用或不可信时，必须回退到 snippet 高亮，而不是误高亮错误段落，
@@ -31,14 +34,16 @@
 |---|---|---|
 | 最终公开回答审核必须有耐久的后端 owner | `src/learning/answerReleaseReview.ts` 已经在 answer synthesis 之后持有 `release` / `revise` / `abstain` 决策。 | 已实现 |
 | 现有 DAG 必须参与回答正确性，而不只是 retrieval 排序 | `graphContextAssembler.ts` 在 synthesis 前装配图上下文，`claim_graph_order_consistency` 在 release 时消费 DAG 证据。 | 已实现基线 |
+| 同主体状态矛盾必须在 release 前改写 | `answerReleaseReview.ts` 现在会对中英文可比 definition/copula 断言执行 `claim_state_consistency`。 | 已实现基线 |
+| 右侧原文预览必须在可用时消费 source-to-render provenance | `markdown_runtime.js` 现在会给渲染 block 标注 source-line 元数据，`workspace_panes.js` 则优先使用 `source_line_provenance`，并输出 provenance 覆盖计数。 | 已实现基线 |
 | 右侧原文预览在 snippet 重复时仍必须高亮正确段落 | `workspace_panes.js` 现在优先使用可信 `line_window` 锚点，并用 specificity/container penalty 给候选节点打分。 | 已实现基线 |
 | 陈旧行号不能强行把高亮带偏 | `workspace_panes.js` 现在会主动怀疑 stale line window，并回退到 `snippet_fallback`；前端测试已固定这类失败模式。 | 已实现基线 |
 | 截图驱动的 `waterglass` 失败必须继续作为正式验收项 | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` 现在要求 grounded 输出、reviewer/public-answer 一致性，以及无诊断泄漏。 | 已实现 |
-| 当前剩余缺口必须明确转移到更广矛盾检测与更深 provenance | 现有代码仍需继续补 claim-vs-citation / claim-vs-evidence conflict 检测，并等待 markdown runtime 暴露更稳定的 source-line/DOM provenance。 | 未完成 |
+| 当前剩余缺口必须明确转移到更广矛盾检测与更深 provenance | 现有代码仍需继续补超出 lexical + structured + state + polarity + graph-order 栈的 claim-vs-citation / claim-vs-evidence conflict 检测，以及超出当前 block-level mapping 的 exact-span / nested provenance。 | 未完成 |
 
 本次复审验证：
 
-- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- tsc --noEmit`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 

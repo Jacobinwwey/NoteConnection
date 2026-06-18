@@ -15,11 +15,14 @@ What is now true in code:
 - the existing DAG is already being consumed twice:
   - at answer-planning time by `src/learning/graphContextAssembler.ts`,
   - at release-review time by `claim_graph_order_consistency`,
+- `src/learning/answerReleaseReview.ts` now also enforces `claim_state_consistency`, so same-subject state reversals such as `open system` vs `closed system` are revised instead of reaching the public answer,
+- `src/frontend/markdown_runtime.js` now annotates rendered markdown blocks with block-level source-line metadata,
 - `src/frontend/workspace_panes.js` now tightens right-pane evidence focus beyond payload stability:
-  - it prefers a trustworthy `line_window` anchor built from `startLine` / `endLine`,
-  - it falls back to `snippet_fallback` when the line window is absent or stale,
-  - it exposes additive `highlightStrategy` diagnostics (`line_window`, `snippet_fallback`, `none`),
-  - it penalizes over-broad container matches so repeated snippet text does not highlight the whole article,
+  - it prefers `source_line_provenance` when rendered-node source ranges overlap trusted evidence spans,
+  - it falls back to `line_window` when rendered provenance is absent but citation line windows are still trustworthy,
+  - it falls back to `snippet_fallback` when line metadata is absent or stale,
+  - it exposes additive `highlightStrategy` diagnostics (`source_line_provenance`, `line_window`, `snippet_fallback`, `none`),
+  - it records additive source-provenance coverage counts, and penalizes over-broad container matches so repeated snippet text does not highlight the whole article,
 - `src/agent_workspace.frontend.test.ts` now pins two operator-relevant regressions:
   - repeated snippet text must resolve to the correct paragraph when the line window is trustworthy,
   - unusable line metadata must fall back to snippet highlighting instead of highlighting the wrong paragraph,
@@ -31,14 +34,16 @@ Code-vs-plan reconciliation:
 |---|---|---|
 | Final public-answer review must have a durable backend owner | `src/learning/answerReleaseReview.ts` already owns `release` / `revise` / `abstain` after synthesis. | Implemented |
 | The existing DAG must influence answer correctness, not just retrieval ranking | `graphContextAssembler.ts` shapes support windows before synthesis, and `claim_graph_order_consistency` uses DAG evidence at release time. | Implemented baseline |
+| Same-subject state contradictions must be revised before release | `answerReleaseReview.ts` now enforces `claim_state_consistency` on comparable definition/copula frames across English and Chinese evidence. | Implemented baseline |
+| Right-pane source preview must consume source-to-render provenance when available | `markdown_runtime.js` now annotates rendered blocks with source-line metadata, and `workspace_panes.js` prefers `source_line_provenance` while reporting provenance coverage counts. | Implemented baseline |
 | Right-pane source preview must highlight the correct paragraph even when snippet text repeats | `workspace_panes.js` now prefers trustworthy `line_window` anchors and scores candidate rendered nodes with specificity/container penalties. | Implemented baseline |
 | Stale line metadata must not force the wrong highlight | `workspace_panes.js` now distrusts stale line windows and falls back to `snippet_fallback`; frontend tests pin the failure mode. | Implemented baseline |
 | The screenshot-backed `waterglass` failure must remain a formal acceptance rule | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` now expects grounded output, reviewer/public-answer parity, and no diagnostic leakage. | Implemented |
-| The active remaining gap must move to broader contradiction coverage and deeper provenance | Current code still needs wider claim-vs-citation / claim-vs-evidence conflict checks plus stronger source-line/DOM provenance when the markdown runtime can expose it. | Open |
+| The active remaining gap must move to broader contradiction coverage and deeper provenance | Current code still needs wider claim-vs-citation / claim-vs-evidence conflict checks beyond the lexical + structured + state + polarity + graph-order stack, plus deeper exact-span / nested provenance beyond the current block-level mapping. | Open |
 
 Verification for this re-audit:
 
-- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- tsc --noEmit`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 

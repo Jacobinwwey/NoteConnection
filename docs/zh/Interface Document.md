@@ -100,7 +100,7 @@
 
 - `AnswerReleaseReview` 现在已经是一级运行时契约，而不是方案占位。
   - `AnswerReleaseDecision` 继续保持 `release` | `revise` | `abstain`。
-  - 当前 gate 覆盖 `evidence_sufficiency`、`graph_support_sufficiency`、`claim_grounding_alignment`、`claim_structured_consistency`、`claim_polarity_consistency`、`claim_graph_order_consistency`、`public_surface_contraction`、`internal_diagnostic_leakage` 与 `abstention_hygiene`。
+  - 当前 gate 覆盖 `evidence_sufficiency`、`graph_support_sufficiency`、`claim_grounding_alignment`、`claim_structured_consistency`、`claim_state_consistency`、`claim_polarity_consistency`、`claim_graph_order_consistency`、`public_surface_contraction`、`internal_diagnostic_leakage` 与 `abstention_hygiene`。
 - `src/learning/conversationComposer.ts` 在对外暴露 public `answer` / `directAnswer` 之前，必须把 scoped draft answer、按文档聚合的 knowledge points、citations、resolved scope 与可选 graph context 一并送入 `reviewAnswerRelease(...)`。
 - `src/learning/KnowledgeLearningPlatform.ts`、workspace export 与前端 reply 渲染必须把 answer-release telemetry 视为 additive inspection material：
   - public answer text，
@@ -108,18 +108,20 @@
   - failed gate IDs，
   - leaked internal fragments，
   - per-gate diagnostics。
-- 右侧 evidence pane 的 source projection 现在明确采用两阶段策略：
-  - 在 source-line 元数据可信时优先使用 markdown `line_window` 锚点，
-  - 当行号陈旧或重叠度过低时退回 `snippet_fallback`，
-  - 通过 additive `highlightStrategy` diagnostics 显式暴露策略，而不是伪装成绝对精确投影。
+- 右侧 evidence pane 的 source projection 现在明确采用分层策略：
+  - `src/frontend/markdown_runtime.js` 会给渲染后的 markdown block 标注 `data-agent-markdown-source-start-line`、`data-agent-markdown-source-end-line` 与 `data-agent-markdown-source-kind`，
+  - 当渲染节点 source range 与可信 evidence span 重叠时，graph focus 优先使用 `source_line_provenance`，
+  - 当渲染 provenance 暂不可用，但 citation 行号仍可信时，回退到 markdown `line_window` 锚点，
+  - 当行号陈旧或重叠度过低时，再退回 `snippet_fallback`，
+  - 并通过 additive `highlightStrategy`、`sourceProvenanceBlockCount` 与 `sourceProvenanceAttributedNodeCount` diagnostics 显式暴露策略，而不是伪装成绝对精确投影。
 - 截图回归路径现在已进入正式运行时契约：
   - 参考失败截图：`E:\微信传输\WeChat Files\wxid_zywfbxxiwwir22\FileStorage\Temp\1781782257390.jpg`
   - 回归用例：`waterglass_explicit_scope_compact_zh`
   - 验证脚本：`scripts/verify-knowledge-workspace-runtime.js`
   - 验收规则：只要 scoped evidence 存在，public answer 就不得泄漏 `No scoped knowledge points matched` 或 `retrieval_candidates_below_threshold`。
 - 当前剩余架构缺口：
-  - 把 contradiction coverage 从高置信 structured fact 扩展到更广的 claim-vs-citation / claim-vs-evidence 级别，
-  - 把 source-to-render provenance 更深地下沉到 markdown runtime，使右侧高亮从当前启发式提升为确定性投影。
+  - 把 contradiction coverage 从当前 lexical + structured + state + polarity + graph-order 栈扩展到更广的 claim-vs-citation / claim-vs-evidence 级别，
+  - 把 source-to-render provenance 推进到当前 block-level markdown mapping 之上，使右侧高亮从“有界启发式”提升到 exact-span / nested-span 级确定性投影。
 
 兼容性规则：
 
