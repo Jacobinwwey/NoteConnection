@@ -130,7 +130,7 @@ import {
     collectAgentConversationAtomIds,
     mergeAgentConversationKnowledgePoints,
 } from './conversationComposer';
-import type { AgentConversationGraphConnectionPath, AgentConversationGraphContext } from './types';
+import { assembleAgentConversationGraphContext } from './graphContextAssembler';
 
 type ParsedAtomDraft = {
     stableKey: string;
@@ -3526,6 +3526,45 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     length: Math.max(0, Math.floor(Number(connectionPath.length || 0))),
                 }))
                 : [],
+            predecessorWindow: Array.isArray((value as any).predecessorWindow)
+                ? (value as any).predecessorWindow.map((node: any) => ({
+                    atomId: String(node.atomId || '').trim(),
+                    title: String(node.title || '').trim(),
+                    relationKind: node.relationKind,
+                    confidence: Number.isFinite(Number(node.confidence)) ? Number(node.confidence) : undefined,
+                }))
+                : [],
+            successorWindow: Array.isArray((value as any).successorWindow)
+                ? (value as any).successorWindow.map((node: any) => ({
+                    atomId: String(node.atomId || '').trim(),
+                    title: String(node.title || '').trim(),
+                    relationKind: node.relationKind,
+                    confidence: Number.isFinite(Number(node.confidence)) ? Number(node.confidence) : undefined,
+                }))
+                : [],
+            evidenceSourceRefs: Array.isArray((value as any).evidenceSourceRefs)
+                ? (value as any).evidenceSourceRefs.map((entry: unknown) => String(entry || '').trim()).filter(Boolean)
+                : [],
+            diagnostics: (value as any).diagnostics && typeof (value as any).diagnostics === 'object'
+                ? {
+                    graphOpsAvailable: (value as any).diagnostics.graphOpsAvailable === true,
+                    usedFallback: (value as any).diagnostics.usedFallback === true,
+                    selectedAnchorReason: String((value as any).diagnostics.selectedAnchorReason || '').trim(),
+                    candidateCount: Math.max(0, Math.floor(Number((value as any).diagnostics.candidateCount || 0))),
+                    supportNodeCount: Math.max(0, Math.floor(Number((value as any).diagnostics.supportNodeCount || 0))),
+                    supportNodeLimit: Math.max(0, Math.floor(Number((value as any).diagnostics.supportNodeLimit || 0))),
+                    pathDepthLimit: Math.max(0, Math.floor(Number((value as any).diagnostics.pathDepthLimit || 0))),
+                    missingConnectionPathSourceAtomIds: Array.isArray((value as any).diagnostics.missingConnectionPathSourceAtomIds)
+                        ? (value as any).diagnostics.missingConnectionPathSourceAtomIds.map((entry: unknown) => String(entry || '').trim()).filter(Boolean)
+                        : [],
+                    missingPredecessorAtomIds: Array.isArray((value as any).diagnostics.missingPredecessorAtomIds)
+                        ? (value as any).diagnostics.missingPredecessorAtomIds.map((entry: unknown) => String(entry || '').trim()).filter(Boolean)
+                        : [],
+                    missingSuccessorAtomIds: Array.isArray((value as any).diagnostics.missingSuccessorAtomIds)
+                        ? (value as any).diagnostics.missingSuccessorAtomIds.map((entry: unknown) => String(entry || '').trim()).filter(Boolean)
+                        : [],
+                }
+                : undefined,
             temporalValidity: value.temporalValidity && typeof value.temporalValidity === 'object'
                 ? {
                     checkedAt: String(value.temporalValidity.checkedAt || '').trim(),
@@ -3595,97 +3634,6 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                         : [],
                 }
                 : point.temporalValidity,
-        };
-    }
-
-    private async buildAgentConversationConnectionPaths(
-        knowledgePoints: AgentConversationKnowledgePoint[]
-    ): Promise<AgentConversationGraphConnectionPath[]> {
-        if (!this.store || !isOpsAdapter(this.store) || knowledgePoints.length <= 1) {
-            return [];
-        }
-        const opsStore = this.store;
-        const anchorPoint = knowledgePoints[0];
-        const anchorAtomId = String(anchorPoint?.atomId || '').trim();
-        if (!anchorAtomId) {
-            return [];
-        }
-
-        const titleByAtomId = new Map<string, string>();
-        knowledgePoints.forEach((point) => {
-            const title = normalizeWhitespace(String(point.title || '').trim());
-            const groupedAtomIds = Array.isArray(point.atomIds) && point.atomIds.length > 0
-                ? point.atomIds
-                : [point.atomId];
-            groupedAtomIds
-                .map((atomId) => String(atomId || '').trim())
-                .filter(Boolean)
-                .forEach((atomId) => {
-                    titleByAtomId.set(atomId, title || atomId);
-                });
-        });
-
-        const connectionPaths: AgentConversationGraphConnectionPath[] = [];
-        for (const point of knowledgePoints.slice(1, 4)) {
-            const sourceAtomIds = Array.isArray(point.atomIds) && point.atomIds.length > 0
-                ? point.atomIds
-                : [point.atomId];
-            for (const sourceAtomIdCandidate of sourceAtomIds) {
-                const sourceAtomId = String(sourceAtomIdCandidate || '').trim();
-                if (!sourceAtomId || sourceAtomId === anchorAtomId) {
-                    continue;
-                }
-                const pathResult = await this.store.findPath(sourceAtomId, anchorAtomId, 6);
-                if (!pathResult.found || !Array.isArray(pathResult.path) || pathResult.path.length <= 1) {
-                    continue;
-                }
-                const pathAtomIds = pathResult.path.map((atomId) => String(atomId || '').trim()).filter(Boolean);
-                const pathTitles = await Promise.all(pathAtomIds.map(async (atomId) => {
-                    if (titleByAtomId.has(atomId)) {
-                        return String(titleByAtomId.get(atomId) || atomId).trim();
-                    }
-                    const atom = await opsStore.getNode(atomId);
-                    const resolvedTitle = normalizeWhitespace(String(atom?.title || '').trim()) || atomId;
-                    titleByAtomId.set(atomId, resolvedTitle);
-                    return resolvedTitle;
-                }));
-                connectionPaths.push({
-                    sourceAtomId,
-                    sourceTitle: normalizeWhitespace(String(point.title || '').trim()) || sourceAtomId,
-                    targetAtomId: anchorAtomId,
-                    targetTitle: normalizeWhitespace(String(anchorPoint.title || '').trim()) || anchorAtomId,
-                    pathAtomIds,
-                    pathTitles,
-                    pathEdges: Array.isArray(pathResult.edges)
-                        ? pathResult.edges.map((edge) => ({
-                            fromAtomId: String(edge.from || '').trim(),
-                            toAtomId: String(edge.to || '').trim(),
-                            relationKind: edge.relation as any,
-                        }))
-                        : [],
-                    length: Math.max(0, Math.floor(Number(pathResult.length || 0))),
-                });
-                break;
-            }
-        }
-
-        return connectionPaths;
-    }
-
-    private async buildAgentConversationGraphContext(
-        knowledgePoints: AgentConversationKnowledgePoint[],
-        replyGraphContext: AgentConversationGraphContext | null
-    ): Promise<AgentConversationGraphContext | null> {
-        if (!replyGraphContext) {
-            return null;
-        }
-        const connectionPaths = await this.buildAgentConversationConnectionPaths(knowledgePoints);
-        if (connectionPaths.length <= 0) {
-            return replyGraphContext;
-        }
-        return {
-            ...replyGraphContext,
-            connectionPaths,
         };
     }
 
@@ -8822,13 +8770,21 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             languages: [],
             matchedAtomCount: queryResult.items.length,
         };
-        const activeConversationAtomIds = collectAgentConversationAtomIds(knowledgePoints);
+        const assembledConversation = await assembleAgentConversationGraphContext({
+            message,
+            usedScope: traceScope,
+            knowledgePoints,
+            store: this.store,
+        });
+        const conversationKnowledgePoints = assembledConversation.knowledgePoints;
+        const graphContext = assembledConversation.graphContext;
+        const activeConversationAtomIds = collectAgentConversationAtomIds(conversationKnowledgePoints);
         const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(activeConversationAtomIds);
         const effectiveWorkspaceId = traceScope.workspaceId || scopedWorkspace.workspaceId;
         const effectiveCorpusId = traceScope.corpusId || scopedWorkspace.corpusId;
-        const baseReply = buildScopedConversationReply({
+        const reply = buildScopedConversationReply({
             message,
-            knowledgePoints,
+            knowledgePoints: conversationKnowledgePoints,
             citations,
             recalledMemories,
             memoryActions,
@@ -8836,22 +8792,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             generatedAt,
             nextBlockId: () => this.nextId('assistant_block'),
             nextRunId: () => this.nextId('knowledge_run'),
+            graphContext,
         });
-        const graphContext = await this.buildAgentConversationGraphContext(knowledgePoints, baseReply.graphContext || null);
-        const reply = graphContext && graphContext !== baseReply.graphContext
-            ? buildScopedConversationReply({
-                message,
-                knowledgePoints,
-                citations,
-                recalledMemories,
-                memoryActions,
-                usedScope: traceScope,
-                generatedAt,
-                nextBlockId: () => this.nextId('assistant_block'),
-                nextRunId: () => baseReply.knowledgeRun.runId,
-                graphContext,
-            })
-            : baseReply;
         const response: AgentConversationResponse = {
             userId,
             sessionId,
@@ -8859,14 +8801,14 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             answer: reply.answer,
             assistantBlocks: reply.assistantBlocks,
             knowledgeRun: reply.knowledgeRun,
-            knowledgePoints,
+            knowledgePoints: conversationKnowledgePoints,
             citations,
             recalledMemories,
             memoryActions,
             summary: {
                 generatedAt,
                 topK,
-                returnedKnowledgePoints: knowledgePoints.length,
+                returnedKnowledgePoints: conversationKnowledgePoints.length,
                 returnedCitations: citations.length,
                 recalledMemoryCount: recalledMemories.length,
                 appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,

@@ -27,14 +27,14 @@ Code-vs-plan reconciliation:
 | Hide developer-heavy support material for now | Graph paths, temporal details, citations, and traces belong in evidence/export surfaces unless explicitly requested. | Preserved direction |
 | File hit opens right pane with highlighted source | Existing graph-focus source rendering and matched-span highlighting remain the canonical path. | Implemented baseline; diagnostics still needed |
 | Use the current DAG | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, and `findPath` are the active graph substrate. | Confirmed |
-| Let the LLM inspect graph structure | Explicit connection paths now reach the answer composer and evidence pane. | Partial: still post-retrieval enrichment |
-| Full DAG-native answer planning | Dedicated graph-conditioned context assembly is not yet extracted. | Pending |
+| Let the LLM inspect graph structure | A bounded `graphContextAssembler` now selects the anchor, reorders support nodes, attaches explicit paths, and adds predecessor/successor windows plus diagnostics before answer synthesis. | Implemented P1 foundation |
+| Full DAG-native answer planning | The assembler boundary is now real, but graph-aware ranking features and graph-specific quality gates are still missing. | P2-P5 pending |
 
 Immediate next direction:
 
-1. Extract a bounded graph-conditioned context assembler between retrieval and answer synthesis.
-2. Add graph-aware ranking features beyond relation-degree bonuses: graph distance, path confidence, prerequisite depth, temporal validity, and relation-kind intent.
-3. Add graph-specific quality gates for prerequisite ordering, comparison branches, supersession warnings, graph-op fallback, and deterministic large-graph budgeting.
+1. Add graph-aware ranking features beyond relation-degree bonuses: graph distance, path confidence, prerequisite depth, temporal validity, and relation-kind intent.
+2. Add graph-specific quality gates for prerequisite ordering, comparison branches, supersession warnings, graph-op fallback, and deterministic large-graph budgeting.
+3. Add right-pane diagnostics for path/source/highlight mismatches without forking the markdown rendering stack.
 4. Keep the public answer focused while graph/evidence/developer detail remains inspectable through evidence panes, traces, artifacts, and export bundles.
 
 ## 2026-06-10 Knowledge Workspace Durable Artifact and DAG Alignment

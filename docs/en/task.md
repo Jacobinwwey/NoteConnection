@@ -8,9 +8,9 @@
 - [x] The 2026-06-17 source-of-truth note is `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`.
 - [x] The current implementation carries optional explicit graph connection paths through graph context, answer composition, evidence-pane rendering, export serialization, and regression tests.
 - [x] The open-source review has a firm boundary: use DSPy / Guidance / Semantic Kernel / LangChain Core / LiteLLM patterns without adding those frameworks to the app runtime.
-- [~] Current DAG-aware answer planning is partial; connection paths are a useful graph-inspection surface but not the final graph-conditioned context assembly layer.
+- [x] Current DAG-aware answer planning now includes a first-class graph-conditioned context assembly layer in `src/learning/graphContextAssembler.ts`.
 - [~] Right-pane source/highlight behavior is implemented baseline but still needs diagnostics for path and snippet mismatches.
-- [ ] Next active task: extract a bounded graph-conditioned context assembler between retrieval and answer synthesis.
+- [ ] Next active task: extend graph-aware ranking features and right-pane diagnostics on top of the new assembler boundary.
 - [ ] Keep the public answer contracted while routing graph evidence, temporal details, and developer trace to secondary surfaces.
 
 ### Current Acceptance Targets

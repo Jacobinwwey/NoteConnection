@@ -1111,6 +1111,26 @@ export interface AgentConversationGraphConnectionPath {
     length: number;
 }
 
+export interface AgentConversationGraphWindowNode {
+    atomId: string;
+    title: string;
+    relationKind?: RelationKind;
+    confidence?: number;
+}
+
+export interface AgentConversationGraphDiagnostics {
+    graphOpsAvailable: boolean;
+    usedFallback: boolean;
+    selectedAnchorReason: string;
+    candidateCount: number;
+    supportNodeCount: number;
+    supportNodeLimit: number;
+    pathDepthLimit: number;
+    missingConnectionPathSourceAtomIds?: string[];
+    missingPredecessorAtomIds?: string[];
+    missingSuccessorAtomIds?: string[];
+}
+
 export interface AgentConversationGraphTemporalContext {
     checkedAt: string;
     allPointsValid: boolean;
@@ -1130,6 +1150,10 @@ export interface AgentConversationGraphContext {
     relationSummaries: AgentConversationGraphRelationSummary[];
     knowledgePointRelations?: AgentConversationGraphKnowledgePointRelation[];
     connectionPaths?: AgentConversationGraphConnectionPath[];
+    predecessorWindow?: AgentConversationGraphWindowNode[];
+    successorWindow?: AgentConversationGraphWindowNode[];
+    evidenceSourceRefs?: string[];
+    diagnostics?: AgentConversationGraphDiagnostics;
     temporalValidity: AgentConversationGraphTemporalContext;
 }
 

@@ -600,6 +600,24 @@
                 .map((item) => item && typeof item === 'object' ? item : null)
                 .filter(Boolean)
             : [];
+        const predecessorWindow = Array.isArray(graphContext.predecessorWindow)
+            ? graphContext.predecessorWindow
+                .map((item) => item && typeof item === 'object' ? item : null)
+                .filter(Boolean)
+            : [];
+        const successorWindow = Array.isArray(graphContext.successorWindow)
+            ? graphContext.successorWindow
+                .map((item) => item && typeof item === 'object' ? item : null)
+                .filter(Boolean)
+            : [];
+        const evidenceSourceRefs = Array.isArray(graphContext.evidenceSourceRefs)
+            ? graphContext.evidenceSourceRefs
+                .map((item) => String(item || '').trim())
+                .filter(Boolean)
+            : [];
+        const graphDiagnostics = graphContext.diagnostics && typeof graphContext.diagnostics === 'object'
+            ? graphContext.diagnostics
+            : null;
         const temporalValidity = graphContext.temporalValidity && typeof graphContext.temporalValidity === 'object'
             ? graphContext.temporalValidity
             : null;
@@ -706,6 +724,72 @@
                 `;
             }).join('')
             : '';
+        const buildWindowHtml = (nodes) => nodes.length > 0
+            ? nodes.map((node) => {
+                const relationSummary = node.relationKind
+                    ? humanizeEvidenceRelationKind(node.relationKind)
+                    : noneLabel;
+                const confidenceSummary = Number.isFinite(Number(node.confidence))
+                    ? formatEvidenceConfidence(node.confidence)
+                    : noneLabel;
+                return `
+                    <li class="agent-pane-list-item">
+                        <div>
+                            <div class="agent-pane-list-label">${escapeHtml(String(node.title || noneLabel))}</div>
+                            <div class="agent-pane-summary">${escapeHtml(String(node.atomId || noneLabel))} | ${escapeHtml(relationSummary)}</div>
+                        </div>
+                        <span class="agent-pane-meta">${escapeHtml(confidenceSummary)}</span>
+                    </li>
+                `;
+            }).join('')
+            : '';
+        const predecessorWindowHtml = buildWindowHtml(predecessorWindow);
+        const successorWindowHtml = buildWindowHtml(successorWindow);
+        const evidenceSourceRefHtml = evidenceSourceRefs.length > 0
+            ? evidenceSourceRefs.map((entry) => `
+                <li class="agent-pane-list-item">
+                    <div class="agent-pane-list-label">${escapeHtml(entry)}</div>
+                </li>
+            `).join('')
+            : '';
+        const diagnosticsMetrics = graphDiagnostics
+            ? [
+                {
+                    title: translate('agentWorkspace.evidence.graphDiagnosticsOpsLabel', 'Graph ops'),
+                    value: graphDiagnostics.graphOpsAvailable === true
+                        ? translate('agentWorkspace.evidence.graphDiagnosticsAvailableLabel', 'available')
+                        : translate('agentWorkspace.evidence.graphDiagnosticsUnavailableLabel', 'unavailable'),
+                },
+                {
+                    title: translate('agentWorkspace.evidence.graphDiagnosticsFallbackLabel', 'Fallback'),
+                    value: graphDiagnostics.usedFallback === true ? 'true' : 'false',
+                },
+                {
+                    title: translate('agentWorkspace.evidence.graphDiagnosticsAnchorReasonLabel', 'Anchor reason'),
+                    value: String(graphDiagnostics.selectedAnchorReason || '').trim() || noneLabel,
+                },
+                {
+                    title: translate('agentWorkspace.evidence.graphDiagnosticsCandidateCountLabel', 'Candidates'),
+                    value: String(graphDiagnostics.candidateCount == null ? 0 : graphDiagnostics.candidateCount),
+                },
+                {
+                    title: translate('agentWorkspace.evidence.graphDiagnosticsSupportCountLabel', 'Support nodes'),
+                    value: `${String(graphDiagnostics.supportNodeCount == null ? 0 : graphDiagnostics.supportNodeCount)} / ${String(graphDiagnostics.supportNodeLimit == null ? 0 : graphDiagnostics.supportNodeLimit)}`,
+                },
+                {
+                    title: translate('agentWorkspace.evidence.graphDiagnosticsBudgetLabel', 'Path depth budget'),
+                    value: String(graphDiagnostics.pathDepthLimit == null ? 0 : graphDiagnostics.pathDepthLimit),
+                },
+                {
+                    title: translate('agentWorkspace.evidence.graphDiagnosticsMissingLookupsLabel', 'Missing graph lookups'),
+                    value: [
+                        ...(Array.isArray(graphDiagnostics.missingConnectionPathSourceAtomIds) ? graphDiagnostics.missingConnectionPathSourceAtomIds : []),
+                        ...(Array.isArray(graphDiagnostics.missingPredecessorAtomIds) ? graphDiagnostics.missingPredecessorAtomIds : []),
+                        ...(Array.isArray(graphDiagnostics.missingSuccessorAtomIds) ? graphDiagnostics.missingSuccessorAtomIds : []),
+                    ].filter(Boolean).join(', ') || noneLabel,
+                },
+            ]
+            : [];
 
         const temporalEdgeKinds = temporalValidity && Array.isArray(temporalValidity.edgeKinds)
             ? temporalValidity.edgeKinds
@@ -768,8 +852,12 @@
             <ul class="agent-pane-list">${relationSummaryHtml}</ul>
             ${knowledgePointRelationHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphKnowledgePointRelationsLabel', 'Knowledge-point relations'))}</div><ul class="agent-pane-list">${knowledgePointRelationHtml}</ul>` : ''}
             ${connectionPathHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphConnectionPathsLabel', 'Connection paths'))}</div><ul class="agent-pane-list">${connectionPathHtml}</ul>` : ''}
+            ${predecessorWindowHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphPredecessorsLabel', 'Immediate predecessors'))}</div><ul class="agent-pane-list">${predecessorWindowHtml}</ul>` : ''}
+            ${successorWindowHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphSuccessorsLabel', 'Immediate successors'))}</div><ul class="agent-pane-list">${successorWindowHtml}</ul>` : ''}
+            ${evidenceSourceRefHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphEvidenceRefsLabel', 'Source references'))}</div><ul class="agent-pane-list">${evidenceSourceRefHtml}</ul>` : ''}
             ${temporalMetrics.length > 0 ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphTemporalLabel', 'Temporal validity'))}</div><ul class="agent-pane-list">${buildEvidenceMetricListHtml(temporalMetrics)}</ul>` : ''}
             ${temporalDetailHtml ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphTemporalDetailsLabel', 'Temporal edge details'))}</div><ul class="agent-pane-list">${temporalDetailHtml}</ul>` : ''}
+            ${diagnosticsMetrics.length > 0 ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphDiagnosticsLabel', 'Graph diagnostics'))}</div><ul class="agent-pane-list">${buildEvidenceMetricListHtml(diagnosticsMetrics)}</ul>` : ''}
         `;
     }
 

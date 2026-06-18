@@ -2,8 +2,6 @@ import type {
     AgentConversationAssistantBlock,
     AgentConversationGraphConnectionPath,
     AgentConversationGraphContext,
-    AgentConversationGraphKnowledgePointRelation,
-    AgentConversationGraphRelationSummary,
     AgentConversationKnowledgePoint,
     AgentConversationMemoryAction,
     AgentConversationMemoryRecord,
@@ -21,6 +19,7 @@ import type {
     KnowledgeRunReviewCard,
     KnowledgeRunReviewState,
 } from './types';
+import { buildAgentConversationGraphContextFromKnowledgePoints } from './graphContextAssembler';
 
 export type BuildAgentWorkspaceCapabilities = (atomId: string) => unknown[];
 
@@ -36,217 +35,6 @@ export type ScopedConversationReplyParams = {
     nextRunId?: () => string;
     graphContext?: AgentConversationGraphContext | null;
 };
-
-function buildAgentConversationGraphContext(
-    knowledgePoints: AgentConversationKnowledgePoint[]
-): AgentConversationGraphContext | null {
-    const anchorPoint = knowledgePoints[0];
-    if (!anchorPoint) {
-        return null;
-    }
-
-    const relationPath = knowledgePoints.flatMap((point) => (
-        Array.isArray(point.relationPath)
-            ? point.relationPath
-            : []
-    ));
-    const relationKinds = Array.from(new Set(
-        relationPath
-            .map((edge) => edge.relationKind)
-            .filter(Boolean)
-    )) as RelationKind[];
-    const relationSummaryMap = new Map<RelationKind, {
-        edgeIds: Set<string>;
-        sourceAtomIds: Set<string>;
-        targetAtomIds: Set<string>;
-        confidenceValues: number[];
-    }>();
-    const anchorAtomId = String(anchorPoint.atomId || '').trim();
-    const atomToKnowledgePoint = new Map<string, {
-        pointAtomId: string;
-        title: string;
-    }>();
-    const knowledgePointAtomIds = new Set(
-        knowledgePoints
-            .flatMap((point) => (
-                Array.isArray(point.atomIds) && point.atomIds.length > 0
-                    ? point.atomIds
-                    : [point.atomId]
-            ))
-            .map((atomId) => String(atomId || '').trim())
-            .filter(Boolean)
-    );
-    knowledgePoints.forEach((point) => {
-        const pointTitle = normalizeWhitespace(String(point.title || '').trim());
-        const groupedAtomIds = Array.isArray(point.atomIds) && point.atomIds.length > 0
-            ? point.atomIds
-            : [point.atomId];
-        groupedAtomIds
-            .map((atomId) => String(atomId || '').trim())
-            .filter(Boolean)
-            .forEach((atomId) => {
-                atomToKnowledgePoint.set(atomId, {
-                    pointAtomId: String(point.atomId || '').trim(),
-                    title: pointTitle || atomId,
-                });
-            });
-    });
-    const knowledgePointRelationMap = new Map<string, AgentConversationGraphKnowledgePointRelation>();
-
-    relationPath.forEach((edge) => {
-        if (!edge || !edge.relationKind) {
-            return;
-        }
-        const summary = relationSummaryMap.get(edge.relationKind) || {
-            edgeIds: new Set<string>(),
-            sourceAtomIds: new Set<string>(),
-            targetAtomIds: new Set<string>(),
-            confidenceValues: [],
-        };
-        if (edge.edgeId) {
-            summary.edgeIds.add(String(edge.edgeId));
-        }
-        const sourceAtomId = String(edge.sourceAtomId || '').trim();
-        const targetAtomId = String(edge.targetAtomId || '').trim();
-        if (sourceAtomId) {
-            summary.sourceAtomIds.add(sourceAtomId);
-        }
-        const targetAtomIds = [
-            sourceAtomId,
-            targetAtomId,
-        ]
-            .filter(Boolean)
-            .filter((atomId) => atomId !== anchorAtomId && !knowledgePointAtomIds.has(atomId));
-        targetAtomIds.forEach((atomId) => summary.targetAtomIds.add(atomId));
-        if (Number.isFinite(Number(edge.confidence))) {
-            summary.confidenceValues.push(Number(edge.confidence));
-        }
-        if (sourceAtomId && targetAtomId) {
-            const sourcePoint = atomToKnowledgePoint.get(sourceAtomId);
-            const targetPoint = atomToKnowledgePoint.get(targetAtomId);
-            if (
-                sourcePoint
-                && targetPoint
-                && sourcePoint.pointAtomId
-                && targetPoint.pointAtomId
-                && sourcePoint.pointAtomId !== targetPoint.pointAtomId
-            ) {
-                const relationKey = [
-                    String(edge.edgeId || '').trim(),
-                    sourcePoint.pointAtomId,
-                    targetPoint.pointAtomId,
-                    edge.relationKind,
-                ].join('|');
-                knowledgePointRelationMap.set(relationKey, {
-                    edgeId: String(edge.edgeId || '').trim(),
-                    relationKind: edge.relationKind,
-                    sourceAtomId: sourcePoint.pointAtomId,
-                    sourceTitle: sourcePoint.title,
-                    targetAtomId: targetPoint.pointAtomId,
-                    targetTitle: targetPoint.title,
-                    confidence: Number(Number(edge.confidence || 0).toFixed(4)),
-                });
-            }
-        }
-        relationSummaryMap.set(edge.relationKind, summary);
-    });
-
-    const relationSummaries: AgentConversationGraphRelationSummary[] = Array.from(relationSummaryMap.entries()).map(([relationKind, summary]) => ({
-        relationKind,
-        edgeIds: Array.from(summary.edgeIds.values()),
-        sourceAtomIds: Array.from(summary.sourceAtomIds.values()),
-        targetAtomIds: Array.from(summary.targetAtomIds.values()),
-        averageConfidence: summary.confidenceValues.length > 0
-            ? Number((summary.confidenceValues.reduce((sum, value) => sum + value, 0) / summary.confidenceValues.length).toFixed(4))
-            : 0,
-    }));
-
-    const supportingAtomIds = Array.from(new Set(
-        knowledgePoints.flatMap((point) => (
-            Array.isArray(point.relationPathAtomIds)
-                ? point.relationPathAtomIds
-                : []
-        ))
-            .map((atomId) => String(atomId || '').trim())
-            .filter(Boolean)
-            .concat(relationSummaries.flatMap((summary) => summary.targetAtomIds))
-    ));
-    const supportingAtomIdSet = new Set(supportingAtomIds);
-    const supportingTitles = knowledgePoints
-        .filter((point, index) => index > 0 || supportingAtomIdSet.has(String(point.atomId || '').trim()))
-        .map((point) => normalizeWhitespace(String(point.title || '').trim()))
-        .filter(Boolean);
-
-    const temporalCheckedAt = knowledgePoints
-        .map((point) => String(point.temporalValidity && point.temporalValidity.checkedAt || '').trim())
-        .filter(Boolean)
-        .sort()
-        .pop() || '';
-    const invalidKnowledgePoints = knowledgePoints.filter((point) => point.temporalValidity && point.temporalValidity.isValid === false);
-    const temporalDetails = knowledgePoints.flatMap((point) => (
-        Array.isArray(point.temporalValidity && point.temporalValidity.details)
-            ? point.temporalValidity!.details
-            : []
-    ));
-    const warningReasons = Array.from(new Set(
-        invalidKnowledgePoints.flatMap((point) => (
-            Array.isArray(point.temporalValidity && point.temporalValidity.reasons)
-                ? point.temporalValidity!.reasons
-                : []
-        ))
-            .map((reason) => String(reason || '').trim())
-            .filter(Boolean)
-    ));
-    const normalizedTemporalDetails = temporalDetails
-        .filter((detail): detail is KnowledgeQueryTemporalDetail => Boolean(detail && typeof detail === 'object'));
-    const temporalEdgeKinds = Array.from(new Set(
-        normalizedTemporalDetails
-            .map((detail) => detail.edgeKind)
-            .filter(Boolean)
-    ));
-    const dedupedTemporalDetails = Array.from(new Map<string, KnowledgeQueryTemporalDetail>(
-        normalizedTemporalDetails.map((detail) => [
-            [
-                String(detail.edgeId || '').trim(),
-                String(detail.edgeKind || '').trim(),
-                String(detail.sourceAtomId || '').trim(),
-                String(detail.targetAtomId || '').trim(),
-                String(detail.validFrom || '').trim(),
-                String(detail.validTo || '').trim(),
-            ].join('|'),
-            {
-                edgeId: String(detail.edgeId || '').trim(),
-                edgeKind: detail.edgeKind,
-                sourceAtomId: String(detail.sourceAtomId || '').trim(),
-                targetAtomId: String(detail.targetAtomId || '').trim(),
-                validFrom: String(detail.validFrom || '').trim(),
-                validTo: detail.validTo ? String(detail.validTo).trim() : undefined,
-                isActive: detail.isActive !== false,
-            } satisfies KnowledgeQueryTemporalDetail,
-        ])
-    ).values());
-
-    return {
-        anchorAtomId,
-        anchorTitle: normalizeWhitespace(String(anchorPoint.title || '').trim()) || anchorAtomId,
-        anchorDocumentId: anchorPoint.documentId,
-        supportingAtomIds: Array.from(new Set(supportingAtomIds)),
-        supportingTitles: Array.from(new Set(supportingTitles)),
-        relationKinds,
-        relationSummaries,
-        knowledgePointRelations: Array.from(knowledgePointRelationMap.values()),
-        temporalValidity: {
-            checkedAt: temporalCheckedAt,
-            allPointsValid: invalidKnowledgePoints.length <= 0,
-            warningReasons,
-            invalidKnowledgePointTitles: invalidKnowledgePoints
-                .map((point) => normalizeWhitespace(String(point.title || '').trim()))
-                .filter(Boolean),
-            edgeKinds: temporalEdgeKinds,
-            details: dedupedTemporalDetails,
-        },
-    };
-}
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -760,6 +548,12 @@ function buildScopedConversationOverviewMarkdown(
     if (graphContext && Array.isArray(graphContext.connectionPaths) && graphContext.connectionPaths.length > 0) {
         lines.push(`- Explicit connection paths: **${graphContext.connectionPaths.length}**`);
     }
+    if (graphContext && Array.isArray(graphContext.predecessorWindow) && graphContext.predecessorWindow.length > 0) {
+        lines.push(`- Immediate predecessors: **${graphContext.predecessorWindow.length}**`);
+    }
+    if (graphContext && Array.isArray(graphContext.successorWindow) && graphContext.successorWindow.length > 0) {
+        lines.push(`- Immediate successors: **${graphContext.successorWindow.length}**`);
+    }
     return lines.join('\n');
 }
 
@@ -810,6 +604,30 @@ function buildScopedConversationExplanationMarkdown(
             '',
             `Explicit graph path: ${formatGraphConnectionPath(graphContext.connectionPaths[0])}.`
         );
+    }
+    if (graphContext && Array.isArray(graphContext.predecessorWindow) && graphContext.predecessorWindow.length > 0) {
+        const predecessorTitles = graphContext.predecessorWindow
+            .map((node) => normalizeWhitespace(String(node.title || '').trim()))
+            .filter(Boolean)
+            .slice(0, 3);
+        if (predecessorTitles.length > 0) {
+            explanationLines.push(
+                '',
+                `Immediate predecessor window: ${predecessorTitles.join(', ')}.`
+            );
+        }
+    }
+    if (graphContext && Array.isArray(graphContext.successorWindow) && graphContext.successorWindow.length > 0) {
+        const successorTitles = graphContext.successorWindow
+            .map((node) => normalizeWhitespace(String(node.title || '').trim()))
+            .filter(Boolean)
+            .slice(0, 3);
+        if (successorTitles.length > 0) {
+            explanationLines.push(
+                '',
+                `Immediate successor window: ${successorTitles.join(', ')}.`
+            );
+        }
     }
     if (graphContext && graphContext.temporalValidity.allPointsValid === false) {
         const reasonSummary = graphContext.temporalValidity.warningReasons.length > 0
@@ -926,6 +744,24 @@ function buildScopedConversationActionGuideMarkdown(
             : [];
         if (titles.length > 1) {
             graphActionHints.push(`- Review the path order: ${titles.join(' -> ')}.`);
+        }
+    }
+    if (graphContext && Array.isArray(graphContext.predecessorWindow) && graphContext.predecessorWindow.length > 0) {
+        const predecessorTitles = graphContext.predecessorWindow
+            .map((node) => normalizeWhitespace(String(node.title || '').trim()))
+            .filter(Boolean)
+            .slice(0, 2);
+        if (predecessorTitles.length > 0) {
+            graphActionHints.push(`- Inspect prerequisite context from ${predecessorTitles.join(', ')} before expanding the answer.`);
+        }
+    }
+    if (graphContext && Array.isArray(graphContext.successorWindow) && graphContext.successorWindow.length > 0) {
+        const successorTitles = graphContext.successorWindow
+            .map((node) => normalizeWhitespace(String(node.title || '').trim()))
+            .filter(Boolean)
+            .slice(0, 2);
+        if (successorTitles.length > 0) {
+            graphActionHints.push(`- Use likely next-step nodes such as ${successorTitles.join(', ')} to continue follow-through after this answer.`);
         }
     }
     return [
@@ -1210,7 +1046,7 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     const blocks: AgentConversationAssistantBlock[] = [];
     const answer = buildScopedConversationAnswer(params);
     const knowledgeRun = buildKnowledgeRun(params);
-    const graphContext = params.graphContext || buildAgentConversationGraphContext(params.knowledgePoints);
+    const graphContext = params.graphContext || buildAgentConversationGraphContextFromKnowledgePoints(params.knowledgePoints);
     const overviewMarkdown = buildScopedConversationOverviewMarkdown(params, graphContext);
     const explanationMarkdown = buildScopedConversationExplanationMarkdown(params, graphContext);
     const evidenceMarkdown = buildScopedConversationEvidenceMarkdown(params);

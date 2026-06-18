@@ -271,6 +271,33 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                                         : [],
                                 }))
                                 : [],
+                            predecessorWindow: Array.isArray((record.response.trace as any).graphContext.predecessorWindow)
+                                ? (record.response.trace as any).graphContext.predecessorWindow.map((node: any) => ({
+                                    ...node,
+                                }))
+                                : [],
+                            successorWindow: Array.isArray((record.response.trace as any).graphContext.successorWindow)
+                                ? (record.response.trace as any).graphContext.successorWindow.map((node: any) => ({
+                                    ...node,
+                                }))
+                                : [],
+                            evidenceSourceRefs: Array.isArray((record.response.trace as any).graphContext.evidenceSourceRefs)
+                                ? [...(record.response.trace as any).graphContext.evidenceSourceRefs]
+                                : [],
+                            diagnostics: (record.response.trace as any).graphContext.diagnostics
+                                ? {
+                                    ...(record.response.trace as any).graphContext.diagnostics,
+                                    missingConnectionPathSourceAtomIds: Array.isArray((record.response.trace as any).graphContext.diagnostics.missingConnectionPathSourceAtomIds)
+                                        ? [...(record.response.trace as any).graphContext.diagnostics.missingConnectionPathSourceAtomIds]
+                                        : [],
+                                    missingPredecessorAtomIds: Array.isArray((record.response.trace as any).graphContext.diagnostics.missingPredecessorAtomIds)
+                                        ? [...(record.response.trace as any).graphContext.diagnostics.missingPredecessorAtomIds]
+                                        : [],
+                                    missingSuccessorAtomIds: Array.isArray((record.response.trace as any).graphContext.diagnostics.missingSuccessorAtomIds)
+                                        ? [...(record.response.trace as any).graphContext.diagnostics.missingSuccessorAtomIds]
+                                        : [],
+                                }
+                                : undefined,
                             temporalValidity: (record.response.trace as any).graphContext.temporalValidity
                                 ? {
                                     ...(record.response.trace as any).graphContext.temporalValidity,

@@ -71,10 +71,10 @@ The project already has multiple graph-bearing layers. The implementation must r
 5. **Graph-conditioned context assembly layer**
    - Proposed owner: a new learning-domain owner, not `server.ts` and not the frontend.
    - Responsibility: turn retrieved candidates into a bounded `GraphContextPack` by selecting anchor, expanding predecessor/successor/path windows, applying temporal validity, attaching evidence spans, and enforcing a token/size budget.
-   - Current 2026-06-17 slice: partially advanced by adding explicit `connectionPaths` into `AgentConversationGraphContext`, trace/export, structured answer composition, and the evidence pane.
+   - Current 2026-06-17 slice: now advanced into a first-class owner by `src/learning/graphContextAssembler.ts`, which selects the anchor, reorders support nodes, carries explicit `connectionPaths`, adds bounded predecessor/successor windows, and records evidence refs plus graph diagnostics before answer synthesis.
    - The same slice protects the current graph substrate during read-side auto-save by merging still-valid store-side relation/temporal edges into rebuilt snapshots before persisting.
    - The same slice contracts the public `answer` / `directAnswer` string so it no longer embeds citation lists, connection paths, memory notices, or knowledge-run diagnostics.
-   - Remaining gap: this is still post-retrieval enrichment. The next implementation should make this a first-class assembly stage before final answer synthesis.
+   - Remaining gap: retrieval ranking still relies too heavily on shallow degree-style signals, and the right-pane source-focus path still needs explicit diagnostics for path/highlight mismatches.
 
 6. **Answer synthesis layer**
    - Owner: `src/learning/conversationComposer.ts` plus future composer/assembler modules.
@@ -120,7 +120,7 @@ This order matters. If graph expansion happens before scope normalization, it ca
 | Hide developer-heavy evidence and purple-box-style support material for now | Evidence pane and runtime/export traces carry supporting context. | Direction is correct | Any new graph details must default to secondary surfaces unless explicitly requested. |
 | Clicking a file hit should open right-side content and highlight matched text | `workspace_panes.js` routes file entries through graph focus, reads markdown via storage, renders through shared markdown runtime, and highlights matched spans. | Implemented baseline | Failures usually come from path canonicalization, missing storage provider, stale runtime path, or snippet/highlight mismatch. Add diagnostics before rewriting the UI. |
 | Use this project's existing DAG, not a generic graph database abstraction | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, `findPath`, path/session logic, and `Graph.ts` DAG helpers already exist. | Confirmed | The prior "graph database + prompt framework" framing was too generic. |
-| Let LLM inspect high-quality graph structure | 2026-06-17 code adds explicit store path chains as `connectionPaths`, preserves them through trace/export/evidence pane, and prevents auto-save snapshot rebuilds from dropping still-valid store-side relation/temporal edges. | Partial implementation | Still missing a dedicated graph-conditioned context assembler that controls anchor/support/path selection before answer synthesis. |
+| Let LLM inspect high-quality graph structure | 2026-06-17 code now uses `graphContextAssembler.ts` to choose the anchor, reorder support nodes, preserve explicit store path chains, add predecessor/successor windows, and expose graph diagnostics through trace/export/evidence pane. | Implemented P1 foundation | Graph-aware ranking features and graph-specific quality gates still need to build on this boundary. |
 | Preserve compatibility | `assistantMessage` remains valid; new `graphContext.connectionPaths` is optional and additive; snapshot merging keeps existing relation/temporal edges only when both endpoints remain active. | Preserved | Keep optional fields optional in all clients and exports. Add edge ownership metadata before treating missing persisted edges as intentional deletes. |
 
 ### Open-Source Library Review Result
@@ -155,7 +155,7 @@ This is a compatibility-safe improvement because all new fields are optional and
 
 #### P1: Extract a graph-conditioned context assembler
 
-Create a focused owner, for example `src/learning/graphContextAssembler.ts`, only if it owns real decisions and not just pass-through calls.
+Landed in the current working tree as `src/learning/graphContextAssembler.ts`.
 
 Inputs:
 
@@ -169,21 +169,20 @@ Outputs:
 
 - `GraphContextPack` / existing `AgentConversationGraphContext` extension,
 - selected anchor,
-- support nodes,
+- reordered support nodes,
 - explicit paths,
 - predecessor/successor windows,
 - temporal warnings,
 - source evidence span references,
 - diagnostics for missing graph data.
 
-Rules:
+Implemented rules in the current slice:
 
-- cap path depth by default (`4` to `6`),
-- cap support nodes by answer intent,
-- prefer high-confidence explicit edges over inferred weak edges,
-- preserve edge direction in every rendered path,
-- do not mix superseded atoms into the answer without a temporal warning,
-- fail open to current retrieval-only behavior when graph ops are unavailable.
+- path depth is capped by default (`6`),
+- support-node count is bounded by answer intent,
+- explicit edge direction is preserved in every rendered path,
+- graph ops failure falls open to retrieval-shaped graph context with diagnostics,
+- predecessor/successor windows are bounded and stay in secondary evidence surfaces.
 
 #### P2: Make retrieval graph-aware without overfitting to degree
 
@@ -287,9 +286,9 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 
 ### Five-Point Summary
 
-1. The project already has a real DAG substrate; the missing piece is a first-class graph-conditioned context assembly layer.
+1. The project already has a real DAG substrate; the missing piece has now moved from “extract the assembler” to “make ranking and quality gates graph-native.”
 2. The public answer must stay targeted; this slice now keeps `answer` / `directAnswer` free of evidence/debug lists while preserving those details in evidence panes, traces, and exports.
-3. The 2026-06-17 code slice adds explicit connection paths through graph context, composer, evidence pane, and export, but it is still partial because graph context assembly remains post-retrieval.
+3. The 2026-06-17 code slice now has a first-class assembler boundary with anchor/support/path/window decisions before answer synthesis, but ranking and quality gates are still partial.
 4. The referenced open-source projects are best used as design patterns, not new runtime dependencies.
 5. The next robust direction is bounded DAG context packs, graph-aware ranking features, right-pane diagnostics, and graph-specific regression tests.
 
@@ -354,10 +353,10 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 5. **Graph-conditioned context assembly 层**
    - 建议 owner：新的 learning domain owner，不应放在 `server.ts` 或前端里。
    - 职责：把检索候选转成有界 `GraphContextPack`：选择 anchor，展开 predecessor/successor/path 窗口，应用 temporal validity，附加 evidence spans，并控制 token/size budget。
-   - 当前 2026-06-17 切片：已经通过 `AgentConversationGraphContext.connectionPaths`、trace/export、structured answer composition、evidence pane 向前推进了一步。
+   - 当前 2026-06-17 切片：已经通过 `src/learning/graphContextAssembler.ts` 进入一等 owner 阶段，会在回答合成前选择 anchor、重排 support node、挂接显式 `connectionPaths`、补有界 predecessor/successor window，并记录 evidence ref 与 graph diagnostics。
    - 同一切片也保护了 read-side 自动保存路径：持久化重建 snapshot 前会合并仍然有效的 store 侧 relation/temporal edges，避免当前图底座被查询/对话读流程误删。
    - 同一切片还收缩了公开 `answer` / `directAnswer` 字符串，不再把 citation list、connection path、memory notice 或 knowledge-run diagnostics 拼进用户回答。
-   - 剩余缺口：这仍是 post-retrieval enrichment。下一步应把它升级为 final answer synthesis 前的一等装配阶段。
+   - 剩余缺口：当前 retrieval ranking 仍过度依赖浅层信号，右侧 source focus 也还需要补路径 / 高亮诊断。
 
 6. **回答合成层**
    - Owner：`src/learning/conversationComposer.ts` 以及后续 composer/assembler 模块。
@@ -403,7 +402,7 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 | 暂时隐藏开发者导向 evidence 与紫框类 support material | evidence pane 与 runtime/export trace 已承接支持上下文。 | 方向正确 | 新增图细节默认应进次级 surface，除非用户显式要求。 |
 | 文件命中单击后打开右侧内容并高亮命中 | `workspace_panes.js` 已通过 graph focus 路由文件项，读取 markdown，经共享 markdown runtime 渲染，并用 matched spans 高亮。 | 已实现基线 | 失败通常来自路径 canonicalization、storage provider 缺失、旧 runtime 路径、snippet/highlight 不匹配。应先加诊断而不是重写 UI。 |
 | 使用项目现有 DAG，而不是泛图数据库抽象 | `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、store ops、`findPath`、path/session logic、`Graph.ts` DAG helper 都已存在。 | 已确认 | 先前“图数据库 + prompt framework”的表述过泛。 |
-| 让 LLM 查阅高质量图结构 | 2026-06-17 代码新增显式 store path chains 作为 `connectionPaths`，经 trace/export/evidence pane 保留，并避免 auto-save snapshot rebuild 丢弃仍然有效的 store 侧 relation/temporal edges。 | 部分实现 | 仍缺专门 graph-conditioned context assembler，在回答合成前控制 anchor/support/path 选择。 |
+| 让 LLM 查阅高质量图结构 | 2026-06-17 代码现在通过 `graphContextAssembler.ts` 在回答合成前选择 anchor、重排 support node、保留显式 store path chain、补 predecessor/successor window，并通过 trace/export/evidence pane 暴露 graph diagnostics。 | P1 基础已实现 | 仍需在这个边界之上补 graph-aware ranking feature 与图专项质量门禁。 |
 | 保持兼容 | `assistantMessage` 仍有效；新增 `graphContext.connectionPaths` 是 optional additive field；snapshot merge 只在两端 atom 仍 active 时保留既有 relation/temporal edges。 | 已保持 | 所有客户端和导出路径都要继续把新增字段视为可选。后续需要 edge ownership metadata，才能区分“用户有意删除的边”和“外部增强但内存快照未携带的边”。 |
 
 ### 开源库研究结论
@@ -438,7 +437,7 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 
 #### P1：抽出 graph-conditioned context assembler
 
-新增一个聚焦 owner，例如 `src/learning/graphContextAssembler.ts`。只有当它拥有真实决策时才新增，不能只是转发调用。
+当前工作区已落地为 `src/learning/graphContextAssembler.ts`。
 
 输入：
 
@@ -452,21 +451,20 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 
 - `GraphContextPack` / 现有 `AgentConversationGraphContext` 的扩展；
 - selected anchor；
-- support nodes；
+- 重排后的 support nodes；
 - explicit paths；
 - predecessor/successor windows；
 - temporal warnings；
 - source evidence span references；
 - graph data 缺失诊断。
 
-规则：
+当前切片已实现的规则：
 
-- 默认限制 path depth（`4` 到 `6`）；
+- 默认限制 path depth（当前为 `6`）；
 - 按 answer intent 限制 support nodes；
-- 优先使用高置信 explicit edges，而不是弱 inferred edges；
 - 每条渲染路径保留边方向；
-- 不在没有 temporal warning 的情况下混入 superseded atoms；
-- graph ops 不可用时 fail open 回到当前 retrieval-only 行为。
+- graph ops 不可用时 fail open 回到 retrieval-shaped graph context，并附带 diagnostics；
+- predecessor/successor window 有界，并默认停留在次级 evidence surface。
 
 #### P2：让 retrieval 真正 graph-aware，但不要过拟合 degree
 
@@ -570,8 +568,8 @@ Evidence pane 应渲染：
 
 ### 五点总结
 
-1. 项目已经有真实 DAG 底座；缺的是一等 graph-conditioned context assembly 层。
+1. 项目已经有真实 DAG 底座；当前缺口已经从“抽出 assembler”转成“让 ranking 与质量门禁 graph-native”。
 2. 公开回答必须保持 targeted；本切片已让 `answer` / `directAnswer` 不再携带 evidence/debug 列表，同时把这些细节保留在 evidence pane、trace 与 export。
-3. 2026-06-17 代码切片已把 explicit connection paths 接入 graph context、composer、evidence pane 与 export，但仍是部分实现，因为 graph context assembly 还停留在 retrieval 后增强。
+3. 2026-06-17 代码切片已经有回答前的一等 assembler 边界，会做 anchor/support/path/window 决策，但 ranking 与质量门禁仍是部分实现。
 4. 参考开源库更适合作为设计模式，不适合作为新的运行时依赖。
 5. 下一步应推进 bounded DAG context pack、graph-aware ranking features、right-pane diagnostics 与 graph-specific regression tests。

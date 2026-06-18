@@ -1951,6 +1951,20 @@ describe('KnowledgeLearningPlatform', () => {
                     ]),
                 }),
             ]));
+            expect((response.trace.graphContext as any)?.predecessorWindow).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    atomId: String(bridgeAtom?.id || ''),
+                    title: 'Bridge Layer',
+                    relationKind: 'reference',
+                }),
+            ]));
+            expect((response.trace.graphContext as any)?.diagnostics).toEqual(expect.objectContaining({
+                graphOpsAvailable: true,
+                usedFallback: false,
+                candidateCount: expect.any(Number),
+                pathDepthLimit: 6,
+            }));
+            expect(response.knowledgePoints[0]?.title).toBe('Ground State');
 
             const structuredBlock = (response.assistantBlocks || []).find((block) => block.type === 'structured_answer');
             expect(
@@ -1958,6 +1972,11 @@ describe('KnowledgeLearningPlatform', () => {
                     ? String(structuredBlock.explanationMarkdown || '')
                     : ''
             ).toContain('Foundation Note -> prerequisite -> Bridge Layer -> reference -> Ground State');
+            expect(
+                structuredBlock && 'explanationMarkdown' in structuredBlock
+                    ? String(structuredBlock.explanationMarkdown || '')
+                    : ''
+            ).toContain('Immediate predecessor window: Bridge Layer');
             expect(
                 structuredBlock && 'nextActionsMarkdown' in structuredBlock
                     ? String(structuredBlock.nextActionsMarkdown || '')

@@ -554,6 +554,38 @@ describe('conversationComposer', () => {
                         length: 2,
                     },
                 ],
+                predecessorWindow: [
+                    {
+                        atomId: 'atom_bridge',
+                        title: 'Bridge Layer',
+                        relationKind: 'prerequisite',
+                        confidence: 0.9,
+                    },
+                ],
+                successorWindow: [
+                    {
+                        atomId: 'atom_application',
+                        title: 'Application Example',
+                        relationKind: 'sequence',
+                        confidence: 0.74,
+                    },
+                ],
+                evidenceSourceRefs: [
+                    'Knowledge_Base/optics/foundation.md:4',
+                    'Knowledge_Base/optics/ground-state.md:8',
+                ],
+                diagnostics: {
+                    graphOpsAvailable: true,
+                    usedFallback: false,
+                    selectedAnchorReason: 'title_mention',
+                    candidateCount: 3,
+                    supportNodeCount: 1,
+                    supportNodeLimit: 3,
+                    pathDepthLimit: 6,
+                    missingConnectionPathSourceAtomIds: [],
+                    missingPredecessorAtomIds: [],
+                    missingSuccessorAtomIds: [],
+                },
                 temporalValidity: {
                     checkedAt: '2026-06-10T09:00:00.000Z',
                     allPointsValid: true,
@@ -576,9 +608,15 @@ describe('conversationComposer', () => {
 
         const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
         expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('Explicit connection paths');
+        expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('Immediate predecessors');
+        expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('Immediate successors');
         expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('Explicit graph path');
         expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('Foundation Note -> prerequisite -> Bridge Layer -> reference -> Ground State');
+        expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('Immediate predecessor window: Bridge Layer');
+        expect(structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '').toContain('Immediate successor window: Application Example');
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Review the path order: Foundation Note -> Bridge Layer -> Ground State');
+        expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Inspect prerequisite context from Bridge Layer');
+        expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Use likely next-step nodes such as Application Example');
     });
 
     test('builds a verified knowledge run with evidence quality gates and review cards', () => {

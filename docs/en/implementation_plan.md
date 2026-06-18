@@ -11,16 +11,16 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 #### Current code truth
 
 - The existing graph substrate is local to the project: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, evidence spans, store ops, and `findPath`.
-- The current slice already adds optional explicit `connectionPaths` to graph context and preserves them through trace/export/evidence rendering.
+- The current slice now has a first-class graph-conditioned context assembler in `src/learning/graphContextAssembler.ts`; it selects the anchor, reorders support nodes, preserves explicit `connectionPaths`, and adds bounded predecessor/successor windows plus graph diagnostics before answer synthesis.
 - Persistence now preserves still-valid store-side relation/temporal edges during auto-save snapshot rebuilds, which prevents read-side query/conversation flows from discarding externally enriched DAG structure before `connectionPaths` are assembled.
 - The current retrieval path is still not fully graph-native; relation degree is only a shallow ranking feature.
 - Prompt-framework research should guide contracts and evaluation, not pull Python frameworks into the app runtime.
 
 #### Next execution order
 
-1. Stabilize the current optional `connectionPaths` surface and keep it additive.
-2. Extract a bounded graph-conditioned context assembler between retrieval and answer synthesis.
-3. Expand graph-aware ranking features beyond relation-degree bonus.
+1. Keep the new assembler surface additive and backward-compatible.
+2. Expand graph-aware ranking features beyond relation-degree bonus.
+3. Add right-pane diagnostics for path/source/highlight mismatches without introducing a second rendering stack.
 4. Keep graph/debug/evidence detail in evidence/export surfaces, not in the public answer.
 5. Add graph-specific answer quality gates for ordering, comparison, temporal validity, fallback, and large-graph budgeting.
 6. Continue owner reduction only when the new module owns real decisions or invariants.
@@ -42,7 +42,7 @@ Extend the current mainline alignment with a Knowledge Workspace and DAG-specifi
 
 - The current branch already has structured grounded conversation, grouped knowledge points, durable `flashcard_batch` / `knowledge_run` artifacts, and workflow-artifact review follow-up.
 - The current DAG-backed learning substrate already exists in code through `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows.
-- The primary missing layer is graph-conditioned context assembly between retrieval and answer synthesis.
+- The former missing layer, graph-conditioned context assembly between retrieval and answer synthesis, is now implemented as `src/learning/graphContextAssembler.ts`.
 - The answer-surface contraction slice is now implemented at the composer/frontend boundary; the remaining product-surface gap is right-pane-first knowledge reading and durable evidence review.
 
 #### Next execution order
@@ -51,7 +51,7 @@ Extend the current mainline alignment with a Knowledge Workspace and DAG-specifi
 2. Preserve the contracted visible answer contract while routing supporting graph/evidence data to secondary surfaces.
 3. Converge left-side knowledge hits on a right-pane-first reading model.
 4. Treat `knowledge_run` and `flashcard_batch` as the first durable evidence surfaces.
-5. Add graph-conditioned context assembly.
+5. Build graph-aware ranking and right-pane diagnostics on top of the new assembler boundary.
 6. Continue ownership reduction across the major server and frontend hosts.
 
 ### 2026-06-06 Mainline Architecture Alignment Plan

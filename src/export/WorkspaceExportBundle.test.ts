@@ -288,6 +288,38 @@ describe('WorkspaceExportBundle', () => {
                                         length: 2,
                                     },
                                 ],
+                                predecessorWindow: [
+                                    {
+                                        atomId: 'atom_bridge',
+                                        title: 'Bridge Layer',
+                                        relationKind: 'prerequisite',
+                                        confidence: 0.91,
+                                    },
+                                ],
+                                successorWindow: [
+                                    {
+                                        atomId: 'atom_application',
+                                        title: 'Application Example',
+                                        relationKind: 'sequence',
+                                        confidence: 0.73,
+                                    },
+                                ],
+                                evidenceSourceRefs: [
+                                    'Knowledge_Base/optics/foundation.md:8',
+                                    'Knowledge_Base/optics/reflection.md:12',
+                                ],
+                                diagnostics: {
+                                    graphOpsAvailable: true,
+                                    usedFallback: false,
+                                    selectedAnchorReason: 'title_mention',
+                                    candidateCount: 3,
+                                    supportNodeCount: 2,
+                                    supportNodeLimit: 3,
+                                    pathDepthLimit: 6,
+                                    missingConnectionPathSourceAtomIds: [],
+                                    missingPredecessorAtomIds: [],
+                                    missingSuccessorAtomIds: [],
+                                },
                                 temporalValidity: {
                                     checkedAt: '2026-05-26T00:00:00.000Z',
                                     allPointsValid: true,
@@ -343,6 +375,26 @@ describe('WorkspaceExportBundle', () => {
                         length: 2,
                     }),
                 ]),
+                predecessorWindow: expect.arrayContaining([
+                    expect.objectContaining({
+                        atomId: 'atom_bridge',
+                        title: 'Bridge Layer',
+                        relationKind: 'prerequisite',
+                    }),
+                ]),
+                successorWindow: expect.arrayContaining([
+                    expect.objectContaining({
+                        atomId: 'atom_application',
+                        title: 'Application Example',
+                        relationKind: 'sequence',
+                    }),
+                ]),
+                evidenceSourceRefs: ['Knowledge_Base/optics/foundation.md:8', 'Knowledge_Base/optics/reflection.md:12'],
+                diagnostics: expect.objectContaining({
+                    graphOpsAvailable: true,
+                    selectedAnchorReason: 'title_mention',
+                    pathDepthLimit: 6,
+                }),
                 temporalValidity: expect.objectContaining({
                     edgeKinds: ['supersedes'],
                     details: expect.arrayContaining([

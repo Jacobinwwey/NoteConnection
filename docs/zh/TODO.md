@@ -8,9 +8,8 @@
 - [x] 已将项目图结构要求重新定义为使用现有 DAG 形态的 `KnowledgeAtom` / `RelationEdge` / `TemporalEdge` 底座，而不是替换成泛化图数据库方案。
 - [x] DSPy、Guidance、Semantic Kernel、LangChain Core 与 LiteLLM 作为 `ref/` 下的已研究设计参考处理，不作为 app runtime 依赖。
 - [x] 可选 `AgentConversationGraphContext.connectionPaths` 已贯穿 conversation trace、结构化回答组织、evidence pane 渲染、workspace export 与聚焦回归测试。
-- [~] 当前 graph-aware answer 行为仍按部分完成处理：显式 connection paths 现在可见、可导出，但专门的 graph-conditioned context assembly layer 仍未完成。
+- [x] 已将有界 graph-conditioned context assembly layer 抽到 `src/learning/graphContextAssembler.ts`，并接入 anchor/support 选择、显式路径、predecessor/successor window、evidence ref 与 graph diagnostics。
 - [~] 右侧 source rendering 按已实现处理，但仍需要围绕路径 canonicalization、storage-provider 读取、markdown render fallback 与 highlight matching 增加诊断。
-- [ ] 在 retrieval 与 answer synthesis 之间抽出有界 graph-conditioned context assembly。
 - [ ] 将 ranking 从 relation-degree bonus 扩展到 distance、path-confidence、prerequisite-depth、temporal-validity、relation-intent features。
 - [ ] 在宣称 DAG-native answer planning 完成前，补齐图回答专用质量门禁。
 

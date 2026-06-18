@@ -8,11 +8,10 @@ Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer cont
 ### Current Status
 - [x] The current DAG clarification is documented in `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`.
 - [x] The referenced DSPy, Guidance, Semantic Kernel, LangChain Core, and LiteLLM repositories are retained under `ref/` as research inputs; they should inform patterns, not become runtime dependencies.
-- [x] The current implementation slice adds optional `AgentConversationGraphContext.connectionPaths` and preserves explicit path chains through conversation trace, structured answer composition, evidence-pane rendering, workspace export, and regression tests.
+- [x] The current implementation slice now includes `src/learning/graphContextAssembler.ts`, which selects the anchor, reorders support nodes, preserves explicit path chains, and adds predecessor/successor windows plus graph diagnostics before answer synthesis.
 - [x] The primary answer surface now enforces the targeted-answer contract in `answer` / `directAnswer`; graph/evidence/developer details stay in typed blocks, the evidence pane, trace, or export unless explicitly requested.
-- [~] The current DAG use is now stronger than shallow relation hints, but it is still partial: explicit connection paths are post-retrieval enrichment, not yet a complete graph-conditioned context assembly stage.
+- [x] The DAG answer path now has a first-class graph-conditioned context assembly stage instead of only post-retrieval enrichment.
 - [~] Right-pane source rendering and matched-span highlighting exist, but failures should be diagnosed through source-path canonicalization, storage-provider, markdown-render, and highlight-hit telemetry before changing UI shape.
-- [ ] Extract a bounded graph-conditioned context assembler between retrieval and answer synthesis.
 - [ ] Extend ranking beyond relation-degree bonuses with graph distance, path confidence, prerequisite depth, temporal validity, and relation-kind intent features.
 - [ ] Add graph-specific quality gates for prerequisite ordering, comparison branches, supersession warnings, graph-op failure fallback, and deterministic large-graph budgeting.
 - [ ] Continue reducing ownership pressure in `KnowledgeLearningPlatform.ts`, `conversationComposer.ts`, `agent_workspace.js`, and `workspace_panes.js` only where a new owner enforces real decisions or invariants.
@@ -25,11 +24,10 @@ Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer cont
 ### 当前状态
 - [x] 当前 DAG 澄清已落盘到 `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`。
 - [x] DSPy、Guidance、Semantic Kernel、LangChain Core 与 LiteLLM 仓库保留在 `ref/` 下作为研究输入；它们用于借鉴模式，不应成为运行时依赖。
-- [x] 当前实现切片新增了可选 `AgentConversationGraphContext.connectionPaths`，并让显式路径链贯穿 conversation trace、结构化回答组织、evidence pane 渲染、workspace export 与回归测试。
+- [x] 当前实现切片已经包含 `src/learning/graphContextAssembler.ts`，会在回答合成前选择 anchor、重排 support node、保留显式路径链，并补 predecessor/successor window 与 graph diagnostics。
 - [x] 主回答区现在已在 `answer` / `directAnswer` 中强制执行 targeted-answer 契约；graph/evidence/developer 细节默认留在 typed blocks、evidence pane、trace 或 export 中，除非用户显式要求查看。
-- [~] 当前 DAG 使用已经比浅层 relation hint 更强，但仍是部分实现：显式 connection paths 仍属于 retrieval 之后的增强，还不是完整 graph-conditioned context assembly 阶段。
+- [x] 当前 DAG 回答链路已经拥有一等 graph-conditioned context assembly 阶段，而不再只是 retrieval 之后的显式路径增强。
 - [~] 右侧原文渲染与 matched-span 高亮已经存在，但遇到失败时应先通过 source-path canonicalization、storage provider、markdown render 与 highlight hit telemetry 定位，而不是直接改 UI 形态。
-- [ ] 在 retrieval 与 answer synthesis 之间抽出有界 graph-conditioned context assembler。
 - [ ] 将排序能力从 relation-degree bonus 扩展到 graph distance、path confidence、prerequisite depth、temporal validity 与 relation-kind intent features。
 - [ ] 增加图回答质量门禁，覆盖 prerequisite ordering、comparison branch、supersession warning、graph-op failure fallback 与大图确定性预算裁剪。
 - [ ] 继续缩减 `KnowledgeLearningPlatform.ts`、`conversationComposer.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力，但只在新 owner 能做真实决策或强制不变量时推进。

@@ -76,6 +76,9 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphKnowledgePointRelationsLabel': 'Knowledge-point relations',
             'agentWorkspace.evidence.graphConnectionPathsLabel': 'Connection paths',
             'agentWorkspace.evidence.graphConnectionPathLengthLabel': 'Length: {length}',
+            'agentWorkspace.evidence.graphPredecessorsLabel': 'Immediate predecessors',
+            'agentWorkspace.evidence.graphSuccessorsLabel': 'Immediate successors',
+            'agentWorkspace.evidence.graphEvidenceRefsLabel': 'Source references',
             'agentWorkspace.evidence.graphRelationTargetsLabel': 'Targets: {count}',
             'agentWorkspace.evidence.graphRelationSourcesLabel': 'Sources: {sources}',
             'agentWorkspace.evidence.graphRelationConfidenceLabel': 'Avg confidence: {confidence}',
@@ -86,6 +89,16 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphTemporalInvalidTitlesLabel': 'Invalid knowledge points',
             'agentWorkspace.evidence.graphTemporalEdgeKindsLabel': 'Temporal edge kinds',
             'agentWorkspace.evidence.graphTemporalDetailsLabel': 'Temporal edge details',
+            'agentWorkspace.evidence.graphDiagnosticsLabel': 'Graph diagnostics',
+            'agentWorkspace.evidence.graphDiagnosticsOpsLabel': 'Graph ops',
+            'agentWorkspace.evidence.graphDiagnosticsAvailableLabel': 'available',
+            'agentWorkspace.evidence.graphDiagnosticsUnavailableLabel': 'unavailable',
+            'agentWorkspace.evidence.graphDiagnosticsFallbackLabel': 'Fallback',
+            'agentWorkspace.evidence.graphDiagnosticsAnchorReasonLabel': 'Anchor reason',
+            'agentWorkspace.evidence.graphDiagnosticsCandidateCountLabel': 'Candidates',
+            'agentWorkspace.evidence.graphDiagnosticsSupportCountLabel': 'Support nodes',
+            'agentWorkspace.evidence.graphDiagnosticsBudgetLabel': 'Path depth budget',
+            'agentWorkspace.evidence.graphDiagnosticsMissingLookupsLabel': 'Missing graph lookups',
             'agentWorkspace.evidence.graphTemporalValid': 'valid',
             'agentWorkspace.evidence.graphTemporalWarning': 'warning',
             'agentWorkspace.knowledge.citation': 'Citation',
@@ -809,6 +822,9 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphKnowledgePointRelationsLabel': '知识点关系',
             'agentWorkspace.evidence.graphConnectionPathsLabel': '连接路径',
             'agentWorkspace.evidence.graphConnectionPathLengthLabel': '长度：{length}',
+            'agentWorkspace.evidence.graphPredecessorsLabel': '直接前置节点',
+            'agentWorkspace.evidence.graphSuccessorsLabel': '直接后继节点',
+            'agentWorkspace.evidence.graphEvidenceRefsLabel': '来源引用',
             'agentWorkspace.evidence.graphRelationTargetsLabel': '目标数：{count}',
             'agentWorkspace.evidence.graphRelationSourcesLabel': '来源：{sources}',
             'agentWorkspace.evidence.graphRelationConfidenceLabel': '平均置信度：{confidence}',
@@ -819,6 +835,16 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphTemporalInvalidTitlesLabel': '失效知识点',
             'agentWorkspace.evidence.graphTemporalEdgeKindsLabel': '时序边类型',
             'agentWorkspace.evidence.graphTemporalDetailsLabel': '时序边细节',
+            'agentWorkspace.evidence.graphDiagnosticsLabel': '图诊断',
+            'agentWorkspace.evidence.graphDiagnosticsOpsLabel': '图操作',
+            'agentWorkspace.evidence.graphDiagnosticsAvailableLabel': '可用',
+            'agentWorkspace.evidence.graphDiagnosticsUnavailableLabel': '不可用',
+            'agentWorkspace.evidence.graphDiagnosticsFallbackLabel': '回退',
+            'agentWorkspace.evidence.graphDiagnosticsAnchorReasonLabel': '锚点选择原因',
+            'agentWorkspace.evidence.graphDiagnosticsCandidateCountLabel': '候选数',
+            'agentWorkspace.evidence.graphDiagnosticsSupportCountLabel': '支撑节点',
+            'agentWorkspace.evidence.graphDiagnosticsBudgetLabel': '路径深度预算',
+            'agentWorkspace.evidence.graphDiagnosticsMissingLookupsLabel': '缺失图查询',
             'agentWorkspace.evidence.graphTemporalValid': '有效',
             'agentWorkspace.evidence.graphTemporalWarning': '告警',
             'agentWorkspace.knowledge.togglePreview': '切换命中知识预览：{file}',
@@ -3103,6 +3129,38 @@ describe('workspace panes controller', () => {
                         length: 2,
                     },
                 ],
+                predecessorWindow: [
+                    {
+                        atomId: 'atom_bridge',
+                        title: 'Bridge Layer',
+                        relationKind: 'prerequisite',
+                        confidence: 0.91,
+                    },
+                ],
+                successorWindow: [
+                    {
+                        atomId: 'atom_application',
+                        title: 'Application Example',
+                        relationKind: 'sequence',
+                        confidence: 0.74,
+                    },
+                ],
+                evidenceSourceRefs: [
+                    'Knowledge_Base/optics/foundation.md:4',
+                    'Knowledge_Base/optics/reflection.md:12',
+                ],
+                diagnostics: {
+                    graphOpsAvailable: true,
+                    usedFallback: false,
+                    selectedAnchorReason: 'title_mention',
+                    candidateCount: 3,
+                    supportNodeCount: 2,
+                    supportNodeLimit: 3,
+                    pathDepthLimit: 6,
+                    missingConnectionPathSourceAtomIds: [],
+                    missingPredecessorAtomIds: [],
+                    missingSuccessorAtomIds: [],
+                },
                 temporalValidity: {
                     checkedAt: '2026-06-10T09:00:00.000Z',
                     allPointsValid: false,
@@ -3136,6 +3194,14 @@ describe('workspace panes controller', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('Connection paths');
         expect(String(evidenceBody?.textContent || '')).toContain('Foundation Note -> Bridge Layer -> Reflection');
         expect(String(evidenceBody?.textContent || '')).toContain('Length: 2');
+        expect(String(evidenceBody?.textContent || '')).toContain('Immediate predecessors');
+        expect(String(evidenceBody?.textContent || '')).toContain('Bridge Layer');
+        expect(String(evidenceBody?.textContent || '')).toContain('Immediate successors');
+        expect(String(evidenceBody?.textContent || '')).toContain('Application Example');
+        expect(String(evidenceBody?.textContent || '')).toContain('Source references');
+        expect(String(evidenceBody?.textContent || '')).toContain('Knowledge_Base/optics/foundation.md:4');
+        expect(String(evidenceBody?.textContent || '')).toContain('Graph diagnostics');
+        expect(String(evidenceBody?.textContent || '')).toContain('title_mention');
         expect(String(evidenceBody?.textContent || '')).toContain('Targets: 1');
         expect(String(evidenceBody?.textContent || '')).toContain('Avg confidence: 92%');
         expect(String(evidenceBody?.textContent || '')).toContain('temporal_edge_expired');
