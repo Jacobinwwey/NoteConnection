@@ -151,6 +151,70 @@ function makeOrderedGraphContext(overrides: Partial<AgentConversationGraphContex
     };
 }
 
+function makeComparisonGraphContext(
+    relationKind: 'contrast' | 'analogy',
+    leftTitle: string,
+    rightTitle: string,
+    overrides: Partial<AgentConversationGraphContext> = {}
+): AgentConversationGraphContext {
+    return {
+        anchorAtomId: 'atom_left',
+        anchorTitle: leftTitle,
+        supportingAtomIds: ['atom_right'],
+        supportingTitles: [rightTitle],
+        relationKinds: [relationKind],
+        relationSummaries: [
+            {
+                relationKind,
+                edgeIds: ['edge_graph_comparison'],
+                sourceAtomIds: ['atom_left'],
+                targetAtomIds: ['atom_right'],
+                averageConfidence: 0.91,
+            },
+        ],
+        knowledgePointRelations: [
+            {
+                edgeId: 'edge_graph_comparison',
+                relationKind,
+                sourceAtomId: 'atom_left',
+                sourceTitle: leftTitle,
+                targetAtomId: 'atom_right',
+                targetTitle: rightTitle,
+                confidence: 0.91,
+            },
+        ],
+        connectionPaths: [
+            {
+                sourceAtomId: 'atom_left',
+                sourceTitle: leftTitle,
+                targetAtomId: 'atom_right',
+                targetTitle: rightTitle,
+                pathAtomIds: ['atom_left', 'atom_right'],
+                pathTitles: [leftTitle, rightTitle],
+                pathEdges: [
+                    {
+                        fromAtomId: 'atom_left',
+                        toAtomId: 'atom_right',
+                        relationKind,
+                    },
+                ],
+                length: 1,
+            },
+        ],
+        predecessorWindow: [],
+        successorWindow: [],
+        temporalValidity: {
+            checkedAt: '2026-06-19T03:40:00.000Z',
+            allPointsValid: true,
+            warningReasons: [],
+            invalidKnowledgePointTitles: [],
+            edgeKinds: [],
+            details: [],
+        },
+        ...overrides,
+    };
+}
+
 describe('answerReleaseReview', () => {
     test('downgrades unsupported debug-style answers into concise abstentions', () => {
         const review = reviewAnswerRelease({
@@ -1319,5 +1383,116 @@ describe('answerReleaseReview', () => {
         expect(review.decision).toBe('revise');
         expect(review.failedGateIds).toContain('claim_graph_causal_consistency');
         expect(review.publicAnswer).toBe('热膨胀导致压力升高。');
+    });
+
+    test('revises grounded answers when a DAG contrast pair is incorrectly released as an analogy claim', () => {
+        const point = makeKnowledgePoint({
+            title: 'Plastic Cup',
+            summary: 'Plastic Cup contrasts with Metal Cup in the current comparison context.',
+            evidenceSnippet: 'Plastic Cup contrasts with Metal Cup in the current comparison context.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Plastic Cup',
+                snippet: 'Plastic Cup contrasts with Metal Cup in the current comparison context.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Plastic Cup',
+                    snippet: 'Plastic Cup contrasts with Metal Cup in the current comparison context.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'compare plastic cup and metal cup',
+            draftAnswer: 'Plastic Cup is similar to Metal Cup.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeComparisonGraphContext('contrast', 'Plastic Cup', 'Metal Cup'),
+            reviewedAt: '2026-06-19T03:45:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_graph_comparison_consistency');
+        expect(review.publicAnswer).toBe('Plastic Cup contrasts with Metal Cup.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_graph_comparison_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('keeps grounded answers when the DAG contrast claim already matches the public answer', () => {
+        const point = makeKnowledgePoint({
+            title: 'Plastic Cup',
+            summary: 'Plastic Cup contrasts with Metal Cup in the current comparison context.',
+            evidenceSnippet: 'Plastic Cup contrasts with Metal Cup in the current comparison context.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Plastic Cup',
+                snippet: 'Plastic Cup contrasts with Metal Cup in the current comparison context.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Plastic Cup',
+                    snippet: 'Plastic Cup contrasts with Metal Cup in the current comparison context.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'compare plastic cup and metal cup',
+            draftAnswer: 'Plastic Cup contrasts with Metal Cup.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeComparisonGraphContext('contrast', 'Plastic Cup', 'Metal Cup'),
+            reviewedAt: '2026-06-19T03:50:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_graph_comparison_consistency');
+        expect(review.publicAnswer).toBe('Plastic Cup contrasts with Metal Cup.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_graph_comparison_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when a DAG analogy pair is incorrectly released as a Chinese contrast claim', () => {
+        const point = makeKnowledgePoint({
+            title: '层流',
+            summary: '层流与电路电流类似。',
+            evidenceSnippet: '层流与电路电流类似。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: '层流',
+                snippet: '层流与电路电流类似。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: '层流',
+                    snippet: '层流与电路电流类似。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '对比层流和电路电流',
+            draftAnswer: '层流与电路电流不同。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeComparisonGraphContext('analogy', '层流', '电路电流'),
+            reviewedAt: '2026-06-19T03:55:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_graph_comparison_consistency');
+        expect(review.publicAnswer).toBe('层流与电路电流类似。');
     });
 });

@@ -10,8 +10,9 @@
 - [x] `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_attribute_consistency`，因此当 grounded draft 保持同一主体与显式 `has` / `具有` 属性框架、却把支撑属性从 `中等热绝缘性能` 偷换成 `高热绝缘性能` 时，也会在 release 前被改写；`src/learning/answerReleaseReview.test.ts` 现在已覆盖英文冲突、中文冲突与兼容细化的防误报用例。
 - [x] `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_containment_consistency`，因此当 grounded draft 保持同一主体与显式容纳关系、却把 `contains water` 偷换成 `contains oil` 这类被容纳内容时，也会在 release 前被改写。
 - [x] `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_graph_causal_consistency`，因此当 grounded draft 把 DAG 支撑的因果方向说反，例如把 `Pressure Rise causes Thermal Expansion` 这类因果对调，也会在中英文路径上于 release 前被改写。
+- [x] `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_graph_comparison_consistency`，因此当 grounded draft 把 DAG 支撑的 `contrast` / `analogy` 对比分支说反时，也会在 release 前被确定性纠正句拦截并改写。
 - [x] 用户提供的截图 `1781782257390.jpg` 继续作为正式验收 owner 保留在 `waterglass_explicit_scope_compact_zh`；当前根因已经明确为 planner/retrieval normalization 漂移叠加公开回答诊断泄漏，而不是泛化的“RAG 能力不足”。
-- [ ] 下一活跃缺口：继续扩展确定性的 claim-vs-citation / claim-vs-evidence 矛盾检测，覆盖当前 lexical + query-intent + structured + attribute + containment + subject + state + polarity + graph-causal + graph-order 栈之外的冲突，同时避免把 reviewer 扩张成猜测型 verifier。
+- [ ] 下一活跃缺口：继续扩展确定性的 claim-vs-citation / claim-vs-evidence 矛盾检测，覆盖当前 lexical + query-intent + structured + attribute + containment + subject + state + polarity + graph-causal + graph-order + graph-comparison 栈之外的冲突，同时避免把 reviewer 扩张成猜测型 verifier。
 - [ ] 下一活跃缺口：在当前 block-level markdown source mapping 与 snippet-projected 内联高亮基线之上，继续推进 source-authenticated 的字符级 provenance。
 - [ ] 下一活跃缺口：继续扩充真实回归语料，覆盖 cross-scope、compact alias 与 synonym failure，同时保持向前兼容。
 
@@ -41,8 +42,10 @@
 - [x] `src/learning/answerReleaseReview.test.ts` 现在已经覆盖确定性的 DAG 因果用例：英文反转、方向正确，以及中文反转。
 - [x] reviewer 现在还会执行 `claim_graph_order_consistency`：对于 grounded draft 中把已装配 DAG 的 `prerequisite` 或 `sequence` 方向说反的断言，会在 release 前强制 revise，并给出确定性的纠正句。
 - [x] `src/learning/answerReleaseReview.test.ts` 现在已经覆盖确定性的 DAG 顺序用例：前置关系反转、前置关系方向正确、以及 sequence 反转。
+- [x] reviewer 现在还会执行 `claim_graph_comparison_consistency`：对于 grounded draft 中把已装配 DAG 的 `contrast` / `analogy` 对比分支说反的断言，会在 release 前强制 revise，并给出确定性的纠正句。
+- [x] `src/learning/answerReleaseReview.test.ts` 现在已经覆盖确定性的 DAG 对比用例：contrast 被错误放行为 analogy、正确 contrast 放行，以及中文 analogy 被错误放行为 contrast。
 - [x] reviewer 现在还会执行 `claim_containment_consistency`：对于 grounded draft 中保持同一主体和显式内容/容纳关系、却偷换被容纳内容的断言，会在 release 前强制 revise；`src/learning/answerReleaseReview.test.ts` 现在也已覆盖英文冲突、中文冲突与兼容细化的防误报用例。
-- [ ] 下一活跃任务：把当前 lexical + query-intent + structured-fact + attribute + containment + subject + state + polarity + graph-causal + graph-order 检查继续扩展到更广的 claim/citation/evidence 矛盾检测，同时控制 false positive。
+- [ ] 下一活跃任务：把当前 lexical + query-intent + structured-fact + attribute + containment + subject + state + polarity + graph-causal + graph-order + graph-comparison 检查继续扩展到更广的 claim/citation/evidence 矛盾检测，同时控制 false positive。
 - [x] graph-focus payload 契约现在已经加固：在打开 graph focus 前，会先归一化 citation-backed `sourcePath` / `snippet` 回退，因此右侧原文预览 / 高亮不再依赖单个原始 top-level hit path。
 - [x] 右侧高亮精度现在已经超出 payload 稳定性本身：可信 line window 会被优先采用，陈旧行号会被主动降权，snippet fallback 继续可用，并通过 `highlightStrategy` 显式暴露命中的高亮路径。
 - [ ] 下一活跃任务：在当前 line-window / snippet-fallback 基线之上，等待 markdown runtime 暴露稳定 source-line / DOM metadata 后，继续推进更深的 source-to-render provenance。
@@ -58,11 +61,12 @@
 6. 对于 grounded draft 中把支撑明确说反的正反断言，系统必须在 release 前改写，而不能仅因 lexical overlap 还在就放行。
 7. 对于 grounded draft 中把 DAG 支撑的因果方向说反的断言，系统必须在 release 前改写，而不能把反向因果公开放行。
 8. 对于 grounded draft 中把已装配 DAG 的 `prerequisite` 或 `sequence` 方向说反的断言，系统必须在 release 前改写，而不能把反向顺序公开放行。
-9. 运维检查面必须能看到 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
-10. 导出的 `knowledgeRunReports` 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时干净省略该字段。
-11. 导出的运行时状态还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计遥测，以及同一路径派生出的 review-trend / gate-aging / compare-ready drilldown 摘要，并且 `knowledge_run` 历史卡片与 compare 卡片要消费同一套 reviewer 遥测。
-12. 右侧文件命中预览必须基于稳定 payload 字段解析原文与命中高亮；即使 top-level hit 字段不完整，也必须能消费 citation-backed path/snippet；渲染后的 markdown block 必须保留 source-line 元数据，在渲染节点 range 与可信 span 重叠时优先使用 `source_line_provenance`，选中的节点内部还必须投影出命中片段的内联高亮，否则再回退到 `line_window` / `snippet_fallback`，且不扩大主回答区。
-13. 运行时验证现在必须通过共享的 alias/scope 回归语料，包括截图派生的 `waterglass` compact/spaced 双查询以及 `financial` 下的跨 scope 恢复双查询，并确认 `answerReleaseReview.publicAnswer === result.answer`。
+9. 对于 grounded draft 中把 DAG 只支撑单一对比语义的 title pair（仅 `contrast` 或仅 `analogy`）说成相反对比分支的断言，系统必须在 release 前改写，而不能把分支语义漂移公开放行。
+10. 运维检查面必须能看到 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
+11. 导出的 `knowledgeRunReports` 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时干净省略该字段。
+12. 导出的运行时状态还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计遥测，以及同一路径派生出的 review-trend / gate-aging / compare-ready drilldown 摘要，并且 `knowledge_run` 历史卡片与 compare 卡片要消费同一套 reviewer 遥测。
+13. 右侧文件命中预览必须基于稳定 payload 字段解析原文与命中高亮；即使 top-level hit 字段不完整，也必须能消费 citation-backed path/snippet；渲染后的 markdown block 必须保留 source-line 元数据，在渲染节点 range 与可信 span 重叠时优先使用 `source_line_provenance`，选中的节点内部还必须投影出命中片段的内联高亮，否则再回退到 `line_window` / `snippet_fallback`，且不扩大主回答区。
+14. 运行时验证现在必须通过共享的 alias/scope 回归语料，包括截图派生的 `waterglass` compact/spaced 双查询以及 `financial` 下的跨 scope 恢复双查询，并确认 `answerReleaseReview.publicAnswer === result.answer`。
 
 ## 2026-06-17 Agent Knowledge DAG 活跃任务同步
 

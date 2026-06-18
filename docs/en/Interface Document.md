@@ -101,7 +101,7 @@ Current contract surfaces:
 
 - `AnswerReleaseReview` is now a first-class additive runtime contract rather than a planning placeholder.
   - `AnswerReleaseDecision` remains `release` | `revise` | `abstain`.
-- Gate coverage currently includes `evidence_sufficiency`, `graph_support_sufficiency`, `claim_grounding_alignment`, `query_intent_alignment`, `claim_structured_consistency`, `claim_containment_consistency`, `claim_subject_consistency`, `claim_state_consistency`, `claim_polarity_consistency`, `claim_graph_causal_consistency`, `claim_graph_order_consistency`, `public_surface_contraction`, `internal_diagnostic_leakage`, and `abstention_hygiene`.
+- Gate coverage currently includes `evidence_sufficiency`, `graph_support_sufficiency`, `claim_grounding_alignment`, `query_intent_alignment`, `claim_structured_consistency`, `claim_attribute_consistency`, `claim_containment_consistency`, `claim_subject_consistency`, `claim_state_consistency`, `claim_polarity_consistency`, `claim_graph_causal_consistency`, `claim_graph_order_consistency`, `claim_graph_comparison_consistency`, `public_surface_contraction`, `internal_diagnostic_leakage`, and `abstention_hygiene`.
 - `src/learning/conversationComposer.ts` must pass the scoped draft answer, grouped knowledge points, citations, resolved scope, and optional graph context through `reviewAnswerRelease(...)` before exposing the public `answer` / `directAnswer` surface.
 - `src/learning/KnowledgeLearningPlatform.ts`, workspace export, and frontend reply rendering must treat answer-release telemetry as additive inspection material:
   - public answer text,
@@ -122,7 +122,7 @@ Current contract surfaces:
   - verifier: `scripts/verify-knowledge-workspace-runtime.js`
   - acceptance rule: the public answer must not leak `No scoped knowledge points matched`, `retrieval_candidates_below_threshold`, or the meta-documentary fragment `本技术文档旨在` when scoped evidence exists.
 - Remaining architecture gap:
-- broaden contradiction coverage from the current lexical + query-intent + structured + attribute + containment + subject + state + polarity + graph-causal + graph-order stack into richer claim-vs-citation / claim-vs-evidence contradiction classes,
+- broaden contradiction coverage from the current lexical + query-intent + structured + attribute + containment + subject + state + polarity + graph-causal + graph-order + graph-comparison stack into richer claim-vs-citation / claim-vs-evidence contradiction classes,
   - push source-to-render provenance beyond the current block-level mapping plus snippet-projected inline highlights so right-pane highlighting can become source-authenticated at the character-offset level rather than merely bounded.
 
 Compatibility rules:

@@ -33,10 +33,13 @@ The target is not another prompt framework. The target is a deterministic releas
 - `src/learning/answerReleaseReview.ts` now also adds `claim_subject_consistency`, so drafts that preserve a supported fact tail but swap the grounded subject, such as `Water density` to `Glass density`, are revised before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_attribute_consistency`, so grounded drafts that keep the same subject and explicit `has` / `具有` attribute frame but swap the supported attribute, such as `moderate thermal insulation` to `high thermal insulation`, are revised before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_graph_causal_consistency`, so grounded drafts that reverse DAG-backed cause/effect direction, such as `Pressure Rise causes Thermal Expansion`, are revised before release with deterministic English/Chinese correction sentences.
+- `src/learning/answerReleaseReview.ts` now also adds `claim_graph_order_consistency`, so grounded drafts that reverse DAG-backed `prerequisite` or `sequence` direction are revised before release with deterministic correction sentences.
+- `src/learning/answerReleaseReview.ts` now also adds `claim_graph_comparison_consistency`, so grounded drafts that misstate DAG-backed `contrast` / `analogy` pairs, such as releasing `is similar to` when the graph only supports `contrast`, are revised before release.
 - `src/frontend/markdown_runtime.js` now exposes block-level source-line provenance for rendered markdown, and `src/frontend/workspace_panes.js` now prefers `source_line_provenance` before `line_window` / `snippet_fallback`.
 - The right pane now also projects the matched evidence fragment into inline highlight markup inside the selected rendered node instead of only tinting the larger paragraph/container.
 - `src/frontend/workspace_panes.js` now also prefers source-authenticated fragment projection inside an already-authenticated rendered block, so single-line paragraphs and nested inline nodes no longer over-highlight the entire line when the matched snippet is narrower.
 - Shared alias/scope regressions now separate corpus-stable public-answer invariants from screenshot-specific runtime behavior: synthetic corpora may legitimately `release` or `revise`, while the real `waterglass_explicit_scope_compact_zh` runtime case still requires `revise` with `query_intent_alignment`.
+- Re-audit of the cloned reference libraries under `ref/` (`dspy`, `guidance`, `semantic-kernel`, `langchain`, `litellm`) confirms they remain design references rather than release-policy owners: they help with prompt optimization, constrained generation, orchestration, or provider routing, but none of them substitutes for local DAG-backed final-answer verification in this TypeScript runtime.
 - The remaining provenance gap is no longer “the right pane can only tint whole blocks.” It is narrower: identical repeated fragments inside the same authenticated block still need explicit span offsets or richer markdown AST provenance to be perfectly disambiguated.
 
 ### First Principles
@@ -102,6 +105,7 @@ The correct architecture is a pipeline of owners, not a single "RAG" blob:
    - evidence sufficiency,
    - graph support sufficiency,
    - structured consistency,
+   - attribute consistency,
    - containment consistency,
    - public-surface contraction,
    - internal diagnostic leakage,
@@ -110,6 +114,7 @@ The correct architecture is a pipeline of owners, not a single "RAG" blob:
    - polarity consistency,
    - graph-causal consistency,
    - graph-order consistency,
+   - graph-comparison consistency,
    - abstention hygiene.
 6. The review result rewrites the public answer if needed.
 7. The final answer is released to the main chat surface.
@@ -138,6 +143,32 @@ The real failure had two layers:
 
 The first fix restores evidence. The second fix restores robustness.
 
+### Reference-Library Reconciliation
+
+The earlier framework recommendations mixed four different problem classes:
+
+1. query rewriting,
+2. structured generation,
+3. agent orchestration/provider routing,
+4. release-time correctness verification.
+
+The screenshot failure was primarily in class 4, with a smaller class-1 retrieval normalization issue upstream. That distinction matters because otherwise the solution keeps drifting toward the wrong owner.
+
+| Reference clone under `ref/` | What it actually optimizes | Best use in this project | Why it is the wrong owner for the current gap |
+|---|---|---|---|
+| `ref/dspy` | prompt/program optimization and evaluation loops | optional offline tuning harness for draft-generation prompts or regression scoring | DSPy does not own the local DAG, the TypeScript runtime contracts, or the final release decision; moving release policy into DSPy would make correctness model-dependent |
+| `ref/guidance` | constrained generation and structured output contracts | optional intermediate JSON extraction for experiments or shadow audits | it helps shape model output, but the screenshot regression happened after generation constraints would already have been bypassed by an unreviewed public answer |
+| `ref/semantic-kernel` | enterprise agent orchestration, plugins, multi-agent flows | optional reference for plugin boundaries or process orchestration | the repo now explicitly points toward Microsoft Agent Framework; pulling that stack into a local Node/TypeScript DAG runtime would duplicate ownership rather than close the release-review boundary |
+| `ref/langchain` | agent/application abstraction and orchestration ecosystem | optional experimentation harness or external evaluation surface | LangChain is strong at composition, not at being the source of truth for local graph-conditioned answer invariants; using it as release owner would just relocate the ambiguity |
+| `ref/litellm` | provider unification and gateway routing | optional upstream model-routing layer if multi-provider control becomes a product requirement | LiteLLM normalizes provider APIs; it does not verify whether the final answer contradicts the project DAG or leaks runtime diagnostics |
+
+Best-practice conclusion:
+
+- keep the deterministic TypeScript reviewer as the source of truth for release policy,
+- keep the project DAG as the structured evidence owner,
+- use LLM frameworks only for optional upstream generation experiments or shadow audits,
+- never let a prompt/orchestration framework become the only owner of final public-answer correctness.
+
 ### Code-vs-Requirement Reconciliation
 
 | Requirement | Current implementation | Progress call |
@@ -153,6 +184,7 @@ The first fix restores evidence. The second fix restores robustness.
 | Grounded drafts must also be checked for explicit polarity reversals | Reviewer now enforces `claim_polarity_consistency`, revising grounded drafts when they say `is not` / `不是` against support that still affirms the same claim skeleton. | Implemented baseline |
 | Grounded drafts must also be checked for reversed DAG causal claims | Reviewer now enforces `claim_graph_causal_consistency`, revising drafts that invert grounded `causal` direction from the assembled DAG. | Implemented baseline |
 | Grounded drafts must also be checked for reversed DAG order claims | Reviewer now enforces `claim_graph_order_consistency`, revising drafts that invert grounded `prerequisite` or `sequence` direction from the assembled DAG. | Implemented baseline |
+| Grounded drafts must also be checked for DAG-backed comparison-branch contradictions | Reviewer now enforces `claim_graph_comparison_consistency`, revising drafts that state `contrast` pairs as `analogy` or `analogy` pairs as `contrast` when the assembled DAG supports only one comparison family for that title pair. | Implemented baseline |
 | Final review state must be inspectable by developers | `answerReleaseReview` is now stored additively on `AgentConversationResponse`, `AgentConversationTrace`, and `KnowledgeRun`. | Implemented |
 | Operator surfaces must expose reviewer state without widening the main answer area | `src/frontend/agent_workspace.js` sanitizes `answerReleaseReview`, and `src/frontend/workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
 | Reviewer telemetry must survive export/replay surfaces | `src/export/WorkspaceExportBundle.ts` now emits compact `runtime.knowledgeRunReports[*].answerReleaseReview` summaries for durable replay and operator audit. | Implemented |
@@ -650,9 +682,12 @@ The first two decide capability. The third decides trust.
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_subject_consistency`，因此像把 `Water density` 偷换成 `Glass density` 这种“事实尾部还对，但 grounded subject 已漂移”的草稿会在 release 前被拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_attribute_consistency`，因此像把 `中等热绝缘性能` 偷换成 `高热绝缘性能` 这种“同一主体、同一显式属性框架、但属性值漂移”的草稿会在 release 前被拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_graph_causal_consistency`，因此像把 `Pressure Rise causes Thermal Expansion` 这样与 DAG 因果方向相反的草稿，会在 release 前被中英文确定性纠正句拦截并改写。
+- `src/learning/answerReleaseReview.ts` 现在也新增 `claim_graph_order_consistency`，因此像把 DAG 支撑的 `prerequisite` / `sequence` 顺序说反的草稿，会在 release 前被确定性纠正句拦截并改写。
+- `src/learning/answerReleaseReview.ts` 现在也新增 `claim_graph_comparison_consistency`，因此当 DAG 只支撑 `contrast` 或只支撑 `analogy` 时，把二者说反的草稿也会在 release 前被拦截并改写。
 - `src/frontend/markdown_runtime.js` 现在会暴露 block-level 的 source-line provenance，`src/frontend/workspace_panes.js` 则优先消费 `source_line_provenance`，之后才回退到 `line_window` / `snippet_fallback`。
 - 右侧 pane 现在也会在选中的渲染节点内部投影命中的 evidence fragment 内联高亮，而不再只是给更大的段落 / 容器着色。
 - 共享 alias/scope 回归现在已经把“跨语料稳定的公开回答不变量”与“截图驱动的运行时行为”拆开：简化语料允许 `release` 或 `revise`，而真实 `waterglass_explicit_scope_compact_zh` 运行时用例仍然要求 `revise`，且必须命中 `query_intent_alignment`。
+- 已核验 `ref/` 下克隆的 `dspy`、`guidance`、`semantic-kernel`、`langchain` 与 `litellm` 仍然只是设计参考，而不是 release policy owner：它们分别擅长 prompt 优化、受约束生成、agent orchestration 或 provider routing，但都不能替代当前 TypeScript runtime 里的本地 DAG 驱动最终回答校验。
 - 当前剩余的 provenance 缺口已经不再是“完全没有 source-to-render provenance”，而是超出当前 block-level mapping 的 exact-span / nested provenance。
 
 ### 第一性原理
@@ -718,6 +753,7 @@ The first two decide capability. The third decides trust.
    - evidence sufficiency
    - graph support sufficiency
    - structured consistency
+   - attribute consistency
    - containment consistency
    - public-surface contraction
    - internal diagnostic leakage
@@ -726,6 +762,7 @@ The first two decide capability. The third decides trust.
    - polarity consistency
    - graph-causal consistency
    - graph-order consistency
+   - graph-comparison consistency
    - abstention hygiene
 6. review 层决定最终公开回答是否原样放行、收缩重写、或降级拒答。
 7. 主回答区只渲染最终公开回答。
@@ -754,6 +791,32 @@ The first two decide capability. The third decides trust.
 
 第一层修复恢复召回；第二层修复恢复鲁棒性。
 
+### 参考开源库对账
+
+之前那组框架建议把四类问题混在了一起：
+
+1. query rewriting，
+2. structured generation，
+3. agent orchestration / provider routing，
+4. release-time correctness verification。
+
+而截图暴露的主故障在第 4 类，上游只夹带了一个较小的第 1 类 query normalization 漂移。如果这一点不拆开，方案会不断漂向错误 owner。
+
+| `ref/` 下的参考仓库 | 它真正优化的对象 | 在本项目里的合理位置 | 为什么它不是当前缺口的 owner |
+|---|---|---|---|
+| `ref/dspy` | prompt/program 优化与评测回路 | 可作为离线 draft-generation prompt 调优或回归评分实验框架 | DSPy 不拥有本地 DAG、TypeScript runtime contract，也不拥有最终 release decision；把 release policy 交给 DSPy 会让正确性重新依赖模型表现 |
+| `ref/guidance` | 受约束生成与结构化输出契约 | 可作为中间 JSON 提取实验或 shadow audit 试验台 | 它能约束模型输出形状，但截图故障发生在“未审核的公开回答被直接释放”这一边界，不是输出 schema 本身缺失 |
+| `ref/semantic-kernel` | 企业级 agent orchestration、plugin、多 agent 流程 | 可参考 plugin/process 边界设计 | 该仓库当前已明确朝 Microsoft Agent Framework 收敛；把这套 owner 直接搬进本地 Node/TypeScript DAG runtime，只会复制编排层，而不会关闭最终审核边界 |
+| `ref/langchain` | agent / LLM application 抽象与 orchestration 生态 | 可作为实验性 harness 或外部评测面 | LangChain 擅长组合，不擅长成为本地 graph-conditioned answer invariant 的事实 owner；把 release ownership 迁过去只会转移歧义 |
+| `ref/litellm` | provider 统一与 gateway 路由 | 如果未来产品需要多 provider 路由，可放在上游模型接入层 | LiteLLM 统一的是 provider API，不会验证最终回答是否违背项目 DAG，也不会阻止 runtime diagnostic leakage |
+
+最佳实践结论：
+
+- 继续让确定性的 TypeScript reviewer 持有 release policy，
+- 继续让项目现有 DAG 持有结构化证据所有权，
+- LLM 框架只用于可选的上游生成实验或 shadow audit，
+- 不让 prompt / orchestration framework 成为最终公开回答正确性的唯一 owner。
+
 ### 当前代码与要求对账
 
 | 要求 | 当前实现 | 进度判断 |
@@ -769,6 +832,7 @@ The first two decide capability. The third decides trust.
 | grounded draft 还必须检查显式正反断言反转 | reviewer 现在会执行 `claim_polarity_consistency`：即使 topical lexical overlap 仍然通过，只要把 `is` / `不是` 这类断言方向明确说反，也会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查与 DAG 相矛盾的因果断言 | reviewer 现在会执行 `claim_graph_causal_consistency`：只要把已装配 DAG 的 `causal` 因果方向说反，就会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查与 DAG 相矛盾的顺序断言 | reviewer 现在会执行 `claim_graph_order_consistency`：只要把已装配 DAG 的 `prerequisite` 或 `sequence` 方向说反，就会触发 revise。 | 已实现基线 |
+| grounded draft 还必须检查 DAG 支撑的对比/类比分支被说反 | reviewer 现在会执行 `claim_graph_comparison_consistency`：当同一 title pair 在已装配 DAG 中只支撑 `contrast` 或只支撑 `analogy` 时，把两者说反会触发 revise。 | 已实现基线 |
 | 最终审核结果必须可供开发者检查 | `answerReleaseReview` 已加到 `AgentConversationResponse`、`AgentConversationTrace`、`KnowledgeRun`。 | 已实现 |
 | 运维表面必须能看到 reviewer 状态且不扩大主回答区 | `src/frontend/agent_workspace.js` 会净化 `answerReleaseReview`，`src/frontend/workspace_panes.js` 会在 `knowledge_run` 卡片中渲染 release-review 明细 / 历史。 | 已实现 |
 | reviewer 遥测必须能跨 export/replay 表面保留 | `src/export/WorkspaceExportBundle.ts` 现在会在 `runtime.knowledgeRunReports[*].answerReleaseReview` 中输出紧凑 reviewer 摘要，供离线回放与运维审计使用。 | 已实现 |

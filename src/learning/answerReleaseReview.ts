@@ -143,6 +143,20 @@ type GraphCausalConflict = {
     evidence: GraphCausalEvidence;
 };
 
+type GraphComparisonSupportedRelationKind = 'contrast' | 'analogy';
+
+type GraphComparisonEvidence = {
+    relationKind: GraphComparisonSupportedRelationKind;
+    leftTitle: string;
+    rightTitle: string;
+    source: GraphRelationEvidenceSource;
+};
+
+type GraphComparisonConflict = {
+    answerSurface: string;
+    evidence: GraphComparisonEvidence;
+};
+
 type QueryIntentAlignmentResult = {
     passed: boolean;
     applicable: boolean;
@@ -475,6 +489,28 @@ function buildGraphCausalRevisionAnswer(
     return `${causeTitle} causes ${effectTitle}.`;
 }
 
+function buildGraphComparisonRevisionAnswer(
+    context: AnswerReleaseReviewContext,
+    conflict: GraphComparisonConflict
+): string {
+    const leftTitle = normalizeWhitespace(conflict.evidence.leftTitle);
+    const rightTitle = normalizeWhitespace(conflict.evidence.rightTitle);
+    const useChinese = containsCjk([
+        context.message,
+        context.draftAnswer,
+        leftTitle,
+        rightTitle,
+    ].join(' '));
+    if (useChinese) {
+        return conflict.evidence.relationKind === 'contrast'
+            ? `${leftTitle}与${rightTitle}不同。`
+            : `${leftTitle}与${rightTitle}类似。`;
+    }
+    return conflict.evidence.relationKind === 'contrast'
+        ? `${leftTitle} contrasts with ${rightTitle}.`
+        : `${leftTitle} is similar to ${rightTitle}.`;
+}
+
 function buildSupportCandidates(
     context: AnswerReleaseReviewContext
 ): AnswerReleaseSupportCandidate[] {
@@ -646,6 +682,59 @@ function buildGraphCausalEvidence(
         }));
 }
 
+function buildSymmetricGraphPairKey(leftTitle: string, rightTitle: string): string {
+    const normalizedLeftTitle = normalizeWhitespace(leftTitle).toLowerCase();
+    const normalizedRightTitle = normalizeWhitespace(rightTitle).toLowerCase();
+    if (!normalizedLeftTitle || !normalizedRightTitle || normalizedLeftTitle === normalizedRightTitle) {
+        return '';
+    }
+    return [normalizedLeftTitle, normalizedRightTitle].sort().join('::');
+}
+
+function isGraphComparisonSupportedRelationKind(
+    value: RelationKind | null | undefined
+): value is GraphComparisonSupportedRelationKind {
+    return value === 'contrast' || value === 'analogy';
+}
+
+function buildGraphComparisonEvidence(
+    graphContext: AgentConversationGraphContext | null
+): GraphComparisonEvidence[] {
+    const pairSupport = new Map<string, {
+        leftTitle: string;
+        rightTitle: string;
+        source: GraphRelationEvidenceSource;
+        relationKinds: Set<GraphComparisonSupportedRelationKind>;
+    }>();
+    buildGraphRelationEvidence(graphContext)
+        .filter((evidence) => isGraphComparisonSupportedRelationKind(evidence.relationKind))
+        .forEach((evidence) => {
+            const pairKey = buildSymmetricGraphPairKey(evidence.sourceTitle, evidence.targetTitle);
+            if (!pairKey) {
+                return;
+            }
+            const entry = pairSupport.get(pairKey);
+            if (entry) {
+                entry.relationKinds.add(evidence.relationKind as GraphComparisonSupportedRelationKind);
+                return;
+            }
+            pairSupport.set(pairKey, {
+                leftTitle: evidence.sourceTitle,
+                rightTitle: evidence.targetTitle,
+                source: evidence.source,
+                relationKinds: new Set([evidence.relationKind as GraphComparisonSupportedRelationKind]),
+            });
+        });
+    return Array.from(pairSupport.values())
+        .filter((entry) => entry.relationKinds.size === 1)
+        .map((entry) => ({
+            relationKind: Array.from(entry.relationKinds)[0] as GraphComparisonSupportedRelationKind,
+            leftTitle: entry.leftTitle,
+            rightTitle: entry.rightTitle,
+            source: entry.source,
+        }));
+}
+
 function normalizePolaritySentenceSource(value: string): string {
     return POLARITY_NEGATION_NORMALIZATION_RULES.reduce(
         (current, [pattern, replacement]) => current.replace(pattern, replacement),
@@ -814,6 +903,63 @@ function buildGraphCausalConflictMessage(conflicts: GraphCausalConflict[]): stri
         `"${conflict.answerSurface}" reversed ${conflict.evidence.causeTitle} -> causes -> ${conflict.evidence.effectTitle}`
     ));
     return `Draft answer reversed grounded causal direction: ${fragments.join('; ')}.`;
+}
+
+function buildGraphComparisonPatterns(
+    leftTitle: string,
+    rightTitle: string,
+    relationKind: GraphComparisonSupportedRelationKind
+): RegExp[] {
+    const leftPattern = buildFlexibleTitlePattern(leftTitle);
+    const rightPattern = buildFlexibleTitlePattern(rightTitle);
+    if (!leftPattern || !rightPattern) {
+        return [];
+    }
+    const sentenceGap = '[^.!?\\u3002\\uFF01\\uFF1F\\n\\r]{0,80}?';
+    const orderedPatterns = (firstPattern: string, secondPattern: string): RegExp[] => {
+        if (relationKind === 'contrast') {
+            return [
+                new RegExp(`${firstPattern}${sentenceGap}(?:contrast(?:s|ed)?\\s+with|differ(?:s|ed)?\\s+from|(?:is|are|was|were|remains?)\\s+different\\s+from)${sentenceGap}${secondPattern}`, 'iu'),
+                new RegExp(`${firstPattern}${sentenceGap}(?:不同于|区别于)${sentenceGap}${secondPattern}`, 'u'),
+                new RegExp(`${firstPattern}${sentenceGap}(?:与|和|跟)?${sentenceGap}${secondPattern}${sentenceGap}(?:不同|形成对比|有明显差异)`, 'u'),
+            ];
+        }
+        return [
+            new RegExp(`${firstPattern}${sentenceGap}(?:(?:is|are|was|were|remains?)\\s+)?(?:similar\\s+to|analogous\\s+to|comparable\\s+to|akin\\s+to|resemble(?:s|d)?)${sentenceGap}${secondPattern}`, 'iu'),
+            new RegExp(`${firstPattern}${sentenceGap}(?:类似于|相似于|可类比于)${sentenceGap}${secondPattern}`, 'u'),
+            new RegExp(`${firstPattern}${sentenceGap}(?:与|和|跟)?${sentenceGap}${secondPattern}${sentenceGap}(?:类似|相似|可类比)`, 'u'),
+        ];
+    };
+    return [
+        ...orderedPatterns(leftPattern, rightPattern),
+        ...orderedPatterns(rightPattern, leftPattern),
+    ];
+}
+
+function findGraphComparisonMatch(
+    answer: string,
+    leftTitle: string,
+    rightTitle: string,
+    relationKind: GraphComparisonSupportedRelationKind
+): string {
+    const normalizedAnswer = String(answer || '');
+    for (const pattern of buildGraphComparisonPatterns(leftTitle, rightTitle, relationKind)) {
+        const match = normalizedAnswer.match(pattern);
+        if (match && match[0]) {
+            return normalizeWhitespace(match[0]);
+        }
+    }
+    return '';
+}
+
+function buildGraphComparisonConflictMessage(conflicts: GraphComparisonConflict[]): string {
+    if (conflicts.length <= 0) {
+        return 'Draft answer stayed consistent with the grounded comparison branch that could be compared.';
+    }
+    const fragments = conflicts.slice(0, 2).map((conflict) => (
+        `"${conflict.answerSurface}" contradicted ${conflict.evidence.leftTitle} <-> ${conflict.evidence.relationKind} <-> ${conflict.evidence.rightTitle}`
+    ));
+    return `Draft answer contradicted grounded graph comparison relations: ${fragments.join('; ')}.`;
 }
 
 function collectLeakedInternalFragments(answer: string): string[] {
@@ -2057,6 +2203,55 @@ function evaluateGraphCausalConsistency(context: AnswerReleaseReviewContext): {
     };
 }
 
+function evaluateGraphComparisonConsistency(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    comparableClaimCount: number;
+    conflicts: GraphComparisonConflict[];
+} {
+    const comparisonEvidence = buildGraphComparisonEvidence(context.graphContext);
+    if (comparisonEvidence.length <= 0) {
+        return {
+            passed: true,
+            comparableClaimCount: 0,
+            conflicts: [],
+        };
+    }
+    const conflicts: GraphComparisonConflict[] = [];
+    let comparableClaimCount = 0;
+    comparisonEvidence.forEach((evidence) => {
+        const supportedMatch = findGraphComparisonMatch(
+            context.draftAnswer,
+            evidence.leftTitle,
+            evidence.rightTitle,
+            evidence.relationKind
+        );
+        const unsupportedRelationKind: GraphComparisonSupportedRelationKind = evidence.relationKind === 'contrast'
+            ? 'analogy'
+            : 'contrast';
+        const unsupportedMatch = findGraphComparisonMatch(
+            context.draftAnswer,
+            evidence.leftTitle,
+            evidence.rightTitle,
+            unsupportedRelationKind
+        );
+        if (!supportedMatch && !unsupportedMatch) {
+            return;
+        }
+        comparableClaimCount += 1;
+        if (unsupportedMatch && !supportedMatch) {
+            conflicts.push({
+                answerSurface: unsupportedMatch,
+                evidence,
+            });
+        }
+    });
+    return {
+        passed: conflicts.length <= 0,
+        comparableClaimCount,
+        conflicts,
+    };
+}
+
 function checkPublicSurfaceContraction(answer: string): boolean {
     const normalizedAnswer = String(answer || '');
     if (normalizeWhitespace(normalizedAnswer).length > 320) {
@@ -2082,6 +2277,7 @@ function buildDecision(
     polarityConsistencyPassed: boolean,
     graphCausalConsistencyPassed: boolean,
     graphOrderConsistencyPassed: boolean,
+    graphComparisonConsistencyPassed: boolean,
     leakedInternalFragments: string[],
     publicSurfaceContracted: boolean
 ): AnswerReleaseDecision {
@@ -2099,6 +2295,7 @@ function buildDecision(
         || !polarityConsistencyPassed
         || !graphCausalConsistencyPassed
         || !graphOrderConsistencyPassed
+        || !graphComparisonConsistencyPassed
         || leakedInternalFragments.length > 0
         || !publicSurfaceContracted
     ) {
@@ -2227,6 +2424,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             comparableClaimCount: 0,
             conflicts: [],
         };
+    const graphComparisonConsistency = groundedEvidenceAvailable
+        ? evaluateGraphComparisonConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            comparableClaimCount: 0,
+            conflicts: [],
+        };
     const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer);
     const graphSupportCount = context.graphContext
         ? (
@@ -2248,11 +2455,13 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         polarityConsistency.passed,
         graphCausalConsistency.passed,
         graphOrderConsistency.passed,
+        graphComparisonConsistency.passed,
         leakedInternalFragments,
         publicSurfaceContracted
     );
     const primaryGraphCausalConflict = graphCausalConsistency.conflicts[0];
     const primaryGraphOrderConflict = graphOrderConsistency.conflicts[0];
+    const primaryGraphComparisonConflict = graphComparisonConsistency.conflicts[0];
     const publicAnswer = normalizeWhitespace(
         decision === 'abstain'
             ? buildAbstentionAnswer(context.message, context.usedScope)
@@ -2262,6 +2471,8 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         ? buildGraphCausalRevisionAnswer(context, primaryGraphCausalConflict)
                         : primaryGraphOrderConflict
                         ? buildGraphOrderRevisionAnswer(context, primaryGraphOrderConflict)
+                        : primaryGraphComparisonConflict
+                        ? buildGraphComparisonRevisionAnswer(context, primaryGraphComparisonConflict)
                         : (!queryIntentAlignment.passed && queryIntentAlignment.supportFrame)
                             ? buildDefinitionIntentRevisionAnswer(context, queryIntentAlignment.supportFrame)
                         : buildGroundedRevisionAnswer(context)
@@ -2404,6 +2615,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : 'No explicit graph-order claim was present in the draft answer, so DAG-order checking stayed conservative.'
                 )
                 : 'No evidence was available, so graph-order contradiction checking was not evaluated.',
+        },
+        {
+            gateId: 'claim_graph_comparison_consistency',
+            passed: graphComparisonConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    graphComparisonConsistency.comparableClaimCount > 0
+                        ? buildGraphComparisonConflictMessage(graphComparisonConsistency.conflicts)
+                        : 'No explicit graph-comparison claim was present in the draft answer, so DAG-comparison checking stayed conservative.'
+                )
+                : 'No evidence was available, so graph-comparison contradiction checking was not evaluated.',
         },
         {
             gateId: 'public_surface_contraction',

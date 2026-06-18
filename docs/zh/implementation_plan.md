@@ -26,6 +26,7 @@
 - reviewer 现在还会执行 `claim_polarity_consistency`：即使 topical lexical overlap 仍然通过，只要草稿把 support 明确说反（正反断言反转），也会被确定性改写。
 - reviewer 现在还会执行 `claim_graph_causal_consistency`：利用 `connectionPaths`、`knowledgePointRelations`、`predecessorWindow` 与 `successorWindow` 检查 `causal` 方向是否被说反，并在冲突时输出 DAG 支撑的纠正句。
 - reviewer 现在还会执行 `claim_graph_order_consistency`：利用 `connectionPaths`、`knowledgePointRelations`、`predecessorWindow` 与 `successorWindow` 检查 `prerequisite` / `sequence` 方向是否被说反，并在冲突时输出 DAG 支撑的纠正句。
+- reviewer 现在还会执行 `claim_graph_comparison_consistency`：利用已装配图证据，在同一 title pair 只支撑单一 `contrast` / `analogy` 家族时，拦截把两者说反的草稿。
 - cross-language abstention hygiene 现在已显式化：中文 scoped miss 不再退化成 English diagnostic-heavy abstention。
 - `KnowledgeLearningPlatform.ts` 现在会把 review 决策写入 response、trace 与 workflow artifact。
 - 运维检查面现在已经能查看 reviewer 状态，但不会重新挤占主回答区：`src/frontend/agent_workspace.js` 会映射并净化 `answerReleaseReview`，`src/frontend/workspace_panes.js` 会在 `knowledge_run` 明细 / 历史卡片中渲染 release-review 结果。
@@ -44,12 +45,12 @@
 - `src/learning/answerReleaseReview.test.ts` 现在还固定了确定性的 polarity contradiction 用例：英文反转、中文反转，以及“support 带有无关否定句但不能误报”的防误报场景。
 - 右侧文件预览/高亮链路与最终回答审核仍是两个独立 owner，但当前 graph-focus 契约已经超过单纯 payload 加固：`src/frontend/markdown_runtime.js` 会给渲染后的 markdown block 标注 source-line 元数据，`src/frontend/workspace_panes.js` 会在渲染节点 range 与可信 span 重叠时优先使用 `source_line_provenance`，并在已认证 block 内优先使用 snippet 尺度的 source-fragment projection，之后才回退到 `line_window`、`snippet_fallback` 与 broad text search；additive 诊断也会同时暴露节点高亮策略、内联高亮策略与 provenance 覆盖度。
 - `src/agent_workspace.frontend.test.ts` 现在已经固定“重复 snippet 仍要命中正确段落”“行号不可用时必须正确回退”“单行段落不能整行过高亮”以及“嵌套 inline 节点必须命中精确片段”四类关键失败场景，因此右侧证据预览不再只依赖脆弱的 snippet-only 启发式。
-- 2026-06-19 的复审已经确认：缺失 owner 这一阶段性问题已经关闭；当前活跃缺口已经转移到超出 lexical + query-intent + structured + attribute + containment + subject + state + polarity + graph-causal + graph-order 栈的更广 claim-vs-citation / claim-vs-evidence 矛盾检测，以及通过显式 offset 或更丰富 AST provenance 解决“同一已认证渲染 block 内重复片段去歧义”的剩余缺口，而不是继续讨论 prompt framework 是否要引入。
+- 2026-06-19 的复审已经确认：缺失 owner 这一阶段性问题已经关闭；当前活跃缺口已经转移到超出 lexical + query-intent + structured + attribute + containment + subject + state + polarity + graph-causal + graph-order + graph-comparison 栈的更广 claim-vs-citation / claim-vs-evidence 矛盾检测，以及通过显式 offset 或更丰富 AST provenance 解决“同一已认证渲染 block 内重复片段去歧义”的剩余缺口，而不是继续讨论 prompt framework 是否要引入。
 
 #### 下一步执行顺序
 
 1. 保持 reviewer 窄口径，只拥有 release invariant，不让 prompt template 重新接管 release policy。
-2. 基于这份显式 alias/scope 回归语料以及当前 query-intent + structured-fact + attribute + containment + subject + state + polarity + graph-causal + graph-order reviewer 切片，继续把 lexical grounding check 扩展到更深的 claim-vs-citation / claim-vs-evidence 矛盾检测，同时控制 false positive。
+2. 基于这份显式 alias/scope 回归语料以及当前 query-intent + structured-fact + attribute + containment + subject + state + polarity + graph-causal + graph-order + graph-comparison reviewer 切片，继续把 lexical grounding check 扩展到更深的 claim-vs-citation / claim-vs-evidence 矛盾检测，同时控制 false positive。
 3. 把当前 block-level markdown source mapping 与 `source_line_provenance` -> source-fragment projection -> `line_window` -> `snippet_fallback` -> 内联片段高亮栈视为已落地基线；下一步不是重新发明前端 release policy，而是用显式 offset 或更丰富 AST provenance 继续解决重复片段去歧义。
 4. 持续扩充共享语料，覆盖更多真实的跨 scope、紧凑别名与同义表达失败场景，并保持 Jest 与运行时 verifier 的确定性预期一致。
 5. 继续做 owner reduction，但前提仍然是“新 owner 持有真实决策或不变量”。
@@ -64,14 +65,15 @@
 6. 对于 grounded draft 中把支撑明确说反的正反断言，系统必须在 release 前改写，而不能仅因 lexical overlap 还在就放行。
 7. 对于 grounded draft 中把 DAG 支撑的因果方向说反的断言，系统必须在 release 前改写，而不能把反向因果公开放行。
 8. 对于 grounded draft 中把已装配 DAG 的 `prerequisite` 或 `sequence` 方向说反的断言，系统必须在 release 前改写，而不能把反向顺序公开放行。
-9. `AgentConversationResponse`、trace 与 `KnowledgeRun` 都必须保留 additive 的 `answerReleaseReview` 状态。
-10. 运维检查面必须能渲染 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
-11. Workspace export 的 knowledge-run report 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时保持向前兼容。
-12. Workspace export 还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计摘要，以及同一路径派生出的 review-trend / gate-aging / compare-ready drilldown 摘要；运维 history 卡片与 compare 卡片都必须消费同一套 reviewer telemetry，而不扩大主回答区。
-13. 右侧文件命中预览必须基于稳定 payload 字段解析原文与命中高亮；即使 top-level hit 字段不完整，也必须能消费 citation-backed path/snippet；渲染后的 markdown block 必须保留 source-line 元数据，在渲染节点 range 与可信 span 重叠时优先使用 `source_line_provenance`，并在已认证 block 内优先投影 snippet 尺度的 source-fragment 内联高亮，否则再回退到 `line_window` / `snippet_fallback` / text search，同时保留运维诊断。
-14. 共享 alias/scope Jest 语料在最终公开回答已经 grounded 且收缩时允许 `release` 或 `revise`；而截图派生的运行时用例 `waterglass_explicit_scope_compact_zh` 仍必须触发 `revise`，且 failed gate 必须包含 `query_intent_alignment`。
-15. `npm run verify:knowledge-workspace:runtime` 必须通过共享 alias/scope 回归语料，包括截图派生的 `waterglass` compact/spaced 双查询与 `financial` 下的跨 scope 恢复双查询，并确认 reviewer/public-answer 一致性。
-16. 现有 `assistantMessage`、`answer`、`assistantBlocks` 与下游 client 必须保持向前兼容。
+9. 对于 grounded draft 中把 DAG 只支撑单一对比分支的 title pair（仅 `contrast` 或仅 `analogy`）说成相反对比语义的断言，系统必须在 release 前改写，而不能把 comparison branch 漂移公开放行。
+10. `AgentConversationResponse`、trace 与 `KnowledgeRun` 都必须保留 additive 的 `answerReleaseReview` 状态。
+11. 运维检查面必须能渲染 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
+12. Workspace export 的 knowledge-run report 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时保持向前兼容。
+13. Workspace export 还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计摘要，以及同一路径派生出的 review-trend / gate-aging / compare-ready drilldown 摘要；运维 history 卡片与 compare 卡片都必须消费同一套 reviewer telemetry，而不扩大主回答区。
+14. 右侧文件命中预览必须基于稳定 payload 字段解析原文与命中高亮；即使 top-level hit 字段不完整，也必须能消费 citation-backed path/snippet；渲染后的 markdown block 必须保留 source-line 元数据，在渲染节点 range 与可信 span 重叠时优先使用 `source_line_provenance`，并在已认证 block 内优先投影 snippet 尺度的 source-fragment 内联高亮，否则再回退到 `line_window` / `snippet_fallback` / text search，同时保留运维诊断。
+15. 共享 alias/scope Jest 语料在最终公开回答已经 grounded 且收缩时允许 `release` 或 `revise`；而截图派生的运行时用例 `waterglass_explicit_scope_compact_zh` 仍必须触发 `revise`，且 failed gate 必须包含 `query_intent_alignment`。
+16. `npm run verify:knowledge-workspace:runtime` 必须通过共享 alias/scope 回归语料，包括截图派生的 `waterglass` compact/spaced 双查询与 `financial` 下的跨 scope 恢复双查询，并确认 reviewer/public-answer 一致性。
+17. 现有 `assistantMessage`、`answer`、`assistantBlocks` 与下游 client 必须保持向前兼容。
 
 ### 2026-06-17 Agent Knowledge DAG 实施计划
 
