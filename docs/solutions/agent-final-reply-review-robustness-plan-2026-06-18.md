@@ -31,8 +31,9 @@ The target is not another prompt framework. The target is a deterministic releas
 - `src/learning/answerReleaseReview.ts` now also adds `query_intent_alignment`, so definition-style queries revise meta-documentary drafts such as `本技术文档旨在...` into direct grounded definitions before release.
 - `src/frontend/markdown_runtime.js` now exposes block-level source-line provenance for rendered markdown, and `src/frontend/workspace_panes.js` now prefers `source_line_provenance` before `line_window` / `snippet_fallback`.
 - The right pane now also projects the matched evidence fragment into inline highlight markup inside the selected rendered node instead of only tinting the larger paragraph/container.
+- `src/frontend/workspace_panes.js` now also prefers source-authenticated fragment projection inside an already-authenticated rendered block, so single-line paragraphs and nested inline nodes no longer over-highlight the entire line when the matched snippet is narrower.
 - Shared alias/scope regressions now separate corpus-stable public-answer invariants from screenshot-specific runtime behavior: synthetic corpora may legitimately `release` or `revise`, while the real `waterglass_explicit_scope_compact_zh` runtime case still requires `revise` with `query_intent_alignment`.
-- The remaining provenance gap is no longer “no source-to-render provenance.” It is deeper exact-span / nested provenance beyond the current block-level mapping.
+- The remaining provenance gap is no longer “the right pane can only tint whole blocks.” It is narrower: identical repeated fragments inside the same authenticated block still need explicit span offsets or richer markdown AST provenance to be perfectly disambiguated.
 
 ### First Principles
 
@@ -413,6 +414,22 @@ Attached additively to:
   - the right pane no longer depends only on payload snippets,
   - but the mapping is still block-level rather than exact-span / nested-span precise.
 
+#### Phase-15 source-authenticated fragment projection landed on top of block-level provenance
+
+- `src/frontend/workspace_panes.js` now treats inline highlight as a second-stage problem after node selection instead of reusing the same broad heuristic.
+- Once a rendered block has already been selected through `source_line_provenance` or `line_window`, inline highlighting now prefers snippet-sized source-authenticated fragment projection before falling back to the older broad text search.
+- The new additive diagnostic field `inlineHighlightStrategy` now distinguishes:
+  - `source_fragment_provenance`
+  - `text_search`
+  - `none`
+- This closes a concrete operator-facing failure mode from the prior slice:
+  - a single-line paragraph no longer gets wrapped as one giant highlight when the matched snippet is only part of the line,
+  - nested inline markdown such as `<strong>` content no longer forces the whole surrounding sentence to be highlighted just because the line window spans the sentence.
+- `src/agent_workspace.frontend.test.ts` now pins two new regressions:
+  - single-line paragraph highlights must collapse to the matched fragment instead of the whole line,
+  - nested inline markdown nodes must still resolve to a single exact fragment highlight.
+- This phase still does not fully solve identical repeated-fragment disambiguation inside one authenticated block with the same line window and the same snippet text. That remaining gap requires stronger payload offsets or richer AST provenance, not another ranking tweak.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -492,7 +509,7 @@ The first two decide capability. The third decides trust.
 
 1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + structured-fact + state + polarity + graph-order gates, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
-3. Treat the current block-level markdown source mapping plus `source_line_provenance` -> `line_window` -> `snippet_fallback` graph-focus stack as the implemented baseline, then push deeper exact-span / nested provenance.
+3. Treat the current block-level markdown source mapping plus `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` graph-focus stack as the implemented baseline, then focus the next provenance step on repeated-fragment disambiguation via explicit offsets or richer AST provenance.
 4. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
 5. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
 
@@ -500,7 +517,7 @@ The first two decide capability. The third decides trust.
 
 1. The missing mechanism was not graph retrieval; it was final public-answer release review.
 2. The correct owner is a local deterministic reviewer layer, not a new prompt framework.
-3. The current project DAG remains the evidence substrate and now also participates in release-time order correction; graph-focus now also has a block-level provenance baseline plus `source_line_provenance` / `line_window` / `snippet_fallback`, so the remaining evidence gap is deeper exact-span / nested provenance rather than basic pane opening.
+3. The current project DAG remains the evidence substrate and now also participates in release-time order correction; graph-focus now also has a block-level provenance baseline plus `source_line_provenance` / source-authenticated fragment projection / `line_window` / `snippet_fallback`, so the remaining evidence gap has narrowed to repeated-fragment disambiguation inside one authenticated block rather than basic pane opening.
 4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification.
 5. The landed slice is backward-compatible and materially improves robustness without widening the main answer surface; the next work is broader contradiction coverage, not replacing the current reviewer owner.
 
@@ -907,6 +924,22 @@ The first two decide capability. The third decides trust.
   - 右侧 pane 不再只依赖 payload snippet，
   - 但当前映射仍然是 block-level，而不是 exact-span / nested-span 精度。
 
+#### 在 block-level provenance 之上继续落地的 Phase-15 source-authenticated fragment projection
+
+- `src/frontend/workspace_panes.js` 现在把内联高亮视为“节点选中之后”的第二阶段问题，而不再复用同一套宽启发式。
+- 一旦渲染 block 已经通过 `source_line_provenance` 或 `line_window` 被选中，内联高亮现在会先尝试 snippet 尺度的 source-authenticated fragment projection，再回退到旧的 broad text search。
+- 新增的 additive 诊断字段 `inlineHighlightStrategy` 现在会区分：
+  - `source_fragment_provenance`
+  - `text_search`
+  - `none`
+- 这一步关闭了上一阶段一个具体且面向运维的失败：
+  - 单行段落在命中 snippet 只是其中一部分时，不会再整行被包成一个大高亮，
+  - `strong` 这类嵌套 inline markdown 节点，也不会再因为 line window 覆盖整句，就把整句一起高亮。
+- `src/agent_workspace.frontend.test.ts` 现在又固定了两类新回归：
+  - 单行段落高亮必须收缩到命中的 fragment，而不是整行，
+  - 嵌套 inline markdown 节点仍然必须解析成单个精确 fragment 高亮。
+- 这个 Phase 仍然没有完全解决“同一个已认证 block 内、同一 line window 下、同一 snippet 文本重复出现”的去歧义问题。那个剩余缺口需要更强的 payload offset 或更丰富的 AST provenance，而不是再堆一层 ranking tweak。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -986,7 +1019,7 @@ The first two decide capability. The third decides trust.
 
 1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + structured-fact + state + polarity + graph-order gate 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
-3. 把当前 block-level markdown source mapping 与 `source_line_provenance` -> `line_window` -> `snippet_fallback` 的 graph-focus 栈视为已落地基线；后续继续推进更深的 exact-span / nested provenance。
+3. 把当前 block-level markdown source mapping 与 `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` 的 graph-focus 栈视为已落地基线；后续重点转到基于显式 offset 或更丰富 AST provenance 的重复片段去歧义。
 4. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
 5. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
 
@@ -994,6 +1027,6 @@ The first two decide capability. The third decides trust.
 
 1. 本轮切片起点真正缺失的不是图检索，而是最终公开回答的 release review；复审现在已经确认这个 owner 已落地。
 2. 正确 owner 是本地确定性 reviewer layer，不是再引入一层 prompt framework。
-3. 项目现有 DAG 继续作为证据底座，并且已经开始参与 release-time 的顺序纠错；graph-focus 现在也已经具备 block-level provenance 加上 `source_line_provenance` / `line_window` / `snippet_fallback` 的高亮基线，剩余缺口转移到更深的 exact-span / nested provenance。
+3. 项目现有 DAG 继续作为证据底座，并且已经开始参与 release-time 的顺序纠错；graph-focus 现在也已经具备 block-level provenance 加上 `source_line_provenance` / source-authenticated fragment projection / `line_window` / `snippet_fallback` 的高亮基线，剩余缺口已经收窄到同一认证 block 内重复片段的去歧义。
 4. `waterglass` 截图已经被编码进正式运行时验收门禁。
 5. 本轮落地保持向前兼容，同时实质提升了 agent 最终回复的鲁棒性；后续重点已经转移到更广的矛盾检测，而不是更换 reviewer owner。

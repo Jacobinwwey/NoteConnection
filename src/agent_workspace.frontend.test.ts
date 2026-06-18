@@ -4493,6 +4493,118 @@ describe('workspace panes controller', () => {
         expect(inlineHighlights[0]?.textContent).toBe('exchanges heat with the environment');
     });
 
+    test('uses source-authenticated fragment projection instead of highlighting an entire single-line paragraph', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'A water glass exchanges heat with the environment during the example setup.',
+        ].join('\n'));
+
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        (window as any).marked = {
+            parse: jest.fn(() => (
+                '<h1>Water Glass</h1>'
+                + '<p data-case="single-line">A water glass exchanges heat with the environment during the example setup.</p>'
+            )),
+        };
+
+        controller.init();
+        controller.openGraphFocusPane({
+            atomId: 'atom_water_glass',
+            title: 'Water Glass',
+            sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            matchedSpans: [
+                {
+                    title: 'Heat exchange',
+                    snippet: 'heat with the environment',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    startLine: 3,
+                    endLine: 3,
+                },
+            ],
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
+        expect(highlighted).toHaveLength(1);
+        expect((highlighted[0] as HTMLElement)?.dataset.case).toBe('single-line');
+
+        const inlineHighlights = Array.from(graphBody?.querySelectorAll('[data-agent-focus-inline-highlight="true"]') || []);
+        expect(inlineHighlights).toHaveLength(1);
+        expect(inlineHighlights[0]?.textContent).toBe('heat with the environment');
+        expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
+            matchedSpanCount: 1,
+            highlightedNodeCount: 1,
+            inlineHighlightCount: 1,
+            inlineHighlightStrategy: 'source_fragment_provenance',
+            highlightStrategy: 'source_line_provenance',
+        }));
+    });
+
+    test('projects source-authenticated fragment highlights across nested inline markdown nodes', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'A water glass exchanges **heat with the environment** during the example setup.',
+        ].join('\n'));
+
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        (window as any).marked = {
+            parse: jest.fn(() => (
+                '<h1>Water Glass</h1>'
+                + '<p data-case="nested-inline">A water glass exchanges <strong>heat with the environment</strong> during the example setup.</p>'
+            )),
+        };
+
+        controller.init();
+        controller.openGraphFocusPane({
+            atomId: 'atom_water_glass',
+            title: 'Water Glass',
+            sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            matchedSpans: [
+                {
+                    title: 'Heat exchange',
+                    snippet: 'heat with the environment',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    startLine: 3,
+                    endLine: 3,
+                },
+            ],
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        const paragraph = graphBody?.querySelector('p[data-case="nested-inline"]') as HTMLElement | null;
+        expect(paragraph?.dataset.agentMarkdownSourceStartLine).toBe('3');
+
+        const inlineHighlights = Array.from(graphBody?.querySelectorAll('[data-agent-focus-inline-highlight="true"]') || []);
+        expect(inlineHighlights).toHaveLength(1);
+        expect(inlineHighlights[0]?.textContent).toBe('heat with the environment');
+        expect(inlineHighlights[0]?.parentElement?.tagName.toLowerCase()).toBe('strong');
+        expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
+            matchedSpanCount: 1,
+            highlightedNodeCount: 1,
+            inlineHighlightCount: 1,
+            inlineHighlightStrategy: 'source_fragment_provenance',
+            highlightStrategy: 'source_line_provenance',
+        }));
+    });
+
     test('keeps reusable card renderers aligned with chat and evidence owners', () => {
         const repoRoot = path.resolve(__dirname, '..');
         const source = fs.readFileSync(

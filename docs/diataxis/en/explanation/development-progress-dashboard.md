@@ -24,13 +24,17 @@ What is now true in code:
 - `src/frontend/workspace_panes.js` now tightens right-pane evidence focus beyond payload stability:
   - it prefers `source_line_provenance` when rendered-node source ranges overlap trusted evidence spans,
   - after selecting the correct node, it projects the matched evidence fragment into inline highlight markup,
+  - inside a source-authenticated selected block, it now prefers snippet-sized fragment projection before broad text search, so a single-line paragraph no longer highlights as one giant fragment,
   - it falls back to `line_window` when rendered provenance is absent but citation line windows are still trustworthy,
   - it falls back to `snippet_fallback` when line metadata is absent or stale,
   - it exposes additive `highlightStrategy` diagnostics (`source_line_provenance`, `line_window`, `snippet_fallback`, `none`),
+  - it also exposes additive `inlineHighlightStrategy` diagnostics (`source_fragment_provenance`, `text_search`, `none`),
   - it records additive source-provenance coverage counts, and penalizes over-broad container matches so repeated snippet text does not highlight the whole article,
-- `src/agent_workspace.frontend.test.ts` now pins two operator-relevant regressions:
+- `src/agent_workspace.frontend.test.ts` now pins four operator-relevant regressions:
   - repeated snippet text must resolve to the correct paragraph when the line window is trustworthy,
   - unusable line metadata must fall back to snippet highlighting instead of highlighting the wrong paragraph,
+  - a single-line paragraph must collapse highlight down to the matched fragment instead of the full line,
+  - nested inline markdown nodes must still produce one exact fragment highlight,
 - the user-provided screenshot `1781782257390.jpg` remains a formal runtime acceptance owner through `waterglass_explicit_scope_compact_zh`; its root cause is now recorded as planner/retrieval normalization drift plus public-answer diagnostic leakage.
 
 Code-vs-plan reconciliation:
@@ -42,11 +46,11 @@ Code-vs-plan reconciliation:
 | Definition-style questions must not release document-self-description drafts | `answerReleaseReview.ts` now enforces `query_intent_alignment`, revising `what is` / `什么是` answers when grounded definition frames exist but the draft still says `This technical document...` / `本技术文档旨在...`. | Implemented baseline |
 | Same-subject state contradictions must be revised before release | `answerReleaseReview.ts` now enforces `claim_state_consistency` on comparable definition/copula frames across English and Chinese evidence. | Implemented baseline |
 | Right-pane source preview must consume source-to-render provenance when available | `markdown_runtime.js` now annotates rendered blocks with source-line metadata, and `workspace_panes.js` prefers `source_line_provenance` while reporting provenance coverage counts. | Implemented baseline |
-| Right-pane source preview must highlight the matched fragment, not only the whole paragraph | `workspace_panes.js` now projects matched evidence fragments into inline highlight markup inside the selected node and reports `inlineHighlightCount`. | Implemented baseline |
+| Right-pane source preview must highlight the matched fragment, not only the whole paragraph | `workspace_panes.js` now projects matched evidence fragments into inline highlight markup inside the selected node, prefers snippet-sized source-authenticated fragment projection inside already-authenticated blocks, and reports both `inlineHighlightCount` and `inlineHighlightStrategy`. | Implemented baseline |
 | Right-pane source preview must highlight the correct paragraph even when snippet text repeats | `workspace_panes.js` now prefers trustworthy `line_window` anchors and scores candidate rendered nodes with specificity/container penalties. | Implemented baseline |
 | Stale line metadata must not force the wrong highlight | `workspace_panes.js` now distrusts stale line windows and falls back to `snippet_fallback`; frontend tests pin the failure mode. | Implemented baseline |
 | The screenshot-backed `waterglass` failure must remain a formal acceptance rule | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` now expects grounded output, reviewer/public-answer parity, no diagnostic leakage, and no `本技术文档旨在` meta-answer fallback. | Implemented |
-| The active remaining gap must move to broader contradiction coverage and deeper provenance | Current code still needs wider claim-vs-citation / claim-vs-evidence conflict checks beyond the lexical + query-intent + structured + state + polarity + graph-order stack, plus source-authenticated character-offset provenance beyond the current block-level mapping and snippet-projected inline highlights. | Open |
+| The active remaining gap must move to broader contradiction coverage and narrower unresolved provenance | Current code still needs wider claim-vs-citation / claim-vs-evidence conflict checks beyond the lexical + query-intent + structured + state + polarity + graph-order stack, plus explicit span offsets or richer AST provenance to disambiguate identical repeated fragments inside one authenticated block. | Open |
 
 Verification for this re-audit:
 

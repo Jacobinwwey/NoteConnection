@@ -24,13 +24,17 @@
 - `src/frontend/workspace_panes.js` 现在已经把右侧证据聚焦从“仅 payload 稳定”推进到“高亮精度可控 + provenance 可观测”：
   - 当渲染节点 source range 与可信 evidence span 重叠时优先使用 `source_line_provenance`，
   - 选中正确节点后，还会把命中的 evidence fragment 投影成内联高亮，
+  - 在已经 source-authenticated 的选中 block 内，现在还会优先使用 snippet 尺度的 fragment projection，因此单行段落不再整行被高亮，
   - 当渲染 provenance 暂不可用但 citation 行窗仍可信时回退到 `line_window`，
   - 在行窗缺失或陈旧时继续回退到 `snippet_fallback`，
   - 通过 additive `highlightStrategy` 诊断显式暴露命中的高亮路径（`source_line_provenance`、`line_window`、`snippet_fallback`、`none`），
+  - 还会通过 additive `inlineHighlightStrategy` 诊断显式暴露内联高亮路径（`source_fragment_provenance`、`text_search`、`none`），
   - 记录 additive 的 provenance 覆盖计数，并对过宽的容器节点做惩罚，避免重复 snippet 导致整块文章被高亮，
-- `src/agent_workspace.frontend.test.ts` 现在已经固定两类运维相关回归：
+- `src/agent_workspace.frontend.test.ts` 现在已经固定四类运维相关回归：
   - 当同一 snippet 在多个段落重复出现时，必须命中可信 line window 对应的正确段落，
   - 当行号元数据不可用或不可信时，必须回退到 snippet 高亮，而不是误高亮错误段落，
+  - 单行段落的高亮必须收缩到命中的 fragment，而不是整行，
+  - 嵌套 inline markdown 节点仍然必须解析为单个精确 fragment 高亮，
 - 用户提供的截图 `1781782257390.jpg` 继续作为正式运行时验收 owner 保留在 `waterglass_explicit_scope_compact_zh`；当前根因已固化为 planner/retrieval normalization 漂移叠加公开回答诊断泄漏。
 
 代码 / 方案对齐：
@@ -42,11 +46,11 @@
 | 定义型问题不得把文档自述草稿直接放行 | `answerReleaseReview.ts` 现在会执行 `query_intent_alignment`：当 `what is` / `什么是` 问题已有 grounded definition frame，但草稿仍然是 `This technical document...` / `本技术文档旨在...` 时，会在 release 前改写。 | 已实现基线 |
 | 同主体状态矛盾必须在 release 前改写 | `answerReleaseReview.ts` 现在会对中英文可比 definition/copula 断言执行 `claim_state_consistency`。 | 已实现基线 |
 | 右侧原文预览必须在可用时消费 source-to-render provenance | `markdown_runtime.js` 现在会给渲染 block 标注 source-line 元数据，`workspace_panes.js` 则优先使用 `source_line_provenance`，并输出 provenance 覆盖计数。 | 已实现基线 |
-| 右侧原文预览必须高亮命中片段，而不只是整段 | `workspace_panes.js` 现在会在选中节点内部投影命中的 evidence fragment，并输出 `inlineHighlightCount`。 | 已实现基线 |
+| 右侧原文预览必须高亮命中片段，而不只是整段 | `workspace_panes.js` 现在会在选中节点内部投影命中的 evidence fragment，在已认证 block 内优先使用 snippet 尺度的 source-authenticated fragment projection，并输出 `inlineHighlightCount` 与 `inlineHighlightStrategy`。 | 已实现基线 |
 | 右侧原文预览在 snippet 重复时仍必须高亮正确段落 | `workspace_panes.js` 现在优先使用可信 `line_window` 锚点，并用 specificity/container penalty 给候选节点打分。 | 已实现基线 |
 | 陈旧行号不能强行把高亮带偏 | `workspace_panes.js` 现在会主动怀疑 stale line window，并回退到 `snippet_fallback`；前端测试已固定这类失败模式。 | 已实现基线 |
 | 截图驱动的 `waterglass` 失败必须继续作为正式验收项 | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` 现在要求 grounded 输出、reviewer/public-answer 一致性、无诊断泄漏，并且不能再退化成 `本技术文档旨在` 这类元文档回答。 | 已实现 |
-| 当前剩余缺口必须明确转移到更广矛盾检测与更深 provenance | 现有代码仍需继续补超出 lexical + query-intent + structured + state + polarity + graph-order 栈的 claim-vs-citation / claim-vs-evidence conflict 检测，以及超出当前 block-level mapping 与 snippet-projected 内联高亮的 source-authenticated 字符级 provenance。 | 未完成 |
+| 当前剩余缺口必须明确转移到更广矛盾检测与更窄但仍未关闭的 provenance | 现有代码仍需继续补超出 lexical + query-intent + structured + state + polarity + graph-order 栈的 claim-vs-citation / claim-vs-evidence conflict 检测，以及用于同一已认证 block 内重复片段去歧义的显式 span offset 或更丰富 AST provenance。 | 未完成 |
 
 本次复审验证：
 

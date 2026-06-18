@@ -362,6 +362,7 @@
             sourceProvenanceAttributedNodeCount: 0,
             highlightedNodeCount: 0,
             inlineHighlightCount: 0,
+            inlineHighlightStrategy: 'none',
             highlightStrategy: 'none',
             usedFallback: false,
             failureReason: '',
@@ -783,6 +784,30 @@
         return candidates.sort((left, right) => right.length - left.length);
     }
 
+    function collectGraphFocusInlineSourceFragmentTexts(anchor) {
+        const candidates = [];
+        const seen = new Set();
+        const append = (value) => {
+            const normalizedValue = normalizeGraphFocusText(value);
+            if (normalizedValue.length < 4) {
+                return;
+            }
+            const lowered = normalizedValue.toLowerCase();
+            if (seen.has(lowered)) {
+                return;
+            }
+            seen.add(lowered);
+            candidates.push(normalizedValue);
+        };
+        append(anchor && anchor.fallbackText);
+        normalizeGraphFocusText(anchor && anchor.fallbackText)
+            .split(/[.;,:()[\]{}!?，。；：！？]/u)
+            .map((fragment) => fragment.trim())
+            .filter((fragment) => fragment.length >= 8)
+            .forEach((fragment) => append(fragment));
+        return candidates;
+    }
+
     function buildGraphFocusNormalizedSearchIndex(rawText) {
         const ranges = [];
         const normalizedCharacters = [];
@@ -930,10 +955,44 @@
         return wrappedCount;
     }
 
+    function resolveGraphFocusInlineHighlightMatch(node, entry, occupiedRanges) {
+        if (!node || !entry || !entry.anchor) {
+            return null;
+        }
+        if (entry.strategy === 'source_line_provenance' || entry.strategy === 'line_window') {
+            const sourceFragmentRange = findGraphFocusInlineHighlightRange(
+                node,
+                collectGraphFocusInlineSourceFragmentTexts(entry.anchor),
+                occupiedRanges
+            );
+            if (sourceFragmentRange) {
+                return {
+                    range: sourceFragmentRange,
+                    strategy: 'source_fragment_provenance',
+                };
+            }
+        }
+        const searchRange = findGraphFocusInlineHighlightRange(
+            node,
+            collectGraphFocusInlineCandidateTexts(entry.anchor),
+            occupiedRanges
+        );
+        if (!searchRange) {
+            return null;
+        }
+        return {
+            range: searchRange,
+            strategy: 'text_search',
+        };
+    }
+
     function applyGraphFocusInlineHighlights(selectedEntries) {
         const entries = Array.isArray(selectedEntries) ? selectedEntries : [];
         if (entries.length <= 0) {
-            return 0;
+            return {
+                inlineHighlightCount: 0,
+                inlineHighlightStrategy: 'none',
+            };
         }
         const entriesByNode = new Map();
         entries.forEach((entry) => {
@@ -945,23 +1004,31 @@
             entriesByNode.set(entry.node, existingEntries);
         });
         let inlineHighlightCount = 0;
+        let inlineHighlightStrategy = 'none';
         entriesByNode.forEach((nodeEntries, node) => {
             clearGraphFocusInlineHighlights(node);
             const occupiedRanges = [];
             nodeEntries.forEach((entry) => {
-                const candidateTexts = collectGraphFocusInlineCandidateTexts(entry.anchor);
-                const range = findGraphFocusInlineHighlightRange(node, candidateTexts, occupiedRanges);
-                if (!range) {
+                const resolvedHighlight = resolveGraphFocusInlineHighlightMatch(node, entry, occupiedRanges);
+                if (!resolvedHighlight || !resolvedHighlight.range) {
                     return;
                 }
-                const wrappedCount = applyGraphFocusInlineHighlightRange(node, range);
+                const wrappedCount = applyGraphFocusInlineHighlightRange(node, resolvedHighlight.range);
                 if (wrappedCount > 0) {
-                    occupiedRanges.push(range);
+                    occupiedRanges.push(resolvedHighlight.range);
                     inlineHighlightCount += 1;
+                    if (resolvedHighlight.strategy === 'source_fragment_provenance') {
+                        inlineHighlightStrategy = 'source_fragment_provenance';
+                    } else if (inlineHighlightStrategy === 'none') {
+                        inlineHighlightStrategy = 'text_search';
+                    }
                 }
             });
         });
-        return inlineHighlightCount;
+        return {
+            inlineHighlightCount,
+            inlineHighlightStrategy,
+        };
     }
 
     function highlightGraphFocusRenderedMarkdown(container, matchedSpans, markdownSource) {
@@ -969,6 +1036,7 @@
             return {
                 highlightedNodeCount: 0,
                 inlineHighlightCount: 0,
+                inlineHighlightStrategy: 'none',
                 highlightStrategy: 'none',
             };
         }
@@ -982,6 +1050,7 @@
             return {
                 highlightedNodeCount: 0,
                 inlineHighlightCount: 0,
+                inlineHighlightStrategy: 'none',
                 highlightStrategy: 'none',
             };
         }
@@ -1030,10 +1099,11 @@
             candidate.classList.add('agent-focus-match');
             candidate.setAttribute('data-agent-focus-highlight', 'true');
         });
-        const inlineHighlightCount = applyGraphFocusInlineHighlights(prunedEntries);
+        const inlineHighlightResult = applyGraphFocusInlineHighlights(prunedEntries);
         return {
             highlightedNodeCount: prunedNodes.length,
-            inlineHighlightCount,
+            inlineHighlightCount: Number(inlineHighlightResult && inlineHighlightResult.inlineHighlightCount || 0),
+            inlineHighlightStrategy: String(inlineHighlightResult && inlineHighlightResult.inlineHighlightStrategy || 'none'),
             highlightStrategy,
         };
     }
@@ -1141,6 +1211,7 @@
                 );
                 diagnostics.highlightedNodeCount = Number(highlightResult && highlightResult.highlightedNodeCount || 0);
                 diagnostics.inlineHighlightCount = Number(highlightResult && highlightResult.inlineHighlightCount || 0);
+                diagnostics.inlineHighlightStrategy = String(highlightResult && highlightResult.inlineHighlightStrategy || 'none');
                 diagnostics.highlightStrategy = String(highlightResult && highlightResult.highlightStrategy || 'none');
             } else {
                 highlightGraphFocusRenderedMarkdown(
