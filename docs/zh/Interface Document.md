@@ -100,7 +100,7 @@
 
 - `AnswerReleaseReview` 现在已经是一级运行时契约，而不是方案占位。
   - `AnswerReleaseDecision` 继续保持 `release` | `revise` | `abstain`。
-  - 当前 gate 覆盖 `evidence_sufficiency`、`graph_support_sufficiency`、`claim_grounding_alignment`、`query_intent_alignment`、`claim_structured_consistency`、`claim_state_consistency`、`claim_polarity_consistency`、`claim_graph_order_consistency`、`public_surface_contraction`、`internal_diagnostic_leakage` 与 `abstention_hygiene`。
+- 当前 gate 覆盖 `evidence_sufficiency`、`graph_support_sufficiency`、`claim_grounding_alignment`、`query_intent_alignment`、`claim_structured_consistency`、`claim_containment_consistency`、`claim_subject_consistency`、`claim_state_consistency`、`claim_polarity_consistency`、`claim_graph_causal_consistency`、`claim_graph_order_consistency`、`public_surface_contraction`、`internal_diagnostic_leakage` 与 `abstention_hygiene`。
 - `src/learning/conversationComposer.ts` 在对外暴露 public `answer` / `directAnswer` 之前，必须把 scoped draft answer、按文档聚合的 knowledge points、citations、resolved scope 与可选 graph context 一并送入 `reviewAnswerRelease(...)`。
 - `src/learning/KnowledgeLearningPlatform.ts`、workspace export 与前端 reply 渲染必须把 answer-release telemetry 视为 additive inspection material：
   - public answer text，
@@ -121,7 +121,7 @@
   - 验证脚本：`scripts/verify-knowledge-workspace-runtime.js`
   - 验收规则：只要 scoped evidence 存在，public answer 就不得泄漏 `No scoped knowledge points matched`、`retrieval_candidates_below_threshold`，也不得继续输出 `本技术文档旨在` 这类文档自述片段。
 - 当前剩余架构缺口：
-  - 把 contradiction coverage 从当前 lexical + query-intent + structured + containment + state + polarity + graph-order 栈扩展到更广的 claim-vs-citation / claim-vs-evidence 级别，
+  - 把 contradiction coverage 从当前 lexical + query-intent + structured + containment + subject + state + polarity + graph-causal + graph-order 栈扩展到更广的 claim-vs-citation / claim-vs-evidence 级别，
   - 把 source-to-render provenance 推进到当前 block-level mapping 与 snippet-projected 内联高亮之上，使右侧高亮进一步提升到 source-authenticated 的字符级确定性投影。
 
 兼容性规则：

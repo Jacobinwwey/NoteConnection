@@ -1279,6 +1279,7 @@ export type AnswerReleaseGateId =
     | 'claim_subject_consistency'
     | 'claim_state_consistency'
     | 'claim_polarity_consistency'
+    | 'claim_graph_causal_consistency'
     | 'claim_graph_order_consistency'
     | 'public_surface_contraction'
     | 'internal_diagnostic_leakage'

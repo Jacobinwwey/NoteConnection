@@ -958,4 +958,250 @@ describe('answerReleaseReview', () => {
         expect(review.failedGateIds).toContain('claim_graph_order_consistency');
         expect(review.publicAnswer).toBe('Baseline Measurement comes before Response Validation.');
     });
+
+    test('revises grounded answers when causal direction is reversed against the DAG', () => {
+        const point = makeKnowledgePoint({
+            atomId: 'atom_pressure_rise',
+            atomIds: ['atom_pressure_rise'],
+            title: 'Pressure Rise',
+            summary: 'Pressure Rise follows thermal expansion in the sealed example.',
+            evidenceSnippet: 'Pressure Rise follows thermal expansion in the sealed example.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                atomId: 'atom_pressure_rise',
+                title: 'Pressure Rise',
+                snippet: 'Pressure Rise follows thermal expansion in the sealed example.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    atomId: 'atom_pressure_rise',
+                    title: 'Pressure Rise',
+                    snippet: 'Pressure Rise follows thermal expansion in the sealed example.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'What causes the pressure rise?',
+            draftAnswer: 'Pressure Rise causes Thermal Expansion.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeOrderedGraphContext({
+                anchorAtomId: 'atom_pressure_rise',
+                anchorTitle: 'Pressure Rise',
+                supportingAtomIds: ['atom_thermal_expansion'],
+                supportingTitles: ['Thermal Expansion'],
+                relationKinds: ['causal'],
+                relationSummaries: [
+                    {
+                        relationKind: 'causal',
+                        edgeIds: ['edge_expansion_to_pressure'],
+                        sourceAtomIds: ['atom_thermal_expansion'],
+                        targetAtomIds: ['atom_pressure_rise'],
+                        averageConfidence: 0.94,
+                    },
+                ],
+                connectionPaths: [
+                    {
+                        sourceAtomId: 'atom_thermal_expansion',
+                        sourceTitle: 'Thermal Expansion',
+                        targetAtomId: 'atom_pressure_rise',
+                        targetTitle: 'Pressure Rise',
+                        pathAtomIds: ['atom_thermal_expansion', 'atom_pressure_rise'],
+                        pathTitles: ['Thermal Expansion', 'Pressure Rise'],
+                        pathEdges: [
+                            {
+                                fromAtomId: 'atom_thermal_expansion',
+                                toAtomId: 'atom_pressure_rise',
+                                relationKind: 'causal',
+                            },
+                        ],
+                        length: 1,
+                    },
+                ],
+                predecessorWindow: [
+                    {
+                        atomId: 'atom_thermal_expansion',
+                        title: 'Thermal Expansion',
+                        relationKind: 'causal',
+                        confidence: 0.94,
+                    },
+                ],
+            }),
+            reviewedAt: '2026-06-19T04:00:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_graph_causal_consistency');
+        expect(review.publicAnswer).toBe('Thermal Expansion causes Pressure Rise.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_graph_causal_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('keeps grounded answers when causal direction matches the DAG', () => {
+        const point = makeKnowledgePoint({
+            atomId: 'atom_pressure_rise',
+            atomIds: ['atom_pressure_rise'],
+            title: 'Pressure Rise',
+            summary: 'Pressure Rise follows thermal expansion in the sealed example.',
+            evidenceSnippet: 'Pressure Rise follows thermal expansion in the sealed example.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                atomId: 'atom_pressure_rise',
+                title: 'Pressure Rise',
+                snippet: 'Pressure Rise follows thermal expansion in the sealed example.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    atomId: 'atom_pressure_rise',
+                    title: 'Pressure Rise',
+                    snippet: 'Pressure Rise follows thermal expansion in the sealed example.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'What causes the pressure rise?',
+            draftAnswer: 'Thermal Expansion causes Pressure Rise.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeOrderedGraphContext({
+                anchorAtomId: 'atom_pressure_rise',
+                anchorTitle: 'Pressure Rise',
+                supportingAtomIds: ['atom_thermal_expansion'],
+                supportingTitles: ['Thermal Expansion'],
+                relationKinds: ['causal'],
+                relationSummaries: [
+                    {
+                        relationKind: 'causal',
+                        edgeIds: ['edge_expansion_to_pressure'],
+                        sourceAtomIds: ['atom_thermal_expansion'],
+                        targetAtomIds: ['atom_pressure_rise'],
+                        averageConfidence: 0.94,
+                    },
+                ],
+                connectionPaths: [
+                    {
+                        sourceAtomId: 'atom_thermal_expansion',
+                        sourceTitle: 'Thermal Expansion',
+                        targetAtomId: 'atom_pressure_rise',
+                        targetTitle: 'Pressure Rise',
+                        pathAtomIds: ['atom_thermal_expansion', 'atom_pressure_rise'],
+                        pathTitles: ['Thermal Expansion', 'Pressure Rise'],
+                        pathEdges: [
+                            {
+                                fromAtomId: 'atom_thermal_expansion',
+                                toAtomId: 'atom_pressure_rise',
+                                relationKind: 'causal',
+                            },
+                        ],
+                        length: 1,
+                    },
+                ],
+                predecessorWindow: [
+                    {
+                        atomId: 'atom_thermal_expansion',
+                        title: 'Thermal Expansion',
+                        relationKind: 'causal',
+                        confidence: 0.94,
+                    },
+                ],
+            }),
+            reviewedAt: '2026-06-19T04:05:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_graph_causal_consistency');
+        expect(review.publicAnswer).toBe('Thermal Expansion causes Pressure Rise.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_graph_causal_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when Chinese causal direction is reversed against the DAG', () => {
+        const point = makeKnowledgePoint({
+            atomId: 'atom_pressure_rise_zh',
+            atomIds: ['atom_pressure_rise_zh'],
+            title: '压力升高',
+            summary: '密闭示例中，热膨胀会导致压力升高。',
+            evidenceSnippet: '密闭示例中，热膨胀会导致压力升高。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                atomId: 'atom_pressure_rise_zh',
+                title: '压力升高',
+                snippet: '密闭示例中，热膨胀会导致压力升高。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    atomId: 'atom_pressure_rise_zh',
+                    title: '压力升高',
+                    snippet: '密闭示例中，热膨胀会导致压力升高。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '是什么导致压力升高？',
+            draftAnswer: '压力升高导致热膨胀。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeOrderedGraphContext({
+                anchorAtomId: 'atom_pressure_rise_zh',
+                anchorTitle: '压力升高',
+                supportingAtomIds: ['atom_thermal_expansion_zh'],
+                supportingTitles: ['热膨胀'],
+                relationKinds: ['causal'],
+                relationSummaries: [
+                    {
+                        relationKind: 'causal',
+                        edgeIds: ['edge_expansion_to_pressure_zh'],
+                        sourceAtomIds: ['atom_thermal_expansion_zh'],
+                        targetAtomIds: ['atom_pressure_rise_zh'],
+                        averageConfidence: 0.94,
+                    },
+                ],
+                connectionPaths: [
+                    {
+                        sourceAtomId: 'atom_thermal_expansion_zh',
+                        sourceTitle: '热膨胀',
+                        targetAtomId: 'atom_pressure_rise_zh',
+                        targetTitle: '压力升高',
+                        pathAtomIds: ['atom_thermal_expansion_zh', 'atom_pressure_rise_zh'],
+                        pathTitles: ['热膨胀', '压力升高'],
+                        pathEdges: [
+                            {
+                                fromAtomId: 'atom_thermal_expansion_zh',
+                                toAtomId: 'atom_pressure_rise_zh',
+                                relationKind: 'causal',
+                            },
+                        ],
+                        length: 1,
+                    },
+                ],
+                predecessorWindow: [
+                    {
+                        atomId: 'atom_thermal_expansion_zh',
+                        title: '热膨胀',
+                        relationKind: 'causal',
+                        confidence: 0.94,
+                    },
+                ],
+            }),
+            reviewedAt: '2026-06-19T04:10:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_graph_causal_consistency');
+        expect(review.publicAnswer).toBe('热膨胀导致压力升高。');
+    });
 });
