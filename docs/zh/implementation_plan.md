@@ -22,6 +22,7 @@
 - reviewer 现在还会执行 `claim_containment_consistency`：即使 grounded subject 保持不变，只要草稿在显式内容/容纳关系里把 `contains water` 这类被容纳内容偷换成 `contains oil`，也会被确定性改写。
 - reviewer 现在还会执行 `claim_composition_consistency`：即使 grounded subject 保持不变，只要草稿在显式 `由...组成` / `composed of` 关系里把 `water and a glass cup` 这类支撑组件偷换成 `oil and a plastic cup`，也会被确定性改写。
 - reviewer 现在还会执行 `claim_purpose_consistency`：即使 grounded subject 保持不变，只要草稿在显式 `used for` / `用于` 关系里把 `drinking water` 这类支撑用途偷换成 `storing motor oil`，也会被确定性改写。
+- reviewer 现在还会执行 `claim_dependency_consistency`：即使 grounded subject 保持不变，只要草稿在显式 `depends on` / `requires` / `依赖` / `前置条件` 关系里把 `基线测量和传感器校准` 这类支撑依赖偷换成 `最终报告`，也会被确定性改写。
 - reviewer 现在还会执行 `claim_subject_consistency`：即使事实尾部仍然与支撑一致，只要草稿把 grounded subject 从 `Water density` 偷换成 `Glass density` 这类别的主体，也会被确定性改写。
 - reviewer 现在还会执行 `claim_state_consistency`：即使 topical lexical overlap 仍然通过，只要同一主体的定义/系词型状态断言与支撑冲突，例如 `open system` vs `closed system`，也会在中英文路径上被确定性改写。
 - reviewer 现在还会执行 `query_intent_alignment`：当 `what is` / `什么是` 类问题已经命中定义证据，但草稿回答仍然停留在“本文档旨在……”这类文档自述时，会在 release 前被确定性改写成直接定义句。
@@ -47,12 +48,12 @@
 - `src/learning/answerReleaseReview.test.ts` 现在还固定了确定性的 polarity contradiction 用例：英文反转、中文反转，以及“support 带有无关否定句但不能误报”的防误报场景。
 - 右侧文件预览/高亮链路与最终回答审核仍是两个独立 owner，但当前 graph-focus 契约已经超过单纯 payload 加固：`src/frontend/markdown_runtime.js` 会给渲染后的 markdown block 标注 source-line 元数据，`src/frontend/workspace_panes.js` 会在渲染节点 range 与可信 span 重叠时优先使用 `source_line_provenance`，并在已认证 block 内优先使用 snippet 尺度的 source-fragment projection，之后才回退到 `line_window`、`snippet_fallback` 与 broad text search；additive 诊断也会同时暴露节点高亮策略、内联高亮策略与 provenance 覆盖度。
 - `src/agent_workspace.frontend.test.ts` 现在已经固定“重复 snippet 仍要命中正确段落”“行号不可用时必须正确回退”“单行段落不能整行过高亮”以及“嵌套 inline 节点必须命中精确片段”四类关键失败场景，因此右侧证据预览不再只依赖脆弱的 snippet-only 启发式。
-- 2026-06-19 的复审已经确认：缺失 owner 这一阶段性问题已经关闭；当前活跃缺口已经转移到超出 lexical + query-intent + structured + attribute + containment + composition + purpose + subject + state + polarity + graph-causal + graph-order + graph-comparison 栈的更广 claim-vs-citation / claim-vs-evidence 矛盾检测，以及通过显式 offset 或更丰富 AST provenance 解决“同一已认证渲染 block 内重复片段去歧义”的剩余缺口，而不是继续讨论 prompt framework 是否要引入。
+- 2026-06-19 的复审已经确认：缺失 owner 这一阶段性问题已经关闭；当前活跃缺口已经转移到超出 lexical + query-intent + structured + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison 栈的更广 claim-vs-citation / claim-vs-evidence 矛盾检测，以及通过显式 offset 或更丰富 AST provenance 解决“同一已认证渲染 block 内重复片段去歧义”的剩余缺口，而不是继续讨论 prompt framework 是否要引入。
 
 #### 下一步执行顺序
 
 1. 保持 reviewer 窄口径，只拥有 release invariant，不让 prompt template 重新接管 release policy。
-2. 基于这份显式 alias/scope 回归语料以及当前 query-intent + structured-fact + attribute + containment + composition + purpose + subject + state + polarity + graph-causal + graph-order + graph-comparison reviewer 切片，继续把 lexical grounding check 扩展到更深的 claim-vs-citation / claim-vs-evidence 矛盾检测，同时控制 false positive。
+2. 基于这份显式 alias/scope 回归语料以及当前 query-intent + structured-fact + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison reviewer 切片，继续把 lexical grounding check 扩展到更深的 claim-vs-citation / claim-vs-evidence 矛盾检测，同时控制 false positive。
 3. 把当前 block-level markdown source mapping 与 `source_line_provenance` -> source-fragment projection -> `line_window` -> `snippet_fallback` -> 内联片段高亮栈视为已落地基线；下一步不是重新发明前端 release policy，而是用显式 offset 或更丰富 AST provenance 继续解决重复片段去歧义。
 4. 持续扩充共享语料，覆盖更多真实的跨 scope、紧凑别名与同义表达失败场景，并保持 Jest 与运行时 verifier 的确定性预期一致。
 5. 继续做 owner reduction，但前提仍然是“新 owner 持有真实决策或不变量”。

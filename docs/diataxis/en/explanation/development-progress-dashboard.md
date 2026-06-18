@@ -20,6 +20,7 @@ What is now true in code:
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_containment_consistency`, so drafts that keep the same grounded subject and explicit containment relation but swap the contained material, such as `contains water` to `contains oil`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_composition_consistency`, so drafts that keep the same grounded subject and explicit `composed of` / `由...组成` relation but swap the supported components, such as `water and a glass cup` to `oil and a plastic cup`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_purpose_consistency`, so drafts that keep the same grounded subject and explicit `used for` / `用于` relation but swap the supported use, such as `drinking water` to `storing motor oil`, are revised before release,
+- `src/learning/answerReleaseReview.ts` now also enforces `claim_dependency_consistency`, so drafts that keep the same grounded subject and explicit `depends on` / `requires` / `依赖` / `前置条件` relation but swap the supported dependency, such as `Baseline Measurement and Sensor Calibration` to `Final Reporting`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_subject_consistency`, so drafts that keep the supported fact tail but silently swap the grounded subject, such as `Water density` to `Glass density`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_attribute_consistency`, so drafts that keep the same grounded subject and explicit `has` / `具有` attribute frame but swap the supported attribute, such as `moderate thermal insulation` to `high thermal insulation`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_graph_causal_consistency`, so drafts that reverse DAG-backed cause/effect direction, such as `Pressure Rise causes Thermal Expansion`, are revised before release in both English and Chinese,
@@ -44,6 +45,32 @@ What is now true in code:
   - nested inline markdown nodes must still produce one exact fragment highlight,
 - the user-provided screenshot `1781782257390.jpg` remains a formal runtime acceptance owner through `waterglass_explicit_scope_compact_zh`; its root cause is now recorded as planner/retrieval normalization drift plus public-answer diagnostic leakage.
 
+## 2026-06-19 Dependency/Prerequisite Contradiction Gate
+
+This sub-slice is intentionally narrower than a generic "LLM verifier" discussion.
+The failure class is explicit dependency drift inside an otherwise grounded answer, not broad semantic uncertainty.
+
+What changed:
+
+- `src/learning/answerReleaseReview.ts` now extracts explicit dependency/prerequisite frames such as `depends on`, `requires`, `relies on`, `has prerequisite`, `依赖`, `需要`, and `前置条件`,
+- `claim_dependency_consistency` compares same-subject dependency claims against the scoped support set and revises the draft when the supported dependency is swapped,
+- `src/learning/types.ts` now exposes that gate as a first-class `AnswerReleaseGateId`,
+- `src/learning/answerReleaseReview.test.ts` now fixes three contract edges:
+  - English dependency contradiction must `revise`,
+  - Chinese dependency contradiction must `revise`,
+  - supported dependency refinements must still `release`.
+
+Why this matters architecturally:
+
+- this gate belongs in the post-synthesis backend reviewer because the question is release-worthiness, not generation style,
+- it deliberately reuses the current DAG-and-evidence runtime instead of introducing a second correctness owner from `ref/`,
+- it closes a concrete contradiction family without widening the false-positive surface into unstable semantic guesswork.
+
+What remains open:
+
+- claim-vs-citation and claim-vs-evidence contradiction coverage still needs to go beyond explicit dependency frames,
+- repeated inline fragment disambiguation still needs exact offsets or richer markdown AST provenance.
+
 Code-vs-plan reconciliation:
 
 | Requirement | Current implementation evidence | Progress call |
@@ -54,6 +81,7 @@ Code-vs-plan reconciliation:
 | Grounded drafts must not keep the same explicit containment relation while swapping the contained material | `answerReleaseReview.ts` now enforces `claim_containment_consistency` on comparable containment/content frames, revising drifts such as `Water glass contains water` -> `Water glass contains oil`. | Implemented baseline |
 | Grounded drafts must not keep the same explicit composition relation while swapping the supported components | `answerReleaseReview.ts` now enforces `claim_composition_consistency` on comparable `composed of` / `consists of` / `由...组成` frames, revising drifts such as `water and a glass cup` -> `oil and a plastic cup` while allowing compatible component order/refinement. | Implemented baseline |
 | Grounded drafts must not keep the same explicit purpose relation while swapping the supported use | `answerReleaseReview.ts` now enforces `claim_purpose_consistency` on comparable `used for` / `用于` frames, revising drifts such as `drinking water` -> `storing motor oil` while allowing supported-purpose refinements. | Implemented baseline |
+| Grounded drafts must not keep the same explicit dependency/prerequisite relation while swapping the supported dependency | `answerReleaseReview.ts` now enforces `claim_dependency_consistency` on comparable `depends on` / `requires` / `依赖` / `前置条件` frames, revising drifts such as `Baseline Measurement and Sensor Calibration` -> `Final Reporting` while allowing genuinely supported dependency answers. | Implemented baseline |
 | Grounded drafts must not keep the supported fact tail while swapping the grounded subject | `answerReleaseReview.ts` now enforces `claim_subject_consistency` on comparable subject-tail frames, revising subject drift such as `Water density` -> `Glass density` even when the numeric tail still matches support. | Implemented baseline |
 | Grounded drafts must not keep the same subject and explicit attribute frame while swapping the supported attribute | `answerReleaseReview.ts` now enforces `claim_attribute_consistency` on comparable `has` / `have` / `具有` frames, revising drifts such as `moderate thermal insulation` -> `high thermal insulation` while allowing compatible refinements. | Implemented baseline |
 | Same-subject state contradictions must be revised before release | `answerReleaseReview.ts` now enforces `claim_state_consistency` on comparable definition/copula frames across English and Chinese evidence. | Implemented baseline |
@@ -64,7 +92,7 @@ Code-vs-plan reconciliation:
 | Right-pane source preview must highlight the correct paragraph even when snippet text repeats | `workspace_panes.js` now prefers trustworthy `line_window` anchors and scores candidate rendered nodes with specificity/container penalties. | Implemented baseline |
 | Stale line metadata must not force the wrong highlight | `workspace_panes.js` now distrusts stale line windows and falls back to `snippet_fallback`; frontend tests pin the failure mode. | Implemented baseline |
 | The screenshot-backed `waterglass` failure must remain a formal acceptance rule | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` now expects grounded output, reviewer/public-answer parity, no diagnostic leakage, and no `本技术文档旨在` meta-answer fallback. | Implemented |
-| The active remaining gap must move to broader contradiction coverage and narrower unresolved provenance | Current code still needs wider claim-vs-citation / claim-vs-evidence conflict checks beyond the lexical + query-intent + structured + attribute + containment + composition + purpose + subject + state + polarity + graph-causal + graph-order + graph-comparison stack, plus explicit span offsets or richer AST provenance to disambiguate identical repeated fragments inside one authenticated block. | Open |
+| The active remaining gap must move to broader contradiction coverage and narrower unresolved provenance | Current code still needs wider claim-vs-citation / claim-vs-evidence conflict checks beyond the lexical + query-intent + structured + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison stack, plus explicit span offsets or richer AST provenance to disambiguate identical repeated fragments inside one authenticated block. | Open |
 
 Verification for this re-audit:
 

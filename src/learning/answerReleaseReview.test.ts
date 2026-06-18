@@ -1007,6 +1007,122 @@ describe('answerReleaseReview', () => {
         ]));
     });
 
+    test('revises grounded answers when dependency claims conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: 'Response Validation Dependencies',
+            summary: 'Response Validation depends on Baseline Measurement and Sensor Calibration.',
+            evidenceSnippet: 'Response Validation depends on Baseline Measurement and Sensor Calibration.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Response Validation Dependencies',
+                snippet: 'Response Validation depends on Baseline Measurement and Sensor Calibration.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Response Validation Dependencies',
+                    snippet: 'Response Validation depends on Baseline Measurement and Sensor Calibration.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'What does response validation depend on?',
+            draftAnswer: 'Response Validation depends on Final Reporting.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T04:30:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_dependency_consistency');
+        expect(review.publicAnswer).toBe('Response Validation Dependencies: Response Validation depends on Baseline Measurement and Sensor Calibration.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_dependency_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when Chinese dependency claims conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: '响应验证依赖项',
+            summary: '响应验证依赖基线测量和传感器校准。',
+            evidenceSnippet: '响应验证依赖基线测量和传感器校准。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: '响应验证依赖项',
+                snippet: '响应验证依赖基线测量和传感器校准。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: '响应验证依赖项',
+                    snippet: '响应验证依赖基线测量和传感器校准。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '响应验证依赖什么？',
+            draftAnswer: '响应验证依赖最终报告。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T04:35:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_dependency_consistency');
+        expect(review.publicAnswer).toBe('响应验证依赖项: 响应验证依赖基线测量和传感器校准。');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_dependency_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('does not raise a dependency conflict when the draft keeps a supported prerequisite subset', () => {
+        const point = makeKnowledgePoint({
+            title: 'Response Validation Dependencies',
+            summary: 'Response Validation depends on Baseline Measurement and Sensor Calibration.',
+            evidenceSnippet: 'Response Validation depends on Baseline Measurement and Sensor Calibration.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Response Validation Dependencies',
+                snippet: 'Response Validation depends on Baseline Measurement and Sensor Calibration.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Response Validation Dependencies',
+                    snippet: 'Response Validation depends on Baseline Measurement and Sensor Calibration.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'What is a prerequisite for response validation?',
+            draftAnswer: 'Baseline Measurement is a prerequisite for Response Validation.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T04:40:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_dependency_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_dependency_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
     test('revises grounded answers when same-subject state conflicts with cited support', () => {
         const point = makeKnowledgePoint({
             title: 'Water Glass Thermodynamics',

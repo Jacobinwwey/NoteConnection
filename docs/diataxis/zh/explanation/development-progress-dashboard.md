@@ -20,6 +20,7 @@
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_containment_consistency`，因此当 grounded subject 与显式容纳关系保持不变、但被容纳内容从 `contains water` 偷换成 `contains oil` 时，草稿也会在 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_composition_consistency`，因此当 grounded subject 与显式 `由...组成` / `composed of` 关系保持不变、但支撑组件从 `water and a glass cup` 偷换成 `oil and a plastic cup` 时，草稿也会在 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_purpose_consistency`，因此当 grounded subject 与显式 `used for` / `用于` 关系保持不变、但支撑用途从 `drinking water` 偷换成 `storing motor oil` 时，草稿也会在 release 前被改写，
+- `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_dependency_consistency`，因此当 grounded subject 与显式 `depends on` / `requires` / `依赖` / `前置条件` 关系保持不变、但支撑依赖从 `基线测量和传感器校准` 偷换成 `最终报告` 时，草稿也会在 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_subject_consistency`，因此像把 `Water density` 偷换成 `Glass density` 这种“事实尾部还对、主体却串了”的草稿，也会在 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_attribute_consistency`，因此当草稿保持同一 grounded subject 与显式 `has` / `具有` 属性框架、却把支撑属性从 `中等热绝缘性能` 偷换成 `高热绝缘性能` 时，也会在 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_graph_causal_consistency`，因此当草稿把 DAG 支撑的因果方向说反，例如把 `Pressure Rise causes Thermal Expansion` 这类因果对调，也会在中英文路径上于 release 前被改写，
@@ -44,6 +45,32 @@
   - 嵌套 inline markdown 节点仍然必须解析为单个精确 fragment 高亮，
 - 用户提供的截图 `1781782257390.jpg` 继续作为正式运行时验收 owner 保留在 `waterglass_explicit_scope_compact_zh`；当前根因已固化为 planner/retrieval normalization 漂移叠加公开回答诊断泄漏。
 
+## 2026-06-19 依赖 / 前置条件矛盾门禁
+
+这一子切片刻意比“泛化 LLM verifier”更窄。
+它针对的是“答案整体看似 grounded，但显式依赖 / 前置条件被偷换”的具体失败类型，而不是宽泛的语义不确定性。
+
+当前变更：
+
+- `src/learning/answerReleaseReview.ts` 现在会抽取 `depends on`、`requires`、`relies on`、`has prerequisite`、`依赖`、`需要`、`前置条件` 这类显式依赖框架，
+- `claim_dependency_consistency` 会把同主体依赖断言与当前 scope 下的支撑集合逐一对齐；一旦支撑依赖被偷换，就会在 release 前改写草稿，
+- `src/learning/types.ts` 现在把这个 gate 正式暴露为一等 `AnswerReleaseGateId`，
+- `src/learning/answerReleaseReview.test.ts` 现在固定三条契约边界：
+  - 英文依赖矛盾必须 `revise`，
+  - 中文依赖矛盾必须 `revise`，
+  - 被支撑的依赖细化仍然必须 `release`。
+
+为什么这件事在架构上重要：
+
+- 这个 gate 必须放在 answer synthesis 之后的后端 reviewer，因为这里判断的是“能否放行”，而不是“生成长什么样”，
+- 它刻意复用当前 DAG + evidence runtime，而不是把 correctness owner 重新交给 `ref/` 里的第二套框架，
+- 它关闭的是一类具体矛盾，而不是把 false positive 面扩大成不稳定的语义猜测器。
+
+当前仍未关闭的缺口：
+
+- claim-vs-citation 与 claim-vs-evidence 的更广矛盾覆盖仍然要继续推进，不能停在显式依赖框架上，
+- 重复 inline fragment 的精准去歧义仍然需要 exact offset 或更丰富的 markdown AST provenance。
+
 代码 / 方案对齐：
 
 | 要求 | 当前实现证据 | 进度判断 |
@@ -54,6 +81,7 @@
 | grounded draft 不得在显式容纳关系里保持同一主体却偷换被容纳内容 | `answerReleaseReview.ts` 现在会对可比的 containment/content frame 执行 `claim_containment_consistency`，因此 `Water glass contains water` -> `Water glass contains oil` 这类内容漂移也会被改写。 | 已实现基线 |
 | grounded draft 不得在显式组成关系里保持同一主体却偷换支撑组件 | `answerReleaseReview.ts` 现在会对可比的 `composed of` / `consists of` / `由...组成` frame 执行 `claim_composition_consistency`，因此 `water and a glass cup` -> `oil and a plastic cup` 这类组成关系漂移也会被改写，同时兼容组件顺序调整与兼容细化。 | 已实现基线 |
 | grounded draft 不得在显式用途关系里保持同一主体却偷换支撑用途 | `answerReleaseReview.ts` 现在会对可比的 `used for` / `用于` frame 执行 `claim_purpose_consistency`，因此 `drinking water` -> `storing motor oil` 这类用途漂移也会被改写，同时兼容支撑用途细化。 | 已实现基线 |
+| grounded draft 不得在显式依赖 / 前置条件关系里保持同一主体却偷换支撑依赖 | `answerReleaseReview.ts` 现在会对可比的 `depends on` / `requires` / `依赖` / `前置条件` frame 执行 `claim_dependency_consistency`，因此 `基线测量和传感器校准` -> `最终报告` 这类依赖漂移也会被改写，同时兼容真正被支撑的依赖回答。 | 已实现基线 |
 | grounded draft 不得保留正确事实尾部却偷换 grounded subject | `answerReleaseReview.ts` 现在会对可比的 subject-tail frame 执行 `claim_subject_consistency`，因此即使数值尾部仍与支撑一致，`Water density` -> `Glass density` 这类主体漂移也会被改写。 | 已实现基线 |
 | grounded draft 不得保持同一主体与显式属性框架却偷换支撑属性 | `answerReleaseReview.ts` 现在会对可比的 `has` / `have` / `具有` 属性 frame 执行 `claim_attribute_consistency`，因此 `中等热绝缘性能` -> `高热绝缘性能` 这类属性漂移也会被改写，同时兼容合理细化。 | 已实现基线 |
 | 同主体状态矛盾必须在 release 前改写 | `answerReleaseReview.ts` 现在会对中英文可比 definition/copula 断言执行 `claim_state_consistency`。 | 已实现基线 |
@@ -64,7 +92,7 @@
 | 右侧原文预览在 snippet 重复时仍必须高亮正确段落 | `workspace_panes.js` 现在优先使用可信 `line_window` 锚点，并用 specificity/container penalty 给候选节点打分。 | 已实现基线 |
 | 陈旧行号不能强行把高亮带偏 | `workspace_panes.js` 现在会主动怀疑 stale line window，并回退到 `snippet_fallback`；前端测试已固定这类失败模式。 | 已实现基线 |
 | 截图驱动的 `waterglass` 失败必须继续作为正式验收项 | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` 现在要求 grounded 输出、reviewer/public-answer 一致性、无诊断泄漏，并且不能再退化成 `本技术文档旨在` 这类元文档回答。 | 已实现 |
-| 当前剩余缺口必须明确转移到更广矛盾检测与更窄但仍未关闭的 provenance | 现有代码仍需继续补超出 lexical + query-intent + structured + attribute + containment + composition + purpose + subject + state + polarity + graph-causal + graph-order + graph-comparison 栈的 claim-vs-citation / claim-vs-evidence conflict 检测，以及用于同一已认证 block 内重复片段去歧义的显式 span offset 或更丰富 AST provenance。 | 未完成 |
+| 当前剩余缺口必须明确转移到更广矛盾检测与更窄但仍未关闭的 provenance | 现有代码仍需继续补超出 lexical + query-intent + structured + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison 栈的 claim-vs-citation / claim-vs-evidence conflict 检测，以及用于同一已认证 block 内重复片段去歧义的显式 span offset 或更丰富 AST provenance。 | 未完成 |
 
 本次复审验证：
 
