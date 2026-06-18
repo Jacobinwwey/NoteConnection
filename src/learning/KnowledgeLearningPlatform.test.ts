@@ -2051,7 +2051,15 @@ describe('KnowledgeLearningPlatform', () => {
         expect(response.trace.missDiagnostics).toEqual(expect.objectContaining({
             reason: 'empty_store',
         }));
-        expect(response.answer).toContain('learning workspace store is empty');
+        expect(response.answer).toContain('current scope "waterglass" does not contain indexed knowledge yet');
+        expect(response.answer).not.toContain('No scoped knowledge points matched');
+        expect(response.answerReleaseReview).toEqual(expect.objectContaining({
+            decision: 'abstain',
+            publicAnswer: response.answer,
+        }));
+        expect(response.trace.answerReleaseReview).toEqual(expect.objectContaining({
+            decision: 'abstain',
+        }));
     });
 
     test('memory policy diagnostics records history and improving trend snapshots', async () => {

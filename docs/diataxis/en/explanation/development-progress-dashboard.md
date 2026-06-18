@@ -3,6 +3,51 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-06-18 Final Reply Release Review and Correction Layer
+
+This slice closes a structural robustness gap in the agent path: the system already had retrieval, DAG context assembly, answer composition, evidence panes, and workflow artifacts, but it still lacked a first-class owner for the last decision before public release.
+
+That missing owner is now implemented as `src/learning/answerReleaseReview.ts`.
+
+What is now true in code:
+
+- `conversationComposer.ts` still drafts the answer, but no longer owns the final public release by itself.
+- the new reviewer evaluates deterministic gates for:
+  - evidence sufficiency,
+  - graph support sufficiency,
+  - public-surface contraction,
+  - internal diagnostic leakage,
+  - abstention hygiene.
+- the reviewer can now `release`, `revise`, or `abstain`.
+- reviewer state is retained additively in:
+  - `AgentConversationResponse.answerReleaseReview`,
+  - `AgentConversationTrace.answerReleaseReview`,
+  - `KnowledgeRun.answerReleaseReview`.
+- `KnowledgeLearningPlatform.ts` persists that state into runtime responses and workflow-artifact payloads.
+- `scripts/verify-knowledge-workspace-runtime.js` now treats reviewer presence and `publicAnswer === result.answer` parity as part of the runtime contract.
+
+Why this matters:
+
+- the earlier `waterglass` screenshot was not only a retrieval miss,
+- it also showed that internal failure language could leak directly into the main answer surface,
+- the new reviewer layer blocks that class of regression even when evidence is absent.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Final public answer must be reviewed before release | `src/learning/answerReleaseReview.ts` now owns the post-synthesis release decision. | Implemented |
+| Unsupported answers must abstain cleanly | Empty-result debug-style drafts are now downgraded into concise abstentions. | Implemented |
+| Developers must be able to inspect the release decision | Review state is now stored on response, trace, and `KnowledgeRun`. | Implemented |
+| `waterglass` screenshot must become a formal regression gate | Runtime verifier now requires reviewer presence and rejects public-answer diagnostic leakage. | Implemented |
+| Backward compatibility must remain explicit | `assistantMessage`, `answer`, and `assistantBlocks` remain valid; reviewer fields are additive. | Preserved |
+
+Verification for this slice:
+
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `npm run verify:knowledge-workspace:runtime`
+
 ## 2026-06-18 Compact-Alias Scoped Retrieval Regression
 
 This slice closes the screenshot-backed runtime failure where `scope=waterglass` plus the prompt `什么是waterglass?` returned:

@@ -2,6 +2,23 @@
 
 ## English Document
 
+### 2026-06-18 Active Final Reply Review Task Sync
+
+- [x] The new source-of-truth note is `docs/solutions/agent-final-reply-review-robustness-plan-2026-06-18.md`.
+- [x] The root problem is now explicitly classified as missing final-answer release review, not merely prompt quality or graph retrieval.
+- [x] A dedicated backend owner now exists at `src/learning/answerReleaseReview.ts`.
+- [x] The response contract now carries additive `answerReleaseReview` state on the response, trace, and `KnowledgeRun`.
+- [x] `conversationComposer.ts` now drafts the answer and then passes it through deterministic release gates before the public answer is released.
+- [x] The screenshot-backed `waterglass` runtime case is now part of the formal verifier: runtime acceptance requires reviewer presence and rejects public-answer diagnostic leakage.
+- [ ] Next active task: deepen contradiction detection between public claims and citations without widening the main answer surface.
+- [ ] Next active task: expose reviewer results more clearly in operator inspection surfaces while keeping them out of the primary answer area.
+
+### Current Acceptance Targets
+
+1. Public answers never expose `No scoped knowledge points matched`-style internal failure strings.
+2. Reviewer decisions remain additive and backward-compatible for all current clients.
+3. Runtime verification on `waterglass` passes for both compact and spaced aliases and confirms `answerReleaseReview.publicAnswer === result.answer`.
+
 ### 2026-06-17 Active Agent Knowledge DAG Task Sync
 
 - [x] The graph-structure requirement is now clarified as the existing project DAG, not a generic graph database.

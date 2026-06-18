@@ -2,6 +2,37 @@
 
 ## English Document
 
+### 2026-06-18 Final Reply Review Robustness Implementation Plan
+
+#### Objective
+
+Add a deterministic final-answer release-review layer between answer synthesis and public release so the agent can revise or abstain before leaking unsupported or diagnostic-heavy text into the main answer surface.
+
+#### Current code truth
+
+- Retrieval normalization for compact/spaced `waterglass` aliases is already fixed at the planner/retrieval boundary.
+- The project already has graph-conditioned context assembly in `src/learning/graphContextAssembler.ts`, so the missing owner is not graph retrieval but final public-answer review.
+- The landed slice adds `src/learning/answerReleaseReview.ts` as a first-class owner for `release` / `revise` / `abstain`.
+- `src/learning/types.ts` now carries additive `AnswerReleaseReview` contracts on the response, trace, and `KnowledgeRun`.
+- `conversationComposer.ts` now drafts the answer and then delegates the public release decision to the reviewer instead of releasing the draft directly.
+- `KnowledgeLearningPlatform.ts` now persists the review decision into response payloads, traces, and workflow artifacts.
+- `scripts/verify-knowledge-workspace-runtime.js` now treats reviewer presence and public-answer hygiene as runtime acceptance gates for the screenshot-backed `waterglass` case.
+
+#### Next execution order
+
+1. Keep the reviewer deterministic and narrowly scoped to release invariants.
+2. Add deeper claim-vs-citation contradiction checks only after explicit regression coverage exists.
+3. Surface the reviewer result more clearly inside operator inspection panes without widening the public answer area.
+4. Extend the alias/scope regression corpus beyond `waterglass`.
+5. Continue owner reduction only when the new owner hides real decisions or invariants.
+
+#### Acceptance criteria
+
+1. Unsupported draft answers do not leak internal diagnostics such as `No scoped knowledge points matched` or `retrieval_candidates_below_threshold` into the public answer.
+2. `AgentConversationResponse`, trace, and `KnowledgeRun` all retain additive `answerReleaseReview` state.
+3. `npm run verify:knowledge-workspace:runtime` passes the `waterglass` compact/spaced matrix and confirms reviewer/public-answer parity.
+4. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
+
 ### 2026-06-17 Agent Knowledge DAG Implementation Plan
 
 #### Objective

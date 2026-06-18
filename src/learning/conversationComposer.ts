@@ -5,6 +5,7 @@ import type {
     AgentConversationKnowledgePoint,
     AgentConversationMemoryAction,
     AgentConversationMemoryRecord,
+    AnswerReleaseReview,
     KnowledgeQueryTemporalDetail,
     KnowledgeAtom,
     KnowledgeCitation,
@@ -19,6 +20,7 @@ import type {
     KnowledgeRunReviewCard,
     KnowledgeRunReviewState,
 } from './types';
+import { reviewAnswerRelease } from './answerReleaseReview';
 import { buildAgentConversationGraphContextFromKnowledgePoints } from './graphContextAssembler';
 
 export type BuildAgentWorkspaceCapabilities = (atomId: string) => unknown[];
@@ -1186,11 +1188,23 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     assistantBlocks: AgentConversationAssistantBlock[];
     knowledgeRun: KnowledgeRun;
     graphContext: AgentConversationGraphContext | null;
+    answerReleaseReview: AnswerReleaseReview;
 } {
     const blocks: AgentConversationAssistantBlock[] = [];
-    const answer = buildScopedConversationAnswer(params);
+    const draftAnswer = buildScopedConversationAnswer(params);
     const graphContext = params.graphContext || buildAgentConversationGraphContextFromKnowledgePoints(params.knowledgePoints);
     const knowledgeRun = buildKnowledgeRun(params, graphContext);
+    const answerReleaseReview = reviewAnswerRelease({
+        message: params.message,
+        draftAnswer,
+        knowledgePoints: params.knowledgePoints,
+        citations: params.citations,
+        usedScope: params.usedScope,
+        graphContext,
+        reviewedAt: params.generatedAt,
+    });
+    knowledgeRun.answerReleaseReview = answerReleaseReview;
+    const answer = answerReleaseReview.publicAnswer;
     const overviewMarkdown = buildScopedConversationOverviewMarkdown(params, graphContext);
     const explanationMarkdown = buildScopedConversationExplanationMarkdown(params, graphContext);
     const evidenceMarkdown = buildScopedConversationEvidenceMarkdown(params);
@@ -1244,5 +1258,6 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         assistantBlocks: blocks,
         knowledgeRun,
         graphContext,
+        answerReleaseReview,
     };
 }

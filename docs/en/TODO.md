@@ -2,6 +2,18 @@
 
 ## English Document
 
+### 2026-06-18 Final Reply Review TODO Reclassification
+
+- [x] Land the new source-of-truth note in `docs/solutions/agent-final-reply-review-robustness-plan-2026-06-18.md`.
+- [x] Reclassify the current agent gap as missing final-answer release review rather than missing prompt-framework adoption.
+- [x] Add `src/learning/answerReleaseReview.ts` as an explicit owner for public-answer `release` / `revise` / `abstain`.
+- [x] Extend `src/learning/types.ts` with additive `AnswerReleaseReview` contracts on the response, trace, and `KnowledgeRun`.
+- [x] Route composed draft answers through deterministic release gates inside `conversationComposer.ts`.
+- [x] Persist reviewer state through `KnowledgeLearningPlatform.ts` and workflow-artifact payloads.
+- [x] Promote the screenshot-backed `waterglass` failure into a runtime acceptance rule by requiring reviewer presence and by rejecting public-answer diagnostic leakage in `scripts/verify-knowledge-workspace-runtime.js`.
+- [ ] Extend the reviewer from leakage/contraction checks into deeper claim-vs-citation contradiction detection.
+- [ ] Surface reviewer state more explicitly in operator evidence panes and export summaries.
+
 ### 2026-06-17 Agent Knowledge DAG TODO Reclassification
 
 - [x] Land the 2026-06-17 agent knowledge DAG answer contract note in `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`.

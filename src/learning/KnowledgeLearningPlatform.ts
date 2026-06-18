@@ -9046,6 +9046,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             sessionId,
             assistantMessage: reply.answer,
             answer: reply.answer,
+            answerReleaseReview: reply.answerReleaseReview,
             assistantBlocks: reply.assistantBlocks,
             knowledgeRun: reply.knowledgeRun,
             knowledgePoints: conversationKnowledgePoints,
@@ -9078,6 +9079,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     titleHitDocumentIds: queryResult.trace.planner?.titleHitDocumentIds || [],
                 },
                 graphContext: graphContext || reply.graphContext || undefined,
+                answerReleaseReview: reply.answerReleaseReview,
             },
         };
         const knowledgeRunArtifact = this.recordWorkflowArtifact({
@@ -9092,6 +9094,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             payload: {
                 knowledgeRun: reply.knowledgeRun,
                 graphContext: graphContext || reply.graphContext || undefined,
+                answerReleaseReview: reply.answerReleaseReview,
                 citations,
                 recalledMemories,
                 memoryActions,

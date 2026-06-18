@@ -3,6 +3,37 @@
 
 ## 中文文档
 
+### 2026-06-18 最终回复审核鲁棒性实施计划
+
+#### 目标
+
+在回答合成与公开释放之间补上一层确定性的 final-answer release-review owner，让 agent 在把答案发给用户前，先决定应该直接放行、收缩改写，还是降级 abstain。
+
+#### 当前代码真相
+
+- `waterglass` 的 compact/spaced alias 归一化问题已经在 planner/retrieval 边界修复。
+- 项目已经有 `src/learning/graphContextAssembler.ts` 作为 graph-conditioned context assembly owner，因此当前缺口不是图检索，而是公开回答发布前的最终审核 owner。
+- 本轮已新增 `src/learning/answerReleaseReview.ts`，专门负责 `release` / `revise` / `abstain` 决策。
+- `src/learning/types.ts` 现在以 additive 方式把 `AnswerReleaseReview` 接到 response、trace 与 `KnowledgeRun`。
+- `conversationComposer.ts` 现在先产出草稿回答，再把最终公开回答交给 reviewer 决定，而不是直接放出 draft。
+- `KnowledgeLearningPlatform.ts` 现在会把 review 决策写入 response、trace 与 workflow artifact。
+- `scripts/verify-knowledge-workspace-runtime.js` 现在已经把 reviewer 存在性与主回答卫生要求纳入 `waterglass` 截图场景的正式运行时验收。
+
+#### 下一步执行顺序
+
+1. 保持 reviewer 窄口径，只拥有 release invariant。
+2. 只有在显式回归语料存在后，才继续补 claim-vs-citation 的更深矛盾检测。
+3. 在不扩大主回答区的前提下，把 reviewer 结果更明确地推到运维检查面。
+4. 把 alias/scope 回归语料从 `waterglass` 扩展到更多真实失败案例。
+5. 继续做 owner reduction，但前提仍然是“新 owner 持有真实决策或不变量”。
+
+#### 验收标准
+
+1. 不支持的草稿回答不能再把 `No scoped knowledge points matched` 或 `retrieval_candidates_below_threshold` 这类内部诊断泄漏到主回答区。
+2. `AgentConversationResponse`、trace 与 `KnowledgeRun` 都必须保留 additive 的 `answerReleaseReview` 状态。
+3. `npm run verify:knowledge-workspace:runtime` 必须通过 `waterglass` 的 compact/spaced 双查询矩阵，并确认 reviewer/public-answer 一致性。
+4. 现有 `assistantMessage`、`answer`、`assistantBlocks` 与下游 client 必须保持向前兼容。
+
 ### 2026-06-17 Agent Knowledge DAG 实施计划
 
 #### 目标

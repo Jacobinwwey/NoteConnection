@@ -3,6 +3,51 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-06-18 最终回复 release review 与纠错层
+
+本切片关闭的是 agent 路径里的一个结构性鲁棒性缺口：系统已经具备 retrieval、DAG context assembly、answer composition、evidence pane 和 workflow artifact，但在把答案真正发给用户之前，还没有一个一等 owner 负责做最后的公开发布决策。
+
+这个缺失 owner 现在已经落地为 `src/learning/answerReleaseReview.ts`。
+
+当前代码已经成立的事实：
+
+- `conversationComposer.ts` 仍然负责产出草稿回答，但已经不再单独拥有最终公开释放权。
+- 新 reviewer 会对以下确定性 gate 做审核：
+  - evidence sufficiency
+  - graph support sufficiency
+  - public-surface contraction
+  - internal diagnostic leakage
+  - abstention hygiene
+- reviewer 现在可以做 `release`、`revise`、`abstain` 三类决策。
+- reviewer 状态现在已经以 additive 方式保留在：
+  - `AgentConversationResponse.answerReleaseReview`
+  - `AgentConversationTrace.answerReleaseReview`
+  - `KnowledgeRun.answerReleaseReview`
+- `KnowledgeLearningPlatform.ts` 现在会把这份状态写进运行时响应与 workflow artifact payload。
+- `scripts/verify-knowledge-workspace-runtime.js` 现在已经把 reviewer 存在性与 `publicAnswer === result.answer` 一致性纳入运行时契约。
+
+这件事为什么重要：
+
+- 之前的 `waterglass` 截图不只是 retrieval miss，
+- 它还暴露了内部失败语言可以直接泄漏到主回答区，
+- 新的 reviewer layer 现在会阻断这类回归，即使当前证据为空。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 最终公开回答必须经过 release review | `src/learning/answerReleaseReview.ts` 现在已经拥有 post-synthesis release decision。 | 已实现 |
+| 不支持的回答必须 clean abstain | empty-result 的 debug-style 草稿现在会被降级成简洁 abstention。 | 已实现 |
+| 开发者必须能检查 release decision | review 状态已保留到 response、trace 与 `KnowledgeRun`。 | 已实现 |
+| `waterglass` 截图必须成为正式回归门禁 | runtime verifier 现在要求 reviewer 存在，并拒绝公开回答中的诊断泄漏。 | 已实现 |
+| 向前兼容必须保持显式 | `assistantMessage`、`answer`、`assistantBlocks` 保持有效；reviewer 字段都是 additive。 | 已保持 |
+
+本切片验证：
+
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `npm run verify:knowledge-workspace:runtime`
+
 ## 2026-06-18 紧凑别名作用域检索回归
 
 本切片关闭的是截图驱动的运行时失败：当 `scope=waterglass` 且提问为 `什么是waterglass?` 时，系统会返回：

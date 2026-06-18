@@ -1200,6 +1200,7 @@ export interface AgentConversationTrace {
         titleHitDocumentIds: string[];
     };
     graphContext?: AgentConversationGraphContext;
+    answerReleaseReview?: AnswerReleaseReview;
 }
 
 export interface AgentConversationRequest {
@@ -1265,6 +1266,33 @@ export interface AgentConversationAssistantKnowledgeActionsBlock {
 export type KnowledgeRunClaimStatus = 'verified' | 'weak' | 'not_proven' | 'rejected';
 
 export type KnowledgeRunQualityStatus = 'pass' | 'caution' | 'fail';
+
+export type AnswerReleaseDecision = 'release' | 'revise' | 'abstain';
+
+export type AnswerReleaseGateId =
+    | 'evidence_sufficiency'
+    | 'graph_support_sufficiency'
+    | 'public_surface_contraction'
+    | 'internal_diagnostic_leakage'
+    | 'abstention_hygiene';
+
+export interface AnswerReleaseGate {
+    gateId: AnswerReleaseGateId;
+    passed: boolean;
+    message: string;
+}
+
+export interface AnswerReleaseReview {
+    reviewedAt: string;
+    decision: AnswerReleaseDecision;
+    revised: boolean;
+    originalAnswer: string;
+    publicAnswer: string;
+    reason: string;
+    failedGateIds: AnswerReleaseGateId[];
+    leakedInternalFragments: string[];
+    gates: AnswerReleaseGate[];
+}
 
 export type KnowledgeRunQualityGateId =
     | 'evidence_coverage'
@@ -1345,6 +1373,7 @@ export interface KnowledgeRun {
     quality: KnowledgeRunQuality;
     reviewCards: KnowledgeRunReviewCard[];
     reviewState: KnowledgeRunReviewState;
+    answerReleaseReview?: AnswerReleaseReview;
     summary: {
         claimCount: number;
         verifiedClaimCount: number;
@@ -1379,6 +1408,7 @@ export interface AgentConversationResponse {
     sessionId: string;
     assistantMessage: string;
     answer: string;
+    answerReleaseReview?: AnswerReleaseReview;
     assistantBlocks?: AgentConversationAssistantBlock[];
     knowledgeRun?: KnowledgeRun;
     knowledgePoints: AgentConversationKnowledgePoint[];

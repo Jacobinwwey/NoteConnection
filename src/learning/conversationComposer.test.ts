@@ -348,6 +348,61 @@ describe('conversationComposer', () => {
                 passed: true,
             }),
         ]));
+        expect(reply.answerReleaseReview).toEqual(expect.objectContaining({
+            decision: 'release',
+            publicAnswer: reply.answer,
+        }));
+    });
+
+    test('contracts empty-scope draft failures before public release', () => {
+        let blockCounter = 0;
+        const reply = buildScopedConversationReply({
+            message: '什么是waterglass?',
+            knowledgePoints: [],
+            citations: [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: {
+                ...globalScope,
+                source: 'scoped',
+                workspaceId: 'waterglass',
+                corpusId: 'waterglass',
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                readiness: {
+                    status: 'ready',
+                    message: 'The scoped learning workspace is ready.',
+                    workspaceId: 'waterglass',
+                    corpusId: 'waterglass',
+                    activeResourceCount: 1,
+                    activeProjectionCount: 1,
+                    indexedUnitCount: 1,
+                    indexedSegmentCount: 4,
+                    matchedDocumentCount: 1,
+                },
+                missDiagnostics: {
+                    reason: 'retrieval_candidates_below_threshold',
+                    message: 'The planner found likely documents, but retrieval did not return evidence-bearing candidates.',
+                    query: '什么是waterglass?',
+                    normalizedQuery: '什么是waterglass?',
+                    plannerQuery: '什么是water glass',
+                    titleLikeQueries: ['waterglass', 'water glass'],
+                    titleHitDocumentIds: ['doc_water_glass'],
+                    indexedScopeAtomCount: 4,
+                },
+            },
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+        });
+
+        expect(reply.answer).toContain('waterglass');
+        expect(reply.answer).not.toContain('No scoped knowledge points matched');
+        expect(reply.answer).not.toContain('retrieval');
+        expect(reply.answerReleaseReview).toEqual(expect.objectContaining({
+            decision: 'abstain',
+            publicAnswer: reply.answer,
+        }));
+        expect(reply.knowledgeRun.answerReleaseReview).toEqual(expect.objectContaining({
+            decision: 'abstain',
+        }));
     });
 
     test('aggregates graph context across multiple knowledge points and preserves temporal edge details', () => {

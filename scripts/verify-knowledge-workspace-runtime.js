@@ -158,6 +158,7 @@ async function main() {
       const usedScope = result.trace && result.trace.usedScope ? result.trace.usedScope : null;
       const planner = result.trace && result.trace.planner ? result.trace.planner : null;
       const missDiagnostics = result.trace && result.trace.missDiagnostics ? result.trace.missDiagnostics : null;
+      const answerReleaseReview = result.answerReleaseReview || (result.trace && result.trace.answerReleaseReview) || null;
 
       if (citations.length <= 0) {
         throw new Error(`expected citations for query=${query}, got body=${JSON.stringify(conversationResponse.body)}`);
@@ -174,6 +175,15 @@ async function main() {
       if (String(result.answer || '').includes('No scoped knowledge points matched')) {
         throw new Error(`conversation still returned empty-scope answer for query=${query}: ${String(result.answer || '')}`);
       }
+      if (String(result.answer || '').includes('retrieval_candidates_below_threshold')) {
+        throw new Error(`conversation leaked retrieval diagnostics into the public answer for query=${query}: ${String(result.answer || '')}`);
+      }
+      if (!answerReleaseReview || typeof answerReleaseReview !== 'object') {
+        throw new Error(`conversation did not return answerReleaseReview for query=${query}: ${JSON.stringify(conversationResponse.body)}`);
+      }
+      if (String(answerReleaseReview.publicAnswer || '') !== String(result.answer || '')) {
+        throw new Error(`answerReleaseReview/public answer mismatch for query=${query}: review=${JSON.stringify(answerReleaseReview)} answer=${String(result.answer || '')}`);
+      }
       if (missDiagnostics && missDiagnostics.reason === 'retrieval_candidates_below_threshold') {
         throw new Error(`conversation still fell below retrieval threshold for query=${query}: ${JSON.stringify(missDiagnostics)}`);
       }
@@ -186,6 +196,7 @@ async function main() {
         usedScope,
         planner,
         missDiagnostics,
+        answerReleaseReview,
         answer: result.answer,
       });
     }

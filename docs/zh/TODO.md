@@ -2,6 +2,18 @@
 
 ## 中文文档
 
+### 2026-06-18 最终回复审核 TODO 重新分类
+
+- [x] 已将新的事实源文档落盘到 `docs/solutions/agent-final-reply-review-robustness-plan-2026-06-18.md`。
+- [x] 已把当前 agent 缺口重新定义为“缺失最终公开回答 release review”，而不是“尚未引入 prompt framework”。
+- [x] 已新增 `src/learning/answerReleaseReview.ts` 作为公开回答 `release` / `revise` / `abstain` 的显式 owner。
+- [x] 已在 `src/learning/types.ts` 中补齐 additive 的 `AnswerReleaseReview` 契约，并接到 response、trace 与 `KnowledgeRun`。
+- [x] `conversationComposer.ts` 产出的草稿回答现在会进入确定性 release gate，而不是直接公开释放。
+- [x] `KnowledgeLearningPlatform.ts` 与 workflow artifact payload 现在已经保留 reviewer 状态。
+- [x] 截图驱动的 `waterglass` 失败现在已经升级为正式运行时验收规则：`scripts/verify-knowledge-workspace-runtime.js` 要求 reviewer 存在，并拒绝主回答中的诊断泄漏。
+- [ ] 将 reviewer 从当前的 leakage/contraction 检查继续扩展到更深的 claim-vs-citation 矛盾检测。
+- [ ] 把 reviewer 状态更明确地暴露到运维 evidence pane 和 export 摘要。
+
 ### 2026-06-17 Agent Knowledge DAG TODO 重新分类
 
 - [x] 已将 2026-06-17 agent knowledge DAG 回答契约落盘到 `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`。
