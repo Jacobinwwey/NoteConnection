@@ -65,6 +65,49 @@ Verification for this slice:
 - `npm.cmd exec -- tsc --noEmit`
 - `npm run verify:knowledge-workspace:runtime`
 
+## 2026-06-18 Shared Alias/Scope Regression Corpus and Soft-Miss Recovery
+
+The screenshot-backed `waterglass` failure is no longer treated as a one-off manual check. The project now has a shared deterministic regression corpus at `src/learning/KnowledgeWorkspaceConversationRegression.ts`, and the first corpus matters for two reasons:
+
+1. it turns alias/scope correctness into an explicit contract shared by Jest and runtime verification,
+2. it exposed a real retrieval bug that the single `waterglass` happy-path pair would not catch.
+
+What is now true in code:
+
+- the corpus includes four deterministic conversation cases:
+  - `waterglass_explicit_scope_compact_zh`,
+  - `waterglass_explicit_scope_spaced_zh`,
+  - `financial_scope_recovery_spaced_en`,
+  - `financial_scope_recovery_compact_en`.
+- the screenshot-derived case `waterglass_explicit_scope_compact_zh` is now the durable acceptance owner for `1781782257390.jpg`, not just an anecdotal repro.
+- `src/learning/KnowledgeWorkspaceConversationRegression.test.ts` runs the same corpus in-memory and deliberately injects `financial/liquidity.md`, `financial/glass steagall act.md`, and `financial/watered stock.md` as noisy in-scope distractors.
+- `scripts/verify-knowledge-workspace-runtime.js` now loads the built corpus module by default when no ad hoc `--query` is supplied, and it also supports targeted `--case` execution.
+- `KnowledgeLearningPlatform.ts` now applies planner scope recovery through `shouldApplyPlannerScopeRecovery(...)` instead of checking only `rerankedItems.length <= 0`.
+- recovery now triggers in two situations:
+  - hard miss: no reranked items survive,
+  - soft miss: reranked items survive, but none of them belong to planner title-hit documents.
+
+Why the soft-miss bug mattered:
+
+- a scoped retrieval system can return non-empty noise and still be wrong,
+- absolute zero-result logic misses that class of failure,
+- the `financial` recovery cases prove this exact issue because `glass steagall act` and `watered stock` can survive as scope-local noise even though the correct title-hit document is `Knowledge_Base/waterglass/water glass.md`.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Alias/scope regression coverage must be explicit and shared | `KnowledgeWorkspaceConversationRegression.ts` is now the shared deterministic corpus consumed by Jest and runtime verification. | Implemented |
+| Runtime verification must cover more than the single `waterglass` control pair | `verify-knowledge-workspace-runtime.js` now defaults to the shared corpus and supports `--case` selection. | Implemented |
+| Scope recovery must handle soft misses, not only zero-result misses | `KnowledgeLearningPlatform.ts` now uses `shouldApplyPlannerScopeRecovery(...)` to recover when no planner title-hit document survives reranking. | Implemented |
+| Cross-scope recovery must survive realistic in-scope noise | The `financial` recovery cases add noisy in-scope documents and still require grounded recovery into `Knowledge_Base/waterglass/water glass.md`. | Implemented |
+
+Verification for this slice:
+
+- `npm.cmd exec -- jest src/learning/KnowledgeWorkspaceConversationRegression.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `npm run verify:knowledge-workspace:runtime`
+
 ## 2026-06-18 Compact-Alias Scoped Retrieval Regression
 
 This slice closes the screenshot-backed runtime failure where `scope=waterglass` plus the prompt `什么是waterglass?` returned:
@@ -84,7 +127,7 @@ Code-vs-plan reconciliation:
 | Requirement | Current implementation evidence | Progress call |
 |---|---|---|
 | Compact mixed-language aliases must retrieve evidence inside an explicit scope | `KnowledgeLearningPlatform.buildQueryBackendContext()` now expands retrieval `queryTokens` from the raw query plus planner-derived title-like variants and passes explicit `queryVariants`. `queryBackend.ts` consumes those variants for semantic token build, anchor inference, and title matching. | Implemented |
-| Runtime verification must cover the real regression, not only the spaced control query | `scripts/verify-knowledge-workspace-runtime.js` now defaults to the `waterglass` query matrix `["什么是waterglass?", "什么是water glass"]`, and `package.json` exposes `npm run verify:knowledge-workspace:runtime`. | Implemented |
+| Runtime verification must cover the real regression, not only the spaced control query | `scripts/verify-knowledge-workspace-runtime.js` now defaults to the shared alias/scope corpus, which includes the `waterglass` pair plus cross-scope recovery cases, and `package.json` exposes `npm run verify:knowledge-workspace:runtime`. | Implemented |
 | Fix direction must stay at the retrieval boundary, not drift into prompt-framework adoption | The fix is local TypeScript runtime normalization. DSPy/Guidance/Semantic Kernel/LangChain/LiteLLM remain design references, not runtime dependencies or bug-workarounds. | Confirmed |
 
 Verification for this slice:

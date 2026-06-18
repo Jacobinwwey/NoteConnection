@@ -18,7 +18,10 @@
 - [x] 现在已经基于上述 reviewer 摘要补出第一层长周期运维审计：`runtime.knowledgeRunAnswerReleaseAuditSummary` 会聚合 reviewer 计数、decision、failed gate 与 leakage 信号，`knowledge_run` 历史卡片也会渲染同一份多 run audit 形态。
 - [x] 现在已经在该聚合审计之上补出第一版 review-trend 与 gate-aging 基线，并继续复用同一条 reviewer telemetry 路径。
 - [x] 现在已经继续沿用同一条 reviewer telemetry 路径补出 compare-ready operator drilldown：近期/前序指标差值、gate 变化、最近两次审核 delta，以及 compare 卡片里的 answer-release 对比。
-- [ ] 在显式回归语料存在后，将 reviewer 从当前 lexical grounding check 继续扩展到更深的 claim-vs-citation 矛盾检测。
+- [x] 已在 `src/learning/KnowledgeWorkspaceConversationRegression.ts` 中固化共享 alias/scope 回归语料，覆盖截图派生的 `waterglass` 用例与 `financial` 下的跨 scope 恢复用例。
+- [x] 已让 Jest 与 `scripts/verify-knowledge-workspace-runtime.js` 共同消费这份确定性语料，避免 alias/scope 预期在单测与运行时验证之间漂移。
+- [x] 已修复 `KnowledgeLearningPlatform.ts` 中的 soft-miss planner-scope-recovery 缺陷：当 scope 内噪声候选幸存但没有任何 planner title-hit 文档幸存时，也会触发恢复。
+- [ ] 基于这份显式 alias/scope 回归语料，将 reviewer 从当前 lexical grounding check 继续扩展到更深的 claim-vs-citation 矛盾检测，并控制 false positive。
 
 ### 2026-06-17 Agent Knowledge DAG TODO 重新分类
 
@@ -34,7 +37,7 @@
 - [x] 后续 conversation / study-session 写入现在会保留已记录的 graph-focus 报告历史，不再整块覆盖无关 `panelState` 域。
 - [x] 已复现并修复截图驱动的 `什么是waterglass?` 紧凑别名回归：修复方式是让 planner-derived query variants 与 retrieval scoring 共享同一契约，而不是放宽 evidence gate。
 - [x] 已把 `waterglass` 的 compact/spaced 双查询提升为正式运行时门禁：`npm run verify:knowledge-workspace:runtime`。
-- [ ] 将同类 normalization-contract 回归语料扩展到 `waterglass` 之外，优先补显式 alias 用例，而不是依赖 prompt framework 或阈值放宽规避问题。
+- [x] 已将同类 normalization-contract 回归语料扩展到 `waterglass` 之外，并优先补齐显式 alias 与跨 scope 恢复用例，而不是依赖 prompt framework 或阈值放宽规避问题。
 
 ### 2026-06-10 知识工作区与 DAG TODO 重新分类
 

@@ -26,12 +26,14 @@
 - 运维侧的 `knowledge_run` history 现在会渲染同一套长周期 release-audit 形态，包括 review trend window 与 gate-aging 摘要，因此多次运行之间的 reviewer 漂移已经可见，同时不扩大主回答区，也不再发明第二条 telemetry 路径。
 - 同一条聚合审计路径现在还会继续派生 compare-ready drilldown：近期/前序已审窗口的指标差值、按 gate 的窗口变化，以及最近两次已审运行的 delta；`knowledge_run` compare 卡片也会在原有质量/图信号对比之外补出 answer-release 对比。
 - `scripts/verify-knowledge-workspace-runtime.js` 现在已经把 reviewer 存在性与主回答卫生要求纳入 `waterglass` 截图场景的正式运行时验收。
+- 共享的确定性 alias/scope 回归语料现在已经落在 `src/learning/KnowledgeWorkspaceConversationRegression.ts`：既覆盖截图派生的 `waterglass` compact/spaced 用例，也覆盖 `financial` 下的跨 scope 恢复用例；Jest 与运行时 verifier 复用同一份数据集。
+- 这份语料还暴露了 `KnowledgeLearningPlatform.ts` 中的一个 soft-miss 检索缺陷：planner scope recovery 先前只会在 0 结果 miss 时触发，现在改为在“scope 内 rerank 噪声候选仍在，但没有任何 planner title-hit 文档幸存”时也会触发。
 
 #### 下一步执行顺序
 
 1. 保持 reviewer 窄口径，只拥有 release invariant，不让 prompt template 重新接管 release policy。
-2. 只有在显式回归语料存在后，才继续扩大 claim-vs-citation / claim-vs-evidence 的更深矛盾检测，并控制 false positive。
-3. 把 alias/scope 回归语料从 `waterglass` 扩展到更多真实失败案例。
+2. 基于这份显式 alias/scope 回归语料，继续把当前 lexical grounding check 扩展到更深的 claim-vs-citation / claim-vs-evidence 矛盾检测，同时控制 false positive。
+3. 持续扩充共享语料，覆盖更多真实的跨 scope、紧凑别名与同义表达失败场景，并保持 Jest 与运行时 verifier 的确定性预期一致。
 4. 继续做 owner reduction，但前提仍然是“新 owner 持有真实决策或不变量”。
 
 #### 验收标准
@@ -41,7 +43,7 @@
 3. 运维检查面必须能渲染 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
 4. Workspace export 的 knowledge-run report 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时保持向前兼容。
 5. Workspace export 还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计摘要，以及同一路径派生出的 review-trend / gate-aging / compare-ready drilldown 摘要；运维 history 卡片与 compare 卡片都必须消费同一套 reviewer telemetry，而不扩大主回答区。
-6. `npm run verify:knowledge-workspace:runtime` 必须通过 `waterglass` 的 compact/spaced 双查询矩阵，并确认 reviewer/public-answer 一致性。
+6. `npm run verify:knowledge-workspace:runtime` 必须通过共享 alias/scope 回归语料，包括截图派生的 `waterglass` compact/spaced 双查询与 `financial` 下的跨 scope 恢复双查询，并确认 reviewer/public-answer 一致性。
 7. 现有 `assistantMessage`、`answer`、`assistantBlocks` 与下游 client 必须保持向前兼容。
 
 ### 2026-06-17 Agent Knowledge DAG 实施计划
@@ -62,6 +64,8 @@
 - 有价值的 graph-focus diagnostics 现在也已经跨过运行时边界：agent workspace 会把它们写入 session state，后续 conversation/study-session 写入会保留这段历史，workspace export 则会派生 durable `runtime.graphFocusReports`。
 - prompt-framework 研究应指导 contract 与 evaluation，不应把 Python framework 拉入 app runtime。
 - 2026-06-18 的截图驱动运行时回归说明：`什么是waterglass?` 这类紧凑混合 query 上，planner 的 alias normalization 与 retrieval scoring 曾经发生漂移；当前切片已通过把 planner-derived query variants 显式下发到 retrieval，并把 compact/spaced `waterglass` 双查询提升为运行时 verifier，修复这一缺口。
+- 运行时 verifier 现在不再只硬编码 `waterglass` 双查询：默认无 `--query` 路径会加载共享 alias/scope 回归语料，对应的 Jest 套件也会在刻意注入 `financial` 噪声文档的前提下复用同一份预期。
+- 这份共享语料还暴露了第二个检索契约缺口：planner scope recovery 必须响应 soft miss，而不只是 0 结果 miss，因此现在只要 rerank 后没有任何 planner-compatible title-hit 文档幸存，就会触发恢复。
 
 #### 下一步执行顺序
 
@@ -79,7 +83,7 @@
 2. graph ops 失败时能带 diagnostics 回退到当前 retrieval-grounded behavior。
 3. 右侧文件命中继续保留 source markdown 与 matched-span highlight 行为。
 4. 不向 Tauri/Node runtime 引入新的宽 prompt-framework 依赖。
-5. `npm run verify:knowledge-workspace:runtime` 必须通过默认 `waterglass` 矩阵：`什么是waterglass?` 与 `什么是water glass` 两个查询都不能出现 0 citations 或 `retrieval_candidates_below_threshold`。
+5. `npm run verify:knowledge-workspace:runtime` 必须通过默认 alias/scope 回归语料：既包括 `什么是waterglass?` / `什么是water glass`，也包括 `financial` scope 下的 `what is water glass?` / `what is waterglass?`，并且不能出现 0 citations 或 `retrieval_candidates_below_threshold`。
 
 ### 2026-06-10 知识工作区与 DAG 实施计划
 

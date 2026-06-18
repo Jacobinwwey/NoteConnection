@@ -4463,6 +4463,28 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return ranked;
     }
 
+    private shouldApplyPlannerScopeRecovery(
+        items: KnowledgeQueryItem[],
+        scopeRecovery: QueryScopeRecoveryPlan | undefined,
+        titleHitDocumentIds: string[]
+    ): boolean {
+        if (!scopeRecovery) {
+            return false;
+        }
+        if (items.length <= 0) {
+            return true;
+        }
+        const plannerDocumentIds = new Set(
+            titleHitDocumentIds
+                .map((documentId) => String(documentId || '').trim())
+                .filter(Boolean)
+        );
+        if (plannerDocumentIds.size <= 0) {
+            return false;
+        }
+        return !items.some((item) => plannerDocumentIds.has(String(item.atom.documentId || '').trim()));
+    }
+
     private async executeQueryBackend(
         request: KnowledgeQueryRequest,
         backend: GraphQueryBackendType,
@@ -4500,10 +4522,15 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 titleHitDocumentIds: effectiveContextBundle.titleHitDocumentIds,
             }).slice(0, effectiveContextBundle.topK);
             let appliedScopeRecovery: QueryScopeRecoveryPlan | undefined;
-            if (rerankedItems.length <= 0 && contextBundle.scopeRecovery) {
+            const plannerScopeRecovery = contextBundle.scopeRecovery;
+            if (this.shouldApplyPlannerScopeRecovery(
+                rerankedItems,
+                plannerScopeRecovery,
+                contextBundle.titleHitDocumentIds
+            )) {
                 const recoveryContextBundle = this.buildQueryBackendContext({
                     ...request,
-                    scope: contextBundle.scopeRecovery.recoveryScope,
+                    scope: plannerScopeRecovery!.recoveryScope,
                 }, backend);
                 const recoveryBackendResult = await backendInstance.query(recoveryContextBundle.context);
                 const recoveryItems = this.materializeQueryBackendItems(
@@ -4522,12 +4549,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 if (recoveryRerankedItems.length > 0) {
                     effectiveContextBundle = {
                         ...recoveryContextBundle,
-                        scopeRecovery: contextBundle.scopeRecovery,
+                        scopeRecovery: plannerScopeRecovery,
                     };
                     effectiveBackendResult = recoveryBackendResult;
                     materializedItems = recoveryItems;
                     rerankedItems = recoveryRerankedItems;
-                    appliedScopeRecovery = contextBundle.scopeRecovery;
+                    appliedScopeRecovery = plannerScopeRecovery;
                 }
             }
             const metrics = this.summarizeQueryItems(rerankedItems);

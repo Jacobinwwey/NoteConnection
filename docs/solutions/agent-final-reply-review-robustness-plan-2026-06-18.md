@@ -231,6 +231,23 @@ Attached additively to:
 - This keeps the public answer contracted while giving operators a pairwise drift surface for release-review behavior.
 - `src/export/WorkspaceExportBundle.test.ts` and `src/agent_workspace.frontend.test.ts` now pin the additive comparison contract on both export and frontend history/compare surfaces.
 
+#### Phase-7 shared regression corpus and planner-scope-recovery hardening landed on top of the compare slice
+
+- `src/learning/KnowledgeWorkspaceConversationRegression.ts` now defines a shared deterministic alias/scope corpus for conversation robustness work.
+- The initial corpus covers four cases:
+  - `waterglass_explicit_scope_compact_zh`
+  - `waterglass_explicit_scope_spaced_zh`
+  - `financial_scope_recovery_spaced_en`
+  - `financial_scope_recovery_compact_en`
+- The screenshot-derived `waterglass_explicit_scope_compact_zh` case is now the durable acceptance owner for `1781782257390.jpg`, not only a one-off manual repro.
+- `src/learning/KnowledgeWorkspaceConversationRegression.test.ts` now runs the same corpus in-memory and deliberately injects noisy `financial` documents (`liquidity`, `glass steagall act`, `watered stock`) so recovery has to beat realistic in-scope distractors.
+- `scripts/verify-knowledge-workspace-runtime.js` now loads the built corpus by default when no ad hoc `--query` is supplied, and it also supports targeted `--case` execution without losing backward-compatible ad hoc `--target` or `--query` flows.
+- This corpus exposed a second real bug in `KnowledgeLearningPlatform.ts`: planner scope recovery previously triggered only when reranking returned zero items.
+- That rule was too weak. A scoped retrieval can return non-empty noise and still be wrong.
+- `KnowledgeLearningPlatform.ts` now routes the decision through `shouldApplyPlannerScopeRecovery(...)`, which also triggers recovery when reranked items survive but none of them belong to planner title-hit documents.
+- This is the correct invariant owner because the recovery decision belongs to retrieval-contract semantics, not to prompt wording, frontend presentation, or release-review heuristics.
+- The result is that cross-scope title recovery now works even when `financial`-scope noise survives locally, while the public answer still remains governed by the later deterministic release-review layer.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -307,8 +324,8 @@ The first two decide capability. The third decides trust.
 
 ### Next Direction
 
-1. Expand the alias/scope regression corpus beyond `waterglass` using real failures before widening reviewer policy again.
-2. Add deeper contradiction checks beyond the current lexical grounding alignment, but only after that explicit corpus exists for false-positive control.
+1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical grounding alignment, but only where the new checks can stay deterministic enough to avoid false-positive churn.
+2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
 3. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
 4. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
 
@@ -541,6 +558,23 @@ The first two decide capability. The third decides trust.
 - 这样做的结果是：主回答区继续收缩，但运维侧终于有了成对观察 reviewer 漂移的表面。
 - `src/export/WorkspaceExportBundle.test.ts` 与 `src/agent_workspace.frontend.test.ts` 现在同时约束 export 与前端 history/compare surface 上的 additive comparison contract。
 
+#### 在 compare 切片之上继续落地的 Phase-7 共享回归语料与 planner-scope-recovery 加固
+
+- `src/learning/KnowledgeWorkspaceConversationRegression.ts` 现在已经定义了一份共享的确定性 alias/scope 会话回归语料。
+- 第一批语料覆盖 4 个用例：
+  - `waterglass_explicit_scope_compact_zh`
+  - `waterglass_explicit_scope_spaced_zh`
+  - `financial_scope_recovery_spaced_en`
+  - `financial_scope_recovery_compact_en`
+- 截图派生的 `waterglass_explicit_scope_compact_zh` 现在已经成为 `1781782257390.jpg` 的 durable 验收 owner，而不再只是一次性手工复现。
+- `src/learning/KnowledgeWorkspaceConversationRegression.test.ts` 现在会以内存态运行同一批语料，并故意注入带噪声的 `financial` 文档（`liquidity`、`glass steagall act`、`watered stock`），让恢复逻辑必须击败真实 scope 内干扰项。
+- `scripts/verify-knowledge-workspace-runtime.js` 现在在没有 ad hoc `--query` 时默认加载构建后的共享语料，同时保留向后兼容的 `--target` / `--query` 路径，并支持只跑指定 `--case`。
+- 这批语料还暴露了 `KnowledgeLearningPlatform.ts` 中第二个真实缺陷：planner scope recovery 过去只会在 rerank 后 0 结果时触发。
+- 这个规则太弱，因为 scoped retrieval 完全可能返回“非空但仍然错误”的噪声结果。
+- `KnowledgeLearningPlatform.ts` 现在会通过 `shouldApplyPlannerScopeRecovery(...)` 做判断：只要 rerank 后仍有结果但没有任何一个属于 planner title-hit 文档，也会触发恢复。
+- 这是正确的不变量 owner，因为 recovery 决策属于 retrieval-contract 语义，而不是 prompt 文案、前端展示或 release-review 启发式规则。
+- 这样一来，即使 `financial` scope 内的局部噪声仍然幸存，跨 scope 的 title recovery 也能成立，而公开回答仍继续受后续确定性 release-review 层治理。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -617,8 +651,8 @@ The first two decide capability. The third decides trust.
 
 ### 后续方向
 
-1. 先把 alias/scope 回归语料从 `waterglass` 扩到更多真实失败案例，再决定是否扩大 reviewer policy。
-2. 在这批显式语料具备后，再把当前 lexical grounding alignment 之外的更深矛盾检测落地，并用可控 false-positive 语料约束它。
+1. 先基于这份显式 alias/scope 回归语料，把当前 lexical grounding alignment 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
+2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
 3. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
 4. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
 

@@ -18,7 +18,10 @@
 - [x] Build the first longer-horizon operator audit on top of the exported reviewer summaries: `runtime.knowledgeRunAnswerReleaseAuditSummary` now aggregates reviewer counts, decisions, failed gates, and leakage signals, and the `knowledge_run` history card renders the same multi-run audit shape.
 - [x] Extend that aggregate audit into the first review-trend and gate-aging baselines, still derived from the same reviewer telemetry path.
 - [x] Extend the same reviewer telemetry path into compare-ready operator drilldowns: recent/prior metric shifts, gate shifts, latest-pair deltas, and compare-card answer-release deltas.
-- [ ] Extend the reviewer from the current lexical grounding check into deeper claim-vs-citation contradiction detection once an explicit regression corpus exists.
+- [x] Formalize a shared alias/scope regression corpus in `src/learning/KnowledgeWorkspaceConversationRegression.ts`, covering the screenshot-derived `waterglass` cases plus cross-scope `financial` recovery cases.
+- [x] Drive both Jest and `scripts/verify-knowledge-workspace-runtime.js` from that same deterministic corpus so alias/scope expectations stay aligned across unit and runtime verification.
+- [x] Fix the soft-miss planner-scope-recovery bug in `KnowledgeLearningPlatform.ts`: recovery now also runs when noisy in-scope candidates survive reranking but none of them belong to planner title-hit documents.
+- [ ] Use the new explicit alias/scope regression corpus to extend the reviewer from lexical grounding checks into deeper claim-vs-citation contradiction detection without raising false positives.
 
 ### 2026-06-17 Agent Knowledge DAG TODO Reclassification
 
@@ -34,7 +37,7 @@
 - [x] Preserve graph-focus report history across later session updates by merging `panelState` domains instead of overwriting them wholesale.
 - [x] Reproduce and fix the screenshot-backed `什么是waterglass?` compact-alias regression by sharing planner-derived query variants with retrieval scoring instead of loosening the evidence gate.
 - [x] Promote the compact/spaced `waterglass` verifier pair into the formal runtime gate via `npm run verify:knowledge-workspace:runtime`.
-- [ ] Extend the same normalization-contract regression corpus beyond `waterglass`, using explicit alias cases rather than prompt-framework or threshold workarounds.
+- [x] Extend the same normalization-contract regression corpus beyond `waterglass`, using explicit alias cases and cross-scope recovery cases rather than prompt-framework or threshold workarounds.
 
 ### 2026-06-10 Knowledge Workspace and DAG TODO Reclassification
 

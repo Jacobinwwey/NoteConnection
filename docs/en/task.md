@@ -17,8 +17,11 @@
 - [x] Aggregate reviewer audit telemetry is now exported through `runtime.knowledgeRunAnswerReleaseAuditSummary`, and the `knowledge_run` history card renders the same multi-run audit shape for operators.
 - [x] The aggregate reviewer audit now also carries review-trend windows and gate-aging summaries, and the operator history card renders both from the same telemetry path.
 - [x] The same reviewer telemetry path now also carries compare-ready operator drilldowns: recent/prior metric shifts, gate shifts, and latest-pair deltas in history, plus answer-release deltas in the run-compare card.
-- [ ] Next active task: deepen contradiction detection beyond the current lexical grounding check once an explicit regression corpus exists.
-- [ ] Next active task: expand the alias/scope regression corpus beyond `waterglass`, then use that corpus to gate deeper contradiction checks.
+- [x] A shared alias/scope regression corpus now exists at `src/learning/KnowledgeWorkspaceConversationRegression.ts`, including the screenshot-derived compact/spaced `waterglass` cases and cross-scope recovery cases under `financial`.
+- [x] `scripts/verify-knowledge-workspace-runtime.js` and `src/learning/KnowledgeWorkspaceConversationRegression.test.ts` now consume the same deterministic corpus, so runtime and Jest no longer drift on alias/scope expectations.
+- [x] That corpus exposed and fixed a soft-miss recovery bug in `KnowledgeLearningPlatform.ts`: planner scope recovery no longer waits for absolute zero results, and now also recovers when noisy in-scope candidates survive but none of them belong to planner title-hit documents.
+- [ ] Next active task: use the explicit alias/scope regression corpus to deepen contradiction detection beyond the current lexical grounding check without letting false positives widen.
+- [ ] Next active task: continue growing the regression corpus with more real cross-scope and synonym failures, while keeping the public answer surface contracted.
 
 ### Current Acceptance Targets
 
@@ -27,7 +30,7 @@
 3. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
 4. Exported `knowledgeRunReports` carry compact reviewer summaries for `release` / `revise` flows and omit the field cleanly when review data is absent.
 5. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card and compare card surface the same reviewer path.
-6. Runtime verification on `waterglass` passes for both compact and spaced aliases and confirms `answerReleaseReview.publicAnswer === result.answer`.
+6. Runtime verification now passes the shared alias/scope corpus, including the screenshot-derived compact/spaced `waterglass` pair and the `financial` cross-scope recovery pair, and confirms `answerReleaseReview.publicAnswer === result.answer`.
 
 ### 2026-06-17 Active Agent Knowledge DAG Task Sync
 
@@ -41,7 +44,8 @@
 - [x] The `graph_comparison_branch` quality gate now rejects reference-only support when compare intent lacks real branch-difference signals.
 - [x] Graph-focus render diagnostics now cross the runtime boundary: interesting pane diagnostics are persisted in session state and exported as durable `runtime.graphFocusReports`.
 - [x] The screenshot-backed compact-alias regression for `什么是waterglass?` has been reproduced, traced to planner/retrieval normalization drift, and fixed by passing planner-derived query variants into retrieval scoring.
-- [x] `verify-knowledge-workspace-runtime.js` now treats the compact/spaced `waterglass` pair as the default runtime acceptance matrix, and `npm run verify:knowledge-workspace:runtime` formalizes that gate.
+- [x] `verify-knowledge-workspace-runtime.js` now loads the shared alias/scope regression corpus by default, so `npm run verify:knowledge-workspace:runtime` covers both the `waterglass` compact/spaced pair and cross-scope recovery cases.
+- [x] The shared corpus also exposed a soft-miss recovery bug: planner scope recovery now triggers when reranked in-scope noise does not contain any planner title-hit document, not only when retrieval returns zero results.
 - [ ] Next active task: calibrate the new graph-quality-gate model and continue owner reduction only where a new module owns real invariants or state.
 - [ ] Keep the public answer contracted while routing graph evidence, temporal details, and developer trace to secondary surfaces.
 
@@ -51,7 +55,7 @@
 2. Public conversation compatibility remains additive: `assistantMessage` stays valid and new graph context fields are optional.
 3. Evidence-pane/export surfaces preserve graph connection paths without crowding the main answer.
 4. Follow-up implementation starts from context assembly and graph-specific tests, not from prompt-framework adoption.
-5. The compact/spaced `waterglass` runtime matrix passes for both `什么是waterglass?` and `什么是water glass`.
+5. The default alias/scope runtime corpus passes for both `什么是waterglass?` / `什么是water glass` and the `financial`-scope recovery pair `what is water glass?` / `what is waterglass?`.
 
 ### 2026-06-10 Active Knowledge Workspace and DAG Task Sync
 

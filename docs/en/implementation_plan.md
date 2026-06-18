@@ -25,12 +25,14 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 - The operator history surface now renders the same longer-horizon release-audit shape inside `knowledge_run` history, including review-trend windows and gate-aging summaries, so multi-run reviewer drift is visible without widening the main answer area or inventing a second telemetry path.
 - That same aggregate audit path now also carries compare-ready drilldowns: metric shifts between recent/prior reviewed windows, per-gate window shifts, and the latest reviewed-pair delta. The knowledge-run compare card now surfaces answer-release deltas on top of the existing quality/graph comparison.
 - `scripts/verify-knowledge-workspace-runtime.js` now treats reviewer presence and public-answer hygiene as runtime acceptance gates for the screenshot-backed `waterglass` case.
+- A shared deterministic alias/scope regression corpus now lives in `src/learning/KnowledgeWorkspaceConversationRegression.ts`; it covers the screenshot-derived compact/spaced `waterglass` cases plus cross-scope recovery cases under `financial`, and both Jest and runtime verification consume the same dataset.
+- That corpus exposed a soft-miss retrieval bug in `KnowledgeLearningPlatform.ts`: planner scope recovery previously triggered only on zero-result misses, and now also triggers when reranked in-scope noise survives but none of the surviving items belong to planner title-hit documents.
 
 #### Next execution order
 
 1. Keep the reviewer deterministic and narrowly scoped to release invariants; do not let prompt templates reclaim ownership of release policy.
-2. Broaden contradiction coverage beyond the current lexical grounding check only after explicit regression corpora exist for false-positive control.
-3. Extend the alias/scope regression corpus beyond `waterglass`.
+2. Use the explicit alias/scope regression corpus to broaden contradiction coverage beyond the current lexical grounding check without widening false positives.
+3. Keep extending the shared corpus with more real cross-scope, compact-alias, and synonym failures while preserving deterministic expectations in both Jest and runtime verification.
 4. Continue owner reduction only when the new owner hides real decisions or invariants.
 
 #### Acceptance criteria
@@ -40,7 +42,7 @@ Add a deterministic final-answer release-review layer between answer synthesis a
 3. Operator inspection surfaces render reviewer decision, failed gates, and original/public answer deltas without widening the primary answer area.
 4. Workspace export knowledge-run reports carry compact reviewer summaries for `release` / `revise` flows and stay backward-compatible when review data is absent.
 5. Workspace export also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card renders the same audit shape, and the compare card exposes answer-release deltas without widening the public answer area.
-6. `npm run verify:knowledge-workspace:runtime` passes the `waterglass` compact/spaced matrix and confirms reviewer/public-answer parity.
+6. `npm run verify:knowledge-workspace:runtime` passes the shared alias/scope regression corpus, including the screenshot-derived `waterglass` compact/spaced pair and the `financial` cross-scope recovery pair, and confirms reviewer/public-answer parity.
 7. Existing `assistantMessage`, `answer`, `assistantBlocks`, and downstream clients remain backward-compatible.
 
 ### 2026-06-17 Agent Knowledge DAG Implementation Plan
@@ -61,6 +63,8 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 - Interesting graph-focus diagnostics now also cross the runtime boundary: the agent workspace persists them into session state, later conversation/study-session writes preserve that history, and workspace export derives durable `runtime.graphFocusReports`.
 - Prompt-framework research should guide contracts and evaluation, not pull Python frameworks into the app runtime.
 - A 2026-06-18 screenshot-backed runtime regression showed that planner alias normalization and retrieval scoring had drifted apart for compact mixed-language queries such as `什么是waterglass?`; the current slice fixes this by carrying planner-derived query variants into retrieval and by promoting the compact/spaced `waterglass` pair into the runtime verifier.
+- The runtime verifier no longer hardcodes only the `waterglass` pair: the default no-`--query` path now loads the shared alias/scope regression corpus, and the matching Jest suite runs the same expectations against deliberate `financial` noise documents.
+- That corpus exposed a second retrieval-contract bug: planner scope recovery must react to soft misses, not only to zero-result misses, so recovery now triggers whenever reranked items do not contain any planner-compatible title-hit document.
 
 #### Next execution order
 
@@ -78,7 +82,7 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 2. Graph ops failure falls back to current retrieval-grounded behavior with diagnostics.
 3. Right-pane file hits keep source markdown and matched-span highlight behavior.
 4. No new broad prompt-framework dependency is introduced into the Tauri/Node runtime.
-5. `npm run verify:knowledge-workspace:runtime` passes the default `waterglass` matrix for both `什么是waterglass?` and `什么是water glass`, without zero-citation results or `retrieval_candidates_below_threshold`.
+5. `npm run verify:knowledge-workspace:runtime` passes the default alias/scope regression corpus for both `什么是waterglass?` / `什么是water glass` and the `financial`-scope recovery pair `what is water glass?` / `what is waterglass?`, without zero-citation results or `retrieval_candidates_below_threshold`.
 
 ### 2026-06-10 Knowledge Workspace and DAG Implementation Plan
 

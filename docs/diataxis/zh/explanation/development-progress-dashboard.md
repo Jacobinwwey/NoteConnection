@@ -65,6 +65,49 @@
 - `npm.cmd exec -- tsc --noEmit`
 - `npm run verify:knowledge-workspace:runtime`
 
+## 2026-06-18 共享 alias/scope 回归语料与 soft-miss 恢复
+
+截图驱动的 `waterglass` 失败现在已经不再被当作一次性人工检查。项目已经有了共享的确定性回归语料 `src/learning/KnowledgeWorkspaceConversationRegression.ts`，而这批语料的重要性在于两点：
+
+1. 它把 alias/scope 正确性变成了 Jest 与运行时 verifier 共享的显式契约；
+2. 它暴露了单靠 `waterglass` 成功对照组发现不了的真实检索缺陷。
+
+当前代码已经成立的事实：
+
+- 语料当前包含 4 个确定性会话用例：
+  - `waterglass_explicit_scope_compact_zh`
+  - `waterglass_explicit_scope_spaced_zh`
+  - `financial_scope_recovery_spaced_en`
+  - `financial_scope_recovery_compact_en`
+- 截图派生的 `waterglass_explicit_scope_compact_zh` 现在已经成为 `1781782257390.jpg` 的 durable 验收 owner，而不再只是一次口头复现。
+- `src/learning/KnowledgeWorkspaceConversationRegression.test.ts` 会以内存态运行同一批语料，并故意注入 `financial/liquidity.md`、`financial/glass steagall act.md`、`financial/watered stock.md` 作为 scope 内噪声干扰项。
+- `scripts/verify-knowledge-workspace-runtime.js` 现在在没有 ad hoc `--query` 的情况下默认加载构建后的语料模块，同时也支持通过 `--case` 只跑指定用例。
+- `KnowledgeLearningPlatform.ts` 现在通过 `shouldApplyPlannerScopeRecovery(...)` 决定是否触发 planner scope recovery，而不再只检查 `rerankedItems.length <= 0`。
+- 恢复现在会在两类情况下触发：
+  - hard miss：rerank 后没有任何结果存活；
+  - soft miss：rerank 后仍有结果存活，但其中没有任何一个属于 planner title-hit 文档。
+
+为什么 soft-miss 缺陷重要：
+
+- scoped retrieval 返回“非空结果”并不代表正确；
+- 如果逻辑只看绝对 0 结果，就会错过这类“有噪声但仍然错误”的失败；
+- `financial` 恢复用例精确证明了这个问题，因为 `glass steagall act` 与 `watered stock` 这类 scope 内噪声文档可能幸存，但真正该被恢复的 title-hit 文档仍然是 `Knowledge_Base/waterglass/water glass.md`。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| alias/scope 回归覆盖必须显式且共享 | `KnowledgeWorkspaceConversationRegression.ts` 现在已经成为 Jest 与运行时 verifier 共同消费的确定性语料 owner。 | 已实现 |
+| 运行时验证不能只覆盖单个 `waterglass` 对照组 | `verify-knowledge-workspace-runtime.js` 现在默认跑共享语料，并支持 `--case` 选择。 | 已实现 |
+| scope recovery 必须处理 soft miss，而不只是 0 结果 miss | `KnowledgeLearningPlatform.ts` 现在通过 `shouldApplyPlannerScopeRecovery(...)` 在 planner title-hit 文档全部丢失时触发恢复。 | 已实现 |
+| 跨 scope 恢复必须能顶住真实 scope 内噪声 | `financial` 恢复用例故意加入 scope 内噪声文档，但仍要求系统 grounded 恢复到 `Knowledge_Base/waterglass/water glass.md`。 | 已实现 |
+
+本切片验证：
+
+- `npm.cmd exec -- jest src/learning/KnowledgeWorkspaceConversationRegression.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `npm run verify:knowledge-workspace:runtime`
+
 ## 2026-06-18 紧凑别名作用域检索回归
 
 本切片关闭的是截图驱动的运行时失败：当 `scope=waterglass` 且提问为 `什么是waterglass?` 时，系统会返回：
@@ -84,7 +127,7 @@
 | 要求 | 当前实现证据 | 进度判断 |
 |---|---|---|
 | 显式 scope 下的紧凑混合别名必须能召回证据 | `KnowledgeLearningPlatform.buildQueryBackendContext()` 现在会基于原始 query 与 planner-derived title-like variant 扩展 retrieval `queryTokens`，并显式传入 `queryVariants`。`queryBackend.ts` 会在 semantic token、anchor inference 与 title matching 中消费这些 variant。 | 已实现 |
-| 运行时验证必须覆盖真实回归，而不只是带空格控制组 | `scripts/verify-knowledge-workspace-runtime.js` 现在默认使用 `waterglass` 查询矩阵 `["什么是waterglass?", "什么是water glass"]`，`package.json` 也已暴露 `npm run verify:knowledge-workspace:runtime`。 | 已实现 |
+| 运行时验证必须覆盖真实回归，而不只是带空格控制组 | `scripts/verify-knowledge-workspace-runtime.js` 现在默认使用共享 alias/scope 语料，其中既有 `waterglass` 双查询，也有跨 scope 恢复用例，`package.json` 也已暴露 `npm run verify:knowledge-workspace:runtime`。 | 已实现 |
 | 修复方向必须留在 retrieval boundary，而不是漂到 prompt framework 采纳 | 本次修复是本地 TypeScript runtime normalization。DSPy/Guidance/Semantic Kernel/LangChain/LiteLLM 继续作为设计参考，而不是运行时依赖或补丁手段。 | 已确认 |
 
 本切片验证：
