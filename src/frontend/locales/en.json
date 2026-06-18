@@ -904,6 +904,7 @@
       "knowledgeRunHistoryCardTitle": "Knowledge Run History",
       "knowledgeRunHistoryCardSummary": "{returnedArtifacts} run artifact(s) returned.",
       "knowledgeRunHistoryRunsHeading": "Recent Runs",
+      "knowledgeRunHistoryGraphSignalLabel": "Graph signal",
       "knowledgeRunHistoryInspectRun": "Inspect Run",
       "knowledgeRunHistoryCompareLatest": "Compare Latest",
       "knowledgeRunCompareCardTitle": "Knowledge Run Comparison",
@@ -914,6 +915,9 @@
       "knowledgeRunCompareClaimDeltaLabel": "Claim delta",
       "knowledgeRunCompareWeakClaimDeltaLabel": "Weak-claim delta",
       "knowledgeRunCompareRemainingReviewDeltaLabel": "Remaining review delta",
+      "knowledgeRunComparePathDeltaLabel": "Path delta",
+      "knowledgeRunCompareTemporalWarningDeltaLabel": "Temporal-warning delta",
+      "knowledgeRunCompareGraphFallbackDeltaLabel": "Graph fallback delta",
       "knowledgeRunNone": "none",
       "flashcardBatch": {
         "cardTitle": "Review Card Batch",

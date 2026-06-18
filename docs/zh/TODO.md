@@ -21,7 +21,7 @@
 - [x] 当前用户可见回答区在本切片中已收缩：`answer` / `directAnswer` 现在保持 targeted，supporting block 继续通过次级 pane、trace、artifact 与 export 保留。
 - [~] 左侧 knowledge-hit 交互仍应视为部分完成：已经是 file-first，但还未完全收敛为 right-pane-first 阅读模型。
 - [x] retrieval 与 answer synthesis 之间的 graph-conditioned context-assembly layer 已经落地，当前 DAG 已成为一等 answer-planning substrate。
-- [ ] 决定这批新的 pane-local graph diagnostics 是否还要继续提升到 replay/export-oriented 运维 surface。
+- [ ] 决定这批新的 pane/history/compare graph diagnostics 是否还要继续提升到 replay/export-oriented 运维 surface。
 - [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。
 - [ ] 当本切片状态变化时，继续同步根目录与 `docs/en|zh` 的 README、TODO、task、implementation plan、walkthrough、Interface、dashboard 与 TEST_REPORT 文档。
 

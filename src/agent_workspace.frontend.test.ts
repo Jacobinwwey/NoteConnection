@@ -136,6 +136,7 @@ function createI18nStub() {
             'agentWorkspace.reply.knowledgeRunHistoryCardTitle': 'Knowledge Run History',
             'agentWorkspace.reply.knowledgeRunHistoryCardSummary': '{returnedArtifacts} run artifact(s) returned.',
             'agentWorkspace.reply.knowledgeRunHistoryRunsHeading': 'Recent Runs',
+            'agentWorkspace.reply.knowledgeRunHistoryGraphSignalLabel': 'Graph signal',
             'agentWorkspace.reply.knowledgeRunHistoryInspectRun': 'Inspect Run',
             'agentWorkspace.reply.knowledgeRunHistoryCompareLatest': 'Compare Latest',
             'agentWorkspace.reply.knowledgeRunCompareCardTitle': 'Knowledge Run Comparison',
@@ -146,6 +147,9 @@ function createI18nStub() {
             'agentWorkspace.reply.knowledgeRunCompareClaimDeltaLabel': 'Claim delta',
             'agentWorkspace.reply.knowledgeRunCompareWeakClaimDeltaLabel': 'Weak-claim delta',
             'agentWorkspace.reply.knowledgeRunCompareRemainingReviewDeltaLabel': 'Remaining review delta',
+            'agentWorkspace.reply.knowledgeRunComparePathDeltaLabel': 'Path delta',
+            'agentWorkspace.reply.knowledgeRunCompareTemporalWarningDeltaLabel': 'Temporal-warning delta',
+            'agentWorkspace.reply.knowledgeRunCompareGraphFallbackDeltaLabel': 'Graph fallback delta',
             'agentWorkspace.reply.knowledgeRunNone': 'none',
             'agentWorkspace.tutorAction.cardTitle': 'Tutor Action',
             'agentWorkspace.tutorAction.quizTitle': 'Quiz Prompt',
@@ -509,6 +513,7 @@ function createI18nStub() {
             'agentWorkspace.reply.knowledgeRunHistoryCardTitle': '知识运行历史',
             'agentWorkspace.reply.knowledgeRunHistoryCardSummary': '返回 {returnedArtifacts} 条运行 artifact。',
             'agentWorkspace.reply.knowledgeRunHistoryRunsHeading': '最近运行',
+            'agentWorkspace.reply.knowledgeRunHistoryGraphSignalLabel': '图信号',
             'agentWorkspace.reply.knowledgeRunHistoryInspectRun': '检查运行',
             'agentWorkspace.reply.knowledgeRunHistoryCompareLatest': '对比最新运行',
             'agentWorkspace.reply.knowledgeRunCompareCardTitle': '知识运行对比',
@@ -519,6 +524,9 @@ function createI18nStub() {
             'agentWorkspace.reply.knowledgeRunCompareClaimDeltaLabel': '主张差值',
             'agentWorkspace.reply.knowledgeRunCompareWeakClaimDeltaLabel': '弱主张差值',
             'agentWorkspace.reply.knowledgeRunCompareRemainingReviewDeltaLabel': '剩余复习差值',
+            'agentWorkspace.reply.knowledgeRunComparePathDeltaLabel': '路径差值',
+            'agentWorkspace.reply.knowledgeRunCompareTemporalWarningDeltaLabel': '时序告警差值',
+            'agentWorkspace.reply.knowledgeRunCompareGraphFallbackDeltaLabel': '图回退差值',
             'agentWorkspace.reply.knowledgeRunNone': '无',
             'agentWorkspace.tutorAction.cardTitle': '导师动作',
             'agentWorkspace.tutorAction.quizTitle': '测验提示',
@@ -1683,6 +1691,54 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                                 remainingReviewCardCount: 1,
                                             },
                                         },
+                                        graphContext: {
+                                            anchorAtomId: 'atom_blocks_1',
+                                            anchorTitle: 'Blocks Citation',
+                                            supportingAtomIds: ['atom_blocks_1_foundation'],
+                                            supportingTitles: ['Blocks Foundation'],
+                                            relationKinds: ['prerequisite'],
+                                            relationSummaries: [],
+                                            connectionPaths: [
+                                                {
+                                                    sourceAtomId: 'atom_blocks_1_foundation',
+                                                    sourceTitle: 'Blocks Foundation',
+                                                    targetAtomId: 'atom_blocks_1',
+                                                    targetTitle: 'Blocks Citation',
+                                                    pathAtomIds: ['atom_blocks_1_foundation', 'atom_blocks_1'],
+                                                    pathTitles: ['Blocks Foundation', 'Blocks Citation'],
+                                                    pathEdges: [],
+                                                    length: 1,
+                                                },
+                                            ],
+                                            predecessorWindow: [
+                                                {
+                                                    atomId: 'atom_blocks_1_foundation',
+                                                    title: 'Blocks Foundation',
+                                                    relationKind: 'prerequisite',
+                                                    confidence: 0.91,
+                                                },
+                                            ],
+                                            successorWindow: [],
+                                            evidenceSourceRefs: ['Knowledge_Base/optics/blocks.md:18'],
+                                            diagnostics: {
+                                                graphOpsAvailable: true,
+                                                usedFallback: false,
+                                                selectedAnchorReason: 'title_mention',
+                                                candidateCount: 1,
+                                                supportNodeCount: 1,
+                                                supportNodeLimit: 2,
+                                                pathDepthLimit: 6,
+                                                missingConnectionPathSourceAtomIds: [],
+                                                missingPredecessorAtomIds: [],
+                                                missingSuccessorAtomIds: [],
+                                            },
+                                            temporalValidity: {
+                                                checkedAt: '2026-04-13T00:01:00.000Z',
+                                                allPointsValid: true,
+                                                warningReasons: [],
+                                                invalidKnowledgePointTitles: [],
+                                            },
+                                        },
                                     },
                                 },
                                 {
@@ -1737,6 +1793,36 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                                 reviewCardCount: 1,
                                                 completedReviewCardCount: 0,
                                                 remainingReviewCardCount: 1,
+                                            },
+                                        },
+                                        graphContext: {
+                                            anchorAtomId: 'atom_blocks_2',
+                                            anchorTitle: 'Absorption',
+                                            supportingAtomIds: ['atom_blocks_2_aux'],
+                                            supportingTitles: ['Attenuation coupling'],
+                                            relationKinds: ['reference'],
+                                            relationSummaries: [],
+                                            connectionPaths: [],
+                                            predecessorWindow: [],
+                                            successorWindow: [],
+                                            evidenceSourceRefs: ['Knowledge_Base/optics/absorption.md:18'],
+                                            diagnostics: {
+                                                graphOpsAvailable: false,
+                                                usedFallback: true,
+                                                selectedAnchorReason: 'retrieval_score',
+                                                candidateCount: 2,
+                                                supportNodeCount: 1,
+                                                supportNodeLimit: 2,
+                                                pathDepthLimit: 6,
+                                                missingConnectionPathSourceAtomIds: ['atom_blocks_2_aux'],
+                                                missingPredecessorAtomIds: [],
+                                                missingSuccessorAtomIds: ['atom_blocks_2_future'],
+                                            },
+                                            temporalValidity: {
+                                                checkedAt: '2026-04-12T23:55:00.000Z',
+                                                allPointsValid: false,
+                                                warningReasons: ['temporal_edge_expired'],
+                                                invalidKnowledgePointTitles: ['Attenuation coupling'],
                                             },
                                         },
                                     },
@@ -1851,6 +1937,36 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
                                                 reviewCardCount: 1,
                                                 completedReviewCardCount: 0,
                                                 remainingReviewCardCount: 1,
+                                            },
+                                        },
+                                        graphContext: {
+                                            anchorAtomId: 'atom_blocks_2',
+                                            anchorTitle: 'Absorption',
+                                            supportingAtomIds: ['atom_blocks_2_aux'],
+                                            supportingTitles: ['Attenuation coupling'],
+                                            relationKinds: ['reference'],
+                                            relationSummaries: [],
+                                            connectionPaths: [],
+                                            predecessorWindow: [],
+                                            successorWindow: [],
+                                            evidenceSourceRefs: ['Knowledge_Base/optics/absorption.md:18'],
+                                            diagnostics: {
+                                                graphOpsAvailable: false,
+                                                usedFallback: true,
+                                                selectedAnchorReason: 'retrieval_score',
+                                                candidateCount: 2,
+                                                supportNodeCount: 1,
+                                                supportNodeLimit: 2,
+                                                pathDepthLimit: 6,
+                                                missingConnectionPathSourceAtomIds: ['atom_blocks_2_aux'],
+                                                missingPredecessorAtomIds: [],
+                                                missingSuccessorAtomIds: ['atom_blocks_2_future'],
+                                            },
+                                            temporalValidity: {
+                                                checkedAt: '2026-04-12T23:55:00.000Z',
+                                                allPointsValid: false,
+                                                warningReasons: ['temporal_edge_expired'],
+                                                invalidKnowledgePointTitles: ['Attenuation coupling'],
                                             },
                                         },
                                     },
@@ -5229,6 +5345,9 @@ describe('agent workspace learning-path integration', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_1');
         expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_2');
         expect(String(evidenceBody?.textContent || '')).toContain('Recent Runs');
+        expect(String(evidenceBody?.textContent || '')).toContain('Graph signal');
+        expect(String(evidenceBody?.textContent || '')).toContain('available, paths 1, warnings 0');
+        expect(String(evidenceBody?.textContent || '')).toContain('fallback, paths 0, warnings 1');
 
         const compareButton = evidenceBody?.querySelector('[data-agent-knowledge-run-history-compare="1"]') as HTMLButtonElement | null;
         expect(compareButton).not.toBeNull();
@@ -5241,6 +5360,9 @@ describe('agent workspace learning-path integration', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('knowledge_run_blocks_1');
         expect(String(evidenceBody?.textContent || '')).toContain('Quality delta');
         expect(String(evidenceBody?.textContent || '')).toContain('Weak-claim delta');
+        expect(String(evidenceBody?.textContent || '')).toContain('Path delta');
+        expect(String(evidenceBody?.textContent || '')).toContain('Temporal-warning delta');
+        expect(String(evidenceBody?.textContent || '')).toContain('Graph fallback delta');
         expect(String(evidenceBody?.textContent || '')).toContain('+1');
 
         await (window as any).NoteConnectionAgentWorkspace.executeCapability({

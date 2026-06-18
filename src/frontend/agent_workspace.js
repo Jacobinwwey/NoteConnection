@@ -3344,6 +3344,39 @@
         };
     }
 
+    function summarizeKnowledgeRunGraphSignal(payload) {
+        const artifactPayload = payload && typeof payload === 'object'
+            ? payload
+            : {};
+        const graphContext = artifactPayload.graphContext && typeof artifactPayload.graphContext === 'object'
+            ? artifactPayload.graphContext
+            : {};
+        const graphDiagnostics = graphContext.diagnostics && typeof graphContext.diagnostics === 'object'
+            ? graphContext.diagnostics
+            : {};
+        const connectionPathCount = Array.isArray(graphContext.connectionPaths)
+            ? graphContext.connectionPaths.filter((connectionPath) => connectionPath && typeof connectionPath === 'object').length
+            : 0;
+        const temporalWarningCount = graphContext.temporalValidity && Array.isArray(graphContext.temporalValidity.warningReasons)
+            ? graphContext.temporalValidity.warningReasons.map((value) => String(value || '').trim()).filter(Boolean).length
+            : 0;
+        const graphOpsAvailable = graphDiagnostics.graphOpsAvailable === true;
+        const usedFallback = graphDiagnostics.usedFallback === true;
+        const graphSignalSummary = usedFallback
+            ? `fallback, paths ${connectionPathCount}, warnings ${temporalWarningCount}`
+            : graphOpsAvailable
+                ? `available, paths ${connectionPathCount}, warnings ${temporalWarningCount}`
+                : `unavailable, paths ${connectionPathCount}, warnings ${temporalWarningCount}`;
+        return {
+            graphOpsAvailable,
+            usedFallback,
+            connectionPathCount,
+            temporalWarningCount,
+            selectedAnchorReason: String(graphDiagnostics.selectedAnchorReason || '').trim(),
+            graphSignalSummary,
+        };
+    }
+
     function buildKnowledgeRunHistoryCardPayload(result) {
         const summary = result && typeof result === 'object'
             ? result
@@ -3372,6 +3405,7 @@
                 const scope = knowledgeRun.scope && typeof knowledgeRun.scope === 'object'
                     ? knowledgeRun.scope
                     : {};
+                const graphSignal = summarizeKnowledgeRunGraphSignal(payload);
                 return {
                     artifactId: String(artifact.artifactId || '').trim(),
                     workspaceId: String(artifact.workspaceId || '').trim(),
@@ -3388,6 +3422,12 @@
                     weakClaimCount: Number.isFinite(Number(runSummary.weakClaimCount)) ? Number(runSummary.weakClaimCount) : 0,
                     reviewCardCount: Number.isFinite(Number(runSummary.reviewCardCount)) ? Number(runSummary.reviewCardCount) : 0,
                     remainingReviewCardCount: Number.isFinite(Number(runSummary.remainingReviewCardCount)) ? Number(runSummary.remainingReviewCardCount) : 0,
+                    graphOpsAvailable: graphSignal.graphOpsAvailable,
+                    usedFallback: graphSignal.usedFallback,
+                    connectionPathCount: graphSignal.connectionPathCount,
+                    temporalWarningCount: graphSignal.temporalWarningCount,
+                    selectedAnchorReason: graphSignal.selectedAnchorReason,
+                    graphSignalSummary: graphSignal.graphSignalSummary,
                 };
             }),
         };

@@ -15,14 +15,14 @@
 - 当前切片已经有一等 graph-conditioned context assembler：`src/learning/graphContextAssembler.ts` 会在回答合成前选择 anchor、重排 support node、保留显式 `connectionPaths`，并补有界 predecessor/successor window 与 graph diagnostics。
 - 当前持久化会在自动保存重建 snapshot 时保留仍然有效的 store 侧 relation/temporal edges，避免 read-side query/conversation 流程在装配 `connectionPaths` 前丢掉外部增强 DAG 结构。
 - 当前 retrieval 路径已经使用有界 graph-aware ranking signal，而不再主要依赖 relation degree；剩余工作转为更广的真实回归校准。
-- 当前运维可见诊断已经有两个具体面：右侧 graph-focus 的路径回退诊断，以及 durable `knowledge_run` 卡片中的 graph context / graph diagnostics 检查面。
+- 当前运维可见诊断已经有三个具体面：右侧 graph-focus 的路径回退诊断、durable `knowledge_run` 卡片中的 graph context / graph diagnostics 检查面，以及 knowledge-run history/compare 流程中的紧凑 graph telemetry。
 - prompt-framework 研究应指导 contract 与 evaluation，不应把 Python framework 拉入 app runtime。
 
 #### 下一步执行顺序
 
 1. 保持新的 assembler surface additive，并继续保证向前兼容。
 2. 保持 graph-aware ranking 有界，并用回归用例持续校准，避免回到 degree-driven hub 排序。
-3. 决定这批新的 pane-local 诊断是继续保留在前端 / 运维检查面，还是还要继续提升到 replay/export-oriented surface。
+3. 决定这批新的 pane/history/compare 诊断是继续保留在前端 / 运维检查面，还是还要继续提升到 replay/export-oriented surface。
 4. 将 graph/debug/evidence 细节留在 evidence/export surface，而不是公开回答区。
 5. 继续校准新的图专项回答质量门禁，并补更多回归证据与运维证据。
 6. 只有当新模块拥有真实决策或不变量时，才继续做 owner reduction。

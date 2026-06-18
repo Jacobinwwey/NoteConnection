@@ -14,14 +14,14 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 - The current slice now has a first-class graph-conditioned context assembler in `src/learning/graphContextAssembler.ts`; it selects the anchor, reorders support nodes, preserves explicit `connectionPaths`, and adds bounded predecessor/successor windows plus graph diagnostics before answer synthesis.
 - Persistence now preserves still-valid store-side relation/temporal edges during auto-save snapshot rebuilds, which prevents read-side query/conversation flows from discarding externally enriched DAG structure before `connectionPaths` are assembled.
 - The retrieval path now uses bounded graph-aware ranking signals instead of leaning mainly on relation degree, but it still needs broader calibration against real regressions.
-- Operator-facing diagnostics now exist in two concrete surfaces: graph-focus path-fallback diagnostics in the right pane, and graph-context plus graph-diagnostics inspection inside durable `knowledge_run` cards.
+- Operator-facing diagnostics now exist in three concrete surfaces: graph-focus path-fallback diagnostics in the right pane, graph-context plus graph-diagnostics inspection inside durable `knowledge_run` cards, and compact graph telemetry inside knowledge-run history/compare review flows.
 - Prompt-framework research should guide contracts and evaluation, not pull Python frameworks into the app runtime.
 
 #### Next execution order
 
 1. Keep the new assembler surface additive and backward-compatible.
 2. Keep graph-aware ranking bounded and calibrate it against regression cases instead of drifting back toward degree-driven hubs.
-3. Decide whether the new pane-local diagnostics should remain frontend/operator inspection data or also be promoted into replay/export-oriented surfaces.
+3. Decide whether the current pane/history/compare diagnostics should remain frontend/operator inspection data or also be promoted into replay/export-oriented surfaces.
 4. Keep graph/debug/evidence detail in evidence/export surfaces, not in the public answer.
 5. Calibrate the new graph-specific answer quality gates against more regression cases and operator evidence.
 6. Continue owner reduction only when the new module owns real decisions or invariants.

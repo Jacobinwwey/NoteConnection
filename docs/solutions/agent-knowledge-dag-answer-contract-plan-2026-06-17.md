@@ -120,7 +120,7 @@ This order matters. If graph expansion happens before scope normalization, it ca
 | Hide developer-heavy evidence and purple-box-style support material for now | Evidence pane and runtime/export traces carry supporting context. | Direction is correct | Any new graph details must default to secondary surfaces unless explicitly requested. |
 | Clicking a file hit should open right-side content and highlight matched text | `workspace_panes.js` routes file entries through graph focus, retries source reads across payload + matched-span candidate paths, renders through the shared markdown runtime, highlights matched spans, and records requested/candidate/attempted/resolved-path diagnostics. | Implemented broadened P4 slice | Remaining gap is whether pane-local diagnostics should also be promoted into replay/export-oriented operator surfaces. |
 | Use this project's existing DAG, not a generic graph database abstraction | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, `findPath`, path/session logic, and `Graph.ts` DAG helpers already exist. | Confirmed | The prior "graph database + prompt framework" framing was too generic. |
-| Let LLM inspect high-quality graph structure | 2026-06-17 code now uses `graphContextAssembler.ts` to choose the anchor, reorder support nodes, preserve explicit store path chains, add predecessor/successor windows, and expose graph diagnostics through trace/export/evidence pane. Durable `knowledge_run` artifacts now also retain `graphContext`, and operator inspection cards surface graph context plus graph diagnostics. | Implemented P1/P4/P5 foundation | Remaining work is calibration breadth and deciding whether pane-local diagnostics should also become replay/export-oriented operator data. |
+| Let LLM inspect high-quality graph structure | 2026-06-17 code now uses `graphContextAssembler.ts` to choose the anchor, reorder support nodes, preserve explicit store path chains, add predecessor/successor windows, and expose graph diagnostics through trace/export/evidence pane. Durable `knowledge_run` artifacts now also retain `graphContext`, and operator inspection/history/compare cards surface graph context plus graph diagnostics. | Implemented P1/P4/P5 foundation | Remaining work is calibration breadth and deciding whether pane/history/compare diagnostics should also become replay/export-oriented operator data. |
 | Preserve compatibility | `assistantMessage` remains valid; new `graphContext.connectionPaths` is optional and additive; snapshot merging keeps existing relation/temporal edges only when both endpoints remain active. | Preserved | Keep optional fields optional in all clients and exports. Add edge ownership metadata before treating missing persisted edges as intentional deletes. |
 
 ### Open-Source Library Review Result
@@ -255,8 +255,9 @@ The current code now uses those diagnostics in two operator-facing places withou
 - graph focus retries candidate paths collected from both payload and matched spans before falling back,
 - the graph-focus pane renders diagnostics when fallback or path-fallback behavior occurs,
 - durable `knowledge_run` artifacts retain `graphContext`, and the knowledge-run inspection card shows graph context plus graph diagnostics for operator review.
+- knowledge-run history now shows compact graph telemetry per run, and run-to-run comparison cards expose path / temporal-warning / graph-fallback deltas for calibration review.
 
-The best fix still remains payload/path normalization plus highlight diagnostics, not a second rendering stack. Remaining gap: decide whether pane-local diagnostics should later feed broader replay/export-oriented operator surfaces.
+The best fix still remains payload/path normalization plus highlight diagnostics, not a second rendering stack. Remaining gap: decide whether pane/history/compare diagnostics should later feed broader replay/export-oriented operator surfaces.
 
 #### P5: Add graph answer quality gates
 

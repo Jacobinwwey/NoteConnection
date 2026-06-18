@@ -6,7 +6,7 @@
 - [x] 开源库研究边界已明确：借鉴 DSPy / Guidance / Semantic Kernel / LangChain Core / LiteLLM 的模式，但不把这些框架加入 app runtime。
 - [x] 当前 DAG-aware answer planning 已经包含一等 graph-conditioned context assembly layer：`src/learning/graphContextAssembler.ts`。
 - [x] 右侧原文/高亮行为现在已经支持 candidate source path 重试，记录 requested/candidate/attempted/resolved path 诊断，并在 graph-focus 与 durable knowledge-run 检查面中暴露这些诊断。
-- [ ] 下一活跃任务：在新的 assembler + graph-aware ranking 边界之上继续校准图专项质量门禁，并决定这些 pane-local 运维诊断是否还要提升到 replay/export surface。
+- [ ] 下一活跃任务：在新的 assembler + graph-aware ranking 边界之上继续校准图专项质量门禁，并决定当前 pane/history/compare 运维诊断是否还要提升到 replay/export surface。
 - [ ] 继续保持公开回答区收缩，把 graph evidence、temporal details 与 developer trace 路由到次级表面。
 
 ### 当前验收目标

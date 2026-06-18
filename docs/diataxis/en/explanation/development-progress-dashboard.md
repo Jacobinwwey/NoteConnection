@@ -17,6 +17,7 @@ Implemented or documented in this slice:
 - `conversationComposer` can use those explicit paths in structured answer sections,
 - `workspace_panes.js` renders connection paths in the evidence pane,
 - `knowledge_run` workflow artifacts now also retain `graphContext`, and the knowledge-run inspection card exposes graph context plus graph diagnostics for operator review,
+- recent-run history and run-to-run comparison cards now also surface compact graph telemetry, so operator review is no longer limited to single-run inspection,
 - `workspace_panes.js` now retries graph-focus source rendering against matched-span candidate paths, records requested/candidate/attempted/resolved source-path diagnostics, and exposes those diagnostics inside the right pane when fallback or path fallback occurs,
 - `WorkspaceExportBundle` preserves connection paths in exported conversation trace graph context,
 - focused tests cover graph-path composition, platform enrichment, frontend evidence rendering, locale labels, and export serialization.
@@ -32,12 +33,12 @@ Code-vs-plan reconciliation:
 | Let the LLM inspect graph structure | A bounded `graphContextAssembler` now selects the anchor, reorders support nodes, attaches explicit paths, and adds predecessor/successor windows plus diagnostics before answer synthesis. | Implemented P1 foundation |
 | Retrieval uses graph structure instead of shallow degree bonus | `queryBackend.ts` now applies anchor distance, directed path confidence, prerequisite depth, temporal invalidity penalties, and relation-intent bonuses in `local_hybrid` / `local_vector`. | Implemented P2 foundation |
 | Graph-specific answer quality gates | `knowledgeRun.quality.gates` now checks prerequisite ordering, comparison branches, temporal warnings, graph-op fallback, and bounded graph budgeting. | Implemented P5 foundation |
-| Full DAG-native answer planning | The assembler, graph-aware ranking, graph-quality gates, graph-focus diagnostics, and knowledge-run graph inspection surfaces are real, but the model still needs calibration breadth and longer-run operator evidence. | Calibration pending |
+| Full DAG-native answer planning | The assembler, graph-aware ranking, graph-quality gates, graph-focus diagnostics, single-run inspection, history, and run-to-run comparison surfaces are real, but the model still needs calibration breadth and longer-run operator evidence. | Calibration pending |
 
 Immediate next direction:
 
 1. Calibrate the new graph-aware ranking and graph-quality-gate model against more real-world regressions and operator evidence.
-2. Decide whether pane-local graph-focus diagnostics should also be promoted into replay/export/operator-report surfaces, or remain frontend-only inspection data.
+2. Decide whether the current frontend/operator telemetry should also be promoted into replay/export/operator-report surfaces, or remain pane/history/compare inspection data.
 3. Keep the public answer focused while graph/evidence/developer detail remains inspectable through evidence panes, traces, artifacts, and export bundles.
 
 ## 2026-06-10 Knowledge Workspace Durable Artifact and DAG Alignment

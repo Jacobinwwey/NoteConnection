@@ -1614,6 +1614,7 @@
                     <div class="agent-chat-card-list-meta">${escapeHtml(String(run.artifactTitle || '').trim() || noneLabel)}</div>
                     <div class="agent-chat-card-list-meta">${escapeHtml(String(run.scopeLabel || '').trim() || noneLabel)}</div>
                     <div class="agent-chat-card-list-meta">${escapeHtml(`claims ${String(run.claimCount == null ? 0 : run.claimCount)}, quality ${String(run.qualityStatus || '').trim() || noneLabel}${Number.isFinite(Number(run.qualityScore)) ? `/${String(run.qualityScore)}` : ''}`)}</div>
+                    <div class="agent-chat-card-list-meta">${escapeHtml(`${translate('agentWorkspace.reply.knowledgeRunHistoryGraphSignalLabel', 'Graph signal')}: ${String(run.graphSignalSummary || '').trim() || noneLabel}`)}</div>
                     ${String(run.artifactId || '').trim() ? `<div class="agent-chat-card-actions"><button type="button" data-agent-knowledge-run-history-inspect="${index}">${escapeHtml(translate('agentWorkspace.reply.knowledgeRunHistoryInspectRun', 'Inspect Run'))}</button>${latestRun && index > 0 ? `<button type="button" data-agent-knowledge-run-history-compare="${index}">${escapeHtml(translate('agentWorkspace.reply.knowledgeRunHistoryCompareLatest', 'Compare Latest'))}</button>` : ''}</div>` : ''}
                 </li>
             `).join('')
@@ -1692,6 +1693,9 @@
             latestClaimCount: Number.isFinite(Number(safeLatest.claimCount)) ? Number(safeLatest.claimCount) : 0,
             latestWeakClaimCount: Number.isFinite(Number(safeLatest.weakClaimCount)) ? Number(safeLatest.weakClaimCount) : 0,
             latestRemainingReviewCardCount: Number.isFinite(Number(safeLatest.remainingReviewCardCount)) ? Number(safeLatest.remainingReviewCardCount) : 0,
+            latestConnectionPathCount: Number.isFinite(Number(safeLatest.connectionPathCount)) ? Number(safeLatest.connectionPathCount) : 0,
+            latestTemporalWarningCount: Number.isFinite(Number(safeLatest.temporalWarningCount)) ? Number(safeLatest.temporalWarningCount) : 0,
+            latestUsedFallback: safeLatest.usedFallback === true,
             comparedRunId: String(safeCompared.runId || '').trim(),
             comparedArtifactTitle: String(safeCompared.artifactTitle || '').trim(),
             comparedQualityStatus: String(safeCompared.qualityStatus || '').trim(),
@@ -1699,6 +1703,9 @@
             comparedClaimCount: Number.isFinite(Number(safeCompared.claimCount)) ? Number(safeCompared.claimCount) : 0,
             comparedWeakClaimCount: Number.isFinite(Number(safeCompared.weakClaimCount)) ? Number(safeCompared.weakClaimCount) : 0,
             comparedRemainingReviewCardCount: Number.isFinite(Number(safeCompared.remainingReviewCardCount)) ? Number(safeCompared.remainingReviewCardCount) : 0,
+            comparedConnectionPathCount: Number.isFinite(Number(safeCompared.connectionPathCount)) ? Number(safeCompared.connectionPathCount) : 0,
+            comparedTemporalWarningCount: Number.isFinite(Number(safeCompared.temporalWarningCount)) ? Number(safeCompared.temporalWarningCount) : 0,
+            comparedUsedFallback: safeCompared.usedFallback === true,
             qualityScoreDelta: latestQualityScore != null && comparedQualityScore != null
                 ? Number((comparedQualityScore - latestQualityScore).toFixed(2))
                 : null,
@@ -1708,6 +1715,12 @@
                 - (Number.isFinite(Number(safeLatest.weakClaimCount)) ? Number(safeLatest.weakClaimCount) : 0),
             remainingReviewCardCountDelta: (Number.isFinite(Number(safeCompared.remainingReviewCardCount)) ? Number(safeCompared.remainingReviewCardCount) : 0)
                 - (Number.isFinite(Number(safeLatest.remainingReviewCardCount)) ? Number(safeLatest.remainingReviewCardCount) : 0),
+            connectionPathCountDelta: (Number.isFinite(Number(safeCompared.connectionPathCount)) ? Number(safeCompared.connectionPathCount) : 0)
+                - (Number.isFinite(Number(safeLatest.connectionPathCount)) ? Number(safeLatest.connectionPathCount) : 0),
+            temporalWarningCountDelta: (Number.isFinite(Number(safeCompared.temporalWarningCount)) ? Number(safeCompared.temporalWarningCount) : 0)
+                - (Number.isFinite(Number(safeLatest.temporalWarningCount)) ? Number(safeLatest.temporalWarningCount) : 0),
+            graphFallbackDelta: (safeCompared.usedFallback === true ? 1 : 0)
+                - (safeLatest.usedFallback === true ? 1 : 0),
         };
     }
 
@@ -1753,6 +1766,18 @@
             {
                 title: translate('agentWorkspace.reply.knowledgeRunCompareRemainingReviewDeltaLabel', 'Remaining review delta'),
                 value: formatKnowledgeRunCompareDelta(summary.remainingReviewCardCountDelta),
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunComparePathDeltaLabel', 'Path delta'),
+                value: formatKnowledgeRunCompareDelta(summary.connectionPathCountDelta),
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareTemporalWarningDeltaLabel', 'Temporal-warning delta'),
+                value: formatKnowledgeRunCompareDelta(summary.temporalWarningCountDelta),
+            },
+            {
+                title: translate('agentWorkspace.reply.knowledgeRunCompareGraphFallbackDeltaLabel', 'Graph fallback delta'),
+                value: formatKnowledgeRunCompareDelta(summary.graphFallbackDelta),
             },
         ];
         const metricsHtml = metrics.map((metric) => `
