@@ -65,6 +65,48 @@ Verification for this slice:
 - `npm.cmd exec -- tsc --noEmit`
 - `npm run verify:knowledge-workspace:runtime`
 
+## 2026-06-19 Structured Fact Contradiction Gate
+
+The next robustness gap was narrower than release review itself but still material: lexical topic overlap can say that a draft is "about the right thing" while still missing a concrete contradiction in the facts being stated.
+
+That gap is now partially closed in `src/learning/answerReleaseReview.ts` by a second deterministic reviewer layer: `claim_structured_consistency`.
+
+What is now true in code:
+
+- the reviewer now extracts high-confidence structured facts from the draft answer and grounded support:
+  - numeric values with supported units such as `%`, `kg/m3`, `GPa`, `kPa`, `km/h`, and similar technical units,
+  - year claims when the local context actually looks date-like rather than treating every 4-digit number as a year.
+- structured-fact comparison is intentionally conservative:
+  - if no comparable support fact exists, the gate does not invent a contradiction,
+  - if support contains multiple values under the same anchor/unit family, any matching supported value is enough to avoid a false positive.
+- the new gate is additive:
+  - `src/learning/types.ts` now includes `claim_structured_consistency` in `AnswerReleaseGateId`,
+  - operator surfaces and export telemetry keep working because they already consume gate IDs generically.
+- grounded drafts are now revised when structured facts conflict even though lexical alignment still passes.
+- grounded revisions are also slightly cleaner now: the reviewer no longer prefixes the title again when the support sentence already starts with an article + title phrase.
+
+Why this matters:
+
+- lexical alignment catches topic drift,
+- it does not reliably catch `same subject, wrong number/year`,
+- that means a reviewer that stops at lexical overlap can still release a materially wrong answer.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Contradiction detection must go beyond lexical overlap without becoming speculative | `answerReleaseReview.ts` now evaluates structured numeric/year consistency only when there is a high-confidence comparable support fact. | Implemented baseline |
+| Numeric contradictions must trigger revision even when the topic still matches | `claim_structured_consistency` now fails and revises drafts such as `875 kg/m3` against supported `999.8 kg/m3`. | Implemented |
+| Year contradictions must also be caught deterministically | The reviewer now revises date-like year conflicts such as `1935` vs grounded `1933`. | Implemented |
+| Multi-value support must not create avoidable false positives | `answerReleaseReview.test.ts` now pins a case where support contains both `2500 kg/m3` and `999.8 kg/m3`, and the correct supported value still releases cleanly. | Implemented |
+
+Verification for this slice:
+
+- `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/export/WorkspaceExportBundle.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/learning/KnowledgeWorkspaceConversationRegression.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
 ## 2026-06-18 Shared Alias/Scope Regression Corpus and Soft-Miss Recovery
 
 The screenshot-backed `waterglass` failure is no longer treated as a one-off manual check. The project now has a shared deterministic regression corpus at `src/learning/KnowledgeWorkspaceConversationRegression.ts`, and the first corpus matters for two reasons:

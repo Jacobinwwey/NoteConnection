@@ -77,6 +77,25 @@ function makeKnowledgePoint(overrides: Partial<AgentConversationKnowledgePoint> 
     };
 }
 
+function makeGraphContext(): AgentConversationGraphContext {
+    return {
+        anchorAtomId: 'atom_water_glass',
+        anchorTitle: 'Water Glass',
+        supportingAtomIds: [],
+        supportingTitles: [],
+        relationKinds: [],
+        relationSummaries: [],
+        temporalValidity: {
+            checkedAt: '2026-06-18T00:00:00.000Z',
+            allPointsValid: true,
+            warningReasons: [],
+            invalidKnowledgePointTitles: [],
+            edgeKinds: [],
+            details: [],
+        },
+    };
+}
+
 describe('answerReleaseReview', () => {
     test('downgrades unsupported debug-style answers into concise abstentions', () => {
         const review = reviewAnswerRelease({
@@ -107,29 +126,13 @@ describe('answerReleaseReview', () => {
     });
 
     test('revises grounded answers when draft text leaks support framing', () => {
-        const graphContext: AgentConversationGraphContext = {
-            anchorAtomId: 'atom_water_glass',
-            anchorTitle: 'Water Glass',
-            supportingAtomIds: [],
-            supportingTitles: [],
-            relationKinds: [],
-            relationSummaries: [],
-            temporalValidity: {
-                checkedAt: '2026-06-18T00:00:00.000Z',
-                allPointsValid: true,
-                warningReasons: [],
-                invalidKnowledgePointTitles: [],
-                edgeKinds: [],
-                details: [],
-            },
-        };
         const review = reviewAnswerRelease({
             message: 'what is water glass',
             draftAnswer: 'Grounded by 1 citation. Water glass is a transparent container filled with water.',
             knowledgePoints: [makeKnowledgePoint()],
             citations: [makeKnowledgePoint().citation as KnowledgeCitation],
             usedScope: scopedWaterglass,
-            graphContext,
+            graphContext: makeGraphContext(),
             reviewedAt: '2026-06-18T09:05:00.000Z',
         });
 
@@ -146,22 +149,7 @@ describe('answerReleaseReview', () => {
             knowledgePoints: [makeKnowledgePoint()],
             citations: [makeKnowledgePoint().citation as KnowledgeCitation],
             usedScope: scopedWaterglass,
-            graphContext: {
-                anchorAtomId: 'atom_water_glass',
-                anchorTitle: 'Water Glass',
-                supportingAtomIds: [],
-                supportingTitles: [],
-                relationKinds: [],
-                relationSummaries: [],
-                temporalValidity: {
-                    checkedAt: '2026-06-18T00:00:00.000Z',
-                    allPointsValid: true,
-                    warningReasons: [],
-                    invalidKnowledgePointTitles: [],
-                    edgeKinds: [],
-                    details: [],
-                },
-            },
+            graphContext: makeGraphContext(),
             reviewedAt: '2026-06-18T09:10:00.000Z',
         });
 
@@ -174,5 +162,116 @@ describe('answerReleaseReview', () => {
                 passed: false,
             }),
         ]));
+    });
+
+    test('revises grounded answers when structured numeric facts conflict with support', () => {
+        const densityPoint = makeKnowledgePoint({
+            title: 'Water Density',
+            summary: 'Water density is 999.8 kg/m3 at STP.',
+            evidenceSnippet: 'Water density is 999.8 kg/m3 at STP.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Density',
+                snippet: 'Water density is 999.8 kg/m3 at STP.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Density',
+                    snippet: 'Water density is 999.8 kg/m3 at STP.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is the density of water',
+            draftAnswer: 'Water density is 875 kg/m3 at STP.',
+            knowledgePoints: [densityPoint],
+            citations: [densityPoint.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T00:10:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_structured_consistency');
+        expect(review.publicAnswer).toBe('Water density is 999.8 kg/m3 at STP.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_structured_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('keeps grounded answers when one of several supported structured values matches', () => {
+        const tablePoint = makeKnowledgePoint({
+            title: 'Water Density Table',
+            summary: 'Reference values: glass density 2500 kg/m3; water density 999.8 kg/m3.',
+            evidenceSnippet: 'Reference values: glass density 2500 kg/m3; water density 999.8 kg/m3.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Density Table',
+                snippet: 'Reference values: glass density 2500 kg/m3; water density 999.8 kg/m3.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Water Density Table',
+                    snippet: 'Reference values: glass density 2500 kg/m3; water density 999.8 kg/m3.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is the density of water',
+            draftAnswer: 'Water density is 999.8 kg/m3.',
+            knowledgePoints: [tablePoint],
+            citations: [tablePoint.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T00:20:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_structured_consistency');
+        expect(review.publicAnswer).toBe('Water density is 999.8 kg/m3.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_structured_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when year claims conflict with support', () => {
+        const yearPoint = makeKnowledgePoint({
+            title: 'Glass-Steagall Act',
+            summary: 'The Glass-Steagall Act was enacted in 1933.',
+            evidenceSnippet: 'The Glass-Steagall Act was enacted in 1933.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Glass-Steagall Act',
+                snippet: 'The Glass-Steagall Act was enacted in 1933.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Glass-Steagall Act',
+                    snippet: 'The Glass-Steagall Act was enacted in 1933.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'when was the Glass-Steagall Act enacted',
+            draftAnswer: 'The Glass-Steagall Act was enacted in 1935.',
+            knowledgePoints: [yearPoint],
+            citations: [yearPoint.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T00:30:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_structured_consistency');
+        expect(review.publicAnswer).toBe('The Glass-Steagall Act was enacted in 1933.');
     });
 });

@@ -16,17 +16,20 @@
 - [x] 共享的 alias/scope 回归语料现在已经落在 `src/learning/KnowledgeWorkspaceConversationRegression.ts`，同时覆盖截图派生的 `waterglass` compact/spaced 用例与 `financial` 下的跨 scope 恢复用例。
 - [x] `scripts/verify-knowledge-workspace-runtime.js` 与 `src/learning/KnowledgeWorkspaceConversationRegression.test.ts` 现在已经复用同一份确定性语料，运行时门禁与 Jest 不再各自维护一套 alias/scope 预期。
 - [x] 这批语料还暴露并推动修复了 `KnowledgeLearningPlatform.ts` 中的 soft-miss 恢复缺陷：planner scope recovery 不再只在绝对 0 结果时触发，而是在“仍有 scope 内噪声候选但没有任何 planner title-hit 文档幸存”时也会触发恢复。
-- [ ] 下一活跃任务：基于这份显式 alias/scope 回归语料，把当前 lexical grounding check 继续扩展到更深的 claim/citation/evidence 矛盾检测，同时控制 false positive。
+- [x] reviewer 现在还会执行 `claim_structured_consistency`：即使 lexical topic overlap 仍然看起来合理，只要 grounded draft 在数值或年份这类结构化事实层面与证据冲突，也会被改写。
+- [x] `src/learning/answerReleaseReview.test.ts` 现在已经覆盖确定性的 structured-fact contradiction 用例：数值冲突、年份冲突，以及“支撑里有多个值但其中一个就是正确值”的防误报用例。
+- [ ] 下一活跃任务：把当前 lexical + structured-fact 检查继续扩展到更广的 claim/citation/evidence 矛盾检测，同时控制 false positive。
 - [ ] 下一活跃任务：继续扩充回归语料，覆盖更多真实的跨 scope 与同义别名失败场景，同时保持公开回答区收缩。
 
 ### 当前验收目标
 
 1. 主回答区不得再出现 `No scoped knowledge points matched` 这类内部失败字符串。
 2. reviewer 决策必须保持 additive，并继续对现有 client 向前兼容。
-3. 运维检查面必须能看到 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
-4. 导出的 `knowledgeRunReports` 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时干净省略该字段。
-5. 导出的运行时状态还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计遥测，以及同一路径派生出的 review-trend / gate-aging / compare-ready drilldown 摘要，并且 `knowledge_run` 历史卡片与 compare 卡片要消费同一套 reviewer 遥测。
-6. 运行时验证现在必须通过共享的 alias/scope 回归语料，包括截图派生的 `waterglass` compact/spaced 双查询以及 `financial` 下的跨 scope 恢复双查询，并确认 `answerReleaseReview.publicAnswer === result.answer`。
+3. 对于 grounded draft 中与证据冲突的结构化数值 / 年份事实，系统必须在 release 前改写，而不能仅因 lexical overlap 还在就放行。
+4. 运维检查面必须能看到 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。
+5. 导出的 `knowledgeRunReports` 必须能为 `release` / `revise` 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时干净省略该字段。
+6. 导出的运行时状态还必须在 `runtime.knowledgeRunAnswerReleaseAuditSummary` 中保留 additive 的聚合 reviewer 审计遥测，以及同一路径派生出的 review-trend / gate-aging / compare-ready drilldown 摘要，并且 `knowledge_run` 历史卡片与 compare 卡片要消费同一套 reviewer 遥测。
+7. 运行时验证现在必须通过共享的 alias/scope 回归语料，包括截图派生的 `waterglass` compact/spaced 双查询以及 `financial` 下的跨 scope 恢复双查询，并确认 `answerReleaseReview.publicAnswer === result.answer`。
 
 ## 2026-06-17 Agent Knowledge DAG 活跃任务同步
 

@@ -3,7 +3,7 @@ module: architecture
 tags: [agent-workspace, final-reply-review, dag, answer-release, robustness, compatibility]
 problem_type: implementation-plan
 created: 2026-06-18
-updated: 2026-06-18
+updated: 2026-06-19
 status: in_progress
 version: 2026.06.18
 ---
@@ -121,6 +121,7 @@ The first fix restores evidence. The second fix restores robustness.
 | Public answer must not leak backend diagnostics | New `src/learning/answerReleaseReview.ts` detects and blocks diagnostic leakage before release. | Implemented |
 | Empty-result answers must abstain cleanly instead of exposing runtime detail | Reviewer now downgrades unsupported drafts into concise abstentions. | Implemented |
 | Grounded drafts must stay aligned with their cited/knowledge-point support | Reviewer now enforces `claim_grounding_alignment` and revises drafts when lexical evidence overlap shows claim drift. | Implemented |
+| Grounded drafts must also be checked for deterministic structured fact conflicts | Reviewer now enforces `claim_structured_consistency`, revising grounded drafts when numeric or year facts conflict with support even though topical lexical overlap still passes. | Implemented baseline |
 | Final review state must be inspectable by developers | `answerReleaseReview` is now stored additively on `AgentConversationResponse`, `AgentConversationTrace`, and `KnowledgeRun`. | Implemented |
 | Operator surfaces must expose reviewer state without widening the main answer area | `src/frontend/agent_workspace.js` sanitizes `answerReleaseReview`, and `src/frontend/workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
 | Reviewer telemetry must survive export/replay surfaces | `src/export/WorkspaceExportBundle.ts` now emits compact `runtime.knowledgeRunReports[*].answerReleaseReview` summaries for durable replay and operator audit. | Implemented |
@@ -248,6 +249,31 @@ Attached additively to:
 - This is the correct invariant owner because the recovery decision belongs to retrieval-contract semantics, not to prompt wording, frontend presentation, or release-review heuristics.
 - The result is that cross-scope title recovery now works even when `financial`-scope noise survives locally, while the public answer still remains governed by the later deterministic release-review layer.
 
+#### Phase-8 structured contradiction hardening landed on top of the shared-corpus slice
+
+- `src/learning/answerReleaseReview.ts` now adds a second contradiction-oriented reviewer gate: `claim_structured_consistency`.
+- This gate deliberately does less than a generic verifier model:
+  - it does not try to infer arbitrary semantic truth,
+  - it only evaluates high-confidence comparable structured facts.
+- The first supported contradiction family is intentionally narrow:
+  - numeric facts with explicit technical units such as `%`, `kg/m3`, `GPa`, `kPa`, and similar stable units,
+  - year claims when the local context actually looks date-like.
+- The gate is deliberately conservative:
+  - if the draft exposes no structured facts, it does nothing,
+  - if grounded support exposes no comparable structured facts, it does nothing,
+  - if support contains multiple comparable values and one of them matches the draft, it does not raise a contradiction.
+- This is the right bias. A release gate that invents contradictions is worse than a narrower gate that only catches the highest-confidence ones.
+- `src/learning/answerReleaseReview.test.ts` now pins three important behaviors:
+  - numeric conflict forces `revise`,
+  - year conflict forces `revise`,
+  - multi-value support with one correct answer still `release`s cleanly.
+- The revision builder was also tightened slightly while landing this slice:
+  - when the support sentence already starts with an article + title phrase, the reviewer no longer prefixes the title again and creates duplicated release text.
+- This phase does not replace the earlier lexical `claim_grounding_alignment` gate.
+- Instead, the two gates now cover different failure classes:
+  - lexical alignment catches topic drift,
+  - structured consistency catches `same topic, wrong number/year`.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -324,7 +350,7 @@ The first two decide capability. The third decides trust.
 
 ### Next Direction
 
-1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical grounding alignment, but only where the new checks can stay deterministic enough to avoid false-positive churn.
+1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + structured-fact gates, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
 3. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
 4. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
@@ -448,6 +474,7 @@ The first two decide capability. The third decides trust.
 | 主回答区不能泄漏后端诊断 | 新增 `src/learning/answerReleaseReview.ts`，在 release 前拦截 diagnostic leakage。 | 已实现 |
 | 空结果回答必须 clean abstain，而不是暴露 runtime 细节 | reviewer 现在会把 unsupported draft 降级成简洁 abstention。 | 已实现 |
 | grounded draft 必须与 citation/knowledge-point 支撑保持一致 | reviewer 现在会执行 `claim_grounding_alignment`，在词法证据重叠不足时强制改写漂移主张。 | 已实现 |
+| grounded draft 还必须检查确定性的结构化事实冲突 | reviewer 现在会执行 `claim_structured_consistency`：即使 topical lexical overlap 仍然通过，只要数值或年份事实与支撑冲突，也会触发 revise。 | 已实现基线 |
 | 最终审核结果必须可供开发者检查 | `answerReleaseReview` 已加到 `AgentConversationResponse`、`AgentConversationTrace`、`KnowledgeRun`。 | 已实现 |
 | 运维表面必须能看到 reviewer 状态且不扩大主回答区 | `src/frontend/agent_workspace.js` 会净化 `answerReleaseReview`，`src/frontend/workspace_panes.js` 会在 `knowledge_run` 卡片中渲染 release-review 明细 / 历史。 | 已实现 |
 | reviewer 遥测必须能跨 export/replay 表面保留 | `src/export/WorkspaceExportBundle.ts` 现在会在 `runtime.knowledgeRunReports[*].answerReleaseReview` 中输出紧凑 reviewer 摘要，供离线回放与运维审计使用。 | 已实现 |
@@ -575,6 +602,31 @@ The first two decide capability. The third decides trust.
 - 这是正确的不变量 owner，因为 recovery 决策属于 retrieval-contract 语义，而不是 prompt 文案、前端展示或 release-review 启发式规则。
 - 这样一来，即使 `financial` scope 内的局部噪声仍然幸存，跨 scope 的 title recovery 也能成立，而公开回答仍继续受后续确定性 release-review 层治理。
 
+#### 在共享语料切片之上继续落地的 Phase-8 结构化矛盾加固
+
+- `src/learning/answerReleaseReview.ts` 现在新增了第二个面向矛盾检测的 reviewer gate：`claim_structured_consistency`。
+- 这个 gate 刻意不去假装自己是一个泛化 verifier model：
+  - 它不会试图推断任意语义真值；
+  - 它只在存在高置信度可比结构化事实时才下判断。
+- 当前支持的第一批矛盾类型刻意保持窄口径：
+  - 带显式技术单位的数值事实，例如 `%`、`kg/m3`、`GPa`、`kPa` 等稳定单位；
+  - 只有在局部上下文看起来确实像日期/年份时，才会纳入 year claim。
+- 这个 gate 的保守性是刻意设计出来的：
+  - 如果草稿里没有结构化事实，它什么也不做；
+  - 如果 grounded support 里没有可比的结构化事实，它什么也不做；
+  - 如果 support 里有多个可比值，而其中一个值与草稿一致，它不会误报矛盾。
+- 这是正确偏置。一个会凭空制造“矛盾”的 release gate，比一个只抓最高置信度冲突的窄 gate 更糟。
+- `src/learning/answerReleaseReview.test.ts` 现在已经固定了三类关键行为：
+  - 数值冲突必须 `revise`；
+  - 年份冲突必须 `revise`；
+  - 支撑里存在多个值且其中一个就是正确值时，必须仍然 clean `release`。
+- 在落这一步时，revision builder 也顺手做了一个文本质量修正：
+  - 如果 support sentence 本身已经以 article + title phrase 开头，reviewer 不会再重复加一层标题前缀，避免生成重复的公开回答文本。
+- 这个 Phase 并不替代之前的词法 `claim_grounding_alignment` gate。
+- 两个 gate 现在分工更明确：
+  - lexical alignment 负责抓 topic drift，
+  - structured consistency 负责抓“主题没偏，但数字/年份错了”。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -651,7 +703,7 @@ The first two decide capability. The third decides trust.
 
 ### 后续方向
 
-1. 先基于这份显式 alias/scope 回归语料，把当前 lexical grounding alignment 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
+1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + structured-fact gate 之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
 3. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
 4. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。

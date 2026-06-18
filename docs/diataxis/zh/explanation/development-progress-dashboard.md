@@ -65,6 +65,48 @@
 - `npm.cmd exec -- tsc --noEmit`
 - `npm run verify:knowledge-workspace:runtime`
 
+## 2026-06-19 结构化事实矛盾门禁
+
+下一个鲁棒性缺口比 release review 本身更窄，但依然重要：lexical topic overlap 只能说明“这条草稿大体上还在谈同一个主题”，却不能可靠识别“主题没跑偏，但数值或年份已经说错了”的情况。
+
+这个缺口现在已经在 `src/learning/answerReleaseReview.ts` 中被部分补上，对应的新确定性门禁是 `claim_structured_consistency`。
+
+当前代码已经成立的事实：
+
+- reviewer 现在会从草稿回答与 grounded support 中提取高置信度结构化事实：
+  - 带单位的数值，例如 `%`、`kg/m3`、`GPa`、`kPa`、`km/h` 等技术单位；
+  - 只有在局部上下文看起来确实像日期/年份时，才会把 4 位数按 year claim 处理，而不是把所有 4 位数都误判成年份。
+- structured-fact comparison 刻意保持保守：
+  - 如果没有可比的 support fact，就不会凭空制造“矛盾”；
+  - 如果 support 里在同一 anchor/unit 族下出现多个值，那么只要其中有一个值和草稿一致，就不会误报。
+- 新 gate 是 additive 的：
+  - `src/learning/types.ts` 现在已经把 `claim_structured_consistency` 纳入 `AnswerReleaseGateId`；
+  - 运维表面与 export telemetry 继续保持兼容，因为它们本来就是按通用 gate ID 路径消费 reviewer 结果。
+- 现在即使 lexical alignment 仍然通过，只要结构化事实冲突，grounded draft 也会被改写。
+- grounded revision 的文本质量也顺手收了一步：如果 support sentence 已经以 article + title phrase 开头，reviewer 不会再额外重复加一层标题前缀。
+
+为什么这一步重要：
+
+- lexical alignment 擅长抓主题漂移；
+- 它并不可靠地抓住“主语没变，但数字/年份错了”；
+- 所以只停在 lexical overlap 的 reviewer，依然可能放行一条在事实层面明显错误的回答。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 矛盾检测必须超出 lexical overlap，但不能变成猜测器 | `answerReleaseReview.ts` 现在只会在存在高置信度可比 support fact 时，才执行 structured numeric/year consistency 检查。 | 已实现基线 |
+| 数值矛盾必须在 topic 仍匹配时触发改写 | `claim_structured_consistency` 现在会在 `875 kg/m3` 对上 grounded `999.8 kg/m3` 这类场景中失败并触发 revise。 | 已实现 |
+| 年份矛盾也必须被确定性捕捉 | reviewer 现在会对 `1935` vs grounded `1933` 这类 date-like year conflict 触发 revise。 | 已实现 |
+| 支撑里存在多个值时必须避免可预防的误报 | `answerReleaseReview.test.ts` 现在固定了一条支撑同时包含 `2500 kg/m3` 与 `999.8 kg/m3` 的用例，只要草稿命中正确 supported value，就会 clean release。 | 已实现 |
+
+本切片验证：
+
+- `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/learning/conversationComposer.test.ts src/learning/KnowledgeLearningPlatform.test.ts src/export/WorkspaceExportBundle.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/learning/KnowledgeWorkspaceConversationRegression.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
 ## 2026-06-18 共享 alias/scope 回归语料与 soft-miss 恢复
 
 截图驱动的 `waterglass` 失败现在已经不再被当作一次性人工检查。项目已经有了共享的确定性回归语料 `src/learning/KnowledgeWorkspaceConversationRegression.ts`，而这批语料的重要性在于两点：

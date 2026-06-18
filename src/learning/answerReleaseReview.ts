@@ -19,6 +19,26 @@ export interface AnswerReleaseReviewContext {
     reviewedAt?: string;
 }
 
+type AnswerReleaseSupportCandidate = {
+    label: string;
+    text: string;
+};
+
+type StructuredFactKind = 'number_with_unit' | 'year';
+
+type StructuredFact = {
+    kind: StructuredFactKind;
+    value: number;
+    unit: string;
+    surface: string;
+    anchorTokens: string[];
+};
+
+type StructuredFactConflict = {
+    answerFact: StructuredFact;
+    supportFacts: Array<StructuredFact & { label: string }>;
+};
+
 const INTERNAL_DIAGNOSTIC_FRAGMENTS = [
     'No scoped knowledge points matched',
     'retrieval_candidates_below_threshold',
@@ -27,6 +47,80 @@ const INTERNAL_DIAGNOSTIC_FRAGMENTS = [
     'matchedAtomCount',
     'titleLikeQueries',
 ];
+
+const STRUCTURED_UNIT_ALIASES: Record<string, string> = {
+    '%': '%',
+    percent: '%',
+    percentage: '%',
+    'kg/m3': 'kg/m3',
+    'kg/m³': 'kg/m3',
+    gpa: 'gpa',
+    mpa: 'mpa',
+    kpa: 'kpa',
+    pa: 'pa',
+    km: 'km',
+    cm: 'cm',
+    mm: 'mm',
+    ml: 'ml',
+    mb: 'mb',
+    gb: 'gb',
+    tb: 'tb',
+    kw: 'kw',
+    mw: 'mw',
+    'm/s': 'm/s',
+    'km/h': 'km/h',
+    '°c': 'deg_c',
+    '℃': 'deg_c',
+    '℉': 'deg_f',
+    year: 'year',
+    years: 'year',
+    yr: 'year',
+    yrs: 'year',
+    年: 'year',
+};
+
+const STRUCTURED_FACT_PATTERN = /(-?\d{1,4}(?:,\d{3})*(?:\.\d+)?)(?:\s*(kg\/m(?:³|3)|gpa|mpa|kpa|pa|km\/h|m\/s|km|cm|mm|ml|mb|gb|tb|kw|mw|%|percent|percentage|years?|yrs?|yr|year|°c|℃|℉|年))?/giu;
+
+const YEAR_CONTEXT_PATTERN = /\b(?:year|years|dated|since|until|from|during|after|before|in|on)\b|年/iu;
+
+const STRUCTURED_ANCHOR_STOPWORDS = new Set([
+    'a',
+    'an',
+    'and',
+    'are',
+    'as',
+    'at',
+    'by',
+    'for',
+    'from',
+    'in',
+    'into',
+    'is',
+    'it',
+    'of',
+    'on',
+    'or',
+    'the',
+    'to',
+    'was',
+    'were',
+    'with',
+    'this',
+    'that',
+    'these',
+    'those',
+    '当前',
+    '这个',
+    '这是',
+    '以及',
+    '一个',
+    '一种',
+    '用于',
+    '在',
+    '是',
+    '和',
+    '的',
+]);
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -150,10 +244,49 @@ function buildGroundedRevisionAnswer(
         || ''
     ));
     const title = normalizeWhitespace(String(leadingPoint?.title || ''));
-    if (summary && title && !summary.toLowerCase().startsWith(title.toLowerCase())) {
+    const normalizedSummary = summary.toLowerCase();
+    const normalizedTitle = title.toLowerCase();
+    const summaryAlreadyCarriesTitle = Boolean(
+        summary
+        && title
+        && (
+            normalizedSummary.startsWith(normalizedTitle)
+            || new RegExp(`^(?:a|an|the)\\s+${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\b|\\s)`, 'i').test(summary)
+        )
+    );
+    if (summary && title && !summaryAlreadyCarriesTitle) {
         return `${title}: ${summary}`;
     }
     return summary || title || normalizeWhitespace(context.draftAnswer);
+}
+
+function buildSupportCandidates(
+    context: AnswerReleaseReviewContext
+): AnswerReleaseSupportCandidate[] {
+    const candidates: AnswerReleaseSupportCandidate[] = [];
+    context.citations.forEach((citation, index) => {
+        const title = normalizeWhitespace(String(citation.title || '').trim()) || `citation_${index + 1}`;
+        const snippet = normalizeWhitespace(String(citation.snippet || '').trim());
+        const text = [title, snippet].filter(Boolean).join(' ');
+        if (text) {
+            candidates.push({
+                label: title,
+                text,
+            });
+        }
+    });
+    context.knowledgePoints.forEach((point, index) => {
+        const title = normalizeWhitespace(String(point.title || '').trim()) || `knowledge_point_${index + 1}`;
+        const snippet = normalizeWhitespace(String(point.evidenceSnippet || point.summary || '').trim());
+        const text = [title, snippet].filter(Boolean).join(' ');
+        if (text) {
+            candidates.push({
+                label: title,
+                text,
+            });
+        }
+    });
+    return candidates;
 }
 
 function collectLeakedInternalFragments(answer: string): string[] {
@@ -210,29 +343,7 @@ function evaluateGroundingAlignment(context: AnswerReleaseReviewContext): {
     bestScore: number;
     bestLabel: string;
 } {
-    const candidates: Array<{ label: string; text: string }> = [];
-    context.citations.forEach((citation, index) => {
-        const title = normalizeWhitespace(String(citation.title || '').trim()) || `citation_${index + 1}`;
-        const snippet = normalizeWhitespace(String(citation.snippet || '').trim());
-        const text = [title, snippet].filter(Boolean).join(' ');
-        if (text) {
-            candidates.push({
-                label: title,
-                text,
-            });
-        }
-    });
-    context.knowledgePoints.forEach((point, index) => {
-        const title = normalizeWhitespace(String(point.title || '').trim()) || `knowledge_point_${index + 1}`;
-        const snippet = normalizeWhitespace(String(point.evidenceSnippet || point.summary || '').trim());
-        const text = [title, snippet].filter(Boolean).join(' ');
-        if (text) {
-            candidates.push({
-                label: title,
-                text,
-            });
-        }
-    });
+    const candidates = buildSupportCandidates(context);
     if (candidates.length <= 0) {
         return {
             passed: false,
@@ -254,6 +365,155 @@ function evaluateGroundingAlignment(context: AnswerReleaseReviewContext): {
     };
 }
 
+function normalizeStructuredUnit(rawUnit: string): string {
+    const normalized = String(rawUnit || '').trim().toLowerCase();
+    if (!normalized) {
+        return '';
+    }
+    return STRUCTURED_UNIT_ALIASES[normalized] || normalized;
+}
+
+function collectStructuredAnchorTokens(value: string): string[] {
+    return collectLexicalFeatures(value)
+        .map((feature) => String(feature || '').trim().toLowerCase())
+        .filter((feature) => feature.length >= 2)
+        .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature))
+        .slice(-3);
+}
+
+function extractStructuredFacts(value: string): StructuredFact[] {
+    const text = String(value || '');
+    if (!text) {
+        return [];
+    }
+    const facts: StructuredFact[] = [];
+    for (const match of text.matchAll(STRUCTURED_FACT_PATTERN)) {
+        const rawNumber = String(match[1] || '').trim();
+        const rawUnit = String(match[2] || '').trim();
+        const numericValue = Number(rawNumber.replace(/,/g, ''));
+        if (!Number.isFinite(numericValue)) {
+            continue;
+        }
+        const startIndex = Number(match.index || 0);
+        const surface = normalizeWhitespace(String(match[0] || ''));
+        const endIndex = startIndex + String(match[0] || '').length;
+        const preWindow = text.slice(Math.max(0, startIndex - 48), startIndex);
+        const postWindow = text.slice(endIndex, Math.min(text.length, endIndex + 24));
+        let kind: StructuredFactKind | null = null;
+        let unit = normalizeStructuredUnit(rawUnit);
+        if (unit) {
+            kind = unit === 'year' ? 'year' : 'number_with_unit';
+        } else if (
+            Number.isInteger(numericValue)
+            && numericValue >= 1000
+            && numericValue <= 2099
+            && YEAR_CONTEXT_PATTERN.test(`${preWindow} ${postWindow}`)
+        ) {
+            kind = 'year';
+            unit = 'year';
+        }
+        if (!kind) {
+            continue;
+        }
+        const anchorTokens = collectStructuredAnchorTokens(preWindow);
+        const resolvedAnchorTokens = anchorTokens.length > 0
+            ? anchorTokens
+            : collectStructuredAnchorTokens(postWindow).slice(0, 2);
+        facts.push({
+            kind,
+            value: numericValue,
+            unit,
+            surface,
+            anchorTokens: resolvedAnchorTokens,
+        });
+    }
+    return facts;
+}
+
+function structuredFactValuesMatch(answerFact: StructuredFact, supportFact: StructuredFact): boolean {
+    if (answerFact.kind !== supportFact.kind || answerFact.unit !== supportFact.unit) {
+        return false;
+    }
+    if (answerFact.kind === 'year') {
+        return Math.trunc(answerFact.value) === Math.trunc(supportFact.value);
+    }
+    return Math.abs(answerFact.value - supportFact.value) <= 0.000001;
+}
+
+function structuredFactAnchorsOverlap(answerFact: StructuredFact, supportFact: StructuredFact): boolean {
+    if (answerFact.anchorTokens.length <= 0 || supportFact.anchorTokens.length <= 0) {
+        return true;
+    }
+    const supportAnchorTokenSet = new Set(supportFact.anchorTokens);
+    return answerFact.anchorTokens.some((token) => supportAnchorTokenSet.has(token));
+}
+
+function buildStructuredFactConflictMessage(conflicts: StructuredFactConflict[]): string {
+    if (conflicts.length <= 0) {
+        return 'Draft answer stayed consistent with the grounded structured facts that could be compared.';
+    }
+    const fragments = conflicts.slice(0, 2).map((conflict) => {
+        const supportedValues = Array.from(new Set(
+            conflict.supportFacts.map((fact) => normalizeWhitespace(`${fact.surface} (${fact.label})`))
+        ));
+        return `"${conflict.answerFact.surface}" conflicted with ${supportedValues.join(', ')}`;
+    });
+    return `Draft answer conflicted with grounded structured facts: ${fragments.join('; ')}.`;
+}
+
+function evaluateStructuredConsistency(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    comparableFactCount: number;
+    conflicts: StructuredFactConflict[];
+} {
+    const answerFacts = extractStructuredFacts(context.draftAnswer);
+    if (answerFacts.length <= 0) {
+        return {
+            passed: true,
+            comparableFactCount: 0,
+            conflicts: [],
+        };
+    }
+    const supportFacts = buildSupportCandidates(context).flatMap((candidate) => (
+        extractStructuredFacts(candidate.text).map((fact) => ({
+            ...fact,
+            label: candidate.label,
+        }))
+    ));
+    if (supportFacts.length <= 0) {
+        return {
+            passed: true,
+            comparableFactCount: 0,
+            conflicts: [],
+        };
+    }
+    const conflicts: StructuredFactConflict[] = [];
+    let comparableFactCount = 0;
+    answerFacts.forEach((answerFact) => {
+        const comparableSupportFacts = supportFacts.filter((supportFact) => (
+            answerFact.kind === supportFact.kind
+            && answerFact.unit === supportFact.unit
+            && structuredFactAnchorsOverlap(answerFact, supportFact)
+        ));
+        if (comparableSupportFacts.length <= 0) {
+            return;
+        }
+        comparableFactCount += 1;
+        if (comparableSupportFacts.some((supportFact) => structuredFactValuesMatch(answerFact, supportFact))) {
+            return;
+        }
+        conflicts.push({
+            answerFact,
+            supportFacts: comparableSupportFacts.slice(0, 3),
+        });
+    });
+    return {
+        passed: conflicts.length <= 0,
+        comparableFactCount,
+        conflicts,
+    };
+}
+
 function checkPublicSurfaceContraction(answer: string): boolean {
     const normalizedAnswer = String(answer || '');
     if (normalizeWhitespace(normalizedAnswer).length > 320) {
@@ -270,13 +530,19 @@ function checkPublicSurfaceContraction(answer: string): boolean {
 function buildDecision(
     groundedEvidenceAvailable: boolean,
     groundingAlignmentPassed: boolean,
+    structuredConsistencyPassed: boolean,
     leakedInternalFragments: string[],
     publicSurfaceContracted: boolean
 ): AnswerReleaseDecision {
     if (!groundedEvidenceAvailable) {
         return 'abstain';
     }
-    if (!groundingAlignmentPassed || leakedInternalFragments.length > 0 || !publicSurfaceContracted) {
+    if (
+        !groundingAlignmentPassed
+        || !structuredConsistencyPassed
+        || leakedInternalFragments.length > 0
+        || !publicSurfaceContracted
+    ) {
         return 'revise';
     }
     return 'release';
@@ -311,6 +577,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             bestScore: 1,
             bestLabel: '',
         };
+    const structuredConsistency = groundedEvidenceAvailable
+        ? evaluateStructuredConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            comparableFactCount: 0,
+            conflicts: [],
+        };
     const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer);
     const graphSupportCount = context.graphContext
         ? (
@@ -323,6 +599,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     const decision = buildDecision(
         groundedEvidenceAvailable,
         groundingAlignment.passed,
+        structuredConsistency.passed,
         leakedInternalFragments,
         publicSurfaceContracted
     );
@@ -364,6 +641,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : `Draft answer drifted away from grounded support (best support: ${groundingAlignment.bestLabel || 'primary evidence'}, score ${Math.round(groundingAlignment.bestScore * 100)}%).`
                 )
                 : 'No evidence was available, so claim-grounding alignment was not evaluated.',
+        },
+        {
+            gateId: 'claim_structured_consistency',
+            passed: structuredConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    structuredConsistency.comparableFactCount > 0
+                        ? buildStructuredFactConflictMessage(structuredConsistency.conflicts)
+                        : 'No high-confidence structured fact comparison was available, so contradiction checking stayed conservative.'
+                )
+                : 'No evidence was available, so structured contradiction checking was not evaluated.',
         },
         {
             gateId: 'public_surface_contraction',

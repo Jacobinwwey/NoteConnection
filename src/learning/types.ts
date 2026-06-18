@@ -1273,6 +1273,7 @@ export type AnswerReleaseGateId =
     | 'evidence_sufficiency'
     | 'graph_support_sufficiency'
     | 'claim_grounding_alignment'
+    | 'claim_structured_consistency'
     | 'public_surface_contraction'
     | 'internal_diagnostic_leakage'
     | 'abstention_hygiene';

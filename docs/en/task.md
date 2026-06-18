@@ -20,17 +20,20 @@
 - [x] A shared alias/scope regression corpus now exists at `src/learning/KnowledgeWorkspaceConversationRegression.ts`, including the screenshot-derived compact/spaced `waterglass` cases and cross-scope recovery cases under `financial`.
 - [x] `scripts/verify-knowledge-workspace-runtime.js` and `src/learning/KnowledgeWorkspaceConversationRegression.test.ts` now consume the same deterministic corpus, so runtime and Jest no longer drift on alias/scope expectations.
 - [x] That corpus exposed and fixed a soft-miss recovery bug in `KnowledgeLearningPlatform.ts`: planner scope recovery no longer waits for absolute zero results, and now also recovers when noisy in-scope candidates survive but none of them belong to planner title-hit documents.
-- [ ] Next active task: use the explicit alias/scope regression corpus to deepen contradiction detection beyond the current lexical grounding check without letting false positives widen.
+- [x] The reviewer now also enforces `claim_structured_consistency`, so grounded drafts with conflicting numeric or year facts are revised even when the lexical topic overlap still looks acceptable.
+- [x] `src/learning/answerReleaseReview.test.ts` now covers deterministic structured-fact contradiction cases: numeric conflict, year conflict, and a multi-value support case that must not raise a false positive.
+- [ ] Next active task: extend contradiction coverage beyond the current lexical + structured-fact checks into broader claim/citation/evidence conflicts without letting false positives widen.
 - [ ] Next active task: continue growing the regression corpus with more real cross-scope and synonym failures, while keeping the public answer surface contracted.
 
 ### Current Acceptance Targets
 
 1. Public answers never expose `No scoped knowledge points matched`-style internal failure strings.
 2. Reviewer decisions remain additive and backward-compatible for all current clients.
-3. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
-4. Exported `knowledgeRunReports` carry compact reviewer summaries for `release` / `revise` flows and omit the field cleanly when review data is absent.
-5. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card and compare card surface the same reviewer path.
-6. Runtime verification now passes the shared alias/scope corpus, including the screenshot-derived compact/spaced `waterglass` pair and the `financial` cross-scope recovery pair, and confirms `answerReleaseReview.publicAnswer === result.answer`.
+3. Grounded drafts with conflicting structured numeric/year facts are revised before release instead of slipping through on lexical overlap alone.
+4. Operator inspection surfaces show reviewer decision, failed gates, and original/public answer deltas without widening the main answer area.
+5. Exported `knowledgeRunReports` carry compact reviewer summaries for `release` / `revise` flows and omit the field cleanly when review data is absent.
+6. Exported runtime state also carries additive aggregate reviewer telemetry at `runtime.knowledgeRunAnswerReleaseAuditSummary`, including review-trend windows, gate-aging summaries, and compare-ready drilldowns; the operator history card and compare card surface the same reviewer path.
+7. Runtime verification now passes the shared alias/scope corpus, including the screenshot-derived compact/spaced `waterglass` pair and the `financial` cross-scope recovery pair, and confirms `answerReleaseReview.publicAnswer === result.answer`.
 
 ### 2026-06-17 Active Agent Knowledge DAG Task Sync
 
