@@ -20,6 +20,7 @@ Implemented or documented in this slice:
 - `workspace_panes.js` renders connection paths in the evidence pane,
 - `knowledge_run` workflow artifacts now also retain `graphContext`, and the knowledge-run inspection card exposes graph context plus graph diagnostics for operator review,
 - recent-run history and run-to-run comparison cards now also surface compact graph telemetry, so operator review is no longer limited to single-run inspection,
+- `WorkspaceExportBundle` now exposes durable `runtime.knowledgeRunReports`, carrying compare-ready graph signal summaries for offline replay and operator analysis,
 - `workspace_panes.js` now retries graph-focus source rendering against matched-span candidate paths, records requested/candidate/attempted/resolved source-path diagnostics, and exposes those diagnostics inside the right pane when fallback or path fallback occurs,
 - `WorkspaceExportBundle` preserves connection paths in exported conversation trace graph context,
 - focused tests cover graph-path composition, platform enrichment, frontend evidence rendering, locale labels, and export serialization.
@@ -40,7 +41,7 @@ Code-vs-plan reconciliation:
 Immediate next direction:
 
 1. Calibrate the new graph-aware ranking and graph-quality-gate model against more real-world regressions and operator evidence.
-2. Decide whether the current frontend/operator telemetry should also be promoted into replay/export/operator-report surfaces, or remain pane/history/compare inspection data.
+2. Decide whether graph-focus render diagnostics specifically should also be promoted into replay/export/operator-report surfaces, now that `knowledge_run` telemetry already has a durable export surface.
 3. Keep the public answer focused while graph/evidence/developer detail remains inspectable through evidence panes, traces, artifacts, and export bundles.
 
 ## 2026-06-10 Knowledge Workspace Durable Artifact and DAG Alignment

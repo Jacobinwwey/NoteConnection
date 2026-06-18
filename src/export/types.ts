@@ -76,6 +76,37 @@ export interface WorkspaceExportBundleReadiness {
     render: Pick<RenderMaterializationDecision, 'responseArtifact' | 'rendererPreference' | 'includeSvg' | 'vectorSuppressed'>;
 }
 
+export interface WorkspaceExportKnowledgeRunGraphSignal {
+    graphOpsAvailable: boolean;
+    usedFallback: boolean;
+    selectedAnchorReason: string;
+    connectionPathCount: number;
+    temporalWarningCount: number;
+    supportNodeCount: number;
+    supportNodeLimit: number;
+    pathDepthLimit: number | null;
+    missingLookupCount: number;
+}
+
+export interface WorkspaceExportKnowledgeRunReport {
+    artifactId: string;
+    runId: string;
+    generatedAt: string;
+    artifactTitle: string;
+    artifactStatus: string;
+    workspaceId: string | null;
+    corpusId: string | null;
+    qualityStatus: string;
+    qualityScore: number | null;
+    claimCount: number;
+    weakClaimCount: number;
+    reviewCardCount: number;
+    completedReviewCardCount: number;
+    remainingReviewCardCount: number;
+    scopeSource: string;
+    graphSignal: WorkspaceExportKnowledgeRunGraphSignal;
+}
+
 export interface WorkspaceExportBundle {
     manifest: WorkspaceExportBundleManifest;
     workspace: WorkspaceRecord;
@@ -101,6 +132,7 @@ export interface WorkspaceExportBundle {
         conversationTurns: AgentConversationTurnRecord[];
         conversationInvocations: AgentConversationInvocationRecord[];
         workflowArtifacts: WorkflowArtifactRecord[];
+        knowledgeRunReports: WorkspaceExportKnowledgeRunReport[];
     };
     memory: {
         entries: WorkspaceScopedMemoryExportRecord[];

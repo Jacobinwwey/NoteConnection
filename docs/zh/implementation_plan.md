@@ -24,7 +24,7 @@
 
 1. 保持新的 assembler surface additive，并继续保证向前兼容。
 2. 保持 graph-aware ranking 有界，并用回归用例持续校准，避免回到 degree-driven hub 排序。
-3. 决定这批新的 pane/history/compare 诊断是继续保留在前端 / 运维检查面，还是还要继续提升到 replay/export-oriented surface。
+3. 在 `knowledge_run` history/compare telemetry 已通过 `runtime.knowledgeRunReports` 进入 export 之后，继续决定 graph-focus render diagnostics 是否也要提升到 replay/export-oriented surface。
 4. 将 graph/debug/evidence 细节留在 evidence/export surface，而不是公开回答区。
 5. 继续校准新的图专项回答质量门禁，并补更多回归证据与运维证据。
 6. 只有当新模块拥有真实决策或不变量时，才继续做 owner reduction。

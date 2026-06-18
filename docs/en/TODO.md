@@ -21,7 +21,7 @@
 - [x] Treat the current visible answer area as contracted for this slice: `answer` / `directAnswer` now stays targeted while supporting blocks remain available through secondary panes, traces, artifacts, and exports.
 - [~] Treat left-side knowledge-hit interaction as partially complete: it is file-first, but still not fully converged on a right-pane-first reading model.
 - [x] The graph-conditioned context-assembly layer between retrieval and answer synthesis is now implemented, so the current DAG is a first-class answer-planning substrate.
-- [ ] Decide whether the current pane/history/compare graph diagnostics should also be promoted into replay/export-oriented operator surfaces.
+- [~] `knowledge_run` pane/history/compare graph telemetry is now promoted into export through `runtime.knowledgeRunReports`; remaining question is whether graph-focus render diagnostics should also be externalized.
 - [ ] Continue reducing ownership pressure in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
 - [ ] Keep root/docs bilingual README, TODO, task, implementation plan, walkthrough, interface, dashboard, and test-report docs aligned whenever this slice changes.
 

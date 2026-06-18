@@ -23,7 +23,7 @@ Turn the clarified DAG requirement into an implementation sequence that uses the
 
 1. Keep the new assembler surface additive and backward-compatible.
 2. Keep graph-aware ranking bounded and calibrate it against regression cases instead of drifting back toward degree-driven hubs.
-3. Decide whether the current pane/history/compare diagnostics should remain frontend/operator inspection data or also be promoted into replay/export-oriented surfaces.
+3. Decide whether graph-focus render diagnostics should also be promoted into replay/export-oriented surfaces, now that `knowledge_run` history/compare telemetry is already exported through `runtime.knowledgeRunReports`.
 4. Keep graph/debug/evidence detail in evidence/export surfaces, not in the public answer.
 5. Calibrate the new graph-specific answer quality gates against more regression cases and operator evidence.
 6. Continue owner reduction only when the new module owns real decisions or invariants.

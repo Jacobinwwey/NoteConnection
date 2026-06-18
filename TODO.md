@@ -14,7 +14,7 @@ Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer cont
 - [x] Query backend ranking now goes beyond relation-degree bonus: `queryBackend.ts` uses anchor distance, directed path confidence, prerequisite depth, temporal invalidity penalties, and relation-kind intent bonuses for `local_hybrid` / `local_vector`.
 - [x] Right-pane source rendering and matched-span highlighting now retry candidate source paths, expose graph-focus diagnostics in the pane, and surface stored graph context/graph diagnostics inside durable knowledge-run inspection cards.
 - [x] `knowledgeRun.quality.gates` now includes graph-specific checks for prerequisite ordering, comparison branches, temporal warnings, graph-op fallback, and bounded graph budgeting.
-- [ ] Decide whether the current pane/history/compare graph diagnostics should also be promoted into replay/export-oriented operator surfaces.
+- [~] `knowledge_run` pane/history/compare graph telemetry is now promoted into export through `runtime.knowledgeRunReports`; remaining question is whether graph-focus render diagnostics should also be externalized.
 - [ ] Continue reducing ownership pressure in `KnowledgeLearningPlatform.ts`, `conversationComposer.ts`, `agent_workspace.js`, and `workspace_panes.js` only where a new owner enforces real decisions or invariants.
 
 ## 中文文档
@@ -31,7 +31,7 @@ Keep the active TODO aligned with the 2026-06-17 agent knowledge DAG answer cont
 - [x] `queryBackend.ts` 的排序现在已经超出 relation-degree bonus：`local_hybrid` / `local_vector` 已接入 anchor distance、directed path confidence、prerequisite depth、temporal invalidity penalty 与 relation-kind intent bonus。
 - [x] 右侧原文渲染与 matched-span 高亮现在已经支持 candidate source path 重试，并在 pane 内暴露 graph-focus diagnostics，同时把持久化的 graph context / graph diagnostics 暴露到 durable knowledge-run 检查卡片中。
 - [x] `knowledgeRun.quality.gates` 现在已经包含图专项门禁：prerequisite ordering、comparison branch、temporal warning、graph-op fallback 与有界 graph budgeting。
-- [ ] 决定这批新的 pane/history/compare graph diagnostics 是否还要继续提升到 replay/export-oriented 运维 surface。
+- [~] `knowledge_run` 的 pane/history/compare graph telemetry 现在已经通过 `runtime.knowledgeRunReports` 进入 export；剩余问题是 graph-focus render diagnostics 是否也要外化。
 - [ ] 继续缩减 `KnowledgeLearningPlatform.ts`、`conversationComposer.ts`、`agent_workspace.js`、`workspace_panes.js` 的所有权压力，但只在新 owner 能做真实决策或强制不变量时推进。
 
 ---

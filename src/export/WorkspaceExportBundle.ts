@@ -3,6 +3,7 @@ import { resolvePlatformCapabilities } from '../platform/PlatformCapabilities';
 import { resolveRenderMaterializationDecision } from '../platform/RenderMaterializer';
 import type {
     WorkspaceExportBundle,
+    WorkspaceExportKnowledgeRunReport,
     WorkspaceExportBundleRequest,
     WorkspaceScopedMemoryExportRecord,
 } from './types';
@@ -341,6 +342,92 @@ function sortAndCloneWorkflowArtifacts(records: WorkflowArtifactRecord[]): Workf
         }));
 }
 
+function normalizeCount(value: unknown): number {
+    return Number.isFinite(Number(value)) ? Math.max(0, Math.floor(Number(value))) : 0;
+}
+
+function normalizeOptionalScore(value: unknown): number | null {
+    return Number.isFinite(Number(value)) ? Number(Number(value).toFixed(2)) : null;
+}
+
+function buildKnowledgeRunReports(records: WorkflowArtifactRecord[]): WorkspaceExportKnowledgeRunReport[] {
+    return records
+        .filter((record) => record.kind === 'knowledge_run')
+        .map((record) => {
+            const payload = record.payload && typeof record.payload === 'object'
+                ? record.payload as Record<string, unknown>
+                : {};
+            const knowledgeRun = payload.knowledgeRun && typeof payload.knowledgeRun === 'object'
+                ? payload.knowledgeRun as Record<string, unknown>
+                : {};
+            const runSummary = knowledgeRun.summary && typeof knowledgeRun.summary === 'object'
+                ? knowledgeRun.summary as Record<string, unknown>
+                : {};
+            const quality = knowledgeRun.quality && typeof knowledgeRun.quality === 'object'
+                ? knowledgeRun.quality as Record<string, unknown>
+                : {};
+            const scope = knowledgeRun.scope && typeof knowledgeRun.scope === 'object'
+                ? knowledgeRun.scope as Record<string, unknown>
+                : {};
+            const graphContext = payload.graphContext && typeof payload.graphContext === 'object'
+                ? payload.graphContext as Record<string, unknown>
+                : {};
+            const diagnostics = graphContext.diagnostics && typeof graphContext.diagnostics === 'object'
+                ? graphContext.diagnostics as Record<string, unknown>
+                : {};
+            const temporalValidity = graphContext.temporalValidity && typeof graphContext.temporalValidity === 'object'
+                ? graphContext.temporalValidity as Record<string, unknown>
+                : {};
+            const connectionPathCount = Array.isArray(graphContext.connectionPaths)
+                ? graphContext.connectionPaths.filter((value) => Boolean(value && typeof value === 'object')).length
+                : 0;
+            const temporalWarningCount = Array.isArray(temporalValidity.warningReasons)
+                ? temporalValidity.warningReasons.map((value) => String(value || '').trim()).filter(Boolean).length
+                : 0;
+            const missingLookupCount = (
+                (Array.isArray(diagnostics.missingConnectionPathSourceAtomIds)
+                    ? diagnostics.missingConnectionPathSourceAtomIds.map((value) => String(value || '').trim()).filter(Boolean).length
+                    : 0)
+                + (Array.isArray(diagnostics.missingPredecessorAtomIds)
+                    ? diagnostics.missingPredecessorAtomIds.map((value) => String(value || '').trim()).filter(Boolean).length
+                    : 0)
+                + (Array.isArray(diagnostics.missingSuccessorAtomIds)
+                    ? diagnostics.missingSuccessorAtomIds.map((value) => String(value || '').trim()).filter(Boolean).length
+                    : 0)
+            );
+            return {
+                artifactId: record.artifactId,
+                runId: String(knowledgeRun.runId || payload.runId || '').trim(),
+                generatedAt: String(knowledgeRun.generatedAt || record.updatedAt || record.createdAt || '').trim(),
+                artifactTitle: record.title,
+                artifactStatus: String(record.status || '').trim(),
+                workspaceId: record.workspaceId,
+                corpusId: record.corpusId,
+                qualityStatus: String(quality.status || knowledgeRun.status || '').trim(),
+                qualityScore: normalizeOptionalScore(quality.score),
+                claimCount: normalizeCount(runSummary.claimCount),
+                weakClaimCount: normalizeCount(runSummary.weakClaimCount),
+                reviewCardCount: normalizeCount(runSummary.reviewCardCount),
+                completedReviewCardCount: normalizeCount(runSummary.completedReviewCardCount),
+                remainingReviewCardCount: normalizeCount(runSummary.remainingReviewCardCount),
+                scopeSource: String(scope.scopeSource || scope.source || '').trim(),
+                graphSignal: {
+                    graphOpsAvailable: diagnostics.graphOpsAvailable === true,
+                    usedFallback: diagnostics.usedFallback === true,
+                    selectedAnchorReason: String(diagnostics.selectedAnchorReason || '').trim(),
+                    connectionPathCount,
+                    temporalWarningCount,
+                    supportNodeCount: normalizeCount(diagnostics.supportNodeCount),
+                    supportNodeLimit: normalizeCount(diagnostics.supportNodeLimit),
+                    pathDepthLimit: Number.isFinite(Number(diagnostics.pathDepthLimit))
+                        ? Math.max(0, Math.floor(Number(diagnostics.pathDepthLimit)))
+                        : null,
+                    missingLookupCount,
+                },
+            };
+        });
+}
+
 function sortAndCloneMemoryEntries(records: WorkspaceScopedMemoryExportRecord[]): WorkspaceScopedMemoryExportRecord[] {
     return records
         .slice()
@@ -417,6 +504,7 @@ export function buildWorkspaceExportBundle(input: {
     const conversationTurns = sortAndCloneConversationTurns(input.conversationTurns);
     const conversationInvocations = sortAndCloneConversationInvocations(input.conversationInvocations);
     const workflowArtifacts = sortAndCloneWorkflowArtifacts(input.workflowArtifacts);
+    const knowledgeRunReports = buildKnowledgeRunReports(workflowArtifacts);
     const memoryEntries = sortAndCloneMemoryEntries(input.memoryEntries);
     const memoryAuditRecords = sortAndCloneMemoryAuditRecords(input.memoryAuditRecords);
 
@@ -464,6 +552,7 @@ export function buildWorkspaceExportBundle(input: {
             conversationTurns,
             conversationInvocations,
             workflowArtifacts,
+            knowledgeRunReports,
         },
         memory: {
             entries: memoryEntries,
@@ -549,6 +638,7 @@ export function buildWorkspaceExportBundle(input: {
             conversationTurns,
             conversationInvocations,
             workflowArtifacts,
+            knowledgeRunReports,
         },
         memory: {
             entries: memoryEntries,

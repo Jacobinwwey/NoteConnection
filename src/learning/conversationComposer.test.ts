@@ -342,6 +342,12 @@ describe('conversationComposer', () => {
         const actionBlock = reply.assistantBlocks.find((block) => block.type === 'knowledge_actions');
         expect(actionBlock && 'atomIds' in actionBlock ? actionBlock.atomIds : []).toEqual(['atom_a', 'atom_b']);
         expect(collectAgentConversationAtomIds(knowledgePoints)).toEqual(['atom_a', 'atom_b']);
+        expect(reply.knowledgeRun.quality.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'graph_comparison_branch',
+                passed: true,
+            }),
+        ]));
     });
 
     test('aggregates graph context across multiple knowledge points and preserves temporal edge details', () => {
