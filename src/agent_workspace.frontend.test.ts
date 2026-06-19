@@ -101,11 +101,21 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphDiagnosticsMissingLookupsLabel': 'Missing graph lookups',
             'agentWorkspace.evidence.graphTemporalValid': 'valid',
             'agentWorkspace.evidence.graphTemporalWarning': 'warning',
+            'agentWorkspace.graphFocus.relationMapTitle': 'Relation focus',
+            'agentWorkspace.graphFocus.relationAnchorNode': 'Anchor',
+            'agentWorkspace.graphFocus.relationEdgesUnavailable': 'No bounded relation edges were returned for this hit.',
             'agentWorkspace.knowledge.citation': 'Citation',
             'agentWorkspace.knowledge.score': 'Score',
             'agentWorkspace.knowledge.togglePreview': 'Toggle matched knowledge preview: {file}',
+            'agentWorkspace.knowledge.clickHint': 'Left-click a matched file to open the source with highlighted evidence. Use Learning Path for sequence guidance or Related Focus for citation links.',
             'agentWorkspace.knowledge.previewLoading': 'Loading source preview...',
             'agentWorkspace.knowledge.previewUnavailable': 'Source preview unavailable.',
+            'agentWorkspace.knowledge.openFile': 'Open matched knowledge point: {file}',
+            'agentWorkspace.knowledge.learningPathAction': 'Learning Path',
+            'agentWorkspace.knowledge.learningPathActionLabel': 'Show learning path for {file}',
+            'agentWorkspace.knowledge.relatedFocusAction': 'Related Focus',
+            'agentWorkspace.knowledge.relatedFocusActionLabel': 'Show citation focus for {file}',
+            'agentWorkspace.knowledge.actionsMenu': 'Knowledge point actions',
             'agentWorkspace.reply.flashcardBatch.cardTitle': 'Review Card Batch',
             'agentWorkspace.reply.flashcardBatch.summary': '{returnedArtifacts} artifact(s), {remainingCards}/{totalCards} review card(s) remaining.',
             'agentWorkspace.reply.flashcardBatch.metricsHeading': 'Key Metrics',
@@ -911,9 +921,19 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphDiagnosticsMissingLookupsLabel': '缺失图查询',
             'agentWorkspace.evidence.graphTemporalValid': '有效',
             'agentWorkspace.evidence.graphTemporalWarning': '告警',
+            'agentWorkspace.graphFocus.relationMapTitle': '关联聚焦',
+            'agentWorkspace.graphFocus.relationAnchorNode': '锚点',
+            'agentWorkspace.graphFocus.relationEdgesUnavailable': '当前命中未返回有界关系边。',
             'agentWorkspace.knowledge.togglePreview': '切换命中知识预览：{file}',
+            'agentWorkspace.knowledge.clickHint': '左键单击命中文件可打开源文档并高亮命中依据。使用“学习路径”查看顺序引导，使用“关联聚焦”查看引用关系。',
             'agentWorkspace.knowledge.previewLoading': '正在加载源文档预览...',
             'agentWorkspace.knowledge.previewUnavailable': '源文档预览不可用。',
+            'agentWorkspace.knowledge.openFile': '打开命中的知识点：{file}',
+            'agentWorkspace.knowledge.learningPathAction': '学习路径',
+            'agentWorkspace.knowledge.learningPathActionLabel': '显示 {file} 的学习路径',
+            'agentWorkspace.knowledge.relatedFocusAction': '关联聚焦',
+            'agentWorkspace.knowledge.relatedFocusActionLabel': '显示 {file} 的引用关联聚焦',
+            'agentWorkspace.knowledge.actionsMenu': '知识点操作',
             'agentWorkspace.reply.citations': '引用',
             'agentWorkspace.reply.citationsEmpty': '未返回引用。',
             'agentWorkspace.reply.citationUntitled': '未命名引用',
@@ -3694,8 +3714,13 @@ describe('workspace panes controller', () => {
         expect(pathContainer?.style.display).toBe('none');
     });
 
-    test('does not render knowledge-card action buttons in the primary hit list', async () => {
+    test('renders only fixed graph-learning actions in the primary hit list', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
+        const graphView = {
+            openFocusModeById: jest.fn(() => true),
+        };
+        (window as any).NoteConnectionGraphView = graphView;
+        const onCapability = jest.fn();
         controller.init();
         controller.renderKnowledgePoints([
             {
@@ -3728,20 +3753,34 @@ describe('workspace panes controller', () => {
                 ],
             },
         ], {
-            onCapability: jest.fn(),
+            onCapability,
         });
 
+        expect(document.querySelector('.agent-knowledge-click-hint')?.textContent || '').toContain('Left-click');
         const buttonsBefore = Array.from(
             document.querySelectorAll('.agent-knowledge-actions button')
-        ).map((node) => node.textContent);
-        expect(buttonsBefore).toEqual([]);
+        ) as HTMLButtonElement[];
+        expect(buttonsBefore.map((node) => node.textContent)).toEqual(['Learning Path', 'Related Focus']);
+        expect(buttonsBefore.map((node) => node.getAttribute('data-agent-knowledge-action'))).toEqual([
+            'learning-path',
+            'related-focus',
+        ]);
+
+        buttonsBefore[0]?.click();
+        expect(onCapability).toHaveBeenCalledTimes(1);
+        expect(onCapability.mock.calls[0]?.[1]?.actionId).toBe('open_learning_path');
+
+        buttonsBefore[1]?.click();
+        expect(graphView?.openFocusModeById).toHaveBeenCalledWith('atom_paths');
+        expect(document.getElementById('agent-graph-focus-pane')?.getAttribute('data-open')).toBe('true');
 
         await window.i18n.setLanguage('zh');
 
         const buttonsAfter = Array.from(
             document.querySelectorAll('.agent-knowledge-actions button')
         ).map((node) => node.textContent);
-        expect(buttonsAfter).toEqual([]);
+        expect(buttonsAfter).toEqual(['学习路径', '关联聚焦']);
+        expect(document.querySelector('.agent-knowledge-click-hint')?.textContent || '').toContain('左键单击');
     });
 
     test('renders knowledge hits as file entries and opens graph focus from the right pane', async () => {
@@ -3799,6 +3838,17 @@ describe('workspace panes controller', () => {
                         score: 0.81,
                     },
                 ],
+                relationPath: [
+                    {
+                        edgeId: 'edge_water_glass_material',
+                        sourceAtomId: 'atom_glass_container',
+                        targetAtomId: 'atom_water_glass',
+                        relationKind: 'prerequisite',
+                        confidence: 0.88,
+                    },
+                ],
+                relationPathAtomIds: ['atom_glass_container', 'atom_water_glass'],
+                relationKinds: ['prerequisite'],
                 capabilities: [
                     {
                         actionId: 'open_focus_mode',
@@ -3839,11 +3889,19 @@ describe('workspace panes controller', () => {
         const graphBody = document.getElementById('agent-graph-focus-body');
         expect(graphPane?.getAttribute('data-open')).toBe('true');
         expect(String(graphBody?.textContent || '')).toContain('A water glass is a physical system made of a transparent container and water.');
+        expect(String(graphBody?.textContent || '')).toContain('Relation focus');
+        expect(String(graphBody?.textContent || '')).toContain('prerequisite');
+        expect(String(graphBody?.textContent || '')).toContain('atom_glass_container');
+        expect(graphBody?.querySelector('[data-agent-focus-relation-graph="true"]')).not.toBeNull();
         const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
         expect(highlighted.length).toBeGreaterThan(0);
         expect(String(highlighted[0]?.textContent || '')).toContain('A water glass is a physical system');
         const actionButtons = Array.from(refreshedCard?.querySelectorAll('.agent-knowledge-actions button') || []);
-        expect(actionButtons).toHaveLength(0);
+        expect(actionButtons).toHaveLength(2);
+        expect(actionButtons.map((button) => button.getAttribute('data-agent-knowledge-action'))).toEqual([
+            'learning-path',
+            'related-focus',
+        ]);
         expect(onCapability).not.toHaveBeenCalled();
     });
 
@@ -4673,10 +4731,13 @@ describe('workspace panes controller', () => {
         const actionButtons = Array.from(
             document.querySelectorAll('.agent-knowledge-actions button')
         );
-        expect(actionButtons.length).toBe(0);
+        expect(actionButtons.map((button) => button.getAttribute('data-agent-knowledge-action'))).toEqual([
+            'learning-path',
+            'related-focus',
+        ]);
     });
 
-    test('keeps typed capabilities out of the primary knowledge-hit list even when mixed with legacy fields', () => {
+    test('keeps non-graph capabilities out of the primary knowledge-hit list even when mixed with legacy fields', () => {
         const { controller, document } = loadWorkspacePanesHarness({ withI18n: true });
         controller.init();
 
@@ -4713,8 +4774,14 @@ describe('workspace panes controller', () => {
 
         const firstCardButtons = cards[0]?.querySelectorAll('.agent-knowledge-actions button') || [];
         const secondCardButtons = cards[1]?.querySelectorAll('.agent-knowledge-actions button') || [];
-        expect(firstCardButtons.length).toBe(0);
-        expect(secondCardButtons.length).toBe(0);
+        expect(Array.from(firstCardButtons).map((button) => button.getAttribute('data-agent-knowledge-action'))).toEqual([
+            'learning-path',
+            'related-focus',
+        ]);
+        expect(Array.from(secondCardButtons).map((button) => button.getAttribute('data-agent-knowledge-action'))).toEqual([
+            'learning-path',
+            'related-focus',
+        ]);
     });
 });
 

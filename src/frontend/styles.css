@@ -2057,6 +2057,17 @@ body.agent-workspace-open .agent-workspace-drawer {
   padding-right: 6px;
 }
 
+.agent-knowledge-click-hint {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 8px;
+  background: rgba(14, 116, 144, 0.1);
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .agent-knowledge-card {
   position: relative;
   padding: 0;
@@ -2066,8 +2077,16 @@ body.agent-workspace-open .agent-workspace-drawer {
   overflow: hidden;
 }
 
+.agent-knowledge-card-header {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
 .agent-knowledge-file-button {
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -2102,26 +2121,35 @@ body.agent-workspace-open .agent-workspace-drawer {
 }
 
 .agent-knowledge-actions {
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 0 12px 12px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 8px 8px 0;
 }
 
 .agent-knowledge-actions button {
-  min-height: 36px;
+  min-height: 32px;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;
   background: rgba(2, 6, 12, 0.52);
   color: #dbeafe;
   cursor: pointer;
-  padding: 7px 10px;
+  padding: 6px 9px;
+  white-space: nowrap;
 }
 
 .agent-knowledge-actions button:hover,
 .agent-knowledge-actions button:focus-visible {
   background: rgba(14, 116, 144, 0.22);
   border-color: rgba(125, 211, 252, 0.38);
+}
+
+.agent-knowledge-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
 }
 
 .agent-knowledge-preview[hidden] {
@@ -2230,6 +2258,135 @@ body.agent-workspace-open .agent-workspace-drawer {
   color: #dbeafe;
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+.agent-focus-relation-map {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 8px;
+  background: rgba(14, 116, 144, 0.1);
+  padding: 10px 12px;
+}
+
+.agent-focus-relation-kinds {
+  color: #93c5fd;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.agent-focus-relation-graph {
+  position: relative;
+  min-height: 220px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background: rgba(2, 6, 12, 0.34);
+}
+
+.agent-focus-relation-graph-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.agent-focus-relation-graph-edge {
+  stroke: rgba(125, 211, 252, 0.42);
+  stroke-width: 0.9;
+  vector-effect: non-scaling-stroke;
+}
+
+.agent-focus-relation-graph-lines marker path {
+  fill: rgba(125, 211, 252, 0.72);
+}
+
+.agent-focus-relation-graph-node {
+  position: absolute;
+  max-width: min(38%, 190px);
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.96);
+  color: #dbeafe;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.25;
+  padding: 7px 9px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.agent-focus-relation-graph-node--anchor {
+  border-color: rgba(251, 191, 36, 0.62);
+  background: rgba(120, 53, 15, 0.88);
+  color: #fef3c7;
+}
+
+.agent-focus-relation-graph-node--source {
+  border-color: rgba(45, 212, 191, 0.44);
+}
+
+.agent-focus-relation-graph-node--target {
+  border-color: rgba(248, 113, 113, 0.44);
+}
+
+.agent-focus-relation-nodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.agent-focus-relation-node {
+  max-width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  background: rgba(2, 6, 12, 0.42);
+  color: #dbeafe;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  padding: 5px 8px;
+  overflow-wrap: anywhere;
+}
+
+.agent-focus-relation-node--anchor {
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fef3c7;
+}
+
+.agent-focus-relation-edges {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.agent-focus-relation-edge,
+.agent-focus-relation-empty {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  color: #cbd5e1;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.agent-focus-relation-kind {
+  border-radius: 999px;
+  background: rgba(125, 211, 252, 0.14);
+  color: #bae6fd;
+  padding: 2px 7px;
+}
+
+.agent-focus-relation-confidence {
+  color: #93a4b8;
 }
 
 .agent-focus-hit {
@@ -2377,6 +2534,16 @@ body[data-agent-workspace-promotion="learning-path"] #agent-learning-path-pane {
   .agent-workspace-shell {
     padding: 12px;
     gap: 12px;
+  }
+
+  .agent-knowledge-card-header {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .agent-knowledge-actions {
+    justify-content: flex-start;
+    padding: 0 12px 10px;
   }
 }
 

@@ -409,9 +409,14 @@
       "score": "Score",
       "matchedEvidence": "Matched evidence",
       "togglePreview": "Toggle matched knowledge preview: {file}",
+      "clickHint": "Left-click a matched file to open the source with highlighted evidence. Use Learning Path for sequence guidance or Related Focus for citation links.",
       "previewLoading": "Loading source preview...",
       "previewUnavailable": "Source preview unavailable.",
       "openFile": "Open matched knowledge point: {file}",
+      "learningPathAction": "Learning Path",
+      "learningPathActionLabel": "Show learning path for {file}",
+      "relatedFocusAction": "Related Focus",
+      "relatedFocusActionLabel": "Show citation focus for {file}",
       "actionsMenu": "Knowledge point actions",
       "untitled": "Untitled knowledge point"
     },
@@ -435,7 +440,10 @@
       "fallbackPathLabel": "Path fallback",
       "highlightedNodesLabel": "Highlighted nodes",
       "pathFallbackUsed": "used",
-      "pathFallbackNotUsed": "not used"
+      "pathFallbackNotUsed": "not used",
+      "relationMapTitle": "Relation focus",
+      "relationAnchorNode": "Anchor",
+      "relationEdgesUnavailable": "No bounded relation edges were returned for this hit."
     },
     "evidence": {
       "title": "Evidence Inspector",

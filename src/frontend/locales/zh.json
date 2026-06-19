@@ -409,9 +409,14 @@
       "score": "得分",
       "matchedEvidence": "命中依据",
       "togglePreview": "切换命中知识预览：{file}",
+      "clickHint": "左键单击命中文件可打开源文档并高亮命中依据。使用“学习路径”查看顺序引导，使用“关联聚焦”查看引用关系。",
       "previewLoading": "正在加载源文档预览...",
       "previewUnavailable": "源文档预览不可用。",
       "openFile": "打开命中的知识点：{file}",
+      "learningPathAction": "学习路径",
+      "learningPathActionLabel": "显示 {file} 的学习路径",
+      "relatedFocusAction": "关联聚焦",
+      "relatedFocusActionLabel": "显示 {file} 的引用关联聚焦",
       "actionsMenu": "知识点操作",
       "untitled": "未命名知识点"
     },
@@ -435,7 +440,10 @@
       "fallbackPathLabel": "路径回退",
       "highlightedNodesLabel": "高亮节点数",
       "pathFallbackUsed": "已使用",
-      "pathFallbackNotUsed": "未使用"
+      "pathFallbackNotUsed": "未使用",
+      "relationMapTitle": "关联聚焦",
+      "relationAnchorNode": "锚点",
+      "relationEdgesUnavailable": "当前命中未返回有界关系边。"
     },
     "evidence": {
       "title": "证据面板",

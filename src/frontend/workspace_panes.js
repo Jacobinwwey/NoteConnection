@@ -422,6 +422,200 @@
         `;
     }
 
+    function normalizeGraphFocusRelationPath(payload) {
+        return (Array.isArray(payload && payload.relationPath) ? payload.relationPath : [])
+            .map((edge) => ({
+                sourceAtomId: String(edge && edge.sourceAtomId || '').trim(),
+                sourceTitle: String(edge && edge.sourceTitle || '').trim(),
+                targetAtomId: String(edge && edge.targetAtomId || '').trim(),
+                targetTitle: String(edge && edge.targetTitle || '').trim(),
+                relationKind: String(edge && edge.relationKind || '').trim(),
+                confidence: Number(edge && edge.confidence),
+            }))
+            .filter((edge) => edge.sourceAtomId && edge.targetAtomId)
+            .slice(0, 8);
+    }
+
+    function buildGraphFocusRelationGraphHtml(anchorId, relationPath) {
+        if (!Array.isArray(relationPath) || relationPath.length <= 0) {
+            return '';
+        }
+
+        const nodeLabels = {};
+        const addNodeLabel = function (atomId, title) {
+            const normalizedAtomId = String(atomId || '').trim();
+            if (!normalizedAtomId) {
+                return;
+            }
+            const normalizedTitle = String(title || '').trim();
+            nodeLabels[normalizedAtomId] = normalizedTitle || nodeLabels[normalizedAtomId] || normalizedAtomId;
+        };
+
+        addNodeLabel(anchorId, anchorId);
+        relationPath.forEach((edge) => {
+            addNodeLabel(edge.sourceAtomId, edge.sourceTitle);
+            addNodeLabel(edge.targetAtomId, edge.targetTitle);
+        });
+
+        const leftIds = [];
+        const rightIds = [];
+        const appendUnique = function (bucket, atomId) {
+            if (atomId && !bucket.includes(atomId)) {
+                bucket.push(atomId);
+            }
+        };
+
+        relationPath.forEach((edge) => {
+            if (edge.targetAtomId === anchorId) {
+                appendUnique(leftIds, edge.sourceAtomId);
+                return;
+            }
+            if (edge.sourceAtomId === anchorId) {
+                appendUnique(rightIds, edge.targetAtomId);
+                return;
+            }
+            appendUnique(leftIds, edge.sourceAtomId);
+            appendUnique(rightIds, edge.targetAtomId);
+        });
+
+        const coordinates = {};
+        if (anchorId) {
+            coordinates[anchorId] = { x: 50, y: 50, role: 'anchor' };
+        }
+
+        const placeLane = function (ids, x, role) {
+            const visibleIds = ids.filter((atomId) => atomId !== anchorId).slice(0, 4);
+            const step = 80 / (visibleIds.length + 1);
+            visibleIds.forEach((atomId, index) => {
+                if (!coordinates[atomId]) {
+                    coordinates[atomId] = {
+                        x,
+                        y: 10 + step * (index + 1),
+                        role,
+                    };
+                }
+            });
+        };
+
+        placeLane(leftIds, 22, 'source');
+        placeLane(rightIds, 78, 'target');
+
+        Object.keys(nodeLabels).slice(0, 9).forEach((atomId, index) => {
+            if (!coordinates[atomId]) {
+                coordinates[atomId] = {
+                    x: 50,
+                    y: 18 + (index % 4) * 18,
+                    role: 'related',
+                };
+            }
+        });
+
+        const edgeHtml = relationPath.map((edge) => {
+            const source = coordinates[edge.sourceAtomId];
+            const target = coordinates[edge.targetAtomId];
+            if (!source || !target) {
+                return '';
+            }
+            return `
+                <line
+                    class="agent-focus-relation-graph-edge"
+                    x1="${source.x}"
+                    y1="${source.y}"
+                    x2="${target.x}"
+                    y2="${target.y}"
+                    marker-end="url(#agent-focus-relation-arrow)"
+                ></line>
+            `;
+        }).join('');
+
+        const nodeHtml = Object.keys(coordinates).map((atomId) => {
+            const point = coordinates[atomId];
+            const label = nodeLabels[atomId] || atomId;
+            const nodeClass = [
+                'agent-focus-relation-graph-node',
+                `agent-focus-relation-graph-node--${point.role}`,
+            ].join(' ');
+            return `
+                <div
+                    class="${nodeClass}"
+                    style="left: ${point.x}%; top: ${point.y}%;"
+                    title="${escapeHtml(label)}"
+                >
+                    ${escapeHtml(label)}
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="agent-focus-relation-graph" data-agent-focus-relation-graph="true">
+                <svg class="agent-focus-relation-graph-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <defs>
+                        <marker id="agent-focus-relation-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                            <path d="M0,0 L6,3 L0,6 Z"></path>
+                        </marker>
+                    </defs>
+                    ${edgeHtml}
+                </svg>
+                ${nodeHtml}
+            </div>
+        `;
+    }
+
+    function buildGraphFocusRelationMapHtml(payload) {
+        const relationPath = normalizeGraphFocusRelationPath(payload);
+        const relationKinds = Array.from(new Set(
+            (Array.isArray(payload && payload.relationKinds) ? payload.relationKinds : [])
+                .map((kind) => String(kind || '').trim())
+                .filter(Boolean)
+                .concat(relationPath.map((edge) => edge.relationKind).filter(Boolean))
+        ));
+        if (relationPath.length <= 0 && relationKinds.length <= 0) {
+            return '';
+        }
+        const anchorId = String(payload && (payload.atomId || payload.nodeId) || '').trim();
+        const nodeIds = Array.from(new Set(
+            [anchorId]
+                .concat(relationPath.flatMap((edge) => [edge.sourceAtomId, edge.targetAtomId]))
+                .filter(Boolean)
+        )).slice(0, 10);
+        const nodeHtml = nodeIds.map((nodeId) => `
+            <span class="agent-focus-relation-node${nodeId === anchorId ? ' agent-focus-relation-node--anchor' : ''}">
+                ${escapeHtml(nodeId === anchorId
+                    ? `${translate('agentWorkspace.graphFocus.relationAnchorNode', 'Anchor')}: ${nodeId}`
+                    : nodeId)}
+            </span>
+        `).join('');
+        const edgeHtml = relationPath.length > 0
+            ? relationPath.map((edge) => {
+                const sourceLabel = edge.sourceTitle || edge.sourceAtomId;
+                const targetLabel = edge.targetTitle || edge.targetAtomId;
+                const confidencePercent = edge.confidence > 1
+                    ? Math.min(100, Math.max(0, edge.confidence))
+                    : Math.min(100, Math.max(0, edge.confidence * 100));
+                const confidence = Number.isFinite(edge.confidence)
+                    ? ` - ${Math.round(confidencePercent)}%`
+                    : '';
+                return `
+                    <li class="agent-focus-relation-edge">
+                        <span>${escapeHtml(sourceLabel)}</span>
+                        <span class="agent-focus-relation-kind">${escapeHtml(edge.relationKind || 'related')}</span>
+                        <span>${escapeHtml(targetLabel)}</span>
+                        ${confidence ? `<span class="agent-focus-relation-confidence">${escapeHtml(confidence)}</span>` : ''}
+                    </li>
+                `;
+            }).join('')
+            : `<li class="agent-focus-relation-empty">${escapeHtml(translate('agentWorkspace.graphFocus.relationEdgesUnavailable', 'No bounded relation edges were returned for this hit.'))}</li>`;
+        return `
+            <div class="agent-focus-relation-map" data-agent-focus-relation-map="true">
+                <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.graphFocus.relationMapTitle', 'Relation focus'))}</div>
+                ${relationKinds.length > 0 ? `<div class="agent-focus-relation-kinds">${escapeHtml(relationKinds.join(', '))}</div>` : ''}
+                ${buildGraphFocusRelationGraphHtml(anchorId, relationPath)}
+                <div class="agent-focus-relation-nodes">${nodeHtml}</div>
+                <ul class="agent-focus-relation-edges">${edgeHtml}</ul>
+            </div>
+        `;
+    }
+
     function buildGraphFocusDiagnosticsHtml(diagnostics) {
         if (!diagnostics || (!diagnostics.usedFallback && !diagnostics.fallbackSourcePathUsed)) {
             return '';
@@ -482,6 +676,7 @@
                 <div class="agent-pane-title">${escapeHtml(buildGraphFocusTitle(payload))}</div>
                 <div class="agent-pane-meta">${escapeHtml(String(payload.atomId || payload.nodeId || ''))}</div>
                 <p class="agent-pane-summary">${escapeHtml(summary || translate('agentWorkspace.graphFocus.noSummary', 'No summary available.'))}</p>
+                ${buildGraphFocusRelationMapHtml(payload)}
                 ${buildGraphFocusEvidenceListHtml(matchedSpans)}
                 ${buildGraphFocusDiagnosticsHtml(diagnostics)}
             </div>
@@ -503,6 +698,7 @@
             <div class="agent-pane-block agent-pane-block--graph-focus">
                 <div class="agent-pane-title">${escapeHtml(buildGraphFocusTitle(payload))}</div>
                 <div class="agent-pane-meta">${escapeHtml(String(payload.sourcePath || payload.atomId || payload.nodeId || ''))}</div>
+                ${buildGraphFocusRelationMapHtml(payload)}
                 <div class="agent-focus-rendered-markdown" data-agent-focus-rendered-markdown="true"></div>
                 ${buildGraphFocusEvidenceListHtml(matchedSpans)}
             </div>
@@ -1301,6 +1497,180 @@
             || translate('agentWorkspace.knowledge.untitled', 'Untitled knowledge point');
     }
 
+    function resolveKnowledgePointActionAtomId(item) {
+        const candidates = [];
+        const appendCandidate = function (value) {
+            const normalized = String(value || '').trim();
+            if (normalized) {
+                candidates.push(normalized);
+            }
+        };
+        appendCandidate(item && item.atomId);
+        if (Array.isArray(item && item.atomIds)) {
+            item.atomIds.forEach(appendCandidate);
+        }
+        const citation = item && typeof item.citation === 'object' ? item.citation : null;
+        appendCandidate(citation && citation.atomId);
+        if (Array.isArray(item && item.citations)) {
+            item.citations.forEach((entry) => {
+                appendCandidate(entry && entry.atomId);
+            });
+        }
+        if (Array.isArray(item && item.matchedSpans)) {
+            item.matchedSpans.forEach((span) => {
+                appendCandidate(span && span.atomId);
+            });
+        }
+        appendCandidate(item && item.documentId);
+        return candidates[0] || '';
+    }
+
+    function findKnowledgePointCapabilityByActionId(item, actionId) {
+        const normalizedActionId = String(actionId || '').trim();
+        if (!normalizedActionId) {
+            return null;
+        }
+        const capabilities = resolveCapabilities(item);
+        return capabilities.find((capability) => (
+            String(capability && capability.actionId || '').trim() === normalizedActionId
+        )) || null;
+    }
+
+    function buildKnowledgePointLearningPathCapability(item) {
+        const existingCapability = findKnowledgePointCapabilityByActionId(item, 'open_learning_path');
+        const atomId = resolveKnowledgePointActionAtomId(item);
+        if (!atomId) {
+            return null;
+        }
+        const defaultCapability = {
+            capabilityId: `cap_learning_path_${atomId}`,
+            actionId: 'open_learning_path',
+            targetAtomId: atomId,
+            label: translate('agentWorkspace.knowledge.learningPathAction', 'Learning Path'),
+            labelKey: 'agentWorkspace.knowledge.learningPathAction',
+            request: {
+                focusAtomIds: [atomId],
+                maxMasteryPaths: 4,
+                maxDivergencePaths: 2,
+                recommendedActionLimit: 8,
+            },
+            execution: {
+                kind: 'knowledge_operation',
+                operationId: 'build_learning_path',
+                resultPresentation: 'learning_path_pane',
+            },
+        };
+        if (!existingCapability) {
+            return defaultCapability;
+        }
+        const existingExecution = existingCapability.execution && typeof existingCapability.execution === 'object'
+            ? existingCapability.execution
+            : null;
+        return {
+            ...defaultCapability,
+            ...existingCapability,
+            targetAtomId: String(existingCapability.targetAtomId || '').trim() || atomId,
+            request: existingCapability.request && typeof existingCapability.request === 'object'
+                ? existingCapability.request
+                : defaultCapability.request,
+            execution: existingExecution && String(existingExecution.kind || '').trim()
+                ? existingExecution
+                : defaultCapability.execution,
+        };
+    }
+
+    function invokeKnowledgePointCapability(item, capability, handlers) {
+        if (!capability || !handlers || typeof handlers.onCapability !== 'function') {
+            return false;
+        }
+        try {
+            const result = handlers.onCapability(item, capability);
+            if (result && typeof result.catch === 'function') {
+                result.catch((error) => {
+                    console.error('[AgentWorkspace] knowledge point action failed:', error);
+                });
+            }
+            return true;
+        } catch (error) {
+            console.error('[AgentWorkspace] knowledge point action failed:', error);
+            return false;
+        }
+    }
+
+    function focusKnowledgePointInGraphRuntime(atomId) {
+        const normalizedAtomId = String(atomId || '').trim();
+        if (!normalizedAtomId) {
+            return false;
+        }
+        try {
+            if (
+                window.NoteConnectionGraphView
+                && typeof window.NoteConnectionGraphView.openFocusModeById === 'function'
+            ) {
+                return window.NoteConnectionGraphView.openFocusModeById(normalizedAtomId) === true;
+            }
+            if (typeof window.focusOnNode === 'function') {
+                window.focusOnNode(normalizedAtomId);
+                return true;
+            }
+            if (
+                window.NoteConnectionGraphView
+                && typeof window.NoteConnectionGraphView.resolveNodeById === 'function'
+                && typeof window.enterFocusMode === 'function'
+            ) {
+                const node = window.NoteConnectionGraphView.resolveNodeById(normalizedAtomId);
+                if (node) {
+                    window.enterFocusMode(node);
+                    return true;
+                }
+            }
+        } catch (error) {
+            console.warn('[AgentWorkspace] graph focus runtime rejected knowledge point focus:', error);
+        }
+        return false;
+    }
+
+    function openRelatedFocusForKnowledgePoint(item) {
+        ensureWorkspaceVisible();
+        api.openGraphFocusPane(buildKnowledgePointFocusPayload(item));
+        focusKnowledgePointInGraphRuntime(resolveKnowledgePointActionAtomId(item));
+    }
+
+    function openLearningPathForKnowledgePoint(item, handlers) {
+        ensureWorkspaceVisible();
+        api.openGraphFocusPane(buildKnowledgePointFocusPayload(item));
+        const capability = buildKnowledgePointLearningPathCapability(item);
+        if (invokeKnowledgePointCapability(item, capability, handlers)) {
+            return;
+        }
+        const atomId = resolveKnowledgePointActionAtomId(item);
+        const title = String(item && item.title || resolveKnowledgePointFileName(item)).trim();
+        api.openLearningPathPane({
+            atomId,
+            title: title || atomId || translate('agentWorkspace.learningPath.title', 'Learning Path'),
+            items: atomId ? [{ atomId, title: title || atomId }] : [],
+        });
+    }
+
+    function createKnowledgePointGraphActionButton(actionKind, label, ariaLabel, disabled, onClick) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'agent-knowledge-action-button';
+        button.textContent = label;
+        button.disabled = disabled === true;
+        button.setAttribute('data-agent-knowledge-action', actionKind);
+        button.setAttribute('aria-label', ariaLabel);
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (button.disabled) {
+                return;
+            }
+            onClick();
+        });
+        return button;
+    }
+
     function buildKnowledgePointFocusPayload(item) {
         const matchedSpans = buildKnowledgePointMatchedSpans(item);
         const candidateSourcePaths = collectKnowledgePointCandidateSourcePaths(item, matchedSpans);
@@ -1315,6 +1685,15 @@
             sourcePath: candidateSourcePaths[0] || '',
             candidateSourcePaths,
             matchedSpans,
+            relationPath: Array.isArray(item && item.relationPath)
+                ? item.relationPath.map((edge) => ({ ...edge }))
+                : [],
+            relationPathAtomIds: Array.isArray(item && item.relationPathAtomIds)
+                ? item.relationPathAtomIds.map((atomId) => String(atomId || '').trim()).filter(Boolean)
+                : [],
+            relationKinds: Array.isArray(item && item.relationKinds)
+                ? item.relationKinds.map((kind) => String(kind || '').trim()).filter(Boolean)
+                : [],
         };
     }
 
@@ -6136,23 +6515,38 @@
                 return;
             }
             container.innerHTML = '';
+            const hint = document.createElement('div');
+            hint.className = 'agent-knowledge-click-hint';
+            hint.textContent = translate(
+                'agentWorkspace.knowledge.clickHint',
+                'Left-click a matched file to open the source with highlighted evidence. Use Learning Path for sequence guidance or Related Focus for citation links.'
+            );
+            container.appendChild(hint);
             normalizedItems.forEach((item) => {
                 const card = document.createElement('div');
                 card.className = 'agent-knowledge-card';
                 const fileName = resolveKnowledgePointFileName(item);
                 card.setAttribute('data-agent-knowledge-card', 'true');
                 const sourcePath = resolveKnowledgePointSourcePath(item);
+                const actionAtomId = resolveKnowledgePointActionAtomId(item);
+                const header = document.createElement('div');
+                header.className = 'agent-knowledge-card-header';
+                card.appendChild(header);
+
                 const fileButton = document.createElement('button');
                 fileButton.type = 'button';
                 fileButton.className = 'agent-knowledge-file-button';
                 fileButton.textContent = fileName;
                 fileButton.setAttribute(
                     'aria-label',
-                    translate('agentWorkspace.knowledge.togglePreview', 'Open matched knowledge: {file}', {
+                    translate('agentWorkspace.knowledge.openFile', 'Open matched knowledge point: {file}', {
                         file: fileName,
                     })
                 );
-                card.appendChild(fileButton);
+                fileButton.title = translate('agentWorkspace.knowledge.openFile', 'Open matched knowledge point: {file}', {
+                    file: fileName,
+                });
+                header.appendChild(fileButton);
                 fileButton.addEventListener('click', function () {
                     ensureWorkspaceVisible();
                     api.openGraphFocusPane(buildKnowledgePointFocusPayload(item));
@@ -6163,6 +6557,33 @@
                         fileButton.click();
                     }
                 });
+
+                const actions = document.createElement('div');
+                actions.className = 'agent-knowledge-actions';
+                actions.setAttribute(
+                    'aria-label',
+                    translate('agentWorkspace.knowledge.actionsMenu', 'Knowledge point actions')
+                );
+                actions.appendChild(createKnowledgePointGraphActionButton(
+                    'learning-path',
+                    translate('agentWorkspace.knowledge.learningPathAction', 'Learning Path'),
+                    translate('agentWorkspace.knowledge.learningPathActionLabel', 'Show learning path for {file}', {
+                        file: fileName,
+                    }),
+                    !actionAtomId,
+                    () => openLearningPathForKnowledgePoint(item, handlers)
+                ));
+                actions.appendChild(createKnowledgePointGraphActionButton(
+                    'related-focus',
+                    translate('agentWorkspace.knowledge.relatedFocusAction', 'Related Focus'),
+                    translate('agentWorkspace.knowledge.relatedFocusActionLabel', 'Show citation focus for {file}', {
+                        file: fileName,
+                    }),
+                    false,
+                    () => openRelatedFocusForKnowledgePoint(item)
+                ));
+                header.appendChild(actions);
+
                 if (sourcePath) {
                     const pathNode = document.createElement('div');
                     pathNode.className = 'agent-knowledge-source-path';
