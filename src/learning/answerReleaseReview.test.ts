@@ -77,7 +77,7 @@ function makeKnowledgePoint(overrides: Partial<AgentConversationKnowledgePoint> 
     };
 }
 
-function makeGraphContext(): AgentConversationGraphContext {
+function makeGraphContext(overrides: Partial<AgentConversationGraphContext> = {}): AgentConversationGraphContext {
     return {
         anchorAtomId: 'atom_water_glass',
         anchorTitle: 'Water Glass',
@@ -93,6 +93,7 @@ function makeGraphContext(): AgentConversationGraphContext {
             edgeKinds: [],
             details: [],
         },
+        ...overrides,
     };
 }
 
@@ -1885,6 +1886,193 @@ describe('answerReleaseReview', () => {
         expect(review.decision).toBe('revise');
         expect(review.failedGateIds).toContain('claim_graph_causal_consistency');
         expect(review.publicAnswer).toBe('热膨胀导致压力升高。');
+    });
+
+    test('revises grounded answers when temporally flagged evidence is released as a current answer', () => {
+        const point = makeKnowledgePoint({
+            temporalValidity: {
+                isValid: false,
+                checkedAt: '2026-06-19T05:20:00.000Z',
+                reasons: ['temporal_edge_expired'],
+                details: [],
+            },
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: 'Water glass is a transparent container filled with water.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({
+                temporalValidity: {
+                    checkedAt: '2026-06-19T05:20:00.000Z',
+                    allPointsValid: false,
+                    warningReasons: ['temporal_edge_expired'],
+                    invalidKnowledgePointTitles: ['Water Glass'],
+                    edgeKinds: ['validity_window'],
+                    details: [],
+                },
+            }),
+            reviewedAt: '2026-06-19T05:20:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_temporal_validity_consistency');
+        expect(review.publicAnswer).toBe(
+            'The retrieved evidence for Water Glass carries temporal warnings, so I cannot safely present it as the current answer.'
+        );
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_temporal_validity_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('keeps grounded answers when temporally flagged evidence is explicitly time-qualified in the public answer', () => {
+        const point = makeKnowledgePoint({
+            summary: 'As of 2024, Water Glass was a transparent container filled with water.',
+            evidenceSnippet: 'As of 2024, Water Glass was a transparent container filled with water.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                snippet: 'As of 2024, Water Glass was a transparent container filled with water.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    snippet: 'As of 2024, Water Glass was a transparent container filled with water.',
+                },
+            ],
+            temporalValidity: {
+                isValid: false,
+                checkedAt: '2026-06-19T05:25:00.000Z',
+                reasons: ['temporal_edge_expired'],
+                details: [],
+            },
+        });
+        const review = reviewAnswerRelease({
+            message: 'what did water glass mean historically',
+            draftAnswer: 'As of 2024, Water Glass was a transparent container filled with water.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({
+                temporalValidity: {
+                    checkedAt: '2026-06-19T05:25:00.000Z',
+                    allPointsValid: false,
+                    warningReasons: ['temporal_edge_expired'],
+                    invalidKnowledgePointTitles: ['Water Glass'],
+                    edgeKinds: ['validity_window'],
+                    details: [],
+                },
+            }),
+            reviewedAt: '2026-06-19T05:25:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_temporal_validity_consistency');
+        expect(review.publicAnswer).toBe('As of 2024, Water Glass was a transparent container filled with water.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_temporal_validity_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when Chinese temporally flagged evidence is released as a current answer', () => {
+        const point = makeKnowledgePoint({
+            atomId: 'atom_water_glass_zh',
+            atomIds: ['atom_water_glass_zh'],
+            title: '水杯',
+            summary: '水杯是一个装有水的透明容器。',
+            evidenceSnippet: '水杯是一个装有水的透明容器。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                atomId: 'atom_water_glass_zh',
+                title: '水杯',
+                snippet: '水杯是一个装有水的透明容器。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    atomId: 'atom_water_glass_zh',
+                    title: '水杯',
+                    snippet: '水杯是一个装有水的透明容器。',
+                },
+            ],
+            temporalValidity: {
+                isValid: false,
+                checkedAt: '2026-06-19T05:30:00.000Z',
+                reasons: ['temporal_edge_expired'],
+                details: [],
+            },
+        });
+        const review = reviewAnswerRelease({
+            message: '什么是水杯？',
+            draftAnswer: '水杯是一个装有水的透明容器。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({
+                anchorAtomId: 'atom_water_glass_zh',
+                anchorTitle: '水杯',
+                temporalValidity: {
+                    checkedAt: '2026-06-19T05:30:00.000Z',
+                    allPointsValid: false,
+                    warningReasons: ['temporal_edge_expired'],
+                    invalidKnowledgePointTitles: ['水杯'],
+                    edgeKinds: ['validity_window'],
+                    details: [],
+                },
+            }),
+            reviewedAt: '2026-06-19T05:30:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_temporal_validity_consistency');
+        expect(review.publicAnswer).toBe('关于水杯的当前命中证据带有时序警告，我不能把它直接当作当前结论发布。');
+    });
+
+    test('keeps grounded answers when the graph only records superseded lineage but the current anchor is still temporally valid', () => {
+        const point = makeKnowledgePoint();
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: 'Water glass is a transparent container filled with water.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({
+                temporalValidity: {
+                    checkedAt: '2026-06-19T05:35:00.000Z',
+                    allPointsValid: true,
+                    warningReasons: [],
+                    invalidKnowledgePointTitles: [],
+                    edgeKinds: ['supersedes'],
+                    details: [
+                        {
+                            edgeId: 'temporal_support_supersedes',
+                            edgeKind: 'supersedes',
+                            sourceAtomId: 'atom_water_glass',
+                            targetAtomId: 'atom_water_glass_v0',
+                            validFrom: '2024-01-01T00:00:00.000Z',
+                            validTo: '2025-01-01T00:00:00.000Z',
+                            isActive: true,
+                        },
+                    ],
+                },
+            }),
+            reviewedAt: '2026-06-19T05:35:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_temporal_validity_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_temporal_validity_consistency',
+                passed: true,
+            }),
+        ]));
     });
 
     test('revises grounded answers when a DAG contrast pair is incorrectly released as an analogy claim', () => {

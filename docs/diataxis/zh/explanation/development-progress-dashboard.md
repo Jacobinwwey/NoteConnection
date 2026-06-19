@@ -26,6 +26,7 @@
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_attribute_consistency`，因此当草稿保持同一 grounded subject 与显式 `has` / `具有` 属性框架、却把支撑属性从 `中等热绝缘性能` 偷换成 `高热绝缘性能` 时，也会在 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_graph_causal_consistency`，因此当草稿把 DAG 支撑的因果方向说反，例如把 `Pressure Rise causes Thermal Expansion` 这类因果对调，也会在中英文路径上于 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_graph_comparison_consistency`，因此当草稿把 DAG 支撑的 `contrast` / `analogy` title pair 语义说反时，也会在 release 前被确定性纠正句改写，
+- `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_temporal_validity_consistency`，因此 DAG 的 temporal warning 现在也会进入最终发布决策：当 `graphContext.temporalValidity.allPointsValid === false` 时，未显式加时间限定的“当前结论”草稿会在 release 前被改写，带明确时间限定的答案仍可放行，而仅有 `supersedes` 血缘本身不会造成误报拦截，
 - 共享 alias/scope 回归语料现在也不再把这一步中间改写过程错误地钉死到所有 fixture 上：
   - 对内存态的简化语料，只要最终公开回答已经 grounded 且收缩，`release` 与 `revise` 都是允许结果，
   - 对真实截图派生的运行时用例 `waterglass_explicit_scope_compact_zh`，则继续强制要求 `revise`，并且 failed gate 必须包含 `query_intent_alignment`，
@@ -73,7 +74,7 @@
 
 当前仍未关闭的缺口：
 
-- 更广的 claim-vs-citation / claim-vs-evidence 矛盾覆盖仍需继续超出 lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison 栈，
+- 更广的 claim-vs-citation / claim-vs-evidence 矛盾覆盖仍需继续超出 lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity 栈，
 - 同一已认证渲染 block 内的重复片段去歧义仍然需要 exact offset 或更丰富的 markdown AST provenance。
 
 代码 / 方案对齐：
@@ -133,12 +134,13 @@
 | 同主体状态矛盾必须在 release 前改写 | `answerReleaseReview.ts` 现在会对中英文可比 definition/copula 断言执行 `claim_state_consistency`。 | 已实现基线 |
 | grounded draft 不得把 DAG 支撑的因果方向说反 | `answerReleaseReview.ts` 现在会对 `connectionPaths`、`knowledgePointRelations` 以及 predecessor/successor window 中装配出的 `causal` 边执行 `claim_graph_causal_consistency`，并把反向因果改写成确定性的纠正句。 | 已实现基线 |
 | grounded draft 不得把单一对比分支的 DAG title pair 说成相反对比语义 | `answerReleaseReview.ts` 现在会对已装配 `contrast` / `analogy` 证据执行 `claim_graph_comparison_consistency`；当同一 title pair 在图中只支撑一种对比家族时，把它说成相反语义会触发 revise。 | 已实现基线 |
+| grounded draft 不得把带时序警告的 DAG 证据直接发布成“当前结论” | `answerReleaseReview.ts` 现在会基于 `graphContext.temporalValidity` 执行 `claim_temporal_validity_consistency`：未显式加时间限定的当前结论会被改写，而带明确时间限定的答案仍可放行，并避免 `supersedes` 单独触发误报。 | 已实现基线 |
 | 右侧原文预览必须在可用时消费 source-to-render provenance | `markdown_runtime.js` 现在会给渲染 block 标注 source-line 元数据，`workspace_panes.js` 则优先使用 `source_line_provenance`，并输出 provenance 覆盖计数。 | 已实现基线 |
 | 右侧原文预览必须高亮命中片段，而不只是整段 | `workspace_panes.js` 现在会在选中节点内部投影命中的 evidence fragment，在已认证 block 内优先使用 snippet 尺度的 source-authenticated fragment projection，并输出 `inlineHighlightCount` 与 `inlineHighlightStrategy`。 | 已实现基线 |
 | 右侧原文预览在 snippet 重复时仍必须高亮正确段落 | `workspace_panes.js` 现在优先使用可信 `line_window` 锚点，并用 specificity/container penalty 给候选节点打分。 | 已实现基线 |
 | 陈旧行号不能强行把高亮带偏 | `workspace_panes.js` 现在会主动怀疑 stale line window，并回退到 `snippet_fallback`；前端测试已固定这类失败模式。 | 已实现基线 |
 | 截图驱动的 `waterglass` 失败必须继续作为正式验收项 | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` 现在要求 grounded 输出、reviewer/public-answer 一致性、无诊断泄漏，并且不能再退化成 `本技术文档旨在` 这类元文档回答。 | 已实现 |
-| 当前剩余缺口必须明确转移到更广矛盾检测与更窄但仍未关闭的 provenance | 现有代码仍需继续补超出 lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison 栈的 claim-vs-citation / claim-vs-evidence conflict 检测，以及用于同一已认证 block 内重复片段去歧义的显式 span offset 或更丰富 AST provenance。 | 未完成 |
+| 当前剩余缺口必须明确转移到更广矛盾检测与更窄但仍未关闭的 provenance | 现有代码仍需继续补超出 lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity 栈的 claim-vs-citation / claim-vs-evidence conflict 检测，以及用于同一已认证 block 内重复片段去歧义的显式 span offset 或更丰富 AST provenance。 | 未完成 |
 
 本次复审验证：
 

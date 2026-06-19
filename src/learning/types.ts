@@ -1287,6 +1287,7 @@ export type AnswerReleaseGateId =
     | 'claim_graph_causal_consistency'
     | 'claim_graph_order_consistency'
     | 'claim_graph_comparison_consistency'
+    | 'claim_temporal_validity_consistency'
     | 'public_surface_contraction'
     | 'internal_diagnostic_leakage'
     | 'abstention_hygiene';

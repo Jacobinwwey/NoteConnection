@@ -296,7 +296,9 @@ describe('conversationComposer', () => {
             nextBlockId: () => `assistant_block_${++blockCounter}`,
         });
 
-        expect(reply.answer).toContain('Reflection and absorption differ');
+        expect(reply.answer).toBe(
+            'The retrieved evidence for Reflection carries temporal warnings, so I cannot safely present it as the current answer.'
+        );
         expect(reply.answer).not.toContain('Grounded by');
         expect(reply.answer).not.toContain('Key evidence');
         expect(reply.assistantBlocks.map((block) => block.type)).toEqual(
@@ -326,7 +328,9 @@ describe('conversationComposer', () => {
                 targetAtomIds: ['atom_contrast'],
             }),
         ]));
-        expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toContain('Reflection and absorption differ');
+        expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toBe(
+            'The retrieved evidence for Reflection carries temporal warnings, so I cannot safely present it as the current answer.'
+        );
         expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').not.toContain('Grounded by');
         expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').not.toContain('Key evidence');
         expect(structuredBlock && 'overviewMarkdown' in structuredBlock ? structuredBlock.overviewMarkdown : '').toContain('## Answer Context');
@@ -349,8 +353,9 @@ describe('conversationComposer', () => {
             }),
         ]));
         expect(reply.answerReleaseReview).toEqual(expect.objectContaining({
-            decision: 'release',
+            decision: 'revise',
             publicAnswer: reply.answer,
+            failedGateIds: expect.arrayContaining(['claim_temporal_validity_consistency']),
         }));
     });
 

@@ -241,6 +241,24 @@ type QueryIntentAlignmentResult = {
     supportFrame: (StateFrame & { label: string }) | null;
 };
 
+type TemporalValidityQualificationSource =
+    | 'not_required'
+    | 'draft_qualified';
+
+type TemporalValidityConflict = {
+    anchorTitle: string;
+    warningReasons: string[];
+    invalidKnowledgePointTitles: string[];
+    checkedAt: string;
+};
+
+type TemporalValidityConsistencyResult = {
+    passed: boolean;
+    applicable: boolean;
+    qualificationSource: TemporalValidityQualificationSource;
+    conflict: TemporalValidityConflict | null;
+};
+
 const INTERNAL_DIAGNOSTIC_FRAGMENTS = [
     'No scoped knowledge points matched',
     'retrieval_candidates_below_threshold',
@@ -288,6 +306,8 @@ const ENGLISH_DEFINITION_QUERY_PATTERN = /\b(?:what\s+is|what'?s|what\s+are|who\
 const CHINESE_DEFINITION_QUERY_PATTERN = /什么是|指的是什么|定义|是什么意思/u;
 const ENGLISH_META_DOCUMENTARY_PATTERN = /\b(?:this|the)\s+(?:technical\s+)?document\b[^.!?\n\r]{0,120}\b(?:aims?|describes?|analy[sz]es?|provides?|outlines?)\b|\bthis\s+(?:section|chapter)\b|\bwe\s+will\b/iu;
 const CHINESE_META_DOCUMENTARY_PATTERN = /(?:本|该)?技术文档|本文档|本节|本章|我们将|旨在(?:对|从|说明|分析)|用于阐述/u;
+const ENGLISH_TEMPORAL_QUALIFICATION_PATTERN = /\b(?:as of|historically|historical|previously|formerly|earlier|prior|at the time|during|until|before|after|superseded|expired|outdated|older revision|prior version|previous version|legacy version|no longer current)\b/iu;
+const CHINESE_TEMPORAL_QUALIFICATION_PATTERN = /截至|历史上|历史版本|曾经|先前|此前|之前|之后|期间|当时|已过期|已失效|旧版|早期|已被[^。；.!?\n\r]{0,20}(?:取代|替代)/u;
 
 const STRUCTURED_ANCHOR_STOPWORDS = new Set([
     'a',
@@ -623,6 +643,46 @@ function buildGraphComparisonRevisionAnswer(
     return conflict.evidence.relationKind === 'contrast'
         ? `${leftTitle} contrasts with ${rightTitle}.`
         : `${leftTitle} is similar to ${rightTitle}.`;
+}
+
+function draftCarriesTemporalQualification(value: string): boolean {
+    const normalized = normalizeWhitespace(value);
+    if (!normalized) {
+        return false;
+    }
+    return ENGLISH_TEMPORAL_QUALIFICATION_PATTERN.test(normalized)
+        || CHINESE_TEMPORAL_QUALIFICATION_PATTERN.test(normalized)
+        || /\b(?:19|20)\d{2}\b/.test(normalized);
+}
+
+function buildTemporalValidityRevisionAnswer(
+    context: AnswerReleaseReviewContext,
+    conflict: TemporalValidityConflict
+): string {
+    const anchorTitle = normalizeWhitespace(
+        conflict.anchorTitle
+        || context.graphContext?.anchorTitle
+        || context.knowledgePoints[0]?.title
+        || conflict.invalidKnowledgePointTitles[0]
+        || ''
+    );
+    const useChinese = containsCjk([
+        context.message,
+        context.draftAnswer,
+        anchorTitle,
+        ...conflict.invalidKnowledgePointTitles,
+        ...conflict.warningReasons,
+    ].join(' '));
+    if (useChinese) {
+        if (anchorTitle) {
+            return `关于${anchorTitle}的当前命中证据带有时序警告，我不能把它直接当作当前结论发布。`;
+        }
+        return '当前命中的证据带有时序警告，我不能把它直接当作当前结论发布。';
+    }
+    if (anchorTitle) {
+        return `The retrieved evidence for ${anchorTitle} carries temporal warnings, so I cannot safely present it as the current answer.`;
+    }
+    return 'The retrieved evidence carries temporal warnings, so I cannot safely present it as the current answer.';
 }
 
 function compareStructuredFactMagnitude(
@@ -1120,6 +1180,29 @@ function buildGraphComparisonConflictMessage(conflicts: GraphComparisonConflict[
         `"${conflict.answerSurface}" contradicted ${conflict.evidence.leftTitle} <-> ${conflict.evidence.relationKind} <-> ${conflict.evidence.rightTitle}`
     ));
     return `Draft answer contradicted grounded graph comparison relations: ${fragments.join('; ')}.`;
+}
+
+function buildTemporalValidityConflictMessage(
+    result: TemporalValidityConsistencyResult
+): string {
+    if (!result.applicable) {
+        return 'No temporal validity warning was active for the grounded graph context.';
+    }
+    if (result.passed) {
+        return result.qualificationSource === 'draft_qualified'
+            ? 'Temporal warnings were present, and the draft answer stayed explicitly time-qualified.'
+            : 'Temporal validity stayed aligned with the draft answer.';
+    }
+    if (!result.conflict) {
+        return 'Temporal warnings were present, but the draft answer stayed conservative.';
+    }
+    const warningSummary = result.conflict.warningReasons.length > 0
+        ? result.conflict.warningReasons.join(', ')
+        : 'temporal validity warning';
+    const titleSummary = result.conflict.invalidKnowledgePointTitles.length > 0
+        ? ` for ${result.conflict.invalidKnowledgePointTitles.slice(0, 2).join(', ')}`
+        : '';
+    return `Draft answer presented temporally flagged evidence as a current claim${titleSummary} without any time qualification (${warningSummary}).`;
 }
 
 function collectLeakedInternalFragments(answer: string): string[] {
@@ -3495,6 +3578,43 @@ function evaluateGraphComparisonConsistency(context: AnswerReleaseReviewContext)
     };
 }
 
+function evaluateTemporalValidityConsistency(
+    context: AnswerReleaseReviewContext
+): TemporalValidityConsistencyResult {
+    const temporalValidity = context.graphContext?.temporalValidity;
+    if (!temporalValidity || temporalValidity.allPointsValid !== false) {
+        return {
+            passed: true,
+            applicable: false,
+            qualificationSource: 'not_required',
+            conflict: null,
+        };
+    }
+    if (draftCarriesTemporalQualification(context.draftAnswer)) {
+        return {
+            passed: true,
+            applicable: true,
+            qualificationSource: 'draft_qualified',
+            conflict: null,
+        };
+    }
+    return {
+        passed: false,
+        applicable: true,
+        qualificationSource: 'not_required',
+        conflict: {
+            anchorTitle: normalizeWhitespace(String(context.graphContext?.anchorTitle || '').trim()),
+            warningReasons: Array.isArray(temporalValidity.warningReasons)
+                ? temporalValidity.warningReasons.map((reason) => normalizeWhitespace(String(reason || '').trim())).filter(Boolean)
+                : [],
+            invalidKnowledgePointTitles: Array.isArray(temporalValidity.invalidKnowledgePointTitles)
+                ? temporalValidity.invalidKnowledgePointTitles.map((title) => normalizeWhitespace(String(title || '').trim())).filter(Boolean)
+                : [],
+            checkedAt: normalizeWhitespace(String(temporalValidity.checkedAt || '').trim()),
+        },
+    };
+}
+
 function checkPublicSurfaceContraction(answer: string): boolean {
     const normalizedAnswer = String(answer || '');
     if (normalizeWhitespace(normalizedAnswer).length > 320) {
@@ -3525,6 +3645,7 @@ function buildDecision(
     graphCausalConsistencyPassed: boolean,
     graphOrderConsistencyPassed: boolean,
     graphComparisonConsistencyPassed: boolean,
+    temporalValidityConsistencyPassed: boolean,
     leakedInternalFragments: string[],
     publicSurfaceContracted: boolean
 ): AnswerReleaseDecision {
@@ -3547,6 +3668,7 @@ function buildDecision(
         || !graphCausalConsistencyPassed
         || !graphOrderConsistencyPassed
         || !graphComparisonConsistencyPassed
+        || !temporalValidityConsistencyPassed
         || leakedInternalFragments.length > 0
         || !publicSurfaceContracted
     ) {
@@ -3725,6 +3847,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             comparableClaimCount: 0,
             conflicts: [],
         };
+    const temporalValidityConsistency = groundedEvidenceAvailable
+        ? evaluateTemporalValidityConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            applicable: false,
+            qualificationSource: 'not_required' as const,
+            conflict: null,
+        };
     const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer);
     const graphSupportCount = context.graphContext
         ? (
@@ -3751,6 +3884,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         graphCausalConsistency.passed,
         graphOrderConsistency.passed,
         graphComparisonConsistency.passed,
+        temporalValidityConsistency.passed,
         leakedInternalFragments,
         publicSurfaceContracted
     );
@@ -3758,12 +3892,15 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     const primaryGraphOrderConflict = graphOrderConsistency.conflicts[0];
     const primaryGraphComparisonConflict = graphComparisonConsistency.conflicts[0];
     const primaryStructuredComparisonConflict = structuredComparisonConsistency.conflicts[0];
+    const primaryTemporalValidityConflict = temporalValidityConsistency.conflict;
     const publicAnswer = normalizeWhitespace(
         decision === 'abstain'
             ? buildAbstentionAnswer(context.message, context.usedScope)
             : decision === 'revise'
                 ? (
-                    primaryGraphCausalConflict
+                    primaryTemporalValidityConflict
+                        ? buildTemporalValidityRevisionAnswer(context, primaryTemporalValidityConflict)
+                    : primaryGraphCausalConflict
                         ? buildGraphCausalRevisionAnswer(context, primaryGraphCausalConflict)
                         : primaryGraphOrderConflict
                         ? buildGraphOrderRevisionAnswer(context, primaryGraphOrderConflict)
@@ -3968,6 +4105,13 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : 'No explicit graph-comparison claim was present in the draft answer, so DAG-comparison checking stayed conservative.'
                 )
                 : 'No evidence was available, so graph-comparison contradiction checking was not evaluated.',
+        },
+        {
+            gateId: 'claim_temporal_validity_consistency',
+            passed: temporalValidityConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? buildTemporalValidityConflictMessage(temporalValidityConsistency)
+                : 'No evidence was available, so temporal-validity release checking was not evaluated.',
         },
         {
             gateId: 'public_surface_contraction',

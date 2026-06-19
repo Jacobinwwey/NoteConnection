@@ -38,6 +38,7 @@ The target is not another prompt framework. The target is a deterministic releas
 - `src/learning/answerReleaseReview.ts` now also adds `claim_graph_causal_consistency`, so grounded drafts that reverse DAG-backed cause/effect direction, such as `Pressure Rise causes Thermal Expansion`, are revised before release with deterministic English/Chinese correction sentences.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_graph_order_consistency`, so grounded drafts that reverse DAG-backed `prerequisite` or `sequence` direction are revised before release with deterministic correction sentences.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_graph_comparison_consistency`, so grounded drafts that misstate DAG-backed `contrast` / `analogy` pairs, such as releasing `is similar to` when the graph only supports `contrast`, are revised before release.
+- `src/learning/answerReleaseReview.ts` now also adds `claim_temporal_validity_consistency`, so DAG temporal warnings now participate in final public-answer release: when `graphContext.temporalValidity.allPointsValid === false`, unqualified current-tense drafts are revised, explicitly time-qualified drafts may still release, and supersedes-only lineage does not become a false-positive blocker by itself.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_dependency_consistency`, so grounded drafts that keep the same explicit `depends on` / `requires` / `依赖` / `前置条件` relation but swap the supported dependency, such as `Baseline Measurement and Sensor Calibration` to `Final Reporting`, are revised before release.
 - `src/frontend/markdown_runtime.js` now exposes block-level source-line provenance for rendered markdown, and `src/frontend/workspace_panes.js` now prefers `source_line_provenance` before `line_window` / `snippet_fallback`.
 - The right pane now also projects the matched evidence fragment into inline highlight markup inside the selected rendered node instead of only tinting the larger paragraph/container.
@@ -125,6 +126,7 @@ The correct architecture is a pipeline of owners, not a single "RAG" blob:
    - graph-causal consistency,
    - graph-order consistency,
    - graph-comparison consistency,
+   - temporal-validity consistency,
    - abstention hygiene.
 6. The review result rewrites the public answer if needed.
 7. The final answer is released to the main chat surface.
@@ -199,6 +201,7 @@ Best-practice conclusion:
 | Grounded drafts must also be checked for reversed DAG causal claims | Reviewer now enforces `claim_graph_causal_consistency`, revising drafts that invert grounded `causal` direction from the assembled DAG. | Implemented baseline |
 | Grounded drafts must also be checked for reversed DAG order claims | Reviewer now enforces `claim_graph_order_consistency`, revising drafts that invert grounded `prerequisite` or `sequence` direction from the assembled DAG. | Implemented baseline |
 | Grounded drafts must also be checked for DAG-backed comparison-branch contradictions | Reviewer now enforces `claim_graph_comparison_consistency`, revising drafts that state `contrast` pairs as `analogy` or `analogy` pairs as `contrast` when the assembled DAG supports only one comparison family for that title pair. | Implemented baseline |
+| Grounded drafts must also be checked for DAG temporal-validity contradictions | Reviewer now enforces `claim_temporal_validity_consistency`, revising current-tense releases when `graphContext.temporalValidity.allPointsValid === false`, while allowing explicit time qualification and avoiding supersedes-only false positives. | Implemented baseline |
 | Final review state must be inspectable by developers | `answerReleaseReview` is now stored additively on `AgentConversationResponse`, `AgentConversationTrace`, and `KnowledgeRun`. | Implemented |
 | Operator surfaces must expose reviewer state without widening the main answer area | `src/frontend/agent_workspace.js` sanitizes `answerReleaseReview`, and `src/frontend/workspace_panes.js` renders release-review detail/history inside `knowledge_run` cards. | Implemented |
 | Reviewer telemetry must survive export/replay surfaces | `src/export/WorkspaceExportBundle.ts` now emits compact `runtime.knowledgeRunReports[*].answerReleaseReview` summaries for durable replay and operator audit. | Implemented |
@@ -668,6 +671,27 @@ Attached additively to:
 - Runtime verification now records one more operational lesson: reviewer-gate changes must be checked against freshly built `dist` output. The first runtime probe missed the new gate inventory until `npm run build:mini` refreshed the compiled JS.
 - This phase matters architecturally because it closes a real contradiction family that lexical overlap, structured scalar checks, and DAG comparison-family checks do not cover by themselves: same-property ordering drift between two grounded entities.
 
+#### Phase-24 temporal validity contradiction hardening landed on top of the structured-comparison slice
+
+- `src/learning/answerReleaseReview.ts` now adds a fourteenth contradiction-oriented reviewer gate: `claim_temporal_validity_consistency`.
+- This gate keeps the same narrow-owner discipline:
+  - it consumes the project’s existing DAG temporal surface through `graphContext.temporalValidity`,
+  - it only fires when `allPointsValid === false`,
+  - it stays conservative unless the draft is actually presenting that evidence as a current answer.
+- The supported contradiction family is intentionally concrete:
+  - English: a draft releases a current-tense answer even though the grounded evidence carries temporal warnings,
+  - Chinese: a draft still publishes a current conclusion although the matched DAG evidence is already temporally flagged.
+- False-positive control is explicit:
+  - explicitly time-qualified drafts such as `as of 2024`, `historically`, or `截至2024年` still `release`,
+  - year-qualified public answers count as qualified,
+  - supersedes-only lineage does not block release by itself when the current anchor remains valid.
+- `src/learning/answerReleaseReview.test.ts` now pins four important behaviors:
+  - temporally flagged current-tense English release must `revise`,
+  - explicitly time-qualified answers may still `release`,
+  - temporally flagged current-tense Chinese release must `revise`,
+  - supersedes-only lineage must not create a false positive.
+- This phase matters architecturally because it moves DAG temporal warnings from explanation-only metadata into the final release contract without handing correctness ownership to a second verifier runtime.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -757,7 +781,7 @@ The first two decide capability. The third decides trust.
 
 ### Next Direction
 
-1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison gate stack, but only where the new checks can stay deterministic enough to avoid false-positive churn.
+1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity gate stack, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
 3. Treat the current block-level markdown source mapping plus `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` graph-focus stack as the implemented baseline, then focus the next provenance step on repeated-fragment disambiguation via explicit offsets or richer AST provenance.
 4. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
@@ -768,7 +792,7 @@ The first two decide capability. The third decides trust.
 1. The missing mechanism was not graph retrieval; it was final public-answer release review.
 2. The correct owner is a local deterministic reviewer layer, not a new prompt framework.
 3. The current project DAG remains the evidence substrate and now also participates in release-time causal, order, and comparison correction; graph-focus now also has a block-level provenance baseline plus `source_line_provenance` / source-authenticated fragment projection / `line_window` / `snippet_fallback`, so the remaining evidence gap has narrowed to repeated-fragment disambiguation inside one authenticated block rather than basic pane opening.
-4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification, and the reviewer stack now also blocks same-subject attribute drift, containment-content drift, composition-component drift, dependency/prerequisite drift, and DAG-backed causal reversal before release.
+4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification, and the reviewer stack now also blocks same-subject attribute drift, containment-content drift, composition-component drift, dependency/prerequisite drift, DAG-backed causal reversal, and temporally flagged current-answer release before publication.
 5. The landed slice is backward-compatible and materially improves robustness without widening the main answer surface; the next work is broader contradiction coverage, not replacing the current reviewer owner.
 
 ## 中文文档
@@ -798,6 +822,7 @@ The first two decide capability. The third decides trust.
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_graph_causal_consistency`，因此像把 `Pressure Rise causes Thermal Expansion` 这样与 DAG 因果方向相反的草稿，会在 release 前被中英文确定性纠正句拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_graph_order_consistency`，因此像把 DAG 支撑的 `prerequisite` / `sequence` 顺序说反的草稿，会在 release 前被确定性纠正句拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_graph_comparison_consistency`，因此当 DAG 只支撑 `contrast` 或只支撑 `analogy` 时，把二者说反的草稿也会在 release 前被拦截并改写。
+- `src/learning/answerReleaseReview.ts` 现在也新增 `claim_temporal_validity_consistency`，因此 DAG 时序有效性警告已经进入最终公开回答的 release contract：当 `graphContext.temporalValidity.allPointsValid === false` 时，未显式带时间限定的“当前结论”草稿会在 release 前被改写；已经带明确时间限定的回答仍可放行，而仅有 `supersedes` 血缘本身不会误触发门禁。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_dependency_consistency`，因此像把 `响应验证依赖基线测量和传感器校准` 偷换成 `响应验证依赖最终报告` 这类“同一主体、同一显式依赖/前置条件关系、但依赖目标漂移”的草稿会在 release 前被拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_structured_comparison_consistency`，因此像把 `Water density is higher than glass density` 这类“同一属性、同一单位、比较方向说反”的草稿，也会在 release 前被确定性纠正句拦截并改写，而不会仅因 topic overlap 还在就放行。
 - `src/frontend/markdown_runtime.js` 现在会暴露 block-level 的 source-line provenance，`src/frontend/workspace_panes.js` 则优先消费 `source_line_provenance`，之后才回退到 `line_window` / `snippet_fallback`。
@@ -885,6 +910,7 @@ The first two decide capability. The third decides trust.
    - graph-causal consistency
    - graph-order consistency
    - graph-comparison consistency
+   - temporal-validity consistency
    - abstention hygiene
 6. review 层决定最终公开回答是否原样放行、收缩重写、或降级拒答。
 7. 主回答区只渲染最终公开回答。
@@ -959,6 +985,7 @@ The first two decide capability. The third decides trust.
 | grounded draft 还必须检查与 DAG 相矛盾的因果断言 | reviewer 现在会执行 `claim_graph_causal_consistency`：只要把已装配 DAG 的 `causal` 因果方向说反，就会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查与 DAG 相矛盾的顺序断言 | reviewer 现在会执行 `claim_graph_order_consistency`：只要把已装配 DAG 的 `prerequisite` 或 `sequence` 方向说反，就会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查 DAG 支撑的对比/类比分支被说反 | reviewer 现在会执行 `claim_graph_comparison_consistency`：当同一 title pair 在已装配 DAG 中只支撑 `contrast` 或只支撑 `analogy` 时，把两者说反会触发 revise。 | 已实现基线 |
+| grounded draft 还必须检查 DAG 时序有效性警告与“当前结论”发布之间的冲突 | reviewer 现在会执行 `claim_temporal_validity_consistency`：当 `graphContext.temporalValidity.allPointsValid === false` 时，未显式带时间限定的当前结论会被改写；已经显式限定时间的回答仍可放行，而仅有 `supersedes` 血缘本身不会制造误报。 | 已实现基线 |
 | 最终审核结果必须可供开发者检查 | `answerReleaseReview` 已加到 `AgentConversationResponse`、`AgentConversationTrace`、`KnowledgeRun`。 | 已实现 |
 | 运维表面必须能看到 reviewer 状态且不扩大主回答区 | `src/frontend/agent_workspace.js` 会净化 `answerReleaseReview`，`src/frontend/workspace_panes.js` 会在 `knowledge_run` 卡片中渲染 release-review 明细 / 历史。 | 已实现 |
 | reviewer 遥测必须能跨 export/replay 表面保留 | `src/export/WorkspaceExportBundle.ts` 现在会在 `runtime.knowledgeRunReports[*].answerReleaseReview` 中输出紧凑 reviewer 摘要，供离线回放与运维审计使用。 | 已实现 |
@@ -1428,6 +1455,26 @@ The first two decide capability. The third decides trust.
 - 运行时验证还补出一个操作层面的结论：只改 reviewer 源码还不够，跑 verifier 前必须先刷新 `dist`。第一次 runtime probe 因为编译产物陈旧而漏掉了新 gate 清单；`npm run build:mini` 之后才重新对齐。
 - 这个 Phase 在架构上的意义很直接：它补上的是真实存在、且 lexical overlap、structured scalar check 与 DAG comparison-family gate 各自都不能单独覆盖的矛盾族群，即“同一属性、两个 grounded 实体、比较顺序被说反”。
 
+#### 在结构化比较切片之上继续落地的 Phase-24 时序有效性矛盾加固
+
+- `src/learning/answerReleaseReview.ts` 现在新增了第十四个面向矛盾检测的 reviewer gate：`claim_temporal_validity_consistency`。
+- 这个 gate 继续保持窄边界：
+  - 它直接消费项目现有 DAG 已装配出来的 `graphContext.temporalValidity`，
+  - 它关心的是“带时序警告的证据，是否被当成当前结论公开放行”，
+  - 它不去重做 retrieval、planner 或独立图推理 owner 已经负责的工作。
+- 当前支持的矛盾族群刻意保持具体：
+  - 英文：grounded evidence 已带 temporal warning，但草稿仍直接发布 current-tense answer，
+  - 中文：命中的 DAG 证据已经带时序警告，但草稿仍把它公开表述成“当前结论”。
+- 防误报控制也被显式写进实现：
+  - 只要公开回答已经显式带时间限定，例如 `as of`、`historically`、`截至`、`此前` 或具体年份，仍然允许 `release`，
+  - 仅有 `supersedes` 血缘而当前 anchor 仍然有效时，不会单独阻断 release，
+  - 如果 DAG 侧没有激活 `allPointsValid === false`，这个 gate 什么也不做。
+- `src/learning/answerReleaseReview.test.ts` 现在已经固定三类关键行为：
+  - 带时序警告的 current-tense 英文草稿必须 `revise`；
+  - 带时序警告的 current-tense 中文草稿必须 `revise`；
+  - 已显式加时间限定的回答必须继续 clean `release`，而仅有 supersedes 血缘不得制造误报。
+- 这个 Phase 在架构上的意义很直接：它把 DAG 时序警告从“解释层 metadata”推进成最终 release contract 的一部分，同时仍然把正确性 owner 留在本地确定性 reviewer，而不是再引入第二套 verifier runtime。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -1517,7 +1564,7 @@ The first two decide capability. The third decides trust.
 
 ### 后续方向
 
-1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison gate 栈之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
+1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity gate 栈之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
 3. 把当前 block-level markdown source mapping 与 `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` 的 graph-focus 栈视为已落地基线；后续重点转到基于显式 offset 或更丰富 AST provenance 的重复片段去歧义。
 4. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
@@ -1528,5 +1575,5 @@ The first two decide capability. The third decides trust.
 1. 本轮切片起点真正缺失的不是图检索，而是最终公开回答的 release review；复审现在已经确认这个 owner 已落地。
 2. 正确 owner 是本地确定性 reviewer layer，不是再引入一层 prompt framework。
 3. 项目现有 DAG 继续作为证据底座，并且已经开始同时参与 release-time 的因果、顺序与对比分支纠错；graph-focus 现在也已经具备 block-level provenance 加上 `source_line_provenance` / source-authenticated fragment projection / `line_window` / `snippet_fallback` 的高亮基线，剩余缺口已经收窄到同一认证 block 内重复片段的去歧义。
-4. `waterglass` 截图已经被编码进正式运行时验收门禁，而 reviewer 栈现在也会在 release 前同时拦截“同一主体、同一显式属性框架、但属性值漂移”的草稿、“同一主体、同一显式容纳关系、但内容物漂移”的草稿、“同一主体、同一显式组成关系、但组件漂移”的草稿、“同一主体、同一显式依赖/前置条件关系、但依赖目标漂移”的草稿，以及与 DAG 因果方向相反的草稿。
+4. `waterglass` 截图已经被编码进正式运行时验收门禁，而 reviewer 栈现在也会在 release 前同时拦截“同一主体、同一显式属性框架、但属性值漂移”的草稿、“同一主体、同一显式容纳关系、但内容物漂移”的草稿、“同一主体、同一显式组成关系、但组件漂移”的草稿、“同一主体、同一显式依赖/前置条件关系、但依赖目标漂移”的草稿、与 DAG 因果方向相反的草稿，以及把带时序警告的 DAG 证据直接发布成当前结论的草稿。
 5. 本轮落地保持向前兼容，同时实质提升了 agent 最终回复的鲁棒性；后续重点已经转移到更广的矛盾检测，而不是更换 reviewer owner。
