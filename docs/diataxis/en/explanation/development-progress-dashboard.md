@@ -22,6 +22,7 @@ What is now true in code:
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_purpose_consistency`, so drafts that keep the same grounded subject and explicit `used for` / `用于` relation but swap the supported use, such as `drinking water` to `storing motor oil`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_dependency_consistency`, so drafts that keep the same grounded subject and explicit `depends on` / `requires` / `依赖` / `前置条件` relation but swap the supported dependency, such as `Baseline Measurement and Sensor Calibration` to `Final Reporting`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_subject_consistency`, so drafts that keep the supported fact tail but silently swap the grounded subject, such as `Water density` to `Glass density`, are revised before release,
+- `src/learning/answerReleaseReview.ts` now also enforces `claim_structured_comparison_consistency`, so drafts that explicitly invert supported same-property comparisons such as `Water density is higher than glass density` are revised before release when support facts prove the opposite ordering,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_attribute_consistency`, so drafts that keep the same grounded subject and explicit `has` / `具有` attribute frame but swap the supported attribute, such as `moderate thermal insulation` to `high thermal insulation`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_graph_causal_consistency`, so drafts that reverse DAG-backed cause/effect direction, such as `Pressure Rise causes Thermal Expansion`, are revised before release in both English and Chinese,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_graph_comparison_consistency`, so drafts that misstate DAG-backed `contrast` / `analogy` title pairs are revised before release with deterministic correction sentences,
@@ -43,7 +44,52 @@ What is now true in code:
   - unusable line metadata must fall back to snippet highlighting instead of highlighting the wrong paragraph,
   - a single-line paragraph must collapse highlight down to the matched fragment instead of the full line,
   - nested inline markdown nodes must still produce one exact fragment highlight,
+- runtime verification now also has a build-freshness constraint: reviewer-gate changes must be checked against freshly built `dist` output, because one stale-build probe temporarily hid the new gate inventory until `npm.cmd run build:mini`,
 - the user-provided screenshot `1781782257390.jpg` remains a formal runtime acceptance owner through `waterglass_explicit_scope_compact_zh`; its root cause is now recorded as planner/retrieval normalization drift plus public-answer diagnostic leakage.
+
+## 2026-06-19 Structured Comparison Contradiction Gate
+
+This sub-slice closes a narrower gap than generic "fact checking".
+The failure class is explicit ordering drift between two grounded entities on the same property, not broad semantic uncertainty.
+
+What changed:
+
+- `src/learning/answerReleaseReview.ts` now extracts explicit comparison frames such as `higher than`, `lower than`, `greater than`, `less than`, `高于`, and `低于`,
+- `claim_structured_comparison_consistency` compares those answer frames against support facts only when both sides resolve to same-property, same-unit structured facts,
+- deterministic correction sentences now preserve strong English casing signals instead of blindly lowercasing anchors,
+- `src/learning/types.ts` now exposes the gate as first-class `AnswerReleaseGateId`,
+- `src/learning/answerReleaseReview.test.ts` now pins four contract edges:
+  - English inversion must `revise`,
+  - Chinese inversion must `revise`,
+  - supported comparison direction must still `release`,
+  - mixed-property support must not create a false positive.
+
+Why this matters architecturally:
+
+- lexical overlap alone cannot distinguish `Water density is higher than glass density` from the exact opposite claim,
+- `claim_structured_consistency` catches scalar mismatches on one fact, but it does not by itself prove pairwise ordering between two entities,
+- DAG comparison-family checks (`contrast` / `analogy`) answer a different question; they do not own same-property numeric ordering,
+- therefore this gate belongs in the deterministic backend reviewer, not in prompt wording and not in frontend rendering.
+
+What remains open:
+
+- broader claim-vs-citation / claim-vs-evidence contradiction coverage still needs to extend beyond the current lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison stack,
+- repeated fragment disambiguation inside one authenticated rendered block still needs exact offsets or richer markdown AST provenance.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Final public-answer review must own pairwise comparison ordering when support facts are structurally comparable | `answerReleaseReview.ts` now enforces `claim_structured_comparison_consistency` on explicit comparison frames backed by same-property, same-unit support facts. | Implemented baseline |
+| The gate must remain conservative instead of guessing across unrelated numerics | Mixed-property or mixed-unit support facts do not become comparable; the new tests pin that false-positive boundary. | Implemented baseline |
+| Runtime verification must not trust stale compiled reviewer output | Reviewer-gate runtime checks now require fresh `dist` output; `npm.cmd run build:mini` is part of the verification path after source changes. | Implemented |
+
+Verification for this sub-slice:
+
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd run build:mini`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
 ## 2026-06-19 Dependency/Prerequisite Contradiction Gate
 
@@ -92,12 +138,13 @@ Code-vs-plan reconciliation:
 | Right-pane source preview must highlight the correct paragraph even when snippet text repeats | `workspace_panes.js` now prefers trustworthy `line_window` anchors and scores candidate rendered nodes with specificity/container penalties. | Implemented baseline |
 | Stale line metadata must not force the wrong highlight | `workspace_panes.js` now distrusts stale line windows and falls back to `snippet_fallback`; frontend tests pin the failure mode. | Implemented baseline |
 | The screenshot-backed `waterglass` failure must remain a formal acceptance rule | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` now expects grounded output, reviewer/public-answer parity, no diagnostic leakage, and no `本技术文档旨在` meta-answer fallback. | Implemented |
-| The active remaining gap must move to broader contradiction coverage and narrower unresolved provenance | Current code still needs wider claim-vs-citation / claim-vs-evidence conflict checks beyond the lexical + query-intent + structured + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison stack, plus explicit span offsets or richer AST provenance to disambiguate identical repeated fragments inside one authenticated block. | Open |
+| The active remaining gap must move to broader contradiction coverage and narrower unresolved provenance | Current code still needs wider claim-vs-citation / claim-vs-evidence conflict checks beyond the lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison stack, plus explicit span offsets or richer AST provenance to disambiguate identical repeated fragments inside one authenticated block. | Open |
 
 Verification for this re-audit:
 
 - `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd run build:mini`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
 ## 2026-06-18 Final Reply Release Review and Correction Layer

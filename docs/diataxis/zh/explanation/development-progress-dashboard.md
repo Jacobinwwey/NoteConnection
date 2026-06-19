@@ -22,6 +22,7 @@
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_purpose_consistency`，因此当 grounded subject 与显式 `used for` / `用于` 关系保持不变、但支撑用途从 `drinking water` 偷换成 `storing motor oil` 时，草稿也会在 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_dependency_consistency`，因此当 grounded subject 与显式 `depends on` / `requires` / `依赖` / `前置条件` 关系保持不变、但支撑依赖从 `基线测量和传感器校准` 偷换成 `最终报告` 时，草稿也会在 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_subject_consistency`，因此像把 `Water density` 偷换成 `Glass density` 这种“事实尾部还对、主体却串了”的草稿，也会在 release 前被改写，
+- `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_structured_comparison_consistency`，因此当草稿把已被支撑的同属性比较方向说反，例如 `Water density is higher than glass density`，也会在 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_attribute_consistency`，因此当草稿保持同一 grounded subject 与显式 `has` / `具有` 属性框架、却把支撑属性从 `中等热绝缘性能` 偷换成 `高热绝缘性能` 时，也会在 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_graph_causal_consistency`，因此当草稿把 DAG 支撑的因果方向说反，例如把 `Pressure Rise causes Thermal Expansion` 这类因果对调，也会在中英文路径上于 release 前被改写，
 - `src/learning/answerReleaseReview.ts` 现在还会执行 `claim_graph_comparison_consistency`，因此当草稿把 DAG 支撑的 `contrast` / `analogy` title pair 语义说反时，也会在 release 前被确定性纠正句改写，
@@ -43,7 +44,52 @@
   - 当行号元数据不可用或不可信时，必须回退到 snippet 高亮，而不是误高亮错误段落，
   - 单行段落的高亮必须收缩到命中的 fragment，而不是整行，
   - 嵌套 inline markdown 节点仍然必须解析为单个精确 fragment 高亮，
+- 运行时验证现在还补了一条 build-freshness 约束：reviewer gate 变更后必须对着新鲜 `dist` 产物验证；有一次陈旧构建产物曾暂时遮蔽新 gate 清单，直到执行 `npm.cmd run build:mini` 才恢复真实 reviewer 面，
 - 用户提供的截图 `1781782257390.jpg` 继续作为正式运行时验收 owner 保留在 `waterglass_explicit_scope_compact_zh`；当前根因已固化为 planner/retrieval normalization 漂移叠加公开回答诊断泄漏。
+
+## 2026-06-19 结构化比较矛盾门禁
+
+这一子切片解决的不是泛化“事实核验”。
+它针对的是“两个 grounded 实体、同一属性、同一单位，但比较顺序被说反”的确定性失败类型。
+
+当前变更：
+
+- `src/learning/answerReleaseReview.ts` 现在会抽取 `higher than`、`lower than`、`greater than`、`less than`、`高于`、`低于` 这类显式比较框架，
+- `claim_structured_comparison_consistency` 只会在比较两侧都能绑定到“同一属性、同一单位”的 structured fact 时才启动比对，
+- 确定性英文纠正句现在会保留 acronym / proper noun 的强大小写信号，而不是一律小写化 anchor，
+- `src/learning/types.ts` 现在把该 gate 作为一等 `AnswerReleaseGateId` 暴露，
+- `src/learning/answerReleaseReview.test.ts` 现在已经固定四条契约边界：
+  - 英文反转必须 `revise`，
+  - 中文反转必须 `revise`，
+  - 被支撑的比较方向必须继续 `release`，
+  - mixed-property 支撑不得制造误报。
+
+为什么这件事在架构上重要：
+
+- lexical overlap 无法区分 `Water density is higher than glass density` 与其相反断言，
+- `claim_structured_consistency` 能抓单个结构化事实冲突，但本身并不拥有“双实体顺序关系”的判定，
+- DAG 的 `contrast` / `analogy` 门禁回答的是另一类问题，不拥有同属性数值顺序语义，
+- 所以这个 gate 仍然必须落在后端确定性 reviewer，而不是退回 prompt 文本或前端显示层。
+
+当前仍未关闭的缺口：
+
+- 更广的 claim-vs-citation / claim-vs-evidence 矛盾覆盖仍需继续超出 lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison 栈，
+- 同一已认证渲染 block 内的重复片段去歧义仍然需要 exact offset 或更丰富的 markdown AST provenance。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 最终公开回答审核必须拥有“成对比较顺序”的 release owner | `answerReleaseReview.ts` 现在会基于可比的同属性、同单位支撑事实执行 `claim_structured_comparison_consistency`。 | 已实现基线 |
+| 门禁必须保持保守，不能跨无关数值乱猜 | mixed-property 与 mixed-unit 支撑不会被强行拿来比较；新增单测已经固定这条防误报边界。 | 已实现基线 |
+| reviewer 运行时校验不得信任陈旧编译产物 | reviewer gate 变更后的运行时校验现在要求先刷新 `dist`；`npm.cmd run build:mini` 已进入验证路径。 | 已实现 |
+
+本次子切片验证：
+
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd run build:mini`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
 ## 2026-06-19 依赖 / 前置条件矛盾门禁
 
@@ -92,12 +138,13 @@
 | 右侧原文预览在 snippet 重复时仍必须高亮正确段落 | `workspace_panes.js` 现在优先使用可信 `line_window` 锚点，并用 specificity/container penalty 给候选节点打分。 | 已实现基线 |
 | 陈旧行号不能强行把高亮带偏 | `workspace_panes.js` 现在会主动怀疑 stale line window，并回退到 `snippet_fallback`；前端测试已固定这类失败模式。 | 已实现基线 |
 | 截图驱动的 `waterglass` 失败必须继续作为正式验收项 | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` 现在要求 grounded 输出、reviewer/public-answer 一致性、无诊断泄漏，并且不能再退化成 `本技术文档旨在` 这类元文档回答。 | 已实现 |
-| 当前剩余缺口必须明确转移到更广矛盾检测与更窄但仍未关闭的 provenance | 现有代码仍需继续补超出 lexical + query-intent + structured + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison 栈的 claim-vs-citation / claim-vs-evidence conflict 检测，以及用于同一已认证 block 内重复片段去歧义的显式 span offset 或更丰富 AST provenance。 | 未完成 |
+| 当前剩余缺口必须明确转移到更广矛盾检测与更窄但仍未关闭的 provenance | 现有代码仍需继续补超出 lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison 栈的 claim-vs-citation / claim-vs-evidence conflict 检测，以及用于同一已认证 block 内重复片段去歧义的显式 span offset 或更丰富 AST provenance。 | 未完成 |
 
 本次复审验证：
 
 - `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.locale.contract.test.ts src/export/WorkspaceExportBundle.test.ts --runInBand --no-cache`
 - `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd run build:mini`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
 ## 2026-06-18 最终回复 release review 与纠错层

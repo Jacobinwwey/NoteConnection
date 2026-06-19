@@ -33,6 +33,7 @@ The target is not another prompt framework. The target is a deterministic releas
 - `src/learning/answerReleaseReview.ts` now also adds `claim_composition_consistency`, so grounded drafts that keep the same explicit `composed of` / `由...组成` relation but swap the supported components, such as `water and a glass cup` to `oil and a plastic cup`, are revised before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_purpose_consistency`, so grounded drafts that keep the same explicit `used for` / `用于` relation but swap the supported use, such as `drinking water` to `storing motor oil`, are revised before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_subject_consistency`, so drafts that preserve a supported fact tail but swap the grounded subject, such as `Water density` to `Glass density`, are revised before release.
+- `src/learning/answerReleaseReview.ts` now also adds `claim_structured_comparison_consistency`, so grounded drafts that explicitly invert supported same-property comparisons such as `Water density is higher than glass density` are revised before release with deterministic correction sentences instead of slipping through on topical overlap.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_attribute_consistency`, so grounded drafts that keep the same subject and explicit `has` / `具有` attribute frame but swap the supported attribute, such as `moderate thermal insulation` to `high thermal insulation`, are revised before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_graph_causal_consistency`, so grounded drafts that reverse DAG-backed cause/effect direction, such as `Pressure Rise causes Thermal Expansion`, are revised before release with deterministic English/Chinese correction sentences.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_graph_order_consistency`, so grounded drafts that reverse DAG-backed `prerequisite` or `sequence` direction are revised before release with deterministic correction sentences.
@@ -42,6 +43,7 @@ The target is not another prompt framework. The target is a deterministic releas
 - The right pane now also projects the matched evidence fragment into inline highlight markup inside the selected rendered node instead of only tinting the larger paragraph/container.
 - `src/frontend/workspace_panes.js` now also prefers source-authenticated fragment projection inside an already-authenticated rendered block, so single-line paragraphs and nested inline nodes no longer over-highlight the entire line when the matched snippet is narrower.
 - Shared alias/scope regressions now separate corpus-stable public-answer invariants from screenshot-specific runtime behavior: synthetic corpora may legitimately `release` or `revise`, while the real `waterglass_explicit_scope_compact_zh` runtime case still requires `revise` with `query_intent_alignment`.
+- Runtime verification now has an explicit build-freshness constraint: a first verifier run against stale `dist` output hid the newly added gate inventory, while the same verifier after `npm run build:mini` showed the correct reviewer surface. The bug was stale compiled output, not missing source wiring.
 - Re-audit of the cloned reference libraries under `ref/` (`dspy`, `guidance`, `semantic-kernel`, `langchain`, `litellm`) confirms they remain design references rather than release-policy owners: DSPy is strongest as a program/eval/optimizer harness, Guidance as constrained generation and output control, Semantic Kernel and LangChain as orchestration surfaces, and LiteLLM as a provider gateway, but none of them substitutes for local DAG-backed final-answer verification in this TypeScript runtime.
 - The remaining provenance gap is no longer “the right pane can only tint whole blocks.” It is narrower: identical repeated fragments inside the same authenticated block still need explicit span offsets or richer markdown AST provenance to be perfectly disambiguated.
 
@@ -109,6 +111,7 @@ The correct architecture is a pipeline of owners, not a single "RAG" blob:
    - evidence sufficiency,
    - graph support sufficiency,
    - structured consistency,
+   - structured comparison consistency,
    - attribute consistency,
    - containment consistency,
    - composition consistency,
@@ -184,6 +187,7 @@ Best-practice conclusion:
 | Empty-result answers must abstain cleanly instead of exposing runtime detail | Reviewer now downgrades unsupported drafts into concise abstentions. | Implemented |
 | Grounded drafts must stay aligned with their cited/knowledge-point support | Reviewer now enforces `claim_grounding_alignment` and revises drafts when lexical evidence overlap shows claim drift. | Implemented |
 | Grounded drafts must also be checked for deterministic structured fact conflicts | Reviewer now enforces `claim_structured_consistency`, revising grounded drafts when numeric or year facts conflict with support even though topical lexical overlap still passes. | Implemented baseline |
+| Grounded drafts must also be checked for explicit structured comparison inversions | Reviewer now enforces `claim_structured_comparison_consistency`, revising explicit `higher/lower`, `greater/less`, `高于/低于` comparison claims when same-property, same-unit support facts prove the opposite ordering. | Implemented baseline |
 | Grounded drafts must also be checked for explicit containment/content contradictions | Reviewer now enforces `claim_containment_consistency`, revising grounded drafts when the same grounded subject keeps the same explicit containment relation but swaps the supported contained material in English or Chinese. | Implemented baseline |
 | Grounded drafts must also be checked for explicit composition contradictions | Reviewer now enforces `claim_composition_consistency`, revising grounded drafts when the same grounded subject keeps the same explicit `composed of` / `由...组成` relation but swaps the supported components while still allowing compatible order/refinement. | Implemented baseline |
 | Grounded drafts must also be checked for explicit purpose/use contradictions | Reviewer now enforces `claim_purpose_consistency`, revising grounded drafts when the same grounded subject keeps the same explicit `used for` / `用于` relation but swaps the supported use while still allowing supported-purpose refinements. | Implemented baseline |
@@ -640,6 +644,30 @@ Attached additively to:
   - supported dependency answers still `release` cleanly.
 - This phase matters architecturally because it closes the explicit dependency/prerequisite family without collapsing the reviewer into a generic semantic verifier.
 
+#### Phase-23 structured comparison contradiction hardening landed on top of the dependency slice
+
+- `src/learning/answerReleaseReview.ts` now adds a thirteenth contradiction-oriented reviewer gate: `claim_structured_comparison_consistency`.
+- This gate stays within the same narrow-owner discipline:
+  - it only evaluates explicit comparative frames such as `higher than`, `lower than`, `greater than`, `less than`, `高于`, and `低于`,
+  - it only fires when two support facts are comparable on the same property family and the same unit,
+  - it reuses local structured-fact extraction plus anchor/label lexical features instead of introducing a second semantic verifier.
+- The supported contradiction family is intentionally concrete:
+  - English: `Water density is higher than glass density` vs support showing `Glass density is 2500 kg/m3` and `Water density is 999.8 kg/m3`,
+  - Chinese: `水的密度高于玻璃的密度` vs the same support ordering.
+- False-positive control is explicit:
+  - mixed-property pairs such as density vs temperature do not become comparable just because both are numeric,
+  - mixed-unit pairs do not become comparable,
+  - compatible supported comparisons still `release`,
+  - when the reviewer cannot match both sides to same-property support facts, it stays conservative instead of guessing.
+- `src/learning/answerReleaseReview.test.ts` now pins four important behaviors:
+  - English comparison inversion forces `revise`,
+  - Chinese comparison inversion forces `revise`,
+  - supported comparison direction still `release`s cleanly,
+  - mixed-property support does not create a false positive.
+- The revision surface is also now sentence-quality aware: English deterministic corrections preserve strong anchor casing instead of lowercasing acronyms or proper nouns by accident.
+- Runtime verification now records one more operational lesson: reviewer-gate changes must be checked against freshly built `dist` output. The first runtime probe missed the new gate inventory until `npm run build:mini` refreshed the compiled JS.
+- This phase matters architecturally because it closes a real contradiction family that lexical overlap, structured scalar checks, and DAG comparison-family checks do not cover by themselves: same-property ordering drift between two grounded entities.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -650,6 +678,17 @@ Reviewed references under `ref/`:
 - `ref/langchain` `847312e`
 - `ref/litellm` `cf2db41`
 - `ref/ahadiff` `897768c`
+
+Concrete local files inspected during this re-audit:
+
+- `ref/dspy/dspy/evaluate/evaluate.py`
+- `ref/dspy/dspy/teleprompt/bootstrap.py`
+- `ref/guidance/guidance/_grammar.py`
+- `ref/langchain/libs/core/langchain_core/language_models/base.py`
+- `ref/langchain/libs/core/langchain_core/prompts/chat.py`
+- `ref/semantic-kernel/python/semantic_kernel/prompt_template/prompt_template_config.py`
+- `ref/semantic-kernel/python/samples/concepts/agents/azure_ai_agent/azure_ai_agent_as_kernel_function.py`
+- `ref/litellm/cookbook/litellm_router/load_test_router.py`
 
 Critical conclusion:
 
@@ -718,7 +757,7 @@ The first two decide capability. The third decides trust.
 
 ### Next Direction
 
-1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + query-intent + structured-fact + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison gate stack, but only where the new checks can stay deterministic enough to avoid false-positive churn.
+1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison gate stack, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
 3. Treat the current block-level markdown source mapping plus `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` graph-focus stack as the implemented baseline, then focus the next provenance step on repeated-fragment disambiguation via explicit offsets or richer AST provenance.
 4. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
@@ -760,9 +799,11 @@ The first two decide capability. The third decides trust.
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_graph_order_consistency`，因此像把 DAG 支撑的 `prerequisite` / `sequence` 顺序说反的草稿，会在 release 前被确定性纠正句拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_graph_comparison_consistency`，因此当 DAG 只支撑 `contrast` 或只支撑 `analogy` 时，把二者说反的草稿也会在 release 前被拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_dependency_consistency`，因此像把 `响应验证依赖基线测量和传感器校准` 偷换成 `响应验证依赖最终报告` 这类“同一主体、同一显式依赖/前置条件关系、但依赖目标漂移”的草稿会在 release 前被拦截并改写。
+- `src/learning/answerReleaseReview.ts` 现在也新增 `claim_structured_comparison_consistency`，因此像把 `Water density is higher than glass density` 这类“同一属性、同一单位、比较方向说反”的草稿，也会在 release 前被确定性纠正句拦截并改写，而不会仅因 topic overlap 还在就放行。
 - `src/frontend/markdown_runtime.js` 现在会暴露 block-level 的 source-line provenance，`src/frontend/workspace_panes.js` 则优先消费 `source_line_provenance`，之后才回退到 `line_window` / `snippet_fallback`。
 - 右侧 pane 现在也会在选中的渲染节点内部投影命中的 evidence fragment 内联高亮，而不再只是给更大的段落 / 容器着色。
 - 共享 alias/scope 回归现在已经把“跨语料稳定的公开回答不变量”与“截图驱动的运行时行为”拆开：简化语料允许 `release` 或 `revise`，而真实 `waterglass_explicit_scope_compact_zh` 运行时用例仍然要求 `revise`，且必须命中 `query_intent_alignment`。
+- 运行时验证现在还有一个明确的 build-freshness 约束：第一次在陈旧 `dist` 输出上跑 verifier 时，新 gate 清单没有完整暴露；执行 `npm run build:mini` 后再次验证，编译产物与源码 reviewer 面才重新对齐。问题是陈旧编译输出，不是 reviewer 接线缺失。
 - 已核验 `ref/` 下克隆的 `dspy`、`guidance`、`semantic-kernel`、`langchain` 与 `litellm` 仍然只是设计参考，而不是 release policy owner：它们分别擅长 prompt 优化、受约束生成、agent orchestration 或 provider routing，但都不能替代当前 TypeScript runtime 里的本地 DAG 驱动最终回答校验。
 - 当前剩余的 provenance 缺口已经不再是“完全没有 source-to-render provenance”，而是超出当前 block-level mapping 的 exact-span / nested provenance。
 
@@ -830,6 +871,7 @@ The first two decide capability. The third decides trust.
    - evidence sufficiency
    - graph support sufficiency
    - structured consistency
+   - structured comparison consistency
    - attribute consistency
    - containment consistency
    - composition consistency
@@ -905,6 +947,7 @@ The first two decide capability. The third decides trust.
 | 空结果回答必须 clean abstain，而不是暴露 runtime 细节 | reviewer 现在会把 unsupported draft 降级成简洁 abstention。 | 已实现 |
 | grounded draft 必须与 citation/knowledge-point 支撑保持一致 | reviewer 现在会执行 `claim_grounding_alignment`，在词法证据重叠不足时强制改写漂移主张。 | 已实现 |
 | grounded draft 还必须检查确定性的结构化事实冲突 | reviewer 现在会执行 `claim_structured_consistency`：即使 topical lexical overlap 仍然通过，只要数值或年份事实与支撑冲突，也会触发 revise。 | 已实现基线 |
+| grounded draft 还必须检查显式 structured comparison 方向反转 | reviewer 现在会执行 `claim_structured_comparison_consistency`：当 `higher/lower`、`greater/less`、`高于/低于` 这类显式比较与“同一属性、同一单位”的支撑事实顺序相反时，会在 release 前触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查显式容纳关系里的内容物矛盾 | reviewer 现在会执行 `claim_containment_consistency`：对于中英文可比容纳关系，只要主体不变、关系不变、但内容物被偷换，就会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查显式组成关系里的组件矛盾 | reviewer 现在会执行 `claim_composition_consistency`：对于可比的 `由...组成` / `composed of` 关系，只要主体不变、关系不变、但支撑组件被偷换，就会触发 revise，同时兼容组件顺序调整与兼容细化。 | 已实现基线 |
 | grounded draft 还必须检查显式用途关系里的用途矛盾 | reviewer 现在会执行 `claim_purpose_consistency`：对于可比的 `used for` / `用于` 关系，只要主体不变、关系不变、但支撑用途被偷换，就会触发 revise，同时兼容支撑用途细化。 | 已实现基线 |
@@ -1361,6 +1404,30 @@ The first two decide capability. The third decides trust.
   - 被支撑的依赖回答仍然 clean `release`。
 - 这个 Phase 在架构上的意义也很直接：它把 final-answer reviewer 的确定性边界继续推进到显式依赖/前置条件关系，而没有把 owner 重新交回外部框架或泛化 verifier。
 
+#### 在依赖关系切片之上继续落地的 Phase-23 结构化比较矛盾加固
+
+- `src/learning/answerReleaseReview.ts` 现在新增了第十三个面向矛盾检测的 reviewer gate：`claim_structured_comparison_consistency`。
+- 这个 gate 继续保持窄边界：
+  - 它只比较显式 `higher than`、`lower than`、`greater than`、`less than`、`高于`、`低于` 这类比较框架，
+  - 只有当两侧支撑事实属于同一属性家族且单位一致时，才进入可比集合，
+  - 它继续复用本地 structured-fact 抽取与 anchor/label lexical feature，而不是再引入第二套语义 verifier。
+- 当前支持的矛盾族群刻意保持具体：
+  - 英文：`Water density is higher than glass density`，但支撑事实显示 `Glass density is 2500 kg/m3` 且 `Water density is 999.8 kg/m3`，
+  - 中文：`水的密度高于玻璃的密度`，但同一组支撑事实显示顺序相反。
+- 防误报控制也被显式写进实现：
+  - 密度与温度这类 mixed-property 数值不会因为都可数值化就被强行拿来比较，
+  - mixed-unit 数值不会被强行比较，
+  - 已被支撑的比较方向仍然允许 `release`，
+  - 当 reviewer 无法同时把比较两侧绑定到“同一属性、同一单位”的支撑事实时，会保持保守而不是猜。
+- `src/learning/answerReleaseReview.test.ts` 现在已经固定四类关键行为：
+  - 英文比较方向反转必须 `revise`；
+  - 中文比较方向反转必须 `revise`；
+  - 被支撑的比较方向仍然 clean `release`；
+  - mixed-property 支撑不得制造误报。
+- 英文纠正句现在还补了一层 sentence-quality 约束：在构造确定性改写句时，会保留 acronym / proper noun 这类强大小写信号，而不会被一刀切小写化。
+- 运行时验证还补出一个操作层面的结论：只改 reviewer 源码还不够，跑 verifier 前必须先刷新 `dist`。第一次 runtime probe 因为编译产物陈旧而漏掉了新 gate 清单；`npm run build:mini` 之后才重新对齐。
+- 这个 Phase 在架构上的意义很直接：它补上的是真实存在、且 lexical overlap、structured scalar check 与 DAG comparison-family gate 各自都不能单独覆盖的矛盾族群，即“同一属性、两个 grounded 实体、比较顺序被说反”。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -1371,6 +1438,17 @@ The first two decide capability. The third decides trust.
 - `ref/langchain` `847312e`
 - `ref/litellm` `cf2db41`
 - `ref/ahadiff` `897768c`
+
+本次复审明确查看过的本地参考文件：
+
+- `ref/dspy/dspy/evaluate/evaluate.py`
+- `ref/dspy/dspy/teleprompt/bootstrap.py`
+- `ref/guidance/guidance/_grammar.py`
+- `ref/langchain/libs/core/langchain_core/language_models/base.py`
+- `ref/langchain/libs/core/langchain_core/prompts/chat.py`
+- `ref/semantic-kernel/python/semantic_kernel/prompt_template/prompt_template_config.py`
+- `ref/semantic-kernel/python/samples/concepts/agents/azure_ai_agent/azure_ai_agent_as_kernel_function.py`
+- `ref/litellm/cookbook/litellm_router/load_test_router.py`
 
 关键结论：
 
@@ -1439,7 +1517,7 @@ The first two decide capability. The third decides trust.
 
 ### 后续方向
 
-1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + query-intent + structured-fact + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison gate 栈之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
+1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison gate 栈之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
 3. 把当前 block-level markdown source mapping 与 `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` 的 graph-focus 栈视为已落地基线；后续重点转到基于显式 offset 或更丰富 AST provenance 的重复片段去歧义。
 4. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。

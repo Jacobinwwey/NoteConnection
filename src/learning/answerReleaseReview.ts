@@ -40,6 +40,26 @@ type StructuredFactConflict = {
     supportFacts: Array<StructuredFact & { label: string }>;
 };
 
+type StructuredComparisonRelation = 'greater_than' | 'less_than';
+
+type StructuredComparisonFrame = {
+    surface: string;
+    leftAnchor: string;
+    leftFeatures: string[];
+    leftDistinctFeatures: string[];
+    rightAnchor: string;
+    rightFeatures: string[];
+    rightDistinctFeatures: string[];
+    sharedFeatures: string[];
+    relation: StructuredComparisonRelation;
+};
+
+type StructuredComparisonConflict = {
+    answerFrame: StructuredComparisonFrame;
+    leftSupportFact: StructuredFact & { label: string };
+    rightSupportFact: StructuredFact & { label: string };
+};
+
 type StateFrameConnectorKind = 'copula' | 'definition';
 
 type StateFrame = {
@@ -470,6 +490,43 @@ function stripTerminalSentencePunctuation(value: string): string {
         .trim();
 }
 
+function hasStrongEnglishAnchorCaseSignal(value: string): boolean {
+    const normalized = normalizeWhitespace(value);
+    if (!normalized || containsCjk(normalized)) {
+        return false;
+    }
+    const tokens = normalized.split(/\s+/u).filter(Boolean);
+    return tokens.some((token, index) => {
+        if (/^[A-Z0-9-]{2,}$/u.test(token)) {
+            return true;
+        }
+        if (/[A-Z]/u.test(token.slice(1))) {
+            return true;
+        }
+        return index > 0 && /^[A-Z]/u.test(token);
+    });
+}
+
+function formatEnglishComparisonAnchor(
+    value: string,
+    position: 'leading' | 'non_leading'
+): string {
+    const normalized = normalizeWhitespace(value);
+    if (!normalized || containsCjk(normalized)) {
+        return normalized;
+    }
+    if (hasStrongEnglishAnchorCaseSignal(normalized)) {
+        if (position === 'leading' && /^[a-z]/u.test(normalized)) {
+            return `${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;
+        }
+        return normalized;
+    }
+    if (position === 'leading') {
+        return `${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;
+    }
+    return `${normalized.charAt(0).toLowerCase()}${normalized.slice(1)}`;
+}
+
 function buildDefinitionIntentRevisionAnswer(
     context: AnswerReleaseReviewContext,
     supportFrame: StateFrame & { label: string }
@@ -566,6 +623,52 @@ function buildGraphComparisonRevisionAnswer(
     return conflict.evidence.relationKind === 'contrast'
         ? `${leftTitle} contrasts with ${rightTitle}.`
         : `${leftTitle} is similar to ${rightTitle}.`;
+}
+
+function compareStructuredFactMagnitude(
+    leftFact: StructuredFact,
+    rightFact: StructuredFact
+): number | null {
+    if (leftFact.kind !== rightFact.kind || leftFact.unit !== rightFact.unit) {
+        return null;
+    }
+    if (Math.abs(leftFact.value - rightFact.value) <= 0.000001) {
+        return 0;
+    }
+    return leftFact.value > rightFact.value ? 1 : -1;
+}
+
+function buildStructuredComparisonRevisionAnswer(
+    context: AnswerReleaseReviewContext,
+    conflict: StructuredComparisonConflict
+): string {
+    const magnitude = compareStructuredFactMagnitude(conflict.leftSupportFact, conflict.rightSupportFact);
+    if (!magnitude) {
+        return buildGroundedRevisionAnswer(context);
+    }
+    const correctedLeft = normalizeWhitespace(
+        magnitude > 0
+            ? conflict.answerFrame.leftAnchor
+            : conflict.answerFrame.rightAnchor
+    );
+    const correctedRight = normalizeWhitespace(
+        magnitude > 0
+            ? conflict.answerFrame.rightAnchor
+            : conflict.answerFrame.leftAnchor
+    );
+    if (!correctedLeft || !correctedRight) {
+        return buildGroundedRevisionAnswer(context);
+    }
+    const useChinese = containsCjk([
+        context.message,
+        context.draftAnswer,
+        correctedLeft,
+        correctedRight,
+    ].join(' '));
+    if (useChinese) {
+        return `${correctedLeft}高于${correctedRight}。`;
+    }
+    return `${formatEnglishComparisonAnchor(correctedLeft, 'leading')} is higher than ${formatEnglishComparisonAnchor(correctedRight, 'non_leading')}.`;
 }
 
 function buildSupportCandidates(
@@ -2480,6 +2583,106 @@ function extractStructuredFacts(value: string): StructuredFact[] {
     return facts;
 }
 
+function normalizeStructuredComparisonSide(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/[“”"'`]+/gu, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function buildStructuredComparisonSideFeatures(value: string): string[] {
+    return collectOrderedLexicalFeatures(value)
+        .map((feature) => String(feature || '').trim().toLowerCase())
+        .filter((feature) => feature.length >= 2)
+        .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
+}
+
+function buildStructuredComparisonFrame(
+    surface: string,
+    leftAnchor: string,
+    rightAnchor: string,
+    relation: StructuredComparisonRelation
+): StructuredComparisonFrame | null {
+    const normalizedSurface = normalizeWhitespace(surface);
+    const normalizedLeftAnchor = normalizeStructuredComparisonSide(leftAnchor);
+    const normalizedRightAnchor = normalizeStructuredComparisonSide(rightAnchor);
+    if (!normalizedSurface || !normalizedLeftAnchor || !normalizedRightAnchor) {
+        return null;
+    }
+    if (normalizedLeftAnchor.toLowerCase() === normalizedRightAnchor.toLowerCase()) {
+        return null;
+    }
+    const leftFeatures = buildStructuredComparisonSideFeatures(normalizedLeftAnchor);
+    const rightFeatures = buildStructuredComparisonSideFeatures(normalizedRightAnchor);
+    if (leftFeatures.length <= 0 || rightFeatures.length <= 0) {
+        return null;
+    }
+    const rightFeatureSet = new Set(rightFeatures);
+    const sharedFeatures = leftFeatures.filter((feature) => rightFeatureSet.has(feature));
+    if (sharedFeatures.length <= 0) {
+        return null;
+    }
+    const sharedFeatureSet = new Set(sharedFeatures);
+    const leftDistinctFeatures = leftFeatures.filter((feature) => !sharedFeatureSet.has(feature));
+    const rightDistinctFeatures = rightFeatures.filter((feature) => !sharedFeatureSet.has(feature));
+    if (leftDistinctFeatures.length <= 0 || rightDistinctFeatures.length <= 0) {
+        return null;
+    }
+    return {
+        surface: normalizedSurface,
+        leftAnchor: normalizedLeftAnchor,
+        leftFeatures,
+        leftDistinctFeatures,
+        rightAnchor: normalizedRightAnchor,
+        rightFeatures,
+        rightDistinctFeatures,
+        sharedFeatures,
+        relation,
+    };
+}
+
+function extractStructuredComparisonFrames(value: string): StructuredComparisonFrame[] {
+    const directPatterns: Array<{ pattern: RegExp; relation: StructuredComparisonRelation }> = [
+        {
+            pattern: /^(.{1,80}?)\s+(?:is|are|was|were)\s+(?:higher|greater|larger|bigger|more)\s+than\s+(.+)$/iu,
+            relation: 'greater_than',
+        },
+        {
+            pattern: /^(.{1,80}?)\s+(?:is|are|was|were)\s+(?:lower|less|smaller|fewer)\s+than\s+(.+)$/iu,
+            relation: 'less_than',
+        },
+        {
+            pattern: /^(.{1,40}?)(?:高于|高於|大于|大於|多于|多於|超过|超過)(.+)$/u,
+            relation: 'greater_than',
+        },
+        {
+            pattern: /^(.{1,40}?)(?:低于|低於|小于|小於|少于|少於)(.+)$/u,
+            relation: 'less_than',
+        },
+    ];
+    return String(value || '')
+        .split(POLARITY_SENTENCE_SPLIT_PATTERN)
+        .map((sentence) => normalizeWhitespace(sentence))
+        .filter((sentence) => sentence.length >= 8)
+        .flatMap((sentence) => {
+            for (const candidate of directPatterns) {
+                const match = sentence.match(candidate.pattern);
+                if (!match) {
+                    continue;
+                }
+                const frame = buildStructuredComparisonFrame(
+                    sentence,
+                    String(match[1] || ''),
+                    String(match[2] || ''),
+                    candidate.relation
+                );
+                return frame ? [frame] : [];
+            }
+            return [];
+        });
+}
+
 function structuredFactValuesMatch(answerFact: StructuredFact, supportFact: StructuredFact): boolean {
     if (answerFact.kind !== supportFact.kind || answerFact.unit !== supportFact.unit) {
         return false;
@@ -2498,6 +2701,71 @@ function structuredFactAnchorsOverlap(answerFact: StructuredFact, supportFact: S
     return answerFact.anchorTokens.some((token) => supportAnchorTokenSet.has(token));
 }
 
+function structuredComparisonFactMatchesSide(
+    frame: StructuredComparisonFrame,
+    fact: StructuredFact & { label?: string },
+    side: 'left' | 'right'
+): boolean {
+    const comparableFeatures = Array.from(new Set(
+        [
+            ...fact.anchorTokens,
+            ...buildStructuredComparisonSideFeatures(String(fact.label || '')),
+        ]
+            .map((feature) => String(feature || '').trim().toLowerCase())
+            .filter((feature) => feature.length >= 2)
+    ));
+    if (comparableFeatures.length <= 0) {
+        return false;
+    }
+    const factComparableFeatureSet = new Set(comparableFeatures);
+    if (!frame.sharedFeatures.some((feature) => factComparableFeatureSet.has(feature))) {
+        return false;
+    }
+    const distinctFeatures = side === 'left'
+        ? frame.leftDistinctFeatures
+        : frame.rightDistinctFeatures;
+    return distinctFeatures.some((feature) => factComparableFeatureSet.has(feature));
+}
+
+function structuredComparisonPairSupportsAnswer(
+    frame: StructuredComparisonFrame,
+    leftFact: StructuredFact,
+    rightFact: StructuredFact
+): boolean {
+    const magnitude = compareStructuredFactMagnitude(leftFact, rightFact);
+    if (!magnitude) {
+        return false;
+    }
+    return frame.relation === 'greater_than'
+        ? magnitude > 0
+        : magnitude < 0;
+}
+
+function buildStructuredComparisonPairScore(
+    frame: StructuredComparisonFrame,
+    leftFact: StructuredFact & { label?: string },
+    rightFact: StructuredFact & { label?: string }
+): number {
+    const leftComparableFeatureSet = new Set([
+        ...leftFact.anchorTokens,
+        ...buildStructuredComparisonSideFeatures(String(leftFact.label || '')),
+    ]);
+    const rightComparableFeatureSet = new Set([
+        ...rightFact.anchorTokens,
+        ...buildStructuredComparisonSideFeatures(String(rightFact.label || '')),
+    ]);
+    const leftDistinctOverlap = frame.leftDistinctFeatures.filter((feature) => leftComparableFeatureSet.has(feature)).length;
+    const rightDistinctOverlap = frame.rightDistinctFeatures.filter((feature) => rightComparableFeatureSet.has(feature)).length;
+    const leftSharedOverlap = frame.sharedFeatures.filter((feature) => leftComparableFeatureSet.has(feature)).length;
+    const rightSharedOverlap = frame.sharedFeatures.filter((feature) => rightComparableFeatureSet.has(feature)).length;
+    return (
+        leftDistinctOverlap * 4
+        + rightDistinctOverlap * 4
+        + leftSharedOverlap * 2
+        + rightSharedOverlap * 2
+    );
+}
+
 function buildStructuredFactConflictMessage(conflicts: StructuredFactConflict[]): string {
     if (conflicts.length <= 0) {
         return 'Draft answer stayed consistent with the grounded structured facts that could be compared.';
@@ -2509,6 +2777,16 @@ function buildStructuredFactConflictMessage(conflicts: StructuredFactConflict[])
         return `"${conflict.answerFact.surface}" conflicted with ${supportedValues.join(', ')}`;
     });
     return `Draft answer conflicted with grounded structured facts: ${fragments.join('; ')}.`;
+}
+
+function buildStructuredComparisonConflictMessage(conflicts: StructuredComparisonConflict[]): string {
+    if (conflicts.length <= 0) {
+        return 'Draft answer stayed consistent with the grounded structured comparisons that could be compared.';
+    }
+    const fragments = conflicts.slice(0, 2).map((conflict) => (
+        `"${conflict.answerFrame.surface}" conflicted with ${normalizeWhitespace(conflict.leftSupportFact.surface)} (${conflict.leftSupportFact.label}) and ${normalizeWhitespace(conflict.rightSupportFact.surface)} (${conflict.rightSupportFact.label})`
+    ));
+    return `Draft answer contradicted grounded structured comparisons: ${fragments.join('; ')}.`;
 }
 
 function evaluateStructuredConsistency(context: AnswerReleaseReviewContext): {
@@ -2560,6 +2838,79 @@ function evaluateStructuredConsistency(context: AnswerReleaseReviewContext): {
     return {
         passed: conflicts.length <= 0,
         comparableFactCount,
+        conflicts,
+    };
+}
+
+function evaluateStructuredComparisonConsistency(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    comparableFrameCount: number;
+    conflicts: StructuredComparisonConflict[];
+} {
+    const answerFrames = extractStructuredComparisonFrames(context.draftAnswer);
+    if (answerFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const supportFacts = buildSupportCandidates(context).flatMap((candidate) => (
+        extractStructuredFacts(candidate.text).map((fact) => ({
+            ...fact,
+            label: candidate.label,
+        }))
+    ));
+    if (supportFacts.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const conflicts: StructuredComparisonConflict[] = [];
+    let comparableFrameCount = 0;
+    answerFrames.forEach((answerFrame) => {
+        const leftSupportFacts = supportFacts.filter((supportFact) => structuredComparisonFactMatchesSide(answerFrame, supportFact, 'left'));
+        const rightSupportFacts = supportFacts.filter((supportFact) => structuredComparisonFactMatchesSide(answerFrame, supportFact, 'right'));
+        const comparablePairs: Array<{
+            leftSupportFact: StructuredFact & { label: string };
+            rightSupportFact: StructuredFact & { label: string };
+            score: number;
+        }> = [];
+        leftSupportFacts.forEach((leftSupportFact) => {
+            rightSupportFacts.forEach((rightSupportFact) => {
+                if (leftSupportFact === rightSupportFact) {
+                    return;
+                }
+                const magnitude = compareStructuredFactMagnitude(leftSupportFact, rightSupportFact);
+                if (!magnitude) {
+                    return;
+                }
+                comparablePairs.push({
+                    leftSupportFact,
+                    rightSupportFact,
+                    score: buildStructuredComparisonPairScore(answerFrame, leftSupportFact, rightSupportFact),
+                });
+            });
+        });
+        if (comparablePairs.length <= 0) {
+            return;
+        }
+        comparableFrameCount += 1;
+        if (comparablePairs.some((pair) => structuredComparisonPairSupportsAnswer(answerFrame, pair.leftSupportFact, pair.rightSupportFact))) {
+            return;
+        }
+        comparablePairs.sort((left, right) => right.score - left.score);
+        conflicts.push({
+            answerFrame,
+            leftSupportFact: comparablePairs[0].leftSupportFact,
+            rightSupportFact: comparablePairs[0].rightSupportFact,
+        });
+    });
+    return {
+        passed: conflicts.length <= 0,
+        comparableFrameCount,
         conflicts,
     };
 }
@@ -3162,6 +3513,7 @@ function buildDecision(
     groundingAlignmentPassed: boolean,
     queryIntentAlignmentPassed: boolean,
     structuredConsistencyPassed: boolean,
+    structuredComparisonConsistencyPassed: boolean,
     attributeConsistencyPassed: boolean,
     containmentConsistencyPassed: boolean,
     compositionConsistencyPassed: boolean,
@@ -3183,6 +3535,7 @@ function buildDecision(
         !groundingAlignmentPassed
         || !queryIntentAlignmentPassed
         || !structuredConsistencyPassed
+        || !structuredComparisonConsistencyPassed
         || !attributeConsistencyPassed
         || !containmentConsistencyPassed
         || !compositionConsistencyPassed
@@ -3250,6 +3603,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         : {
             passed: true,
             comparableFactCount: 0,
+            conflicts: [],
+        };
+    const structuredComparisonConsistency = groundedEvidenceAvailable
+        ? evaluateStructuredComparisonConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            comparableFrameCount: 0,
             conflicts: [],
         };
     const attributeConsistency = groundedEvidenceAvailable
@@ -3376,6 +3739,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         groundingAlignment.passed,
         queryIntentAlignment.passed,
         structuredConsistency.passed,
+        structuredComparisonConsistency.passed,
         attributeConsistency.passed,
         containmentConsistency.passed,
         compositionConsistency.passed,
@@ -3393,6 +3757,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     const primaryGraphCausalConflict = graphCausalConsistency.conflicts[0];
     const primaryGraphOrderConflict = graphOrderConsistency.conflicts[0];
     const primaryGraphComparisonConflict = graphComparisonConsistency.conflicts[0];
+    const primaryStructuredComparisonConflict = structuredComparisonConsistency.conflicts[0];
     const publicAnswer = normalizeWhitespace(
         decision === 'abstain'
             ? buildAbstentionAnswer(context.message, context.usedScope)
@@ -3404,6 +3769,8 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         ? buildGraphOrderRevisionAnswer(context, primaryGraphOrderConflict)
                         : primaryGraphComparisonConflict
                         ? buildGraphComparisonRevisionAnswer(context, primaryGraphComparisonConflict)
+                        : primaryStructuredComparisonConflict
+                        ? buildStructuredComparisonRevisionAnswer(context, primaryStructuredComparisonConflict)
                         : (!queryIntentAlignment.passed && queryIntentAlignment.supportFrame)
                             ? buildDefinitionIntentRevisionAnswer(context, queryIntentAlignment.supportFrame)
                         : buildGroundedRevisionAnswer(context)
@@ -3469,6 +3836,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : 'No high-confidence structured fact comparison was available, so contradiction checking stayed conservative.'
                 )
                 : 'No evidence was available, so structured contradiction checking was not evaluated.',
+        },
+        {
+            gateId: 'claim_structured_comparison_consistency',
+            passed: structuredComparisonConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    structuredComparisonConsistency.comparableFrameCount > 0
+                        ? buildStructuredComparisonConflictMessage(structuredComparisonConsistency.conflicts)
+                        : 'No comparable structured comparison was available, so comparative contradiction checking stayed conservative.'
+                )
+                : 'No evidence was available, so structured comparison contradiction checking was not evaluated.',
         },
         {
             gateId: 'claim_attribute_consistency',

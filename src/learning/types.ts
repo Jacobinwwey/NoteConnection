@@ -1275,6 +1275,7 @@ export type AnswerReleaseGateId =
     | 'claim_grounding_alignment'
     | 'query_intent_alignment'
     | 'claim_structured_consistency'
+    | 'claim_structured_comparison_consistency'
     | 'claim_attribute_consistency'
     | 'claim_containment_consistency'
     | 'claim_composition_consistency'

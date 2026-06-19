@@ -466,6 +466,160 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).toBe('The Glass-Steagall Act was enacted in 1933.');
     });
 
+    test('revises grounded answers when structured comparison claims invert cited support', () => {
+        const point = makeKnowledgePoint({
+            title: 'Density Comparison',
+            summary: 'Glass density is 2500 kg/m3. Water density is 999.8 kg/m3.',
+            evidenceSnippet: 'Glass density is 2500 kg/m3. Water density is 999.8 kg/m3.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Density Comparison',
+                snippet: 'Glass density is 2500 kg/m3. Water density is 999.8 kg/m3.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Density Comparison',
+                    snippet: 'Glass density is 2500 kg/m3. Water density is 999.8 kg/m3.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'Which density is higher, glass or water?',
+            draftAnswer: 'Water density is higher than glass density.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T01:00:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_structured_comparison_consistency');
+        expect(review.publicAnswer).toBe('Glass density is higher than water density.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_structured_comparison_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when Chinese structured comparison claims invert cited support', () => {
+        const point = makeKnowledgePoint({
+            title: '密度对比',
+            summary: '玻璃密度是2500 kg/m3。水密度是999.8 kg/m3。',
+            evidenceSnippet: '玻璃密度是2500 kg/m3。水密度是999.8 kg/m3。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: '密度对比',
+                snippet: '玻璃密度是2500 kg/m3。水密度是999.8 kg/m3。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: '密度对比',
+                    snippet: '玻璃密度是2500 kg/m3。水密度是999.8 kg/m3。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '玻璃和水哪个密度更高？',
+            draftAnswer: '水密度高于玻璃密度。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T01:05:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_structured_comparison_consistency');
+        expect(review.publicAnswer).toBe('玻璃密度高于水密度。');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_structured_comparison_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('does not raise a structured comparison conflict when the comparison stays aligned with support', () => {
+        const point = makeKnowledgePoint({
+            title: 'Density Comparison',
+            summary: 'Glass density is 2500 kg/m3. Water density is 999.8 kg/m3.',
+            evidenceSnippet: 'Glass density is 2500 kg/m3. Water density is 999.8 kg/m3.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Density Comparison',
+                snippet: 'Glass density is 2500 kg/m3. Water density is 999.8 kg/m3.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Density Comparison',
+                    snippet: 'Glass density is 2500 kg/m3. Water density is 999.8 kg/m3.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'Which density is higher, glass or water?',
+            draftAnswer: 'Glass density is higher than water density.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T01:10:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_structured_comparison_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_structured_comparison_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
+    test('does not raise a structured comparison conflict when the draft compares different structured properties', () => {
+        const point = makeKnowledgePoint({
+            title: 'Mixed Structured Facts',
+            summary: 'Glass density is 2500 kg/m3. Water temperature is 293 K.',
+            evidenceSnippet: 'Glass density is 2500 kg/m3. Water temperature is 293 K.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Mixed Structured Facts',
+                snippet: 'Glass density is 2500 kg/m3. Water temperature is 293 K.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Mixed Structured Facts',
+                    snippet: 'Glass density is 2500 kg/m3. Water temperature is 293 K.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'compare the reported density and temperature',
+            draftAnswer: 'Glass density is higher than water temperature.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-06-19T01:15:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_structured_comparison_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_structured_comparison_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
     test('revises grounded answers when the subject changes but the supported fact tail stays the same', () => {
         const point = makeKnowledgePoint({
             title: 'Water Density',
