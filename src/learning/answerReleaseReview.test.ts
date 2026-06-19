@@ -1278,6 +1278,122 @@ describe('answerReleaseReview', () => {
         ]));
     });
 
+    test('revises grounded answers when location claims conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: 'Control Module',
+            summary: 'Control module is located in the main chamber.',
+            evidenceSnippet: 'Control module is located in the main chamber.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Control Module',
+                snippet: 'Control module is located in the main chamber.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Control Module',
+                    snippet: 'Control module is located in the main chamber.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'Where is the control module located?',
+            draftAnswer: 'Control module is located in the auxiliary chamber.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({
+                anchorTitle: 'Control Module',
+            }),
+            reviewedAt: '2026-06-19T04:45:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_location_consistency');
+        expect(review.publicAnswer).toBe('Control module is located in the main chamber.');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_location_consistency',
+                passed: false,
+            }),
+        ]));
+    });
+
+    test('revises grounded answers when Chinese location claims conflict with cited support', () => {
+        const point = makeKnowledgePoint({
+            title: '控制模块',
+            summary: '控制模块位于主舱室。',
+            evidenceSnippet: '控制模块位于主舱室。',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: '控制模块',
+                snippet: '控制模块位于主舱室。',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: '控制模块',
+                    snippet: '控制模块位于主舱室。',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '控制模块位于哪里？',
+            draftAnswer: '控制模块位于辅助舱室。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({
+                anchorTitle: '控制模块',
+            }),
+            reviewedAt: '2026-06-19T04:50:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_location_consistency');
+        expect(review.publicAnswer).toBe('控制模块位于主舱室。');
+    });
+
+    test('does not raise a location conflict when the draft keeps a supported broader location', () => {
+        const point = makeKnowledgePoint({
+            title: 'Control Module',
+            summary: 'Control module is located in the eastern experimental hall.',
+            evidenceSnippet: 'Control module is located in the eastern experimental hall.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Control Module',
+                snippet: 'Control module is located in the eastern experimental hall.',
+            },
+            citations: [
+                {
+                    ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                    title: 'Control Module',
+                    snippet: 'Control module is located in the eastern experimental hall.',
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'Where is the control module located?',
+            draftAnswer: 'Control module is located in the experimental hall.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({
+                anchorTitle: 'Control Module',
+            }),
+            reviewedAt: '2026-06-19T04:55:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('claim_location_consistency');
+        expect(review.gates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                gateId: 'claim_location_consistency',
+                passed: true,
+            }),
+        ]));
+    });
+
     test('revises grounded answers when same-subject state conflicts with cited support', () => {
         const point = makeKnowledgePoint({
             title: 'Water Glass Thermodynamics',

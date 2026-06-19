@@ -21,12 +21,14 @@ What is now true in code:
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_composition_consistency`, so drafts that keep the same grounded subject and explicit `composed of` / `由...组成` relation but swap the supported components, such as `water and a glass cup` to `oil and a plastic cup`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_purpose_consistency`, so drafts that keep the same grounded subject and explicit `used for` / `用于` relation but swap the supported use, such as `drinking water` to `storing motor oil`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_dependency_consistency`, so drafts that keep the same grounded subject and explicit `depends on` / `requires` / `依赖` / `前置条件` relation but swap the supported dependency, such as `Baseline Measurement and Sensor Calibration` to `Final Reporting`, are revised before release,
+- `src/learning/answerReleaseReview.ts` now also enforces `claim_location_consistency`, so drafts that keep the same grounded subject and explicit `located in` / `位于` relation but swap the supported location, such as `main chamber` to `auxiliary chamber`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_subject_consistency`, so drafts that keep the supported fact tail but silently swap the grounded subject, such as `Water density` to `Glass density`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_structured_comparison_consistency`, so drafts that explicitly invert supported same-property comparisons such as `Water density is higher than glass density` are revised before release when support facts prove the opposite ordering,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_attribute_consistency`, so drafts that keep the same grounded subject and explicit `has` / `具有` attribute frame but swap the supported attribute, such as `moderate thermal insulation` to `high thermal insulation`, are revised before release,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_graph_causal_consistency`, so drafts that reverse DAG-backed cause/effect direction, such as `Pressure Rise causes Thermal Expansion`, are revised before release in both English and Chinese,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_graph_comparison_consistency`, so drafts that misstate DAG-backed `contrast` / `analogy` title pairs are revised before release with deterministic correction sentences,
 - `src/learning/answerReleaseReview.ts` now also enforces `claim_temporal_validity_consistency`, so DAG temporal warnings now participate in final release: when `graphContext.temporalValidity.allPointsValid === false`, unqualified current-tense drafts are revised, explicitly time-qualified drafts may still release, and supersedes-only lineage does not create a false-positive block,
+- locative predicates such as `located in` / `位于` are now explicitly excluded from `claim_state_consistency` extraction, so location claims stay owned by the location slice instead of surfacing as false-positive state conflicts,
 - the shared alias/scope corpus no longer overfits that internal rewrite step across every fixture:
   - synthetic in-memory corpora now accept either `release` or `revise` as long as the final public answer is grounded and contracted,
   - the real screenshot-derived runtime case `waterglass_explicit_scope_compact_zh` still requires `revise` with failed gate `query_intent_alignment`,
@@ -74,7 +76,7 @@ Why this matters architecturally:
 
 What remains open:
 
-- broader claim-vs-citation / claim-vs-evidence contradiction coverage still needs to extend beyond the current lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity stack,
+- broader claim-vs-citation / claim-vs-evidence contradiction coverage still needs to extend beyond the current lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + location + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity stack,
 - repeated fragment disambiguation inside one authenticated rendered block still needs exact offsets or richer markdown AST provenance.
 
 Code-vs-plan reconciliation:
@@ -91,6 +93,38 @@ Verification for this sub-slice:
 - `npm.cmd exec -- tsc --noEmit`
 - `npm.cmd run build:mini`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
+## 2026-06-19 Location Contradiction Gate
+
+This sub-slice closes a different failure class from state contradictions.
+The problem is explicit same-subject location drift, not copula/state disagreement.
+
+What changed:
+
+- `src/learning/answerReleaseReview.ts` now extracts location frames such as `located in`, `situated in`, `positioned in`, `lies in`, `位于`, and `坐落于`,
+- `claim_location_consistency` compares same-subject location claims against the grounded support set and revises the draft when the supported location is swapped,
+- `STATE_FRAME_SKIP_VALUE_PATTERN` now excludes locative predicates from `claim_state_consistency`, so location claims no longer surface as false-positive state conflicts,
+- `src/learning/types.ts` now exposes `claim_location_consistency` as a first-class `AnswerReleaseGateId`,
+- `src/learning/answerReleaseReview.test.ts` now pins three contract edges:
+  - English location contradiction must `revise`,
+  - Chinese location contradiction must `revise`,
+  - a broader supported location must still `release`.
+
+Why this matters architecturally:
+
+- location drift is a concrete contradiction family that lexical overlap and state checks do not own cleanly,
+- if locative phrases are left inside the state slice, the reviewer produces the right decision for the wrong reason and the gate surface becomes harder to trust,
+- therefore the fix is not another framework or a broader semantic verifier; it is a narrower local owner with an explicit false-positive boundary.
+
+What remains open:
+
+- broader claim-vs-citation / claim-vs-evidence contradiction coverage still needs to go beyond explicit location frames,
+- repeated inline-fragment disambiguation still needs exact offsets or richer markdown AST provenance.
+
+Verification for this sub-slice:
+
+- `npm.cmd exec -- jest src/learning/answerReleaseReview.test.ts --runInBand --no-cache`
+- `npm.cmd exec -- tsc --noEmit`
 
 ## 2026-06-19 Dependency/Prerequisite Contradiction Gate
 
@@ -129,6 +163,7 @@ Code-vs-plan reconciliation:
 | Grounded drafts must not keep the same explicit composition relation while swapping the supported components | `answerReleaseReview.ts` now enforces `claim_composition_consistency` on comparable `composed of` / `consists of` / `由...组成` frames, revising drifts such as `water and a glass cup` -> `oil and a plastic cup` while allowing compatible component order/refinement. | Implemented baseline |
 | Grounded drafts must not keep the same explicit purpose relation while swapping the supported use | `answerReleaseReview.ts` now enforces `claim_purpose_consistency` on comparable `used for` / `用于` frames, revising drifts such as `drinking water` -> `storing motor oil` while allowing supported-purpose refinements. | Implemented baseline |
 | Grounded drafts must not keep the same explicit dependency/prerequisite relation while swapping the supported dependency | `answerReleaseReview.ts` now enforces `claim_dependency_consistency` on comparable `depends on` / `requires` / `依赖` / `前置条件` frames, revising drifts such as `Baseline Measurement and Sensor Calibration` -> `Final Reporting` while allowing genuinely supported dependency answers. | Implemented baseline |
+| Grounded drafts must not keep the same explicit location relation while swapping the supported location | `answerReleaseReview.ts` now enforces `claim_location_consistency` on comparable `located in` / `位于` frames, revising drifts such as `main chamber` -> `auxiliary chamber`; locative predicates are excluded from `claim_state_consistency` extraction so the location slice owns the contradiction. | Implemented baseline |
 | Grounded drafts must not keep the supported fact tail while swapping the grounded subject | `answerReleaseReview.ts` now enforces `claim_subject_consistency` on comparable subject-tail frames, revising subject drift such as `Water density` -> `Glass density` even when the numeric tail still matches support. | Implemented baseline |
 | Grounded drafts must not keep the same subject and explicit attribute frame while swapping the supported attribute | `answerReleaseReview.ts` now enforces `claim_attribute_consistency` on comparable `has` / `have` / `具有` frames, revising drifts such as `moderate thermal insulation` -> `high thermal insulation` while allowing compatible refinements. | Implemented baseline |
 | Same-subject state contradictions must be revised before release | `answerReleaseReview.ts` now enforces `claim_state_consistency` on comparable definition/copula frames across English and Chinese evidence. | Implemented baseline |
@@ -140,7 +175,7 @@ Code-vs-plan reconciliation:
 | Right-pane source preview must highlight the correct paragraph even when snippet text repeats | `workspace_panes.js` now prefers trustworthy `line_window` anchors and scores candidate rendered nodes with specificity/container penalties. | Implemented baseline |
 | Stale line metadata must not force the wrong highlight | `workspace_panes.js` now distrusts stale line windows and falls back to `snippet_fallback`; frontend tests pin the failure mode. | Implemented baseline |
 | The screenshot-backed `waterglass` failure must remain a formal acceptance rule | `scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh` now expects grounded output, reviewer/public-answer parity, no diagnostic leakage, and no `本技术文档旨在` meta-answer fallback. | Implemented |
-| The active remaining gap must move to broader contradiction coverage and narrower unresolved provenance | Current code still needs wider claim-vs-citation / claim-vs-evidence conflict checks beyond the lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity stack, plus explicit span offsets or richer AST provenance to disambiguate identical repeated fragments inside one authenticated block. | Open |
+| The active remaining gap must move to broader contradiction coverage and narrower unresolved provenance | Current code still needs wider claim-vs-citation / claim-vs-evidence conflict checks beyond the lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + location + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity stack, plus explicit span offsets or richer AST provenance to disambiguate identical repeated fragments inside one authenticated block. | Open |
 
 Verification for this re-audit:
 

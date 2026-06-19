@@ -173,6 +173,19 @@ type DependencyFrameConflict = {
     supportFrame: DependencyFrame & { label: string };
 };
 
+type LocationFrame = {
+    surface: string;
+    subject: string;
+    subjectFeatures: string[];
+    location: string;
+    locationFeatures: string[];
+};
+
+type LocationFrameConflict = {
+    answerFrame: LocationFrame;
+    supportFrame: LocationFrame & { label: string };
+};
+
 type SentencePolarity = 'positive' | 'negative';
 
 type PolaritySentence = {
@@ -360,7 +373,7 @@ const POLARITY_NEGATION_NORMALIZATION_RULES: Array<[RegExp, string]> = [
     [/\b([a-z]+)n['’]t\b/gi, '$1 not'],
 ];
 
-const STATE_FRAME_SKIP_VALUE_PATTERN = /\b(?:prerequisite|before|after|depends?\s+on|requires?|sequence|used\s+for|used\s+to|designed\s+for|designed\s+to|serv(?:es|ed|e)\s+(?:to|for))\b|先于|早于|之前|之后|前置条件|前提|依赖|用于|用来|用作/u;
+const STATE_FRAME_SKIP_VALUE_PATTERN = /\b(?:prerequisite|before|after|depends?\s+on|requires?|sequence|used\s+for|used\s+to|designed\s+for|designed\s+to|serv(?:es|ed|e)\s+(?:to|for)|located\s+(?:in|inside|within|at)|situated\s+(?:in|inside|within|at)|positioned\s+(?:in|inside|within|at)|lies?\s+(?:in|within))\b|先于|早于|之前|之后|前置条件|前提|依赖|用于|用来|用作|位于|位於|坐落于|坐落於|处于|處於/u;
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -1348,6 +1361,13 @@ function buildDependencyFrameFeatures(value: string): string[] {
         .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
 }
 
+function buildLocationFrameFeatures(value: string): string[] {
+    return collectOrderedLexicalFeatures(value)
+        .map((feature) => String(feature || '').trim().toLowerCase())
+        .filter((feature) => feature.length >= 2)
+        .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
+}
+
 function normalizeStateFrameSubject(value: string): string {
     return normalizeWhitespace(String(value || ''))
         .replace(/^(?:a|an|the)\s+/i, '')
@@ -1487,6 +1507,24 @@ function normalizeDependencyFrameValue(value: string): string {
         .replace(/\s+(?:during|under|within|inside|outside|near|around|across|throughout|through|at|on|in)\s+.+$/iu, '')
         .replace(/(?:在|于|於).+$/u, '')
         .replace(/[“”"'`]+/gu, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function normalizeLocationFrameSubject(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/^(?:此处的|这里的|该|这个|這個)/u, '')
+        .replace(/[“”"'`]+/gu, '')
+        .replace(/[,:;]+$/g, '')
+        .trim();
+}
+
+function normalizeLocationFrameValue(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^(?:a|an|the)\s+/i, '')
+        .replace(/[“”"'`]+/gu, '')
+        .replace(/\s+(?:during|while|when|under)\s+.+$/iu, '')
         .replace(/[,:;]+$/g, '')
         .trim();
 }
@@ -1998,6 +2036,60 @@ function extractDependencyFrames(value: string): DependencyFrame[] {
         });
 }
 
+function buildLocationFrame(
+    surface: string,
+    subject: string,
+    location: string
+): LocationFrame | null {
+    const normalizedSurface = normalizeWhitespace(surface);
+    const normalizedSubject = normalizeLocationFrameSubject(subject);
+    const normalizedLocation = normalizeLocationFrameValue(location);
+    if (!normalizedSurface || !normalizedSubject || !normalizedLocation) {
+        return null;
+    }
+    const subjectFeatures = buildLocationFrameFeatures(normalizedSubject);
+    const locationFeatures = buildLocationFrameFeatures(normalizedLocation);
+    if (subjectFeatures.length <= 0 || locationFeatures.length <= 0) {
+        return null;
+    }
+    return {
+        surface: normalizedSurface,
+        subject: normalizedSubject,
+        subjectFeatures,
+        location: normalizedLocation,
+        locationFeatures,
+    };
+}
+
+function extractLocationFrames(value: string): LocationFrame[] {
+    const patterns: RegExp[] = [
+        /^(.{1,80}?)\s+(?:is|are|was|were)\s+located\s+(?:in|inside|within|at)\s+(.+)$/iu,
+        /^(.{1,80}?)\s+(?:is|are|was|were)\s+situated\s+(?:in|inside|within|at)\s+(.+)$/iu,
+        /^(.{1,80}?)\s+(?:is|are|was|were)\s+positioned\s+(?:in|inside|within|at)\s+(.+)$/iu,
+        /^(.{1,80}?)\s+lies?\s+(?:in|within)\s+(.+)$/iu,
+        /^(.{1,24}?)(?:位于|位於|坐落于|坐落於|处于|處於)(.+)$/u,
+    ];
+    return String(value || '')
+        .split(POLARITY_SENTENCE_SPLIT_PATTERN)
+        .map((sentence) => normalizeWhitespace(sentence))
+        .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
+        .flatMap((sentence) => {
+            for (const pattern of patterns) {
+                const match = sentence.match(pattern);
+                if (!match) {
+                    continue;
+                }
+                const frame = buildLocationFrame(
+                    sentence,
+                    String(match[1] || ''),
+                    String(match[2] || '')
+                );
+                return frame ? [frame] : [];
+            }
+            return [];
+        });
+}
+
 function extractCompositionFrames(value: string): CompositionFrame[] {
     const patterns: RegExp[] = [
         /^(.{1,80}?)\s+consists?\s+of\s+(.+)$/iu,
@@ -2434,6 +2526,53 @@ function buildDependencyConflictMessage(conflicts: DependencyFrameConflict[]): s
         `"${conflict.answerFrame.surface}" conflicted with "${conflict.supportFrame.surface}" (${conflict.supportFrame.label})`
     ));
     return `Draft answer contradicted comparable grounded dependency claims: ${fragments.join('; ')}.`;
+}
+
+function locationFrameSubjectsComparable(answerFrame: LocationFrame, supportFrame: LocationFrame): boolean {
+    const normalizedAnswerSubject = normalizeWhitespace(answerFrame.subject).toLowerCase();
+    const normalizedSupportSubject = normalizeWhitespace(supportFrame.subject).toLowerCase();
+    if (!normalizedAnswerSubject || !normalizedSupportSubject) {
+        return false;
+    }
+    if (
+        normalizedAnswerSubject.includes(normalizedSupportSubject)
+        || normalizedSupportSubject.includes(normalizedAnswerSubject)
+    ) {
+        return true;
+    }
+    return computeFeatureOverlapRatio(answerFrame.subjectFeatures, supportFrame.subjectFeatures) >= 0.6;
+}
+
+function locationFrameValuesEquivalent(answerFrame: LocationFrame, supportFrame: LocationFrame): boolean {
+    const normalizedAnswerLocation = normalizeWhitespace(answerFrame.location).toLowerCase();
+    const normalizedSupportLocation = normalizeWhitespace(supportFrame.location).toLowerCase();
+    if (!normalizedAnswerLocation || !normalizedSupportLocation) {
+        return false;
+    }
+    if (
+        normalizedAnswerLocation === normalizedSupportLocation
+        || normalizedSupportLocation.includes(normalizedAnswerLocation)
+    ) {
+        return true;
+    }
+    return computeFeatureOverlapRatio(answerFrame.locationFeatures, supportFrame.locationFeatures) === 1;
+}
+
+function locationFrameValueOverlap(answerFrame: LocationFrame, supportFrame: LocationFrame): number {
+    return Math.max(
+        computeFeatureOverlapRatio(answerFrame.locationFeatures, supportFrame.locationFeatures),
+        computeFeatureJaccard(answerFrame.locationFeatures, supportFrame.locationFeatures)
+    );
+}
+
+function buildLocationConflictMessage(conflicts: LocationFrameConflict[]): string {
+    if (conflicts.length <= 0) {
+        return 'Draft answer stayed location-consistent with the grounded support that could be compared.';
+    }
+    const fragments = conflicts.slice(0, 2).map((conflict) => (
+        `"${conflict.answerFrame.surface}" conflicted with "${conflict.supportFrame.surface}" (${conflict.supportFrame.label})`
+    ));
+    return `Draft answer contradicted comparable grounded location claims: ${fragments.join('; ')}.`;
 }
 
 function stateFrameSubjectsComparable(answerFrame: StateFrame, supportFrame: StateFrame): boolean {
@@ -3330,6 +3469,61 @@ function evaluateDependencyConsistency(context: AnswerReleaseReviewContext): {
     };
 }
 
+function evaluateLocationConsistency(context: AnswerReleaseReviewContext): {
+    passed: boolean;
+    comparableFrameCount: number;
+    conflicts: LocationFrameConflict[];
+} {
+    const answerFrames = extractLocationFrames(context.draftAnswer);
+    if (answerFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const supportFrames = buildSupportCandidates(context).flatMap((candidate) => (
+        extractLocationFrames(candidate.text).map((frame) => ({
+            ...frame,
+            label: candidate.label,
+        }))
+    ));
+    if (supportFrames.length <= 0) {
+        return {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
+    }
+    const conflicts: LocationFrameConflict[] = [];
+    let comparableFrameCount = 0;
+    answerFrames.forEach((answerFrame) => {
+        const comparableSupportFrames = supportFrames.filter((supportFrame) => (
+            locationFrameSubjectsComparable(answerFrame, supportFrame)
+        ));
+        if (comparableSupportFrames.length <= 0) {
+            return;
+        }
+        comparableFrameCount += 1;
+        if (comparableSupportFrames.some((supportFrame) => locationFrameValuesEquivalent(answerFrame, supportFrame))) {
+            return;
+        }
+        conflicts.push({
+            answerFrame,
+            supportFrame: comparableSupportFrames
+                .slice()
+                .sort((left, right) => (
+                    locationFrameValueOverlap(answerFrame, right) - locationFrameValueOverlap(answerFrame, left)
+                ))[0],
+        });
+    });
+    return {
+        passed: conflicts.length <= 0,
+        comparableFrameCount,
+        conflicts: conflicts.filter((conflict) => Boolean(conflict.supportFrame)),
+    };
+}
+
 function evaluateStateConsistency(context: AnswerReleaseReviewContext): {
     passed: boolean;
     comparableFrameCount: number;
@@ -3639,6 +3833,7 @@ function buildDecision(
     compositionConsistencyPassed: boolean,
     purposeConsistencyPassed: boolean,
     dependencyConsistencyPassed: boolean,
+    locationConsistencyPassed: boolean,
     subjectConsistencyPassed: boolean,
     stateConsistencyPassed: boolean,
     polarityConsistencyPassed: boolean,
@@ -3662,6 +3857,7 @@ function buildDecision(
         || !compositionConsistencyPassed
         || !purposeConsistencyPassed
         || !dependencyConsistencyPassed
+        || !locationConsistencyPassed
         || !subjectConsistencyPassed
         || !stateConsistencyPassed
         || !polarityConsistencyPassed
@@ -3787,6 +3983,16 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             comparableFrameCount: 0,
             conflicts: [],
         };
+    const locationConsistency = groundedEvidenceAvailable
+        ? evaluateLocationConsistency({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            comparableFrameCount: 0,
+            conflicts: [],
+        };
     const subjectConsistency = groundedEvidenceAvailable
         ? evaluateSubjectConsistency({
             ...context,
@@ -3878,6 +4084,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         compositionConsistency.passed,
         purposeConsistency.passed,
         dependencyConsistency.passed,
+        locationConsistency.passed,
         subjectConsistency.passed,
         stateConsistency.passed,
         polarityConsistency.passed,
@@ -4039,6 +4246,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : 'No comparable dependency frame was available, so dependency contradiction checking stayed conservative.'
                 )
                 : 'No evidence was available, so dependency contradiction checking was not evaluated.',
+        },
+        {
+            gateId: 'claim_location_consistency',
+            passed: locationConsistency.passed,
+            message: groundedEvidenceAvailable
+                ? (
+                    locationConsistency.comparableFrameCount > 0
+                        ? buildLocationConflictMessage(locationConsistency.conflicts)
+                        : 'No comparable location frame was available, so location contradiction checking stayed conservative.'
+                )
+                : 'No evidence was available, so location contradiction checking was not evaluated.',
         },
         {
             gateId: 'claim_subject_consistency',

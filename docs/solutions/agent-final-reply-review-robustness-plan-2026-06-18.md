@@ -40,6 +40,8 @@ The target is not another prompt framework. The target is a deterministic releas
 - `src/learning/answerReleaseReview.ts` now also adds `claim_graph_comparison_consistency`, so grounded drafts that misstate DAG-backed `contrast` / `analogy` pairs, such as releasing `is similar to` when the graph only supports `contrast`, are revised before release.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_temporal_validity_consistency`, so DAG temporal warnings now participate in final public-answer release: when `graphContext.temporalValidity.allPointsValid === false`, unqualified current-tense drafts are revised, explicitly time-qualified drafts may still release, and supersedes-only lineage does not become a false-positive blocker by itself.
 - `src/learning/answerReleaseReview.ts` now also adds `claim_dependency_consistency`, so grounded drafts that keep the same explicit `depends on` / `requires` / `依赖` / `前置条件` relation but swap the supported dependency, such as `Baseline Measurement and Sensor Calibration` to `Final Reporting`, are revised before release.
+- `src/learning/answerReleaseReview.ts` now also adds `claim_location_consistency`, so grounded drafts that keep the same explicit `located in` / `位于` relation but swap the supported location, such as `main chamber` to `auxiliary chamber`, are revised before release.
+- Locative predicates such as `located in` / `位于` are now explicitly excluded from `claim_state_consistency` extraction, so location contradictions stay owned by the location slice instead of surfacing as false-positive state conflicts.
 - `src/frontend/markdown_runtime.js` now exposes block-level source-line provenance for rendered markdown, and `src/frontend/workspace_panes.js` now prefers `source_line_provenance` before `line_window` / `snippet_fallback`.
 - The right pane now also projects the matched evidence fragment into inline highlight markup inside the selected rendered node instead of only tinting the larger paragraph/container.
 - `src/frontend/workspace_panes.js` now also prefers source-authenticated fragment projection inside an already-authenticated rendered block, so single-line paragraphs and nested inline nodes no longer over-highlight the entire line when the matched snippet is narrower.
@@ -118,6 +120,7 @@ The correct architecture is a pipeline of owners, not a single "RAG" blob:
    - composition consistency,
    - purpose consistency,
    - dependency consistency,
+   - location consistency,
    - public-surface contraction,
    - internal diagnostic leakage,
    - subject consistency,
@@ -194,6 +197,7 @@ Best-practice conclusion:
 | Grounded drafts must also be checked for explicit composition contradictions | Reviewer now enforces `claim_composition_consistency`, revising grounded drafts when the same grounded subject keeps the same explicit `composed of` / `由...组成` relation but swaps the supported components while still allowing compatible order/refinement. | Implemented baseline |
 | Grounded drafts must also be checked for explicit purpose/use contradictions | Reviewer now enforces `claim_purpose_consistency`, revising grounded drafts when the same grounded subject keeps the same explicit `used for` / `用于` relation but swaps the supported use while still allowing supported-purpose refinements. | Implemented baseline |
 | Grounded drafts must also be checked for explicit dependency/prerequisite contradictions | Reviewer now enforces `claim_dependency_consistency`, revising grounded drafts when the same grounded subject keeps the same explicit `depends on` / `requires` / `依赖` / `前置条件` relation but swaps the supported dependency while still allowing genuinely supported dependency answers. | Implemented baseline |
+| Grounded drafts must also be checked for explicit location contradictions | Reviewer now enforces `claim_location_consistency`, revising grounded drafts when the same grounded subject keeps the same explicit `located in` / `位于` relation but swaps the supported location; locative predicates are excluded from `claim_state_consistency` extraction so the location slice owns those contradictions. | Implemented baseline |
 | Grounded drafts must also be checked for grounded-subject drift even when the supported fact tail still matches | Reviewer now enforces `claim_subject_consistency`, revising drafts that keep the supported fact tail but swap the subject/entity from the grounded support. | Implemented baseline |
 | Grounded drafts must also be checked for same-subject explicit attribute drift | Reviewer now enforces `claim_attribute_consistency`, revising grounded drafts when the same subject keeps an explicit `has` / `具有` frame but swaps the supported attribute value. | Implemented baseline |
 | Grounded drafts must also be checked for same-subject state contradictions | Reviewer now enforces `claim_state_consistency`, revising grounded drafts when comparable definition/copula state claims conflict with grounded support in English or Chinese. | Implemented baseline |
@@ -692,6 +696,23 @@ Attached additively to:
   - supersedes-only lineage must not create a false positive.
 - This phase matters architecturally because it moves DAG temporal warnings from explanation-only metadata into the final release contract without handing correctness ownership to a second verifier runtime.
 
+#### Phase-25 location contradiction hardening landed on top of the temporal-validity slice
+
+- `src/learning/answerReleaseReview.ts` now adds a fifteenth contradiction-oriented reviewer gate: `claim_location_consistency`.
+- This gate keeps the same narrow-owner discipline:
+  - it compares only explicit same-subject location frames such as `located in`, `situated in`, `positioned in`, `lies in`, `位于`, and `坐落于`,
+  - it revises only when the grounded support and the draft disagree on the location value for a comparable subject,
+  - it stays local to release policy instead of creating a second semantic-verifier owner.
+- False-positive control is explicit:
+  - broader supported locations still `release`,
+  - locative predicates are excluded from `claim_state_consistency` extraction, so the reviewer no longer explains a location contradiction as a state contradiction,
+  - when the reviewer cannot align subject and location frames conservatively, it does not guess.
+- `src/learning/answerReleaseReview.test.ts` now pins three important behaviors:
+  - English location contradiction forces `revise`,
+  - Chinese location contradiction forces `revise`,
+  - supported broader-location wording still `release`s cleanly.
+- This phase matters architecturally because it fixes a real ownership bug exposed by reviewer expansion: location drift is its own contradiction family, and leaving locative phrases inside the state slice would keep the decision surface correct only by accident.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -781,7 +802,7 @@ The first two decide capability. The third decides trust.
 
 ### Next Direction
 
-1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity gate stack, but only where the new checks can stay deterministic enough to avoid false-positive churn.
+1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + location + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity gate stack, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
 3. Treat the current block-level markdown source mapping plus `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` graph-focus stack as the implemented baseline, then focus the next provenance step on repeated-fragment disambiguation via explicit offsets or richer AST provenance.
 4. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
@@ -792,7 +813,7 @@ The first two decide capability. The third decides trust.
 1. The missing mechanism was not graph retrieval; it was final public-answer release review.
 2. The correct owner is a local deterministic reviewer layer, not a new prompt framework.
 3. The current project DAG remains the evidence substrate and now also participates in release-time causal, order, and comparison correction; graph-focus now also has a block-level provenance baseline plus `source_line_provenance` / source-authenticated fragment projection / `line_window` / `snippet_fallback`, so the remaining evidence gap has narrowed to repeated-fragment disambiguation inside one authenticated block rather than basic pane opening.
-4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification, and the reviewer stack now also blocks same-subject attribute drift, containment-content drift, composition-component drift, dependency/prerequisite drift, DAG-backed causal reversal, and temporally flagged current-answer release before publication.
+4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification, and the reviewer stack now also blocks same-subject attribute drift, containment-content drift, composition-component drift, dependency/prerequisite drift, location drift, DAG-backed causal reversal, and temporally flagged current-answer release before publication.
 5. The landed slice is backward-compatible and materially improves robustness without widening the main answer surface; the next work is broader contradiction coverage, not replacing the current reviewer owner.
 
 ## 中文文档
@@ -824,6 +845,8 @@ The first two decide capability. The third decides trust.
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_graph_comparison_consistency`，因此当 DAG 只支撑 `contrast` 或只支撑 `analogy` 时，把二者说反的草稿也会在 release 前被拦截并改写。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_temporal_validity_consistency`，因此 DAG 时序有效性警告已经进入最终公开回答的 release contract：当 `graphContext.temporalValidity.allPointsValid === false` 时，未显式带时间限定的“当前结论”草稿会在 release 前被改写；已经带明确时间限定的回答仍可放行，而仅有 `supersedes` 血缘本身不会误触发门禁。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_dependency_consistency`，因此像把 `响应验证依赖基线测量和传感器校准` 偷换成 `响应验证依赖最终报告` 这类“同一主体、同一显式依赖/前置条件关系、但依赖目标漂移”的草稿会在 release 前被拦截并改写。
+- `src/learning/answerReleaseReview.ts` 现在也新增 `claim_location_consistency`，因此像把 `控制模块位于主舱室` 偷换成 `控制模块位于辅助舱室` 这类“同一主体、同一显式位置关系、但位置漂移”的草稿会在 release 前被拦截并改写。
+- `located in` / `位于` 这类位置谓词现在也已从 `claim_state_consistency` 抽取中显式排除，因此位置矛盾不再误记到 state slice 上。
 - `src/learning/answerReleaseReview.ts` 现在也新增 `claim_structured_comparison_consistency`，因此像把 `Water density is higher than glass density` 这类“同一属性、同一单位、比较方向说反”的草稿，也会在 release 前被确定性纠正句拦截并改写，而不会仅因 topic overlap 还在就放行。
 - `src/frontend/markdown_runtime.js` 现在会暴露 block-level 的 source-line provenance，`src/frontend/workspace_panes.js` 则优先消费 `source_line_provenance`，之后才回退到 `line_window` / `snippet_fallback`。
 - 右侧 pane 现在也会在选中的渲染节点内部投影命中的 evidence fragment 内联高亮，而不再只是给更大的段落 / 容器着色。
@@ -902,6 +925,7 @@ The first two decide capability. The third decides trust.
    - composition consistency
    - purpose consistency
    - dependency consistency
+   - location consistency
    - public-surface contraction
    - internal diagnostic leakage
    - subject consistency
@@ -978,6 +1002,7 @@ The first two decide capability. The third decides trust.
 | grounded draft 还必须检查显式组成关系里的组件矛盾 | reviewer 现在会执行 `claim_composition_consistency`：对于可比的 `由...组成` / `composed of` 关系，只要主体不变、关系不变、但支撑组件被偷换，就会触发 revise，同时兼容组件顺序调整与兼容细化。 | 已实现基线 |
 | grounded draft 还必须检查显式用途关系里的用途矛盾 | reviewer 现在会执行 `claim_purpose_consistency`：对于可比的 `used for` / `用于` 关系，只要主体不变、关系不变、但支撑用途被偷换，就会触发 revise，同时兼容支撑用途细化。 | 已实现基线 |
 | grounded draft 还必须检查显式依赖 / 前置条件关系里的依赖目标矛盾 | reviewer 现在会执行 `claim_dependency_consistency`：对于可比的 `depends on` / `requires` / `依赖` / `前置条件` 关系，只要主体不变、关系不变、但支撑依赖被偷换，就会触发 revise，同时兼容真正被支撑的依赖回答。 | 已实现基线 |
+| grounded draft 还必须检查显式位置关系里的位置矛盾 | reviewer 现在会执行 `claim_location_consistency`：对于可比的 `located in` / `位于` 关系，只要主体不变、关系不变、但支撑位置被偷换，就会触发 revise；位置谓词已从 `claim_state_consistency` 抽取中排除，因此位置矛盾会由正确 slice 持有。 | 已实现基线 |
 | grounded draft 还必须检查“事实尾部一致但主体漂移”的 grounded-subject 冲突 | reviewer 现在会执行 `claim_subject_consistency`：即使数值/事实尾部仍与支撑一致，只要 grounded subject / entity 被偷换，也会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查同主体显式属性漂移 | reviewer 现在会执行 `claim_attribute_consistency`：对于可比的 `has` / `have` / `具有` 属性框架，只要主体不变但属性值被偷换，就会触发 revise。 | 已实现基线 |
 | grounded draft 还必须检查同主体状态矛盾 | reviewer 现在会执行 `claim_state_consistency`：对于中英文可比的 definition/copula 状态断言，只要同主体状态与支撑冲突，就会触发 revise。 | 已实现基线 |
@@ -1475,6 +1500,23 @@ The first two decide capability. The third decides trust.
   - 已显式加时间限定的回答必须继续 clean `release`，而仅有 supersedes 血缘不得制造误报。
 - 这个 Phase 在架构上的意义很直接：它把 DAG 时序警告从“解释层 metadata”推进成最终 release contract 的一部分，同时仍然把正确性 owner 留在本地确定性 reviewer，而不是再引入第二套 verifier runtime。
 
+#### 在时序有效性切片之上继续落地的 Phase-25 位置矛盾加固
+
+- `src/learning/answerReleaseReview.ts` 现在新增了第十五个面向矛盾检测的 reviewer gate：`claim_location_consistency`。
+- 这个 gate 继续保持窄边界：
+  - 它只比较显式同主体位置框架，例如 `located in`、`situated in`、`positioned in`、`lies in`、`位于`、`坐落于`，
+  - 它只在草稿与 grounded support 对同一主体的位置值发生冲突时触发改写，
+  - 它继续把正确性 owner 留在本地 release policy，而不是引入第二套语义 verifier。
+- 防误报控制也被显式写进实现：
+  - 被支撑的更宽位置表述仍然允许 `release`，
+  - `located in` / `位于` 这类位置谓词已从 `claim_state_consistency` 抽取中排除，因此 reviewer 不会再把位置矛盾误解释成状态矛盾，
+  - 当 reviewer 无法保守绑定主体与位置 frame 时，会保持保守而不是猜。
+- `src/learning/answerReleaseReview.test.ts` 现在已经固定三类关键行为：
+  - 英文位置矛盾必须 `revise`；
+  - 中文位置矛盾必须 `revise`；
+  - 被支撑的更宽位置表述仍然 clean `release`。
+- 这个 Phase 在架构上的意义很直接：它修复了 reviewer 扩展过程中暴露出来的一个真实 owner 边界错误。位置漂移本来就是独立矛盾族群，把位置谓词留在 state slice 里只会让门禁表面“碰巧正确”，而不是“按正确 owner 正确”。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -1564,7 +1606,7 @@ The first two decide capability. The third decides trust.
 
 ### 后续方向
 
-1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity gate 栈之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
+1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + location + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity gate 栈之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
 3. 把当前 block-level markdown source mapping 与 `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` 的 graph-focus 栈视为已落地基线；后续重点转到基于显式 offset 或更丰富 AST provenance 的重复片段去歧义。
 4. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
@@ -1575,5 +1617,5 @@ The first two decide capability. The third decides trust.
 1. 本轮切片起点真正缺失的不是图检索，而是最终公开回答的 release review；复审现在已经确认这个 owner 已落地。
 2. 正确 owner 是本地确定性 reviewer layer，不是再引入一层 prompt framework。
 3. 项目现有 DAG 继续作为证据底座，并且已经开始同时参与 release-time 的因果、顺序与对比分支纠错；graph-focus 现在也已经具备 block-level provenance 加上 `source_line_provenance` / source-authenticated fragment projection / `line_window` / `snippet_fallback` 的高亮基线，剩余缺口已经收窄到同一认证 block 内重复片段的去歧义。
-4. `waterglass` 截图已经被编码进正式运行时验收门禁，而 reviewer 栈现在也会在 release 前同时拦截“同一主体、同一显式属性框架、但属性值漂移”的草稿、“同一主体、同一显式容纳关系、但内容物漂移”的草稿、“同一主体、同一显式组成关系、但组件漂移”的草稿、“同一主体、同一显式依赖/前置条件关系、但依赖目标漂移”的草稿、与 DAG 因果方向相反的草稿，以及把带时序警告的 DAG 证据直接发布成当前结论的草稿。
+4. `waterglass` 截图已经被编码进正式运行时验收门禁，而 reviewer 栈现在也会在 release 前同时拦截“同一主体、同一显式属性框架、但属性值漂移”的草稿、“同一主体、同一显式容纳关系、但内容物漂移”的草稿、“同一主体、同一显式组成关系、但组件漂移”的草稿、“同一主体、同一显式依赖/前置条件关系、但依赖目标漂移”的草稿、“同一主体、同一显式位置关系、但位置漂移”的草稿、与 DAG 因果方向相反的草稿，以及把带时序警告的 DAG 证据直接发布成当前结论的草稿。
 5. 本轮落地保持向前兼容，同时实质提升了 agent 最终回复的鲁棒性；后续重点已经转移到更广的矛盾检测，而不是更换 reviewer owner。

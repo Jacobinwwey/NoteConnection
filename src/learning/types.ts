@@ -1281,6 +1281,7 @@ export type AnswerReleaseGateId =
     | 'claim_composition_consistency'
     | 'claim_purpose_consistency'
     | 'claim_dependency_consistency'
+    | 'claim_location_consistency'
     | 'claim_subject_consistency'
     | 'claim_state_consistency'
     | 'claim_polarity_consistency'
