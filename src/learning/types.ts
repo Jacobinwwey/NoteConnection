@@ -338,6 +338,8 @@ export interface KnowledgeCitation {
     sourcePath: string;
     title: string;
     snippet: string;
+    startOffset?: number;
+    endOffset?: number;
     startLine?: number;
     endLine?: number;
     score: number;
@@ -1052,6 +1054,8 @@ export interface AgentConversationKnowledgePoint {
         title: string;
         snippet: string;
         sourcePath: string;
+        startOffset?: number;
+        endOffset?: number;
         startLine?: number;
         endLine?: number;
         score: number;

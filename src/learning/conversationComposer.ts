@@ -114,6 +114,8 @@ function buildKnowledgeCitation(item: KnowledgeQueryItem, index: number): Knowle
             || atom.title
             || ''
         ).slice(0, 280)),
+        startOffset: evidence?.startOffset,
+        endOffset: evidence?.endOffset,
         startLine: evidence?.startLine,
         endLine: evidence?.endLine,
         score: Number(Number(item.score || 0).toFixed(4)),
@@ -145,6 +147,8 @@ function buildAgentConversationKnowledgePoint(
                 title: atom.title,
                 snippet: citation.snippet || summary || atom.title,
                 sourcePath: atom.sourcePath,
+                startOffset: citation.startOffset,
+                endOffset: citation.endOffset,
                 startLine: citation.startLine,
                 endLine: citation.endLine,
                 score: Number(Number(item.score || 0).toFixed(4)),
@@ -262,6 +266,8 @@ export function mergeAgentConversationKnowledgePoints(
                     title: atom.title,
                     snippet,
                     sourcePath: atom.sourcePath,
+                    startOffset: citation.startOffset,
+                    endOffset: citation.endOffset,
                     startLine: citation.startLine,
                     endLine: citation.endLine,
                     score: Number(Number(item.score || 0).toFixed(4)),

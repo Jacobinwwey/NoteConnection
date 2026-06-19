@@ -234,6 +234,16 @@
             }
             return undefined;
         };
+        const normalizeSourceOffset = function (primaryValue, fallbackValue) {
+            const candidates = [primaryValue, fallbackValue];
+            for (let index = 0; index < candidates.length; index += 1) {
+                const numericValue = Number(candidates[index]);
+                if (Number.isFinite(numericValue) && numericValue >= 0) {
+                    return Math.trunc(numericValue);
+                }
+            }
+            return undefined;
+        };
         return Array.isArray(spans)
             ? spans
                 .map((span) => {
@@ -251,6 +261,8 @@
                         sourcePath: String(span.sourcePath || citation && citation.sourcePath || '').trim(),
                         startLine: normalizeLineNumber(span.startLine, citation && citation.startLine),
                         endLine: normalizeLineNumber(span.endLine, citation && citation.endLine),
+                        startOffset: normalizeSourceOffset(span.startOffset, citation && citation.startOffset),
+                        endOffset: normalizeSourceOffset(span.endOffset, citation && citation.endOffset),
                     };
                 })
                 .filter(Boolean)
@@ -768,6 +780,40 @@
             : '';
     }
 
+    function buildGraphFocusLineStartOffsets(markdownSource) {
+        const source = String(markdownSource || '');
+        const offsets = [0];
+        for (let index = 0; index < source.length; index += 1) {
+            if (source[index] === '\n') {
+                offsets.push(index + 1);
+            }
+        }
+        return offsets;
+    }
+
+    function resolveGraphFocusSourceLineOffsetRange(markdownSource, startLine, endLine) {
+        const source = String(markdownSource || '');
+        const normalizedStartLine = Number(startLine);
+        if (!source || !Number.isFinite(normalizedStartLine) || normalizedStartLine <= 0) {
+            return null;
+        }
+        const lineStartOffsets = buildGraphFocusLineStartOffsets(source);
+        const startOffset = lineStartOffsets[Math.trunc(normalizedStartLine) - 1];
+        if (!Number.isFinite(startOffset)) {
+            return null;
+        }
+        const normalizedEndLine = Number.isFinite(Number(endLine)) && Number(endLine) >= normalizedStartLine
+            ? Math.trunc(Number(endLine))
+            : Math.trunc(normalizedStartLine);
+        const endOffset = normalizedEndLine < lineStartOffsets.length
+            ? lineStartOffsets[normalizedEndLine]
+            : source.length;
+        return {
+            rawStart: Math.max(0, startOffset),
+            rawEnd: Math.max(startOffset, endOffset),
+        };
+    }
+
     function resolveGraphFocusRenderedSourceRange(candidate) {
         const dataset = candidate && candidate.dataset ? candidate.dataset : null;
         const startLine = Number(dataset && dataset.agentMarkdownSourceStartLine);
@@ -820,6 +866,12 @@
                     fallbackText,
                     startLine: Number.isFinite(Number(span && span.startLine)) ? Math.trunc(Number(span.startLine)) : null,
                     endLine: Number.isFinite(Number(span && span.endLine)) ? Math.trunc(Number(span.endLine)) : null,
+                    startOffset: Number.isFinite(Number(span && span.startOffset)) && Number(span.startOffset) >= 0
+                        ? Math.trunc(Number(span.startOffset))
+                        : null,
+                    endOffset: Number.isFinite(Number(span && span.endOffset)) && Number(span.endOffset) >= 0
+                        ? Math.trunc(Number(span.endOffset))
+                        : null,
                 }
                 : fallbackText
                     ? {
@@ -828,12 +880,22 @@
                         fallbackText: '',
                         startLine: null,
                         endLine: null,
+                        startOffset: null,
+                        endOffset: null,
                     }
                     : null;
             if (!anchor) {
                 return;
             }
-            const key = `${anchor.strategy}::${anchor.text}::${anchor.fallbackText || ''}`;
+            const key = [
+                anchor.strategy,
+                anchor.text,
+                anchor.fallbackText || '',
+                anchor.startLine || '',
+                anchor.endLine || '',
+                Number.isFinite(Number(anchor.startOffset)) ? Number(anchor.startOffset) : '',
+                Number.isFinite(Number(anchor.endOffset)) ? Number(anchor.endOffset) : '',
+            ].join('::');
             if (seen.has(key)) {
                 return;
             }
@@ -1081,6 +1143,156 @@
         return null;
     }
 
+    function findGraphFocusInlineHighlightRangeAtOccurrence(root, candidateTexts, occurrenceIndex, occupiedRanges) {
+        if (!root || candidateTexts.length <= 0) {
+            return null;
+        }
+        const rawText = String(root.textContent || '');
+        if (!rawText) {
+            return null;
+        }
+        const searchIndex = buildGraphFocusNormalizedSearchIndex(rawText);
+        if (!searchIndex.normalizedText || searchIndex.ranges.length <= 0) {
+            return null;
+        }
+        const targetOccurrence = Math.max(0, Math.trunc(Number(occurrenceIndex) || 0));
+        const usedRanges = Array.isArray(occupiedRanges) ? occupiedRanges : [];
+        for (const candidateText of candidateTexts) {
+            const normalizedCandidate = normalizeGraphFocusText(candidateText).toLowerCase();
+            if (normalizedCandidate.length < 4) {
+                continue;
+            }
+            let searchStart = 0;
+            let occurrenceCursor = 0;
+            while (searchStart <= searchIndex.normalizedText.length - normalizedCandidate.length) {
+                const matchIndex = searchIndex.normalizedText.indexOf(normalizedCandidate, searchStart);
+                if (matchIndex < 0) {
+                    break;
+                }
+                const lastIndex = matchIndex + normalizedCandidate.length - 1;
+                const matchRange = {
+                    rawStart: searchIndex.ranges[matchIndex].rawStart,
+                    rawEnd: searchIndex.ranges[lastIndex].rawEnd,
+                };
+                if (
+                    occurrenceCursor >= targetOccurrence
+                    && !usedRanges.some((usedRange) => doGraphFocusRawRangesOverlap(usedRange, matchRange))
+                ) {
+                    return matchRange;
+                }
+                occurrenceCursor += 1;
+                searchStart = matchIndex + normalizedCandidate.length;
+            }
+        }
+        return null;
+    }
+
+    function countGraphFocusSourceOccurrencesBefore(sourceText, candidateText, rawEndExclusive) {
+        const normalizedCandidate = normalizeGraphFocusText(candidateText).toLowerCase();
+        if (normalizedCandidate.length < 4) {
+            return 0;
+        }
+        const searchIndex = buildGraphFocusNormalizedSearchIndex(sourceText);
+        if (!searchIndex.normalizedText || searchIndex.ranges.length <= 0) {
+            return 0;
+        }
+        const boundedEnd = Math.max(0, Math.trunc(Number(rawEndExclusive) || 0));
+        let occurrenceCount = 0;
+        let searchStart = 0;
+        while (searchStart <= searchIndex.normalizedText.length - normalizedCandidate.length) {
+            const matchIndex = searchIndex.normalizedText.indexOf(normalizedCandidate, searchStart);
+            if (matchIndex < 0) {
+                break;
+            }
+            const lastIndex = matchIndex + normalizedCandidate.length - 1;
+            const matchRawEnd = searchIndex.ranges[lastIndex].rawEnd;
+            if (matchRawEnd <= boundedEnd) {
+                occurrenceCount += 1;
+            }
+            searchStart = matchIndex + normalizedCandidate.length;
+        }
+        return occurrenceCount;
+    }
+
+    function collectGraphFocusSourceOffsetCandidateTexts(anchor, markdownSource) {
+        const candidates = [];
+        const seen = new Set();
+        const append = (value) => {
+            const normalizedValue = sanitizeGraphFocusSourceLine(value);
+            if (normalizedValue.length < 4) {
+                return;
+            }
+            const lowered = normalizedValue.toLowerCase();
+            if (seen.has(lowered)) {
+                return;
+            }
+            seen.add(lowered);
+            candidates.push(normalizedValue);
+        };
+        const source = String(markdownSource || '');
+        const startOffset = Number(anchor && anchor.startOffset);
+        const endOffset = Number(anchor && anchor.endOffset);
+        if (
+            Number.isFinite(startOffset)
+            && Number.isFinite(endOffset)
+            && startOffset >= 0
+            && endOffset > startOffset
+            && endOffset <= source.length
+        ) {
+            append(source.slice(startOffset, endOffset));
+        }
+        append(anchor && anchor.fallbackText);
+        return candidates;
+    }
+
+    function resolveGraphFocusSourceOffsetInlineRange(node, anchor, occupiedRanges, markdownSource) {
+        const source = String(markdownSource || '');
+        const startOffset = Number(anchor && anchor.startOffset);
+        const endOffset = Number(anchor && anchor.endOffset);
+        if (
+            !node
+            || !source
+            || !Number.isFinite(startOffset)
+            || !Number.isFinite(endOffset)
+            || startOffset < 0
+            || endOffset <= startOffset
+            || endOffset > source.length
+        ) {
+            return null;
+        }
+        const sourceLineOffsetRange = resolveGraphFocusSourceLineOffsetRange(
+            source,
+            anchor && anchor.startLine,
+            anchor && anchor.endLine
+        ) || {
+            rawStart: 0,
+            rawEnd: source.length,
+        };
+        if (startOffset < sourceLineOffsetRange.rawStart || startOffset >= sourceLineOffsetRange.rawEnd) {
+            return null;
+        }
+        const sourceLineText = source.slice(sourceLineOffsetRange.rawStart, sourceLineOffsetRange.rawEnd);
+        const sourceLocalStart = startOffset - sourceLineOffsetRange.rawStart;
+        const candidateTexts = collectGraphFocusSourceOffsetCandidateTexts(anchor, source);
+        for (const candidateText of candidateTexts) {
+            const occurrenceIndex = countGraphFocusSourceOccurrencesBefore(
+                sourceLineText,
+                candidateText,
+                sourceLocalStart
+            );
+            const range = findGraphFocusInlineHighlightRangeAtOccurrence(
+                node,
+                [candidateText],
+                occurrenceIndex,
+                occupiedRanges
+            );
+            if (range) {
+                return range;
+            }
+        }
+        return null;
+    }
+
     function buildGraphFocusTextNodeIndex(root) {
         if (!root || typeof document.createTreeWalker !== 'function') {
             return [];
@@ -1151,11 +1363,23 @@
         return wrappedCount;
     }
 
-    function resolveGraphFocusInlineHighlightMatch(node, entry, occupiedRanges) {
+    function resolveGraphFocusInlineHighlightMatch(node, entry, occupiedRanges, markdownSource) {
         if (!node || !entry || !entry.anchor) {
             return null;
         }
         if (entry.strategy === 'source_line_provenance' || entry.strategy === 'line_window') {
+            const sourceOffsetRange = resolveGraphFocusSourceOffsetInlineRange(
+                node,
+                entry.anchor,
+                occupiedRanges,
+                markdownSource
+            );
+            if (sourceOffsetRange) {
+                return {
+                    range: sourceOffsetRange,
+                    strategy: 'source_offset_provenance',
+                };
+            }
             const sourceFragmentRange = findGraphFocusInlineHighlightRange(
                 node,
                 collectGraphFocusInlineSourceFragmentTexts(entry.anchor),
@@ -1182,7 +1406,7 @@
         };
     }
 
-    function applyGraphFocusInlineHighlights(selectedEntries) {
+    function applyGraphFocusInlineHighlights(selectedEntries, markdownSource) {
         const entries = Array.isArray(selectedEntries) ? selectedEntries : [];
         if (entries.length <= 0) {
             return {
@@ -1205,7 +1429,7 @@
             clearGraphFocusInlineHighlights(node);
             const occupiedRanges = [];
             nodeEntries.forEach((entry) => {
-                const resolvedHighlight = resolveGraphFocusInlineHighlightMatch(node, entry, occupiedRanges);
+                const resolvedHighlight = resolveGraphFocusInlineHighlightMatch(node, entry, occupiedRanges, markdownSource);
                 if (!resolvedHighlight || !resolvedHighlight.range) {
                     return;
                 }
@@ -1213,7 +1437,12 @@
                 if (wrappedCount > 0) {
                     occupiedRanges.push(resolvedHighlight.range);
                     inlineHighlightCount += 1;
-                    if (resolvedHighlight.strategy === 'source_fragment_provenance') {
+                    if (resolvedHighlight.strategy === 'source_offset_provenance') {
+                        inlineHighlightStrategy = 'source_offset_provenance';
+                    } else if (
+                        resolvedHighlight.strategy === 'source_fragment_provenance'
+                        && inlineHighlightStrategy !== 'source_offset_provenance'
+                    ) {
                         inlineHighlightStrategy = 'source_fragment_provenance';
                     } else if (inlineHighlightStrategy === 'none') {
                         inlineHighlightStrategy = 'text_search';
@@ -1295,7 +1524,7 @@
             candidate.classList.add('agent-focus-match');
             candidate.setAttribute('data-agent-focus-highlight', 'true');
         });
-        const inlineHighlightResult = applyGraphFocusInlineHighlights(prunedEntries);
+        const inlineHighlightResult = applyGraphFocusInlineHighlights(prunedEntries, markdownSource);
         return {
             highlightedNodeCount: prunedNodes.length,
             inlineHighlightCount: Number(inlineHighlightResult && inlineHighlightResult.inlineHighlightCount || 0),

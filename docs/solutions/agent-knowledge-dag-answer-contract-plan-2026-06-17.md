@@ -118,7 +118,7 @@ This order matters. If graph expansion happens before scope normalization, it ca
 |---|---|---|---|
 | Public answer should answer the user's question, not list every internal artifact | `buildScopedConversationAnswer()` now returns a single targeted answer string; citation lists, graph paths, memory notices, and knowledge-run diagnostics stay in typed blocks, traces, panes, or exports. | Implemented current slice | Keep future DAG context from re-inflating the answer area. |
 | Hide developer-heavy evidence and purple-box-style support material for now | Evidence pane and runtime/export traces carry supporting context. | Direction is correct | Any new graph details must default to secondary surfaces unless explicitly requested. |
-| Clicking a file hit should open right-side content and highlight matched text | `workspace_panes.js` routes file entries through graph focus, retries source reads across payload + matched-span candidate paths, renders through the shared markdown runtime, highlights matched spans, records requested/candidate/attempted/resolved-path diagnostics, and now emits interesting diagnostics through the agent-workspace runtime for durable session/export capture. | Implemented broadened P4 slice | Remaining risk is calibration quality, not missing persistence plumbing. |
+| Clicking a file hit should open right-side content and highlight matched text | `workspace_panes.js` routes file entries through graph focus, retries source reads across payload + matched-span candidate paths, renders through the shared markdown runtime, highlights matched spans, records requested/candidate/attempted/resolved-path diagnostics, emits interesting diagnostics through the agent-workspace runtime, and now reports `inlineHighlightStrategy` including `source_offset_provenance`. `EvidenceSpan` offsets flow through citations and matched spans so repeated identical fragments inside one authenticated block can be disambiguated when offsets exist. | Implemented broadened P4 slice | Remaining risk is old payloads without offsets or genuinely richer nested AST provenance needs, not missing pane opening or persistence plumbing. |
 | Use this project's existing DAG, not a generic graph database abstraction | `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, store ops, `findPath`, path/session logic, and `Graph.ts` DAG helpers already exist. Retrieval-side graph intent detection now also aligns with the rest of the stack by covering Chinese compare/how-to/explain markers. | Confirmed | The prior "graph database + prompt framework" framing was too generic. |
 | Let LLM inspect high-quality graph structure | 2026-06-17/18 code now uses `graphContextAssembler.ts` to choose the anchor, reorder support nodes, preserve explicit store path chains, add predecessor/successor windows, and expose graph diagnostics through trace/export/evidence pane. Durable `knowledge_run` artifacts now also retain `graphContext`, operator inspection/history/compare cards surface graph context plus graph diagnostics, `WorkspaceExportBundle` emits `runtime.knowledgeRunReports`, and graph-focus render diagnostics are exported as `runtime.graphFocusReports`. | Implemented broader P1/P4/P5 foundation | Remaining work is calibration breadth and owner reduction, not runtime-surface absence. |
 | Compact mixed-language alias queries inside an explicit scope must still retrieve evidence | 2026-06-18 fix: planner-derived title-like variants are now passed into retrieval as expanded `queryTokens` plus explicit `queryVariants`; `queryBackend.ts` consumes those variants for semantic tokens, anchor inference, and title matching; the runtime verifier now defaults to the `什么是waterglass?` + `什么是water glass` matrix. | Implemented current slice | Keep alias normalization centralized. Do not relax the evidence gate to hide normalization bugs. |
@@ -286,16 +286,18 @@ Expected failure classes remain:
 - old runtime file path still used by a legacy entrypoint,
 - markdown rendering succeeds but highlight terms are too narrow.
 
-The current code now uses those diagnostics in three operator-facing places without forking the rendering stack:
+The current code now uses those diagnostics across operator-facing paths without forking the rendering stack:
 
 - graph focus retries candidate paths collected from both payload and matched spans before falling back,
+- inline highlighting reports whether it used `source_offset_provenance`, `source_fragment_provenance`, `text_search`, or no inline match,
+- repeated identical fragments inside one authenticated rendered block use source offsets to select the correct occurrence when offsets are present,
 - the graph-focus pane renders diagnostics when fallback or path-fallback behavior occurs,
 - durable `knowledge_run` artifacts retain `graphContext`, and the knowledge-run inspection card shows graph context plus graph diagnostics for operator review.
 - knowledge-run history now shows compact graph telemetry per run, and run-to-run comparison cards expose path / temporal-warning / graph-fallback deltas for calibration review.
 - the agent workspace now persists interesting graph-focus diagnostics into session state and later conversation/study-session writes preserve that history instead of overwriting unrelated `panelState` domains,
 - `WorkspaceExportBundle` now emits durable `runtime.knowledgeRunReports` and `runtime.graphFocusReports`, so the same graph telemetry can be replayed and analyzed offline without reimplementing the frontend summary logic.
 
-The best fix still remains payload/path normalization plus highlight diagnostics, not a second rendering stack. The remaining gap is calibration quality: decide what additional operator summaries are justified only after current `knowledgeRunReports` + `graphFocusReports` prove insufficient.
+The best fix still remains typed payload/path/span provenance plus highlight diagnostics, not a second rendering stack. The current implementation is precise when offsets exist and backward-compatible when they do not. The remaining gap is calibration quality and offset coverage: decide whether richer AST provenance is justified only after current `knowledgeRunReports` + `graphFocusReports` prove offset-backed spans insufficient.
 
 #### P5: Add graph answer quality gates
 
@@ -349,7 +351,7 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 
 1. The project already has a real DAG substrate; the missing piece has moved from “extract the assembler” to “calibrate graph-aware ranking and quality gates.”
 2. The public answer must stay targeted; this slice keeps `answer` / `directAnswer` free of evidence/debug lists while preserving those details in evidence panes, traces, and exports.
-3. The graph-focus path is now durable end to end: pane diagnostics cross the runtime boundary, survive later session-state writes, and export as `runtime.graphFocusReports`.
+3. The graph-focus path is now durable end to end: pane diagnostics cross the runtime boundary, survive later session-state writes, export as `runtime.graphFocusReports`, and now include offset-backed inline highlight provenance for repeated-fragment disambiguation.
 4. The referenced open-source projects are best used as design patterns, not new runtime dependencies.
 5. The next robust direction is deeper calibration and carefully scoped owner reduction, not broader framework adoption.
 
@@ -461,7 +463,7 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 |---|---|---|---|
 | 公开回答区只回答用户问题，不罗列内部产物 | `buildScopedConversationAnswer()` 现在只返回单一 targeted answer 字符串；citation list、graph path、memory notice 与 knowledge-run diagnostics 保留在 typed blocks、trace、pane 或 export 中。 | 当前切片已实现 | 后续 DAG context 不能把回答区重新撑大。 |
 | 暂时隐藏开发者导向 evidence 与紫框类 support material | evidence pane 与 runtime/export trace 已承接支持上下文。 | 方向正确 | 新增图细节默认应进次级 surface，除非用户显式要求。 |
-| 文件命中单击后打开右侧内容并高亮命中 | `workspace_panes.js` 已通过 graph focus 路由文件项，读取 markdown，经共享 markdown runtime 渲染，并用 matched spans 高亮。 | 已实现基线 | 失败通常来自路径 canonicalization、storage provider 缺失、旧 runtime 路径、snippet/highlight 不匹配。应先加诊断而不是重写 UI。 |
+| 文件命中单击后打开右侧内容并高亮命中 | `workspace_panes.js` 已通过 graph focus 路由文件项，读取 markdown，经共享 markdown runtime 渲染，并用 matched spans 高亮；当前还会记录 `inlineHighlightStrategy`，并在 citation / matched span 带有 `EvidenceSpan` offset 时使用 `source_offset_provenance` 去区分同一认证块里的重复片段。 | 已实现扩展 P4 切片 | 剩余风险是旧 payload 没有 offset，或未来确实需要更丰富 nested AST provenance；不是 pane 打不开或诊断无法持久化。 |
 | 使用项目现有 DAG，而不是泛图数据库抽象 | `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、store ops、`findPath`、path/session logic、`Graph.ts` DAG helper 都已存在。 | 已确认 | 先前“图数据库 + prompt framework”的表述过泛。 |
 | 让 LLM 查阅高质量图结构 | 2026-06-17 代码现在通过 `graphContextAssembler.ts` 在回答合成前选择 anchor、重排 support node、保留显式 store path chain、补 predecessor/successor window，并通过 trace/export/evidence pane 暴露 graph diagnostics。 | P1 基础已实现 | graph-aware ranking 与图专项质量门禁现在都已存在，剩余工作转为校准广度与更广的运维诊断。 |
 | 显式 scope 下的紧凑混合别名查询也必须召回证据 | 2026-06-18 修复：planner 推导出的 title-like variant 现在会以扩展 `queryTokens` 与显式 `queryVariants` 的形式进入 retrieval；`queryBackend.ts` 会在 semantic token、anchor inference 与 title matching 中消费这些 variant；runtime verifier 默认以 `什么是waterglass?` + `什么是water glass` 作为验收矩阵。 | 当前切片已实现 | 必须把 alias normalization 维持为集中契约，不能靠放宽 evidence gate 掩盖归一化缺陷。 |
@@ -613,6 +615,11 @@ Evidence pane 应渲染：
 - markdown render success / fallback；
 - highlight-term count；
 - highlighted node count；
+- inlineHighlightStrategy；
+- candidate source paths；
+- attempted source paths；
+- resolved source path；
+- path fallback usage；
 - failure reason classification。
 
 预期失败类型：
@@ -621,9 +628,10 @@ Evidence pane 应渲染：
 - `sourcePath` 缺失但 citation/matchedSpan path 存在；
 - snippet 文本归一化方式与渲染后的 markdown 不一致；
 - legacy entrypoint 仍在使用旧 runtime 文件；
-- markdown 渲染成功，但 highlight terms 太窄。
+- markdown 渲染成功，但 highlight terms 太窄；
+- 旧 payload 没有 `startOffset` / `endOffset`，只能回退到 source fragment 或 text search。
 
-最佳修复仍然更可能是 payload/path normalization + highlight diagnostics，而不是再造一套渲染栈。2026-06-18 之后，这些诊断已不再只停留在 graph-focus pane/controller 层，而是通过 session state 与 `runtime.graphFocusReports` 进入更广的运维检查面；剩余缺口转为“是否还需要更高阶汇总”的校准问题。
+最佳修复仍然是 typed payload/path/span provenance + highlight diagnostics，而不是再造一套渲染栈。当前 offset 存在时可以精确命中重复片段，offset 缺失时保持向前兼容的保守回退。2026-06-18 之后，这些诊断已不再只停留在 graph-focus pane/controller 层，而是通过 session state 与 `runtime.graphFocusReports` 进入更广的运维检查面；剩余缺口转为“offset 覆盖与运维汇总是否足够”的校准问题。
 
 #### P5：增加图回答质量门禁
 
@@ -677,6 +685,6 @@ Evidence pane 应渲染：
 
 1. 项目已经有真实 DAG 底座；当前缺口已经从“抽出 assembler”转成“校准 graph-aware ranking 与质量门禁”。
 2. 公开回答必须保持 targeted；本切片让 `answer` / `directAnswer` 不再携带 evidence/debug 列表，同时把这些细节保留在 evidence pane、trace 与 export。
-3. graph-focus 路径现在已经形成端到端的 durable 链路：pane 诊断会跨过运行时边界，保留到后续 session-state 写入中，并导出为 `runtime.graphFocusReports`。
+3. graph-focus 路径现在已经形成端到端的 durable 链路：pane 诊断会跨过运行时边界，保留到后续 session-state 写入中，导出为 `runtime.graphFocusReports`，并且已经包含 offset-backed inline highlight provenance 来处理重复片段去歧义。
 4. 参考开源库更适合作为设计模式，不适合作为新的运行时依赖。
 5. 下一步应把重心转到更深的校准与克制的 owner reduction，而不是继续扩大框架面。

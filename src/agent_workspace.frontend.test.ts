@@ -4663,6 +4663,62 @@ describe('workspace panes controller', () => {
         }));
     });
 
+    test('uses source offsets to disambiguate repeated fragments inside one authenticated block', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const markdownSource = [
+            '# Repeated Fragment',
+            '',
+            'Alpha repeats. Alpha repeats. Beta closes.',
+        ].join('\n');
+        const secondAlphaOffset = markdownSource.indexOf('Alpha repeats.', markdownSource.indexOf('Alpha repeats.') + 1);
+        const readContent = jest.fn(async () => markdownSource);
+
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({
+                readContent,
+            }),
+        };
+        (window as any).marked = {
+            parse: jest.fn(() => (
+                '<h1>Repeated Fragment</h1>'
+                + '<p data-case="repeated-fragment">Alpha repeats. Alpha repeats. Beta closes.</p>'
+            )),
+        };
+
+        controller.init();
+        controller.openGraphFocusPane({
+            atomId: 'atom_repeated_fragment',
+            title: 'Repeated Fragment',
+            sourcePath: 'Knowledge_Base/repeated.md',
+            matchedSpans: [
+                {
+                    title: 'Second repeat',
+                    snippet: 'Alpha repeats.',
+                    sourcePath: 'Knowledge_Base/repeated.md',
+                    startLine: 3,
+                    endLine: 3,
+                    startOffset: secondAlphaOffset,
+                    endOffset: secondAlphaOffset + 'Alpha repeats.'.length,
+                },
+            ],
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const graphBody = document.getElementById('agent-graph-focus-body');
+        const paragraph = graphBody?.querySelector('p[data-case="repeated-fragment"]') as HTMLElement | null;
+        expect(paragraph?.innerHTML).toContain('Alpha repeats. <mark');
+        expect(paragraph?.innerHTML).not.toContain('<mark class="agent-focus-inline-highlight" data-agent-focus-inline-highlight="true">Alpha repeats.</mark> Alpha repeats.');
+        expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
+            matchedSpanCount: 1,
+            highlightedNodeCount: 1,
+            inlineHighlightCount: 1,
+            inlineHighlightStrategy: 'source_offset_provenance',
+            highlightStrategy: 'source_line_provenance',
+        }));
+    });
+
     test('keeps reusable card renderers aligned with chat and evidence owners', () => {
         const repoRoot = path.resolve(__dirname, '..');
         const source = fs.readFileSync(

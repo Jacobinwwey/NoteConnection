@@ -180,6 +180,14 @@ describe('conversationComposer', () => {
         expect(points[0].atomIds).toEqual(expect.arrayContaining(['atom_a', 'atom_b']));
         expect(points[0].citations?.length).toBe(2);
         expect(points[0].matchedSpans?.length).toBe(2);
+        expect(points[0].matchedSpans?.[0]).toEqual(expect.objectContaining({
+            startOffset: 0,
+            endOffset: 42,
+        }));
+        expect(points[0].citations?.[0]).toEqual(expect.objectContaining({
+            startOffset: 0,
+            endOffset: 42,
+        }));
         expect(points[0].matchCount).toBe(2);
         expect((points[0] as any).relationPath).toHaveLength(2);
         expect((points[0] as any).relationKinds).toEqual(expect.arrayContaining(['prerequisite', 'contrast']));

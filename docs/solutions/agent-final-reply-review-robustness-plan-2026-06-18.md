@@ -48,7 +48,8 @@ The target is not another prompt framework. The target is a deterministic releas
 - Shared alias/scope regressions now separate corpus-stable public-answer invariants from screenshot-specific runtime behavior: synthetic corpora may legitimately `release` or `revise`, while the real `waterglass_explicit_scope_compact_zh` runtime case still requires `revise` with `query_intent_alignment`.
 - Runtime verification now has an explicit build-freshness constraint: a first verifier run against stale `dist` output hid the newly added gate inventory, while the same verifier after `npm run build:mini` showed the correct reviewer surface. The bug was stale compiled output, not missing source wiring.
 - Re-audit of the cloned reference libraries under `ref/` (`dspy`, `guidance`, `semantic-kernel`, `langchain`, `litellm`) confirms they remain design references rather than release-policy owners: DSPy is strongest as a program/eval/optimizer harness, Guidance as constrained generation and output control, Semantic Kernel and LangChain as orchestration surfaces, and LiteLLM as a provider gateway, but none of them substitutes for local DAG-backed final-answer verification in this TypeScript runtime.
-- The remaining provenance gap is no longer “the right pane can only tint whole blocks.” It is narrower: identical repeated fragments inside the same authenticated block still need explicit span offsets or richer markdown AST provenance to be perfectly disambiguated.
+- `EvidenceSpan.startOffset` / `endOffset` now flow through citations and `matchedSpans`, and the right pane prefers `source_offset_provenance` before source-fragment and text-search fallback when a hit is already line/source authenticated.
+- Repeated identical fragments inside one authenticated rendered block are now disambiguated when source offsets are available. The remaining provenance gap is narrower: old payloads without offsets still need conservative fallback, and richer markdown AST provenance is only justified if offset coverage proves insufficient.
 
 ### First Principles
 
@@ -713,6 +714,21 @@ Attached additively to:
   - supported broader-location wording still `release`s cleanly.
 - This phase matters architecturally because it fixes a real ownership bug exposed by reviewer expansion: location drift is its own contradiction family, and leaving locative phrases inside the state slice would keep the decision surface correct only by accident.
 
+#### Phase-26 source-offset provenance landed on top of the graph-focus slice
+
+- `src/learning/types.ts` now keeps `startOffset` / `endOffset` as optional compatibility-safe fields on citations and matched spans.
+- `src/learning/conversationComposer.ts` now carries offsets from `EvidenceSpan` into both first-pass and grouped knowledge-point payloads, so downstream renderers do not have to rediscover source positions from display text.
+- `src/frontend/workspace_panes.js` now resolves inline highlights in this order:
+  - `source_offset_provenance`,
+  - `source_fragment_provenance`,
+  - `text_search`,
+  - `none`.
+- The offset path is deliberately guarded:
+  - it only runs inside an already source-authenticated rendered block (`source_line_provenance` or `line_window`),
+  - it validates that the offset falls inside the resolved source line range,
+  - it uses the source-side occurrence index to choose the corresponding rendered-text occurrence.
+- This closes the repeated-fragment case that block-level provenance could not solve. The tradeoff is intentional: payloads without offsets keep the old safe fallback instead of adding fuzzy ranking that would make highlight behavior harder to audit.
+
 ### Why the Earlier Framework Proposals Were Insufficient
 
 Reviewed references under `ref/`:
@@ -804,7 +820,7 @@ The first two decide capability. The third decides trust.
 
 1. Use the new explicit alias/scope regression corpus to add deeper contradiction checks beyond the current lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + location + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity gate stack, but only where the new checks can stay deterministic enough to avoid false-positive churn.
 2. Keep expanding the corpus with real cross-scope, compact-alias, and synonym failures before widening reviewer policy again.
-3. Treat the current block-level markdown source mapping plus `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` graph-focus stack as the implemented baseline, then focus the next provenance step on repeated-fragment disambiguation via explicit offsets or richer AST provenance.
+3. Treat the current block-level markdown source mapping plus `source_offset_provenance` -> `source_line_provenance` / source-authenticated fragment projection -> `line_window` -> `snippet_fallback` graph-focus stack as the implemented baseline; next provenance work should target offset coverage for old payloads or richer AST provenance only if real regressions prove offsets insufficient.
 4. Keep compare-ready drilldowns on the existing reviewer telemetry path and resist creating a second audit owner for richer operator slices.
 5. Continue owner reduction in `KnowledgeLearningPlatform.ts` and `agent_workspace.js` only where the new module owns real invariants.
 
@@ -812,7 +828,7 @@ The first two decide capability. The third decides trust.
 
 1. The missing mechanism was not graph retrieval; it was final public-answer release review.
 2. The correct owner is a local deterministic reviewer layer, not a new prompt framework.
-3. The current project DAG remains the evidence substrate and now also participates in release-time causal, order, and comparison correction; graph-focus now also has a block-level provenance baseline plus `source_line_provenance` / source-authenticated fragment projection / `line_window` / `snippet_fallback`, so the remaining evidence gap has narrowed to repeated-fragment disambiguation inside one authenticated block rather than basic pane opening.
+3. The current project DAG remains the evidence substrate and now also participates in release-time causal, order, and comparison correction; graph-focus now has block-level provenance plus offset-backed inline disambiguation, so the remaining evidence gap is old payloads without offsets rather than basic pane opening or repeated-fragment ambiguity when offsets exist.
 4. The `waterglass` screenshot is now encoded as a runtime acceptance requirement through reviewer-aware verification, and the reviewer stack now also blocks same-subject attribute drift, containment-content drift, composition-component drift, dependency/prerequisite drift, location drift, DAG-backed causal reversal, and temporally flagged current-answer release before publication.
 5. The landed slice is backward-compatible and materially improves robustness without widening the main answer surface; the next work is broader contradiction coverage, not replacing the current reviewer owner.
 
@@ -853,7 +869,8 @@ The first two decide capability. The third decides trust.
 - 共享 alias/scope 回归现在已经把“跨语料稳定的公开回答不变量”与“截图驱动的运行时行为”拆开：简化语料允许 `release` 或 `revise`，而真实 `waterglass_explicit_scope_compact_zh` 运行时用例仍然要求 `revise`，且必须命中 `query_intent_alignment`。
 - 运行时验证现在还有一个明确的 build-freshness 约束：第一次在陈旧 `dist` 输出上跑 verifier 时，新 gate 清单没有完整暴露；执行 `npm run build:mini` 后再次验证，编译产物与源码 reviewer 面才重新对齐。问题是陈旧编译输出，不是 reviewer 接线缺失。
 - 已核验 `ref/` 下克隆的 `dspy`、`guidance`、`semantic-kernel`、`langchain` 与 `litellm` 仍然只是设计参考，而不是 release policy owner：它们分别擅长 prompt 优化、受约束生成、agent orchestration 或 provider routing，但都不能替代当前 TypeScript runtime 里的本地 DAG 驱动最终回答校验。
-- 当前剩余的 provenance 缺口已经不再是“完全没有 source-to-render provenance”，而是超出当前 block-level mapping 的 exact-span / nested provenance。
+- `EvidenceSpan.startOffset` / `endOffset` 现在已经会透传到 citation 与 `matchedSpans`，右侧 pane 在已完成 source/line 认证的命中上会优先使用 `source_offset_provenance`，再回退到 source fragment 与 text search。
+- 同一认证渲染块里出现多个相同片段时，只要 payload 带有 offset，现在已经可以命中正确 occurrence。剩余 provenance 缺口进一步收窄为：旧 payload 没有 offset 时仍只能保守回退；只有 offset 覆盖被真实回归证明不够时，才值得引入更重的 markdown AST provenance。
 
 ### 第一性原理
 
@@ -1517,6 +1534,21 @@ The first two decide capability. The third decides trust.
   - 被支撑的更宽位置表述仍然 clean `release`。
 - 这个 Phase 在架构上的意义很直接：它修复了 reviewer 扩展过程中暴露出来的一个真实 owner 边界错误。位置漂移本来就是独立矛盾族群，把位置谓词留在 state slice 里只会让门禁表面“碰巧正确”，而不是“按正确 owner 正确”。
 
+#### 在 graph-focus 切片之上继续落地的 Phase-26 source-offset provenance 加固
+
+- `src/learning/types.ts` 现在把 `startOffset` / `endOffset` 作为 citation 与 matched span 上的可选兼容字段保留下来。
+- `src/learning/conversationComposer.ts` 现在会把 `EvidenceSpan` 的 offset 透传进首次命中与 grouped knowledge-point payload，避免前端再从展示文本里反推源位置。
+- `src/frontend/workspace_panes.js` 现在按以下顺序解析内联高亮：
+  - `source_offset_provenance`；
+  - `source_fragment_provenance`；
+  - `text_search`；
+  - `none`。
+- offset 路径被刻意限制在更窄边界内：
+  - 只有渲染块已经通过 `source_line_provenance` 或 `line_window` 认证后才会启用；
+  - 必须验证 offset 落在已解析的源行范围内；
+  - 会用源文本中的 occurrence 序号去选择渲染文本中的对应 occurrence。
+- 这补上了 block-level provenance 解决不了的重复片段去歧义。这里没有引入模糊 ranking，是因为旧 payload 没有 offset 时继续保守回退，比把高亮正确性交给新启发式更可审计。
+
 ### 为什么先前那些框架方案不够
 
 已分析的 `ref/` 参考：
@@ -1608,7 +1640,7 @@ The first two decide capability. The third decides trust.
 
 1. 先基于这份显式 alias/scope 回归语料，把当前 lexical + query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + location + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity gate 栈之外的更深矛盾检测落地，但前提仍然是控制好 false positive，不把 reviewer 变成不稳定猜测器。
 2. 继续把语料从当前 4 个用例扩展到更多真实 cross-scope、compact-alias 与同义表达失败案例，再决定是否继续扩大 reviewer policy。
-3. 把当前 block-level markdown source mapping 与 `source_line_provenance` -> source-authenticated fragment projection -> `line_window` -> `snippet_fallback` 的 graph-focus 栈视为已落地基线；后续重点转到基于显式 offset 或更丰富 AST provenance 的重复片段去歧义。
+3. 把当前 block-level markdown source mapping 与 `source_offset_provenance` -> `source_line_provenance` / source-authenticated fragment projection -> `line_window` -> `snippet_fallback` 的 graph-focus 栈视为已落地基线；后续 provenance 工作应优先补齐旧 payload 的 offset 覆盖，只有真实回归证明 offset 不够时才引入更重 AST provenance。
 4. compare-ready drilldown 继续坚持复用现有 reviewer telemetry path，不再平行新增第二个 audit owner。
 5. 继续缩减 `KnowledgeLearningPlatform.ts` 与 `agent_workspace.js` 的 owner 压力，但前提仍然是“新模块拥有真实不变量”。
 
@@ -1616,6 +1648,6 @@ The first two decide capability. The third decides trust.
 
 1. 本轮切片起点真正缺失的不是图检索，而是最终公开回答的 release review；复审现在已经确认这个 owner 已落地。
 2. 正确 owner 是本地确定性 reviewer layer，不是再引入一层 prompt framework。
-3. 项目现有 DAG 继续作为证据底座，并且已经开始同时参与 release-time 的因果、顺序与对比分支纠错；graph-focus 现在也已经具备 block-level provenance 加上 `source_line_provenance` / source-authenticated fragment projection / `line_window` / `snippet_fallback` 的高亮基线，剩余缺口已经收窄到同一认证 block 内重复片段的去歧义。
+3. 项目现有 DAG 继续作为证据底座，并且已经开始同时参与 release-time 的因果、顺序与对比分支纠错；graph-focus 现在已经具备 block-level provenance 加 offset-backed inline disambiguation，剩余缺口是旧 payload 没有 offset，而不是基础 pane 打开或 offset 存在时的重复片段歧义。
 4. `waterglass` 截图已经被编码进正式运行时验收门禁，而 reviewer 栈现在也会在 release 前同时拦截“同一主体、同一显式属性框架、但属性值漂移”的草稿、“同一主体、同一显式容纳关系、但内容物漂移”的草稿、“同一主体、同一显式组成关系、但组件漂移”的草稿、“同一主体、同一显式依赖/前置条件关系、但依赖目标漂移”的草稿、“同一主体、同一显式位置关系、但位置漂移”的草稿、与 DAG 因果方向相反的草稿，以及把带时序警告的 DAG 证据直接发布成当前结论的草稿。
 5. 本轮落地保持向前兼容，同时实质提升了 agent 最终回复的鲁棒性；后续重点已经转移到更广的矛盾检测，而不是更换 reviewer owner。
