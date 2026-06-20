@@ -409,6 +409,8 @@
       "score": "Score",
       "matchedEvidence": "Matched evidence",
       "togglePreview": "Toggle matched knowledge preview: {file}",
+      "hitFilesTitle": "Matched files",
+      "helpLabel": "Knowledge hit help",
       "clickHint": "Left-click a matched file to open the source with highlighted evidence. Use Learning Path for sequence guidance or Related Focus for citation links.",
       "previewLoading": "Loading source preview...",
       "previewUnavailable": "Source preview unavailable.",
@@ -443,6 +445,8 @@
       "pathFallbackNotUsed": "not used",
       "relationMapTitle": "Relation focus",
       "relationAnchorNode": "Anchor",
+      "continueCluster": "Continue exploring",
+      "supportCluster": "Helps understanding",
       "relationEdgesUnavailable": "No bounded relation edges were returned for this hit."
     },
     "evidence": {
@@ -502,6 +506,7 @@
       "openWorkspace": "Knowledge Workspace",
       "closeWorkspace": "Close",
       "send": "Send",
+      "closePane": "Close pane",
       "focus": "Focus",
       "learningPath": "Guided Learning",
       "studySession": "Study Session",

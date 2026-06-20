@@ -409,6 +409,8 @@
       "score": "得分",
       "matchedEvidence": "命中依据",
       "togglePreview": "切换命中知识预览：{file}",
+      "hitFilesTitle": "命中文件",
+      "helpLabel": "命中帮助",
       "clickHint": "左键单击命中文件可打开源文档并高亮命中依据。使用“学习路径”查看顺序引导，使用“关联聚焦”查看引用关系。",
       "previewLoading": "正在加载源文档预览...",
       "previewUnavailable": "源文档预览不可用。",
@@ -443,6 +445,8 @@
       "pathFallbackNotUsed": "未使用",
       "relationMapTitle": "关联聚焦",
       "relationAnchorNode": "锚点",
+      "continueCluster": "继续探索",
+      "supportCluster": "帮助理解",
       "relationEdgesUnavailable": "当前命中未返回有界关系边。"
     },
     "evidence": {
@@ -502,6 +506,7 @@
       "openWorkspace": "知识工作区",
       "closeWorkspace": "关闭",
       "send": "发送",
+      "closePane": "关闭面板",
       "focus": "聚焦",
       "learningPath": "引导式学习",
       "studySession": "学习会话",

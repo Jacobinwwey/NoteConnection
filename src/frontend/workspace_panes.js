@@ -153,16 +153,35 @@
         return null;
     }
 
+    function getCloseButtonElement(paneKey) {
+        if (paneKey === 'graph-focus') {
+            return getElement('btn-agent-graph-focus-close');
+        }
+        if (paneKey === 'evidence') {
+            return getElement('btn-agent-evidence-close');
+        }
+        if (paneKey === 'learning-path') {
+            return getElement('btn-agent-learning-path-close');
+        }
+        return null;
+    }
+
     function updatePaneControlLabels() {
         PANE_KEYS.forEach((paneKey) => {
             const button = getFullscreenButtonElement(paneKey);
-            if (!button) {
-                return;
+            if (button) {
+                const isFullscreen = state.panes[paneKey].fullscreen === true;
+                button.textContent = isFullscreen
+                    ? translate('agentWorkspace.actions.restore', 'Restore')
+                    : translate('agentWorkspace.actions.fullscreen', 'Fullscreen');
             }
-            const isFullscreen = state.panes[paneKey].fullscreen === true;
-            button.textContent = isFullscreen
-                ? translate('agentWorkspace.actions.restore', 'Restore')
-                : translate('agentWorkspace.actions.fullscreen', 'Fullscreen');
+            const closeButton = getCloseButtonElement(paneKey);
+            if (closeButton) {
+                const label = translate('agentWorkspace.actions.closePane', 'Close pane');
+                closeButton.textContent = '\u00d7';
+                closeButton.setAttribute('aria-label', label);
+                closeButton.setAttribute('title', label);
+            }
         });
     }
 
@@ -840,8 +859,8 @@
         }
 
         const nodeCount = normalizedSnapshot.nodes.length;
-        const coordinates = {};
         const anchorId = normalizedSnapshot.anchorId;
+        const anchorNode = normalizedSnapshot.nodes.find((node) => node.id === anchorId) || normalizedSnapshot.nodes[0];
         const incoming = normalizedSnapshot.nodes.filter((node) => node.id !== anchorId && node.role === 'incoming');
         const outgoing = normalizedSnapshot.nodes.filter((node) => node.id !== anchorId && node.role === 'outgoing');
         const related = normalizedSnapshot.nodes.filter((node) => (
@@ -849,30 +868,49 @@
             && node.role !== 'incoming'
             && node.role !== 'outgoing'
         ));
+        const usedNodeIds = new Set([anchorId]);
+        const takeUniqueNodes = function (candidates, limit) {
+            const taken = [];
+            candidates.forEach((node) => {
+                if (taken.length >= limit || usedNodeIds.has(node.id)) {
+                    return;
+                }
+                usedNodeIds.add(node.id);
+                taken.push(node);
+            });
+            return taken;
+        };
+        const continueNodes = takeUniqueNodes(outgoing.concat(related), 4);
+        const supportNodes = takeUniqueNodes(incoming.concat(related), 4);
+        if (continueNodes.length <= 0) {
+            takeUniqueNodes(incoming.concat(related), 2).forEach((node) => continueNodes.push(node));
+        }
+        if (supportNodes.length <= 0) {
+            takeUniqueNodes(outgoing.concat(related), 2).forEach((node) => supportNodes.push(node));
+        }
 
-        const placeLane = function (nodesToPlace, x, fallbackRole) {
-            const step = 80 / (nodesToPlace.length + 1);
+        const coordinates = {};
+        const anchorLabel = normalizedSnapshot.anchorLabel || anchorNode.label || anchorId;
+        coordinates[anchorId] = {
+            x: 50,
+            y: 52,
+            role: 'anchor',
+            label: anchorLabel,
+        };
+
+        const assignClusterCoordinates = function (nodesToPlace, y, role) {
+            const step = 70 / (nodesToPlace.length + 1);
             nodesToPlace.forEach((node, index) => {
-                const hasPosition = Number.isFinite(node.x) && Number.isFinite(node.y);
                 coordinates[node.id] = {
-                    x: hasPosition ? Math.max(6, Math.min(94, node.x)) : x,
-                    y: hasPosition ? Math.max(8, Math.min(92, node.y)) : 10 + step * (index + 1),
-                    role: node.role || fallbackRole,
+                    x: 15 + step * (index + 1),
+                    y,
+                    role,
                     label: node.label || node.id,
                 };
             });
         };
-
-        const anchorNode = normalizedSnapshot.nodes.find((node) => node.id === anchorId) || normalizedSnapshot.nodes[0];
-        coordinates[anchorId] = {
-            x: Number.isFinite(anchorNode.x) ? Math.max(6, Math.min(94, anchorNode.x)) : 50,
-            y: Number.isFinite(anchorNode.y) ? Math.max(8, Math.min(92, anchorNode.y)) : 50,
-            role: 'anchor',
-            label: normalizedSnapshot.anchorLabel || anchorNode.label || anchorId,
-        };
-        placeLane(incoming.slice(0, 5), 24, 'incoming');
-        placeLane(outgoing.slice(0, 5), 76, 'outgoing');
-        placeLane(related.slice(0, Math.max(0, 8 - incoming.length - outgoing.length)), 50, 'related');
+        assignClusterCoordinates(continueNodes, 24, 'continue');
+        assignClusterCoordinates(supportNodes, 78, 'support');
 
         const edgeHtml = normalizedSnapshot.edges.map((edge) => {
             const source = coordinates[edge.sourceId];
@@ -882,49 +920,80 @@
             }
             return `
                 <line
-                    class="agent-focus-relation-graph-edge"
+                    class="agent-focus-mode-edge"
                     x1="${source.x}"
                     y1="${source.y}"
                     x2="${target.x}"
                     y2="${target.y}"
-                    marker-end="url(#agent-focus-snapshot-arrow)"
                 ></line>
             `;
         }).join('');
 
-        const nodeHtml = Object.keys(coordinates).map((nodeId) => {
+        const renderNode = function (nodeId) {
             const point = coordinates[nodeId];
-            const nodeClass = [
-                'agent-focus-relation-graph-node',
-                `agent-focus-relation-graph-node--${point.role === 'focus' ? 'anchor' : point.role}`,
-            ].join(' ');
+            if (!point) {
+                return '';
+            }
+            const role = point.role === 'anchor' ? 'anchor' : point.role;
             return `
                 <div
-                    class="${nodeClass}"
-                    data-agent-focus-snapshot-node="${escapeHtml(nodeId)}"
+                    class="agent-focus-mode-node agent-focus-mode-node--${role}"
+                    data-agent-focus-mode-node-role="${escapeHtml(role)}"
                     style="left: ${point.x}%; top: ${point.y}%;"
                     title="${escapeHtml(point.label)}"
                 >
                     ${escapeHtml(point.label)}
                 </div>
             `;
-        }).join('');
+        };
+        const continueHtml = continueNodes.map((node) => renderNode(node.id)).join('');
+        const supportHtml = supportNodes.map((node) => renderNode(node.id)).join('');
+        const anchorHtml = renderNode(anchorId);
+        const contextNodes = normalizedSnapshot.nodes
+            .filter((node) => node.id !== anchorId)
+            .slice(0, 18)
+            .map((node, index) => {
+                const x = Number.isFinite(node.x)
+                    ? Math.max(8, Math.min(92, node.x))
+                    : 8 + ((index * 17) % 84);
+                const y = Number.isFinite(node.y)
+                    ? Math.max(10, Math.min(90, node.y))
+                    : 12 + ((index * 23) % 76);
+                return `
+                    <span
+                        class="agent-focus-mode-context-node"
+                        style="left: ${x}%; top: ${y}%;"
+                    >${escapeHtml(node.label || node.id)}</span>
+                `;
+            }).join('');
 
         return `
             <div
-                class="agent-focus-relation-graph agent-focus-relation-graph--snapshot"
+                class="agent-focus-mode-preview"
+                data-agent-focus-mode-preview="true"
                 data-agent-focus-snapshot-graph="true"
+                data-focus-mode-anchor-id="${escapeHtml(anchorId)}"
                 data-focus-node-count="${nodeCount}"
             >
-                <svg class="agent-focus-relation-graph-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    <defs>
-                        <marker id="agent-focus-snapshot-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-                            <path d="M0,0 L6,3 L0,6 Z"></path>
-                        </marker>
-                    </defs>
+                <div class="agent-focus-mode-context" aria-hidden="true">
+                    ${contextNodes}
+                </div>
+                <div class="agent-focus-mode-cluster-label agent-focus-mode-cluster-label--continue">
+                    ${escapeHtml(translate('agentWorkspace.graphFocus.continueCluster', 'Continue exploring'))}
+                </div>
+                <svg class="agent-focus-mode-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                     ${edgeHtml}
                 </svg>
-                ${nodeHtml}
+                <div class="agent-focus-mode-cluster agent-focus-mode-cluster--continue" data-agent-focus-mode-cluster="continue">
+                    ${continueHtml}
+                </div>
+                ${anchorHtml}
+                <div class="agent-focus-mode-cluster agent-focus-mode-cluster--support" data-agent-focus-mode-cluster="support">
+                    ${supportHtml}
+                </div>
+                <div class="agent-focus-mode-cluster-label agent-focus-mode-cluster-label--support">
+                    ${escapeHtml(translate('agentWorkspace.graphFocus.supportCluster', 'Helps understanding'))}
+                </div>
             </div>
         `;
     }
@@ -2314,6 +2383,126 @@
         return button;
     }
 
+    function dismissActiveKnowledgeHelp() {
+        if (typeof state.knowledgePoints.activeHelpDismiss === 'function') {
+            state.knowledgePoints.activeHelpDismiss();
+        }
+        state.knowledgePoints.activeHelpDismiss = null;
+    }
+
+    function createKnowledgePointHelpControl() {
+        const root = document.createElement('div');
+        root.className = 'agent-knowledge-help';
+        root.setAttribute('data-agent-knowledge-help', 'true');
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'agent-knowledge-help-button';
+        button.textContent = '?';
+        button.setAttribute('data-agent-knowledge-help-button', 'true');
+        button.setAttribute(
+            'aria-label',
+            translate('agentWorkspace.knowledge.helpLabel', 'Knowledge hit help')
+        );
+        button.setAttribute('aria-expanded', 'false');
+
+        const popover = document.createElement('div');
+        const popoverId = `agent-knowledge-help-popover-${Date.now().toString(36)}`;
+        popover.id = popoverId;
+        popover.className = 'agent-knowledge-help-popover';
+        popover.setAttribute('data-agent-knowledge-help-popover', 'true');
+        popover.setAttribute('role', 'tooltip');
+        popover.hidden = true;
+        const helpText = translate(
+            'agentWorkspace.knowledge.clickHint',
+            'Left-click a matched file to open the source with highlighted evidence. Use Learning Path for sequence guidance or Related Focus for citation links.'
+        );
+        button.setAttribute('aria-describedby', popoverId);
+
+        let open = false;
+        let documentClickHandler = null;
+        let documentKeyHandler = null;
+
+        const removeDocumentHandlers = function () {
+            if (documentClickHandler) {
+                document.removeEventListener('click', documentClickHandler, true);
+                documentClickHandler = null;
+            }
+            if (documentKeyHandler) {
+                document.removeEventListener('keydown', documentKeyHandler, true);
+                documentKeyHandler = null;
+            }
+        };
+
+        const hide = function () {
+            open = false;
+            popover.hidden = true;
+            popover.textContent = '';
+            root.setAttribute('data-open', 'false');
+            button.setAttribute('aria-expanded', 'false');
+            removeDocumentHandlers();
+            if (state.knowledgePoints.activeHelpDismiss === hide) {
+                state.knowledgePoints.activeHelpDismiss = null;
+            }
+        };
+
+        const show = function () {
+            if (open) {
+                return;
+            }
+            dismissActiveKnowledgeHelp();
+            open = true;
+            popover.textContent = helpText;
+            popover.hidden = false;
+            root.setAttribute('data-open', 'true');
+            button.setAttribute('aria-expanded', 'true');
+            documentClickHandler = function (event) {
+                if (root.contains(event.target)) {
+                    return;
+                }
+                hide();
+            };
+            documentKeyHandler = function (event) {
+                if (event.key === 'Escape') {
+                    hide();
+                }
+            };
+            document.addEventListener('click', documentClickHandler, true);
+            document.addEventListener('keydown', documentKeyHandler, true);
+            state.knowledgePoints.activeHelpDismiss = hide;
+        };
+
+        button.addEventListener('mouseenter', show);
+        root.addEventListener('mouseleave', hide);
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (open) {
+                hide();
+                return;
+            }
+            show();
+        });
+
+        root.appendChild(button);
+        root.appendChild(popover);
+        return root;
+    }
+
+    function createKnowledgePointListHeader() {
+        const header = document.createElement('div');
+        header.className = 'agent-knowledge-list-header';
+        header.setAttribute('data-agent-knowledge-list-header', 'true');
+
+        const title = document.createElement('div');
+        title.className = 'agent-knowledge-list-title';
+        title.textContent = translate('agentWorkspace.knowledge.hitFilesTitle', 'Matched files');
+
+        header.appendChild(title);
+        header.appendChild(createKnowledgePointHelpControl());
+        return header;
+    }
+
     function buildKnowledgePointFocusPayload(item, resolvedGraphTarget) {
         const graphTarget = resolvedGraphTarget || resolveKnowledgePointGraphTarget(item);
         const matchedSpans = buildKnowledgePointMatchedSpans(item);
@@ -2377,17 +2566,29 @@
         const atomId = normalizeKnowledgeGraphText(payload && payload.atomId);
         const graphTargetId = normalizeKnowledgeGraphText(payload && payload.graphTargetId);
         const title = normalizeKnowledgeGraphText(payload && (payload.graphTargetLabel || payload.title || payload.atomId));
-        const anchorId = atomId || graphTargetId || title;
+        const anchorId = graphTargetId || title || atomId;
         const nodesById = new Map();
         const edges = [];
 
-        const addNode = function (id, label, role) {
+        const resolvePreviewNodeId = function (id) {
             const normalizedId = normalizeKnowledgeGraphText(id);
+            if (!normalizedId) {
+                return '';
+            }
+            return atomId && normalizedId === atomId ? anchorId : normalizedId;
+        };
+
+        const addNode = function (id, label, role) {
+            const normalizedId = resolvePreviewNodeId(id);
             if (!normalizedId) {
                 return null;
             }
             const existing = nodesById.get(normalizedId);
-            const resolvedLabel = normalizeKnowledgeGraphText(label || nodeLabels[normalizedId] || normalizedId);
+            const resolvedLabel = normalizeKnowledgeGraphText(
+                normalizedId === anchorId
+                    ? title || label || nodeLabels[normalizedId] || nodeLabels[atomId] || normalizedId
+                    : label || nodeLabels[normalizedId] || normalizedId
+            );
             if (existing) {
                 if (resolvedLabel && existing.label === existing.id) {
                     existing.label = resolvedLabel;
@@ -2406,8 +2607,10 @@
         addNode(anchorId, title || nodeLabels[anchorId] || anchorId, 'anchor');
         const relationPath = normalizeGraphFocusRelationPath(payload);
         relationPath.forEach((edge) => {
-            const source = addNode(edge.sourceAtomId, edge.sourceTitle || nodeLabels[edge.sourceAtomId], edge.targetAtomId === anchorId ? 'prerequisite' : 'related');
-            const target = addNode(edge.targetAtomId, edge.targetTitle || nodeLabels[edge.targetAtomId], edge.sourceAtomId === anchorId ? 'next' : 'related');
+            const sourceId = resolvePreviewNodeId(edge.sourceAtomId);
+            const targetId = resolvePreviewNodeId(edge.targetAtomId);
+            const source = addNode(sourceId, edge.sourceTitle || nodeLabels[edge.sourceAtomId], targetId === anchorId ? 'prerequisite' : 'related');
+            const target = addNode(targetId, edge.targetTitle || nodeLabels[edge.targetAtomId], sourceId === anchorId ? 'next' : 'related');
             if (source && target) {
                 edges.push({
                     sourceId: source.id,
@@ -2420,7 +2623,7 @@
 
         const items = Array.isArray(payload && payload.items) ? payload.items : [];
         items.forEach((item, index) => {
-            const itemId = normalizeKnowledgeGraphText(item && (item.atomId || item.id || item.title));
+            const itemId = resolvePreviewNodeId(item && (item.atomId || item.id || item.title));
             const itemNode = addNode(itemId, item && item.title || itemId, index === 0 ? 'anchor' : 'next');
             if (itemNode && itemNode.id !== anchorId && !edges.some((edge) => edge.sourceId === anchorId && edge.targetId === itemNode.id)) {
                 edges.push({
@@ -2449,27 +2652,36 @@
         if (!graph) {
             return '';
         }
-        const relatedNodes = graph.nodes.filter((node) => node.id !== graph.anchorId).slice(0, 8);
-        const coordinates = {};
-        coordinates[graph.anchorId] = {
-            x: 50,
-            y: 50,
-            role: 'anchor',
+        const beforeNodes = graph.nodes.filter((node) => node.id !== graph.anchorId && node.role === 'prerequisite').slice(0, 2);
+        const afterNodes = graph.nodes.filter((node) => node.id !== graph.anchorId && node.role === 'next').slice(0, 3);
+        const fallbackNodes = graph.nodes.filter((node) => (
+            node.id !== graph.anchorId
+            && node.role !== 'prerequisite'
+            && node.role !== 'next'
+        ));
+        while (beforeNodes.length < 1 && fallbackNodes.length > 0) {
+            beforeNodes.push(fallbackNodes.shift());
+        }
+        while (afterNodes.length < 1 && fallbackNodes.length > 0) {
+            afterNodes.push(fallbackNodes.shift());
+        }
+        const anchorNode = graph.nodes.find((node) => node.id === graph.anchorId) || {
+            id: graph.anchorId,
             label: graph.anchorLabel,
+            role: 'anchor',
         };
-        const radiusX = 32;
-        const radiusY = 30;
-        relatedNodes.forEach((node, index) => {
-            const angle = relatedNodes.length === 1
-                ? -Math.PI / 2
-                : (-Math.PI / 2) + (index * Math.PI * 2 / relatedNodes.length);
+        const mainNodes = beforeNodes.concat([anchorNode], afterNodes).slice(0, 6);
+        const coordinates = {};
+        const step = 78 / Math.max(1, mainNodes.length - 1);
+        mainNodes.forEach((node, index) => {
             coordinates[node.id] = {
-                x: 50 + Math.cos(angle) * radiusX,
-                y: 50 + Math.sin(angle) * radiusY,
-                role: node.role,
-                label: node.label,
+                x: mainNodes.length === 1 ? 50 : 11 + step * index,
+                y: node.id === graph.anchorId ? 54 : 50,
+                role: node.id === graph.anchorId ? 'anchor' : node.role || 'related',
+                label: node.id === graph.anchorId ? graph.anchorLabel : node.label,
             };
         });
+
         const edgeHtml = graph.edges.map((edge) => {
             const source = coordinates[edge.sourceId];
             const target = coordinates[edge.targetId];
@@ -2478,20 +2690,21 @@
             }
             return `
                 <line
-                    class="agent-path-preview-edge"
+                    class="agent-path-mode-edge"
                     x1="${source.x}"
                     y1="${source.y}"
                     x2="${target.x}"
                     y2="${target.y}"
-                    marker-end="url(#agent-path-preview-arrow)"
                 ></line>
             `;
         }).join('');
-        const nodeHtml = Object.keys(coordinates).map((nodeId) => {
-            const point = coordinates[nodeId];
+        const nodeHtml = mainNodes.map((node) => {
+            const point = coordinates[node.id];
+            const role = node.id === graph.anchorId ? 'anchor' : point.role || 'related';
             return `
                 <div
-                    class="agent-path-preview-node agent-path-preview-node--${point.role === 'anchor' ? 'anchor' : 'related'}"
+                    class="agent-path-mode-node agent-path-mode-node--${role}"
+                    data-agent-path-node-role="${escapeHtml(role)}"
                     style="left: ${point.x}%; top: ${point.y}%;"
                     title="${escapeHtml(point.label)}"
                 >
@@ -2499,30 +2712,34 @@
                 </div>
             `;
         }).join('');
-        const stepHtml = graph.nodes.slice(0, 8).map((node, index) => `
-            <span class="agent-path-preview-step${node.id === graph.anchorId ? ' agent-path-preview-step--anchor' : ''}">
-                ${escapeHtml(`${index + 1}. ${node.label}`)}
+        const bandNodes = graph.nodes
+            .filter((node) => node.id !== graph.anchorId)
+            .slice(0, 6);
+        const bandHtml = bandNodes.map((node) => `
+            <span class="agent-path-mode-band-node">
+                ${escapeHtml(node.label)}
             </span>
         `).join('');
         return `
             <div
-                class="agent-path-preview"
+                class="agent-path-mode-preview"
+                data-agent-path-mode-preview="true"
                 data-agent-path-preview="true"
+                data-path-anchor-id="${escapeHtml(graph.anchorId)}"
                 data-path-node-count="${graph.nodes.length}"
             >
                 <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.learningPath.previewTitle', 'Path mode preview'))}</div>
-                <div class="agent-path-preview-canvas">
-                    <svg class="agent-path-preview-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                        <defs>
-                            <marker id="agent-path-preview-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-                                <path d="M0,0 L6,3 L0,6 Z"></path>
-                            </marker>
-                        </defs>
+                <div class="agent-path-mode-canvas">
+                    <svg class="agent-path-mode-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                         ${edgeHtml}
                     </svg>
-                    ${nodeHtml}
+                    <div class="agent-path-mode-lane" data-agent-path-mode-lane="main">
+                        ${nodeHtml}
+                    </div>
+                    <div class="agent-path-mode-band" data-agent-path-mode-band="related">
+                        ${bandHtml}
+                    </div>
                 </div>
-                <div class="agent-path-preview-steps">${stepHtml}</div>
             </div>
         `;
     }
@@ -2533,7 +2750,8 @@
             return;
         }
         const title = String(
-            payload.title
+            payload.graphTargetLabel
+            || payload.title
             || payload.atomId
             || translate('agentWorkspace.learningPath.title', 'Learning Path')
         ).trim();
@@ -6148,6 +6366,7 @@
             expandedByKey: {},
             previewRenderToken: 0,
             resultSetKey: '',
+            activeHelpDismiss: null,
         },
     };
 
@@ -6809,6 +7028,30 @@
         }
     }
 
+    function clearPaneByKey(paneKey) {
+        if (paneKey === 'graph-focus') {
+            api.clearGraphFocusPane();
+            return;
+        }
+        if (paneKey === 'evidence') {
+            api.clearEvidencePane();
+            return;
+        }
+        if (paneKey === 'learning-path') {
+            api.clearLearningPathPane();
+        }
+    }
+
+    function bindPaneCloseButton(paneKey) {
+        const button = getCloseButtonElement(paneKey);
+        if (!button || typeof button.addEventListener !== 'function') {
+            return;
+        }
+        button.addEventListener('click', function () {
+            clearPaneByKey(paneKey);
+        });
+    }
+
     function init() {
         if (state.initialized) {
             return api;
@@ -6841,6 +7084,10 @@
                 api.setPaneFullscreen('learning-path', !state.panes['learning-path'].fullscreen);
             });
         }
+
+        PANE_KEYS.forEach((paneKey) => {
+            bindPaneCloseButton(paneKey);
+        });
 
         const pathExitButton = getElement('btn-exit-path');
         if (pathExitButton && typeof pathExitButton.addEventListener === 'function') {
@@ -7321,6 +7568,8 @@
             }
             state.knowledgePoints.items = normalizedItems.slice();
             state.knowledgePoints.handlers = handlers || null;
+            dismissActiveKnowledgeHelp();
+            container.setAttribute('data-agent-knowledge-scrollable', 'true');
             if (normalizedItems.length <= 0) {
                 state.knowledgePoints.resultSetKey = '';
                 state.knowledgePoints.expandedByKey = {};
@@ -7328,13 +7577,7 @@
                 return;
             }
             container.innerHTML = '';
-            const hint = document.createElement('div');
-            hint.className = 'agent-knowledge-click-hint';
-            hint.textContent = translate(
-                'agentWorkspace.knowledge.clickHint',
-                'Left-click a matched file to open the source with highlighted evidence. Use Learning Path for sequence guidance or Related Focus for citation links.'
-            );
-            container.appendChild(hint);
+            container.appendChild(createKnowledgePointListHeader());
             normalizedItems.forEach((item) => {
                 const card = document.createElement('div');
                 card.className = 'agent-knowledge-card';

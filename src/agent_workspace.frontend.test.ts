@@ -1044,18 +1044,21 @@ function createWorkspaceHtml() {
                   <section id="agent-graph-focus-pane" class="agent-workspace-pane">
                     <div class="agent-workspace-pane-header">
                       <button id="btn-agent-graph-focus-fullscreen"></button>
+                      <button id="btn-agent-graph-focus-close"></button>
                     </div>
                     <div id="agent-graph-focus-body"></div>
                   </section>
                   <section id="agent-evidence-pane" class="agent-workspace-pane">
                     <div class="agent-workspace-pane-header">
                       <button id="btn-agent-evidence-fullscreen"></button>
+                      <button id="btn-agent-evidence-close"></button>
                     </div>
                     <div id="agent-evidence-body"></div>
                   </section>
                   <section id="agent-learning-path-pane" class="agent-workspace-pane">
                     <div class="agent-workspace-pane-header">
                       <button id="btn-agent-learning-path-fullscreen"></button>
+                      <button id="btn-agent-learning-path-close"></button>
                     </div>
                     <div id="agent-learning-path-body"></div>
                   </section>
@@ -3452,6 +3455,49 @@ describe('workspace panes controller', () => {
         expect(document.body.hasAttribute('data-agent-workspace-promotion')).toBe(false);
     });
 
+    test('close buttons independently clear right-side knowledge workspace panes', () => {
+        const { controller, document } = loadWorkspacePanesHarness({ withI18n: true });
+        controller.init();
+
+        controller.openGraphFocusPane({
+            atomId: 'atom_focus',
+            title: 'Focus Node',
+            summary: 'Focus content.',
+        });
+        controller.openEvidencePane({
+            kind: 'grounding',
+            title: 'Evidence Inspector',
+            scope: 'waterglass',
+        });
+        controller.openLearningPathPane({
+            atomId: 'atom_paths',
+            graphTargetId: 'water glass',
+            graphTargetLabel: 'water glass',
+            title: 'water glass',
+            items: [{ atomId: 'atom_paths', title: 'water glass' }],
+        });
+
+        controller.setPaneFullscreen('learning-path', true);
+        expect(document.getElementById('agent-graph-focus-pane')?.getAttribute('data-open')).toBe('true');
+        expect(document.getElementById('agent-evidence-pane')?.getAttribute('data-open')).toBe('true');
+        expect(document.getElementById('agent-learning-path-pane')?.getAttribute('data-open')).toBe('true');
+        expect(document.body.getAttribute('data-agent-workspace-promotion')).toBe('learning-path');
+
+        (document.getElementById('btn-agent-graph-focus-close') as HTMLButtonElement | null)?.click();
+        expect(document.getElementById('agent-graph-focus-pane')?.getAttribute('data-open')).toBe('false');
+        expect(String(document.getElementById('agent-graph-focus-body')?.textContent || '')).toContain('Graph focus pane is idle.');
+
+        (document.getElementById('btn-agent-evidence-close') as HTMLButtonElement | null)?.click();
+        expect(document.getElementById('agent-evidence-pane')?.getAttribute('data-open')).toBe('false');
+        expect(String(document.getElementById('agent-evidence-body')?.textContent || '')).toContain('Evidence pane is idle.');
+
+        (document.getElementById('btn-agent-learning-path-close') as HTMLButtonElement | null)?.click();
+        expect(document.getElementById('agent-learning-path-pane')?.getAttribute('data-open')).toBe('false');
+        expect(document.getElementById('agent-learning-path-pane')?.getAttribute('data-fullscreen')).toBe('false');
+        expect(document.body.hasAttribute('data-agent-workspace-promotion')).toBe(false);
+        expect(String(document.getElementById('agent-learning-path-body')?.textContent || '')).toContain('Learning path pane is idle.');
+    });
+
     test('opens and clears the evidence pane with grounding and artifact payloads', () => {
         const { controller, document } = loadWorkspacePanesHarness({ withI18n: true });
         controller.init();
@@ -3760,7 +3806,35 @@ describe('workspace panes controller', () => {
             onCapability,
         });
 
-        expect(document.querySelector('.agent-knowledge-click-hint')?.textContent || '').toContain('Left-click');
+        const knowledgeRegion = document.getElementById('agent-workspace-knowledge-points');
+        expect(knowledgeRegion?.getAttribute('data-agent-knowledge-scrollable')).toBe('true');
+        expect(document.querySelector('.agent-knowledge-click-hint')).toBeNull();
+        expect(String(knowledgeRegion?.textContent || '')).not.toContain('Left-click a matched file');
+
+        const helpButton = document.querySelector('[data-agent-knowledge-help-button="true"]') as HTMLButtonElement | null;
+        const helpPopover = document.querySelector('[data-agent-knowledge-help-popover="true"]') as HTMLElement | null;
+        expect(helpButton).not.toBeNull();
+        expect(helpButton?.textContent?.trim()).toBe('?');
+        expect(helpButton?.getAttribute('aria-expanded')).toBe('false');
+        expect(helpPopover).not.toBeNull();
+        expect(helpPopover?.hasAttribute('hidden')).toBe(true);
+
+        helpButton?.dispatchEvent(new window.MouseEvent('mouseenter', { bubbles: true }));
+        expect(helpButton?.getAttribute('aria-expanded')).toBe('true');
+        expect(helpPopover?.hasAttribute('hidden')).toBe(false);
+        expect(helpPopover?.textContent || '').toContain('Left-click a matched file');
+
+        helpButton?.dispatchEvent(new window.MouseEvent('mouseleave', { bubbles: true }));
+        expect(helpButton?.getAttribute('aria-expanded')).toBe('false');
+        expect(helpPopover?.hasAttribute('hidden')).toBe(true);
+
+        helpButton?.click();
+        expect(helpButton?.getAttribute('aria-expanded')).toBe('true');
+        expect(helpPopover?.hasAttribute('hidden')).toBe(false);
+        document.body.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+        expect(helpButton?.getAttribute('aria-expanded')).toBe('false');
+        expect(helpPopover?.hasAttribute('hidden')).toBe(true);
+
         const buttonsBefore = Array.from(
             document.querySelectorAll('.agent-knowledge-actions button')
         ) as HTMLButtonElement[];
@@ -3780,11 +3854,18 @@ describe('workspace panes controller', () => {
 
         await window.i18n.setLanguage('zh');
 
+        const translatedKnowledgeRegion = document.getElementById('agent-workspace-knowledge-points');
+        expect(String(translatedKnowledgeRegion?.textContent || '')).not.toContain('左键单击');
+        const translatedHelpButton = document.querySelector('[data-agent-knowledge-help-button="true"]') as HTMLButtonElement | null;
+        translatedHelpButton?.click();
+        const translatedHelpPopover = document.querySelector('[data-agent-knowledge-help-popover="true"]') as HTMLElement | null;
+        expect(translatedHelpPopover?.hasAttribute('hidden')).toBe(false);
+        expect(translatedHelpPopover?.textContent || '').toContain('左键单击');
+
         const buttonsAfter = Array.from(
             document.querySelectorAll('.agent-knowledge-actions button')
         ).map((node) => node.textContent);
         expect(buttonsAfter).toEqual(['学习路径', '关联聚焦']);
-        expect(document.querySelector('.agent-knowledge-click-hint')?.textContent || '').toContain('左键单击');
     });
 
     test('renders related focus from graph snapshot with resolved node names instead of atom ids', async () => {
@@ -3837,7 +3918,12 @@ describe('workspace panes controller', () => {
 
         const relationMap = document.querySelector('[data-agent-focus-relation-map="true"]');
         expect(relationMap).not.toBeNull();
-        expect(relationMap?.querySelector('[data-agent-focus-snapshot-graph="true"]')).not.toBeNull();
+        const focusPreview = relationMap?.querySelector('[data-agent-focus-mode-preview="true"]');
+        expect(focusPreview).not.toBeNull();
+        expect(focusPreview?.getAttribute('data-focus-mode-anchor-id')).toBe('water glass');
+        expect(focusPreview?.querySelector('[data-agent-focus-mode-node-role="anchor"]')?.textContent || '').toContain('water glass');
+        expect(focusPreview?.querySelector('[data-agent-focus-mode-cluster="continue"]')).not.toBeNull();
+        expect(focusPreview?.querySelector('[data-agent-focus-mode-cluster="support"]')).not.toBeNull();
         const graphText = String(relationMap?.textContent || '');
         expect(graphText).toContain('water glass');
         expect(graphText).toContain('sequence');
@@ -3887,13 +3973,18 @@ describe('workspace panes controller', () => {
         ) as HTMLButtonElement | null;
         learningPathButton?.click();
 
-        const preview = document.querySelector('[data-agent-path-preview="true"]');
+        const preview = document.querySelector('[data-agent-path-mode-preview="true"]');
         expect(preview).not.toBeNull();
+        expect(preview?.getAttribute('data-path-anchor-id')).toBe('water glass');
         expect(Number(preview?.getAttribute('data-path-node-count') || '0')).toBeGreaterThan(0);
+        expect(preview?.querySelector('[data-agent-path-node-role="anchor"]')?.textContent || '').toContain('water glass');
+        expect(preview?.querySelector('[data-agent-path-mode-lane="main"]')).not.toBeNull();
+        expect(preview?.querySelector('[data-agent-path-mode-band="related"]')).not.toBeNull();
         const previewText = String(preview?.textContent || '');
         expect(previewText).toContain('water glass');
         expect(previewText).toContain('sequence');
         expect(previewText).toContain('application');
+        expect(previewText).not.toContain('atom_h');
         expect(previewText).not.toContain('Learning Path: 0 nodes');
     });
 
