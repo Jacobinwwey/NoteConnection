@@ -3818,6 +3818,9 @@ describe('workspace panes controller', () => {
         expect(helpButton?.getAttribute('aria-expanded')).toBe('false');
         expect(helpPopover).not.toBeNull();
         expect(helpPopover?.hasAttribute('hidden')).toBe(true);
+        const helpPopoverId = helpPopover?.id || '';
+        expect(helpPopoverId).toMatch(/^agent-knowledge-help-popover-\d+$/);
+        expect(helpButton?.getAttribute('aria-describedby')).toBe(helpPopoverId);
 
         helpButton?.dispatchEvent(new window.MouseEvent('mouseenter', { bubbles: true }));
         expect(helpButton?.getAttribute('aria-expanded')).toBe('true');
@@ -3825,6 +3828,15 @@ describe('workspace panes controller', () => {
         expect(helpPopover?.textContent || '').toContain('Left-click a matched file');
 
         helpButton?.dispatchEvent(new window.MouseEvent('mouseleave', { bubbles: true }));
+        expect(helpButton?.getAttribute('aria-expanded')).toBe('false');
+        expect(helpPopover?.hasAttribute('hidden')).toBe(true);
+
+        helpButton?.dispatchEvent(new window.FocusEvent('focus'));
+        expect(helpButton?.getAttribute('aria-expanded')).toBe('true');
+        expect(helpPopover?.hasAttribute('hidden')).toBe(false);
+        expect(helpPopover?.textContent || '').toContain('Left-click a matched file');
+
+        helpButton?.dispatchEvent(new window.FocusEvent('blur', { relatedTarget: document.body }));
         expect(helpButton?.getAttribute('aria-expanded')).toBe('false');
         expect(helpPopover?.hasAttribute('hidden')).toBe(true);
 
@@ -3857,8 +3869,10 @@ describe('workspace panes controller', () => {
         const translatedKnowledgeRegion = document.getElementById('agent-workspace-knowledge-points');
         expect(String(translatedKnowledgeRegion?.textContent || '')).not.toContain('左键单击');
         const translatedHelpButton = document.querySelector('[data-agent-knowledge-help-button="true"]') as HTMLButtonElement | null;
-        translatedHelpButton?.click();
         const translatedHelpPopover = document.querySelector('[data-agent-knowledge-help-popover="true"]') as HTMLElement | null;
+        expect(translatedHelpPopover?.id).not.toBe(helpPopoverId);
+        expect(translatedHelpButton?.getAttribute('aria-describedby')).toBe(translatedHelpPopover?.id);
+        translatedHelpButton?.click();
         expect(translatedHelpPopover?.hasAttribute('hidden')).toBe(false);
         expect(translatedHelpPopover?.textContent || '').toContain('左键单击');
 
@@ -3980,6 +3994,9 @@ describe('workspace panes controller', () => {
         expect(preview?.querySelector('[data-agent-path-node-role="anchor"]')?.textContent || '').toContain('water glass');
         expect(preview?.querySelector('[data-agent-path-mode-lane="main"]')).not.toBeNull();
         expect(preview?.querySelector('[data-agent-path-mode-band="related"]')).not.toBeNull();
+        const pathRoles = Array.from(preview?.querySelectorAll('[data-agent-path-node-role]') || [])
+            .map((node) => node.getAttribute('data-agent-path-node-role'));
+        expect(pathRoles).toEqual(expect.arrayContaining(['prerequisite', 'anchor', 'next']));
         const previewText = String(preview?.textContent || '');
         expect(previewText).toContain('water glass');
         expect(previewText).toContain('sequence');

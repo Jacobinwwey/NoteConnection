@@ -2503,10 +2503,11 @@ body.agent-workspace-open .agent-workspace-drawer {
 .agent-focus-mode-node {
   position: absolute;
   transform: translate(-50%, -50%);
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  max-width: 160px;
+  max-width: min(30%, 136px);
   min-height: 34px;
   border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 999px;
@@ -2724,11 +2725,12 @@ body.agent-workspace-open .agent-workspace-drawer {
 .agent-path-mode-node {
   position: absolute;
   transform: translate(-50%, -50%);
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 116px;
-  max-width: 160px;
+  min-width: min(112px, 30%);
+  max-width: min(34%, 150px);
   min-height: 44px;
   border: 2px solid rgba(250, 204, 21, 0.86);
   border-radius: 18px;
@@ -2764,6 +2766,7 @@ body.agent-workspace-open .agent-workspace-drawer {
   right: 16%;
   bottom: 18px;
   z-index: 2;
+  box-sizing: border-box;
   min-height: 72px;
   display: flex;
   align-items: center;
@@ -2947,6 +2950,52 @@ body[data-agent-workspace-promotion="learning-path"] #agent-learning-path-pane {
   .agent-knowledge-actions {
     justify-content: flex-start;
     padding: 0 12px 10px;
+  }
+
+  .agent-focus-mode-preview {
+    min-height: 300px;
+  }
+
+  .agent-focus-mode-cluster-label {
+    font-size: 0.9rem;
+  }
+
+  .agent-focus-mode-node {
+    max-width: 112px;
+    font-size: 0.72rem;
+    padding: 6px 10px;
+  }
+
+  .agent-focus-mode-node--anchor {
+    width: 68px;
+    min-height: 68px;
+    padding: 7px;
+  }
+
+  .agent-path-mode-canvas {
+    min-height: 320px;
+  }
+
+  .agent-path-mode-node {
+    min-width: 88px;
+    max-width: 108px;
+    font-size: 0.7rem;
+    padding: 7px 9px;
+  }
+
+  .agent-path-mode-band {
+    left: 10%;
+    right: 10%;
+    bottom: 14px;
+    min-height: 60px;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .agent-path-mode-band-node {
+    max-width: 105px;
+    font-size: 0.68rem;
+    padding: 6px 10px;
   }
 }
 

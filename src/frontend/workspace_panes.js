@@ -880,8 +880,8 @@
             });
             return taken;
         };
-        const continueNodes = takeUniqueNodes(outgoing.concat(related), 4);
-        const supportNodes = takeUniqueNodes(incoming.concat(related), 4);
+        const continueNodes = takeUniqueNodes(outgoing.concat(related), 3);
+        const supportNodes = takeUniqueNodes(incoming.concat(related), 3);
         if (continueNodes.length <= 0) {
             takeUniqueNodes(incoming.concat(related), 2).forEach((node) => continueNodes.push(node));
         }
@@ -900,10 +900,11 @@
 
         const assignClusterCoordinates = function (nodesToPlace, y, role) {
             const step = 70 / (nodesToPlace.length + 1);
+            const stagger = role === 'continue' ? [-5, 4, -1] : [5, -4, 1];
             nodesToPlace.forEach((node, index) => {
                 coordinates[node.id] = {
                     x: 15 + step * (index + 1),
-                    y,
+                    y: Math.max(16, Math.min(86, y + stagger[index % stagger.length])),
                     role,
                     label: node.label || node.id,
                 };
@@ -2406,8 +2407,9 @@
         );
         button.setAttribute('aria-expanded', 'false');
 
+        state.knowledgePoints.helpIdCounter += 1;
         const popover = document.createElement('div');
-        const popoverId = `agent-knowledge-help-popover-${Date.now().toString(36)}`;
+        const popoverId = `agent-knowledge-help-popover-${state.knowledgePoints.helpIdCounter}`;
         popover.id = popoverId;
         popover.className = 'agent-knowledge-help-popover';
         popover.setAttribute('data-agent-knowledge-help-popover', 'true');
@@ -2472,11 +2474,32 @@
             state.knowledgePoints.activeHelpDismiss = hide;
         };
 
+        let pointerFocusPending = false;
+        button.addEventListener('pointerdown', function () {
+            pointerFocusPending = true;
+        });
+        button.addEventListener('pointercancel', function () {
+            pointerFocusPending = false;
+        });
+        button.addEventListener('focus', function () {
+            if (pointerFocusPending) {
+                pointerFocusPending = false;
+                return;
+            }
+            show();
+        });
+        button.addEventListener('blur', function (event) {
+            const relatedTarget = event.relatedTarget;
+            if (!relatedTarget || !root.contains(relatedTarget)) {
+                hide();
+            }
+        });
         button.addEventListener('mouseenter', show);
         root.addEventListener('mouseleave', hide);
         button.addEventListener('click', function (event) {
             event.preventDefault();
             event.stopPropagation();
+            pointerFocusPending = false;
             if (open) {
                 hide();
                 return;
@@ -2672,14 +2695,32 @@
         };
         const mainNodes = beforeNodes.concat([anchorNode], afterNodes).slice(0, 6);
         const coordinates = {};
-        const step = 78 / Math.max(1, mainNodes.length - 1);
-        mainNodes.forEach((node, index) => {
+        const assignPathNodeCoordinate = function (node, point) {
+            if (!node || !node.id) {
+                return;
+            }
             coordinates[node.id] = {
-                x: mainNodes.length === 1 ? 50 : 11 + step * index,
-                y: node.id === graph.anchorId ? 54 : 50,
+                x: point.x,
+                y: point.y,
                 role: node.id === graph.anchorId ? 'anchor' : node.role || 'related',
                 label: node.id === graph.anchorId ? graph.anchorLabel : node.label,
             };
+        };
+        const leftSlots = [
+            { x: 24, y: 36 },
+            { x: 24, y: 66 },
+        ];
+        const rightSlots = [
+            { x: 76, y: 30 },
+            { x: 82, y: 50 },
+            { x: 76, y: 70 },
+        ];
+        beforeNodes.slice(0, leftSlots.length).forEach((node, index) => {
+            assignPathNodeCoordinate(node, leftSlots[index]);
+        });
+        assignPathNodeCoordinate(anchorNode, { x: 50, y: 50 });
+        afterNodes.slice(0, rightSlots.length).forEach((node, index) => {
+            assignPathNodeCoordinate(node, rightSlots[index]);
         });
 
         const edgeHtml = graph.edges.map((edge) => {
@@ -2698,7 +2739,9 @@
                 ></line>
             `;
         }).join('');
-        const nodeHtml = mainNodes.map((node) => {
+        const positionedNodes = mainNodes.filter((node) => Boolean(coordinates[node.id]));
+        const positionedNodeIds = new Set(positionedNodes.map((node) => node.id));
+        const nodeHtml = positionedNodes.map((node) => {
             const point = coordinates[node.id];
             const role = node.id === graph.anchorId ? 'anchor' : point.role || 'related';
             return `
@@ -2713,7 +2756,7 @@
             `;
         }).join('');
         const bandNodes = graph.nodes
-            .filter((node) => node.id !== graph.anchorId)
+            .filter((node) => node.id !== graph.anchorId && !positionedNodeIds.has(node.id))
             .slice(0, 6);
         const bandHtml = bandNodes.map((node) => `
             <span class="agent-path-mode-band-node">
@@ -6367,6 +6410,7 @@
             previewRenderToken: 0,
             resultSetKey: '',
             activeHelpDismiss: null,
+            helpIdCounter: 0,
         },
     };
 
