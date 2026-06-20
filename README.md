@@ -27,6 +27,30 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
+## Current Mainline Architecture Status (2026-06-20)
+
+### English
+
+- The Agent Knowledge Workspace closure now combines three mainline owners: bounded DAG context assembly, deterministic final-answer release review, and right-pane graph/source projections.
+- Public answers remain contracted to the reviewed answer path; citations, graph context, reviewer details, provenance diagnostics, and developer traces belong to secondary panes, artifacts, traces, or exports.
+- Matched-file discoverability is now intentionally compact: users get a question-mark help affordance for "left-click opens source and highlights the basis" instead of permanent instructional text in the workspace.
+- The matched-file/source-focus path is now right-pane-first: source clicks resolve candidate paths, render Markdown, highlight matched evidence, and expose close controls for the affected right-pane surfaces.
+- `Related Focus` is implemented as a side-pane semantic projection of the Tauri Focus-mode state around the selected node; `Learning Path` is implemented as a side-pane semantic projection of Godot Path-mode-style prerequisite/anchor/next guidance.
+- The current implementation uses resolved graph labels such as `water glass`, not internal atom IDs, for the knowledge graph preview surface. This behavior is pinned by strict browser verification.
+- Current code-vs-plan details are tracked in [Agent Knowledge Workspace Graph Preview and Review Closure (2026-06-20)](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) and the [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md).
+
+### 中文
+
+- Agent Knowledge Workspace 本轮收口现在合并了三类主线 owner：有界 DAG context assembly、确定性最终回答 release review，以及右侧 graph/source projection。
+- 公开回答继续收缩到经过审核的回答路径；citation、graph context、reviewer detail、provenance diagnostics 与 developer trace 进入次级 pane、artifact、trace 或 export。
+- 命中文件可发现性现在刻意保持克制：用户通过问号帮助入口了解“左键打开源文档并高亮依据”，而不是在 workspace 中常驻说明文案。
+- 命中文件 / source-focus 路径现在以右侧 pane 为权威阅读面：单击后解析候选路径、渲染 Markdown、高亮命中依据，并在受影响的右侧 pane surface 上提供关闭控件。
+- `关联聚焦` 已实现为围绕选中节点的 Tauri Focus-mode 语义投影；`学习路径` 已实现为 Godot Path-mode 风格的 prerequisite/anchor/next 学习引导语义投影。
+- 当前实现使用 `water glass` 这类解析后的图标签，而不是内部 atom ID，作为知识图预览展示名称；该行为已由 strict browser verification 固定。
+- 当前代码 / 方案对齐详情见 [Agent 知识工作区图预览与回答审核收口（2026-06-20）](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) 与 [开发进度看板](docs/diataxis/zh/explanation/development-progress-dashboard.md)。
+
+---
+
 ## Current Mainline Architecture Status (2026-06-17)
 
 ### English

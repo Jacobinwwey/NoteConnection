@@ -5,6 +5,7 @@ This page indexes repository solution notes that capture durable implementation 
 
 ## Architecture & Cross-Platform / 架构与跨平台
 
+- [Agent Knowledge Workspace Graph Preview and Review Closure (2026-06-20)](agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) — Agent 知识工作区图预览与回答审核收口方案
 - [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](agent-knowledge-dag-answer-contract-plan-2026-06-17.md) — Agent knowledge DAG 回答契约方案
 - [Knowledge Workspace and DAG Alignment Plan (2026-06-10)](knowledge-workspace-dag-alignment-2026-06-10.md) — 知识工作区与 DAG 对齐推进方案
 - [Architecture Progress Alignment and Mainline Plan (2026-06-06)](architecture-progress-alignment-2026-06-06.md) — 架构推进对齐与主线推进方案

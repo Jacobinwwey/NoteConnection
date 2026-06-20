@@ -1,3 +1,45 @@
+# 2026-06-20 v1.7.0 - Agent Knowledge Workspace Graph Preview and Review Closure TODO
+
+## English Document
+
+### Objective
+Keep the active TODO aligned with the 2026-06-20 Agent Knowledge Workspace graph-preview and final-answer review closure on `main`.
+
+### Current Status
+- [x] Durable bilingual closure plan is documented in `docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md`.
+- [x] Development progress dashboards have a 2026-06-20 update that reconciles the current code with the prior DAG/reviewer/UI requirements.
+- [x] Public answers remain contracted to the reviewed response path; supporting evidence, graph context, reviewer state, and diagnostics stay in secondary panes/traces/artifacts/exports.
+- [x] Matched-file discoverability now uses a compact question-mark help affordance instead of permanent instruction text in the Knowledge Workspace.
+- [x] Matched-file source focus remains right-pane-first and uses source-line, line-window, snippet, and offset-backed provenance where available.
+- [x] `Related Focus` now projects the selected node's Focus-mode-style graph neighborhood in the right knowledge focus area.
+- [x] `Learning Path` now projects a Path-mode-style prerequisite/anchor/next learning path around the resolved graph label.
+- [x] Strict browser verification pins the `water glass.md` interaction surface, including visible label, help affordance behavior, button hit targets, graph-label usage, graph bounds, and close buttons.
+- [ ] Continue expanding reviewer contradiction corpora only when each new gate has a clear false-positive boundary.
+- [ ] Increase source-offset coverage for legacy payloads before considering heavier Markdown AST provenance.
+- [ ] Keep graph-aware ranking calibration data-driven; do not raise graph relation weights without real-corpus evidence.
+- [ ] Extract smaller frontend modules only when the new owner enforces a real invariant rather than forwarding calls.
+
+## 中文文档
+
+### 目标
+让活跃 TODO 与 `main` 上 2026-06-20 的 Agent Knowledge Workspace 图预览与最终回答审核收口保持一致。
+
+### 当前状态
+- [x] 持久双语收口方案已落盘到 `docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md`。
+- [x] 开发进度看板已新增 2026-06-20 更新，用于对齐当前代码与先前 DAG / reviewer / UI 要求。
+- [x] 公开回答继续收缩到经过审核的 response path；supporting evidence、graph context、reviewer state 与 diagnostics 保留在次级 pane / trace / artifact / export。
+- [x] 命中文件可发现性现在使用紧凑问号帮助入口，而不是在 Knowledge Workspace 常驻说明文字。
+- [x] 命中文件 source focus 继续以右侧 pane 为权威阅读面，并在可用时使用 source-line、line-window、snippet 与 offset-backed provenance。
+- [x] `关联聚焦` 现在会在右侧知识聚焦区域投影选中节点的 Focus-mode 风格图邻域。
+- [x] `学习路径` 现在会围绕解析后的图标签投影 Path-mode 风格的 prerequisite / anchor / next 学习路径。
+- [x] strict browser verification 已固定 `water glass.md` 交互面，包括可见 label、help affordance 行为、按钮点击目标、图标签使用、图边界与关闭按钮。
+- [ ] 继续扩展 reviewer contradiction corpus，但每个新 gate 都必须有明确 false-positive 边界。
+- [ ] 优先提高 legacy payload 的 source-offset 覆盖，再考虑更重的 Markdown AST provenance。
+- [ ] graph-aware ranking 校准必须由真实语料驱动；没有真实 corpus 证据时不要提高 graph relation weight。
+- [ ] 只有新 owner 能强制真实不变量时，才继续拆分前端模块，避免只转发调用的空层。
+
+---
+
 # 2026-06-18 v1.7.0 - Agent Knowledge DAG Answer Contract TODO
 
 ## English Document

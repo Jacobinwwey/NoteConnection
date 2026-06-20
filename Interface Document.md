@@ -97,6 +97,33 @@ Audit flow:
 - Architecture rule: future graph-native answer planning should be implemented as a bounded graph-conditioned context assembly layer between retrieval and answer synthesis. It should consume existing `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, evidence spans, and store-level path operations instead of introducing a broad prompt-framework dependency into the runtime.
 - Compatibility rule: when graph ops are unavailable or fail, the conversation path must fail open to the existing retrieval-grounded behavior with observable diagnostics rather than breaking the public answer endpoint.
 
+## 0.2D Agent Knowledge Workspace Graph Preview and Release-Review Addendum (2026-06-20)
+
+- The Agent Knowledge Workspace public-answer contract is release-reviewed:
+  - `answer` / `directAnswer` must stay focused on the user's question,
+  - citations, graph context, reviewer state, source provenance, and diagnostics remain secondary inspection material unless explicitly requested.
+- `AnswerReleaseReview` is an additive response/trace/review contract:
+  - clients must tolerate its absence on old payloads,
+  - clients that receive it should treat `publicAnswer` as the release-reviewed answer.
+- Matched-file entries are interactive source entries:
+  - left-click should open the canonical right-side source/focus pane,
+  - source rendering should prefer source-line and offset provenance when available,
+  - snippet/line fallback remains required for older payloads.
+- The matched-file instruction text is not a permanent workspace block. It is exposed through a compact help affordance that must remain keyboard-accessible.
+- `Related Focus` is a right-pane semantic projection of the selected node's Focus-mode graph neighborhood:
+  - anchor label,
+  - incoming references,
+  - outgoing references,
+  - immediate relation context.
+- `Learning Path` is a right-pane semantic projection of Path-mode-style learning guidance:
+  - prerequisite/upstream role,
+  - anchor role,
+  - next/downstream role.
+- Graph preview labels must prefer resolved human graph labels such as `water glass`; internal atom IDs are fallback diagnostics, not primary display labels.
+- Right-side source/focus/path panes must expose close controls.
+- Compatibility rule: these graph-preview contracts are additive UI/runtime contracts. Existing clients that only consume `assistantMessage`, `answer`, `assistantBlocks`, citations, or `trace.graphContext` must remain valid.
+- Runtime boundary rule: the Knowledge Workspace pane currently projects Focus/Path semantics instead of embedding live Tauri/Godot canvases. Exact renderer parity should be introduced only through a shared graph projection/renderer contract, not by ad hoc pane-level runtime embedding.
+
 ---
 
 ## 1. Runtime and Path Contracts
@@ -860,6 +887,33 @@ This section records interface changes added after `v1.4.5`, keeping all previou
 - 右侧 graph-focus source rendering 仍是文件命中的权威交互路径。file-hit payload 应保留 source path 与 matched-span 数据，以便 pane 读取 source markdown 并在原文中高亮证据。
 - 架构规则：后续 graph-native answer planning 应在 retrieval 与 answer synthesis 之间实现一个有界 graph-conditioned context assembly layer。该层应消费现有 `KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、evidence spans 与 store-level path operations，而不是把宽 prompt framework 作为运行时依赖引入。
 - 兼容规则：graph ops 不可用或失败时，conversation path 必须 fail open 到现有 retrieval-grounded 行为，并通过 diagnostics 可观测，而不是破坏公开回答端点。
+
+## 0.2D Agent Knowledge Workspace 图预览与发布审核补充（2026-06-20）
+
+- Agent Knowledge Workspace 的公开回答契约现在经过 release review：
+  - `answer` / `directAnswer` 必须聚焦用户问题；
+  - citation、graph context、reviewer state、source provenance 与 diagnostics 默认作为次级 inspection material，除非用户显式要求查看。
+- `AnswerReleaseReview` 是 additive response / trace / review contract：
+  - 客户端必须兼容旧 payload 中缺失该字段；
+  - 如果收到该字段，应把 `publicAnswer` 视为经过发布审核的回答。
+- 命中文件 entry 是可交互 source entry：
+  - 左键单击应打开右侧 canonical source/focus pane；
+  - source rendering 在可用时应优先使用 source-line 与 offset provenance；
+  - 对旧 payload 仍必须保留 snippet / line fallback。
+- 命中文件说明文案不是 workspace 常驻块。它通过紧凑帮助入口暴露，并且必须保持键盘可访问。
+- `关联聚焦` 是右侧 pane 对选中节点 Focus-mode 图邻域的语义投影：
+  - anchor label；
+  - incoming references；
+  - outgoing references；
+  - immediate relation context。
+- `学习路径` 是右侧 pane 对 Path-mode 风格学习引导的语义投影：
+  - prerequisite / upstream role；
+  - anchor role；
+  - next / downstream role。
+- 图预览 label 必须优先使用 `water glass` 这类解析后的人类可读图标签；内部 atom ID 是 fallback diagnostics，不是主要展示标签。
+- 右侧 source / focus / path pane 必须提供关闭控件。
+- 兼容规则：这些 graph-preview 契约是 additive UI/runtime contract。只消费 `assistantMessage`、`answer`、`assistantBlocks`、citations 或 `trace.graphContext` 的既有客户端必须继续有效。
+- 运行时边界规则：Knowledge Workspace pane 当前投影 Focus/Path 语义，而不是嵌入 live Tauri/Godot canvas。精确 renderer parity 只能通过共享 graph projection / renderer contract 引入，不应通过 pane 级临时嵌入运行时实现。
 
 ---
 

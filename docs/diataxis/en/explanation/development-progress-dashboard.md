@@ -3,6 +3,50 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-06-20 Knowledge Workspace Graph Preview and Review Closure
+
+The latest closure is not a new framework direction.
+It is the consolidation of the existing DAG answer contract, final-answer release review, and the Knowledge Workspace graph-preview UI into one mainline acceptance surface.
+
+What is now true in code:
+
+- the public answer remains contracted to the release-reviewed answer from `src/learning/conversationComposer.ts` and `src/learning/answerReleaseReview.ts`,
+- the existing DAG is still consumed before synthesis by `src/learning/graphContextAssembler.ts` and again at release time through graph-aware reviewer gates,
+- the matched-file list in `src/frontend/workspace_panes.js` now uses a compact question-mark help affordance instead of dumping instructional copy into the workspace,
+- matched-file source focus remains right-pane-first: clicks resolve source paths, render Markdown, and project inline highlights through line/snippet/offset provenance paths,
+- `Related Focus` now uses a Focus-mode-style semantic projection of the selected graph neighborhood instead of leaking internal atom IDs,
+- `Learning Path` now uses a Path-mode-style projection around the resolved graph label and the strict browser verifier pins `water glass` as the anchor label,
+- right-pane windows now expose close controls on the affected source/focus/path surfaces,
+- strict browser verification in `scripts/verify-agent-workspace-browser.js` now owns the user-reported `water glass.md` UI regression surface.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| The answer area should not become an evidence dump | `conversationComposer.ts` publishes `answerReleaseReview.publicAnswer`; graph/evidence diagnostics stay in secondary surfaces. | Implemented |
+| Users need to discover that matched files are clickable without permanent workspace clutter | `workspace_panes.js` renders the instruction behind a help icon that appears on hover/focus. | Implemented |
+| Clicking a matched file should open source and highlight the basis | Source focus consumes source-line provenance, line windows, snippets, and offsets where available. | Implemented baseline |
+| `Related Focus` should correspond to the Tauri Focus-mode state | The pane renders the selected node's focus neighborhood as anchor/incoming/outgoing context. | Implemented as semantic projection |
+| `Learning Path` should correspond to the Godot Path-mode design | The pane renders prerequisite/anchor/next roles around the resolved graph label. | Implemented as semantic projection |
+| Final answers need a robust review/correction owner | `answerReleaseReview.ts` remains the deterministic backend release-policy owner. | Implemented baseline |
+| Compatibility must hold | New graph-preview and provenance fields remain additive/optional; legacy response fields remain valid. | Implemented |
+
+The important tradeoff is deliberate: the side pane projects Focus/Path semantics rather than embedding live Tauri or Godot canvases.
+That keeps lifecycle, resize, bridge, and shutdown ownership out of the knowledge pane.
+If future product requirements demand pixel parity, the correct next step is a shared graph projection contract plus shared renderer, not ad hoc canvas embedding.
+
+Remaining work has moved to calibration:
+
+- expand reviewer contradiction corpora without widening false positives,
+- increase source-offset coverage for legacy payloads,
+- calibrate graph-aware ranking on real corpora before increasing relation weights,
+- extract smaller frontend owners only when the new module owns a real invariant,
+- keep strict browser UI verification active while matched-file interactions continue evolving.
+
+Durable plan:
+
+- [Agent Knowledge Workspace Graph Preview and Review Closure (2026-06-20)](../../../solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md)
+
 ## 2026-06-19 Re-audit: Reviewer Owner Already Landed
 
 The latest re-audit changes the diagnosis of the slice.
