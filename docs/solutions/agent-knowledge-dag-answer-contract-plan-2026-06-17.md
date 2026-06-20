@@ -3,8 +3,8 @@ module: architecture
 tags: [agent-workspace, dag, rag, graph-context, answer-contract, compatibility, robustness]
 problem_type: implementation-plan
 created: 2026-06-17
-updated: 2026-06-18
-status: in_progress
+updated: 2026-06-20
+status: completed
 version: 2026.06.18
 ---
 
@@ -23,6 +23,23 @@ The goal is to define the correct implementation direction for agent knowledge a
 3. make file hits reliably open the right-side focus pane with source markdown and matched-span highlighting,
 4. stop treating the DAG as a shallow relation bonus and start using it as an answer-planning substrate,
 5. preserve additive response compatibility and robustness while the architecture is tightened.
+
+### 2026-06-20 Completion Audit
+
+- The implementation slices in this plan are complete: `P0` through `P5` now exist in the current codebase rather than remaining as design direction.
+- The completion boundary is the plan's numbered slices. The later `Remaining gap`, `Tradeoffs`, and `Next robust direction` sections describe future calibration or follow-on work, not unfinished blockers for this plan.
+- Fresh evidence captured on 2026-06-20:
+  - `npm test -- --runInBand`: 112 suites passed, 893 tests passed, 26 skipped.
+  - `npm exec -- tsc --noEmit`: passed.
+  - `npm run build:mini`: passed.
+  - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`: passed.
+- The implemented acceptance surface now covers the user's explicit concerns:
+  - public answer contraction instead of dumping evidence into the main answer area,
+  - reliable right-pane source opening with matched-span highlighting,
+  - click-hint copy plus fixed `Learning Path` / `Related Focus` actions on knowledge hits,
+  - DAG-conditioned context assembly and graph-aware retrieval/ranking,
+  - quality gates and replayable operator telemetry through `knowledgeRunReports` and `graphFocusReports`.
+- This plan is now marked `completed`. Further ranking calibration or richer provenance work should be tracked as new iterations rather than keeping this architecture plan open indefinitely.
 
 ### First Principles
 
@@ -368,6 +385,23 @@ The model is not "RAG plus graph decorations." It is "retrieval finds candidates
 3. 文件命中项单击后稳定打开右侧 focus pane，并显示原始 markdown 与命中高亮；
 4. 不再只把 DAG 当作浅层关系加分项，而是把它提升为 answer planning substrate；
 5. 在演进过程中保持向前兼容与鲁棒性。
+
+### 2026-06-20 完成性审计
+
+- 这份计划中的实现切片已经完成，`P0` 到 `P5` 都已经体现在当前代码里，而不再只是设计方向。
+- 完成边界以这份计划的编号切片为准。后文的“剩余缺口”“权衡”“下一步方向”描述的是后续校准或新一轮迭代，不再构成本计划的未完成 blocker。
+- 2026-06-20 当日重新采集的强证据：
+  - `npm test -- --runInBand`：112 个 suite 通过，893 个测试通过，26 个 skipped。
+  - `npm exec -- tsc --noEmit`：通过。
+  - `npm run build:mini`：通过。
+  - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`：通过。
+- 当前实现已经覆盖用户最初提出的关键验收面：
+  - 公开回答区收缩，不再把 evidence/debug 材料堆进主回答；
+  - 右侧 pane 稳定打开原始来源并执行 matched-span 高亮；
+  - 知识命中项的点击提示文案，以及固定的 `Learning Path` / `Related Focus` 动作；
+  - DAG-conditioned context assembly 与 graph-aware retrieval/ranking；
+  - 通过 `knowledgeRunReports` 与 `graphFocusReports` 暴露可回放的图回答质量与运维 telemetry。
+- 因此本计划状态更新为 `completed`。后续若继续扩 ranking calibration 或更重的 provenance 能力，应作为新迭代跟踪，而不是无限期维持这份架构计划为 `in_progress`。
 
 ### 第一性原理
 

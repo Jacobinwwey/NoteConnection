@@ -3,8 +3,8 @@ module: architecture
 tags: [agent-workspace, final-reply-review, dag, answer-release, robustness, compatibility]
 problem_type: implementation-plan
 created: 2026-06-18
-updated: 2026-06-19
-status: in_progress
+updated: 2026-06-20
+status: completed
 version: 2026.06.18
 ---
 
@@ -50,6 +50,23 @@ The target is not another prompt framework. The target is a deterministic releas
 - Re-audit of the cloned reference libraries under `ref/` (`dspy`, `guidance`, `semantic-kernel`, `langchain`, `litellm`) confirms they remain design references rather than release-policy owners: DSPy is strongest as a program/eval/optimizer harness, Guidance as constrained generation and output control, Semantic Kernel and LangChain as orchestration surfaces, and LiteLLM as a provider gateway, but none of them substitutes for local DAG-backed final-answer verification in this TypeScript runtime.
 - `EvidenceSpan.startOffset` / `endOffset` now flow through citations and `matchedSpans`, and the right pane prefers `source_offset_provenance` before source-fragment and text-search fallback when a hit is already line/source authenticated.
 - Repeated identical fragments inside one authenticated rendered block are now disambiguated when source offsets are available. The remaining provenance gap is narrower: old payloads without offsets still need conservative fallback, and richer markdown AST provenance is only justified if offset coverage proves insufficient.
+
+### 2026-06-20 Completion Audit
+
+- All numbered implementation slices in this plan now exist in code, from the first reviewer slice through `Phase-26 source-offset provenance`.
+- The completion boundary is the phase plan itself, not the later `Next Direction` research backlog. Those later items remain optional follow-on work rather than open blockers for this plan.
+- Fresh evidence captured on 2026-06-20:
+  - `npm test -- --runInBand`: 112 suites passed, 893 tests passed, 26 skipped.
+  - `npm exec -- tsc --noEmit`: passed.
+  - `npm run build:mini`: passed.
+  - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`: passed.
+- Acceptance-critical behaviors are now covered by current code plus tests:
+  - final public-answer contraction and deterministic release review,
+  - screenshot-derived `waterglass` runtime acceptance,
+  - right-pane source open + inline highlight,
+  - click hint plus fixed `Learning Path` / `Related Focus` actions,
+  - offset-backed repeated-fragment disambiguation inside one authenticated rendered block.
+- This plan is therefore marked `completed`. Future reviewer expansion or telemetry calibration should be tracked as new work, not by keeping this implementation plan artificially open.
 
 ### First Principles
 
@@ -871,6 +888,23 @@ The first two decide capability. The third decides trust.
 - 已核验 `ref/` 下克隆的 `dspy`、`guidance`、`semantic-kernel`、`langchain` 与 `litellm` 仍然只是设计参考，而不是 release policy owner：它们分别擅长 prompt 优化、受约束生成、agent orchestration 或 provider routing，但都不能替代当前 TypeScript runtime 里的本地 DAG 驱动最终回答校验。
 - `EvidenceSpan.startOffset` / `endOffset` 现在已经会透传到 citation 与 `matchedSpans`，右侧 pane 在已完成 source/line 认证的命中上会优先使用 `source_offset_provenance`，再回退到 source fragment 与 text search。
 - 同一认证渲染块里出现多个相同片段时，只要 payload 带有 offset，现在已经可以命中正确 occurrence。剩余 provenance 缺口进一步收窄为：旧 payload 没有 offset 时仍只能保守回退；只有 offset 覆盖被真实回归证明不够时，才值得引入更重的 markdown AST provenance。
+
+### 2026-06-20 完成性审计
+
+- 本计划中的全部编号 phase 现已在代码中落地，覆盖从首版 reviewer slice 一直到 `Phase-26 source-offset provenance`。
+- 完成边界以这份 phase 计划本身为准，而不是后文 `Next Direction` / `后续方向` 里的研究性 backlog。那些内容仍可继续演进，但不再构成本计划的未完成 blocker。
+- 2026-06-20 当日重新采集的强证据：
+  - `npm test -- --runInBand`：112 个 suite 通过，893 个测试通过，26 个 skipped。
+  - `npm exec -- tsc --noEmit`：通过。
+  - `npm run build:mini`：通过。
+  - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`：通过。
+- 当前代码与测试已经覆盖本计划要求的关键验收行为：
+  - 最终公开回答收缩与确定性 release review；
+  - 由截图派生出来的 `waterglass` 运行时验收；
+  - 右侧 pane 打开原文并执行内联高亮；
+  - 点击提示文案以及固定的 `Learning Path` / `Related Focus` 动作；
+  - 同一认证渲染块内基于 offset 的重复片段去歧义。
+- 因此本计划状态更新为 `completed`。后续若继续扩 reviewer gate 或 telemetry 校准，应新开工作项，而不是继续把这份实现计划维持在 `in_progress`。
 
 ### 第一性原理
 
