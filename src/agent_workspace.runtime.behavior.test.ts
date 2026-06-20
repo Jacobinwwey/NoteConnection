@@ -278,6 +278,7 @@ describe('agent workspace runtime behavior', () => {
         delete (global as unknown as Record<string, unknown>).pathApp;
         delete (global as unknown as Record<string, unknown>).focusOnNode;
         delete (global as unknown as Record<string, unknown>).enterFocusMode;
+        delete (global as unknown as Record<string, unknown>).NoteConnectionGraphView;
         delete (global as unknown as Record<string, unknown>).i18n;
         delete (global as unknown as Record<string, unknown>).NoteConnectionAgentWorkspaceContract;
         delete (global as unknown as Record<string, unknown>).prompt;
@@ -334,6 +335,63 @@ describe('agent workspace runtime behavior', () => {
 
         const focusOnNode = (global as unknown as Record<string, unknown>).focusOnNode as jest.Mock;
         expect(focusOnNode).toHaveBeenCalledWith('atom-focus-1');
+    });
+
+    test('opens focus mode through resolved graph node when knowledge point atom differs from runtime node', async () => {
+        const graphView = {
+            resolveNodeByKnowledgePoint: jest.fn(() => ({ id: 'water glass', label: 'water glass' })),
+            openFocusModeById: jest.fn(() => true),
+        };
+        (global as unknown as Record<string, unknown>).NoteConnectionGraphView = graphView;
+        const fetchMock = jest.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                success: true,
+                result: {
+                    userId: 'agent_user_default',
+                    message: 'Found 1 local knowledge point(s).',
+                    knowledgePoints: [
+                        {
+                            atomId: 'atom_h',
+                            title: 'water glass',
+                            snippet: 'The target concept is water glass.',
+                            score: 0.98,
+                            capabilities: [
+                                {
+                                    actionId: 'open_focus_mode',
+                                    label: 'Focus',
+                                    request: { userId: 'agent_user_default', atomId: 'atom_h' },
+                                    execution: { kind: 'frontend_only' },
+                                },
+                            ],
+                        },
+                    ],
+                },
+            }),
+        });
+        (global as unknown as Record<string, unknown>).fetch = fetchMock;
+
+        const runtime = runtimeModule.createAgentWorkspaceRuntime({ defaultUserId: 'agent_user_default' });
+        runtime.init();
+
+        const input = document.getElementById('agent-workspace-input') as HTMLTextAreaElement;
+        const form = document.getElementById('agent-workspace-form') as HTMLFormElement;
+        input.value = 'show water glass';
+        form.dispatchEvent(new dom!.window.Event('submit', { bubbles: true, cancelable: true }));
+        await flushAsync();
+
+        const pointCard = document.querySelector('.agent-workspace-point-card') as HTMLElement;
+        pointCard.click();
+
+        expect(graphView.resolveNodeByKnowledgePoint).toHaveBeenCalledWith(expect.objectContaining({
+            atomId: 'atom_h',
+            title: 'water glass',
+        }));
+        expect(graphView.openFocusModeById).toHaveBeenCalledWith('water glass');
+        const focusOnNode = (global as unknown as Record<string, unknown>).focusOnNode as jest.Mock;
+        expect(focusOnNode).not.toHaveBeenCalledWith('atom_h');
+        expect(runtime.getDiagnosticsSnapshot().latestFocusAtomId).toBe('atom_h');
     });
 
     test('executes learning path capability and opens docked path pane', async () => {
@@ -428,6 +486,84 @@ describe('agent workspace runtime behavior', () => {
             true,
             expect.objectContaining({ reason: 'agent-workspace-open-path-dock' })
         );
+    });
+
+    test('keeps atom id for learning path API while configuring path runtime with resolved graph node', async () => {
+        const graphView = {
+            resolveNodeByKnowledgePoint: jest.fn(() => ({ id: 'water glass', label: 'water glass' })),
+        };
+        (global as unknown as Record<string, unknown>).NoteConnectionGraphView = graphView;
+        const fetchMock = jest
+            .fn()
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    success: true,
+                    result: {
+                        userId: 'agent_user_default',
+                        message: 'Found 1 local knowledge point(s).',
+                        knowledgePoints: [
+                            {
+                                atomId: 'atom_h',
+                                title: 'water glass',
+                                snippet: 'Build the path from water glass.',
+                                score: 0.98,
+                                capabilities: [
+                                    {
+                                        actionId: 'open_learning_path',
+                                        label: 'Learning Path',
+                                        request: { userId: 'agent_user_default', atomId: 'atom_h' },
+                                        execution: {
+                                            kind: 'knowledge_operation',
+                                            operationId: 'build_learning_path',
+                                            resultPresentation: 'learning_path_card',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    success: true,
+                    result: {
+                        masteryPaths: [{ id: 'm1' }],
+                        divergencePaths: [],
+                    },
+                }),
+            });
+        (global as unknown as Record<string, unknown>).fetch = fetchMock;
+
+        const runtime = runtimeModule.createAgentWorkspaceRuntime({ defaultUserId: 'agent_user_default' });
+        runtime.init();
+
+        const input = document.getElementById('agent-workspace-input') as HTMLTextAreaElement;
+        const form = document.getElementById('agent-workspace-form') as HTMLFormElement;
+        input.value = 'build water glass path';
+        form.dispatchEvent(new dom!.window.Event('submit', { bubbles: true, cancelable: true }));
+        await flushAsync();
+
+        const actionButton = Array.from(document.querySelectorAll('.agent-workspace-action-button'))
+            .find((button) => (button as HTMLElement).textContent === 'Learning Path') as HTMLButtonElement;
+        actionButton.click();
+        await flushAsync();
+
+        const requestBody = JSON.parse(String((fetchMock.mock.calls[1][1] as RequestInit).body || '{}'));
+        expect(JSON.stringify(requestBody)).toContain('atom_h');
+        expect(JSON.stringify(requestBody)).not.toContain('water glass');
+        expect(graphView.resolveNodeByKnowledgePoint).toHaveBeenCalledWith(expect.objectContaining({
+            atomId: 'atom_h',
+            title: 'water glass',
+        }));
+        const pathApp = (global as unknown as Record<string, unknown>).pathApp as Record<string, jest.Mock>;
+        expect(pathApp.init).toHaveBeenCalledWith('water glass');
+        expect(pathApp.currentTargetId).toBe('water glass');
+        expect(runtime.getDiagnosticsSnapshot().latestFocusAtomId).toBe('atom_h');
     });
 
     test('renders active atom rail and active-card highlight after focus changes', async () => {

@@ -1763,24 +1763,139 @@
                 return state.latestKnowledgePoints.find((point) => trimString(point.atomId) === normalized) || null;
             }
 
-            function focusAtom(atomId) {
+            function normalizeRuntimeGraphNode(node) {
+                if (!node || typeof node !== 'object') {
+                    return null;
+                }
+                const id = trimString(node.id) || trimString(node.nodeId) || trimString(node.key);
+                if (!id) {
+                    return null;
+                }
+                return {
+                    id,
+                    label: trimString(node.label) || trimString(node.title) || trimString(node.name) || id,
+                };
+            }
+
+            function resolveGraphViewApi() {
+                if (globalScope.NoteConnectionGraphView && typeof globalScope.NoteConnectionGraphView === 'object') {
+                    return globalScope.NoteConnectionGraphView;
+                }
+                if (
+                    globalScope.window
+                    && globalScope.window.NoteConnectionGraphView
+                    && typeof globalScope.window.NoteConnectionGraphView === 'object'
+                ) {
+                    return globalScope.window.NoteConnectionGraphView;
+                }
+                return null;
+            }
+
+            function resolveGraphTargetForKnowledgePoint(point, capability, preferredAtomId) {
+                const request = capability && capability.request && typeof capability.request === 'object'
+                    ? capability.request
+                    : {};
+                const atomId = trimString(preferredAtomId) || trimString(request.atomId) || trimString(point && point.atomId);
+                const title = trimString(point && point.title)
+                    || trimString(point && point.label)
+                    || trimString(point && point.name)
+                    || trimString(request.title)
+                    || atomId;
+                const explicitGraphNodeId = trimString(point && point.graphNodeId)
+                    || trimString(point && point.graphTargetId)
+                    || trimString(request.graphNodeId)
+                    || trimString(request.graphTargetId);
+                const graphView = resolveGraphViewApi();
+                if (graphView && typeof graphView.resolveNodeByKnowledgePoint === 'function') {
+                    try {
+                        const resolvedNode = normalizeRuntimeGraphNode(graphView.resolveNodeByKnowledgePoint({
+                            atomId,
+                            title,
+                            label: title,
+                            documentId: trimString(point && point.documentId) || trimString(request.documentId),
+                            sourcePath: trimString(point && point.sourcePath) || trimString(request.sourcePath),
+                            relationPath: Array.isArray(point && point.relationPath)
+                                ? point.relationPath.map((edge) => ({ ...edge }))
+                                : [],
+                            capability: capability && typeof capability === 'object' ? { ...capability } : null,
+                        }));
+                        if (resolvedNode) {
+                            return {
+                                atomId,
+                                graphNodeId: resolvedNode.id,
+                                graphNodeLabel: resolvedNode.label,
+                                runtimeResolved: true,
+                            };
+                        }
+                    } catch (error) {
+                        console.warn('[AgentWorkspace] graph target resolver rejected runtime knowledge point:', error);
+                    }
+                }
+
+                if (graphView && typeof graphView.resolveNodeById === 'function') {
+                    const candidates = [explicitGraphNodeId, atomId, title].map(trimString).filter(Boolean);
+                    for (const candidate of candidates) {
+                        try {
+                            const resolvedNode = normalizeRuntimeGraphNode(graphView.resolveNodeById(candidate));
+                            if (resolvedNode) {
+                                return {
+                                    atomId,
+                                    graphNodeId: resolvedNode.id,
+                                    graphNodeLabel: resolvedNode.label,
+                                    runtimeResolved: true,
+                                };
+                            }
+                        } catch (error) {
+                            console.warn('[AgentWorkspace] graph node id resolver rejected runtime candidate:', error);
+                        }
+                    }
+                }
+
+                const fallbackGraphNodeId = explicitGraphNodeId || atomId;
+                return {
+                    atomId,
+                    graphNodeId: fallbackGraphNodeId,
+                    graphNodeLabel: title || fallbackGraphNodeId,
+                    runtimeResolved: false,
+                };
+            }
+
+            function focusAtom(atomId, point, capability) {
                 const normalizedAtomId = trimString(atomId);
                 if (!normalizedAtomId) {
                     throw new Error('Missing atomId for focus action.');
                 }
 
-                if (typeof globalScope.focusOnNode === 'function') {
-                    globalScope.focusOnNode(normalizedAtomId);
+                const graphTarget = resolveGraphTargetForKnowledgePoint(
+                    point || findKnowledgePoint(normalizedAtomId),
+                    capability,
+                    normalizedAtomId
+                );
+                const runtimeNodeId = trimString(graphTarget.graphNodeId) || normalizedAtomId;
+                const graphView = resolveGraphViewApi();
+                let opened = false;
+                if (
+                    graphTarget.runtimeResolved
+                    && graphView
+                    && typeof graphView.openFocusModeById === 'function'
+                ) {
+                    opened = graphView.openFocusModeById(runtimeNodeId) === true;
+                }
+                if (!opened && typeof globalScope.focusOnNode === 'function') {
+                    globalScope.focusOnNode(runtimeNodeId);
+                    opened = true;
                 } else if (typeof globalScope.enterFocusMode === 'function') {
-                    globalScope.enterFocusMode(normalizedAtomId);
-                } else {
+                    globalScope.enterFocusMode(runtimeNodeId);
+                    opened = true;
+                }
+                if (!opened) {
                     throw new Error('Focus runtime is unavailable. Ensure app.js is loaded.');
                 }
                 state.latestFocusAtomId = normalizedAtomId;
                 appendMessage(
                     'system',
-                    getI18nText('agentWorkspace.messages.focusModeOpened', `Focus mode opened for ${normalizedAtomId}.`, {
-                        atomId: normalizedAtomId,
+                    getI18nText('agentWorkspace.messages.focusModeOpened', `Focus mode opened for ${graphTarget.graphNodeLabel || normalizedAtomId}.`, {
+                        atomId: graphTarget.graphNodeLabel || normalizedAtomId,
                     })
                 );
                 renderKnowledgePoints(state.latestKnowledgePoints);
@@ -1880,8 +1995,10 @@
                 return trimString(firstPoint && firstPoint.atomId);
             }
 
-            function openLearningPathDock(preferredAtomId) {
+            function openLearningPathDock(preferredAtomId, point, capability) {
                 const atomId = resolvePathAtomId(preferredAtomId);
+                const graphTarget = resolveGraphTargetForKnowledgePoint(point || findKnowledgePoint(atomId), capability, atomId);
+                const runtimeNodeId = trimString(graphTarget.graphNodeId) || atomId;
                 ensurePathDockVisible();
                 refreshToolbarButtons();
                 if (!globalScope.pathApp || typeof globalScope.pathApp !== 'object') {
@@ -1894,11 +2011,11 @@
                 }
 
                 if (!globalScope.pathApp.uiInitialized) {
-                    globalScope.pathApp.init(atomId || null);
-                    globalScope.pathApp.currentTargetId = atomId || '';
-                } else if (atomId && typeof globalScope.pathApp.switchCentral === 'function') {
-                    globalScope.pathApp.switchCentral(atomId);
-                    globalScope.pathApp.currentTargetId = atomId;
+                    globalScope.pathApp.init(runtimeNodeId || null);
+                    globalScope.pathApp.currentTargetId = runtimeNodeId || '';
+                } else if (runtimeNodeId && typeof globalScope.pathApp.switchCentral === 'function') {
+                    globalScope.pathApp.switchCentral(runtimeNodeId);
+                    globalScope.pathApp.currentTargetId = runtimeNodeId;
                     if (typeof globalScope.pathApp.triggerUpdate === 'function') {
                         globalScope.pathApp.triggerUpdate();
                     }
@@ -1914,12 +2031,12 @@
                 }
                 if (atomId) {
                     state.latestFocusAtomId = atomId;
-                    state.latestPathAtomId = atomId;
+                    state.latestPathAtomId = runtimeNodeId || atomId;
                 }
                 appendMessage(
                     'system',
-                    getI18nText('agentWorkspace.messages.learningPathOpened', `Learning path opened${atomId ? ` for ${atomId}` : ''}.`, {
-                        atomId: atomId || '',
+                    getI18nText('agentWorkspace.messages.learningPathOpened', `Learning path opened${runtimeNodeId ? ` for ${graphTarget.graphNodeLabel || runtimeNodeId}` : ''}.`, {
+                        atomId: graphTarget.graphNodeLabel || runtimeNodeId || '',
                     })
                 );
                 renderKnowledgePoints(state.latestKnowledgePoints);
@@ -2038,7 +2155,7 @@
                     : {};
                 const atomId = trimString(request.atomId) || trimString(knowledgePoint && knowledgePoint.atomId);
                 if (actionId === 'open_focus_mode') {
-                    focusAtom(atomId);
+                    focusAtom(atomId, knowledgePoint, capability);
                     recordCapabilityEvent({
                         phase: 'frontend',
                         status: 'success',
@@ -2158,7 +2275,7 @@
                             { masteryPathCount, divergencePathCount }
                         )
                     );
-                    openLearningPathDock(atomId);
+                    openLearningPathDock(atomId, knowledgePoint, capability);
                     return;
                 }
 
@@ -2474,7 +2591,7 @@
                         return;
                     }
                     if (normalizedActionId === 'open_learning_path') {
-                        openLearningPathDock(trimString(point && point.atomId));
+                        openLearningPathDock(trimString(point && point.atomId), point);
                         return;
                     }
                     throw new Error(`Unsupported point action "${normalizedActionId || '<empty>'}".`);
@@ -3784,7 +3901,7 @@
                 if (!atomId) {
                     return;
                 }
-                focusAtom(atomId);
+                focusAtom(atomId, point);
             }
 
             function renderKnowledgePoints(knowledgePoints) {

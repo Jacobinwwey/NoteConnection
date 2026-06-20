@@ -1319,6 +1319,65 @@
         return String(item && item.atomId || '').trim();
     }
 
+    function resolveGraphTargetForKnowledgePoint(item, capability) {
+        const atomId = resolveCapabilityTargetAtomId(item, capability);
+        const controller = getController();
+        if (controller && typeof controller.resolveKnowledgePointGraphTarget === 'function') {
+            try {
+                const target = controller.resolveKnowledgePointGraphTarget(item, capability);
+                if (target && typeof target === 'object') {
+                    const graphNodeId = String(target.graphNodeId || '').trim();
+                    if (graphNodeId) {
+                        return {
+                            atomId,
+                            graphNodeId,
+                            graphNodeLabel: String(target.graphNodeLabel || target.displayLabel || graphNodeId).trim() || graphNodeId,
+                            runtimeResolved: target.runtimeResolved === true,
+                            focusModeSnapshot: target.focusModeSnapshot || null,
+                        };
+                    }
+                }
+            } catch (error) {
+                console.warn('[AgentWorkspace] failed to resolve graph target through workspace panes:', error);
+            }
+        }
+
+        const title = String(item && (item.title || item.label || item.name) || atomId).trim();
+        const graphView = window.NoteConnectionGraphView;
+        if (graphView && typeof graphView.resolveNodeByKnowledgePoint === 'function') {
+            try {
+                const resolved = graphView.resolveNodeByKnowledgePoint({
+                    atomId,
+                    title,
+                    documentId: String(item && item.documentId || '').trim(),
+                    sourcePath: String(item && item.sourcePath || '').trim(),
+                    relationPath: Array.isArray(item && item.relationPath) ? item.relationPath.map((edge) => ({ ...edge })) : [],
+                    capability: capability && typeof capability === 'object' ? { ...capability } : null,
+                });
+                const graphNodeId = String(resolved && (resolved.id || resolved.nodeId) || '').trim();
+                if (graphNodeId) {
+                    return {
+                        atomId,
+                        graphNodeId,
+                        graphNodeLabel: String(resolved.label || resolved.title || title || graphNodeId).trim() || graphNodeId,
+                        runtimeResolved: true,
+                        focusModeSnapshot: null,
+                    };
+                }
+            } catch (error) {
+                console.warn('[AgentWorkspace] graph target resolver rejected knowledge point:', error);
+            }
+        }
+
+        return {
+            atomId,
+            graphNodeId: atomId,
+            graphNodeLabel: title || atomId,
+            runtimeResolved: false,
+            focusModeSnapshot: null,
+        };
+    }
+
     function resolveCapabilityFailureConfig(capability, defaultFailure) {
         const capabilityFailure = capability && typeof capability.failure === 'object'
             ? capability.failure
@@ -4138,7 +4197,8 @@
     }
 
     function openGraphFocus(item, capability) {
-        const nodeId = resolveCapabilityTargetAtomId(item, capability);
+        const graphTarget = resolveGraphTargetForKnowledgePoint(item, capability);
+        const nodeId = graphTarget.graphNodeId;
         if (!nodeId) {
             return;
         }
@@ -4162,16 +4222,24 @@
         }
         const controller = getController();
         if (controller) {
-            controller.openGraphFocusPane({
-                atomId: nodeId,
-                title: String(item.title || node.label || node.id || nodeId),
-                summary: String(item.summary || node.summary || node.content || ''),
-            });
+            const focusPayload = typeof controller.buildKnowledgePointFocusPayload === 'function'
+                ? controller.buildKnowledgePointFocusPayload(item, graphTarget)
+                : {
+                    atomId: graphTarget.atomId || nodeId,
+                    graphTargetId: nodeId,
+                    graphTargetLabel: graphTarget.graphNodeLabel,
+                    title: String(item.title || node.label || node.id || nodeId),
+                    summary: String(item.summary || node.summary || node.content || ''),
+                };
+            controller.openGraphFocusPane(focusPayload);
         }
     }
 
     function presentLearningPathResult(item, capability, result, requestPayload) {
         const nodeId = resolveCapabilityTargetAtomId(item, capability);
+        const graphTarget = resolveGraphTargetForKnowledgePoint(item, capability);
+        const pathRuntimeTargetId = graphTarget.graphNodeId || nodeId;
+        const pathRuntimeTargetIds = pathRuntimeTargetId ? [pathRuntimeTargetId] : requestPayload.focusAtomIds;
         const controller = getController();
         if (!controller) {
             return;
@@ -4195,8 +4263,16 @@
         });
         controller.openLearningPathPane({
             atomId: nodeId,
+            graphTargetId: pathRuntimeTargetId,
+            graphTargetLabel: graphTarget.graphNodeLabel,
             title: String(item.title || nodeId),
             items,
+            relationPath: Array.isArray(item && item.relationPath)
+                ? item.relationPath.map((edge) => ({ ...edge }))
+                : [],
+            relationKinds: Array.isArray(item && item.relationKinds)
+                ? item.relationKinds.map((kind) => String(kind || '').trim()).filter(Boolean)
+                : [],
         });
         const pathContainer = getElement('path-container');
         if (pathContainer) {
@@ -4210,12 +4286,12 @@
             const pathApp = window.pathApp;
             const config = {
                 mode: 'diffusion',
-                targetId: nodeId,
-                targetIds: requestPayload.focusAtomIds,
+                targetId: pathRuntimeTargetId,
+                targetIds: pathRuntimeTargetIds,
                 language: getActiveLanguage(),
             };
             if (!window.__NC_AGENT_PATH_WORKSPACE_INITIALIZED && typeof pathApp.init === 'function') {
-                pathApp.init(nodeId);
+                pathApp.init(pathRuntimeTargetId);
                 window.__NC_AGENT_PATH_WORKSPACE_INITIALIZED = true;
             }
             if (typeof pathApp.applyRemoteConfigure === 'function') {

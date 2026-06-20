@@ -495,7 +495,8 @@
     "learningPath": {
       "title": "引导式学习",
       "emptyIdle": "学习路径面板当前为空。",
-      "emptyLoaded": "尚未加载学习路径。"
+      "emptyLoaded": "尚未加载学习路径。",
+      "previewTitle": "Path mode 预览"
     },
     "actions": {
       "openWorkspace": "知识工作区",

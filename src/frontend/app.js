@@ -4360,6 +4360,186 @@ window.focusOnNode = function(id) {
     }
 };
 
+function normalizeGraphViewText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeGraphViewLookupKey(value) {
+    return normalizeGraphViewText(value).toLowerCase();
+}
+
+function resolveGraphViewSourceBasename(sourcePath) {
+    const normalized = String(sourcePath || '').replace(/\\/g, '/').trim();
+    if (!normalized) {
+        return '';
+    }
+    const fileName = normalized.split('/').filter(Boolean).pop() || normalized;
+    return fileName.replace(/\.[^/.]+$/, '').trim();
+}
+
+function getGraphViewNodeLabel(node) {
+    return normalizeGraphViewText(node && (node.label || node.title || node.name || node.id));
+}
+
+function getGraphViewLinkNodeId(endpoint) {
+    if (endpoint && typeof endpoint === 'object') {
+        return normalizeGraphViewText(endpoint.id || endpoint.nodeId || endpoint.key);
+    }
+    return normalizeGraphViewText(endpoint);
+}
+
+function collectGraphViewKnowledgePointCandidates(payload) {
+    const candidates = [];
+    const seen = new Set();
+    const appendCandidate = (value) => {
+        const normalized = normalizeGraphViewText(value);
+        if (!normalized || seen.has(normalized)) {
+            return;
+        }
+        seen.add(normalized);
+        candidates.push(normalized);
+    };
+    appendCandidate(payload && payload.graphNodeId);
+    appendCandidate(payload && payload.graphTargetId);
+    appendCandidate(payload && payload.nodeId);
+    appendCandidate(payload && payload.documentId);
+    appendCandidate(payload && payload.title);
+    appendCandidate(payload && payload.label);
+    appendCandidate(payload && payload.sourceBasename);
+    appendCandidate(resolveGraphViewSourceBasename(payload && payload.sourcePath));
+    appendCandidate(payload && payload.atomId);
+    if (Array.isArray(payload && payload.atomIds)) {
+        payload.atomIds.forEach(appendCandidate);
+    }
+    if (Array.isArray(payload && payload.nodeIds)) {
+        payload.nodeIds.forEach(appendCandidate);
+    }
+    if (Array.isArray(payload && payload.matchedSpans)) {
+        payload.matchedSpans.forEach((span) => {
+            appendCandidate(span && span.title);
+            appendCandidate(span && span.atomId);
+            appendCandidate(resolveGraphViewSourceBasename(span && span.sourcePath));
+        });
+    }
+    return candidates;
+}
+
+function resolveGraphViewNodeByIdOrLabel(candidate) {
+    const normalized = normalizeGraphViewText(candidate);
+    if (!normalized || !Array.isArray(nodes)) {
+        return null;
+    }
+    const exactId = nodes.find((node) => normalizeGraphViewText(node && node.id) === normalized);
+    if (exactId) {
+        return exactId;
+    }
+    const lookupKey = normalizeGraphViewLookupKey(normalized);
+    const exactLabelMatches = nodes.filter((node) => normalizeGraphViewLookupKey(getGraphViewNodeLabel(node)) === lookupKey);
+    if (exactLabelMatches.length === 1) {
+        return exactLabelMatches[0];
+    }
+    const sourceMatches = nodes.filter((node) => {
+        const metadata = node && typeof node.metadata === 'object' ? node.metadata : {};
+        return normalizeGraphViewLookupKey(resolveGraphViewSourceBasename(node && (node.sourcePath || node.filepath || metadata.filepath || metadata.sourcePath))) === lookupKey;
+    });
+    return sourceMatches.length === 1 ? sourceMatches[0] : null;
+}
+
+function resolveGraphViewNodeByKnowledgePoint(payload) {
+    const candidates = collectGraphViewKnowledgePointCandidates(payload);
+    for (const candidate of candidates) {
+        const node = resolveGraphViewNodeByIdOrLabel(candidate);
+        if (node) {
+            return node;
+        }
+    }
+    return null;
+}
+
+function buildGraphViewFocusModeSnapshot(nodeId) {
+    const focusD = resolveGraphViewNodeByIdOrLabel(nodeId);
+    if (!focusD) {
+        return null;
+    }
+    const incoming = [];
+    const outgoing = [];
+    const linkList = Array.isArray(links) ? links : [];
+    linkList.forEach((linkItem) => {
+        const sourceId = getGraphViewLinkNodeId(linkItem && linkItem.source);
+        const targetId = getGraphViewLinkNodeId(linkItem && linkItem.target);
+        if (sourceId === focusD.id) {
+            const targetNode = resolveGraphViewNodeByIdOrLabel(targetId);
+            if (targetNode) {
+                outgoing.push(targetNode);
+            }
+        } else if (targetId === focusD.id) {
+            const sourceNode = resolveGraphViewNodeByIdOrLabel(sourceId);
+            if (sourceNode) {
+                incoming.push(sourceNode);
+            }
+        }
+    });
+
+    const uniqueById = (items) => {
+        const seen = new Set();
+        const unique = [];
+        items.forEach((item) => {
+            const id = normalizeGraphViewText(item && item.id);
+            if (!id || seen.has(id)) {
+                return;
+            }
+            seen.add(id);
+            unique.push(item);
+        });
+        return unique;
+    };
+    const incomingNodes = uniqueById(incoming).slice(0, 5);
+    const outgoingNodes = uniqueById(outgoing).slice(0, 5);
+    const snapshotNodes = [];
+    const addSnapshotNode = (node, role, x, y) => {
+        snapshotNodes.push({
+            id: normalizeGraphViewText(node && node.id),
+            label: getGraphViewNodeLabel(node),
+            role,
+            x,
+            y,
+        });
+    };
+    const placeLane = (nodeList, role, x) => {
+        const step = 80 / (nodeList.length + 1);
+        nodeList.forEach((node, index) => {
+            addSnapshotNode(node, role, x, 10 + step * (index + 1));
+        });
+    };
+    placeLane(incomingNodes, 'incoming', 22);
+    addSnapshotNode(focusD, 'anchor', 50, 50);
+    placeLane(outgoingNodes, 'outgoing', 78);
+
+    const visibleIds = new Set(snapshotNodes.map((node) => node.id));
+    const snapshotEdges = linkList
+        .map((linkItem) => {
+            const sourceId = getGraphViewLinkNodeId(linkItem && linkItem.source);
+            const targetId = getGraphViewLinkNodeId(linkItem && linkItem.target);
+            if (!sourceId || !targetId || !visibleIds.has(sourceId) || !visibleIds.has(targetId)) {
+                return null;
+            }
+            return {
+                sourceId,
+                targetId,
+                relationKind: normalizeGraphViewText(linkItem && (linkItem.type || linkItem.relationKind || linkItem.kind)) || 'related',
+                confidence: Number(linkItem && (linkItem.confidence || linkItem.weight)),
+            };
+        })
+        .filter(Boolean);
+
+    return {
+        anchorId: focusD.id,
+        anchorLabel: getGraphViewNodeLabel(focusD),
+        nodes: snapshotNodes,
+        edges: snapshotEdges,
+    };
+}
+
 // Compatibility API for agent workspace graph-focus capabilities.
 // Keeps agent runtime decoupled from historical global helper names.
 window.NoteConnectionGraphView = {
@@ -4369,6 +4549,9 @@ window.NoteConnectionGraphView = {
             return null;
         }
         return nodes.find((node) => node.id === id) || null;
+    },
+    resolveNodeByKnowledgePoint: function(payload) {
+        return resolveGraphViewNodeByKnowledgePoint(payload);
     },
     openFocusModeById: function(nodeId) {
         const node = this.resolveNodeById(nodeId);
@@ -4389,6 +4572,9 @@ window.NoteConnectionGraphView = {
         return focusNode && typeof focusNode === 'object'
             ? focusNode
             : null;
+    },
+    getFocusModeSnapshot: function(nodeId) {
+        return buildGraphViewFocusModeSnapshot(nodeId || (focusNode && focusNode.id));
     },
     getNodeCount: function() {
         return Array.isArray(nodes) ? nodes.length : 0;

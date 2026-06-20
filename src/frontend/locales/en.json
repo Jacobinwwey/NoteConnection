@@ -495,7 +495,8 @@
     "learningPath": {
       "title": "Guided Learning",
       "emptyIdle": "Learning path pane is idle.",
-      "emptyLoaded": "No learning path loaded yet."
+      "emptyLoaded": "No learning path loaded yet.",
+      "previewTitle": "Path mode preview"
     },
     "actions": {
       "openWorkspace": "Knowledge Workspace",

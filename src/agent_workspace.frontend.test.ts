@@ -15,7 +15,9 @@ type HarnessResult = {
     };
     graphView?: {
         resolveNodeById: jest.Mock;
+        resolveNodeByKnowledgePoint?: jest.Mock;
         openFocusModeById: jest.Mock;
+        getFocusModeSnapshot?: jest.Mock;
         getFocusNode: jest.Mock;
     };
 };
@@ -3357,7 +3359,9 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
     };
     const graphView = {
         resolveNodeById: jest.fn((id: string) => ({ id, label: `Node ${id}` })),
+        resolveNodeByKnowledgePoint: jest.fn(() => null),
         openFocusModeById: jest.fn(),
+        getFocusModeSnapshot: jest.fn(() => null),
         getFocusNode: jest.fn(() => null),
     };
 
@@ -3781,6 +3785,116 @@ describe('workspace panes controller', () => {
         ).map((node) => node.textContent);
         expect(buttonsAfter).toEqual(['学习路径', '关联聚焦']);
         expect(document.querySelector('.agent-knowledge-click-hint')?.textContent || '').toContain('左键单击');
+    });
+
+    test('renders related focus from graph snapshot with resolved node names instead of atom ids', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
+        const graphView = {
+            resolveNodeByKnowledgePoint: jest.fn(() => ({ id: 'water glass', label: 'water glass' })),
+            openFocusModeById: jest.fn(() => true),
+            getFocusModeSnapshot: jest.fn(() => ({
+                anchorId: 'water glass',
+                anchorLabel: 'water glass',
+                nodes: [
+                    { id: 'sequence', label: 'sequence', role: 'incoming', x: 22, y: 28 },
+                    { id: 'water glass', label: 'water glass', role: 'anchor', x: 50, y: 50 },
+                    { id: 'application', label: 'application', role: 'outgoing', x: 78, y: 38 },
+                    { id: 'analogy', label: 'analogy', role: 'outgoing', x: 78, y: 62 },
+                ],
+                edges: [
+                    { sourceId: 'sequence', targetId: 'water glass', relationKind: 'sequence', confidence: 0.98 },
+                    { sourceId: 'water glass', targetId: 'application', relationKind: 'application', confidence: 0.95 },
+                    { sourceId: 'water glass', targetId: 'analogy', relationKind: 'analogy', confidence: 0.91 },
+                ],
+            })),
+        };
+        (window as any).NoteConnectionGraphView = graphView;
+        controller.init();
+
+        controller.renderKnowledgePoints([
+            {
+                atomId: 'atom_h',
+                title: 'water glass',
+                summary: 'A water glass node from the local knowledge graph.',
+                relationPath: [
+                    { sourceAtomId: 'atom_f', targetAtomId: 'atom_h', relationKind: 'sequence', confidence: 0.98 },
+                    { sourceAtomId: 'atom_h', targetAtomId: 'atom_j', relationKind: 'application', confidence: 0.95 },
+                    { sourceAtomId: 'atom_h', targetAtomId: 'atom_v', relationKind: 'analogy', confidence: 0.91 },
+                ],
+                relationKinds: ['sequence', 'application', 'analogy'],
+            },
+        ]);
+
+        const relatedFocusButton = document.querySelector(
+            '[data-agent-knowledge-action="related-focus"]'
+        ) as HTMLButtonElement | null;
+        relatedFocusButton?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(graphView.resolveNodeByKnowledgePoint).toHaveBeenCalled();
+        expect(graphView.openFocusModeById).toHaveBeenCalledWith('water glass');
+        expect(graphView.getFocusModeSnapshot).toHaveBeenCalledWith('water glass');
+
+        const relationMap = document.querySelector('[data-agent-focus-relation-map="true"]');
+        expect(relationMap).not.toBeNull();
+        expect(relationMap?.querySelector('[data-agent-focus-snapshot-graph="true"]')).not.toBeNull();
+        const graphText = String(relationMap?.textContent || '');
+        expect(graphText).toContain('water glass');
+        expect(graphText).toContain('sequence');
+        expect(graphText).toContain('application');
+        expect(graphText).toContain('analogy');
+        expect(graphText).not.toContain('atom_h');
+        expect(graphText).not.toContain('atom_f');
+    });
+
+    test('renders a non-empty path-mode preview with resolved node names for relation hits', () => {
+        const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
+        const graphView = {
+            resolveNodeByKnowledgePoint: jest.fn(() => ({ id: 'water glass', label: 'water glass' })),
+        };
+        (window as any).NoteConnectionGraphView = graphView;
+        controller.init();
+
+        controller.renderKnowledgePoints([
+            {
+                atomId: 'atom_h',
+                title: 'water glass',
+                summary: 'A water glass node from the local knowledge graph.',
+                relationPath: [
+                    {
+                        sourceAtomId: 'atom_f',
+                        sourceTitle: 'sequence',
+                        targetAtomId: 'atom_h',
+                        targetTitle: 'water glass',
+                        relationKind: 'sequence',
+                        confidence: 0.98,
+                    },
+                    {
+                        sourceAtomId: 'atom_h',
+                        sourceTitle: 'water glass',
+                        targetAtomId: 'atom_j',
+                        targetTitle: 'application',
+                        relationKind: 'application',
+                        confidence: 0.95,
+                    },
+                ],
+                relationKinds: ['sequence', 'application'],
+            },
+        ]);
+
+        const learningPathButton = document.querySelector(
+            '[data-agent-knowledge-action="learning-path"]'
+        ) as HTMLButtonElement | null;
+        learningPathButton?.click();
+
+        const preview = document.querySelector('[data-agent-path-preview="true"]');
+        expect(preview).not.toBeNull();
+        expect(Number(preview?.getAttribute('data-path-node-count') || '0')).toBeGreaterThan(0);
+        const previewText = String(preview?.textContent || '');
+        expect(previewText).toContain('water glass');
+        expect(previewText).toContain('sequence');
+        expect(previewText).toContain('application');
+        expect(previewText).not.toContain('Learning Path: 0 nodes');
     });
 
     test('renders knowledge hits as file entries and opens graph focus from the right pane', async () => {
@@ -6443,6 +6557,44 @@ describe('agent workspace learning-path integration', () => {
         }));
         expect(pathApp?.triggerUpdate).toHaveBeenCalled();
         expect(document.getElementById('agent-learning-path-body')?.querySelector('#path-container')).not.toBeNull();
+    });
+
+    test('keeps atom ids for learning API but configures pathApp with the resolved graph node', async () => {
+        const {
+            window,
+            fetchMock,
+            pathApp,
+            graphView,
+        } = loadAgentWorkspaceHarness();
+        graphView?.resolveNodeByKnowledgePoint?.mockReturnValue({ id: 'water glass', label: 'water glass' });
+
+        await (window as any).NoteConnectionAgentWorkspace.openLearningPath({
+            atomId: 'atom_h',
+            title: 'water glass',
+            relationPath: [
+                { sourceAtomId: 'atom_f', targetAtomId: 'atom_h', relationKind: 'sequence', confidence: 0.98 },
+                { sourceAtomId: 'atom_h', targetAtomId: 'atom_j', relationKind: 'application', confidence: 0.95 },
+            ],
+        }, {
+            capabilityId: 'cap_path_atom_h',
+            actionId: 'open_learning_path',
+            targetAtomId: 'atom_h',
+            label: 'Learning Path',
+            request: {
+                focusAtomIds: ['atom_h'],
+            },
+        });
+
+        const fetchCall = fetchMock?.mock.calls.find((call) => call[0] === '/api/knowledge/path');
+        const requestBody = JSON.parse(String(fetchCall?.[1]?.body || '{}'));
+        expect(requestBody.focusAtomIds).toEqual(['atom_h']);
+        expect(graphView?.resolveNodeByKnowledgePoint).toHaveBeenCalled();
+        expect(pathApp?.init).toHaveBeenCalledWith('water glass');
+        expect(pathApp?.applyRemoteConfigure).toHaveBeenCalledWith(expect.objectContaining({
+            mode: 'diffusion',
+            targetId: 'water glass',
+            targetIds: ['water glass'],
+        }));
     });
 
     test('prefers typed capability request payloads over hardcoded learning-path defaults', async () => {

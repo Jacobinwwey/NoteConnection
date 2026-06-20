@@ -2336,6 +2336,18 @@ body.agent-workspace-open .agent-workspace-drawer {
   border-color: rgba(248, 113, 113, 0.44);
 }
 
+.agent-focus-relation-graph-node--incoming {
+  border-color: rgba(45, 212, 191, 0.44);
+}
+
+.agent-focus-relation-graph-node--outgoing {
+  border-color: rgba(248, 113, 113, 0.44);
+}
+
+.agent-focus-relation-graph-node--related {
+  border-color: rgba(147, 197, 253, 0.34);
+}
+
 .agent-focus-relation-nodes {
   display: flex;
   flex-wrap: wrap;
@@ -2474,6 +2486,92 @@ body.agent-workspace-open .agent-workspace-drawer {
 .agent-workspace-pane-body {
   flex: 1;
   margin-top: 12px;
+}
+
+.agent-path-preview {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  border: 1px solid rgba(45, 212, 191, 0.18);
+  border-radius: 8px;
+  background: rgba(13, 148, 136, 0.08);
+  padding: 10px 12px;
+}
+
+.agent-path-preview-canvas {
+  position: relative;
+  min-height: 240px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background: rgba(2, 6, 12, 0.34);
+}
+
+.agent-path-preview-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.agent-path-preview-edge {
+  stroke: rgba(45, 212, 191, 0.42);
+  stroke-width: 0.9;
+  vector-effect: non-scaling-stroke;
+}
+
+.agent-path-preview-lines marker path {
+  fill: rgba(45, 212, 191, 0.72);
+}
+
+.agent-path-preview-node {
+  position: absolute;
+  max-width: min(36%, 180px);
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(45, 212, 191, 0.34);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.96);
+  color: #ccfbf1;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.25;
+  padding: 7px 9px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.agent-path-preview-node--anchor {
+  border-color: rgba(251, 191, 36, 0.62);
+  background: rgba(120, 53, 15, 0.88);
+  color: #fef3c7;
+}
+
+.agent-path-preview-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.agent-path-preview-step {
+  max-width: 100%;
+  border: 1px solid rgba(45, 212, 191, 0.22);
+  border-radius: 999px;
+  background: rgba(2, 6, 12, 0.42);
+  color: #ccfbf1;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  padding: 5px 8px;
+  overflow-wrap: anywhere;
+}
+
+.agent-path-preview-step--anchor {
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fef3c7;
 }
 
 .agent-learning-path-workspace-host {
