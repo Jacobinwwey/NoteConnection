@@ -4252,6 +4252,7 @@
                     title: String(item.title || node.label || node.id || nodeId),
                     summary: String(item.summary || node.summary || node.content || ''),
                 };
+            focusPayload.presentationMode = 'focus-mode';
             controller.openGraphFocusPane(focusPayload);
         }
     }

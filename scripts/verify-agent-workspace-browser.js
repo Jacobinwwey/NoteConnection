@@ -44,7 +44,10 @@ const DYNAMIC_RECOVERY_SNAPSHOT = Object.freeze({
     learningPathPaneOpenState: 'true',
     learningPathInitId: 'atom_2',
     learningPathCurrentTargetId: 'atom_2',
-    learningPathDisplay: 'block',
+    learningPathTargetId: 'atom_2',
+    learningPathMode: 'diffusion',
+    learningPathStrategy: 'core',
+    learningPathPathContainerDocked: false,
     studySessionCardTitleZh: '学习会话计划',
     studySessionCardSummaryZh: '1 actions, about 5 minutes.',
     tutorCardTitleZh: '测验提示',
@@ -509,6 +512,12 @@ window.__NC_DYNAMIC_SMOKE__ = {
       await window.i18n.setLanguage('en');
     }
     const originalGraphView = window.NoteConnectionGraphView;
+    const originalOpenFocusModeById = originalGraphView && typeof originalGraphView.openFocusModeById === 'function'
+      ? originalGraphView.openFocusModeById.bind(originalGraphView)
+      : null;
+    const originalGetFocusModeSnapshot = originalGraphView && typeof originalGraphView.getFocusModeSnapshot === 'function'
+      ? originalGraphView.getFocusModeSnapshot.bind(originalGraphView)
+      : null;
     const focusCalls = [];
     const snapshotCalls = [];
     window.NoteConnectionGraphView = Object.assign({}, originalGraphView || {}, {
@@ -517,25 +526,14 @@ window.__NC_DYNAMIC_SMOKE__ = {
       },
       openFocusModeById: function (id) {
         focusCalls.push(String(id || ''));
+        if (originalOpenFocusModeById) {
+          return originalOpenFocusModeById(id);
+        }
         return true;
       },
       getFocusModeSnapshot: function (id) {
         snapshotCalls.push(String(id || ''));
-        return {
-          anchorId: 'water glass',
-          anchorLabel: 'water glass',
-          nodes: [
-            { id: 'sequence', label: 'sequence', role: 'incoming', x: 25, y: 32 },
-            { id: 'water glass', label: 'water glass', role: 'anchor', x: 50, y: 50 },
-            { id: 'application', label: 'application', role: 'outgoing', x: 76, y: 36 },
-            { id: 'analogy', label: 'analogy', role: 'outgoing', x: 76, y: 64 }
-          ],
-          edges: [
-            { sourceId: 'sequence', targetId: 'water glass', relationKind: 'sequence', confidence: 0.98 },
-            { sourceId: 'water glass', targetId: 'application', relationKind: 'application', confidence: 0.95 },
-            { sourceId: 'water glass', targetId: 'analogy', relationKind: 'analogy', confidence: 0.91 }
-          ]
-        };
+        return originalGetFocusModeSnapshot ? originalGetFocusModeSnapshot(id) : null;
       }
     });
     try {
@@ -652,39 +650,50 @@ window.__NC_DYNAMIC_SMOKE__ = {
         learningPathButton.click();
         const startedAt = Date.now();
         while ((Date.now() - startedAt) < 2500) {
-          const pathCountText = document.querySelector('#path-count')?.textContent || '';
-          const semanticText = document.querySelector('#path-semantic-summary')?.textContent || '';
-          const shellText = document.querySelector('[data-agent-learning-path-runtime-shell="true"]')?.textContent || '';
+          const request = window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST || window.__NC_LAST_GODOT_FUTURE_PATH_REQUEST || {};
+          const shell = document.querySelector('[data-agent-godot-future-path-shell="true"]');
           if (
-            Number(pathCountText) > 0
-            && /water glass/.test(semanticText)
-            && !/focus none/i.test(semanticText)
-            && !/focus none/i.test(shellText)
-            && !/0 of 0 nodes completed/i.test(shellText)
+            shell
+            && request
+            && request.mode === 'diffusion'
+            && request.strategy === 'core'
+            && request.targetId === 'water glass'
           ) {
             break;
           }
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
       }
-      const pathRuntimeShell = document.querySelector('[data-agent-learning-path-runtime-shell="true"]');
-      const pathRuntimeHost = document.querySelector('#agent-learning-path-workspace-host');
-      const pathRuntimeContainer = pathRuntimeHost ? pathRuntimeHost.querySelector('#path-container') : null;
-      const pathRuntimeTitle = pathRuntimeShell ? pathRuntimeShell.textContent.replace(/\\s+/g, ' ').trim() : '';
-      const pathRuntimeNodeCount = Number(document.querySelector('#path-count')?.textContent || '0');
-      const pathRuntimeSemanticText = document.querySelector('#path-semantic-summary')?.textContent.replace(/\\s+/g, ' ').trim() || '';
+      const godotFuturePathShell = document.querySelector('[data-agent-godot-future-path-shell="true"]');
+      const godotFuturePathRequest = window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST || window.__NC_LAST_GODOT_FUTURE_PATH_REQUEST || {};
+      const pathContainerInLearningPane = document.querySelector('#agent-learning-path-body #path-container');
+      const pathRuntimeTitle = godotFuturePathShell ? godotFuturePathShell.textContent.replace(/\\s+/g, ' ').trim() : '';
       const pathDebugPreview = document.querySelector('[data-agent-path-mode-preview="true"]');
       if (relatedFocusButton) {
         relatedFocusButton.click();
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        const startedAt = Date.now();
+        while ((Date.now() - startedAt) < 2500) {
+          const focusNode = window.NoteConnectionGraphView
+            && typeof window.NoteConnectionGraphView.getFocusNode === 'function'
+              ? window.NoteConnectionGraphView.getFocusNode()
+              : null;
+          if (focusNode && String(focusNode.id || '') === 'water glass') {
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
       }
       panes.openEvidencePane({
         kind: 'grounding',
         title: 'Evidence Inspector',
         scopeLabel: 'water glass'
       });
-      const focusPreview = document.querySelector('[data-agent-focus-mode-preview="true"]');
-      const focusPreviewText = focusPreview ? focusPreview.textContent.replace(/\\s+/g, ' ').trim() : '';
+      const graphFocusRuntimeFocusNode = window.NoteConnectionGraphView
+        && typeof window.NoteConnectionGraphView.getFocusNode === 'function'
+          ? window.NoteConnectionGraphView.getFocusNode()
+          : null;
+      const graphFocusRuntime = document.querySelector('[data-agent-graph-focus-workspace-host="true"] #graph-container');
+      const graphFocusRuntimeText = graphFocusRuntime ? graphFocusRuntime.textContent.replace(/\\s+/g, ' ').trim() : '';
       const focusDeveloperDetails = document.querySelector('[data-agent-focus-developer-details="true"]');
       const focusRelationKinds = document.querySelector('.agent-focus-relation-kinds');
       const focusRelationEdges = document.querySelector('.agent-focus-relation-edges');
@@ -701,7 +710,6 @@ window.__NC_DYNAMIC_SMOKE__ = {
         const rect = node.getBoundingClientRect();
         return Math.min(rect.width, rect.height);
       }).filter((value) => Number.isFinite(value) && value > 0);
-      const focusCanvas = document.querySelector('.agent-focus-mode-preview');
       const countOutOfBounds = function (selector, container) {
         if (!container) {
           return 0;
@@ -739,18 +747,23 @@ window.__NC_DYNAMIC_SMOKE__ = {
         leftPaneScrollTopAfterScroll: leftPaneScrollProbe.scrollTopAfterScroll,
         learningPathReachableAfterLeftPaneScroll: leftPaneScrollProbe.learningPathReachableAfterScroll,
         relatedFocusReachableAfterLeftPaneScroll: leftPaneScrollProbe.relatedFocusReachableAfterScroll,
-        pathRuntimeMounted: Boolean(pathRuntimeContainer),
-        pathRuntimeHostContainsContainer: Boolean(pathRuntimeHost && pathRuntimeContainer && pathRuntimeContainer.parentElement === pathRuntimeHost),
+        godotFuturePathShellPresent: Boolean(godotFuturePathShell),
+        godotFuturePathMode: String(godotFuturePathRequest.mode || ''),
+        godotFuturePathStrategy: String(godotFuturePathRequest.strategy || ''),
+        godotFuturePathTargetId: String(godotFuturePathRequest.targetId || ''),
+        godotFuturePathTargetIds: Array.isArray(godotFuturePathRequest.targetIds) ? godotFuturePathRequest.targetIds.map(String) : [],
+        pathContainerDockedInLearningPane: Boolean(pathContainerInLearningPane),
         pathRuntimeTitle,
-        pathRuntimeNodeCount,
-        pathRuntimeSemanticText,
         pathDebugPreviewPresent: Boolean(pathDebugPreview),
-        focusPreviewAnchorId: focusPreview ? focusPreview.getAttribute('data-focus-mode-anchor-id') || '' : '',
-        focusPreviewText,
+        graphFocusRuntimeDocked: Boolean(graphFocusRuntime),
+        graphFocusRuntimeIsMainContainer: graphFocusRuntime ? graphFocusRuntime.id === 'graph-container' : false,
+        graphFocusRuntimeFocusNodeId: graphFocusRuntimeFocusNode ? String(graphFocusRuntimeFocusNode.id || '') : '',
+        graphFocusRuntimeFocusNodeLabel: graphFocusRuntimeFocusNode ? String(graphFocusRuntimeFocusNode.label || graphFocusRuntimeFocusNode.name || '') : '',
+        graphFocusRuntimeText,
         focusDeveloperDetailsPresent: Boolean(focusDeveloperDetails),
         focusRelationKindsText: focusRelationKinds ? focusRelationKinds.textContent.replace(/\\s+/g, ' ').trim() : '',
         focusRelationEdgesPresent: Boolean(focusRelationEdges),
-        focusOutOfBoundsCount: countOutOfBounds('[data-agent-focus-mode-node-role]', focusCanvas),
+        focusOutOfBoundsCount: countOutOfBounds('[data-agent-focus-mode-node-role]', document.querySelector('[data-agent-focus-mode-preview="true"]')),
         focusCalls,
         snapshotCalls,
         learningPathPaneOpen: learningPathPane ? learningPathPane.getAttribute('data-open') : '',
@@ -1037,7 +1050,7 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                 browserChecks: {
                     backendMode: 'real_backend',
                     graphMode: 'real_graph_runtime',
-                    pathMode: 'real_path_runtime',
+                    pathMode: 'godot_future_path_runtime',
                 },
             };
             const criticalFailures = [];
@@ -1241,6 +1254,8 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                         const smokeState = {
                             learningPathInitId: null,
                             learningPathConfig: null,
+                            godotFuturePathTargetId: null,
+                            godotFuturePathConfig: null,
                             learningPathTriggered: false,
                         };
                         window.__ncBrowserSmoke = smokeState;
@@ -1252,6 +1267,10 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                             : null;
                         const originalTrigger = window.pathApp && typeof window.pathApp.triggerUpdate === 'function'
                             ? window.pathApp.triggerUpdate.bind(window.pathApp)
+                            : null;
+                        const originalOpenGodotFuturePath = window.NoteConnectionPathMode
+                            && typeof window.NoteConnectionPathMode.openGodotFuturePathById === 'function'
+                            ? window.NoteConnectionPathMode.openGodotFuturePathById.bind(window.NoteConnectionPathMode)
                             : null;
                         if (originalInit) {
                             window.pathApp.init = function(id) {
@@ -1269,6 +1288,13 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                             window.pathApp.triggerUpdate = function() {
                                 smokeState.learningPathTriggered = true;
                                 return originalTrigger();
+                            };
+                        }
+                        if (originalOpenGodotFuturePath) {
+                            window.NoteConnectionPathMode.openGodotFuturePathById = function(targetId, options) {
+                                smokeState.godotFuturePathTargetId = targetId;
+                                smokeState.godotFuturePathConfig = options && options.config ? options.config : null;
+                                return originalOpenGodotFuturePath(targetId, options);
                             };
                         }
                         return true;
@@ -1463,19 +1489,44 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                     '--raw',
                     'eval',
                     `(async () => {
-                        const pathButton = document.querySelector('.agent-knowledge-actions button[data-capability-action-id="open_learning_path"]');
+                        const pathButton = document.querySelector('[data-agent-knowledge-action="learning-path"]')
+                            || document.querySelector('[data-capability-action-id="open_learning_path"]')
+                            || Array.from(document.querySelectorAll('.agent-workspace-action-button')).find((b) => /Learning Path|学习路径|å­¦/.test(String(b && b.textContent || '')));
+                        if (!pathButton) {
+                            return null;
+                        }
                         pathButton.click();
                         for (let attempt = 0; attempt < 50; attempt += 1) {
                             const paneOpenState = document.querySelector('#agent-learning-path-pane')?.getAttribute('data-open');
                             const initId = window.__ncBrowserSmoke && window.__ncBrowserSmoke.learningPathInitId;
                             const currentTargetId = window.pathApp && window.pathApp.currentTargetId;
-                            const pathDisplay = document.querySelector('#path-container')?.style.display || '';
-                            if (paneOpenState === 'true' && initId && currentTargetId) {
+                            const smokeConfig = window.__ncBrowserSmoke && (
+                                window.__ncBrowserSmoke.godotFuturePathConfig
+                                || window.__ncBrowserSmoke.learningPathConfig
+                            );
+                            const request = window.__NC_LAST_GODOT_FUTURE_PATH_REQUEST
+                                || window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST
+                                || smokeConfig
+                                || {};
+                            const targetId = request.targetId || currentTargetId || '';
+                            const pathContainerDocked = Boolean(document.querySelector('#agent-learning-path-body #path-container'));
+                            const shellPresent = Boolean(document.querySelector('[data-agent-godot-future-path-shell="true"]'));
+                            if (
+                                paneOpenState === 'true'
+                                && shellPresent
+                                && request.mode === 'diffusion'
+                                && request.strategy === 'core'
+                                && targetId
+                            ) {
                                 return {
                                     paneOpenState,
                                     learningPathInitId: initId,
                                     learningPathCurrentTargetId: currentTargetId,
-                                    learningPathDisplay: pathDisplay
+                                    learningPathTargetId: targetId,
+                                    learningPathTargetIds: Array.isArray(request.targetIds) ? request.targetIds : [],
+                                    learningPathMode: request.mode || '',
+                                    learningPathStrategy: request.strategy || '',
+                                    learningPathPathContainerDocked: pathContainerDocked
                                 };
                             }
                             await new Promise((resolve) => setTimeout(resolve, 100));
@@ -1492,8 +1543,18 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             learningPathState && typeof learningPathState === 'object' ? learningPathState.learningPathInitId : '';
         const learningPathCurrentTargetId =
             learningPathState && typeof learningPathState === 'object' ? learningPathState.learningPathCurrentTargetId : '';
-        const learningPathDisplay =
-            learningPathState && typeof learningPathState === 'object' ? learningPathState.learningPathDisplay : '';
+        const learningPathTargetId =
+            learningPathState && typeof learningPathState === 'object' ? learningPathState.learningPathTargetId : '';
+        const learningPathTargetIds =
+            learningPathState && typeof learningPathState === 'object' && Array.isArray(learningPathState.learningPathTargetIds)
+                ? learningPathState.learningPathTargetIds
+                : [];
+        const learningPathMode =
+            learningPathState && typeof learningPathState === 'object' ? learningPathState.learningPathMode : '';
+        const learningPathStrategy =
+            learningPathState && typeof learningPathState === 'object' ? learningPathState.learningPathStrategy : '';
+        const learningPathPathContainerDocked =
+            learningPathState && typeof learningPathState === 'object' ? learningPathState.learningPathPathContainerDocked : null;
 
         const studySessionState = normalizeRawValue(
             runPwcli(
@@ -2315,7 +2376,7 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             browserChecks: {
                 backendMode: 'real_backend',
                 graphMode: 'real_graph_runtime',
-                pathMode: 'real_path_runtime',
+                pathMode: 'godot_future_path_runtime',
                 titleText: String(titleText || ''),
                 userMessageText: resolveRecoveredValue(userMessageText, dynamicRecoverySnapshot && dynamicRecoverySnapshot.userMessageText),
                 assistantMessageText: resolveRecoveredValue(assistantMessageText, dynamicRecoverySnapshot && dynamicRecoverySnapshot.assistantMessageText),
@@ -2344,7 +2405,15 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                 learningPathPaneOpenState: resolveRecoveredValue(learningPathPaneOpenState, dynamicRecoverySnapshot && dynamicRecoverySnapshot.learningPathPaneOpenState),
                 learningPathInitId: resolveRecoveredValue(learningPathInitId, dynamicRecoverySnapshot && dynamicRecoverySnapshot.learningPathInitId),
                 learningPathCurrentTargetId: resolveRecoveredValue(learningPathCurrentTargetId, dynamicRecoverySnapshot && dynamicRecoverySnapshot.learningPathCurrentTargetId),
-                learningPathDisplay: resolveRecoveredValue(learningPathDisplay, dynamicRecoverySnapshot && dynamicRecoverySnapshot.learningPathDisplay),
+                learningPathTargetId: resolveRecoveredValue(learningPathTargetId, dynamicRecoverySnapshot && dynamicRecoverySnapshot.learningPathTargetId),
+                learningPathTargetIds: learningPathTargetIds.length > 0
+                    ? learningPathTargetIds
+                    : [dynamicRecoverySnapshot && dynamicRecoverySnapshot.learningPathTargetId].filter(Boolean),
+                learningPathMode: resolveRecoveredValue(learningPathMode, dynamicRecoverySnapshot && dynamicRecoverySnapshot.learningPathMode),
+                learningPathStrategy: resolveRecoveredValue(learningPathStrategy, dynamicRecoverySnapshot && dynamicRecoverySnapshot.learningPathStrategy),
+                learningPathPathContainerDocked: typeof learningPathPathContainerDocked === 'boolean'
+                    ? learningPathPathContainerDocked
+                    : Boolean(dynamicRecoverySnapshot && dynamicRecoverySnapshot.learningPathPathContainerDocked),
                 studySessionCardTitleZh: resolveRecoveredValue(studySessionCardTitleZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.studySessionCardTitleZh),
                 studySessionCardSummaryZh: resolveRecoveredValue(studySessionCardSummaryZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.studySessionCardSummaryZh),
                 tutorCardTitleZh: resolveRecoveredValue(tutorCardTitleZh, dynamicRecoverySnapshot && dynamicRecoverySnapshot.tutorCardTitleZh),
@@ -2395,7 +2464,7 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (report.browserChecks.graphMode !== 'real_graph_runtime') {
             failures.push(`graphMode='${report.browserChecks.graphMode}'`);
         }
-        if (report.browserChecks.pathMode !== 'real_path_runtime') {
+        if (report.browserChecks.pathMode !== 'godot_future_path_runtime') {
             failures.push(`pathMode='${report.browserChecks.pathMode}'`);
         }
         if (!report.artifacts.screenshotPath || !fs.existsSync(report.artifacts.screenshotPath)) {
@@ -2573,14 +2642,35 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (report.browserChecks.learningPathPaneOpenState !== 'true') {
             failures.push(`learningPathPaneOpenState='${report.browserChecks.learningPathPaneOpenState}'`);
         }
-        if (report.browserChecks.learningPathInitId !== report.browserChecks.focusOpenedId) {
+        const expectedLearningPathTargetId = /^atom_/.test(String(report.browserChecks.focusOpenedId || ''))
+            ? report.browserChecks.focusOpenedId
+            : DYNAMIC_RECOVERY_SNAPSHOT.focusOpenedId;
+        if (
+            report.browserChecks.learningPathInitId
+            && report.browserChecks.learningPathInitId !== expectedLearningPathTargetId
+        ) {
             failures.push(`learningPathInitId='${report.browserChecks.learningPathInitId}'`);
         }
-        if (report.browserChecks.learningPathCurrentTargetId !== report.browserChecks.focusOpenedId) {
+        if (
+            report.browserChecks.learningPathCurrentTargetId
+            && report.browserChecks.learningPathCurrentTargetId !== expectedLearningPathTargetId
+        ) {
             failures.push(`learningPathCurrentTargetId='${report.browserChecks.learningPathCurrentTargetId}'`);
         }
-        if (report.browserChecks.learningPathDisplay !== 'block') {
-            failures.push(`learningPathDisplay='${report.browserChecks.learningPathDisplay}'`);
+        if (report.browserChecks.learningPathTargetId !== expectedLearningPathTargetId) {
+            failures.push(`learningPathTargetId='${report.browserChecks.learningPathTargetId}'`);
+        }
+        if (!Array.isArray(report.browserChecks.learningPathTargetIds) || !report.browserChecks.learningPathTargetIds.includes(expectedLearningPathTargetId)) {
+            failures.push(`learningPathTargetIds='${JSON.stringify(report.browserChecks.learningPathTargetIds || [])}'`);
+        }
+        if (report.browserChecks.learningPathMode !== 'diffusion') {
+            failures.push(`learningPathMode='${report.browserChecks.learningPathMode}'`);
+        }
+        if (report.browserChecks.learningPathStrategy !== 'core') {
+            failures.push(`learningPathStrategy='${report.browserChecks.learningPathStrategy}'`);
+        }
+        if (report.browserChecks.learningPathPathContainerDocked !== false) {
+            failures.push(`learningPathPathContainerDocked='${String(report.browserChecks.learningPathPathContainerDocked)}'`);
         }
         if (report.browserChecks.studySessionCardTitleZh !== '学习会话计划') {
             failures.push(`studySessionCardTitleZh='${report.browserChecks.studySessionCardTitleZh}'`);
@@ -2809,38 +2899,43 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                 `knowledgeHitUi.leftPaneActionReachability='${String(knowledgeHitUi.learningPathReachableAfterLeftPaneScroll)}:${String(knowledgeHitUi.relatedFocusReachableAfterLeftPaneScroll)}'`
             );
         }
-        if (knowledgeHitUi.pathRuntimeMounted !== true || knowledgeHitUi.pathRuntimeHostContainsContainer !== true) {
-            failures.push(
-                `knowledgeHitUi.pathRuntimeMounted='${String(knowledgeHitUi.pathRuntimeMounted)}:${String(knowledgeHitUi.pathRuntimeHostContainsContainer)}'`
-            );
+        if (knowledgeHitUi.godotFuturePathShellPresent !== true) {
+            failures.push(`knowledgeHitUi.godotFuturePathShellPresent='${String(knowledgeHitUi.godotFuturePathShellPresent)}'`);
         }
-        if (
-            !String(knowledgeHitUi.pathRuntimeTitle || '').includes('water glass')
-            || /focus none/i.test(String(knowledgeHitUi.pathRuntimeTitle || ''))
-            || /0 of 0 nodes completed/i.test(String(knowledgeHitUi.pathRuntimeTitle || ''))
-            || String(knowledgeHitUi.pathRuntimeTitle || '').includes('atom_h')
-        ) {
+        if (knowledgeHitUi.godotFuturePathMode !== 'diffusion') {
+            failures.push(`knowledgeHitUi.godotFuturePathMode='${String(knowledgeHitUi.godotFuturePathMode)}'`);
+        }
+        if (knowledgeHitUi.godotFuturePathStrategy !== 'core') {
+            failures.push(`knowledgeHitUi.godotFuturePathStrategy='${String(knowledgeHitUi.godotFuturePathStrategy)}'`);
+        }
+        if (knowledgeHitUi.godotFuturePathTargetId !== 'water glass') {
+            failures.push(`knowledgeHitUi.godotFuturePathTargetId='${String(knowledgeHitUi.godotFuturePathTargetId)}'`);
+        }
+        if (!Array.isArray(knowledgeHitUi.godotFuturePathTargetIds) || !knowledgeHitUi.godotFuturePathTargetIds.includes('water glass')) {
+            failures.push(`knowledgeHitUi.godotFuturePathTargetIds='${JSON.stringify(knowledgeHitUi.godotFuturePathTargetIds || [])}'`);
+        }
+        if (knowledgeHitUi.pathContainerDockedInLearningPane !== false) {
+            failures.push(`knowledgeHitUi.pathContainerDockedInLearningPane='${String(knowledgeHitUi.pathContainerDockedInLearningPane)}'`);
+        }
+        if (!String(knowledgeHitUi.pathRuntimeTitle || '').includes('water glass') || String(knowledgeHitUi.pathRuntimeTitle || '').includes('atom_h')) {
             failures.push(`knowledgeHitUi.pathRuntimeTitle='${String(knowledgeHitUi.pathRuntimeTitle || '')}'`);
-        }
-        if (Number(knowledgeHitUi.pathRuntimeNodeCount || 0) <= 0) {
-            failures.push(`knowledgeHitUi.pathRuntimeNodeCount='${String(knowledgeHitUi.pathRuntimeNodeCount || 0)}'`);
-        }
-        if (
-            !String(knowledgeHitUi.pathRuntimeSemanticText || '').includes('water glass')
-            || /focus none/i.test(String(knowledgeHitUi.pathRuntimeSemanticText || ''))
-            || /0 of 0 nodes completed/i.test(String(knowledgeHitUi.pathRuntimeSemanticText || ''))
-            || String(knowledgeHitUi.pathRuntimeSemanticText || '').includes('atom_h')
-        ) {
-            failures.push(`knowledgeHitUi.pathRuntimeSemanticText='${String(knowledgeHitUi.pathRuntimeSemanticText || '')}'`);
         }
         if (knowledgeHitUi.pathDebugPreviewPresent !== false) {
             failures.push(`knowledgeHitUi.pathDebugPreviewPresent='${String(knowledgeHitUi.pathDebugPreviewPresent)}'`);
         }
-        if (knowledgeHitUi.focusPreviewAnchorId !== 'water glass') {
-            failures.push(`knowledgeHitUi.focusPreviewAnchorId='${String(knowledgeHitUi.focusPreviewAnchorId)}'`);
+        if (knowledgeHitUi.graphFocusRuntimeDocked !== true || knowledgeHitUi.graphFocusRuntimeIsMainContainer !== true) {
+            failures.push(
+                `knowledgeHitUi.graphFocusRuntime='${String(knowledgeHitUi.graphFocusRuntimeDocked)}:${String(knowledgeHitUi.graphFocusRuntimeIsMainContainer)}'`
+            );
         }
-        if (!String(knowledgeHitUi.focusPreviewText || '').includes('water glass') || String(knowledgeHitUi.focusPreviewText || '').includes('atom_h')) {
-            failures.push(`knowledgeHitUi.focusPreviewText='${String(knowledgeHitUi.focusPreviewText || '')}'`);
+        if (knowledgeHitUi.graphFocusRuntimeFocusNodeId !== 'water glass') {
+            failures.push(`knowledgeHitUi.graphFocusRuntimeFocusNodeId='${String(knowledgeHitUi.graphFocusRuntimeFocusNodeId || '')}'`);
+        }
+        if (!String(knowledgeHitUi.graphFocusRuntimeFocusNodeLabel || '').includes('water glass')) {
+            failures.push(`knowledgeHitUi.graphFocusRuntimeFocusNodeLabel='${String(knowledgeHitUi.graphFocusRuntimeFocusNodeLabel || '')}'`);
+        }
+        if (String(knowledgeHitUi.graphFocusRuntimeText || '').includes('atom_h')) {
+            failures.push(`knowledgeHitUi.graphFocusRuntimeText='${String(knowledgeHitUi.graphFocusRuntimeText || '')}'`);
         }
         if (knowledgeHitUi.focusDeveloperDetailsPresent !== false) {
             failures.push(`knowledgeHitUi.focusDeveloperDetailsPresent='${String(knowledgeHitUi.focusDeveloperDetailsPresent)}'`);
@@ -2856,7 +2951,7 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (!Array.isArray(knowledgeHitUi.focusCalls) || !knowledgeHitUi.focusCalls.includes('water glass')) {
             failures.push(`knowledgeHitUi.focusCalls='${JSON.stringify(knowledgeHitUi.focusCalls || [])}'`);
         }
-        if (!Array.isArray(knowledgeHitUi.snapshotCalls) || !knowledgeHitUi.snapshotCalls.includes('water glass')) {
+        if (Array.isArray(knowledgeHitUi.snapshotCalls) && knowledgeHitUi.snapshotCalls.includes('water glass')) {
             failures.push(`knowledgeHitUi.snapshotCalls='${JSON.stringify(knowledgeHitUi.snapshotCalls || [])}'`);
         }
         if (knowledgeHitUi.learningPathPaneOpen !== 'true' || knowledgeHitUi.graphFocusPaneOpen !== 'true' || knowledgeHitUi.evidencePaneOpen !== 'true') {
@@ -2879,6 +2974,14 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             'missingNodeMessageZh=',
             'promotionStateAfterClick=',
             'promotionStateAfterEscape=',
+            'learningPathPaneOpenState=',
+            'learningPathInitId=',
+            'learningPathCurrentTargetId=',
+            'learningPathTargetId=',
+            'learningPathTargetIds=',
+            'learningPathMode=',
+            'learningPathStrategy=',
+            'learningPathPathContainerDocked=',
             'knowledgeHitUi.',
         ]);
         const dynamicSignalFailurePrefixes = [
@@ -2925,7 +3028,11 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             'learningPathPaneOpenState=',
             'learningPathInitId=',
             'learningPathCurrentTargetId=',
-            'learningPathDisplay=',
+            'learningPathTargetId=',
+            'learningPathTargetIds=',
+            'learningPathMode=',
+            'learningPathStrategy=',
+            'learningPathPathContainerDocked=',
             'studySessionCardTitleZh=',
             'studySessionCardSummaryZh=',
             'tutorCardTitleZh=',

@@ -1,13 +1,9 @@
 (function () {
     const PANE_KEYS = ['graph-focus', 'evidence', 'learning-path'];
     const PROMOTION_ATTRIBUTE = 'data-agent-workspace-promotion';
-    const LEARNING_PATH_WORKSPACE_ELEMENT_IDS = [
-        'path-container',
-        'learning-history-sidebar',
-        'learning-workbench-sidebar',
-    ];
-    let learningPathConfigureRetryTimer = null;
-    let learningPathConfigureRetryCount = 0;
+    const GRAPH_FOCUS_RUNTIME_ELEMENT_ID = 'graph-container';
+    let godotFuturePathRetryTimer = null;
+    let godotFuturePathRetryCount = 0;
 
     function getElement(id) {
         return document.getElementById(id);
@@ -47,8 +43,8 @@
         return null;
     }
 
-    function getLearningPathWorkspaceHost() {
-        return getElement('agent-learning-path-workspace-host');
+    function getGraphFocusWorkspaceHost() {
+        return getElement('agent-graph-focus-workspace-host');
     }
 
     function isDeveloperModeEnabled() {
@@ -741,7 +737,8 @@
         }
     }
 
-    function resolveKnowledgePointGraphTarget(item, capability) {
+    function resolveKnowledgePointGraphTarget(item, capability, options) {
+        const shouldIncludeFocusModeSnapshot = Boolean(options && options.includeFocusModeSnapshot === true);
         const atomId = resolveKnowledgePointActionAtomId(item);
         const displayLabel = resolveKnowledgePointDisplayLabel(item, atomId);
         const runtimeNode = resolveRuntimeGraphNodeForKnowledgePoint(item, capability);
@@ -752,7 +749,9 @@
         const graphNodeLabel = runtimeNode && runtimeNode.label
             ? runtimeNode.label
             : displayLabel || graphNodeId;
-        const focusModeSnapshot = resolveFocusModeSnapshot(graphNodeId);
+        const focusModeSnapshot = shouldIncludeFocusModeSnapshot
+            ? resolveFocusModeSnapshot(graphNodeId)
+            : null;
         return {
             atomId,
             graphNodeId,
@@ -1248,13 +1247,38 @@
         `;
     }
 
+    function resolveGraphFocusRuntimeTargetId(payload) {
+        const candidates = [
+            payload && payload.graphTargetId,
+            payload && payload.graphNodeId,
+            payload && payload.targetId,
+            payload && payload.nodeId,
+            payload && payload.atomId,
+        ];
+        for (let index = 0; index < candidates.length; index += 1) {
+            const normalized = normalizeKnowledgeGraphText(candidates[index]);
+            if (normalized) {
+                return normalized;
+            }
+        }
+        return '';
+    }
+
     function buildGraphFocusRuntimeOnlyHtml(payload) {
+        const developerDetails = isDeveloperModeEnabled()
+            ? buildGraphFocusRelationMapHtml(payload)
+            : '';
         return `
             <div
                 class="agent-pane-block agent-pane-block--graph-focus agent-pane-block--focus-runtime"
                 data-agent-graph-focus-runtime-only="true"
             >
-                ${buildGraphFocusRelationMapHtml(payload)}
+                <div
+                    id="agent-graph-focus-workspace-host"
+                    class="agent-graph-focus-workspace-host"
+                    data-agent-graph-focus-workspace-host="true"
+                ></div>
+                ${developerDetails}
             </div>
         `;
     }
@@ -2245,11 +2269,14 @@
         state.graphFocusRenderToken += 1;
         const renderToken = state.graphFocusRenderToken;
         const diagnostics = buildGraphFocusDiagnostics(payload, matchedSpans, renderToken);
-        if (isGraphFocusRuntimeOnlyPayload(payload) && !isDeveloperModeEnabled()) {
+        if (isGraphFocusRuntimeOnlyPayload(payload)) {
+            restoreGraphFocusRuntime();
             body.innerHTML = buildGraphFocusRuntimeOnlyHtml(payload);
+            openGraphFocusRuntimeForPayload(payload);
             setLastGraphFocusDiagnostics(null);
             return;
         }
+        restoreGraphFocusRuntime();
         body.innerHTML = buildGraphFocusLoadingHtml(payload);
         const rendered = await renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken, diagnostics);
         if (rendered || renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open) {
@@ -2420,11 +2447,13 @@
 
     function openRelatedFocusForKnowledgePoint(item) {
         ensureWorkspaceVisible();
-        const graphTarget = resolveKnowledgePointGraphTarget(item);
+        const graphTarget = resolveKnowledgePointGraphTarget(item, null, {
+            includeFocusModeSnapshot: isDeveloperModeEnabled(),
+        });
         focusKnowledgePointInGraphRuntime(graphTarget.graphNodeId || graphTarget.atomId);
         const payload = buildKnowledgePointFocusPayload(item, graphTarget);
         payload.presentationMode = 'focus-mode';
-        if (!payload.focusModeSnapshot) {
+        if (!payload.focusModeSnapshot && isDeveloperModeEnabled()) {
             payload.focusModeSnapshot = resolveFocusModeSnapshot(graphTarget.graphNodeId);
         }
         api.openGraphFocusPane(payload);
@@ -2674,211 +2703,6 @@
         };
     }
 
-    function buildLearningPathPreviewGraph(payload) {
-        const nodeLabels = payload && payload.nodeLabels && typeof payload.nodeLabels === 'object'
-            ? payload.nodeLabels
-            : {};
-        const atomId = normalizeKnowledgeGraphText(payload && payload.atomId);
-        const graphTargetId = normalizeKnowledgeGraphText(payload && payload.graphTargetId);
-        const title = normalizeKnowledgeGraphText(payload && (payload.graphTargetLabel || payload.title || payload.atomId));
-        const anchorId = graphTargetId || title || atomId;
-        const nodesById = new Map();
-        const edges = [];
-
-        const resolvePreviewNodeId = function (id) {
-            const normalizedId = normalizeKnowledgeGraphText(id);
-            if (!normalizedId) {
-                return '';
-            }
-            return atomId && normalizedId === atomId ? anchorId : normalizedId;
-        };
-
-        const addNode = function (id, label, role) {
-            const normalizedId = resolvePreviewNodeId(id);
-            if (!normalizedId) {
-                return null;
-            }
-            const existing = nodesById.get(normalizedId);
-            const resolvedLabel = normalizeKnowledgeGraphText(
-                normalizedId === anchorId
-                    ? title || label || nodeLabels[normalizedId] || nodeLabels[atomId] || normalizedId
-                    : label || nodeLabels[normalizedId] || normalizedId
-            );
-            if (existing) {
-                if (resolvedLabel && existing.label === existing.id) {
-                    existing.label = resolvedLabel;
-                }
-                return existing;
-            }
-            const node = {
-                id: normalizedId,
-                label: resolvedLabel || normalizedId,
-                role: role || 'related',
-            };
-            nodesById.set(normalizedId, node);
-            return node;
-        };
-
-        addNode(anchorId, title || nodeLabels[anchorId] || anchorId, 'anchor');
-        const relationPath = normalizeGraphFocusRelationPath(payload);
-        relationPath.forEach((edge) => {
-            const sourceId = resolvePreviewNodeId(edge.sourceAtomId);
-            const targetId = resolvePreviewNodeId(edge.targetAtomId);
-            const source = addNode(sourceId, edge.sourceTitle || nodeLabels[edge.sourceAtomId], targetId === anchorId ? 'prerequisite' : 'related');
-            const target = addNode(targetId, edge.targetTitle || nodeLabels[edge.targetAtomId], sourceId === anchorId ? 'next' : 'related');
-            if (source && target) {
-                edges.push({
-                    sourceId: source.id,
-                    targetId: target.id,
-                    relationKind: edge.relationKind || 'related',
-                    confidence: edge.confidence,
-                });
-            }
-        });
-
-        const items = Array.isArray(payload && payload.items) ? payload.items : [];
-        items.forEach((item, index) => {
-            const itemId = resolvePreviewNodeId(item && (item.atomId || item.id || item.title));
-            const itemNode = addNode(itemId, item && item.title || itemId, index === 0 ? 'anchor' : 'next');
-            if (itemNode && itemNode.id !== anchorId && !edges.some((edge) => edge.sourceId === anchorId && edge.targetId === itemNode.id)) {
-                edges.push({
-                    sourceId: anchorId,
-                    targetId: itemNode.id,
-                    relationKind: 'learning_step',
-                    confidence: Number.NaN,
-                });
-            }
-        });
-
-        const nodes = Array.from(nodesById.values());
-        if (nodes.length <= 0) {
-            return null;
-        }
-        return {
-            anchorId,
-            anchorLabel: title || nodes.find((node) => node.id === anchorId)?.label || anchorId,
-            nodes,
-            edges,
-        };
-    }
-
-    function buildLearningPathPreviewHtml(payload) {
-        const graph = buildLearningPathPreviewGraph(payload);
-        if (!graph) {
-            return '';
-        }
-        const beforeNodes = graph.nodes.filter((node) => node.id !== graph.anchorId && node.role === 'prerequisite').slice(0, 2);
-        const afterNodes = graph.nodes.filter((node) => node.id !== graph.anchorId && node.role === 'next').slice(0, 3);
-        const fallbackNodes = graph.nodes.filter((node) => (
-            node.id !== graph.anchorId
-            && node.role !== 'prerequisite'
-            && node.role !== 'next'
-        ));
-        while (beforeNodes.length < 1 && fallbackNodes.length > 0) {
-            beforeNodes.push(fallbackNodes.shift());
-        }
-        while (afterNodes.length < 1 && fallbackNodes.length > 0) {
-            afterNodes.push(fallbackNodes.shift());
-        }
-        const anchorNode = graph.nodes.find((node) => node.id === graph.anchorId) || {
-            id: graph.anchorId,
-            label: graph.anchorLabel,
-            role: 'anchor',
-        };
-        const mainNodes = beforeNodes.concat([anchorNode], afterNodes).slice(0, 6);
-        const coordinates = {};
-        const assignPathNodeCoordinate = function (node, point) {
-            if (!node || !node.id) {
-                return;
-            }
-            coordinates[node.id] = {
-                x: point.x,
-                y: point.y,
-                role: node.id === graph.anchorId ? 'anchor' : node.role || 'related',
-                label: node.id === graph.anchorId ? graph.anchorLabel : node.label,
-            };
-        };
-        const leftSlots = [
-            { x: 24, y: 36 },
-            { x: 24, y: 66 },
-        ];
-        const rightSlots = [
-            { x: 76, y: 30 },
-            { x: 82, y: 50 },
-            { x: 76, y: 70 },
-        ];
-        beforeNodes.slice(0, leftSlots.length).forEach((node, index) => {
-            assignPathNodeCoordinate(node, leftSlots[index]);
-        });
-        assignPathNodeCoordinate(anchorNode, { x: 50, y: 50 });
-        afterNodes.slice(0, rightSlots.length).forEach((node, index) => {
-            assignPathNodeCoordinate(node, rightSlots[index]);
-        });
-
-        const edgeHtml = graph.edges.map((edge) => {
-            const source = coordinates[edge.sourceId];
-            const target = coordinates[edge.targetId];
-            if (!source || !target) {
-                return '';
-            }
-            return `
-                <line
-                    class="agent-path-mode-edge"
-                    x1="${source.x}"
-                    y1="${source.y}"
-                    x2="${target.x}"
-                    y2="${target.y}"
-                ></line>
-            `;
-        }).join('');
-        const positionedNodes = mainNodes.filter((node) => Boolean(coordinates[node.id]));
-        const positionedNodeIds = new Set(positionedNodes.map((node) => node.id));
-        const nodeHtml = positionedNodes.map((node) => {
-            const point = coordinates[node.id];
-            const role = node.id === graph.anchorId ? 'anchor' : point.role || 'related';
-            return `
-                <div
-                    class="agent-path-mode-node agent-path-mode-node--${role}"
-                    data-agent-path-node-role="${escapeHtml(role)}"
-                    style="left: ${point.x}%; top: ${point.y}%;"
-                    title="${escapeHtml(point.label)}"
-                >
-                    ${escapeHtml(point.label)}
-                </div>
-            `;
-        }).join('');
-        const bandNodes = graph.nodes
-            .filter((node) => node.id !== graph.anchorId && !positionedNodeIds.has(node.id))
-            .slice(0, 6);
-        const bandHtml = bandNodes.map((node) => `
-            <span class="agent-path-mode-band-node">
-                ${escapeHtml(node.label)}
-            </span>
-        `).join('');
-        return `
-            <div
-                class="agent-path-mode-preview"
-                data-agent-path-mode-preview="true"
-                data-agent-path-preview="true"
-                data-path-anchor-id="${escapeHtml(graph.anchorId)}"
-                data-path-node-count="${graph.nodes.length}"
-            >
-                <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.learningPath.previewTitle', 'Path mode preview'))}</div>
-                <div class="agent-path-mode-canvas">
-                    <svg class="agent-path-mode-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                        ${edgeHtml}
-                    </svg>
-                    <div class="agent-path-mode-lane" data-agent-path-mode-lane="main">
-                        ${nodeHtml}
-                    </div>
-                    <div class="agent-path-mode-band" data-agent-path-mode-band="related">
-                        ${bandHtml}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
     function resolveLearningPathTitle(payload) {
         return String(
             payload && (
@@ -2923,20 +2747,20 @@
                 <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.graphFocus.diagnosticsTitle', 'Render diagnostics'))}</div>
                 <ul class="agent-pane-list">${listHtml}</ul>
             </div>
-            ${buildLearningPathPreviewHtml(payload)}
         `;
     }
 
-    function resolveLearningPathRuntimeTargetId(payload) {
+    function resolveGodotFuturePathTargetId(payload) {
         const candidates = [
             payload && payload.graphTargetId,
             payload && payload.graphNodeId,
             payload && payload.targetId,
             payload && payload.atomId,
+            payload && payload.graphTargetLabel,
             payload && payload.title,
         ];
-        for (const candidate of candidates) {
-            const normalized = normalizeKnowledgeGraphText(candidate);
+        for (let index = 0; index < candidates.length; index += 1) {
+            const normalized = normalizeKnowledgeGraphText(candidates[index]);
             if (normalized) {
                 return normalized;
             }
@@ -2944,198 +2768,60 @@
         return '';
     }
 
-    function normalizeLearningPathLookupKey(value) {
-        return normalizeKnowledgeGraphText(value)
-            .toLowerCase()
-            .replace(/\.[a-z0-9]+$/i, '')
-            .replace(/[_-]+/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-
-    function resolveLearningPathNodeLabel(node) {
-        return normalizeKnowledgeGraphText(node && (node.label || node.title || node.name || node.id));
-    }
-
-    function resolveLearningPathNodeSourceBasenames(node) {
-        if (!node || typeof node !== 'object') {
-            return [];
-        }
-        const metadata = node.metadata && typeof node.metadata === 'object'
-            ? node.metadata
-            : {};
-        return [
-            node.sourcePath,
-            node.filepath,
-            node.path,
-            metadata.sourcePath,
-            metadata.filepath,
-            metadata.path,
-        ]
-            .map(resolvePathBasenameWithoutExtension)
-            .filter(Boolean);
-    }
-
-    function getLearningPathRuntimeSourceData(pathApp) {
-        if (pathApp && typeof pathApp._getSourceGraphData === 'function') {
-            try {
-                const sourceData = pathApp._getSourceGraphData();
-                if (sourceData && Array.isArray(sourceData.nodes)) {
-                    return sourceData;
-                }
-            } catch (_error) {
-                // Fall through to global graphData checks.
-            }
-        }
-        if (typeof graphData !== 'undefined' && graphData && Array.isArray(graphData.nodes)) {
-            return graphData;
-        }
-        if (window.graphData && Array.isArray(window.graphData.nodes)) {
-            return window.graphData;
-        }
-        return null;
-    }
-
-    function resolveLearningPathNodeByCandidate(sourceData, candidate) {
-        const normalizedCandidate = normalizeKnowledgeGraphText(candidate);
-        if (!sourceData || !Array.isArray(sourceData.nodes) || !normalizedCandidate) {
+    function buildGodotFuturePathRequest(payload) {
+        const targetId = resolveGodotFuturePathTargetId(payload);
+        if (!targetId) {
             return null;
         }
-        const nodes = sourceData.nodes.filter((node) => node && typeof node === 'object');
-        const exactId = nodes.find((node) => normalizeKnowledgeGraphText(node.id) === normalizedCandidate);
-        if (exactId) {
-            return exactId;
-        }
-
-        const lookupKey = normalizeLearningPathLookupKey(normalizedCandidate);
-        if (!lookupKey) {
-            return null;
-        }
-        const labelMatches = nodes.filter((node) => normalizeLearningPathLookupKey(resolveLearningPathNodeLabel(node)) === lookupKey);
-        if (labelMatches.length === 1) {
-            return labelMatches[0];
-        }
-        const sourceMatches = nodes.filter((node) =>
-            resolveLearningPathNodeSourceBasenames(node)
-                .some((basename) => normalizeLearningPathLookupKey(basename) === lookupKey)
-        );
-        return sourceMatches.length === 1 ? sourceMatches[0] : null;
-    }
-
-    function collectLearningPathRuntimeTargetCandidates(payload) {
-        const candidates = [];
+        const targetIds = [];
         const seen = new Set();
-        const appendCandidate = function (value) {
+        const appendTargetId = function (value) {
             const normalized = normalizeKnowledgeGraphText(value);
             if (!normalized || seen.has(normalized)) {
                 return;
             }
             seen.add(normalized);
-            candidates.push(normalized);
+            targetIds.push(normalized);
         };
-        appendCandidate(payload && payload.graphTargetId);
-        appendCandidate(payload && payload.graphNodeId);
-        appendCandidate(payload && payload.targetId);
-        appendCandidate(payload && payload.graphTargetLabel);
-        appendCandidate(payload && payload.title);
-        appendCandidate(resolvePathBasenameWithoutExtension(payload && payload.sourcePath));
-        appendCandidate(payload && payload.atomId);
+        appendTargetId(targetId);
         []
             .concat(Array.isArray(payload && payload.graphTargetIds) ? payload.graphTargetIds : [])
             .concat(Array.isArray(payload && payload.targetIds) ? payload.targetIds : [])
-            .concat(Array.isArray(payload && payload.focusAtomIds) ? payload.focusAtomIds : [])
-            .forEach(appendCandidate);
-
-        const nodeLabels = payload && payload.nodeLabels && typeof payload.nodeLabels === 'object'
-            ? payload.nodeLabels
-            : {};
-        Object.keys(nodeLabels).forEach((nodeId) => {
-            appendCandidate(nodeId);
-            appendCandidate(nodeLabels[nodeId]);
-        });
-
-        const relationPath = Array.isArray(payload && payload.relationPath) ? payload.relationPath : [];
-        relationPath.forEach((edge) => {
-            appendCandidate(edge && edge.targetTitle);
-            appendCandidate(edge && edge.sourceTitle);
-            appendCandidate(edge && edge.targetAtomId);
-            appendCandidate(edge && edge.sourceAtomId);
-        });
-        return candidates;
-    }
-
-    function resolveLearningPathRuntimeTarget(payload, pathApp) {
-        const sourceData = getLearningPathRuntimeSourceData(pathApp);
-        const candidates = collectLearningPathRuntimeTargetCandidates(payload);
-        if (sourceData && Array.isArray(sourceData.nodes) && sourceData.nodes.length > 0) {
-            for (const candidate of candidates) {
-                const node = resolveLearningPathNodeByCandidate(sourceData, candidate);
-                if (node && normalizeKnowledgeGraphText(node.id)) {
-                    const id = normalizeKnowledgeGraphText(node.id);
-                    return {
-                        id,
-                        label: resolveLearningPathNodeLabel(node) || normalizeKnowledgeGraphText(candidate) || id,
-                        sourceAvailable: true,
-                    };
-                }
-            }
-            return {
-                id: '',
-                label: resolveLearningPathTitle(payload || {}),
-                sourceAvailable: true,
-            };
-        }
-        const fallbackId = candidates[0] || resolveLearningPathRuntimeTargetId(payload);
+            .forEach(appendTargetId);
         return {
-            id: fallbackId,
-            label: resolveLearningPathTitle(payload || {}) || fallbackId,
-            sourceAvailable: false,
+            mode: 'diffusion',
+            strategy: 'core',
+            layout: 'orbital',
+            targetId,
+            target_id: targetId,
+            targetIds,
+            focus_mode: true,
+            language: normalizeKnowledgeGraphText(payload && payload.language) || getActiveWorkspaceLanguage(),
         };
     }
 
-    function resolveLearningPathRuntimeTargetIds(payload, primaryTargetId, pathApp) {
-        const sourceData = getLearningPathRuntimeSourceData(pathApp);
-        const rawTargetIds = []
-            .concat(Array.isArray(payload && payload.graphTargetIds) ? payload.graphTargetIds : [])
-            .concat(Array.isArray(payload && payload.targetIds) ? payload.targetIds : [])
-            .concat(Array.isArray(payload && payload.focusAtomIds) ? payload.focusAtomIds : []);
-        const targetIds = [];
-        const seen = new Set();
-        [primaryTargetId].concat(rawTargetIds).forEach((targetId) => {
-            const resolvedNode = sourceData ? resolveLearningPathNodeByCandidate(sourceData, targetId) : null;
-            const normalized = normalizeKnowledgeGraphText(resolvedNode && resolvedNode.id || targetId);
-            if (!normalized || seen.has(normalized)) {
-                return;
-            }
-            if (sourceData && !resolvedNode && normalized !== primaryTargetId) {
-                return;
-            }
-            seen.add(normalized);
-            targetIds.push(normalized);
-        });
-        return targetIds;
-    }
-
-    function scheduleLearningPathRuntimeConfigureRetry(payload) {
-        if (learningPathConfigureRetryCount >= 8) {
+    function scheduleGodotFuturePathRetry(payload) {
+        if (godotFuturePathRetryCount >= 8) {
             return;
         }
-        learningPathConfigureRetryCount += 1;
-        if (learningPathConfigureRetryTimer) {
-            clearTimeout(learningPathConfigureRetryTimer);
+        godotFuturePathRetryCount += 1;
+        if (godotFuturePathRetryTimer) {
+            clearTimeout(godotFuturePathRetryTimer);
         }
-        learningPathConfigureRetryTimer = setTimeout(function () {
-            learningPathConfigureRetryTimer = null;
-            configureLearningPathWorkspaceRuntime(payload || {});
+        godotFuturePathRetryTimer = setTimeout(function () {
+            godotFuturePathRetryTimer = null;
+            dispatchGodotFuturePathForPayload(payload || {});
         }, 150);
     }
 
-    function applyLearningPathRuntimeTargetState(pathApp, config) {
+    function applyGodotFuturePathProducerState(pathApp, config) {
         if (!pathApp || !config || !config.targetId) {
             return;
         }
         if (pathApp.runtimeConfig && typeof pathApp.runtimeConfig === 'object') {
             pathApp.runtimeConfig.mode = 'diffusion';
+            pathApp.runtimeConfig.strategy = 'core';
+            pathApp.runtimeConfig.layout = 'orbital';
             pathApp.runtimeConfig.targetId = config.targetId;
             pathApp.runtimeConfig.targetIds = Array.isArray(config.targetIds)
                 ? config.targetIds.slice()
@@ -3148,62 +2834,99 @@
         pathApp.centralNodeId = config.targetId;
     }
 
-    function configureLearningPathWorkspaceRuntime(payload) {
-        const pathContainer = getElement('path-container');
-        if (pathContainer) {
-            pathContainer.style.display = 'block';
-        }
-        const graphWrapper = getElement('graph-wrapper');
-        if (graphWrapper) {
-            graphWrapper.style.display = 'block';
-        }
+    function dispatchGodotFuturePathViaPathApp(config) {
         const pathApp = window.pathApp;
         if (!pathApp || typeof pathApp !== 'object') {
             return false;
         }
-        const runtimeTarget = resolveLearningPathRuntimeTarget(payload, pathApp);
-        const targetId = runtimeTarget.id;
-        if (!targetId) {
-            scheduleLearningPathRuntimeConfigureRetry(payload);
-            return false;
+        applyGodotFuturePathProducerState(pathApp, config);
+        if (!window.__NC_AGENT_GODOT_FUTURE_PATH_INITIALIZED && typeof pathApp.init === 'function') {
+            pathApp.init(config.targetId);
+            window.__NC_AGENT_GODOT_FUTURE_PATH_INITIALIZED = true;
         }
-        const targetIds = resolveLearningPathRuntimeTargetIds(payload, targetId, pathApp);
-        const config = {
-            mode: 'diffusion',
-            targetId,
-            targetIds,
-            language: normalizeKnowledgeGraphText(payload && payload.language) || getActiveWorkspaceLanguage(),
-        };
-        applyLearningPathRuntimeTargetState(pathApp, config);
-        if (!window.__NC_AGENT_PATH_WORKSPACE_INITIALIZED && typeof pathApp.init === 'function') {
-            pathApp.init(targetId);
-            window.__NC_AGENT_PATH_WORKSPACE_INITIALIZED = true;
-        } else if (
-            runtimeTarget.sourceAvailable
-            && typeof pathApp.startProcessing === 'function'
-            && (!Array.isArray(pathApp.nodes) || pathApp.nodes.length === 0)
-        ) {
-            pathApp.startProcessing(targetId);
-        }
-        applyLearningPathRuntimeTargetState(pathApp, config);
+        applyGodotFuturePathProducerState(pathApp, config);
         if (typeof pathApp.applyRemoteConfigure === 'function') {
             pathApp.applyRemoteConfigure(config);
-        } else if (typeof pathApp.switchCentral === 'function') {
-            pathApp.switchCentral(targetId);
         }
-        const learningUserIdInput = getElement('learning-user-id');
-        if (
-            learningUserIdInput
-            && typeof learningUserIdInput.value === 'string'
-            && normalizeKnowledgeGraphText(payload && payload.userId)
-        ) {
-            learningUserIdInput.value = normalizeKnowledgeGraphText(payload && payload.userId);
+        if (typeof pathApp._sendBridgeMessage === 'function') {
+            pathApp._sendBridgeMessage('configure', config);
         }
         if (typeof pathApp.triggerUpdate === 'function') {
             pathApp.triggerUpdate();
         }
-        learningPathConfigureRetryCount = 0;
         return true;
+    }
+
+    function dispatchGodotFuturePathForPayload(payload) {
+        const config = buildGodotFuturePathRequest(payload || {});
+        if (!config) {
+            scheduleGodotFuturePathRetry(payload || {});
+            return false;
+        }
+        state.godotFuturePath.request = { ...config };
+        window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST = { ...config };
+
+        let dispatched = false;
+        const pathModeApi = window.NoteConnectionPathMode;
+        if (
+            pathModeApi
+            && typeof pathModeApi.openGodotFuturePathById === 'function'
+        ) {
+            try {
+                const result = pathModeApi.openGodotFuturePathById(config.targetId, {
+                    config,
+                    source: 'agent-workspace-learning-path',
+                });
+                dispatched = true;
+                state.godotFuturePath.lastDispatch = {
+                    runtime: 'NoteConnectionPathMode',
+                    async: Boolean(result && typeof result.then === 'function'),
+                    targetId: config.targetId,
+                };
+                if (result && typeof result.catch === 'function') {
+                    result.catch((error) => {
+                        console.warn('[AgentWorkspace] Godot Future Path dispatch failed:', error);
+                        scheduleGodotFuturePathRetry(payload || {});
+                    });
+                }
+            } catch (error) {
+                console.warn('[AgentWorkspace] Godot Future Path API rejected request:', error);
+            }
+        }
+
+        if (!dispatched) {
+            dispatched = dispatchGodotFuturePathViaPathApp(config);
+            if (dispatched) {
+                state.godotFuturePath.lastDispatch = {
+                    runtime: 'pathApp',
+                    targetId: config.targetId,
+                };
+            }
+        }
+
+        const pathApp = window.pathApp;
+        if (pathApp && typeof pathApp.requestBridgeWindowVisibility === 'function') {
+            void pathApp.requestBridgeWindowVisibility(true, {
+                waitMs: 1600,
+                reason: 'agent-workspace-godot-future-path',
+            });
+        }
+        if (
+            window.__TAURI__
+            && window.__TAURI__.core
+            && typeof window.__TAURI__.core.invoke === 'function'
+        ) {
+            void window.__TAURI__.core.invoke('toggle_pathmode_window', { showGodot: true })
+                .catch((error) => {
+                    console.warn('[AgentWorkspace] toggle_pathmode_window failed for Godot Future Path:', error);
+                });
+        }
+        if (!dispatched) {
+            scheduleGodotFuturePathRetry(payload || {});
+        } else {
+            godotFuturePathRetryCount = 0;
+        }
+        return dispatched;
     }
 
     function renderLearningPathBody(payload) {
@@ -3212,13 +2935,19 @@
             return;
         }
         const title = resolveLearningPathTitle(payload || {});
+        const config = buildGodotFuturePathRequest(payload || {});
+        const targetLabel = normalizeKnowledgeGraphText(payload && payload.graphTargetLabel) || title;
         body.innerHTML = `
             <div
-                class="agent-learning-path-runtime-shell"
-                data-agent-learning-path-runtime-shell="true"
+                class="agent-godot-future-path-shell"
+                data-agent-godot-future-path-shell="true"
             >
-                <div class="agent-learning-path-runtime-title">${escapeHtml(title)}</div>
-                <div id="agent-learning-path-workspace-host" class="agent-learning-path-workspace-host"></div>
+                <div class="agent-godot-future-path-title">${escapeHtml(targetLabel)}</div>
+                <div class="agent-godot-future-path-status" data-agent-godot-future-path-status="true">
+                    ${escapeHtml(config
+                        ? translate('agentWorkspace.learningPath.godotFuturePathRequested', 'Godot Future Path requested: Diffusion / Core')
+                        : translate('agentWorkspace.learningPath.godotFuturePathUnavailable', 'Godot Future Path target is unavailable.'))}
+                </div>
             </div>
             ${buildLearningPathDeveloperDetailsHtml(payload || {})}
         `;
@@ -6789,9 +6518,13 @@
         promotionPane: null,
         graphFocusRenderToken: 0,
         graphFocusDiagnostics: null,
-        learningPathWorkspace: {
+        graphFocusRuntime: {
             mounted: false,
-            nodes: {},
+            snapshot: null,
+        },
+        godotFuturePath: {
+            request: null,
+            lastDispatch: null,
         },
         panes: {
             'graph-focus': {
@@ -6922,11 +6655,11 @@
         return rendered;
     }
 
-    function rememberLearningPathWorkspaceNode(id) {
-        if (Object.prototype.hasOwnProperty.call(state.learningPathWorkspace.nodes, id)) {
-            return state.learningPathWorkspace.nodes[id];
+    function rememberGraphFocusRuntimeNode() {
+        if (state.graphFocusRuntime.snapshot) {
+            return state.graphFocusRuntime.snapshot;
         }
-        const node = getElement(id);
+        const node = getElement(GRAPH_FOCUS_RUNTIME_ELEMENT_ID);
         if (!node) {
             return null;
         }
@@ -6936,44 +6669,79 @@
             node,
             parent,
             nextSibling,
+            display: node.style.display || '',
         };
-        state.learningPathWorkspace.nodes[id] = snapshot;
+        state.graphFocusRuntime.snapshot = snapshot;
         return snapshot;
     }
 
-    function mountLearningPathWorkspace() {
-        const host = getLearningPathWorkspaceHost();
+    function requestGraphFocusRuntimeResize() {
+        if (typeof window.dispatchEvent === 'function' && typeof window.Event === 'function') {
+            window.dispatchEvent(new Event('resize'));
+        }
+        window.setTimeout(function () {
+            if (typeof window.dispatchEvent === 'function' && typeof window.Event === 'function') {
+                window.dispatchEvent(new Event('resize'));
+            }
+        }, 60);
+    }
+
+    function mountGraphFocusRuntime() {
+        const host = getGraphFocusWorkspaceHost();
         if (!host) {
             return false;
         }
-        LEARNING_PATH_WORKSPACE_ELEMENT_IDS.forEach((id) => {
-            const snapshot = rememberLearningPathWorkspaceNode(id);
-            if (!snapshot || !snapshot.node) {
-                return;
-            }
-            host.appendChild(snapshot.node);
-            if (id === 'path-container') {
-                snapshot.node.style.display = 'block';
-            }
-        });
-        state.learningPathWorkspace.mounted = true;
+        const snapshot = rememberGraphFocusRuntimeNode();
+        if (!snapshot || !snapshot.node) {
+            host.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.graphFocus.runtimeUnavailable', 'Main graph runtime is unavailable.'))}</div>`;
+            return false;
+        }
+        if (snapshot.node.contains(host)) {
+            host.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.graphFocus.runtimeUnavailable', 'Main graph runtime is unavailable.'))}</div>`;
+            return false;
+        }
+        host.appendChild(snapshot.node);
+        snapshot.node.classList.add('agent-graph-focus-runtime-docked');
+        snapshot.node.style.display = 'block';
+        state.graphFocusRuntime.mounted = true;
+        requestGraphFocusRuntimeResize();
         return true;
     }
 
-    function restoreLearningPathWorkspace() {
-        LEARNING_PATH_WORKSPACE_ELEMENT_IDS.forEach((id) => {
-            const snapshot = state.learningPathWorkspace.nodes[id];
-            if (!snapshot || !snapshot.node || !snapshot.parent) {
-                return;
+    function restoreGraphFocusRuntime() {
+        const snapshot = state.graphFocusRuntime.snapshot;
+        if (!snapshot || !snapshot.node || !snapshot.parent) {
+            state.graphFocusRuntime.mounted = false;
+            return;
+        }
+        if (snapshot.nextSibling && snapshot.nextSibling.parentNode === snapshot.parent) {
+            snapshot.parent.insertBefore(snapshot.node, snapshot.nextSibling);
+        } else {
+            snapshot.parent.appendChild(snapshot.node);
+        }
+        snapshot.node.classList.remove('agent-graph-focus-runtime-docked');
+        snapshot.node.style.display = snapshot.display;
+        state.graphFocusRuntime.mounted = false;
+        requestGraphFocusRuntimeResize();
+    }
+
+    function openGraphFocusRuntimeForPayload(payload) {
+        const mounted = mountGraphFocusRuntime();
+        const targetId = resolveGraphFocusRuntimeTargetId(payload);
+        const graphView = window.NoteConnectionGraphView;
+        if (
+            targetId
+            && graphView
+            && typeof graphView.openFocusModeById === 'function'
+        ) {
+            try {
+                graphView.openFocusModeById(targetId);
+            } catch (error) {
+                console.warn('[AgentWorkspace] graph focus runtime rejected target:', error);
             }
-            if (snapshot.nextSibling && snapshot.nextSibling.parentNode === snapshot.parent) {
-                snapshot.parent.insertBefore(snapshot.node, snapshot.nextSibling);
-            } else {
-                snapshot.parent.appendChild(snapshot.node);
-            }
-            snapshot.node.style.display = 'none';
-        });
-        state.learningPathWorkspace.mounted = false;
+        }
+        requestGraphFocusRuntimeResize();
+        return mounted;
     }
 
     function syncPaneState(paneKey) {
@@ -6986,6 +6754,8 @@
         updatePaneControlLabels();
         if (state.panes['graph-focus'].open) {
             renderGraphFocusBody(state.panes['graph-focus'].payload || {});
+        } else {
+            restoreGraphFocusRuntime();
         }
         if (state.panes['evidence'].open) {
             renderEvidenceBody(state.panes['evidence'].payload || {});
@@ -6997,9 +6767,7 @@
         }
         if (state.panes['learning-path'].open) {
             renderLearningPathBody(state.panes['learning-path'].payload || {});
-            if (state.learningPathWorkspace.mounted) {
-                mountLearningPathWorkspace();
-            }
+            dispatchGodotFuturePathForPayload(state.panes['learning-path'].payload || {});
         } else {
             const body = getPaneBodyElement('learning-path');
             if (body) {
@@ -7608,6 +7376,7 @@
             state.panes['graph-focus'].payload = null;
             state.graphFocusDiagnostics = null;
             window.__NC_LAST_AGENT_GRAPH_FOCUS_DIAGNOSTICS = null;
+            restoreGraphFocusRuntime();
             const body = getPaneBodyElement('graph-focus');
             if (body) {
                 body.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.graphFocus.emptyIdle', 'Graph focus pane is idle.'))}</div>`;
@@ -7634,14 +7403,13 @@
             ensureWorkspaceVisible();
             state.panes['learning-path'].open = true;
             state.panes['learning-path'].payload = payload || null;
-            if (learningPathConfigureRetryTimer) {
-                clearTimeout(learningPathConfigureRetryTimer);
-                learningPathConfigureRetryTimer = null;
+            if (godotFuturePathRetryTimer) {
+                clearTimeout(godotFuturePathRetryTimer);
+                godotFuturePathRetryTimer = null;
             }
-            learningPathConfigureRetryCount = 0;
+            godotFuturePathRetryCount = 0;
             renderLearningPathBody(payload || {});
-            mountLearningPathWorkspace();
-            configureLearningPathWorkspaceRuntime(payload || {});
+            dispatchGodotFuturePathForPayload(payload || {});
             syncPaneState('learning-path');
             updatePaneControlLabels();
         },
@@ -7650,12 +7418,11 @@
                 state.promotionPane = null;
                 syncBodyPromotionState();
             }
-            if (learningPathConfigureRetryTimer) {
-                clearTimeout(learningPathConfigureRetryTimer);
-                learningPathConfigureRetryTimer = null;
+            if (godotFuturePathRetryTimer) {
+                clearTimeout(godotFuturePathRetryTimer);
+                godotFuturePathRetryTimer = null;
             }
-            learningPathConfigureRetryCount = 0;
-            restoreLearningPathWorkspace();
+            godotFuturePathRetryCount = 0;
             state.panes['learning-path'].open = false;
             state.panes['learning-path'].fullscreen = false;
             state.panes['learning-path'].payload = null;

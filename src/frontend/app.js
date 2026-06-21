@@ -4548,7 +4548,7 @@ window.NoteConnectionGraphView = {
         if (!id) {
             return null;
         }
-        return nodes.find((node) => node.id === id) || null;
+        return resolveGraphViewNodeByIdOrLabel(id);
     },
     resolveNodeByKnowledgePoint: function(payload) {
         return resolveGraphViewNodeByKnowledgePoint(payload);
@@ -6426,6 +6426,151 @@ function getTauriDialogApi() {
     }
     return null;
 }
+
+function normalizePathModeRuntimeText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizePathModeLanguage(value) {
+    const raw = normalizePathModeRuntimeText(value).toLowerCase();
+    return raw.startsWith('zh') ? 'zh' : 'en';
+}
+
+function resolvePathModeRuntimeTarget(targetId) {
+    const normalizedTargetId = normalizePathModeRuntimeText(targetId);
+    if (!normalizedTargetId) {
+        return null;
+    }
+    const node = resolveGraphViewNodeByIdOrLabel(normalizedTargetId);
+    if (!node) {
+        return {
+            id: normalizedTargetId,
+            label: normalizedTargetId,
+            resolved: false,
+        };
+    }
+    return {
+        id: node.id,
+        label: getGraphViewNodeLabel(node) || node.id,
+        resolved: true,
+    };
+}
+
+function buildGodotFuturePathRuntimeConfig(targetId, options = {}) {
+    const runtimeTarget = resolvePathModeRuntimeTarget(targetId);
+    if (!runtimeTarget || !runtimeTarget.id) {
+        return null;
+    }
+    const existingConfig = options.config && typeof options.config === 'object'
+        ? options.config
+        : {};
+    const targetIds = [];
+    const seen = new Set();
+    const appendTargetId = function(value) {
+        const normalized = normalizePathModeRuntimeText(value);
+        if (!normalized || seen.has(normalized)) {
+            return;
+        }
+        seen.add(normalized);
+        targetIds.push(normalized);
+    };
+    appendTargetId(runtimeTarget.id);
+    if (Array.isArray(existingConfig.targetIds)) {
+        existingConfig.targetIds.forEach(appendTargetId);
+    }
+    return {
+        ...existingConfig,
+        mode: 'diffusion',
+        strategy: 'core',
+        layout: 'orbital',
+        targetId: runtimeTarget.id,
+        target_id: runtimeTarget.id,
+        targetIds,
+        focus_mode: true,
+        language: normalizePathModeLanguage(
+            existingConfig.language
+            || window.i18n && window.i18n.currentLanguage
+            || document.documentElement && document.documentElement.lang
+            || 'en'
+        ),
+    };
+}
+
+async function openGodotFuturePathById(targetId, options = {}) {
+    const config = buildGodotFuturePathRuntimeConfig(targetId, options);
+    if (!config) {
+        throw new Error('Missing Godot Future Path target node.');
+    }
+    window.__NC_LAST_GODOT_FUTURE_PATH_REQUEST = { ...config };
+
+    const pathApp = window.pathApp;
+    if (pathApp && typeof pathApp === 'object') {
+        if (!window.__NC_AGENT_GODOT_FUTURE_PATH_INITIALIZED && typeof pathApp.init === 'function') {
+            pathApp.init(config.targetId);
+            window.__NC_AGENT_GODOT_FUTURE_PATH_INITIALIZED = true;
+        }
+        if (pathApp.runtimeConfig && typeof pathApp.runtimeConfig === 'object') {
+            pathApp.runtimeConfig.mode = 'diffusion';
+            pathApp.runtimeConfig.strategy = 'core';
+            pathApp.runtimeConfig.layout = 'orbital';
+            pathApp.runtimeConfig.targetId = config.targetId;
+            pathApp.runtimeConfig.targetIds = config.targetIds.slice();
+        }
+        pathApp.currentTargetId = config.targetId;
+        pathApp.currentTargetIds = config.targetIds.slice();
+        pathApp.centralNodeId = config.targetId;
+        if (typeof pathApp.applyRemoteConfigure === 'function') {
+            pathApp.applyRemoteConfigure(config);
+        }
+        if (typeof pathApp._sendBridgeMessage === 'function') {
+            pathApp._sendBridgeMessage('configure', config);
+        }
+        if (typeof pathApp.triggerUpdate === 'function') {
+            pathApp.triggerUpdate();
+        }
+        if (typeof pathApp.requestBridgeWindowVisibility === 'function') {
+            const bridgeReady = await pathApp.requestBridgeWindowVisibility(true, {
+                waitMs: 1800,
+                reason: options.source || 'open-godot-future-path',
+            });
+            if (bridgeReady && typeof pathApp._sendBridgeMessage === 'function') {
+                pathApp._sendBridgeMessage('configure', config);
+            }
+        }
+    }
+
+    const invoke = getTauriCoreInvoke();
+    if (invoke) {
+        const caps = window.__NC_RUNTIME_CAPS || {};
+        if (caps.platform === 'android' && caps.supports_native_pathmode === true) {
+            await invoke('open_native_pathmode', {
+                request: {
+                    mode: 'diffusion',
+                    strategy: 'core',
+                    targetId: config.targetId,
+                },
+            });
+        } else {
+            await invoke('toggle_pathmode_window', { showGodot: true });
+        }
+    }
+
+    return {
+        opened: true,
+        targetId: config.targetId,
+        targetIds: config.targetIds.slice(),
+        strategy: config.strategy,
+        mode: config.mode,
+    };
+}
+
+window.NoteConnectionPathMode = {
+    ...(window.NoteConnectionPathMode && typeof window.NoteConnectionPathMode === 'object'
+        ? window.NoteConnectionPathMode
+        : {}),
+    buildGodotFuturePathRuntimeConfig,
+    openGodotFuturePathById,
+};
 
 function normalizeNotemdPickerPayload(payload) {
     const safePayload = payload && typeof payload === 'object' ? { ...payload } : {};

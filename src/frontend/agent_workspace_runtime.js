@@ -750,6 +750,8 @@
                 latestKnowledgePoints: [],
                 latestFocusAtomId: '',
                 latestPathAtomId: '',
+                latestPathRuntimeNodeId: '',
+                latestPathRuntimeNodeLabel: '',
                 expandedHistoryEventIdsByAtom: Object.create(null),
                 pathVisible: false,
                 pathFullscreen: false,
@@ -1468,6 +1470,8 @@
                         visible: state.pathVisible,
                         fullscreen: state.pathFullscreen,
                         atomId: resolveCurrentPathAtomId(),
+                        targetId: trimString(state.latestPathRuntimeNodeId),
+                        targetLabel: trimString(state.latestPathRuntimeNodeLabel),
                     },
                     latestFocusAtomId: state.latestFocusAtomId,
                     latestKnowledgePoints: Array.isArray(state.latestKnowledgePoints)
@@ -1901,32 +1905,7 @@
                 renderKnowledgePoints(state.latestKnowledgePoints);
             }
 
-            function ensurePathDockVisible() {
-                const body = document.body;
-                const pathContainer = document.getElementById('path-container');
-                const graphWrapper = document.getElementById('graph-wrapper');
-                if (!pathContainer) {
-                    throw new Error('Path container is unavailable.');
-                }
-                body.classList.add(BODY_CLASS_PATH_VISIBLE);
-                pathContainer.classList.add(PATH_DOCK_CLASS);
-                pathContainer.style.display = 'block';
-                if (graphWrapper) {
-                    graphWrapper.style.display = 'block';
-                }
-                state.pathVisible = true;
-            }
-
             function resolveCurrentPathAtomId() {
-                const runtimeTarget = trimString(
-                    globalScope.pathApp
-                    && typeof globalScope.pathApp === 'object'
-                    && globalScope.pathApp.currentTargetId
-                );
-                if (runtimeTarget) {
-                    state.latestPathAtomId = runtimeTarget;
-                    return runtimeTarget;
-                }
                 return trimString(state.latestPathAtomId);
             }
 
@@ -1942,12 +1921,14 @@
                 state.pathVisible = false;
                 state.pathFullscreen = false;
                 state.latestPathAtomId = '';
+                state.latestPathRuntimeNodeId = '';
+                state.latestPathRuntimeNodeLabel = '';
                 refreshToolbarButtons();
                 renderKnowledgePoints(state.latestKnowledgePoints);
                 if (globalScope.pathApp && typeof globalScope.pathApp.requestBridgeWindowVisibility === 'function') {
                     void globalScope.pathApp.requestBridgeWindowVisibility(false, {
                         waitMs: 900,
-                        reason: 'agent-workspace-hide-path-dock',
+                        reason: 'agent-workspace-hide-godot-future-path',
                     });
                 }
                 globalScope.dispatchEvent(new Event('resize'));
@@ -1959,9 +1940,10 @@
                 }
                 if (dom.pathFullscreenButton) {
                     dom.pathFullscreenButton.disabled = !state.pathVisible;
-                    dom.pathFullscreenButton.textContent = state.pathFullscreen
-                        ? getI18nText('agentWorkspace.actions.exitPathFullscreen', 'Exit Path Fullscreen')
-                        : getI18nText('agentWorkspace.actions.pathFullscreen', 'Path Fullscreen');
+                    dom.pathFullscreenButton.textContent = getI18nText(
+                        'agentWorkspace.actions.focusGodotFuturePath',
+                        'Focus Godot Future Path'
+                    );
                 }
                 if (dom.foundationReadinessButton) {
                     dom.foundationReadinessButton.textContent = getI18nText(
@@ -1975,9 +1957,14 @@
                 if (!state.pathVisible) {
                     return;
                 }
-                const body = document.body;
-                state.pathFullscreen = !state.pathFullscreen;
-                body.classList.toggle(BODY_CLASS_PATH_FULLSCREEN, state.pathFullscreen);
+                state.pathFullscreen = false;
+                document.body.classList.remove(BODY_CLASS_PATH_FULLSCREEN);
+                if (globalScope.pathApp && typeof globalScope.pathApp.requestBridgeWindowVisibility === 'function') {
+                    void globalScope.pathApp.requestBridgeWindowVisibility(true, {
+                        waitMs: 900,
+                        reason: 'agent-workspace-focus-godot-future-path',
+                    });
+                }
                 refreshToolbarButtons();
                 renderKnowledgePoints(state.latestKnowledgePoints);
                 globalScope.dispatchEvent(new Event('resize'));
@@ -1999,46 +1986,77 @@
                 const atomId = resolvePathAtomId(preferredAtomId);
                 const graphTarget = resolveGraphTargetForKnowledgePoint(point || findKnowledgePoint(atomId), capability, atomId);
                 const runtimeNodeId = trimString(graphTarget.graphNodeId) || atomId;
-                ensurePathDockVisible();
-                refreshToolbarButtons();
-                if (!globalScope.pathApp || typeof globalScope.pathApp !== 'object') {
-                    const fallbackButton = document.getElementById('btn-path-mode');
-                    if (fallbackButton && typeof fallbackButton.click === 'function') {
-                        fallbackButton.click();
-                        return;
+                const futurePathConfig = {
+                    mode: 'diffusion',
+                    strategy: 'core',
+                    layout: 'orbital',
+                    targetId: runtimeNodeId,
+                    target_id: runtimeNodeId,
+                    targetIds: runtimeNodeId ? [runtimeNodeId] : [],
+                    focus_mode: true,
+                };
+                const pathApp = globalScope.pathApp && typeof globalScope.pathApp === 'object'
+                    ? globalScope.pathApp
+                    : null;
+                if (pathApp) {
+                    if (!pathApp.runtimeConfig || typeof pathApp.runtimeConfig !== 'object') {
+                        pathApp.runtimeConfig = {};
                     }
-                    throw new Error('Path runtime is unavailable. Ensure path_app.js is loaded.');
+                    pathApp.runtimeConfig.mode = 'diffusion';
+                    pathApp.runtimeConfig.strategy = 'core';
+                    pathApp.runtimeConfig.layout = 'orbital';
+                    pathApp.runtimeConfig.targetId = runtimeNodeId;
+                    pathApp.runtimeConfig.targetIds = runtimeNodeId ? [runtimeNodeId] : [];
+                    pathApp.currentTargetId = runtimeNodeId;
+                    pathApp.currentTargetIds = runtimeNodeId ? [runtimeNodeId] : [];
+                    pathApp.centralNodeId = runtimeNodeId;
                 }
-
-                if (!globalScope.pathApp.uiInitialized) {
-                    globalScope.pathApp.init(runtimeNodeId || null);
-                    globalScope.pathApp.currentTargetId = runtimeNodeId || '';
-                } else if (runtimeNodeId && typeof globalScope.pathApp.switchCentral === 'function') {
-                    globalScope.pathApp.switchCentral(runtimeNodeId);
-                    globalScope.pathApp.currentTargetId = runtimeNodeId;
-                    if (typeof globalScope.pathApp.triggerUpdate === 'function') {
-                        globalScope.pathApp.triggerUpdate();
-                    }
-                } else if (typeof globalScope.pathApp.triggerUpdate === 'function') {
-                    globalScope.pathApp.triggerUpdate();
-                }
-
-                if (typeof globalScope.pathApp.requestBridgeWindowVisibility === 'function') {
-                    void globalScope.pathApp.requestBridgeWindowVisibility(true, {
-                        waitMs: 1200,
-                        reason: 'agent-workspace-open-path-dock',
+                const pathModeApi = globalScope.NoteConnectionPathMode;
+                if (pathModeApi && typeof pathModeApi.openGodotFuturePathById === 'function') {
+                    void pathModeApi.openGodotFuturePathById(runtimeNodeId, {
+                        config: futurePathConfig,
+                        source: 'agent-workspace-runtime',
                     });
+                } else if (pathApp) {
+                    if (!globalScope.__NC_AGENT_GODOT_FUTURE_PATH_INITIALIZED && typeof pathApp.init === 'function') {
+                        pathApp.init(runtimeNodeId || null);
+                        globalScope.__NC_AGENT_GODOT_FUTURE_PATH_INITIALIZED = true;
+                    }
+                    if (typeof pathApp.applyRemoteConfigure === 'function') {
+                        pathApp.applyRemoteConfigure(futurePathConfig);
+                    }
+                    if (typeof pathApp._sendBridgeMessage === 'function') {
+                        pathApp._sendBridgeMessage('configure', futurePathConfig);
+                    }
+                    if (typeof pathApp.triggerUpdate === 'function') {
+                        pathApp.triggerUpdate();
+                    }
+                    if (typeof pathApp.requestBridgeWindowVisibility === 'function') {
+                        void pathApp.requestBridgeWindowVisibility(true, {
+                            waitMs: 1200,
+                            reason: 'agent-workspace-open-godot-future-path',
+                        });
+                    }
+                } else {
+                    throw new Error('Godot Path Mode runtime is unavailable. Ensure path_app.js and app.js are loaded.');
                 }
                 if (atomId) {
                     state.latestFocusAtomId = atomId;
-                    state.latestPathAtomId = runtimeNodeId || atomId;
+                    state.latestPathAtomId = atomId;
+                    state.latestPathRuntimeNodeId = runtimeNodeId || atomId;
+                    state.latestPathRuntimeNodeLabel = trimString(graphTarget.graphNodeLabel) || runtimeNodeId || atomId;
                 }
+                state.pathVisible = true;
+                state.pathFullscreen = false;
+                document.body.classList.remove(BODY_CLASS_PATH_VISIBLE);
+                document.body.classList.remove(BODY_CLASS_PATH_FULLSCREEN);
                 appendMessage(
                     'system',
-                    getI18nText('agentWorkspace.messages.learningPathOpened', `Learning path opened${runtimeNodeId ? ` for ${graphTarget.graphNodeLabel || runtimeNodeId}` : ''}.`, {
+                    getI18nText('agentWorkspace.messages.learningPathOpened', `Godot Future Path opened${runtimeNodeId ? ` for ${graphTarget.graphNodeLabel || runtimeNodeId}` : ''}.`, {
                         atomId: graphTarget.graphNodeLabel || runtimeNodeId || '',
                     })
                 );
+                refreshToolbarButtons();
                 renderKnowledgePoints(state.latestKnowledgePoints);
                 globalScope.dispatchEvent(new Event('resize'));
             }
@@ -2672,7 +2690,7 @@
                     return {
                         message: getI18nText(
                             'agentWorkspace.messages.activeAtomPathInactive',
-                            'Focus is ready for {atomId}. Open Learning Path to pair the side pane with this atom.',
+                            'Focus is ready for {atomId}. Open Learning Path to launch Godot Future Path for this atom.',
                             { atomId: activeAtomId }
                         ),
                         showPathBadge: false,
@@ -2682,31 +2700,25 @@
                 if (pathAtomId === activeAtomId) {
                     return {
                         message: getI18nText(
-                            state.pathFullscreen
-                                ? 'agentWorkspace.messages.activeAtomPathAlignedFullscreen'
-                                : 'agentWorkspace.messages.activeAtomPathAligned',
-                            state.pathFullscreen
-                                ? 'Focus and learning path are aligned on {atomId} in fullscreen path view.'
-                                : 'Focus and learning path are aligned on {atomId}.',
+                            'agentWorkspace.messages.activeAtomFuturePathAligned',
+                            'Focus and Godot Future Path target are aligned on {atomId}.',
                             { atomId: activeAtomId }
                         ),
                         showPathBadge: true,
-                        pathBadgeLabel: state.pathFullscreen
-                            ? getI18nText('agentWorkspace.labels.learningPathFullscreen', 'Path Fullscreen')
-                            : getI18nText('agentWorkspace.labels.learningPathDocked', 'Path Docked'),
+                        pathBadgeLabel: getI18nText('agentWorkspace.labels.godotFuturePathActive', 'Future Path'),
                     };
                 }
                 return {
                     message: getI18nText(
-                        'agentWorkspace.messages.activeAtomPathDrifted',
-                        'Focus is on {atomId}. Learning path is still pinned to {pathAtomId}. Reopen Learning Path to realign.',
+                        'agentWorkspace.messages.activeAtomFuturePathDrifted',
+                        'Focus is on {atomId}. Godot Future Path is still targeted at {pathAtomId}. Reopen Learning Path to realign.',
                         {
                             atomId: activeAtomId,
                             pathAtomId,
                         }
                     ),
                     showPathBadge: true,
-                    pathBadgeLabel: getI18nText('agentWorkspace.labels.learningPathPinned', 'Path Pinned'),
+                    pathBadgeLabel: getI18nText('agentWorkspace.labels.godotFuturePathPinned', 'Future Path Pinned'),
                 };
             }
 

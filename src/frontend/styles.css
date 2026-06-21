@@ -2703,238 +2703,49 @@ body.agent-workspace-open .agent-workspace-drawer {
   margin-top: 12px;
 }
 
-.agent-path-mode-preview {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-  border: 1px solid rgba(45, 212, 191, 0.18);
+.agent-graph-focus-workspace-host {
+  min-height: min(72vh, 760px);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 8px;
-  background: rgba(13, 148, 136, 0.08);
-  padding: 10px 12px;
+  background: rgba(2, 6, 12, 0.48);
 }
 
-.agent-path-mode-canvas {
-  position: relative;
+.agent-graph-focus-workspace-host #graph-container {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: min(72vh, 760px) !important;
   min-height: 360px;
-  overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 8px;
-  background: #202020;
 }
 
-.agent-path-mode-lines {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
+.agent-graph-focus-runtime-docked {
+  display: block !important;
 }
 
-.agent-path-mode-edge {
-  stroke: rgba(226, 232, 240, 0.16);
-  stroke-width: 1.2;
-  vector-effect: non-scaling-stroke;
-}
-
-.agent-path-mode-lane {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-}
-
-.agent-path-mode-node {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: min(112px, 30%);
-  max-width: min(34%, 150px);
-  min-height: 44px;
-  border: 2px solid rgba(250, 204, 21, 0.86);
-  border-radius: 18px;
-  background: rgba(107, 114, 128, 0.72);
-  box-shadow:
-    0 0 0 18px rgba(148, 163, 184, 0.11),
-    0 0 0 34px rgba(148, 163, 184, 0.05);
-  color: #f8fbff;
-  font-size: 0.78rem;
-  font-weight: 800;
-  line-height: 1.2;
-  padding: 8px 12px;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-
-.agent-path-mode-node--next {
-  border-color: rgba(34, 211, 238, 0.9);
-  background: #06b6d4;
-  box-shadow:
-    0 0 0 18px rgba(34, 211, 238, 0.12),
-    0 0 0 34px rgba(34, 211, 238, 0.05);
-}
-
-.agent-path-mode-node--anchor {
-  border-color: rgba(250, 204, 21, 0.9);
-  background: rgba(75, 85, 99, 0.72);
-}
-
-.agent-path-mode-band {
-  position: absolute;
-  left: 16%;
-  right: 16%;
-  bottom: 18px;
-  z-index: 2;
-  box-sizing: border-box;
-  min-height: 72px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 14px 18px;
-  border: 2px solid rgba(74, 222, 128, 0.62);
-  border-radius: 14px;
-  background: rgba(75, 85, 99, 0.5);
-}
-
-.agent-path-mode-band-node {
-  max-width: 150px;
-  min-height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: rgba(107, 114, 128, 0.68);
-  color: rgba(248, 251, 255, 0.78);
-  font-size: 0.74rem;
-  font-weight: 700;
-  line-height: 1.2;
-  padding: 7px 14px;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-
-.agent-path-preview {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-  border: 1px solid rgba(45, 212, 191, 0.18);
-  border-radius: 8px;
-  background: rgba(13, 148, 136, 0.08);
-  padding: 10px 12px;
-}
-
-.agent-path-preview-canvas {
-  position: relative;
-  min-height: 240px;
-  overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 8px;
-  background: rgba(2, 6, 12, 0.34);
-}
-
-.agent-path-preview-lines {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.agent-path-preview-edge {
-  stroke: rgba(45, 212, 191, 0.42);
-  stroke-width: 0.9;
-  vector-effect: non-scaling-stroke;
-}
-
-.agent-path-preview-lines marker path {
-  fill: rgba(45, 212, 191, 0.72);
-}
-
-.agent-path-preview-node {
-  position: absolute;
-  max-width: min(36%, 180px);
-  transform: translate(-50%, -50%);
-  border: 1px solid rgba(45, 212, 191, 0.34);
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.96);
-  color: #ccfbf1;
-  font-size: 0.72rem;
-  font-weight: 650;
-  line-height: 1.25;
-  padding: 7px 9px;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  overflow-wrap: anywhere;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.agent-path-preview-node--anchor {
-  border-color: rgba(251, 191, 36, 0.62);
-  background: rgba(120, 53, 15, 0.88);
-  color: #fef3c7;
-}
-
-.agent-path-preview-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.agent-path-preview-step {
-  max-width: 100%;
-  border: 1px solid rgba(45, 212, 191, 0.22);
-  border-radius: 999px;
-  background: rgba(2, 6, 12, 0.42);
-  color: #ccfbf1;
-  font-size: 0.74rem;
-  line-height: 1.2;
-  padding: 5px 8px;
-  overflow-wrap: anywhere;
-}
-
-.agent-path-preview-step--anchor {
-  border-color: rgba(251, 191, 36, 0.5);
-  color: #fef3c7;
-}
-
-.agent-learning-path-runtime-shell {
+.agent-godot-future-path-shell {
   display: grid;
   gap: 10px;
-  min-height: 360px;
+  min-height: 120px;
+  align-content: start;
 }
 
-.agent-learning-path-runtime-title {
+.agent-godot-future-path-title {
   color: #f8fbff;
   font-size: 0.95rem;
   font-weight: 800;
   line-height: 1.25;
 }
 
-.agent-learning-path-workspace-host {
-  margin-top: 14px;
-  min-height: 320px;
-}
-
-.agent-learning-path-runtime-shell .agent-learning-path-workspace-host {
-  margin-top: 0;
-}
-
-.agent-learning-path-workspace-host #path-container {
-  position: relative !important;
-  inset: auto !important;
-  width: 100% !important;
-  height: min(72vh, 760px) !important;
-  display: block !important;
-}
-
-.agent-learning-path-workspace-host #learning-history-sidebar,
-.agent-learning-path-workspace-host #learning-workbench-sidebar {
-  display: none !important;
+.agent-godot-future-path-status {
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 8px;
+  background: rgba(14, 116, 144, 0.12);
+  color: #c7e9f6;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  padding: 10px 12px;
 }
 
 body[data-agent-workspace-promotion="graph-focus"] #agent-learning-path-pane,
@@ -3014,31 +2825,6 @@ body[data-agent-workspace-promotion="learning-path"] #agent-learning-path-pane {
     padding: 7px;
   }
 
-  .agent-path-mode-canvas {
-    min-height: 320px;
-  }
-
-  .agent-path-mode-node {
-    min-width: 88px;
-    max-width: 108px;
-    font-size: 0.7rem;
-    padding: 7px 9px;
-  }
-
-  .agent-path-mode-band {
-    left: 10%;
-    right: 10%;
-    bottom: 14px;
-    min-height: 60px;
-    gap: 8px;
-    padding: 10px 12px;
-  }
-
-  .agent-path-mode-band-node {
-    max-width: 105px;
-    font-size: 0.68rem;
-    padding: 6px 10px;
-  }
 }
 
 /* --- Mobile Responsiveness (v0.9.2) --- */

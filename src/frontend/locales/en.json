@@ -447,7 +447,8 @@
       "relationAnchorNode": "Anchor",
       "continueCluster": "Continue exploring",
       "supportCluster": "Helps understanding",
-      "relationEdgesUnavailable": "No bounded relation edges were returned for this hit."
+      "relationEdgesUnavailable": "No bounded relation edges were returned for this hit.",
+      "runtimeUnavailable": "Focus runtime is unavailable."
     },
     "evidence": {
       "title": "Evidence Inspector",
@@ -500,7 +501,9 @@
       "title": "Guided Learning",
       "emptyIdle": "Learning path pane is idle.",
       "emptyLoaded": "No learning path loaded yet.",
-      "previewTitle": "Path mode preview"
+      "previewTitle": "Path mode preview",
+      "godotFuturePathRequested": "Godot Future Path requested: Diffusion / Core",
+      "godotFuturePathUnavailable": "Godot Future Path target is unavailable."
     },
     "actions": {
       "openWorkspace": "Knowledge Workspace",

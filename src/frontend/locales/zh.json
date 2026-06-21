@@ -447,7 +447,8 @@
       "relationAnchorNode": "锚点",
       "continueCluster": "继续探索",
       "supportCluster": "帮助理解",
-      "relationEdgesUnavailable": "当前命中未返回有界关系边。"
+      "relationEdgesUnavailable": "当前命中未返回有界关系边。",
+      "runtimeUnavailable": "专注运行时不可用。"
     },
     "evidence": {
       "title": "证据面板",
@@ -500,7 +501,9 @@
       "title": "引导式学习",
       "emptyIdle": "学习路径面板当前为空。",
       "emptyLoaded": "尚未加载学习路径。",
-      "previewTitle": "Path mode 预览"
+      "previewTitle": "Path mode 预览",
+      "godotFuturePathRequested": "已请求 Godot Future Path：Diffusion / Core",
+      "godotFuturePathUnavailable": "Godot Future Path 目标不可用。"
     },
     "actions": {
       "openWorkspace": "知识工作区",

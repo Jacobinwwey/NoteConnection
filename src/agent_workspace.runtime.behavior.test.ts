@@ -29,6 +29,8 @@ type AgentRuntimeModule = {
                 visible: boolean;
                 fullscreen: boolean;
                 atomId: string;
+                targetId: string;
+                targetLabel: string;
             };
             latestFocusAtomId: string;
             latestKnowledgePoints: number;
@@ -111,10 +113,17 @@ describe('agent workspace runtime behavior', () => {
         (global as unknown as Record<string, unknown>).addEventListener = dom.window.addEventListener.bind(dom.window);
         (global as unknown as Record<string, unknown>).removeEventListener = dom.window.removeEventListener.bind(dom.window);
         (global as unknown as Record<string, unknown>).dispatchEvent = dom.window.dispatchEvent.bind(dom.window);
+        delete (global as unknown as Record<string, unknown>).__NC_AGENT_GODOT_FUTURE_PATH_INITIALIZED;
         (global as unknown as Record<string, unknown>).pathApp = {
             uiInitialized: false,
+            runtimeConfig: {},
+            currentTargetId: '',
+            currentTargetIds: [],
+            centralNodeId: '',
             init: jest.fn(),
             switchCentral: jest.fn(),
+            applyRemoteConfigure: jest.fn(),
+            _sendBridgeMessage: jest.fn(),
             triggerUpdate: jest.fn(),
             requestBridgeWindowVisibility: jest.fn().mockResolvedValue(true),
         };
@@ -279,6 +288,8 @@ describe('agent workspace runtime behavior', () => {
         delete (global as unknown as Record<string, unknown>).focusOnNode;
         delete (global as unknown as Record<string, unknown>).enterFocusMode;
         delete (global as unknown as Record<string, unknown>).NoteConnectionGraphView;
+        delete (global as unknown as Record<string, unknown>).NoteConnectionPathMode;
+        delete (global as unknown as Record<string, unknown>).__NC_AGENT_GODOT_FUTURE_PATH_INITIALIZED;
         delete (global as unknown as Record<string, unknown>).i18n;
         delete (global as unknown as Record<string, unknown>).NoteConnectionAgentWorkspaceContract;
         delete (global as unknown as Record<string, unknown>).prompt;
@@ -394,7 +405,7 @@ describe('agent workspace runtime behavior', () => {
         expect(runtime.getDiagnosticsSnapshot().latestFocusAtomId).toBe('atom_h');
     });
 
-    test('executes learning path capability and opens docked path pane', async () => {
+    test('executes learning path capability and opens Godot Future Path without docking browser path', async () => {
         const fetchMock = jest
             .fn()
             .mockResolvedValueOnce({
@@ -476,16 +487,40 @@ describe('agent workspace runtime behavior', () => {
             expect.objectContaining({ method: 'POST' })
         );
 
-        expect(document.body.classList.contains('agent-workspace-path-visible')).toBe(true);
+        expect(document.body.classList.contains('agent-workspace-path-visible')).toBe(false);
         const pathContainer = document.getElementById('path-container') as HTMLElement;
-        expect(pathContainer.classList.contains('agent-workspace-path-docked')).toBe(true);
+        expect(pathContainer.classList.contains('agent-workspace-path-docked')).toBe(false);
+        expect(pathContainer.style.display).toBe('none');
 
-        const pathApp = (global as unknown as Record<string, unknown>).pathApp as Record<string, jest.Mock>;
+        const pathApp = (global as unknown as Record<string, unknown>).pathApp as Record<string, any>;
         expect(pathApp.init).toHaveBeenCalledWith('atom-path-1');
+        expect(pathApp.applyRemoteConfigure).toHaveBeenCalledWith(expect.objectContaining({
+            mode: 'diffusion',
+            strategy: 'core',
+            layout: 'orbital',
+            targetId: 'atom-path-1',
+            target_id: 'atom-path-1',
+            targetIds: ['atom-path-1'],
+            focus_mode: true,
+        }));
+        expect(pathApp._sendBridgeMessage).toHaveBeenCalledWith('configure', expect.objectContaining({
+            mode: 'diffusion',
+            strategy: 'core',
+            layout: 'orbital',
+            targetId: 'atom-path-1',
+            focus_mode: true,
+        }));
+        expect(pathApp.triggerUpdate).toHaveBeenCalled();
         expect(pathApp.requestBridgeWindowVisibility).toHaveBeenCalledWith(
             true,
-            expect.objectContaining({ reason: 'agent-workspace-open-path-dock' })
+            expect.objectContaining({ reason: 'agent-workspace-open-godot-future-path' })
         );
+        expect(runtime.getDiagnosticsSnapshot().pathState).toEqual(expect.objectContaining({
+            visible: true,
+            fullscreen: false,
+            atomId: 'atom-path-1',
+            targetId: 'atom-path-1',
+        }));
     });
 
     test('keeps atom id for learning path API while configuring path runtime with resolved graph node', async () => {
@@ -560,10 +595,26 @@ describe('agent workspace runtime behavior', () => {
             atomId: 'atom_h',
             title: 'water glass',
         }));
-        const pathApp = (global as unknown as Record<string, unknown>).pathApp as Record<string, jest.Mock>;
+        const pathApp = (global as unknown as Record<string, unknown>).pathApp as Record<string, any>;
         expect(pathApp.init).toHaveBeenCalledWith('water glass');
+        expect(pathApp.applyRemoteConfigure).toHaveBeenCalledWith(expect.objectContaining({
+            mode: 'diffusion',
+            strategy: 'core',
+            layout: 'orbital',
+            targetId: 'water glass',
+            target_id: 'water glass',
+            targetIds: ['water glass'],
+            focus_mode: true,
+        }));
         expect(pathApp.currentTargetId).toBe('water glass');
-        expect(runtime.getDiagnosticsSnapshot().latestFocusAtomId).toBe('atom_h');
+        expect(runtime.getDiagnosticsSnapshot()).toEqual(expect.objectContaining({
+            latestFocusAtomId: 'atom_h',
+            pathState: expect.objectContaining({
+                atomId: 'atom_h',
+                targetId: 'water glass',
+                targetLabel: 'water glass',
+            }),
+        }));
     });
 
     test('renders active atom rail and active-card highlight after focus changes', async () => {
@@ -714,8 +765,16 @@ describe('agent workspace runtime behavior', () => {
             })
         );
 
-        const pathApp = (global as unknown as Record<string, unknown>).pathApp as Record<string, jest.Mock>;
+        const pathApp = (global as unknown as Record<string, unknown>).pathApp as Record<string, any>;
         expect(pathApp.init).toHaveBeenCalledWith('atom-toolbar-2');
+        expect(pathApp.applyRemoteConfigure).toHaveBeenCalledWith(expect.objectContaining({
+            mode: 'diffusion',
+            strategy: 'core',
+            layout: 'orbital',
+            targetId: 'atom-toolbar-2',
+            focus_mode: true,
+        }));
+        expect(document.body.classList.contains('agent-workspace-path-visible')).toBe(false);
     });
 
     test('executes active rail contextual capability through shared capability path', async () => {
@@ -851,16 +910,17 @@ describe('agent workspace runtime behavior', () => {
 
         const activeRail = document.querySelector('.agent-workspace-active-point') as HTMLElement;
         expect(activeRail.textContent || '').toContain('Focus Ready');
-        expect(activeRail.textContent || '').toContain('Path Docked');
-        expect(activeRail.textContent || '').toContain('Focus and learning path are aligned on atom-pane-1.');
+        expect(activeRail.textContent || '').toContain('Future Path');
+        expect(activeRail.textContent || '').toContain('Focus and Godot Future Path target are aligned on atom-pane-1.');
 
         const diagnostics = runtime.getDiagnosticsSnapshot();
         expect(diagnostics.pathState.atomId).toBe('atom-pane-1');
+        expect(diagnostics.pathState.targetId).toBe('atom-pane-1');
         expect(diagnostics.pathState.visible).toBe(true);
         expect(diagnostics.pathState.fullscreen).toBe(false);
     });
 
-    test('surfaces pane drift note when focus atom changes away from docked path target', async () => {
+    test('surfaces Future Path drift note when focus atom changes away from requested target', async () => {
         const fetchMock = jest.fn().mockResolvedValue({
             ok: true,
             status: 200,
@@ -907,14 +967,15 @@ describe('agent workspace runtime behavior', () => {
         await flushAsync();
 
         const activeRail = document.querySelector('.agent-workspace-active-point') as HTMLElement;
-        expect(activeRail.textContent || '').toContain('Path Pinned');
+        expect(activeRail.textContent || '').toContain('Future Path Pinned');
         expect(activeRail.textContent || '').toContain(
-            'Focus is on atom-drift-2. Learning path is still pinned to atom-drift-1. Reopen Learning Path to realign.'
+            'Focus is on atom-drift-2. Godot Future Path is still targeted at atom-drift-1. Reopen Learning Path to realign.'
         );
 
         const diagnostics = runtime.getDiagnosticsSnapshot();
         expect(diagnostics.latestFocusAtomId).toBe('atom-drift-2');
         expect(diagnostics.pathState.atomId).toBe('atom-drift-1');
+        expect(diagnostics.pathState.targetId).toBe('atom-drift-1');
     });
 
     test('renders active atom summary cards from capability taxonomy without endpoint branching', async () => {
@@ -1572,7 +1633,7 @@ describe('agent workspace runtime behavior', () => {
         expect(refreshedCards[2].textContent || '').toContain('Try one harder recall question next.');
     });
 
-    test('keeps focus mode and path dock coexistence during fullscreen lifecycle', async () => {
+    test('keeps focus mode available while Godot Future Path remains outside browser dock lifecycle', async () => {
         const fetchMock = jest.fn().mockResolvedValue({
             ok: true,
             status: 200,
@@ -1582,10 +1643,10 @@ describe('agent workspace runtime behavior', () => {
                     userId: 'agent_user_default',
                     message: 'Found 1 local knowledge point(s).',
                     knowledgePoints: [
-                        {
-                            atomId: 'atom-coexist-1',
-                            title: 'Coexist Candidate',
-                            snippet: 'Focus then path dock.',
+                            {
+                                atomId: 'atom-coexist-1',
+                                title: 'Coexist Candidate',
+                                snippet: 'Focus then Godot Future Path.',
                             score: 0.73,
                             capabilities: [
                                 {
@@ -1619,20 +1680,24 @@ describe('agent workspace runtime behavior', () => {
         await flushAsync();
 
         expect(document.body.classList.contains('agent-workspace-enabled')).toBe(true);
-        expect(document.body.classList.contains('agent-workspace-path-visible')).toBe(true);
+        expect(document.body.classList.contains('agent-workspace-path-visible')).toBe(false);
         expect(document.body.classList.contains('agent-workspace-path-fullscreen')).toBe(false);
         const graphWrapper = document.getElementById('graph-wrapper') as HTMLElement;
-        expect(graphWrapper.style.display).toBe('block');
+        expect(graphWrapper.style.display).not.toBe('none');
 
         runtime.togglePathFullscreen();
-        expect(document.body.classList.contains('agent-workspace-path-fullscreen')).toBe(true);
+        expect(document.body.classList.contains('agent-workspace-path-fullscreen')).toBe(false);
         runtime.togglePathFullscreen();
         expect(document.body.classList.contains('agent-workspace-path-fullscreen')).toBe(false);
 
-        const pathApp = (global as unknown as Record<string, unknown>).pathApp as Record<string, jest.Mock>;
+        const pathApp = (global as unknown as Record<string, unknown>).pathApp as Record<string, any>;
         expect(pathApp.requestBridgeWindowVisibility).toHaveBeenCalledWith(
             true,
-            expect.objectContaining({ reason: 'agent-workspace-open-path-dock' })
+            expect.objectContaining({ reason: 'agent-workspace-open-godot-future-path' })
+        );
+        expect(pathApp.requestBridgeWindowVisibility).toHaveBeenCalledWith(
+            true,
+            expect.objectContaining({ reason: 'agent-workspace-focus-godot-future-path' })
         );
         const focusOnNode = (global as unknown as Record<string, unknown>).focusOnNode as jest.Mock;
         expect(focusOnNode).toHaveBeenCalledWith('atom-coexist-1');
@@ -1645,7 +1710,7 @@ describe('agent workspace runtime behavior', () => {
         runtime.openLearningPathDock('atom-close-1');
         await flushAsync();
 
-        const pathApp = (global as unknown as Record<string, unknown>).pathApp as Record<string, jest.Mock>;
+        const pathApp = (global as unknown as Record<string, unknown>).pathApp as Record<string, any>;
         pathApp.requestBridgeWindowVisibility.mockClear();
 
         const closeButton = document.getElementById('agent-workspace-close-learning-path') as HTMLButtonElement;
@@ -1658,7 +1723,7 @@ describe('agent workspace runtime behavior', () => {
         expect(pathContainer.style.display).toBe('none');
         expect(pathApp.requestBridgeWindowVisibility).toHaveBeenCalledWith(
             false,
-            expect.objectContaining({ reason: 'agent-workspace-hide-path-dock' })
+            expect.objectContaining({ reason: 'agent-workspace-hide-godot-future-path' })
         );
 
         runtime.openLearningPathDock('atom-close-2');
@@ -1671,7 +1736,7 @@ describe('agent workspace runtime behavior', () => {
         expect(document.body.classList.contains('agent-workspace-path-visible')).toBe(false);
         expect(pathApp.requestBridgeWindowVisibility).toHaveBeenCalledWith(
             false,
-            expect.objectContaining({ reason: 'agent-workspace-hide-path-dock' })
+            expect.objectContaining({ reason: 'agent-workspace-hide-godot-future-path' })
         );
     });
 
@@ -4112,6 +4177,7 @@ describe('agent workspace runtime behavior', () => {
                 'agentWorkspace.actions.openFocusMode': 'Focus EN',
                 'agentWorkspace.actions.pathFullscreen': 'Path Fullscreen EN',
                 'agentWorkspace.actions.exitPathFullscreen': 'Exit Path Fullscreen EN',
+                'agentWorkspace.actions.focusGodotFuturePath': 'Focus Future Path EN',
                 'agentWorkspace.actions.openFoundationReadiness': 'Foundation Readiness EN',
                 'agentWorkspace.messages.clickPointToFocus': 'Click to focus EN',
                 'agentWorkspace.labels.score': 'Score EN',
@@ -4122,6 +4188,8 @@ describe('agent workspace runtime behavior', () => {
                 'agentWorkspace.labels.learningPathDocked': 'Path Docked EN',
                 'agentWorkspace.labels.learningPathFullscreen': 'Path Fullscreen EN',
                 'agentWorkspace.labels.learningPathPinned': 'Path Pinned EN',
+                'agentWorkspace.labels.godotFuturePathActive': 'Future Path EN',
+                'agentWorkspace.labels.godotFuturePathPinned': 'Future Path Pinned EN',
                 'agentWorkspace.labels.studyLoopSummary': 'Study Loop EN',
                 'agentWorkspace.labels.supportSurfaceSummary': 'Support Surface EN',
                 'agentWorkspace.labels.currentAtomHistorySummary': 'Recent Activity EN',
@@ -4151,6 +4219,8 @@ describe('agent workspace runtime behavior', () => {
                 'agentWorkspace.messages.activeAtomPathAligned': 'Aligned EN {atomId}',
                 'agentWorkspace.messages.activeAtomPathAlignedFullscreen': 'Aligned Fullscreen EN {atomId}',
                 'agentWorkspace.messages.activeAtomPathDrifted': 'Drifted EN {atomId} -> {pathAtomId}',
+                'agentWorkspace.messages.activeAtomFuturePathAligned': 'Aligned Future EN {atomId}',
+                'agentWorkspace.messages.activeAtomFuturePathDrifted': 'Drifted Future EN {atomId} -> {pathAtomId}',
                 'agentWorkspace.messages.studyLoopReadyCount': '{count} ready EN',
                 'agentWorkspace.messages.supportSurfaceCounts': 'Memory {memoryCount} EN Diagnostics {diagnosticCount} EN',
                 'agentWorkspace.messages.currentAtomHistoryCount': '{count} recent results EN',
@@ -4179,6 +4249,7 @@ describe('agent workspace runtime behavior', () => {
                 'agentWorkspace.actions.openFocusMode': '专注 ZH',
                 'agentWorkspace.actions.pathFullscreen': '路径全屏 ZH',
                 'agentWorkspace.actions.exitPathFullscreen': '退出路径全屏 ZH',
+                'agentWorkspace.actions.focusGodotFuturePath': 'Focus Future Path ZH',
                 'agentWorkspace.actions.openFoundationReadiness': '基础就绪性 ZH',
                 'agentWorkspace.messages.clickPointToFocus': '点击进入专注 ZH',
                 'agentWorkspace.labels.score': '分数 ZH',
@@ -4189,6 +4260,8 @@ describe('agent workspace runtime behavior', () => {
                 'agentWorkspace.labels.learningPathDocked': '路径停靠 ZH',
                 'agentWorkspace.labels.learningPathFullscreen': '路径全屏状态 ZH',
                 'agentWorkspace.labels.learningPathPinned': '路径已固定 ZH',
+                'agentWorkspace.labels.godotFuturePathActive': 'Future Path ZH',
+                'agentWorkspace.labels.godotFuturePathPinned': 'Future Path Pinned ZH',
                 'agentWorkspace.labels.studyLoopSummary': '学习闭环 ZH',
                 'agentWorkspace.labels.supportSurfaceSummary': '支持面 ZH',
                 'agentWorkspace.labels.currentAtomHistorySummary': '最近活动 ZH',
@@ -4218,6 +4291,8 @@ describe('agent workspace runtime behavior', () => {
                 'agentWorkspace.messages.activeAtomPathAligned': '已对齐 ZH {atomId}',
                 'agentWorkspace.messages.activeAtomPathAlignedFullscreen': '全屏已对齐 ZH {atomId}',
                 'agentWorkspace.messages.activeAtomPathDrifted': '已漂移 ZH {atomId} -> {pathAtomId}',
+                'agentWorkspace.messages.activeAtomFuturePathAligned': 'Aligned Future ZH {atomId}',
+                'agentWorkspace.messages.activeAtomFuturePathDrifted': 'Drifted Future ZH {atomId} -> {pathAtomId}',
                 'agentWorkspace.messages.studyLoopReadyCount': '{count} 个已就绪 ZH',
                 'agentWorkspace.messages.supportSurfaceCounts': '记忆 {memoryCount} ZH 诊断 {diagnosticCount} ZH',
                 'agentWorkspace.messages.currentAtomHistoryCount': '{count} 条最近结果 ZH',
@@ -4344,10 +4419,10 @@ describe('agent workspace runtime behavior', () => {
         const pathFullscreenButton = document.getElementById('agent-workspace-path-fullscreen') as HTMLButtonElement;
         const readinessButton = document.getElementById('agent-workspace-open-foundation-readiness') as HTMLButtonElement;
         expect(input.placeholder).toBe('Ask in English');
-        expect(pathFullscreenButton.textContent).toBe('Path Fullscreen EN');
+        expect(pathFullscreenButton.textContent).toBe('Focus Future Path EN');
         expect(readinessButton.textContent).toBe('Foundation Readiness EN');
         runtime.togglePathFullscreen();
-        expect(pathFullscreenButton.textContent).toBe('Exit Path Fullscreen EN');
+        expect(pathFullscreenButton.textContent).toBe('Focus Future Path EN');
 
         const pointMetaEn = document.querySelector('.agent-workspace-point-meta') as HTMLElement;
         const activeRailEn = document.querySelector('.agent-workspace-active-point') as HTMLElement;
@@ -4357,8 +4432,8 @@ describe('agent workspace runtime behavior', () => {
         expect(activeRailEn.textContent || '').toContain('Active Atom EN');
         expect(activeRailEn.textContent || '').toContain('Active EN');
         expect(activeRailEn.textContent || '').toContain('Focus Ready EN');
-        expect(activeRailEn.textContent || '').toContain('Path Fullscreen EN');
-        expect(activeRailEn.textContent || '').toContain('Aligned Fullscreen EN atom-i18n-1');
+        expect(activeRailEn.textContent || '').toContain('Future Path EN');
+        expect(activeRailEn.textContent || '').toContain('Aligned Future EN atom-i18n-1');
         expect(activeRailEn.textContent || '').toContain('Study Loop EN');
         expect(activeRailEn.textContent || '').toContain('No study action yet EN');
         expect(activeRailEn.textContent || '').toContain('Support Surface EN');
@@ -4409,7 +4484,7 @@ describe('agent workspace runtime behavior', () => {
         const actionButtonZh = pointCardZh.querySelector('.agent-workspace-action-button') as HTMLButtonElement;
         const activeRailZh = document.querySelector('.agent-workspace-active-point') as HTMLElement;
         expect(input.placeholder).toBe('请用中文提问');
-        expect(pathFullscreenButton.textContent).toBe('退出路径全屏 ZH');
+        expect(pathFullscreenButton.textContent).toBe('Focus Future Path ZH');
         expect(readinessButton.textContent).toBe('基础就绪性 ZH');
         expect(pointCardZh.title).toBe('点击进入专注 ZH');
         expect(pointMetaZh.textContent || '').toContain('分数 ZH: 0.905');
@@ -4417,8 +4492,8 @@ describe('agent workspace runtime behavior', () => {
         expect(activeRailZh.textContent || '').toContain('当前知识点 ZH');
         expect(activeRailZh.textContent || '').toContain('当前 ZH');
         expect(activeRailZh.textContent || '').toContain('专注就绪 ZH');
-        expect(activeRailZh.textContent || '').toContain('路径全屏状态 ZH');
-        expect(activeRailZh.textContent || '').toContain('全屏已对齐 ZH atom-i18n-1');
+        expect(activeRailZh.textContent || '').toContain('Future Path ZH');
+        expect(activeRailZh.textContent || '').toContain('Aligned Future ZH atom-i18n-1');
         expect(activeRailZh.textContent || '').toContain('学习闭环 ZH');
         expect(activeRailZh.textContent || '').toContain('暂无学习动作 ZH');
         expect(activeRailZh.textContent || '').toContain('支持面 ZH');
@@ -4456,10 +4531,10 @@ describe('agent workspace runtime behavior', () => {
         expect(alternativeButtonZh.textContent).toBe('构建学习会话 ZH');
 
         runtime.togglePathFullscreen();
-        expect(pathFullscreenButton.textContent).toBe('路径全屏 ZH');
+        expect(pathFullscreenButton.textContent).toBe('Focus Future Path ZH');
         const activeRailZhDocked = document.querySelector('.agent-workspace-active-point') as HTMLElement;
-        expect(activeRailZhDocked.textContent || '').toContain('路径停靠 ZH');
-        expect(activeRailZhDocked.textContent || '').toContain('已对齐 ZH atom-i18n-1');
+        expect(activeRailZhDocked.textContent || '').toContain('Future Path ZH');
+        expect(activeRailZhDocked.textContent || '').toContain('Aligned Future ZH atom-i18n-1');
     });
 
     test('loads foundation readiness from toolbar and records diagnostics snapshot', async () => {

@@ -4687,9 +4687,83 @@ func _on_settings_panel_changed(settings: Dictionary) -> void:
 		_sync_reader_controls_from_settings()
 
 
+func _coerce_remote_target_ids(value) -> Array[String]:
+	var ids: Array[String] = []
+	if value is Array:
+		for raw_id in value:
+			var id := String(raw_id).strip_edges()
+			if id.is_empty() or id in ids:
+				continue
+			ids.append(id)
+	else:
+		var single_id := String(value).strip_edges()
+		if not single_id.is_empty():
+			ids.append(single_id)
+	return ids
+
+
+func _ensure_future_path_panel_visible() -> void:
+	if not _tree_panel:
+		return
+	if _tree_panel.has_method("restore"):
+		_tree_panel.call("restore")
+	_tree_panel.visible = true
+
+
+func _apply_remote_path_selection(settings: Dictionary) -> void:
+	var mode_changed := false
+	if settings.has("mode"):
+		var next_mode := String(settings.get("mode", _current_mode)).strip_edges()
+		if next_mode == "domain" or next_mode == "diffusion":
+			mode_changed = next_mode != _current_mode
+			_current_mode = next_mode
+
+	if settings.has("strategy"):
+		var next_strategy := String(settings.get("strategy", _current_strategy)).strip_edges()
+		if next_strategy == "foundational" or next_strategy == "core":
+			_current_strategy = next_strategy
+
+	var remote_target_ids: Array[String] = []
+	if settings.has("targetIds"):
+		remote_target_ids = _coerce_remote_target_ids(settings.get("targetIds", []))
+	elif settings.has("targetId"):
+		remote_target_ids = _coerce_remote_target_ids(settings.get("targetId", ""))
+	elif settings.has("target_id"):
+		remote_target_ids = _coerce_remote_target_ids(settings.get("target_id", ""))
+
+	if remote_target_ids.size() > 0:
+		if _current_mode == "diffusion":
+			_current_diffusion_target_ids = remote_target_ids
+			_current_target_id = remote_target_ids[0]
+			_current_target_label = _current_target_id
+		else:
+			_current_domain_target_ids = remote_target_ids
+
+	if _mode_option:
+		_mode_option.select(0 if _current_mode == "domain" else 1)
+	if _strategy_option:
+		_strategy_option.select(0 if _current_strategy == "foundational" else 1)
+
+	var mode_name := "Domain Learning" if _current_mode == "domain" else "Diffusion Learning"
+	update_mode(mode_name)
+
+	if _target_nodes.size() > 0:
+		if _current_mode == "diffusion":
+			_ensure_valid_diffusion_target()
+		else:
+			_reconcile_domain_targets()
+	_update_target_button_state()
+	_populate_target_list(_target_filter_input.text if _target_filter_input else "")
+	if _current_mode == "diffusion" and settings.get("focus_mode", false) == true:
+		_ensure_future_path_panel_visible()
+	if mode_changed and _tree_view and _tree_view.has_method("update_settings"):
+		_tree_view.update_settings(settings)
+
+
 func apply_remote_runtime_settings(settings: Dictionary) -> void:
 	if settings.is_empty():
 		return
+	_apply_remote_path_selection(settings)
 	if _settings_panel and _settings_panel.has_method("_apply_remote_settings"):
 		_settings_panel.call("_apply_remote_settings", settings)
 		if _settings_panel.has_method("_update_ui"):
