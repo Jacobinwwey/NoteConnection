@@ -553,6 +553,56 @@ window.__NC_DYNAMIC_SMOKE__ = {
       const helpHiddenAfterBlur = Boolean(helpPopover && helpPopover.hasAttribute('hidden'));
       const learningPathButton = document.querySelector('[data-agent-knowledge-action="learning-path"]');
       const relatedFocusButton = document.querySelector('[data-agent-knowledge-action="related-focus"]');
+      const chatPane = document.querySelector('#agent-chat-pane');
+      const isFullyVisibleWithin = function (node, container) {
+        if (!node || !container) {
+          return false;
+        }
+        const rect = node.getBoundingClientRect();
+        const bounds = container.getBoundingClientRect();
+        return rect.top >= bounds.top - 1
+          && rect.left >= bounds.left - 1
+          && rect.right <= bounds.right + 1
+          && rect.bottom <= bounds.bottom + 1;
+      };
+      let leftPaneScrollProbe = {
+        overflowY: chatPane ? getComputedStyle(chatPane).overflowY : '',
+        hasConstrainedVerticalOverflow: false,
+        scrollTopAfterScroll: 0,
+        learningPathReachableAfterScroll: false,
+        relatedFocusReachableAfterScroll: false
+      };
+      if (chatPane && learningPathButton && relatedFocusButton) {
+        const previousHeight = chatPane.style.height;
+        const previousMaxHeight = chatPane.style.maxHeight;
+        const previousScrollTop = chatPane.scrollTop;
+        const previousRegionScrollTop = region ? region.scrollTop : 0;
+        chatPane.style.height = '520px';
+        chatPane.style.maxHeight = '520px';
+        chatPane.scrollTop = 0;
+        if (region) {
+          region.scrollTop = 0;
+        }
+        leftPaneScrollProbe = {
+          ...leftPaneScrollProbe,
+          overflowY: getComputedStyle(chatPane).overflowY,
+          hasConstrainedVerticalOverflow: chatPane.scrollHeight > chatPane.clientHeight + 1
+        };
+        if (region) {
+          region.scrollTop = region.scrollHeight;
+        }
+        chatPane.scrollTop = chatPane.scrollHeight;
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        leftPaneScrollProbe.scrollTopAfterScroll = chatPane.scrollTop;
+        leftPaneScrollProbe.learningPathReachableAfterScroll = isFullyVisibleWithin(learningPathButton, chatPane);
+        leftPaneScrollProbe.relatedFocusReachableAfterScroll = isFullyVisibleWithin(relatedFocusButton, chatPane);
+        chatPane.style.height = previousHeight;
+        chatPane.style.maxHeight = previousMaxHeight;
+        chatPane.scrollTop = previousScrollTop;
+        if (region) {
+          region.scrollTop = previousRegionScrollTop;
+        }
+      }
       if (learningPathButton) {
         learningPathButton.click();
         await new Promise((resolve) => setTimeout(resolve, 50));
@@ -619,6 +669,11 @@ window.__NC_DYNAMIC_SMOKE__ = {
         minTargetSizePx: targetSizes.length > 0 ? Math.min.apply(null, targetSizes) : 0,
         knowledgeRegionScrollable: region ? getComputedStyle(region).overflowY : '',
         knowledgeRegionHorizontalOverflow: region ? region.scrollWidth > region.clientWidth + 1 : true,
+        leftPaneOverflowY: leftPaneScrollProbe.overflowY,
+        leftPaneHasConstrainedVerticalOverflow: leftPaneScrollProbe.hasConstrainedVerticalOverflow,
+        leftPaneScrollTopAfterScroll: leftPaneScrollProbe.scrollTopAfterScroll,
+        learningPathReachableAfterLeftPaneScroll: leftPaneScrollProbe.learningPathReachableAfterScroll,
+        relatedFocusReachableAfterLeftPaneScroll: leftPaneScrollProbe.relatedFocusReachableAfterScroll,
         pathPreviewAnchorId: pathPreview ? pathPreview.getAttribute('data-path-anchor-id') || '' : '',
         pathPreviewText,
         pathRoles,
@@ -2669,6 +2724,20 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         }
         if (knowledgeHitUi.knowledgeRegionHorizontalOverflow !== false) {
             failures.push(`knowledgeHitUi.knowledgeRegionHorizontalOverflow='${String(knowledgeHitUi.knowledgeRegionHorizontalOverflow)}'`);
+        }
+        if (!['auto', 'scroll'].includes(String(knowledgeHitUi.leftPaneOverflowY || ''))) {
+            failures.push(`knowledgeHitUi.leftPaneOverflowY='${String(knowledgeHitUi.leftPaneOverflowY)}'`);
+        }
+        if (knowledgeHitUi.leftPaneHasConstrainedVerticalOverflow !== true) {
+            failures.push(`knowledgeHitUi.leftPaneHasConstrainedVerticalOverflow='${String(knowledgeHitUi.leftPaneHasConstrainedVerticalOverflow)}'`);
+        }
+        if (Number(knowledgeHitUi.leftPaneScrollTopAfterScroll || 0) <= 0) {
+            failures.push(`knowledgeHitUi.leftPaneScrollTopAfterScroll='${String(knowledgeHitUi.leftPaneScrollTopAfterScroll)}'`);
+        }
+        if (knowledgeHitUi.learningPathReachableAfterLeftPaneScroll !== true || knowledgeHitUi.relatedFocusReachableAfterLeftPaneScroll !== true) {
+            failures.push(
+                `knowledgeHitUi.leftPaneActionReachability='${String(knowledgeHitUi.learningPathReachableAfterLeftPaneScroll)}:${String(knowledgeHitUi.relatedFocusReachableAfterLeftPaneScroll)}'`
+            );
         }
         if (knowledgeHitUi.pathPreviewAnchorId !== 'water glass') {
             failures.push(`knowledgeHitUi.pathPreviewAnchorId='${String(knowledgeHitUi.pathPreviewAnchorId)}'`);

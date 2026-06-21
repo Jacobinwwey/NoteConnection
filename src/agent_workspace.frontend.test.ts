@@ -3882,6 +3882,18 @@ describe('workspace panes controller', () => {
         expect(buttonsAfter).toEqual(['学习路径', '关联聚焦']);
     });
 
+    test('keeps the left knowledge workspace pane vertically scrollable when hit actions overflow the viewport', () => {
+        const stylesPath = path.join(__dirname, 'frontend', 'styles.css');
+        const styles = fs.readFileSync(stylesPath, 'utf8');
+        const chatPaneRule = styles.match(/\.agent-chat-pane\s*\{[^}]*\}/)?.[0] || '';
+
+        expect(chatPaneRule).toContain('overflow-x: hidden');
+        expect(chatPaneRule).toContain('overflow-y: auto');
+        expect(chatPaneRule).toContain('overscroll-behavior: contain');
+        expect(chatPaneRule).toContain('scrollbar-gutter: stable');
+        expect(chatPaneRule).not.toContain('overflow: hidden');
+    });
+
     test('renders related focus from graph snapshot with resolved node names instead of atom ids', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
         const graphView = {

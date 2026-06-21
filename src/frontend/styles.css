@@ -1565,7 +1565,10 @@ body.agent-workspace-open .agent-workspace-drawer {
   flex-direction: column;
   padding: 16px;
   gap: 12px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .agent-pane-header,
