@@ -1319,6 +1319,27 @@
         return String(item && item.atomId || '').trim();
     }
 
+    function resolveKnowledgePointSourcePath(item) {
+        const directSourcePath = String(item && (item.sourcePath || item.source_path) || '').trim();
+        if (directSourcePath) {
+            return directSourcePath;
+        }
+        const spans = Array.isArray(item && item.matchedSpans) ? item.matchedSpans : [];
+        for (const span of spans) {
+            const citation = span && typeof span.citation === 'object' ? span.citation : null;
+            const sourcePath = String(
+                span && (span.sourcePath || span.source_path)
+                || citation && (citation.sourcePath || citation.source_path)
+                || ''
+            ).trim();
+            if (sourcePath) {
+                return sourcePath;
+            }
+        }
+        const citation = item && typeof item.citation === 'object' ? item.citation : null;
+        return String(citation && (citation.sourcePath || citation.source_path) || '').trim();
+    }
+
     function resolveGraphTargetForKnowledgePoint(item, capability) {
         const atomId = resolveCapabilityTargetAtomId(item, capability);
         const controller = getController();
@@ -1350,7 +1371,7 @@
                     atomId,
                     title,
                     documentId: String(item && item.documentId || '').trim(),
-                    sourcePath: String(item && item.sourcePath || '').trim(),
+                    sourcePath: resolveKnowledgePointSourcePath(item),
                     relationPath: Array.isArray(item && item.relationPath) ? item.relationPath.map((edge) => ({ ...edge })) : [],
                     capability: capability && typeof capability === 'object' ? { ...capability } : null,
                 });
@@ -4264,8 +4285,12 @@
         controller.openLearningPathPane({
             atomId: nodeId,
             graphTargetId: pathRuntimeTargetId,
+            targetIds: pathRuntimeTargetIds,
             graphTargetLabel: graphTarget.graphNodeLabel,
             title: String(item.title || nodeId),
+            sourcePath: resolveKnowledgePointSourcePath(item),
+            language: getActiveLanguage(),
+            userId: getUserId(),
             items,
             relationPath: Array.isArray(item && item.relationPath)
                 ? item.relationPath.map((edge) => ({ ...edge }))
@@ -4274,37 +4299,6 @@
                 ? item.relationKinds.map((kind) => String(kind || '').trim()).filter(Boolean)
                 : [],
         });
-        const pathContainer = getElement('path-container');
-        if (pathContainer) {
-            pathContainer.style.display = 'block';
-        }
-        const graphWrapper = getElement('graph-wrapper');
-        if (graphWrapper) {
-            graphWrapper.style.display = 'block';
-        }
-        if (window.pathApp) {
-            const pathApp = window.pathApp;
-            const config = {
-                mode: 'diffusion',
-                targetId: pathRuntimeTargetId,
-                targetIds: pathRuntimeTargetIds,
-                language: getActiveLanguage(),
-            };
-            if (!window.__NC_AGENT_PATH_WORKSPACE_INITIALIZED && typeof pathApp.init === 'function') {
-                pathApp.init(pathRuntimeTargetId);
-                window.__NC_AGENT_PATH_WORKSPACE_INITIALIZED = true;
-            }
-            if (typeof pathApp.applyRemoteConfigure === 'function') {
-                pathApp.applyRemoteConfigure(config);
-            }
-            const learningUserIdInput = getElement('learning-user-id');
-            if (learningUserIdInput && typeof learningUserIdInput.value === 'string') {
-                learningUserIdInput.value = getUserId();
-            }
-            if (typeof pathApp.triggerUpdate === 'function') {
-                pathApp.triggerUpdate();
-            }
-        }
     }
 
     function presentLearningPathFailure(item, capability, error) {

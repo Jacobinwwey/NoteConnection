@@ -3,6 +3,40 @@
 
 ## 中文文档
 
+### 2026-06-21 Agent Knowledge Workspace 运行时复用实施计划
+
+#### 目标
+
+通过复用本项目现有的 DAG 支撑运行时，收口 Knowledge Workspace 剩余的图动作缺陷，避免继续维护与主运行时分叉的预览逻辑。
+
+#### 当前代码真相
+
+- `关联聚焦` 现在复用主图面的 graph-view Focus-mode snapshot/runtime 路径；relation edge 与后端 debug 细节只有 Developer Mode 开启时才显示。
+- `学习路径` 现在把现有 Path workspace/runtime（`path-container`、path sidebars、`path_app.js`）挂入右侧停靠 pane，而不是渲染手写的 prerequisite/anchor/next DOM 假预览。
+- 学习路径目标会基于真实 DAG source graph 按稳定节点 ID、人类可读 label 与 source basename 做一致性解析。worker 收到真实图节点 ID；UI 展示 `water glass` 这类解析后的 label。
+- `agent_workspace.js` 现在会从 knowledge point 顶层字段、matched spans 与 citation payload 透传 `sourcePath`，让图目标解析拥有持久的 source-path 信号。
+- `path_app.js` 在语义 live-region 被节流时会延迟刷新，避免有效路径已经算出后仍残留 `focus none` / `0 of 0 nodes` 文案。
+- `scripts/verify-agent-workspace-browser.js` 现在围绕 `water glass` 播种真实 DAG 邻域，并断言已挂载的 Path runtime 节点数大于 0、语义文本包含 `water glass`、不泄漏 `atom_h`、不出现 `focus none`、也不出现 `0 of 0 nodes completed`。
+- `src/agent_workspace.frontend.test.ts` 固定关键不变量：运行时配置可以使用 DAG ID（fixture 中为 `atom_h`），但右侧 pane UI 必须显示节点 label（`water glass`），不能暴露内部 ID。
+- 命中文件帮助入口继续保持为紧凑的 hover/focus 问号控件；左侧命中区域保持可滚动，动作按钮保持可达。
+- 兼容性保持 additive：没有把既有 response shape 改成强制字段，并继续接受 legacy `performance.deepDebug` 作为 Developer Mode 兼容键。
+
+#### 执行顺序
+
+1. 图目标解析保留在 workspace/path 边界，不从展示字符串里反推运行时语义。
+2. 保持 Path runtime 作为 diffusion/path 语义的唯一 owner，不再引入手写 preview graph。
+3. Focus 默认输出保持面向用户且克制；relation 列表与后端诊断只放在 Developer Mode 后。
+4. 保持 strict browser verification 作为截图问题的可执行验收面，尤其是 `water glass.md`。
+5. 只有新模块持有真实不变量时才继续拆分 owner；避免只转发 graph payload 的 pass-through adapter。
+
+#### 验收标准
+
+1. 点击 `学习路径` 会挂载真实 Path workspace，并从所选 DAG 节点计算出非空路径。
+2. Path worker 收到有效图节点 ID，同时右侧 pane 的可见标签优先使用人类可读节点名。
+3. 点击 `关联聚焦` 会显示所选节点的 Focus-mode 图状态，默认不显示后端 / relation debug 列表。
+4. 命中文件列表可纵向滚动，能显示 `water glass.md`，并保持 `学习路径` / `关联聚焦` 按钮可交互。
+5. 如果用户可见的 path pane 中重新出现 `atom_h`、`focus none` 或 `0 of 0 nodes`，strict browser verifier 必须失败。
+
 ### 2026-06-18 最终回复审核鲁棒性实施计划
 
 #### 目标

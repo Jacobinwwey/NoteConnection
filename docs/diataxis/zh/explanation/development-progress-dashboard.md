@@ -3,10 +3,10 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
-## 2026-06-20 知识工作区图预览与回答审核收口
+## 2026-06-21 知识工作区运行时复用收口
 
 最新收口不是新的框架方向。
-它是把既有 DAG 回答契约、最终回答发布审核，以及 Knowledge Workspace 图预览 UI 合并成一条主线验收面。
+它修正了上一版“图预览”折中：Knowledge Workspace 现在优先复用项目已有的图与路径运行时 owner，而不是维护一套平行的假预览。
 
 当前代码已经成立的事实：
 
@@ -14,10 +14,11 @@
 - 现有 DAG 仍在 synthesis 前由 `src/learning/graphContextAssembler.ts` 消费，并在 release-time 通过图感知 reviewer gate 再次参与判断；
 - `src/frontend/workspace_panes.js` 的命中文件列表现在使用紧凑问号帮助入口，而不是把说明文字直接堆进 workspace；
 - 命中文件的 source focus 继续以右侧 pane 为权威阅读面：点击后解析 source path、渲染 Markdown，并通过 line/snippet/offset provenance 投影 inline highlight；
-- `关联聚焦` 现在以 Focus-mode 风格语义投影展示选中图节点邻域，不再泄漏内部 atom ID；
-- `学习路径` 现在围绕解析后的图标签做 Path-mode 风格投影，strict browser verifier 已把 `water glass` 固定为 anchor label；
+- `关联聚焦` 现在走现有 graph-view Focus-mode snapshot 路径，默认只显示 focus 图面，relation edge/debug 细节只有 Developer Mode 打开时才显示；
+- `学习路径` 现在把现有 path workspace/runtime（`path-container`、path sidebars、`path_app.js`）挂入右侧 pane，而不是渲染静态 DOM 预览；
+- 学习路径目标会基于真实 DAG source（`graphData` / path-app source graph）按 ID、label 与 source basename 做一致性解析；worker 收到真实节点 ID，UI 保留人类可读 label；
 - 受影响的 source/focus/path 右侧窗口现在都有 close control；
-- `scripts/verify-agent-workspace-browser.js` 的 strict browser verification 已经持有用户报告的 `water glass.md` UI 回归面。
+- `scripts/verify-agent-workspace-browser.js` 的 strict browser verification 已经持有用户报告的 `water glass.md` UI 回归面，包括 path runtime 节点数必须大于 0、语义文本必须包含 `water glass`，并拒绝 `atom_h`、`focus none` 与 `0 of 0 nodes`。
 
 代码 / 方案对齐：
 
@@ -26,14 +27,15 @@
 | 回答区不能变成 evidence dump | `conversationComposer.ts` 发布 `answerReleaseReview.publicAnswer`；graph/evidence diagnostics 留在次级 surface。 | 已实现 |
 | 用户需要知道命中文件可点击，但 workspace 不应常驻说明文案 | `workspace_panes.js` 将说明放入 hover/focus 触发的 help icon。 | 已实现 |
 | 单击命中文件应打开源文档并高亮依据 | source focus 消费 source-line provenance、line window、snippet，并在可用时使用 offset。 | 已实现基线 |
-| `关联聚焦` 应对应 Tauri Focus-mode 状态 | pane 将选中节点邻域渲染为 anchor/incoming/outgoing 上下文。 | 以语义投影实现 |
-| `学习路径` 应对应 Godot Path-mode 设计 | pane 围绕解析后的图标签渲染 prerequisite/anchor/next 角色。 | 以语义投影实现 |
+| `关联聚焦` 应对应 Tauri Focus-mode 状态 | pane 调用 graph-view focus snapshot/runtime API，默认只显示 focus 图；开发者 relation 列表隐藏在 Developer Mode 后。 | 已实现 |
+| `学习路径` 应对应 Godot/Path-mode 设计 | pane 挂载现有 Path runtime，并用解析后的 DAG 节点 ID 配置 diffusion，同时展示解析后的 label。 | 已实现 |
 | 最终回答需要鲁棒审核 / 纠错 owner | `answerReleaseReview.ts` 继续作为后端确定性 release-policy owner。 | 已实现基线 |
 | 兼容性必须保持 | 新增 graph-preview 与 provenance 字段保持 additive/optional；legacy response fields 继续有效。 | 已实现 |
 
-关键权衡是有意选择的：右侧 pane 投影 Focus/Path 语义，而不是嵌入 live Tauri 或 Godot canvas。
-这样可以避免把 lifecycle、resize、bridge 与 shutdown owner 拖进知识 pane。
-如果未来产品要求像素级一致，正确下一步应是共享 graph projection contract 与共享 renderer，而不是临时嵌 canvas。
+关键权衡现在更窄。
+Path 使用现有浏览器 Path runtime，因为该 owner 已经存在，并且可以被安全挂入停靠 pane。
+Focus 仍然复用 graph-view Focus-mode snapshot/rendering 路径，而不是在 workspace 里再嵌一套 Tauri window/canvas 生命周期。
+如果未来产品要求与完整 Tauri 图 canvas 像素级一致，正确下一步是共享 renderer contract，而不是第二套临时 canvas host。
 
 剩余工作已经转为校准：
 

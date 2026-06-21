@@ -2356,6 +2356,17 @@ body.agent-workspace-open .agent-workspace-drawer {
   padding: 10px 12px;
 }
 
+.agent-focus-relation-map--focus-mode {
+  gap: 0;
+  border-color: rgba(148, 163, 184, 0.16);
+  background: transparent;
+  padding: 0;
+}
+
+.agent-focus-relation-map--focus-mode .agent-focus-mode-preview {
+  min-height: min(72vh, 760px);
+}
+
 .agent-focus-relation-kinds {
   color: #93c5fd;
   font-size: 0.76rem;
@@ -2633,6 +2644,12 @@ body.agent-workspace-open .agent-workspace-drawer {
   gap: 12px;
 }
 
+.agent-pane-block--focus-runtime {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .agent-focus-rendered-markdown {
   color: #dbe7f3;
   font-size: 0.9rem;
@@ -2885,9 +2902,26 @@ body.agent-workspace-open .agent-workspace-drawer {
   color: #fef3c7;
 }
 
+.agent-learning-path-runtime-shell {
+  display: grid;
+  gap: 10px;
+  min-height: 360px;
+}
+
+.agent-learning-path-runtime-title {
+  color: #f8fbff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
 .agent-learning-path-workspace-host {
   margin-top: 14px;
   min-height: 320px;
+}
+
+.agent-learning-path-runtime-shell .agent-learning-path-workspace-host {
+  margin-top: 0;
 }
 
 .agent-learning-path-workspace-host #path-container {
@@ -2896,6 +2930,11 @@ body.agent-workspace-open .agent-workspace-drawer {
   width: 100% !important;
   height: min(72vh, 760px) !important;
   display: block !important;
+}
+
+.agent-learning-path-workspace-host #learning-history-sidebar,
+.agent-learning-path-workspace-host #learning-workbench-sidebar {
+  display: none !important;
 }
 
 body[data-agent-workspace-promotion="graph-focus"] #agent-learning-path-pane,

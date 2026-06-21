@@ -3,9 +3,9 @@ module: architecture
 tags: [agent-workspace, knowledge-workspace, dag, graph-preview, answer-release-review, frontend, robustness, compatibility]
 problem_type: implementation-plan
 created: 2026-06-20
-updated: 2026-06-20
+updated: 2026-06-21
 status: completed
-version: 2026.06.20
+version: 2026.06.21
 ---
 
 # 2026-06-20 v1.7.0 - Agent Knowledge Workspace Graph Preview and Review Closure
@@ -20,12 +20,12 @@ It reconciles the user's latest UI expectations with the already-landed DAG answ
 1. the public answer stays targeted to the user's question instead of dumping retrieval evidence,
 2. matched files are explicitly discoverable as clickable source entries without adding permanent instructional text to the workspace,
 3. source clicks open the right focus pane and highlight the matched basis,
-4. `Related Focus` projects the same semantic state as the Tauri main graph's node-focused Focus mode,
-5. `Learning Path` projects a Godot Path-mode-style learning sequence around the resolved graph node label,
+4. `Related Focus` reuses the graph-view Focus-mode snapshot/runtime path and hides backend relation detail unless Developer Mode is enabled,
+5. `Learning Path` mounts the existing Path workspace/runtime and drives it with the resolved DAG node ID while keeping the human graph label visible,
 6. the final public answer is reviewed before release by the local deterministic reviewer,
 7. all added fields and UI surfaces remain optional, additive, and backward-compatible.
 
-This is not a recommendation to introduce another RAG framework. The right owner is already inside this codebase: the existing DAG, the learning runtime, the answer composer/reviewer, and the frontend graph projection layer.
+This is not a recommendation to introduce another RAG framework. The right owner is already inside this codebase: the existing DAG, the learning runtime, the answer composer/reviewer, the graph-view Focus snapshot path, and the Path runtime.
 
 ### Completion Boundary
 
@@ -34,7 +34,7 @@ Current implementation status is code-backed:
 - `src/learning/graphContextAssembler.ts` owns graph-conditioned context assembly before answer synthesis.
 - `src/learning/conversationComposer.ts` calls `reviewAnswerRelease()` and releases `answerReleaseReview.publicAnswer`.
 - `src/learning/answerReleaseReview.ts` owns deterministic public-answer gates, including graph-causal, graph-order, graph-comparison, temporal-validity, and query-intent gates.
-- `src/frontend/workspace_panes.js` owns the Knowledge Workspace source focus pane, help affordance, matched-file action controls, Focus-mode projection, Path-mode projection, close controls, and provenance diagnostics.
+- `src/frontend/workspace_panes.js` owns the Knowledge Workspace source focus pane, help affordance, matched-file action controls, Focus-mode snapshot rendering, Path runtime mounting, close controls, and provenance diagnostics.
 - `scripts/verify-agent-workspace-browser.js` owns the strict browser regression for the latest UI defects, including the `water glass.md` display case.
 - `src/agent_workspace.frontend.test.ts` pins help-popover behavior, stable ARIA/control IDs, source highlight behavior, and path-role rendering.
 
@@ -42,7 +42,7 @@ The remaining work is calibration and coverage expansion. It is not a blocker fo
 
 - older payloads without source offsets still need conservative fallback,
 - the reviewer should keep expanding contradiction families only when false-positive boundaries are explicit,
-- the side-pane graph projections are semantic projections, not embedded full Tauri/Godot runtimes,
+- the Focus pane still uses the existing graph-view Focus snapshot/rendering path rather than embedding a second Tauri graph canvas lifecycle,
 - CI should keep the strict browser UI gate fresh if this surface continues changing.
 
 ### First Principles
@@ -56,8 +56,8 @@ The remaining work is calibration and coverage expansion. It is not a blocker fo
 - **Source provenance**: the path, line window, snippet, and optional source offsets that let the UI open the original Markdown and highlight the exact support fragment.
 - **Graph context pack**: the bounded graph-derived structure assembled for answer synthesis. It contains anchor identity, support nodes, relation/path windows, temporal warnings, evidence refs, and diagnostics. It must not be the whole graph.
 - **Answer release review**: the post-synthesis decision layer that can `release`, `revise`, or `abstain` before a draft becomes the public answer.
-- **Focus-mode projection**: a side-pane rendering of the same semantic neighborhood expected from Tauri's node-focused Focus mode: anchor node, incoming references, outgoing references, and immediate relation context.
-- **Path-mode projection**: a side-pane rendering of the same learning-path semantics expected from Godot Path mode: prerequisite/upstream steps, anchor, and next/downstream steps around the selected node.
+- **Focus-mode snapshot rendering**: a side-pane rendering fed by the same graph-view Focus-mode snapshot/runtime path used by the main graph: anchor node, incoming references, outgoing references, and immediate relation context. Developer-only relation lists stay hidden by default.
+- **Path runtime mount**: a side-pane host for the existing browser Path workspace/runtime. It configures diffusion/path mode with a real DAG node ID and lets the existing path worker/layout code compute the learning path.
 - **Resolved graph label**: the human-facing node name selected for display. In the reported failure this must be `water glass`, not an internal atom ID such as `atom_h`.
 
 #### Layer Connections
@@ -106,8 +106,8 @@ The runtime should be read as a chain of owners:
 | Left matched-file area must be scrollable and show long names such as `water glass.md` | The strict browser verifier checks visible `water glass.md`, no horizontal overflow, and interactive action targets. | Implemented | Very long filenames still need truncation plus tooltip discipline, not layout expansion. |
 | Clicking a hit should open right-side source and highlight matched evidence | Source pane logic uses source-line provenance, line windows, snippets, and offset-backed inline highlight where available. | Implemented baseline | Old payloads without offsets can only fall back conservatively. |
 | Right-side source window needs a close control | The strict browser verifier asserts three close buttons across the affected right-pane surfaces. | Implemented | Future pane additions must not bypass the shared close-control pattern. |
-| `Related Focus` should match Tauri Focus mode semantics | `workspace_panes.js` calls the graph-view focus snapshot path and renders anchor/incoming/outgoing context. | Implemented as side-pane semantic projection | It is not a full embedded Tauri canvas; pixel parity requires a shared renderer contract. |
-| `Learning Path` should match Godot Path mode semantics and use the real node name | `buildLearningPathPreviewGraph()` renders prerequisite, anchor, and next roles, and the strict verifier asserts `pathPreviewAnchorId === 'water glass'`. | Implemented as side-pane semantic projection | Full Godot runtime embedding would add lifecycle, bridge, and rendering ownership. |
+| `Related Focus` should match Tauri Focus mode semantics | `workspace_panes.js` calls the graph-view focus snapshot/runtime path, renders anchor/incoming/outgoing context, and hides developer relation lists unless Developer Mode is enabled. | Implemented | It is not a second embedded Tauri canvas; pixel parity with the full main graph still requires a shared renderer contract. |
+| `Learning Path` should match Godot/Path mode semantics and use the real node name | `workspace_panes.js` mounts the existing Path workspace/runtime, resolves the selected item against real DAG data, passes the DAG node ID to the worker, and the strict verifier asserts runtime text contains `water glass` without `atom_h`, `focus none`, or `0 of 0 nodes`. | Implemented | The mount reuses the browser Path runtime; it does not launch a separate Godot executable inside the pane. |
 | Existing DAG should be visible to the LLM and reviewer | `graphContextAssembler.ts` assembles `connectionPaths`, predecessor/successor windows, temporal validity, evidence refs, and diagnostics; reviewer graph gates consume DAG context. | Implemented baseline | Ranking and reviewer calibration still need broader corpora. |
 | Final public answer needs robust review and correction | `answerReleaseReview.ts` owns deterministic release gates and is called before response release. | Implemented | Gate expansion must remain conservative to avoid false positives. |
 | Compatibility must be preserved | New fields are optional/additive; legacy `assistantMessage` and existing answer fields remain valid. | Implemented | Contract drift can reappear if new clients treat optional fields as mandatory. |
@@ -173,13 +173,15 @@ The matched-file area now has an explicit compact help affordance. The instructi
 
 Best practice: the help control must work on hover and focus, must close on blur/outside interaction, and must keep stable ARIA relationships so rerenders do not orphan the tooltip.
 
-#### P5: Focus and Path Graph Projections
+#### P5: Focus Snapshot and Path Runtime Reuse
 
-Status: completed as side-pane semantic projections.
+Status: completed.
 
-`Related Focus` renders the selected node's focus neighborhood. `Learning Path` renders prerequisite, anchor, and next-step roles with the resolved display label. The strict browser verifier asserts that the `water glass` anchor is used and that Focus/Path nodes are in bounds.
+`Related Focus` renders the selected node's Focus-mode neighborhood through the existing graph-view focus snapshot/runtime path. Default UI shows the focus graph state only; relation-edge lists, relation kinds, and backend diagnostics are available only when Developer Mode is enabled.
 
-Tradeoff: this is deliberately not a full embedded Tauri or Godot runtime inside the knowledge pane. Embedding the live canvases would require ownership of lifecycle, resizing, event forwarding, bridge state, and shutdown semantics. The current projection is lower-risk and sufficient for the knowledge workspace. If exact pixel parity becomes a product requirement, the next move should be a shared graph projection contract and renderer, not ad hoc canvas embedding.
+`Learning Path` mounts the existing Path workspace/runtime into the right pane. The target reconciliation step mirrors the Godot-side lesson: do not trust display strings as runtime identity. It resolves candidates by DAG node ID, label, and source basename; the worker receives a valid node ID, while the pane displays the human label. The strict browser verifier now requires a nonempty runtime path whose semantic summary includes `water glass` and excludes `atom_h`, `focus none`, and `0 of 0 nodes`.
+
+Tradeoff: the Path pane reuses the existing browser Path runtime, not a separate Godot executable. That keeps lifecycle and teardown inside the web runtime already used by the workspace. The Focus pane still avoids embedding a second Tauri graph canvas; if exact pixel parity becomes a product requirement, the next move should be a shared graph renderer contract rather than an ad hoc canvas host.
 
 #### P6: Regression and Release Hygiene
 
@@ -207,15 +209,16 @@ The strict browser case specifically verifies:
 - `Learning Path` and `Related Focus` are interactive,
 - action targets meet minimum hit-area expectations,
 - there is no horizontal overflow,
-- the Path preview anchor is `water glass`,
-- Path roles include `prerequisite`, `anchor`, and `next`,
-- Focus preview text uses `water glass` and does not leak `atom_h`,
+- the Path runtime is mounted and reports a nonzero node count,
+- the Path runtime semantic summary includes `water glass`,
+- the Path pane does not show `atom_h`, `focus none`, or `0 of 0 nodes completed`,
+- Focus text uses `water glass` and does not leak `atom_h`,
 - Focus and Path nodes stay inside their render bounds,
 - right-pane windows have close controls.
 
 ### Tradeoffs
 
-- **Semantic projection over runtime embedding**: lower lifecycle risk, less pixel-perfect parity. Correct choice for the current pane.
+- **Runtime reuse where ownership exists**: Path reuses the existing browser Path runtime; Focus reuses graph-view Focus snapshots instead of hosting a second Tauri canvas lifecycle.
 - **Deterministic reviewer before model verifier**: less broad semantic coverage, but stable, testable release policy.
 - **Bounded DAG pack over whole-graph prompt**: less complete context, but lower latency and lower hallucination risk.
 - **Optional additive fields over mandatory schema break**: slower cleanup of legacy branches, but preserves existing clients.
@@ -226,7 +229,7 @@ The strict browser case specifically verifies:
 1. Rendering internal atom IDs when a human graph label is available.
 2. Treating a graph database or prompt framework as a substitute for the existing DAG contract.
 3. Putting instructional copy directly in the workspace because the click affordance is weak.
-4. Embedding live Tauri/Godot renderers in a side pane without owning lifecycle, resize, bridge, and teardown.
+4. Reintroducing a handcrafted Path preview after the Path runtime is already mountable.
 5. Expanding reviewer gates faster than the false-positive corpus.
 6. Hiding missing provenance by broadening highlight heuristics until the UI "looks right".
 7. Adding a facade that only forwards calls and owns no invariant.
@@ -255,7 +258,7 @@ Do not collapse these questions into one prompt or one frontend component. Each 
 ### Real Applications
 
 - A user asks `什么是waterglass?`: the public answer should define the concept directly; the matched file should show `water glass.md`; source click should open the Markdown and highlight the support.
-- A user wants to learn the selected node: `Learning Path` should show prerequisite -> anchor -> next, using the visible node label.
+- A user wants to learn the selected node: `Learning Path` should mount the real Path runtime, compute from the selected DAG node, and keep the visible node label such as `water glass`.
 - A user wants relation context: `Related Focus` should show incoming and outgoing references around the selected node.
 - A developer audits a questionable answer: the reviewer result, graph context, citations, and provenance diagnostics should be available in secondary surfaces without polluting the public answer.
 
@@ -268,14 +271,14 @@ Do not collapse these questions into one prompt or one frontend component. Each 
 - "A prompt framework can solve final answer review."
   - Incomplete. It can shape drafts, but release policy still needs a local owner.
 - "Side-pane Path/Focus must embed the real Godot/Tauri windows."
-  - Not unless pixel parity is a hard requirement. For knowledge guidance, semantic projection is safer.
+  - Too broad. Path can reuse the existing browser Path runtime safely. Focus should keep using graph-view Focus snapshots unless the product requires full Tauri canvas pixel parity and a shared renderer contract exists.
 - "If the highlight is roughly near the right paragraph, provenance is good enough."
   - Not for repeated snippets. Offset or AST provenance is the durable fix.
 
 ### Five-Point Summary
 
 1. The correct architecture is local DAG -> bounded graph context -> answer synthesis -> deterministic release review -> secondary evidence surfaces.
-2. The latest UI slice is closed as a semantic projection: matched files are discoverable and clickable, source highlights work, Focus/Path previews use the resolved node label, and right panes can close.
+2. The latest UI slice now reuses real owners: matched files are discoverable and clickable, source highlights work, Focus uses the graph-view Focus snapshot path, Path mounts the existing Path runtime, labels stay human-readable, and right panes can close.
 3. The earlier DSPy/Guidance/Semantic Kernel/LangChain/LiteLLM ideas remain useful references, but none should own DAG semantics, source provenance, or final release policy in this runtime.
 4. The main remaining risk is calibration, not missing ownership: broader reviewer corpora, more offset coverage, and ranking evaluation are the next hard work.
 5. Keep changes backward-compatible and invariant-owned; avoid pass-through layers, unbounded graph dumps, and UI-only correctness fixes.
@@ -290,12 +293,12 @@ Do not collapse these questions into one prompt or one frontend component. Each 
 1. 公开回答只针对用户问题，不把检索证据堆进主回答区；
 2. 命中文件必须有明确但克制的可点击提示；
 3. 单击命中文件后打开右侧聚焦 pane，并高亮命中依据；
-4. `关联聚焦` 投影 Tauri 主图双击节点后的 Focus mode 语义状态；
-5. `学习路径` 投影 Godot Path mode 风格的学习顺序，并使用真实图节点名称；
+4. `关联聚焦` 复用 graph-view Focus-mode snapshot/runtime 路径，并在 Developer Mode 关闭时隐藏后端 relation 细节；
+5. `学习路径` 挂载现有 Path workspace/runtime，用解析后的 DAG 节点 ID 驱动计算，同时保持人类可读图节点名可见；
 6. 最终公开回答必须先经过本地确定性 reviewer 再发布；
 7. 新增字段与 UI surface 保持 optional、additive、向前兼容。
 
-这不是引入另一套 RAG 框架的理由。正确 owner 已经在本项目内部：现有 DAG、learning runtime、answer composer/reviewer，以及前端 graph projection 层。
+这不是引入另一套 RAG 框架的理由。正确 owner 已经在本项目内部：现有 DAG、learning runtime、answer composer/reviewer、graph-view Focus snapshot 路径与 Path runtime。
 
 ### 完成边界
 
@@ -304,7 +307,7 @@ Do not collapse these questions into one prompt or one frontend component. Each 
 - `src/learning/graphContextAssembler.ts` 在回答合成前持有 graph-conditioned context assembly。
 - `src/learning/conversationComposer.ts` 调用 `reviewAnswerRelease()`，并发布 `answerReleaseReview.publicAnswer`。
 - `src/learning/answerReleaseReview.ts` 持有确定性公开回答门禁，包括 graph-causal、graph-order、graph-comparison、temporal-validity 与 query-intent 门禁。
-- `src/frontend/workspace_panes.js` 持有 Knowledge Workspace 的 source focus pane、帮助提示、命中文件 action、Focus-mode 投影、Path-mode 投影、关闭控件与 provenance 诊断。
+- `src/frontend/workspace_panes.js` 持有 Knowledge Workspace 的 source focus pane、帮助提示、命中文件 action、Focus-mode snapshot 渲染、Path runtime 挂载、关闭控件与 provenance 诊断。
 - `scripts/verify-agent-workspace-browser.js` 固定了最新 UI 缺陷的严格浏览器回归，包括 `water glass.md` 展示案例。
 - `src/agent_workspace.frontend.test.ts` 固定 help popover、稳定 ARIA/control ID、source highlight 与 path role 渲染。
 
@@ -312,7 +315,7 @@ Do not collapse these questions into one prompt or one frontend component. Each 
 
 - 旧 payload 缺少 source offset 时仍只能保守回退；
 - reviewer 只能在 false-positive 边界清晰时继续扩展矛盾族群；
-- 右侧图预览是语义投影，不是完整嵌入 Tauri/Godot 运行时；
+- Focus pane 仍复用现有 graph-view Focus snapshot/rendering 路径，而不是在 workspace 内再嵌一套 Tauri graph canvas 生命周期；
 - 如果该 surface 后续持续变化，应继续把 strict browser UI gate 固化到 CI。
 
 ### 第一性原理
@@ -326,8 +329,8 @@ Do not collapse these questions into one prompt or one frontend component. Each 
 - **源 provenance**：让 UI 能打开原始 Markdown 并高亮支持片段的 path、line window、snippet 与可选 source offset。
 - **Graph context pack**：回答合成前装配出的有界图上下文，包含 anchor、support node、relation/path window、temporal warning、evidence ref 与 diagnostics。它不应该是整张图。
 - **回答发布审核**：draft answer 进入公开回答前的后置决策层，可以 `release`、`revise` 或 `abstain`。
-- **Focus-mode 投影**：右侧 pane 对 Tauri 节点聚焦 Focus mode 语义邻域的投影：anchor、incoming reference、outgoing reference 与直接关系上下文。
-- **Path-mode 投影**：右侧 pane 对 Godot Path mode 学习语义的投影：围绕选中节点展示 prerequisite/upstream step、anchor 与 next/downstream step。
+- **Focus-mode snapshot 渲染**：由主图同一 graph-view Focus-mode snapshot/runtime 路径驱动的右侧 pane 渲染：anchor、incoming reference、outgoing reference 与直接关系上下文。开发者 relation 列表默认隐藏。
+- **Path runtime 挂载**：现有浏览器 Path workspace/runtime 的右侧 pane host。它使用真实 DAG 节点 ID 配置 diffusion/path mode，并让现有 path worker/layout 代码计算学习路径。
 - **解析后的图标签**：用于展示的人类可读节点名。报告中的失败点要求显示 `water glass`，而不是 `atom_h` 这类内部 atom ID。
 
 #### 各层连接
@@ -376,8 +379,8 @@ Do not collapse these questions into one prompt or one frontend component. Each 
 | 左侧命中文件区域要可滚动，并完整处理 `water glass.md` 这类长名称 | strict browser verifier 检查 `water glass.md` 可见、无水平溢出、action target 可交互。 | 已实现 | 极长文件名仍要靠截断与 tooltip，而不是撑开布局。 |
 | 单击命中项应打开右侧源文档并高亮命中依据 | source pane 使用 source-line provenance、line window、snippet，并在可用时使用 offset-backed inline highlight。 | 已实现基线 | 旧 payload 没有 offset 时只能保守回退。 |
 | 右侧打开窗口需要关闭按钮 | strict browser verifier 检查相关右侧 pane surface 上有 3 个 close button。 | 已实现 | 后续新增 pane 不能绕开共享关闭控件模式。 |
-| `关联聚焦` 应对应 Tauri Focus mode 语义 | `workspace_panes.js` 调用 graph-view focus snapshot 路径并渲染 anchor/incoming/outgoing 上下文。 | 以右侧 pane 语义投影实现 | 它不是完整 Tauri canvas 嵌入；像素级一致需要共享 renderer contract。 |
-| `学习路径` 应对应 Godot Path mode 语义，并显示真实节点名称 | `buildLearningPathPreviewGraph()` 渲染 prerequisite、anchor、next 角色，strict verifier 断言 `pathPreviewAnchorId === 'water glass'`。 | 以右侧 pane 语义投影实现 | 完整 Godot runtime 嵌入会新增生命周期、bridge 与渲染 owner。 |
+| `关联聚焦` 应对应 Tauri Focus mode 语义 | `workspace_panes.js` 调用 graph-view focus snapshot/runtime 路径，渲染 anchor/incoming/outgoing 上下文，并在 Developer Mode 关闭时隐藏开发者 relation 列表。 | 已实现 | 它不是第二个嵌入式 Tauri canvas；与完整主图像素级一致仍需要共享 renderer contract。 |
+| `学习路径` 应对应 Godot/Path mode 语义，并显示真实节点名称 | `workspace_panes.js` 挂载现有 Path workspace/runtime，基于真实 DAG data 解析选中项，把 DAG 节点 ID 传给 worker；strict verifier 断言 runtime 文本包含 `water glass`，且不包含 `atom_h`、`focus none` 或 `0 of 0 nodes`。 | 已实现 | 该挂载复用浏览器 Path runtime；不会在 pane 内启动独立 Godot executable。 |
 | 现有 DAG 应进入 LLM 与 reviewer | `graphContextAssembler.ts` 装配 `connectionPaths`、predecessor/successor window、temporal validity、evidence ref 与 diagnostics；reviewer 图门禁消费 DAG context。 | 已实现基线 | ranking 与 reviewer 校准仍需更广语料。 |
 | 最终公开回答需要鲁棒审核与纠错 | `answerReleaseReview.ts` 持有确定性 release gate，并在 response release 前执行。 | 已实现 | gate 扩展必须保守，避免误报。 |
 | 必须保持向前兼容 | 新字段 optional/additive；legacy `assistantMessage` 与既有 answer 字段继续有效。 | 已实现 | 如果新客户端把 optional 字段当 mandatory，contract drift 会复发。 |
@@ -443,13 +446,15 @@ Do not collapse these questions into one prompt or one frontend component. Each 
 
 最佳实践：help control 必须支持 hover 与 focus，blur/outside interaction 后关闭，并保持稳定 ARIA 关系，避免 rerender 后 tooltip 变成孤儿节点。
 
-#### P5：Focus 与 Path 图投影
+#### P5：Focus snapshot 与 Path runtime 复用
 
-状态：已作为右侧 pane 语义投影完成。
+状态：已完成。
 
-`关联聚焦` 渲染选中节点的 focus neighborhood。`学习路径` 渲染 prerequisite、anchor 与 next-step 角色，并使用解析后的展示 label。strict browser verifier 已断言 `water glass` anchor 被使用，且 Focus/Path 节点没有越界。
+`关联聚焦` 通过现有 graph-view focus snapshot/runtime 路径渲染选中节点的 Focus-mode 邻域。默认 UI 只显示 focus graph 状态；relation edge 列表、relation kind 与后端诊断只有 Developer Mode 开启时才显示。
 
-权衡：这里刻意没有把完整 Tauri 或 Godot runtime 嵌进 knowledge pane。嵌入 live canvas 会要求额外持有 lifecycle、resize、event forwarding、bridge state 与 shutdown semantics。当前语义投影风险更低，并足以服务知识工作区。如果未来要求像素级一致，下一步应抽共享 graph projection contract 与 renderer，而不是临时嵌 canvas。
+`学习路径` 将现有 Path workspace/runtime 挂入右侧 pane。目标解析步骤复用了 Godot 侧处理给出的核心教训：不能把展示字符串当作运行时身份。它按 DAG 节点 ID、label 与 source basename 解析候选；worker 收到有效节点 ID，pane 显示人类可读 label。strict browser verifier 现在要求 runtime path 非空、语义摘要包含 `water glass`，并排除 `atom_h`、`focus none` 与 `0 of 0 nodes`。
+
+权衡：Path pane 复用现有浏览器 Path runtime，而不是在 pane 内启动独立 Godot executable。这样 lifecycle 与 teardown 仍由 workspace 已有 Web runtime 持有。Focus pane 仍避免再嵌一套 Tauri graph canvas；如果未来要求像素级一致，下一步应抽共享 graph renderer contract，而不是临时 canvas host。
 
 #### P6：回归与发布卫生
 
@@ -477,15 +482,16 @@ strict browser case 明确验证：
 - `学习路径` 与 `关联聚焦` 可交互；
 - action target 满足最小点击区域要求；
 - 不存在水平溢出；
-- Path preview anchor 是 `water glass`；
-- Path role 包含 `prerequisite`、`anchor`、`next`；
-- Focus preview 文案使用 `water glass`，不泄漏 `atom_h`；
+- Path runtime 已挂载，且节点数大于 0；
+- Path runtime 语义摘要包含 `water glass`；
+- Path pane 不显示 `atom_h`、`focus none` 或 `0 of 0 nodes completed`；
+- Focus 文案使用 `water glass`，不泄漏 `atom_h`；
 - Focus 与 Path 节点保持在渲染边界内；
 - 右侧窗口具备关闭控件。
 
 ### 权衡
 
-- **语义投影优先于运行时嵌入**：生命周期风险更低，但不是像素级一致。对当前 pane 是正确选择。
+- **在已有 owner 处复用运行时**：Path 复用现有浏览器 Path runtime；Focus 复用 graph-view Focus snapshot，而不是再托管第二套 Tauri canvas 生命周期。
 - **先确定性 reviewer，后模型 verifier**：语义覆盖更窄，但 release policy 稳定、可测试。
 - **有界 DAG pack 优先于整图 prompt**：上下文不完整，但延迟更低、幻觉面更小。
 - **optional/additive 字段优先于强制 schema break**：legacy 分支清理更慢，但保留现有客户端。
@@ -496,7 +502,7 @@ strict browser case 明确验证：
 1. 有人类可读图标签时仍渲染内部 atom ID。
 2. 把图数据库或 prompt framework 当作现有 DAG contract 的替代品。
 3. 因为 click affordance 弱，就把说明文案直接堆进 workspace。
-4. 在没有持有 lifecycle、resize、bridge 与 teardown 的情况下，把 live Tauri/Godot renderer 嵌进 side pane。
+4. 在 Path runtime 已经可挂载后，又重新引入手写 Path preview。
 5. reviewer gate 扩展快于 false-positive 语料。
 6. 通过放宽高亮启发式来掩盖 provenance 缺失，让 UI 看起来正确。
 7. 新增只转发调用、不持有不变量的 facade。
@@ -525,7 +531,7 @@ strict browser case 明确验证：
 ### 真实应用
 
 - 用户问 `什么是waterglass?`：公开回答应直接定义概念；命中文件应显示 `water glass.md`；单击后打开 Markdown 并高亮依据。
-- 用户想学习选中节点：`学习路径` 应展示 prerequisite -> anchor -> next，并使用可见节点 label。
+- 用户想学习选中节点：`学习路径` 应挂载真实 Path runtime，从选中的 DAG 节点计算，并保持 `water glass` 这类可见节点 label。
 - 用户想理解关系上下文：`关联聚焦` 应围绕选中节点展示 incoming 与 outgoing references。
 - 开发者审计可疑回答：reviewer result、graph context、citation 与 provenance diagnostics 应在次级 surface 可见，而不污染公开回答。
 
@@ -538,14 +544,14 @@ strict browser case 明确验证：
 - “prompt framework 能解决最终回答审核。”
   - 不完整。它能改善 draft，但 release policy 仍需要本地 owner。
 - “右侧 Path/Focus 必须嵌入真实 Godot/Tauri 窗口。”
-  - 除非像素级一致是硬要求，否则不应这么做。对知识引导而言，语义投影更安全。
+  - 这个说法过宽。Path 可以安全复用现有浏览器 Path runtime。Focus 应继续使用 graph-view Focus snapshot，除非产品明确要求完整 Tauri canvas 像素级一致，并且已有共享 renderer contract。
 - “高亮大致落在正确段落附近就够了。”
   - 对重复 snippet 不够。offset 或 AST provenance 才是耐久修复。
 
 ### 五点总结
 
 1. 正确架构是本地 DAG -> 有界 graph context -> answer synthesis -> 确定性 release review -> 次级 evidence surface。
-2. 最新 UI 切片已按语义投影收口：命中文件可发现、可点击，source highlight 生效，Focus/Path preview 使用解析后的节点名称，右侧 pane 可关闭。
+2. 最新 UI 切片已复用真实 owner：命中文件可发现、可点击，source highlight 生效，Focus 使用 graph-view Focus snapshot 路径，Path 挂载现有 Path runtime，标签保持人类可读，右侧 pane 可关闭。
 3. 先前 DSPy/Guidance/Semantic Kernel/LangChain/LiteLLM 方案仍有参考价值，但不应在本 runtime 中持有 DAG 语义、source provenance 或最终 release policy。
 4. 主要剩余风险是校准，不是 owner 缺失：更广 reviewer 语料、更多 offset 覆盖与 ranking evaluation 是下一步硬工作。
 5. 后续变更必须保持向前兼容，并由真实不变量驱动；避免 pass-through layer、无界图倾倒和 UI-only correctness fix。

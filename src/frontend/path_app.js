@@ -56,6 +56,7 @@ window.pathApp = {
     pendingWindowVisibility: null,
     semanticA11yLastSummaryKey: '',
     semanticA11yLastAnnouncementAt: 0,
+    semanticA11yDeferredRefreshTimer: null,
     learningWorkbench: {
         userId: 'path_user_default',
         loading: false,
@@ -4412,6 +4413,14 @@ window.pathApp = {
 
         const now = Date.now();
         if ((now - this.semanticA11yLastAnnouncementAt) < 250) {
+            if (this.semanticA11yDeferredRefreshTimer) {
+                clearTimeout(this.semanticA11yDeferredRefreshTimer);
+            }
+            const delayMs = Math.max(25, 260 - (now - this.semanticA11yLastAnnouncementAt));
+            this.semanticA11yDeferredRefreshTimer = setTimeout(() => {
+                this.semanticA11yDeferredRefreshTimer = null;
+                this._refreshPathSemanticA11y(reason);
+            }, delayMs);
             return;
         }
 

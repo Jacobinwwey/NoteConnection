@@ -333,8 +333,53 @@ function writeSeedGraphAsset(frontendDir) {
                 degree: 0,
                 cluster: 0,
             },
+            {
+                id: 'sequence',
+                label: 'sequence',
+                summary: 'Prerequisite ordering for the water glass concept.',
+                content: 'Prerequisite ordering for the water glass concept.',
+                inDegree: 0,
+                outDegree: 1,
+                degree: 1,
+                cluster: 0,
+            },
+            {
+                id: 'water glass',
+                label: 'water glass',
+                summary: 'A water glass node from the local knowledge graph.',
+                content: 'A water glass is a physical system.',
+                sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                inDegree: 1,
+                outDegree: 2,
+                degree: 3,
+                cluster: 0,
+            },
+            {
+                id: 'application',
+                label: 'application',
+                summary: 'Applied water glass reasoning.',
+                content: 'Applied water glass reasoning.',
+                inDegree: 1,
+                outDegree: 0,
+                degree: 1,
+                cluster: 0,
+            },
+            {
+                id: 'analogy',
+                label: 'analogy',
+                summary: 'Analogical water glass reasoning.',
+                content: 'Analogical water glass reasoning.',
+                inDegree: 1,
+                outDegree: 0,
+                degree: 1,
+                cluster: 0,
+            },
         ],
-        edges: [],
+        edges: [
+            { source: 'sequence', target: 'water glass', type: 'sequence', weight: 0.98 },
+            { source: 'water glass', target: 'application', type: 'application', weight: 0.95 },
+            { source: 'water glass', target: 'analogy', type: 'analogy', weight: 0.91 },
+        ],
     };
     const assetSource = [
         `const graphData = ${JSON.stringify(seededGraphData, null, 2)};`,
@@ -605,12 +650,30 @@ window.__NC_DYNAMIC_SMOKE__ = {
       }
       if (learningPathButton) {
         learningPathButton.click();
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        const startedAt = Date.now();
+        while ((Date.now() - startedAt) < 2500) {
+          const pathCountText = document.querySelector('#path-count')?.textContent || '';
+          const semanticText = document.querySelector('#path-semantic-summary')?.textContent || '';
+          const shellText = document.querySelector('[data-agent-learning-path-runtime-shell="true"]')?.textContent || '';
+          if (
+            Number(pathCountText) > 0
+            && /water glass/.test(semanticText)
+            && !/focus none/i.test(semanticText)
+            && !/focus none/i.test(shellText)
+            && !/0 of 0 nodes completed/i.test(shellText)
+          ) {
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
       }
-      const pathPreview = document.querySelector('[data-agent-path-mode-preview="true"]');
-      const pathPreviewText = pathPreview ? pathPreview.textContent.replace(/\\s+/g, ' ').trim() : '';
-      const pathRoles = Array.from(document.querySelectorAll('[data-agent-path-node-role]'))
-        .map((node) => node.getAttribute('data-agent-path-node-role') || '');
+      const pathRuntimeShell = document.querySelector('[data-agent-learning-path-runtime-shell="true"]');
+      const pathRuntimeHost = document.querySelector('#agent-learning-path-workspace-host');
+      const pathRuntimeContainer = pathRuntimeHost ? pathRuntimeHost.querySelector('#path-container') : null;
+      const pathRuntimeTitle = pathRuntimeShell ? pathRuntimeShell.textContent.replace(/\\s+/g, ' ').trim() : '';
+      const pathRuntimeNodeCount = Number(document.querySelector('#path-count')?.textContent || '0');
+      const pathRuntimeSemanticText = document.querySelector('#path-semantic-summary')?.textContent.replace(/\\s+/g, ' ').trim() || '';
+      const pathDebugPreview = document.querySelector('[data-agent-path-mode-preview="true"]');
       if (relatedFocusButton) {
         relatedFocusButton.click();
         await new Promise((resolve) => setTimeout(resolve, 50));
@@ -622,6 +685,9 @@ window.__NC_DYNAMIC_SMOKE__ = {
       });
       const focusPreview = document.querySelector('[data-agent-focus-mode-preview="true"]');
       const focusPreviewText = focusPreview ? focusPreview.textContent.replace(/\\s+/g, ' ').trim() : '';
+      const focusDeveloperDetails = document.querySelector('[data-agent-focus-developer-details="true"]');
+      const focusRelationKinds = document.querySelector('.agent-focus-relation-kinds');
+      const focusRelationEdges = document.querySelector('.agent-focus-relation-edges');
       const closeButtons = [
         document.querySelector('#btn-agent-graph-focus-close'),
         document.querySelector('#btn-agent-evidence-close'),
@@ -635,7 +701,6 @@ window.__NC_DYNAMIC_SMOKE__ = {
         const rect = node.getBoundingClientRect();
         return Math.min(rect.width, rect.height);
       }).filter((value) => Number.isFinite(value) && value > 0);
-      const pathCanvas = document.querySelector('.agent-path-mode-canvas');
       const focusCanvas = document.querySelector('.agent-focus-mode-preview');
       const countOutOfBounds = function (selector, container) {
         if (!container) {
@@ -674,12 +739,17 @@ window.__NC_DYNAMIC_SMOKE__ = {
         leftPaneScrollTopAfterScroll: leftPaneScrollProbe.scrollTopAfterScroll,
         learningPathReachableAfterLeftPaneScroll: leftPaneScrollProbe.learningPathReachableAfterScroll,
         relatedFocusReachableAfterLeftPaneScroll: leftPaneScrollProbe.relatedFocusReachableAfterScroll,
-        pathPreviewAnchorId: pathPreview ? pathPreview.getAttribute('data-path-anchor-id') || '' : '',
-        pathPreviewText,
-        pathRoles,
-        pathOutOfBoundsCount: countOutOfBounds('[data-agent-path-node-role]', pathCanvas),
+        pathRuntimeMounted: Boolean(pathRuntimeContainer),
+        pathRuntimeHostContainsContainer: Boolean(pathRuntimeHost && pathRuntimeContainer && pathRuntimeContainer.parentElement === pathRuntimeHost),
+        pathRuntimeTitle,
+        pathRuntimeNodeCount,
+        pathRuntimeSemanticText,
+        pathDebugPreviewPresent: Boolean(pathDebugPreview),
         focusPreviewAnchorId: focusPreview ? focusPreview.getAttribute('data-focus-mode-anchor-id') || '' : '',
         focusPreviewText,
+        focusDeveloperDetailsPresent: Boolean(focusDeveloperDetails),
+        focusRelationKindsText: focusRelationKinds ? focusRelationKinds.textContent.replace(/\\s+/g, ' ').trim() : '',
+        focusRelationEdgesPresent: Boolean(focusRelationEdges),
         focusOutOfBoundsCount: countOutOfBounds('[data-agent-focus-mode-node-role]', focusCanvas),
         focusCalls,
         snapshotCalls,
@@ -2739,25 +2809,46 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                 `knowledgeHitUi.leftPaneActionReachability='${String(knowledgeHitUi.learningPathReachableAfterLeftPaneScroll)}:${String(knowledgeHitUi.relatedFocusReachableAfterLeftPaneScroll)}'`
             );
         }
-        if (knowledgeHitUi.pathPreviewAnchorId !== 'water glass') {
-            failures.push(`knowledgeHitUi.pathPreviewAnchorId='${String(knowledgeHitUi.pathPreviewAnchorId)}'`);
+        if (knowledgeHitUi.pathRuntimeMounted !== true || knowledgeHitUi.pathRuntimeHostContainsContainer !== true) {
+            failures.push(
+                `knowledgeHitUi.pathRuntimeMounted='${String(knowledgeHitUi.pathRuntimeMounted)}:${String(knowledgeHitUi.pathRuntimeHostContainsContainer)}'`
+            );
         }
-        if (!String(knowledgeHitUi.pathPreviewText || '').includes('water glass') || String(knowledgeHitUi.pathPreviewText || '').includes('atom_h')) {
-            failures.push(`knowledgeHitUi.pathPreviewText='${String(knowledgeHitUi.pathPreviewText || '')}'`);
+        if (
+            !String(knowledgeHitUi.pathRuntimeTitle || '').includes('water glass')
+            || /focus none/i.test(String(knowledgeHitUi.pathRuntimeTitle || ''))
+            || /0 of 0 nodes completed/i.test(String(knowledgeHitUi.pathRuntimeTitle || ''))
+            || String(knowledgeHitUi.pathRuntimeTitle || '').includes('atom_h')
+        ) {
+            failures.push(`knowledgeHitUi.pathRuntimeTitle='${String(knowledgeHitUi.pathRuntimeTitle || '')}'`);
         }
-        ['prerequisite', 'anchor', 'next'].forEach((role) => {
-            if (!Array.isArray(knowledgeHitUi.pathRoles) || !knowledgeHitUi.pathRoles.includes(role)) {
-                failures.push(`knowledgeHitUi.pathRoles.${role}='missing'`);
-            }
-        });
-        if (Number(knowledgeHitUi.pathOutOfBoundsCount || 0) !== 0) {
-            failures.push(`knowledgeHitUi.pathOutOfBoundsCount='${String(knowledgeHitUi.pathOutOfBoundsCount)}'`);
+        if (Number(knowledgeHitUi.pathRuntimeNodeCount || 0) <= 0) {
+            failures.push(`knowledgeHitUi.pathRuntimeNodeCount='${String(knowledgeHitUi.pathRuntimeNodeCount || 0)}'`);
+        }
+        if (
+            !String(knowledgeHitUi.pathRuntimeSemanticText || '').includes('water glass')
+            || /focus none/i.test(String(knowledgeHitUi.pathRuntimeSemanticText || ''))
+            || /0 of 0 nodes completed/i.test(String(knowledgeHitUi.pathRuntimeSemanticText || ''))
+            || String(knowledgeHitUi.pathRuntimeSemanticText || '').includes('atom_h')
+        ) {
+            failures.push(`knowledgeHitUi.pathRuntimeSemanticText='${String(knowledgeHitUi.pathRuntimeSemanticText || '')}'`);
+        }
+        if (knowledgeHitUi.pathDebugPreviewPresent !== false) {
+            failures.push(`knowledgeHitUi.pathDebugPreviewPresent='${String(knowledgeHitUi.pathDebugPreviewPresent)}'`);
         }
         if (knowledgeHitUi.focusPreviewAnchorId !== 'water glass') {
             failures.push(`knowledgeHitUi.focusPreviewAnchorId='${String(knowledgeHitUi.focusPreviewAnchorId)}'`);
         }
         if (!String(knowledgeHitUi.focusPreviewText || '').includes('water glass') || String(knowledgeHitUi.focusPreviewText || '').includes('atom_h')) {
             failures.push(`knowledgeHitUi.focusPreviewText='${String(knowledgeHitUi.focusPreviewText || '')}'`);
+        }
+        if (knowledgeHitUi.focusDeveloperDetailsPresent !== false) {
+            failures.push(`knowledgeHitUi.focusDeveloperDetailsPresent='${String(knowledgeHitUi.focusDeveloperDetailsPresent)}'`);
+        }
+        if (knowledgeHitUi.focusRelationEdgesPresent !== false || String(knowledgeHitUi.focusRelationKindsText || '').length > 0) {
+            failures.push(
+                `knowledgeHitUi.focusDeveloperNoise='${String(knowledgeHitUi.focusRelationEdgesPresent)}:${String(knowledgeHitUi.focusRelationKindsText || '')}'`
+            );
         }
         if (Number(knowledgeHitUi.focusOutOfBoundsCount || 0) !== 0) {
             failures.push(`knowledgeHitUi.focusOutOfBoundsCount='${String(knowledgeHitUi.focusOutOfBoundsCount)}'`);

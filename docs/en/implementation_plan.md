@@ -2,6 +2,40 @@
 
 ## English Document
 
+### 2026-06-21 Agent Knowledge Workspace Runtime Reuse Plan
+
+#### Objective
+
+Close the remaining Knowledge Workspace graph-action defects by reusing the project's existing DAG-backed runtimes instead of maintaining separate preview logic.
+
+#### Current code truth
+
+- `Related Focus` now uses the existing graph-view Focus-mode snapshot/runtime path from the main graph surface and hides relation-edge/debug detail unless Developer Mode is enabled.
+- `Learning Path` now mounts the existing Path workspace/runtime (`path-container`, path sidebars, and `path_app.js`) into the docked right pane instead of rendering a fake prerequisite/anchor/next DOM preview.
+- Learning-path target selection is reconciled against the real DAG source graph by stable node ID, human label, and source basename. The worker receives the real graph node ID; the UI displays the resolved label such as `water glass`.
+- `agent_workspace.js` now propagates `sourcePath` from top-level knowledge-point fields, matched spans, and citation payloads so graph target resolution has a durable source-path signal.
+- `path_app.js` now defers semantic live-region refreshes when throttled, preventing stale `focus none` / `0 of 0 nodes` announcements after a valid runtime path is computed.
+- `scripts/verify-agent-workspace-browser.js` now seeds a real DAG neighborhood around `water glass` and asserts the mounted Path runtime has nonzero nodes, visible `water glass` semantics, no `atom_h` leakage, no `focus none`, and no `0 of 0 nodes completed`.
+- `src/agent_workspace.frontend.test.ts` pins the important invariant: runtime configuration may use the DAG ID (`atom_h` in the fixture), but the right-pane UI must show the node label (`water glass`) and not expose the internal ID.
+- The matched-file help affordance remains a compact hover/focus question-mark control; the left hit area remains scrollable and action controls stay reachable.
+- Compatibility is additive: no existing response shape is made mandatory, and the legacy `performance.deepDebug` setting remains accepted as the Developer Mode compatibility key.
+
+#### Execution order
+
+1. Keep graph target reconciliation in the workspace/path boundary, not in display strings.
+2. Preserve the Path runtime as the single owner for diffusion/path semantics; do not reintroduce a handcrafted preview graph.
+3. Keep Focus default output user-facing and sparse; expose relation lists and backend diagnostics only behind Developer Mode.
+4. Keep strict browser verification as the executable acceptance surface for the reported screenshots, especially `water glass.md`.
+5. Extend only invariant-owning modules; avoid pass-through adapters that merely forward graph payloads.
+
+#### Acceptance criteria
+
+1. Clicking `Learning Path` mounts the real Path workspace and computes a nonempty path from the selected DAG node.
+2. The Path worker receives a valid graph node ID while all visible right-pane labels prefer human node names.
+3. Clicking `Related Focus` shows the selected node's Focus-mode graph state without default backend/relation debug lists.
+4. The matched-file list scrolls vertically, exposes `water glass.md`, and keeps `Learning Path` / `Related Focus` buttons interactable.
+5. The strict browser verifier fails if `atom_h`, `focus none`, or `0 of 0 nodes` reappear in the user-facing path pane.
+
 ### 2026-06-18 Final Reply Review Robustness Implementation Plan
 
 #### Objective

@@ -3,10 +3,10 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
-## 2026-06-20 Knowledge Workspace Graph Preview and Review Closure
+## 2026-06-21 Knowledge Workspace Runtime Reuse Closure
 
 The latest closure is not a new framework direction.
-It is the consolidation of the existing DAG answer contract, final-answer release review, and the Knowledge Workspace graph-preview UI into one mainline acceptance surface.
+It corrects the prior graph-preview compromise: the Knowledge Workspace now reuses the existing graph/path runtimes where the project already has owners, instead of maintaining a parallel fake preview path.
 
 What is now true in code:
 
@@ -14,10 +14,11 @@ What is now true in code:
 - the existing DAG is still consumed before synthesis by `src/learning/graphContextAssembler.ts` and again at release time through graph-aware reviewer gates,
 - the matched-file list in `src/frontend/workspace_panes.js` now uses a compact question-mark help affordance instead of dumping instructional copy into the workspace,
 - matched-file source focus remains right-pane-first: clicks resolve source paths, render Markdown, and project inline highlights through line/snippet/offset provenance paths,
-- `Related Focus` now uses a Focus-mode-style semantic projection of the selected graph neighborhood instead of leaking internal atom IDs,
-- `Learning Path` now uses a Path-mode-style projection around the resolved graph label and the strict browser verifier pins `water glass` as the anchor label,
+- `Related Focus` now goes through the existing graph-view Focus-mode snapshot path and hides relation-edge/debug details unless Developer Mode is enabled,
+- `Learning Path` now mounts the existing path workspace/runtime (`path-container`, path sidebars, `path_app.js`) inside the right pane instead of rendering a static DOM preview,
+- the learning-path target is reconciled against the real DAG source (`graphData` / path-app source graph) by ID, label, and source basename; the worker receives the real node ID while the UI keeps the human label visible,
 - right-pane windows now expose close controls on the affected source/focus/path surfaces,
-- strict browser verification in `scripts/verify-agent-workspace-browser.js` now owns the user-reported `water glass.md` UI regression surface.
+- strict browser verification in `scripts/verify-agent-workspace-browser.js` now owns the user-reported `water glass.md` UI regression surface, including nonzero path runtime nodes, `water glass` semantic text, and rejection of `atom_h`, `focus none`, and `0 of 0 nodes`.
 
 Code-vs-plan reconciliation:
 
@@ -26,14 +27,15 @@ Code-vs-plan reconciliation:
 | The answer area should not become an evidence dump | `conversationComposer.ts` publishes `answerReleaseReview.publicAnswer`; graph/evidence diagnostics stay in secondary surfaces. | Implemented |
 | Users need to discover that matched files are clickable without permanent workspace clutter | `workspace_panes.js` renders the instruction behind a help icon that appears on hover/focus. | Implemented |
 | Clicking a matched file should open source and highlight the basis | Source focus consumes source-line provenance, line windows, snippets, and offsets where available. | Implemented baseline |
-| `Related Focus` should correspond to the Tauri Focus-mode state | The pane renders the selected node's focus neighborhood as anchor/incoming/outgoing context. | Implemented as semantic projection |
-| `Learning Path` should correspond to the Godot Path-mode design | The pane renders prerequisite/anchor/next roles around the resolved graph label. | Implemented as semantic projection |
+| `Related Focus` should correspond to the Tauri Focus-mode state | The pane calls graph-view focus snapshot/runtime APIs and renders only the focus graph by default; developer relation lists are behind Developer Mode. | Implemented |
+| `Learning Path` should correspond to the Godot/Path-mode design | The pane mounts the existing Path runtime and configures diffusion using the reconciled DAG node ID while displaying the resolved label. | Implemented |
 | Final answers need a robust review/correction owner | `answerReleaseReview.ts` remains the deterministic backend release-policy owner. | Implemented baseline |
 | Compatibility must hold | New graph-preview and provenance fields remain additive/optional; legacy response fields remain valid. | Implemented |
 
-The important tradeoff is deliberate: the side pane projects Focus/Path semantics rather than embedding live Tauri or Godot canvases.
-That keeps lifecycle, resize, bridge, and shutdown ownership out of the knowledge pane.
-If future product requirements demand pixel parity, the correct next step is a shared graph projection contract plus shared renderer, not ad hoc canvas embedding.
+The important tradeoff is now narrower.
+Path uses the existing browser Path runtime because that owner already exists and can be mounted safely in a docked pane.
+Focus still uses the graph-view Focus-mode snapshot/rendering path rather than embedding another Tauri window/canvas lifecycle into the workspace.
+If future product requirements demand pixel parity with the full Tauri graph canvas, the correct next step is a shared renderer contract, not a second one-off canvas host.
 
 Remaining work has moved to calibration:
 

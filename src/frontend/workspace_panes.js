@@ -6,6 +6,8 @@
         'learning-history-sidebar',
         'learning-workbench-sidebar',
     ];
+    let learningPathConfigureRetryTimer = null;
+    let learningPathConfigureRetryCount = 0;
 
     function getElement(id) {
         return document.getElementById(id);
@@ -47,6 +49,43 @@
 
     function getLearningPathWorkspaceHost() {
         return getElement('agent-learning-path-workspace-host');
+    }
+
+    function isDeveloperModeEnabled() {
+        if (window.__NC_AGENT_WORKSPACE_DEVELOPER_MODE === true) {
+            return true;
+        }
+        const settingsManager = window.settingsManager;
+        try {
+            if (settingsManager && typeof settingsManager.get === 'function') {
+                return settingsManager.get('performance', 'developerMode') === true
+                    || settingsManager.get('performance', 'deepDebug') === true;
+            }
+        } catch (_error) {
+            // Fall back to the raw settings object below. Older settings shims may
+            // throw for unknown keys while still exposing the compatibility value.
+        }
+        const performanceSettings = settingsManager
+            && settingsManager.settings
+            && typeof settingsManager.settings === 'object'
+            && settingsManager.settings.performance
+            && typeof settingsManager.settings.performance === 'object'
+            ? settingsManager.settings.performance
+            : null;
+        return Boolean(
+            performanceSettings
+            && (performanceSettings.developerMode === true || performanceSettings.deepDebug === true)
+        );
+    }
+
+    function getActiveWorkspaceLanguage() {
+        const i18nLanguage = window.i18n && typeof window.i18n.currentLanguage === 'string'
+            ? window.i18n.currentLanguage.trim()
+            : '';
+        const documentLanguage = document.documentElement && typeof document.documentElement.lang === 'string'
+            ? document.documentElement.lang.trim()
+            : '';
+        return i18nLanguage || documentLanguage || 'en';
     }
 
     function formatTemplate(template, params) {
@@ -301,18 +340,23 @@
         };
         const citation = item && typeof item.citation === 'object' ? item.citation : null;
         appendPath(item && item.sourcePath);
+        appendPath(item && item.source_path);
         appendPath(citation && citation.sourcePath);
+        appendPath(citation && citation.source_path);
         const citations = Array.isArray(item && item.citations) ? item.citations : [];
         citations.forEach((entry) => {
             appendPath(entry && entry.sourcePath);
+            appendPath(entry && entry.source_path);
         });
         const normalizedMatchedSpans = Array.isArray(matchedSpans)
             ? matchedSpans
             : normalizeMatchedSpans(item && item.matchedSpans);
         normalizedMatchedSpans.forEach((span) => {
             appendPath(span && span.sourcePath);
+            appendPath(span && span.source_path);
             const spanCitation = span && typeof span.citation === 'object' ? span.citation : null;
             appendPath(spanCitation && spanCitation.sourcePath);
+            appendPath(spanCitation && spanCitation.source_path);
         });
         return candidates;
     }
@@ -427,6 +471,13 @@
             || payload.nodeId
             || translate('agentWorkspace.graphFocus.title', 'Graph Focus')
         ).trim();
+    }
+
+    function isGraphFocusRuntimeOnlyPayload(payload) {
+        const presentationMode = normalizeKnowledgeGraphText(
+            payload && (payload.presentationMode || payload.viewMode || payload.focusViewMode)
+        );
+        return presentationMode === 'focus-mode' || presentationMode === 'runtime-focus';
     }
 
     function buildGraphFocusEvidenceListHtml(matchedSpans) {
@@ -1005,6 +1056,8 @@
             ? payload.nodeLabels
             : {};
         const focusModeSnapshot = normalizeFocusModeSnapshot(payload && payload.focusModeSnapshot);
+        const developerMode = isDeveloperModeEnabled()
+            || Boolean(payload && payload.showDeveloperDetails === true);
         const relationKinds = Array.from(new Set(
             (Array.isArray(payload && payload.relationKinds) ? payload.relationKinds : [])
                 .map((kind) => String(kind || '').trim())
@@ -1021,6 +1074,20 @@
             || payload && (payload.graphTargetLabel || payload.title)
             || anchorId
         ).trim();
+        const graphHtml = focusModeSnapshot
+            ? buildGraphFocusSnapshotGraphHtml(focusModeSnapshot)
+            : buildGraphFocusRelationGraphHtml(anchorId, relationPath, nodeLabels);
+        if (!developerMode) {
+            return `
+                <div
+                    class="agent-focus-relation-map agent-focus-relation-map--focus-mode"
+                    data-agent-focus-relation-map="true"
+                    data-agent-focus-developer-mode="false"
+                >
+                    ${graphHtml || `<div class="agent-focus-relation-empty">${escapeHtml(translate('agentWorkspace.graphFocus.relationEdgesUnavailable', 'No bounded relation edges were returned for this hit.'))}</div>`}
+                </div>
+            `;
+        }
         const nodeEntries = focusModeSnapshot
             ? focusModeSnapshot.nodes.slice(0, 10).map((node) => ({
                 id: node.id,
@@ -1085,19 +1152,26 @@
             : `<li class="agent-focus-relation-empty">${escapeHtml(translate('agentWorkspace.graphFocus.relationEdgesUnavailable', 'No bounded relation edges were returned for this hit.'))}</li>`;
         const edgeHtml = focusModeSnapshot ? snapshotEdgeHtml || relationEdgeHtml : relationEdgeHtml;
         return `
-            <div class="agent-focus-relation-map" data-agent-focus-relation-map="true">
+            <div
+                class="agent-focus-relation-map"
+                data-agent-focus-relation-map="true"
+                data-agent-focus-developer-mode="true"
+            >
                 <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.graphFocus.relationMapTitle', 'Relation focus'))}</div>
-                ${relationKinds.length > 0 ? `<div class="agent-focus-relation-kinds">${escapeHtml(relationKinds.join(', '))}</div>` : ''}
-                ${focusModeSnapshot
-                    ? buildGraphFocusSnapshotGraphHtml(focusModeSnapshot)
-                    : buildGraphFocusRelationGraphHtml(anchorId, relationPath, nodeLabels)}
-                ${nodeHtml ? `<div class="agent-focus-relation-nodes">${nodeHtml}</div>` : ''}
-                <ul class="agent-focus-relation-edges">${edgeHtml}</ul>
+                ${relationKinds.length > 0 ? `<div class="agent-focus-relation-kinds" data-agent-focus-developer-details="true">${escapeHtml(relationKinds.join(', '))}</div>` : ''}
+                ${graphHtml}
+                <div data-agent-focus-developer-details="true">
+                    ${nodeHtml ? `<div class="agent-focus-relation-nodes">${nodeHtml}</div>` : ''}
+                    <ul class="agent-focus-relation-edges">${edgeHtml}</ul>
+                </div>
             </div>
         `;
     }
 
     function buildGraphFocusDiagnosticsHtml(diagnostics) {
+        if (!isDeveloperModeEnabled()) {
+            return '';
+        }
         if (!diagnostics || (!diagnostics.usedFallback && !diagnostics.fallbackSourcePathUsed)) {
             return '';
         }
@@ -1170,6 +1244,17 @@
                 <div class="agent-pane-title">${escapeHtml(buildGraphFocusTitle(payload))}</div>
                 <div class="agent-pane-meta">${escapeHtml(String(payload.sourcePath || payload.atomId || payload.nodeId || ''))}</div>
                 <p class="agent-pane-summary">${escapeHtml(translate('reader_loading', 'Loading reader content...'))}</p>
+            </div>
+        `;
+    }
+
+    function buildGraphFocusRuntimeOnlyHtml(payload) {
+        return `
+            <div
+                class="agent-pane-block agent-pane-block--graph-focus agent-pane-block--focus-runtime"
+                data-agent-graph-focus-runtime-only="true"
+            >
+                ${buildGraphFocusRelationMapHtml(payload)}
             </div>
         `;
     }
@@ -2160,6 +2245,11 @@
         state.graphFocusRenderToken += 1;
         const renderToken = state.graphFocusRenderToken;
         const diagnostics = buildGraphFocusDiagnostics(payload, matchedSpans, renderToken);
+        if (isGraphFocusRuntimeOnlyPayload(payload) && !isDeveloperModeEnabled()) {
+            body.innerHTML = buildGraphFocusRuntimeOnlyHtml(payload);
+            setLastGraphFocusDiagnostics(null);
+            return;
+        }
         body.innerHTML = buildGraphFocusLoadingHtml(payload);
         const rendered = await renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken, diagnostics);
         if (rendered || renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open) {
@@ -2333,6 +2423,7 @@
         const graphTarget = resolveKnowledgePointGraphTarget(item);
         focusKnowledgePointInGraphRuntime(graphTarget.graphNodeId || graphTarget.atomId);
         const payload = buildKnowledgePointFocusPayload(item, graphTarget);
+        payload.presentationMode = 'focus-mode';
         if (!payload.focusModeSnapshot) {
             payload.focusModeSnapshot = resolveFocusModeSnapshot(graphTarget.graphNodeId);
         }
@@ -2342,7 +2433,6 @@
     function openLearningPathForKnowledgePoint(item, handlers) {
         ensureWorkspaceVisible();
         const graphTarget = resolveKnowledgePointGraphTarget(item);
-        api.openGraphFocusPane(buildKnowledgePointFocusPayload(item, graphTarget));
         const capability = buildKnowledgePointLearningPathCapability(item);
         if (invokeKnowledgePointCapability(item, capability, handlers)) {
             return;
@@ -2352,8 +2442,10 @@
         api.openLearningPathPane({
             atomId,
             graphTargetId: graphTarget.graphNodeId,
+            targetIds: graphTarget.graphNodeId ? [graphTarget.graphNodeId] : [atomId].filter(Boolean),
             graphTargetLabel: graphTarget.graphNodeLabel,
             title: title || atomId || translate('agentWorkspace.learningPath.title', 'Learning Path'),
+            sourcePath: resolveKnowledgePointSourcePath(item),
             items: atomId ? [{ atomId, title: title || atomId }] : [],
             relationPath: Array.isArray(item && item.relationPath)
                 ? item.relationPath.map((edge) => ({ ...edge }))
@@ -2787,33 +2879,348 @@
         `;
     }
 
+    function resolveLearningPathTitle(payload) {
+        return String(
+            payload && (
+                payload.graphTargetLabel
+                || payload.title
+                || payload.atomId
+            )
+            || translate('agentWorkspace.learningPath.title', 'Learning Path')
+        ).trim();
+    }
+
+    function resolveLearningPathItemLabel(payload, item) {
+        const nodeLabels = payload && payload.nodeLabels && typeof payload.nodeLabels === 'object'
+            ? payload.nodeLabels
+            : {};
+        const itemId = normalizeKnowledgeGraphText(item && (item.atomId || item.id || item.nodeId));
+        return normalizeKnowledgeGraphText(
+            itemId && nodeLabels[itemId]
+            || item && (item.title || item.label || item.name)
+            || itemId
+        );
+    }
+
+    function buildLearningPathDeveloperDetailsHtml(payload) {
+        if (!isDeveloperModeEnabled()) {
+            return '';
+        }
+        const items = Array.isArray(payload && payload.items) ? payload.items : [];
+        const listHtml = items.length > 0
+            ? items.map((item, index) => `
+                <li class="agent-pane-list-item">
+                    <span class="agent-pane-list-index">${index + 1}</span>
+                    <span class="agent-pane-list-label">${escapeHtml(resolveLearningPathItemLabel(payload, item) || translate('agentWorkspace.reply.knowledgeRunNone', 'none'))}</span>
+                </li>
+            `).join('')
+            : `<li class="agent-pane-list-empty">${escapeHtml(translate('agentWorkspace.learningPath.emptyLoaded', 'No learning path loaded yet.'))}</li>`;
+        return `
+            <div
+                class="agent-pane-block agent-learning-path-developer-details"
+                data-agent-learning-path-developer-details="true"
+            >
+                <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.graphFocus.diagnosticsTitle', 'Render diagnostics'))}</div>
+                <ul class="agent-pane-list">${listHtml}</ul>
+            </div>
+            ${buildLearningPathPreviewHtml(payload)}
+        `;
+    }
+
+    function resolveLearningPathRuntimeTargetId(payload) {
+        const candidates = [
+            payload && payload.graphTargetId,
+            payload && payload.graphNodeId,
+            payload && payload.targetId,
+            payload && payload.atomId,
+            payload && payload.title,
+        ];
+        for (const candidate of candidates) {
+            const normalized = normalizeKnowledgeGraphText(candidate);
+            if (normalized) {
+                return normalized;
+            }
+        }
+        return '';
+    }
+
+    function normalizeLearningPathLookupKey(value) {
+        return normalizeKnowledgeGraphText(value)
+            .toLowerCase()
+            .replace(/\.[a-z0-9]+$/i, '')
+            .replace(/[_-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function resolveLearningPathNodeLabel(node) {
+        return normalizeKnowledgeGraphText(node && (node.label || node.title || node.name || node.id));
+    }
+
+    function resolveLearningPathNodeSourceBasenames(node) {
+        if (!node || typeof node !== 'object') {
+            return [];
+        }
+        const metadata = node.metadata && typeof node.metadata === 'object'
+            ? node.metadata
+            : {};
+        return [
+            node.sourcePath,
+            node.filepath,
+            node.path,
+            metadata.sourcePath,
+            metadata.filepath,
+            metadata.path,
+        ]
+            .map(resolvePathBasenameWithoutExtension)
+            .filter(Boolean);
+    }
+
+    function getLearningPathRuntimeSourceData(pathApp) {
+        if (pathApp && typeof pathApp._getSourceGraphData === 'function') {
+            try {
+                const sourceData = pathApp._getSourceGraphData();
+                if (sourceData && Array.isArray(sourceData.nodes)) {
+                    return sourceData;
+                }
+            } catch (_error) {
+                // Fall through to global graphData checks.
+            }
+        }
+        if (typeof graphData !== 'undefined' && graphData && Array.isArray(graphData.nodes)) {
+            return graphData;
+        }
+        if (window.graphData && Array.isArray(window.graphData.nodes)) {
+            return window.graphData;
+        }
+        return null;
+    }
+
+    function resolveLearningPathNodeByCandidate(sourceData, candidate) {
+        const normalizedCandidate = normalizeKnowledgeGraphText(candidate);
+        if (!sourceData || !Array.isArray(sourceData.nodes) || !normalizedCandidate) {
+            return null;
+        }
+        const nodes = sourceData.nodes.filter((node) => node && typeof node === 'object');
+        const exactId = nodes.find((node) => normalizeKnowledgeGraphText(node.id) === normalizedCandidate);
+        if (exactId) {
+            return exactId;
+        }
+
+        const lookupKey = normalizeLearningPathLookupKey(normalizedCandidate);
+        if (!lookupKey) {
+            return null;
+        }
+        const labelMatches = nodes.filter((node) => normalizeLearningPathLookupKey(resolveLearningPathNodeLabel(node)) === lookupKey);
+        if (labelMatches.length === 1) {
+            return labelMatches[0];
+        }
+        const sourceMatches = nodes.filter((node) =>
+            resolveLearningPathNodeSourceBasenames(node)
+                .some((basename) => normalizeLearningPathLookupKey(basename) === lookupKey)
+        );
+        return sourceMatches.length === 1 ? sourceMatches[0] : null;
+    }
+
+    function collectLearningPathRuntimeTargetCandidates(payload) {
+        const candidates = [];
+        const seen = new Set();
+        const appendCandidate = function (value) {
+            const normalized = normalizeKnowledgeGraphText(value);
+            if (!normalized || seen.has(normalized)) {
+                return;
+            }
+            seen.add(normalized);
+            candidates.push(normalized);
+        };
+        appendCandidate(payload && payload.graphTargetId);
+        appendCandidate(payload && payload.graphNodeId);
+        appendCandidate(payload && payload.targetId);
+        appendCandidate(payload && payload.graphTargetLabel);
+        appendCandidate(payload && payload.title);
+        appendCandidate(resolvePathBasenameWithoutExtension(payload && payload.sourcePath));
+        appendCandidate(payload && payload.atomId);
+        []
+            .concat(Array.isArray(payload && payload.graphTargetIds) ? payload.graphTargetIds : [])
+            .concat(Array.isArray(payload && payload.targetIds) ? payload.targetIds : [])
+            .concat(Array.isArray(payload && payload.focusAtomIds) ? payload.focusAtomIds : [])
+            .forEach(appendCandidate);
+
+        const nodeLabels = payload && payload.nodeLabels && typeof payload.nodeLabels === 'object'
+            ? payload.nodeLabels
+            : {};
+        Object.keys(nodeLabels).forEach((nodeId) => {
+            appendCandidate(nodeId);
+            appendCandidate(nodeLabels[nodeId]);
+        });
+
+        const relationPath = Array.isArray(payload && payload.relationPath) ? payload.relationPath : [];
+        relationPath.forEach((edge) => {
+            appendCandidate(edge && edge.targetTitle);
+            appendCandidate(edge && edge.sourceTitle);
+            appendCandidate(edge && edge.targetAtomId);
+            appendCandidate(edge && edge.sourceAtomId);
+        });
+        return candidates;
+    }
+
+    function resolveLearningPathRuntimeTarget(payload, pathApp) {
+        const sourceData = getLearningPathRuntimeSourceData(pathApp);
+        const candidates = collectLearningPathRuntimeTargetCandidates(payload);
+        if (sourceData && Array.isArray(sourceData.nodes) && sourceData.nodes.length > 0) {
+            for (const candidate of candidates) {
+                const node = resolveLearningPathNodeByCandidate(sourceData, candidate);
+                if (node && normalizeKnowledgeGraphText(node.id)) {
+                    const id = normalizeKnowledgeGraphText(node.id);
+                    return {
+                        id,
+                        label: resolveLearningPathNodeLabel(node) || normalizeKnowledgeGraphText(candidate) || id,
+                        sourceAvailable: true,
+                    };
+                }
+            }
+            return {
+                id: '',
+                label: resolveLearningPathTitle(payload || {}),
+                sourceAvailable: true,
+            };
+        }
+        const fallbackId = candidates[0] || resolveLearningPathRuntimeTargetId(payload);
+        return {
+            id: fallbackId,
+            label: resolveLearningPathTitle(payload || {}) || fallbackId,
+            sourceAvailable: false,
+        };
+    }
+
+    function resolveLearningPathRuntimeTargetIds(payload, primaryTargetId, pathApp) {
+        const sourceData = getLearningPathRuntimeSourceData(pathApp);
+        const rawTargetIds = []
+            .concat(Array.isArray(payload && payload.graphTargetIds) ? payload.graphTargetIds : [])
+            .concat(Array.isArray(payload && payload.targetIds) ? payload.targetIds : [])
+            .concat(Array.isArray(payload && payload.focusAtomIds) ? payload.focusAtomIds : []);
+        const targetIds = [];
+        const seen = new Set();
+        [primaryTargetId].concat(rawTargetIds).forEach((targetId) => {
+            const resolvedNode = sourceData ? resolveLearningPathNodeByCandidate(sourceData, targetId) : null;
+            const normalized = normalizeKnowledgeGraphText(resolvedNode && resolvedNode.id || targetId);
+            if (!normalized || seen.has(normalized)) {
+                return;
+            }
+            if (sourceData && !resolvedNode && normalized !== primaryTargetId) {
+                return;
+            }
+            seen.add(normalized);
+            targetIds.push(normalized);
+        });
+        return targetIds;
+    }
+
+    function scheduleLearningPathRuntimeConfigureRetry(payload) {
+        if (learningPathConfigureRetryCount >= 8) {
+            return;
+        }
+        learningPathConfigureRetryCount += 1;
+        if (learningPathConfigureRetryTimer) {
+            clearTimeout(learningPathConfigureRetryTimer);
+        }
+        learningPathConfigureRetryTimer = setTimeout(function () {
+            learningPathConfigureRetryTimer = null;
+            configureLearningPathWorkspaceRuntime(payload || {});
+        }, 150);
+    }
+
+    function applyLearningPathRuntimeTargetState(pathApp, config) {
+        if (!pathApp || !config || !config.targetId) {
+            return;
+        }
+        if (pathApp.runtimeConfig && typeof pathApp.runtimeConfig === 'object') {
+            pathApp.runtimeConfig.mode = 'diffusion';
+            pathApp.runtimeConfig.targetId = config.targetId;
+            pathApp.runtimeConfig.targetIds = Array.isArray(config.targetIds)
+                ? config.targetIds.slice()
+                : [config.targetId];
+        }
+        pathApp.currentTargetId = config.targetId;
+        pathApp.currentTargetIds = Array.isArray(config.targetIds)
+            ? config.targetIds.slice()
+            : [config.targetId];
+        pathApp.centralNodeId = config.targetId;
+    }
+
+    function configureLearningPathWorkspaceRuntime(payload) {
+        const pathContainer = getElement('path-container');
+        if (pathContainer) {
+            pathContainer.style.display = 'block';
+        }
+        const graphWrapper = getElement('graph-wrapper');
+        if (graphWrapper) {
+            graphWrapper.style.display = 'block';
+        }
+        const pathApp = window.pathApp;
+        if (!pathApp || typeof pathApp !== 'object') {
+            return false;
+        }
+        const runtimeTarget = resolveLearningPathRuntimeTarget(payload, pathApp);
+        const targetId = runtimeTarget.id;
+        if (!targetId) {
+            scheduleLearningPathRuntimeConfigureRetry(payload);
+            return false;
+        }
+        const targetIds = resolveLearningPathRuntimeTargetIds(payload, targetId, pathApp);
+        const config = {
+            mode: 'diffusion',
+            targetId,
+            targetIds,
+            language: normalizeKnowledgeGraphText(payload && payload.language) || getActiveWorkspaceLanguage(),
+        };
+        applyLearningPathRuntimeTargetState(pathApp, config);
+        if (!window.__NC_AGENT_PATH_WORKSPACE_INITIALIZED && typeof pathApp.init === 'function') {
+            pathApp.init(targetId);
+            window.__NC_AGENT_PATH_WORKSPACE_INITIALIZED = true;
+        } else if (
+            runtimeTarget.sourceAvailable
+            && typeof pathApp.startProcessing === 'function'
+            && (!Array.isArray(pathApp.nodes) || pathApp.nodes.length === 0)
+        ) {
+            pathApp.startProcessing(targetId);
+        }
+        applyLearningPathRuntimeTargetState(pathApp, config);
+        if (typeof pathApp.applyRemoteConfigure === 'function') {
+            pathApp.applyRemoteConfigure(config);
+        } else if (typeof pathApp.switchCentral === 'function') {
+            pathApp.switchCentral(targetId);
+        }
+        const learningUserIdInput = getElement('learning-user-id');
+        if (
+            learningUserIdInput
+            && typeof learningUserIdInput.value === 'string'
+            && normalizeKnowledgeGraphText(payload && payload.userId)
+        ) {
+            learningUserIdInput.value = normalizeKnowledgeGraphText(payload && payload.userId);
+        }
+        if (typeof pathApp.triggerUpdate === 'function') {
+            pathApp.triggerUpdate();
+        }
+        learningPathConfigureRetryCount = 0;
+        return true;
+    }
+
     function renderLearningPathBody(payload) {
         const body = getPaneBodyElement('learning-path');
         if (!body) {
             return;
         }
-        const title = String(
-            payload.graphTargetLabel
-            || payload.title
-            || payload.atomId
-            || translate('agentWorkspace.learningPath.title', 'Learning Path')
-        ).trim();
-        const items = Array.isArray(payload.items) ? payload.items : [];
-        const listHtml = items.length > 0
-            ? items.map((item, index) => `
-                <li class="agent-pane-list-item">
-                    <span class="agent-pane-list-index">${index + 1}</span>
-                    <span class="agent-pane-list-label">${escapeHtml(String(item.title || item.atomId || ''))}</span>
-                </li>
-            `).join('')
-            : `<li class="agent-pane-list-empty">${escapeHtml(translate('agentWorkspace.learningPath.emptyLoaded', 'No learning path loaded yet.'))}</li>`;
+        const title = resolveLearningPathTitle(payload || {});
         body.innerHTML = `
-            <div class="agent-pane-block">
-                <div class="agent-pane-title">${escapeHtml(title)}</div>
-                <ul class="agent-pane-list">${listHtml}</ul>
+            <div
+                class="agent-learning-path-runtime-shell"
+                data-agent-learning-path-runtime-shell="true"
+            >
+                <div class="agent-learning-path-runtime-title">${escapeHtml(title)}</div>
+                <div id="agent-learning-path-workspace-host" class="agent-learning-path-workspace-host"></div>
             </div>
-            ${buildLearningPathPreviewHtml(payload)}
-            <div id="agent-learning-path-workspace-host" class="agent-learning-path-workspace-host"></div>
+            ${buildLearningPathDeveloperDetailsHtml(payload || {})}
         `;
     }
 
@@ -7227,8 +7634,14 @@
             ensureWorkspaceVisible();
             state.panes['learning-path'].open = true;
             state.panes['learning-path'].payload = payload || null;
+            if (learningPathConfigureRetryTimer) {
+                clearTimeout(learningPathConfigureRetryTimer);
+                learningPathConfigureRetryTimer = null;
+            }
+            learningPathConfigureRetryCount = 0;
             renderLearningPathBody(payload || {});
             mountLearningPathWorkspace();
+            configureLearningPathWorkspaceRuntime(payload || {});
             syncPaneState('learning-path');
             updatePaneControlLabels();
         },
@@ -7237,6 +7650,11 @@
                 state.promotionPane = null;
                 syncBodyPromotionState();
             }
+            if (learningPathConfigureRetryTimer) {
+                clearTimeout(learningPathConfigureRetryTimer);
+                learningPathConfigureRetryTimer = null;
+            }
+            learningPathConfigureRetryCount = 0;
             restoreLearningPathWorkspace();
             state.panes['learning-path'].open = false;
             state.panes['learning-path'].fullscreen = false;
