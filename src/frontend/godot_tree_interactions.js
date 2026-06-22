@@ -29,13 +29,6 @@
         );
     }
 
-    function hasPrerequisites(nodeElement) {
-        return nodeElement && (
-            nodeElement.getAttribute('data-agent-future-path-node-has-prereqs') === 'true'
-            || nodeElement.getAttribute('data-godot-tree-node-has-prereqs') === 'true'
-        );
-    }
-
     function isExpandedNode(nodeElement) {
         return nodeElement && (
             nodeElement.getAttribute('data-agent-future-path-node-expanded') === 'true'
@@ -44,7 +37,7 @@
     }
 
     function canTogglePrerequisites(nodeElement) {
-        return isSpineNode(nodeElement) || hasPrerequisites(nodeElement) || isExpandedNode(nodeElement);
+        return isSpineNode(nodeElement);
     }
 
     function emit(callbacks, name, nodeId, event) {

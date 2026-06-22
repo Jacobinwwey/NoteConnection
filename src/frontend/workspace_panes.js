@@ -1065,6 +1065,7 @@
         }
         const interactive = Boolean(options && options.interactive === true);
         const hideEdges = Boolean(options && options.hideEdges === true);
+        const hideContext = Boolean(options && options.hideContext === true);
 
         const nodeCount = normalizedSnapshot.nodes.length;
         const anchorId = normalizedSnapshot.anchorId;
@@ -1165,7 +1166,7 @@
         const continueHtml = continueNodes.map((node) => renderNode(node.id)).join('');
         const supportHtml = supportNodes.map((node) => renderNode(node.id)).join('');
         const anchorHtml = renderNode(anchorId);
-        const contextNodes = normalizedSnapshot.nodes
+        const contextNodeHtml = hideContext ? '' : normalizedSnapshot.nodes
             .filter((node) => node.id !== anchorId)
             .slice(0, 18)
             .map((node, index) => {
@@ -1182,6 +1183,11 @@
                     >${escapeHtml(node.label || node.id)}</span>
                 `;
             }).join('');
+        const contextLayerHtml = hideContext ? '' : `
+                <div class="agent-focus-mode-context" aria-hidden="true">
+                    ${contextNodeHtml}
+                </div>
+            `;
 
         return `
             <div
@@ -1192,10 +1198,9 @@
                 data-agent-focus-visible-edges="${hideEdges ? 'false' : 'true'}"
                 data-focus-mode-anchor-id="${escapeHtml(anchorId)}"
                 data-focus-node-count="${nodeCount}"
+                data-focus-context-node-count="${hideContext ? 0 : Math.min(18, Math.max(0, normalizedSnapshot.nodes.length - 1))}"
             >
-                <div class="agent-focus-mode-context" aria-hidden="true">
-                    ${contextNodes}
-                </div>
+                ${contextLayerHtml}
                 <div class="agent-focus-mode-cluster-label agent-focus-mode-cluster-label--continue">
                     ${escapeHtml(translate('agentWorkspace.graphFocus.continueCluster', 'Continue exploring'))}
                 </div>
@@ -1218,11 +1223,12 @@
         `;
     }
 
-    function buildGraphFocusProjectionGraphHtml(projection) {
+    function buildGraphFocusProjectionGraphHtml(projection, options) {
         const normalizedProjection = normalizeFocusModeProjection(projection);
         if (!normalizedProjection) {
             return '';
         }
+        const hideContext = Boolean(options && options.hideContext === true);
         const nodeCount = normalizedProjection.nodes.length;
         const anchorId = normalizedProjection.anchorId;
         const padding = 8;
@@ -1285,7 +1291,7 @@
                 </button>
             `;
         }).join('');
-        const contextHtml = normalizedProjection.contextNodes.map((node) => {
+        const contextHtml = hideContext ? '' : normalizedProjection.contextNodes.map((node) => {
             const x = toContextPercent(node.x, contextBounds.minX, contextWidth);
             const y = toContextPercent(node.y, contextBounds.minY, contextHeight);
             return `
@@ -1301,6 +1307,11 @@
                 </span>
             `;
         }).join('');
+        const contextLayerHtml = hideContext ? '' : `
+                <div class="agent-focus-mode-context" aria-hidden="true">
+                    ${contextHtml}
+                </div>
+            `;
         return `
             <div
                 class="agent-focus-mode-preview agent-focus-mode-preview--projection agent-focus-mode-preview--hosted agent-focus-mode-preview--edge-hidden"
@@ -1310,12 +1321,10 @@
                 data-agent-focus-visible-edges="false"
                 data-focus-mode-anchor-id="${escapeHtml(anchorId)}"
                 data-focus-node-count="${nodeCount}"
-                data-focus-context-node-count="${normalizedProjection.contextNodes.length}"
+                data-focus-context-node-count="${hideContext ? 0 : normalizedProjection.contextNodes.length}"
                 data-focus-layout-type="${escapeHtml(normalizedProjection.layoutType)}"
             >
-                <div class="agent-focus-mode-context" aria-hidden="true">
-                    ${contextHtml}
-                </div>
+                ${contextLayerHtml}
                 ${labelHtml}
                 ${nodeHtml}
             </div>
@@ -1347,9 +1356,9 @@
             || anchorId
         ).trim();
         const graphHtml = normalizeFocusModeProjection(focusModeGraph)
-            ? buildGraphFocusProjectionGraphHtml(focusModeGraph)
+            ? buildGraphFocusProjectionGraphHtml(focusModeGraph, { hideContext: true })
             : focusModeGraph
-                ? buildGraphFocusSnapshotGraphHtml(focusModeGraph, { interactive: true, hideEdges: true })
+                ? buildGraphFocusSnapshotGraphHtml(focusModeGraph, { interactive: true, hideEdges: true, hideContext: true })
             : buildGraphFocusRelationGraphHtml(anchorId, relationPath, nodeLabels);
         if (!developerMode) {
             return `
@@ -1664,8 +1673,8 @@
                 data-agent-hosted-focus-anchor-id="${escapeHtml(normalizedSnapshot.anchorId)}"
             >
                 ${normalizedProjection
-                    ? buildGraphFocusProjectionGraphHtml(normalizedProjection)
-                    : buildGraphFocusSnapshotGraphHtml(normalizedSnapshot, { interactive: true, hideEdges: true })}
+                    ? buildGraphFocusProjectionGraphHtml(normalizedProjection, { hideContext: true })
+                    : buildGraphFocusSnapshotGraphHtml(normalizedSnapshot, { interactive: true, hideEdges: true, hideContext: true })}
                 ${buildGraphFocusPaneReaderHtml()}
                 ${developerDetails}
             </div>
@@ -3523,19 +3532,147 @@
         };
     }
 
-    function ensureHostedFuturePathExpansionState(targetId) {
+    function getHostedFuturePathValidNodeIds(sourceData) {
+        const sourceNodes = Array.isArray(sourceData && sourceData.nodes) ? sourceData.nodes : [];
+        return new Set(sourceNodes
+            .map((node) => normalizeKnowledgeGraphText(node && node.id))
+            .filter(Boolean));
+    }
+
+    function normalizeHostedFuturePathIdList(value, validNodeIds) {
+        const ids = [];
+        const seen = new Set();
+        const append = function (candidate) {
+            const normalized = normalizeKnowledgeGraphText(candidate && typeof candidate === 'object'
+                ? (candidate.id || candidate.nodeId || candidate.key || candidate.value)
+                : candidate);
+            if (!normalized || seen.has(normalized)) {
+                return;
+            }
+            if (validNodeIds && validNodeIds.size > 0 && !validNodeIds.has(normalized)) {
+                return;
+            }
+            seen.add(normalized);
+            ids.push(normalized);
+        };
+        if (Array.isArray(value)) {
+            value.forEach(append);
+            return ids;
+        }
+        if (value && typeof value !== 'string' && typeof value[Symbol.iterator] === 'function') {
+            Array.from(value).forEach(append);
+            return ids;
+        }
+        append(value);
+        return ids;
+    }
+
+    function readHostedFuturePathModeState(targetId, validNodeIds) {
+        const normalizedTargetId = normalizeKnowledgeGraphText(targetId);
+        const pathApp = window.pathApp;
+        if (!normalizedTargetId || !pathApp || typeof pathApp !== 'object') {
+            return null;
+        }
+        const runtimeConfig = pathApp.runtimeConfig && typeof pathApp.runtimeConfig === 'object'
+            ? pathApp.runtimeConfig
+            : {};
+        const liveTargetIds = normalizeHostedFuturePathIdList([
+            pathApp.currentTargetId,
+            runtimeConfig.targetId,
+        ], validNodeIds).concat(
+            normalizeHostedFuturePathIdList(pathApp.currentTargetIds, validNodeIds),
+            normalizeHostedFuturePathIdList(runtimeConfig.targetIds, validNodeIds)
+        );
+        if (!liveTargetIds.includes(normalizedTargetId)) {
+            return null;
+        }
+        const mode = normalizeKnowledgeGraphText(runtimeConfig.mode).toLowerCase();
+        const strategy = normalizeKnowledgeGraphText(runtimeConfig.strategy).toLowerCase();
+        if (mode && mode !== 'diffusion') {
+            return null;
+        }
+        if (strategy && strategy !== 'core') {
+            return null;
+        }
+        return {
+            expandedNodeIds: normalizeHostedFuturePathIdList(pathApp.expansionOrder, validNodeIds),
+            collapsedNodeIds: normalizeHostedFuturePathIdList(pathApp.collapsedNodes, validNodeIds),
+            forcedExpansionNodeIds: normalizeHostedFuturePathIdList(pathApp.forcedExpansionNodes, validNodeIds),
+            completedNodeIds: normalizeHostedFuturePathIdList(pathApp.completedNodes, validNodeIds),
+            stickyClaimEnabled: pathApp.stickyClaimEnabled !== false,
+            fromLivePathMode: true,
+        };
+    }
+
+    function buildHostedFuturePathModeStateSignature(liveState) {
+        if (!liveState) {
+            return '';
+        }
+        return JSON.stringify({
+            expandedNodeIds: liveState.expandedNodeIds || [],
+            collapsedNodeIds: liveState.collapsedNodeIds || [],
+            forcedExpansionNodeIds: liveState.forcedExpansionNodeIds || [],
+            completedNodeIds: liveState.completedNodeIds || [],
+            stickyClaimEnabled: liveState.stickyClaimEnabled !== false,
+        });
+    }
+
+    function applyHostedFuturePathModeState(targetId, liveState, liveSignature) {
+        const normalizedTargetId = normalizeKnowledgeGraphText(targetId);
+        const collapsedNodeIds = liveState ? liveState.collapsedNodeIds.slice() : [];
+        const collapsedNodeSet = new Set(collapsedNodeIds);
+        const expandedNodeIds = liveState
+            ? liveState.expandedNodeIds.filter((nodeId) => !collapsedNodeSet.has(nodeId))
+            : [];
+        const completedNodeIds = liveState ? liveState.completedNodeIds.slice() : [];
+        const forcedExpansionIds = new Set((liveState ? liveState.forcedExpansionNodeIds : [])
+            .filter((nodeId) => !collapsedNodeSet.has(nodeId)));
+        expandedNodeIds.forEach((nodeId) => forcedExpansionIds.add(nodeId));
+
+        const targetExplicitlyCollapsed = collapsedNodeIds.includes(normalizedTargetId);
+        if (!targetExplicitlyCollapsed && normalizedTargetId) {
+            if (!expandedNodeIds.includes(normalizedTargetId)) {
+                expandedNodeIds.unshift(normalizedTargetId);
+            }
+            forcedExpansionIds.add(normalizedTargetId);
+        }
+
+        state.godotFuturePath.expandedNodeIds = expandedNodeIds;
+        state.godotFuturePath.collapsedNodeIds = collapsedNodeIds;
+        state.godotFuturePath.forcedExpansionNodeIds = Array.from(forcedExpansionIds);
+        state.godotFuturePath.completedNodeIds = completedNodeIds;
+        state.godotFuturePath.stickyClaimEnabled = !liveState || liveState.stickyClaimEnabled !== false;
+        state.godotFuturePath.pathModeStateSignature = liveSignature || '';
+        state.godotFuturePath.userMutatedExpansion = false;
+        state.godotFuturePath.syncedFromPathMode = Boolean(liveState && liveState.fromLivePathMode === true);
+    }
+
+    function ensureHostedFuturePathExpansionState(targetId, sourceData) {
         const normalizedTargetId = normalizeKnowledgeGraphText(targetId);
         if (!normalizedTargetId) {
             state.godotFuturePath.expandedNodeIds = [];
             state.godotFuturePath.collapsedNodeIds = [];
+            state.godotFuturePath.forcedExpansionNodeIds = [];
+            state.godotFuturePath.completedNodeIds = [];
             state.godotFuturePath.activeTargetId = '';
+            state.godotFuturePath.pathModeStateSignature = '';
+            state.godotFuturePath.userMutatedExpansion = false;
+            state.godotFuturePath.syncedFromPathMode = false;
             return;
         }
+        const validNodeIds = getHostedFuturePathValidNodeIds(sourceData);
+        const liveState = readHostedFuturePathModeState(normalizedTargetId, validNodeIds);
+        const liveSignature = buildHostedFuturePathModeStateSignature(liveState);
         if (state.godotFuturePath.activeTargetId !== normalizedTargetId) {
             state.godotFuturePath.activeTargetId = normalizedTargetId;
-            state.godotFuturePath.expandedNodeIds = [normalizedTargetId];
-            state.godotFuturePath.collapsedNodeIds = [];
             state.godotFuturePath.collapseAllRequested = false;
+            applyHostedFuturePathModeState(normalizedTargetId, liveState, liveSignature);
+        } else if (
+            liveState
+            && state.godotFuturePath.userMutatedExpansion !== true
+            && state.godotFuturePath.pathModeStateSignature !== liveSignature
+        ) {
+            applyHostedFuturePathModeState(normalizedTargetId, liveState, liveSignature);
         }
         const targetExplicitlyCollapsed = state.godotFuturePath.collapsedNodeIds.includes(normalizedTargetId);
         if (
@@ -3544,6 +3681,12 @@
             && !state.godotFuturePath.expandedNodeIds.includes(normalizedTargetId)
         ) {
             state.godotFuturePath.expandedNodeIds.unshift(normalizedTargetId);
+        }
+        if (!state.godotFuturePath.collapseAllRequested && !targetExplicitlyCollapsed) {
+            const forcedExpansionIds = new Set(state.godotFuturePath.forcedExpansionNodeIds);
+            forcedExpansionIds.add(normalizedTargetId);
+            state.godotFuturePath.expandedNodeIds.forEach((nodeId) => forcedExpansionIds.add(nodeId));
+            state.godotFuturePath.forcedExpansionNodeIds = Array.from(forcedExpansionIds);
         }
         if (!state.godotFuturePath.collapseAllRequested && !targetExplicitlyCollapsed) {
             state.godotFuturePath.collapsedNodeIds = state.godotFuturePath.collapsedNodeIds
@@ -3587,19 +3730,20 @@
                 targetLabel,
             };
         }
-        ensureHostedFuturePathExpansionState(targetId);
+        ensureHostedFuturePathExpansionState(targetId, sourceData);
         try {
-            const completedSet = new Set();
-            const forcedExpansionSet = new Set([targetId]);
+            const completedSet = new Set(state.godotFuturePath.completedNodeIds);
+            const forcedExpansionSet = new Set(state.godotFuturePath.forcedExpansionNodeIds);
             const result = graphRuntime.engine.diffusionLearning(targetId, 'core', completedSet, forcedExpansionSet);
             const collapsedSet = new Set(state.godotFuturePath.collapsedNodeIds);
             const expansionOrder = state.godotFuturePath.expandedNodeIds.slice();
+            const stickyClaimEnabled = state.godotFuturePath.stickyClaimEnabled !== false;
             const treeLayout = graphRuntime.engine.getTreeLayout(
                 targetId,
                 result,
                 collapsedSet,
                 expansionOrder,
-                true,
+                stickyClaimEnabled,
                 { verticalGap: 240 }
             );
             return {
@@ -3608,12 +3752,18 @@
                     targetId,
                     target_id: targetId,
                     targetIds: [targetId].concat((config.targetIds || []).filter((id) => id !== targetId)),
+                    collapsedIds: Array.from(collapsedSet),
+                    completedIds: Array.from(completedSet),
+                    forcedExpansionIds: Array.from(forcedExpansionSet),
+                    expansionOrder,
+                    stickyClaimEnabled,
                 },
                 available: Boolean(treeLayout && Array.isArray(treeLayout.nodes) && treeLayout.nodes.length > 0),
                 reason: treeLayout ? '' : 'empty_tree_layout',
                 treeLayout,
                 targetId,
                 targetLabel,
+                syncedFromPathMode: state.godotFuturePath.syncedFromPathMode === true,
                 pathNodeCount: Array.isArray(result && result.nodes) ? result.nodes.length : 0,
                 pathEdgeCount: Array.isArray(result && result.edges) ? result.edges.length : 0,
             };
@@ -3701,7 +3851,11 @@
             activeTargetId: state.godotFuturePath.activeTargetId,
             expandedNodeIds: state.godotFuturePath.expandedNodeIds.slice(),
             collapsedNodeIds: state.godotFuturePath.collapsedNodeIds.slice(),
+            forcedExpansionNodeIds: state.godotFuturePath.forcedExpansionNodeIds.slice(),
+            completedNodeIds: state.godotFuturePath.completedNodeIds.slice(),
+            stickyClaimEnabled: state.godotFuturePath.stickyClaimEnabled !== false,
             collapseAllRequested: state.godotFuturePath.collapseAllRequested === true,
+            syncedFromPathMode: state.godotFuturePath.syncedFromPathMode === true,
         };
     }
 
@@ -3722,10 +3876,6 @@
         return nodeElement && (
             nodeElement.getAttribute('data-agent-future-path-node-spine') === 'true'
             || nodeElement.getAttribute('data-godot-tree-node-spine') === 'true'
-            || nodeElement.getAttribute('data-agent-future-path-node-has-prereqs') === 'true'
-            || nodeElement.getAttribute('data-godot-tree-node-has-prereqs') === 'true'
-            || nodeElement.getAttribute('data-agent-future-path-node-expanded') === 'true'
-            || nodeElement.getAttribute('data-godot-tree-node-expanded') === 'true'
         );
     }
 
@@ -3768,39 +3918,37 @@
         }
         const expandedNodeIds = new Set(state.godotFuturePath.expandedNodeIds);
         const collapsed = new Set(state.godotFuturePath.collapsedNodeIds);
+        const forcedExpansionIds = new Set(state.godotFuturePath.forcedExpansionNodeIds);
         if (shouldExpand === true) {
             expandedNodeIds.add(normalizedNodeId);
             collapsed.delete(normalizedNodeId);
+            forcedExpansionIds.add(normalizedNodeId);
         } else {
             expandedNodeIds.delete(normalizedNodeId);
             collapsed.add(normalizedNodeId);
+            forcedExpansionIds.delete(normalizedNodeId);
         }
         state.godotFuturePath.collapseAllRequested = false;
         state.godotFuturePath.expandedNodeIds = Array.from(expandedNodeIds);
         state.godotFuturePath.collapsedNodeIds = Array.from(collapsed);
+        state.godotFuturePath.forcedExpansionNodeIds = Array.from(forcedExpansionIds);
+        state.godotFuturePath.userMutatedExpansion = true;
+        state.godotFuturePath.syncedFromPathMode = false;
         publishHostedFuturePathExpansionState();
         renderLearningPathBody(payload || state.panes['learning-path'].payload || {});
     }
 
     function collapseAllHostedFuturePathNodes(payload) {
-        const projection = state.godotFuturePath.projection;
-        const treeNodes = projection && projection.treeLayout && Array.isArray(projection.treeLayout.nodes)
-            ? projection.treeLayout.nodes
-            : [];
-        const collapsedIds = treeNodes
-            .filter((node) => node && (
-                node.isSpine === true
-                || node.isSpine === 'true'
-                || node.hasPrereqs === true
-                || node.hasPrereqs === 'true'
-                || node.isExpanded === true
-                || node.isExpanded === 'true'
-            ))
-            .map((node) => normalizeKnowledgeGraphText(node.id || node.nodeId || node.key))
+        const collapsedIds = state.godotFuturePath.collapsedNodeIds
+            .concat(state.godotFuturePath.expandedNodeIds)
+            .map((nodeId) => normalizeKnowledgeGraphText(nodeId))
             .filter(Boolean);
         state.godotFuturePath.expandedNodeIds = [];
         state.godotFuturePath.collapsedNodeIds = Array.from(new Set(collapsedIds));
+        state.godotFuturePath.forcedExpansionNodeIds = [];
         state.godotFuturePath.collapseAllRequested = true;
+        state.godotFuturePath.userMutatedExpansion = true;
+        state.godotFuturePath.syncedFromPathMode = false;
         publishHostedFuturePathExpansionState();
         renderLearningPathBody(payload || state.panes['learning-path'].payload || {});
     }
@@ -7645,6 +7793,12 @@
             lastDispatch: null,
             expandedNodeIds: [],
             collapsedNodeIds: [],
+            forcedExpansionNodeIds: [],
+            completedNodeIds: [],
+            stickyClaimEnabled: true,
+            pathModeStateSignature: '',
+            syncedFromPathMode: false,
+            userMutatedExpansion: false,
             selectedNodeId: '',
             lastSignal: null,
             collapseAllRequested: false,

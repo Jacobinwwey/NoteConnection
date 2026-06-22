@@ -3910,6 +3910,74 @@ describe('workspace panes controller', () => {
         expect(pathContainer?.style.display).toBe('none');
     });
 
+    test('syncs hosted Godot Future Path expansion state from matching Path mode runtime', () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const pathCalls = installHostedFuturePathRuntime(window, {
+            nodes: [
+                { id: 'sequence', label: 'sequence' },
+                { id: 'water glass', label: 'water glass' },
+                { id: 'application', label: 'application' },
+                { id: 'reflection', label: 'Reflection' },
+            ],
+            edges: [
+                { source: 'sequence', target: 'water glass', type: 'sequence' },
+                { source: 'reflection', target: 'water glass', type: 'prerequisite' },
+                { source: 'water glass', target: 'application', type: 'application' },
+            ],
+        });
+        (window as any).pathApp = {
+            init: jest.fn(),
+            applyRemoteConfigure: jest.fn(),
+            triggerUpdate: jest.fn(),
+            requestBridgeWindowVisibility: jest.fn(),
+            currentTargetId: 'water glass',
+            currentTargetIds: ['water glass'],
+            runtimeConfig: {
+                mode: 'diffusion',
+                strategy: 'core',
+                targetId: 'water glass',
+                targetIds: ['water glass'],
+            },
+            expansionOrder: ['water glass', 'reflection'],
+            forcedExpansionNodes: new Set(['water glass', 'reflection']),
+            collapsedNodes: new Set(['application']),
+            completedNodes: new Set(['sequence']),
+            stickyClaimEnabled: false,
+        };
+        controller.init();
+
+        controller.openLearningPathPane({
+            atomId: 'water glass',
+            title: 'water glass',
+        });
+
+        const diffusionCall = pathCalls.diffusionLearning.mock.calls[pathCalls.diffusionLearning.mock.calls.length - 1];
+        const layoutCall = pathCalls.getTreeLayout.mock.calls[pathCalls.getTreeLayout.mock.calls.length - 1];
+        expect(Array.from(diffusionCall?.[2] as Set<string>)).toEqual(expect.arrayContaining(['sequence']));
+        expect(Array.from(diffusionCall?.[3] as Set<string>)).toEqual(expect.arrayContaining(['water glass', 'reflection']));
+        expect(Array.from(layoutCall?.[2] as Set<string>)).toEqual(expect.arrayContaining(['application']));
+        expect(layoutCall?.[3]).toEqual(['water glass', 'reflection']);
+        expect(layoutCall?.[4]).toBe(false);
+        expect((window as any).__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST).toEqual(expect.objectContaining({
+            targetId: 'water glass',
+            completedIds: ['sequence'],
+            forcedExpansionIds: expect.arrayContaining(['water glass', 'reflection']),
+            collapsedIds: ['application'],
+            expansionOrder: ['water glass', 'reflection'],
+            stickyClaimEnabled: false,
+        }));
+        expect((window as any).__NC_LAST_AGENT_GODOT_FUTURE_PATH_EXPANSION_STATE).toEqual(expect.objectContaining({
+            activeTargetId: 'water glass',
+            syncedFromPathMode: true,
+            completedNodeIds: ['sequence'],
+            forcedExpansionNodeIds: expect.arrayContaining(['water glass', 'reflection']),
+            collapsedNodeIds: ['application'],
+            expandedNodeIds: ['water glass', 'reflection'],
+            stickyClaimEnabled: false,
+        }));
+        expect(document.querySelector('[data-godot-tree-node-id="water glass"]')).not.toBeNull();
+    });
+
     test('renders only fixed graph-learning actions in the primary hit list', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
         const graphView = {
@@ -4179,14 +4247,14 @@ describe('workspace panes controller', () => {
         expect(document.querySelector('[data-agent-focus-mode-preview="true"]')).not.toBeNull();
         expect(document.querySelector('[data-agent-focus-projection-graph="true"]')).not.toBeNull();
         expect(Number(document.querySelector('[data-agent-focus-projection-graph="true"]')?.getAttribute('data-focus-node-count') || '0')).toBeGreaterThan(3);
-        expect(Number(document.querySelector('[data-agent-focus-projection-graph="true"]')?.getAttribute('data-focus-context-node-count') || '0')).toBeGreaterThan(3);
+        expect(Number(document.querySelector('[data-agent-focus-projection-graph="true"]')?.getAttribute('data-focus-context-node-count') || '0')).toBe(0);
         expect(document.querySelector('[data-agent-focus-projection-graph="true"]')?.getAttribute('data-agent-focus-mainlike')).toBe('true');
         expect(document.querySelector('[data-agent-focus-projection-graph="true"]')?.getAttribute('data-agent-focus-visible-edges')).toBe('false');
         expect(document.querySelector('[data-agent-focus-mode-toolbar="true"]')).toBeNull();
         expect(document.querySelector('[data-agent-focus-projection-graph="true"] .agent-focus-mode-lines')).toBeNull();
         expect(document.querySelector('[data-agent-focus-projection-graph="true"] .agent-focus-mode-edge')).toBeNull();
-        expect(document.querySelectorAll('[data-agent-focus-context-node-id]').length).toBeGreaterThan(3);
-        expect(document.querySelectorAll('[data-agent-focus-context-node-dot="true"]').length).toBeGreaterThan(3);
+        expect(document.querySelectorAll('[data-agent-focus-context-node-id]').length).toBe(0);
+        expect(document.querySelectorAll('[data-agent-focus-context-node-dot="true"]').length).toBe(0);
         expect(document.querySelector('[data-agent-focus-relation-map="true"]')).toBeNull();
         expect(String(document.getElementById('agent-graph-focus-body')?.textContent || '')).not.toContain('atom_h');
         expect(String(document.getElementById('agent-graph-focus-body')?.textContent || '')).toContain('water glass');
@@ -4472,6 +4540,15 @@ describe('workspace panes controller', () => {
             nodeId: 'water glass',
             host: 'agent-workspace',
         }));
+        const nonSpineNode = document.querySelector('[data-godot-tree-node-id="application"]') as HTMLElement | null;
+        const callsBeforeNonSpineRightClick = pathCalls.getTreeLayout.mock.calls.length;
+        nonSpineNode?.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+        expect((window as any).__NC_LAST_AGENT_GODOT_TREE_SIGNAL).toEqual(expect.objectContaining({
+            signal: 'node_clicked',
+            nodeId: 'water glass',
+            host: 'agent-workspace',
+        }));
+        expect(pathCalls.getTreeLayout.mock.calls.length).toBe(callsBeforeNonSpineRightClick);
         const callsBeforeRightClick = pathCalls.getTreeLayout.mock.calls.length;
         targetNode?.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
         expect((window as any).__NC_LAST_AGENT_GODOT_TREE_SIGNAL).toEqual(expect.objectContaining({

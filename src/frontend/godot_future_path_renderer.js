@@ -448,7 +448,7 @@
                     aria-label="${escapeHtml(node.label)}"
                 >
                     <span class="agent-godot-future-path-node-label">${buildNodeLabelHtml(node.label)}</span>
-                    ${node.hasPrereqs || node.isExpanded ? `
+                    ${node.hasPrereqs && node.isSpine ? `
                         <span
                             class="agent-godot-future-path-node-badge"
                             data-godot-tree-expansion-badge="true"

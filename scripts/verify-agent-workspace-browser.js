@@ -548,6 +548,16 @@ window.__NC_DYNAMIC_SMOKE__ = {
     const graphContainer = document.querySelector('#graph-container');
     const graphContainerOriginalParent = graphContainer ? graphContainer.parentElement : null;
     const pathApp = window.pathApp || null;
+    const originalPathModeState = pathApp ? {
+      currentTargetId: pathApp.currentTargetId,
+      currentTargetIds: pathApp.currentTargetIds,
+      runtimeConfig: pathApp.runtimeConfig,
+      expansionOrder: pathApp.expansionOrder,
+      forcedExpansionNodes: pathApp.forcedExpansionNodes,
+      collapsedNodes: pathApp.collapsedNodes,
+      completedNodes: pathApp.completedNodes,
+      stickyClaimEnabled: pathApp.stickyClaimEnabled
+    } : null;
     const originalBridgeVisibility = pathApp && typeof pathApp.requestBridgeWindowVisibility === 'function'
       ? pathApp.requestBridgeWindowVisibility.bind(pathApp)
       : null;
@@ -668,6 +678,33 @@ window.__NC_DYNAMIC_SMOKE__ = {
         };
       }
     });
+    if (pathApp) {
+      const graphSource = (typeof graphData !== 'undefined' && graphData && Array.isArray(graphData.nodes))
+        ? graphData
+        : (window.graphData && Array.isArray(window.graphData.nodes) ? window.graphData : null);
+      const graphIds = new Set((graphSource && Array.isArray(graphSource.nodes) ? graphSource.nodes : [])
+        .map((node) => String(node && node.id || '').trim())
+        .filter(Boolean));
+      const seededExpansionIds = ['water glass', 'Reflection', 'Absorption', 'hyperquenching']
+        .filter((nodeId) => graphIds.size === 0 || graphIds.has(nodeId));
+      if (!seededExpansionIds.includes('water glass')) {
+        seededExpansionIds.unshift('water glass');
+      }
+      pathApp.currentTargetId = 'water glass';
+      pathApp.currentTargetIds = ['water glass'];
+      pathApp.runtimeConfig = Object.assign({}, pathApp.runtimeConfig || {}, {
+        mode: 'diffusion',
+        strategy: 'core',
+        targetId: 'water glass',
+        targetIds: ['water glass']
+      });
+      pathApp.expansionOrder = seededExpansionIds.slice();
+      pathApp.forcedExpansionNodes = new Set(seededExpansionIds);
+      pathApp.collapsedNodes = new Set();
+      pathApp.completedNodes = new Set();
+      pathApp.stickyClaimEnabled = true;
+      window.__NC_AGENT_WORKSPACE_VERIFY_PATHMODE_SEED_IDS = seededExpansionIds.slice();
+    }
     try {
       panes.renderKnowledgePoints([
         {
@@ -816,6 +853,7 @@ window.__NC_DYNAMIC_SMOKE__ = {
       const godotFuturePathShell = document.querySelector('[data-agent-godot-future-path-shell="true"]');
       const godotFuturePathRequest = window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST || window.__NC_LAST_GODOT_FUTURE_PATH_REQUEST || {};
       const godotFuturePathLayout = window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_LAYOUT || null;
+      const godotFuturePathExpansionState = window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_EXPANSION_STATE || {};
       const godotFuturePathHosted = document.querySelector('[data-agent-godot-future-path-hosted="true"]');
       const godotFuturePathSurface = document.querySelector('[data-agent-godot-future-path-surface="true"]');
       const godotTreeRenderer = document.querySelector('[data-godot-tree-renderer="true"]');
@@ -995,6 +1033,14 @@ window.__NC_DYNAMIC_SMOKE__ = {
         godotFuturePathStrategy: String(godotFuturePathRequest.strategy || ''),
         godotFuturePathTargetId: String(godotFuturePathRequest.targetId || ''),
         godotFuturePathTargetIds: Array.isArray(godotFuturePathRequest.targetIds) ? godotFuturePathRequest.targetIds.map(String) : [],
+        godotFuturePathExpansionOrder: Array.isArray(godotFuturePathRequest.expansionOrder) ? godotFuturePathRequest.expansionOrder.map(String) : [],
+        godotFuturePathForcedExpansionIds: Array.isArray(godotFuturePathRequest.forcedExpansionIds) ? godotFuturePathRequest.forcedExpansionIds.map(String) : [],
+        godotFuturePathCollapsedIds: Array.isArray(godotFuturePathRequest.collapsedIds) ? godotFuturePathRequest.collapsedIds.map(String) : [],
+        godotFuturePathCompletedIds: Array.isArray(godotFuturePathRequest.completedIds) ? godotFuturePathRequest.completedIds.map(String) : [],
+        godotFuturePathSyncedFromPathMode: godotFuturePathExpansionState.syncedFromPathMode === true,
+        godotFuturePathSeededExpansionIds: Array.isArray(window.__NC_AGENT_WORKSPACE_VERIFY_PATHMODE_SEED_IDS)
+          ? window.__NC_AGENT_WORKSPACE_VERIFY_PATHMODE_SEED_IDS.map(String)
+          : [],
         godotFuturePathLayoutNodeCount: godotFuturePathLayout && Array.isArray(godotFuturePathLayout.nodes) ? godotFuturePathLayout.nodes.length : 0,
         godotFuturePathLayoutTargetLabels: godotFuturePathLayout && Array.isArray(godotFuturePathLayout.nodes)
           ? godotFuturePathLayout.nodes.map((node) => String(node && (node.label || node.id) || ''))
@@ -1051,6 +1097,17 @@ window.__NC_DYNAMIC_SMOKE__ = {
       if (pathApp && originalBridgeVisibility) {
         pathApp.requestBridgeWindowVisibility = originalBridgeVisibility;
       }
+      if (pathApp && originalPathModeState) {
+        pathApp.currentTargetId = originalPathModeState.currentTargetId;
+        pathApp.currentTargetIds = originalPathModeState.currentTargetIds;
+        pathApp.runtimeConfig = originalPathModeState.runtimeConfig;
+        pathApp.expansionOrder = originalPathModeState.expansionOrder;
+        pathApp.forcedExpansionNodes = originalPathModeState.forcedExpansionNodes;
+        pathApp.collapsedNodes = originalPathModeState.collapsedNodes;
+        pathApp.completedNodes = originalPathModeState.completedNodes;
+        pathApp.stickyClaimEnabled = originalPathModeState.stickyClaimEnabled;
+      }
+      delete window.__NC_AGENT_WORKSPACE_VERIFY_PATHMODE_SEED_IDS;
       if (tauriCore && originalTauriInvoke) {
         tauriCore.invoke = originalTauriInvoke;
       }
@@ -3250,6 +3307,24 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (!Array.isArray(knowledgeHitUi.godotFuturePathTargetIds) || !knowledgeHitUi.godotFuturePathTargetIds.includes('water glass')) {
             failures.push(`knowledgeHitUi.godotFuturePathTargetIds='${JSON.stringify(knowledgeHitUi.godotFuturePathTargetIds || [])}'`);
         }
+        if (knowledgeHitUi.godotFuturePathSyncedFromPathMode !== true) {
+            failures.push(`knowledgeHitUi.godotFuturePathSyncedFromPathMode='${String(knowledgeHitUi.godotFuturePathSyncedFromPathMode)}'`);
+        }
+        if (!Array.isArray(knowledgeHitUi.godotFuturePathExpansionOrder) || !knowledgeHitUi.godotFuturePathExpansionOrder.includes('water glass')) {
+            failures.push(`knowledgeHitUi.godotFuturePathExpansionOrder='${JSON.stringify(knowledgeHitUi.godotFuturePathExpansionOrder || [])}'`);
+        }
+        if (!Array.isArray(knowledgeHitUi.godotFuturePathForcedExpansionIds) || !knowledgeHitUi.godotFuturePathForcedExpansionIds.includes('water glass')) {
+            failures.push(`knowledgeHitUi.godotFuturePathForcedExpansionIds='${JSON.stringify(knowledgeHitUi.godotFuturePathForcedExpansionIds || [])}'`);
+        }
+        if (
+            Array.isArray(knowledgeHitUi.godotFuturePathSeededExpansionIds)
+            && knowledgeHitUi.godotFuturePathSeededExpansionIds.length > 1
+            && Number(knowledgeHitUi.godotFuturePathLayoutNodeCount || 0) <= 3
+        ) {
+            failures.push(
+                `knowledgeHitUi.godotFuturePathSeededLayoutNodeCount='${String(knowledgeHitUi.godotFuturePathLayoutNodeCount || 0)}:${JSON.stringify(knowledgeHitUi.godotFuturePathSeededExpansionIds)}'`
+            );
+        }
         if (Number(knowledgeHitUi.godotFuturePathLayoutNodeCount || 0) <= 0) {
             failures.push(`knowledgeHitUi.godotFuturePathLayoutNodeCount='${String(knowledgeHitUi.godotFuturePathLayoutNodeCount || 0)}'`);
         }
@@ -3291,10 +3366,10 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (Number(knowledgeHitUi.graphFocusProjectionNodeCount || 0) <= 3) {
             failures.push(`knowledgeHitUi.graphFocusProjectionNodeCount='${String(knowledgeHitUi.graphFocusProjectionNodeCount || 0)}'`);
         }
-        if (Number(knowledgeHitUi.graphFocusContextNodeCount || 0) <= 3) {
+        if (Number(knowledgeHitUi.graphFocusContextNodeCount || 0) !== 0) {
             failures.push(`knowledgeHitUi.graphFocusContextNodeCount='${String(knowledgeHitUi.graphFocusContextNodeCount || 0)}'`);
         }
-        if (Number(knowledgeHitUi.graphFocusContextDotCount || 0) <= 3) {
+        if (Number(knowledgeHitUi.graphFocusContextDotCount || 0) !== 0) {
             failures.push(`knowledgeHitUi.graphFocusContextDotCount='${String(knowledgeHitUi.graphFocusContextDotCount || 0)}'`);
         }
         if (knowledgeHitUi.graphFocusToolbarPresent !== false) {
