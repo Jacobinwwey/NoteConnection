@@ -718,6 +718,129 @@
         };
     }
 
+    function normalizeFocusModeProjection(projection) {
+        if (!projection || typeof projection !== 'object') {
+            return null;
+        }
+        const normalizeProjectionNode = function (node, fallbackRole) {
+            const id = normalizeKnowledgeGraphText(node && (node.id || node.nodeId));
+            const x = Number(node && node.x);
+            const y = Number(node && node.y);
+            if (!id || !Number.isFinite(x) || !Number.isFinite(y)) {
+                return null;
+            }
+            return {
+                id,
+                label: normalizeKnowledgeGraphText(node && (node.label || node.title || node.name || id)) || id,
+                role: normalizeKnowledgeGraphText(node && node.role) || fallbackRole || 'related',
+                x,
+                y,
+                score: Number(node && node.score),
+                inDegree: Number(node && node.inDegree),
+                outDegree: Number(node && node.outDegree),
+                sourcePath: normalizeKnowledgeGraphText(node && node.sourcePath),
+                radius: Number(node && node.radius),
+                labelDy: Number(node && node.labelDy),
+                labelDx: Number(node && node.labelDx),
+            };
+        };
+        const rawNodes = Array.isArray(projection.nodes) ? projection.nodes : [];
+        const nodes = rawNodes
+            .map((node) => normalizeProjectionNode(node, 'related'))
+            .filter(Boolean);
+        if (nodes.length <= 0) {
+            return null;
+        }
+        const nodeIds = new Set(nodes.map((node) => node.id));
+        const contextNodes = (Array.isArray(projection.contextNodes) ? projection.contextNodes : [])
+            .map((node) => normalizeProjectionNode(node, 'context'))
+            .filter((node) => node && !nodeIds.has(node.id));
+        const edges = (Array.isArray(projection.edges) ? projection.edges : [])
+            .map((edge) => {
+                const sourceId = normalizeKnowledgeGraphText(edge && (edge.sourceId || edge.source || edge.from));
+                const targetId = normalizeKnowledgeGraphText(edge && (edge.targetId || edge.target || edge.to));
+                if (!sourceId || !targetId || !nodeIds.has(sourceId) || !nodeIds.has(targetId)) {
+                    return null;
+                }
+                return {
+                    sourceId,
+                    targetId,
+                    relationKind: normalizeKnowledgeGraphText(edge && (edge.relationKind || edge.type || edge.kind)),
+                    confidence: Number(edge && (edge.confidence || edge.weight)),
+                    role: normalizeKnowledgeGraphText(edge && edge.role) || 'related',
+                };
+            })
+            .filter(Boolean);
+        const anchorId = normalizeKnowledgeGraphText(projection.anchorId || projection.focusNodeId || projection.centralId)
+            || nodes.find((node) => node.role === 'anchor' || node.role === 'focus')?.id
+            || nodes[0].id;
+        const anchorNode = nodes.find((node) => node.id === anchorId) || nodes[0];
+        const labels = (Array.isArray(projection.labels) ? projection.labels : [])
+            .map((label) => {
+                const text = normalizeKnowledgeGraphText(label && label.text);
+                const x = Number(label && label.x);
+                const y = Number(label && label.y);
+                if (!text || !Number.isFinite(x) || !Number.isFinite(y)) {
+                    return null;
+                }
+                return {
+                    text,
+                    x,
+                    y,
+                    role: normalizeKnowledgeGraphText(label && label.role) || '',
+                    align: normalizeKnowledgeGraphText(label && label.align) || 'middle',
+                };
+            })
+            .filter(Boolean);
+        const normalizeProjectionBounds = function (rawBounds) {
+            if (!rawBounds || typeof rawBounds !== 'object') {
+                return null;
+            }
+            return {
+                minX: Number(rawBounds.minX),
+                maxX: Number(rawBounds.maxX),
+                minY: Number(rawBounds.minY),
+                maxY: Number(rawBounds.maxY),
+            };
+        };
+        const bounds = normalizeProjectionBounds(projection.bounds);
+        const contextBounds = normalizeProjectionBounds(projection.contextBounds);
+        const finiteBounds = bounds
+            && Number.isFinite(bounds.minX)
+            && Number.isFinite(bounds.maxX)
+            && Number.isFinite(bounds.minY)
+            && Number.isFinite(bounds.maxY)
+            ? bounds
+            : {
+                minX: Math.min(...nodes.map((node) => node.x).concat(labels.map((label) => label.x))),
+                maxX: Math.max(...nodes.map((node) => node.x).concat(labels.map((label) => label.x))),
+                minY: Math.min(...nodes.map((node) => node.y).concat(labels.map((label) => label.y))),
+                maxY: Math.max(...nodes.map((node) => node.y).concat(labels.map((label) => label.y))),
+            };
+        const finiteContextBounds = contextBounds
+            && Number.isFinite(contextBounds.minX)
+            && Number.isFinite(contextBounds.maxX)
+            && Number.isFinite(contextBounds.minY)
+            && Number.isFinite(contextBounds.maxY)
+            ? contextBounds
+            : finiteBounds;
+        return {
+            anchorId,
+            anchorLabel: normalizeKnowledgeGraphText(projection.anchorLabel || anchorNode.label) || anchorId,
+            layoutType: normalizeKnowledgeGraphText(projection.layoutType) || 'horizontal',
+            layerGap: Number(projection.layerGap),
+            nodeGap: Number(projection.nodeGap),
+            nodes,
+            edges,
+            labels,
+            bounds: finiteBounds,
+            contextBounds: finiteContextBounds,
+            stats: projection.stats && typeof projection.stats === 'object' ? { ...projection.stats } : {},
+            controls: projection.controls && typeof projection.controls === 'object' ? { ...projection.controls } : {},
+            contextNodes,
+        };
+    }
+
     function resolveFocusModeSnapshot(graphNodeId) {
         const normalizedGraphNodeId = normalizeKnowledgeGraphText(graphNodeId);
         const graphView = window.NoteConnectionGraphView;
@@ -730,6 +853,40 @@
             console.warn('[AgentWorkspace] focus mode snapshot request failed:', error);
             return null;
         }
+    }
+
+    function resolveFocusModeProjection(graphNodeId) {
+        const normalizedGraphNodeId = normalizeKnowledgeGraphText(graphNodeId);
+        const graphView = window.NoteConnectionGraphView;
+        if (!normalizedGraphNodeId || !graphView || typeof graphView !== 'object') {
+            return null;
+        }
+        if (typeof graphView.getFocusModeProjection === 'function') {
+            try {
+                const projection = normalizeFocusModeProjection(graphView.getFocusModeProjection(normalizedGraphNodeId, {
+                    layoutType: 'horizontal',
+                }));
+                if (projection) {
+                    return projection;
+                }
+            } catch (error) {
+                console.warn('[AgentWorkspace] focus mode projection request failed:', error);
+            }
+        }
+        return resolveFocusModeSnapshot(normalizedGraphNodeId);
+    }
+
+    function resolveFocusModeGraphPayload(payload) {
+        const payloadProjection = normalizeFocusModeProjection(payload && payload.focusModeProjection);
+        if (payloadProjection) {
+            return payloadProjection;
+        }
+        const targetId = resolveGraphFocusHostedTargetId(payload || {});
+        const runtimeProjection = targetId ? resolveFocusModeProjection(targetId) : null;
+        if (runtimeProjection) {
+            return runtimeProjection;
+        }
+        return normalizeFocusModeSnapshot(payload && payload.focusModeSnapshot);
     }
 
     function resolveKnowledgePointGraphTarget(item, capability, options) {
@@ -747,6 +904,9 @@
         const focusModeSnapshot = shouldIncludeFocusModeSnapshot
             ? resolveFocusModeSnapshot(graphNodeId)
             : null;
+        const focusModeProjection = shouldIncludeFocusModeSnapshot
+            ? resolveFocusModeProjection(graphNodeId)
+            : null;
         return {
             atomId,
             graphNodeId,
@@ -754,6 +914,7 @@
             displayLabel: displayLabel || graphNodeLabel || atomId,
             runtimeResolved: Boolean(runtimeNode),
             focusModeSnapshot,
+            focusModeProjection,
             lookupPayload: buildKnowledgePointGraphLookupPayload(item, capability),
         };
     }
@@ -1052,12 +1213,160 @@
         `;
     }
 
+    function buildGraphFocusProjectionGraphHtml(projection) {
+        const normalizedProjection = normalizeFocusModeProjection(projection);
+        if (!normalizedProjection) {
+            return '';
+        }
+        const nodeCount = normalizedProjection.nodes.length;
+        const anchorId = normalizedProjection.anchorId;
+        const padding = 8;
+        const bounds = normalizedProjection.bounds;
+        const width = Math.max(1, bounds.maxX - bounds.minX);
+        const height = Math.max(1, bounds.maxY - bounds.minY);
+        const contextBounds = normalizedProjection.contextBounds || bounds;
+        const contextWidth = Math.max(1, contextBounds.maxX - contextBounds.minX);
+        const contextHeight = Math.max(1, contextBounds.maxY - contextBounds.minY);
+        const toPercent = function (value, minValue, range) {
+            return padding + ((Number(value) - minValue) / range) * (100 - (padding * 2));
+        };
+        const toContextPercent = function (value, minValue, range) {
+            const projected = toPercent(value, minValue, range);
+            if (!Number.isFinite(projected)) {
+                return 50;
+            }
+            return Math.max(4, Math.min(96, projected));
+        };
+        const pointById = new Map(normalizedProjection.nodes.map((node) => [
+            node.id,
+            {
+                x: toPercent(node.x, bounds.minX, width),
+                y: toPercent(node.y, bounds.minY, height),
+            },
+        ]));
+        const edgeHtml = normalizedProjection.edges.map((edge) => {
+            const source = pointById.get(edge.sourceId);
+            const target = pointById.get(edge.targetId);
+            if (!source || !target) {
+                return '';
+            }
+            return `
+                <line
+                    class="agent-focus-mode-edge agent-focus-mode-edge--${escapeHtml(edge.role || 'related')}"
+                    x1="${source.x}"
+                    y1="${source.y}"
+                    x2="${target.x}"
+                    y2="${target.y}"
+                ></line>
+            `;
+        }).join('');
+        const labelHtml = normalizedProjection.labels.map((label) => {
+            const x = toPercent(label.x, bounds.minX, width);
+            const y = toPercent(label.y, bounds.minY, height);
+            return `
+                <div
+                    class="agent-focus-mode-cluster-label agent-focus-mode-cluster-label--projection agent-focus-mode-cluster-label--${escapeHtml(label.role || 'related')}"
+                    style="left: ${x}%; top: ${y}%;"
+                >${escapeHtml(label.text)}</div>
+            `;
+        }).join('');
+        const nodeHtml = normalizedProjection.nodes.map((node) => {
+            const point = pointById.get(node.id);
+            if (!point) {
+                return '';
+            }
+            const role = node.id === anchorId ? 'anchor' : node.role || 'related';
+            const degreeText = [
+                Number.isFinite(node.inDegree) ? `In ${node.inDegree}` : '',
+                Number.isFinite(node.outDegree) ? `Out ${node.outDegree}` : '',
+            ].filter(Boolean).join(' | ');
+            return `
+                <button
+                    type="button"
+                    class="agent-focus-mode-node agent-focus-mode-node--projection agent-focus-mode-node--${escapeHtml(role)}"
+                    data-agent-focus-mode-node-id="${escapeHtml(node.id)}"
+                    data-agent-focus-mode-anchor="${node.id === anchorId ? 'true' : 'false'}"
+                    data-agent-focus-mode-node-role="${escapeHtml(role)}"
+                    style="left: ${point.x}%; top: ${point.y}%;"
+                    title="${escapeHtml(degreeText ? `${node.label} (${degreeText})` : node.label)}"
+                    aria-label="${escapeHtml(node.label)}"
+                >
+                    <span class="agent-focus-mode-node-dot" aria-hidden="true"></span>
+                    <span class="agent-focus-mode-node-label">${escapeHtml(node.label || node.id)}</span>
+                </button>
+            `;
+        }).join('');
+        const contextHtml = normalizedProjection.contextNodes.map((node) => {
+            const x = toContextPercent(node.x, contextBounds.minX, contextWidth);
+            const y = toContextPercent(node.y, contextBounds.minY, contextHeight);
+            return `
+                <span
+                    class="agent-focus-mode-context-node agent-focus-mode-context-node--projection"
+                    data-agent-focus-context-node-id="${escapeHtml(node.id)}"
+                    style="left: ${x}%; top: ${y}%;"
+                    title="${escapeHtml(node.label || node.id)}"
+                    aria-hidden="true"
+                >
+                    <span class="agent-focus-mode-context-dot" data-agent-focus-context-node-dot="true"></span>
+                    <span class="agent-focus-mode-context-label">${escapeHtml(node.label || node.id)}</span>
+                </span>
+            `;
+        }).join('');
+        const stats = normalizedProjection.stats || {};
+        const controls = normalizedProjection.controls || {};
+        const layoutType = normalizeKnowledgeGraphText(controls.layoutType || normalizedProjection.layoutType) === 'vertical'
+            ? 'Vertical (L-R)'
+            : 'Horizontal (Standard)';
+        const layerGap = Number.isFinite(Number(controls.layerGap || normalizedProjection.layerGap))
+            ? Number(controls.layerGap || normalizedProjection.layerGap)
+            : null;
+        const nodeGap = Number.isFinite(Number(controls.nodeGap || normalizedProjection.nodeGap))
+            ? Number(controls.nodeGap || normalizedProjection.nodeGap)
+            : null;
+        const inDegree = Number.isFinite(Number(stats.inDegree)) ? Number(stats.inDegree) : 0;
+        const outDegree = Number.isFinite(Number(stats.outDegree)) ? Number(stats.outDegree) : 0;
+        const toolbarControlHtml = [
+            `Layout: ${layoutType}`,
+            layerGap === null ? '' : `Layer-Space: ${layerGap}`,
+            nodeGap === null ? '' : `Node-Space: ${nodeGap}`,
+        ].filter(Boolean).map((item) => `
+            <span class="agent-focus-mode-toolbar-control">${escapeHtml(item)}</span>
+        `).join('');
+        return `
+            <div
+                class="agent-focus-mode-preview agent-focus-mode-preview--projection"
+                data-agent-focus-mode-preview="true"
+                data-agent-focus-projection-graph="true"
+                data-focus-mode-anchor-id="${escapeHtml(anchorId)}"
+                data-focus-node-count="${nodeCount}"
+                data-focus-context-node-count="${normalizedProjection.contextNodes.length}"
+                data-focus-layout-type="${escapeHtml(normalizedProjection.layoutType)}"
+            >
+                <div class="agent-focus-mode-toolbar" data-agent-focus-mode-toolbar="true">
+                    <div class="agent-focus-mode-toolbar-node">
+                        <span class="agent-focus-mode-toolbar-title">${escapeHtml(normalizedProjection.anchorLabel || anchorId)}</span>
+                        <span class="agent-focus-mode-toolbar-stats">${escapeHtml(`In: ${inDegree} | Out: ${outDegree}`)}</span>
+                    </div>
+                    <div class="agent-focus-mode-toolbar-controls">${toolbarControlHtml}</div>
+                </div>
+                <div class="agent-focus-mode-context" aria-hidden="true">
+                    ${contextHtml}
+                </div>
+                <svg class="agent-focus-mode-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    ${edgeHtml}
+                </svg>
+                ${labelHtml}
+                ${nodeHtml}
+            </div>
+        `;
+    }
+
     function buildGraphFocusRelationMapHtml(payload) {
         const relationPath = normalizeGraphFocusRelationPath(payload);
         const nodeLabels = payload && payload.nodeLabels && typeof payload.nodeLabels === 'object'
             ? payload.nodeLabels
             : {};
-        const focusModeSnapshot = normalizeFocusModeSnapshot(payload && payload.focusModeSnapshot);
+        const focusModeGraph = resolveFocusModeGraphPayload(payload || {});
         const developerMode = isDeveloperModeEnabled()
             || Boolean(payload && payload.showDeveloperDetails === true);
         const relationKinds = Array.from(new Set(
@@ -1065,9 +1374,9 @@
                 .map((kind) => String(kind || '').trim())
                 .filter(Boolean)
                 .concat(relationPath.map((edge) => edge.relationKind).filter(Boolean))
-                .concat(focusModeSnapshot ? focusModeSnapshot.edges.map((edge) => edge.relationKind).filter(Boolean) : [])
+                .concat(focusModeGraph ? focusModeGraph.edges.map((edge) => edge.relationKind).filter(Boolean) : [])
         ));
-        if (relationPath.length <= 0 && relationKinds.length <= 0 && !focusModeSnapshot) {
+        if (relationPath.length <= 0 && relationKinds.length <= 0 && !focusModeGraph) {
             return '';
         }
         const anchorId = String(payload && (payload.atomId || payload.nodeId) || '').trim();
@@ -1076,8 +1385,10 @@
             || payload && (payload.graphTargetLabel || payload.title)
             || anchorId
         ).trim();
-        const graphHtml = focusModeSnapshot
-            ? buildGraphFocusSnapshotGraphHtml(focusModeSnapshot)
+        const graphHtml = normalizeFocusModeProjection(focusModeGraph)
+            ? buildGraphFocusProjectionGraphHtml(focusModeGraph)
+            : focusModeGraph
+                ? buildGraphFocusSnapshotGraphHtml(focusModeGraph)
             : buildGraphFocusRelationGraphHtml(anchorId, relationPath, nodeLabels);
         if (!developerMode) {
             return `
@@ -1090,11 +1401,11 @@
                 </div>
             `;
         }
-        const nodeEntries = focusModeSnapshot
-            ? focusModeSnapshot.nodes.slice(0, 10).map((node) => ({
+        const nodeEntries = focusModeGraph
+            ? focusModeGraph.nodes.slice(0, 10).map((node) => ({
                 id: node.id,
                 label: node.label,
-                anchor: node.id === focusModeSnapshot.anchorId,
+                anchor: node.id === focusModeGraph.anchorId,
             }))
             : Array.from(new Set(
                 [anchorId]
@@ -1112,10 +1423,10 @@
                     : entry.label)}
             </span>
         `).join('');
-        const snapshotEdgeHtml = focusModeSnapshot && focusModeSnapshot.edges.length > 0
-            ? focusModeSnapshot.edges.map((edge) => {
-                const sourceLabel = focusModeSnapshot.nodes.find((node) => node.id === edge.sourceId)?.label || edge.sourceId;
-                const targetLabel = focusModeSnapshot.nodes.find((node) => node.id === edge.targetId)?.label || edge.targetId;
+        const snapshotEdgeHtml = focusModeGraph && focusModeGraph.edges.length > 0
+            ? focusModeGraph.edges.map((edge) => {
+                const sourceLabel = focusModeGraph.nodes.find((node) => node.id === edge.sourceId)?.label || edge.sourceId;
+                const targetLabel = focusModeGraph.nodes.find((node) => node.id === edge.targetId)?.label || edge.targetId;
                 const confidencePercent = edge.confidence > 1
                     ? Math.min(100, Math.max(0, edge.confidence))
                     : Math.min(100, Math.max(0, edge.confidence * 100));
@@ -1152,7 +1463,7 @@
                 `;
             }).join('')
             : `<li class="agent-focus-relation-empty">${escapeHtml(translate('agentWorkspace.graphFocus.relationEdgesUnavailable', 'No bounded relation edges were returned for this hit.'))}</li>`;
-        const edgeHtml = focusModeSnapshot ? snapshotEdgeHtml || relationEdgeHtml : relationEdgeHtml;
+        const edgeHtml = focusModeGraph ? snapshotEdgeHtml || relationEdgeHtml : relationEdgeHtml;
         return `
             <div
                 class="agent-focus-relation-map"
@@ -1276,6 +1587,15 @@
         return targetId ? resolveFocusModeSnapshot(targetId) : null;
     }
 
+    function resolveGraphFocusHostedProjection(payload) {
+        const payloadProjection = normalizeFocusModeProjection(payload && payload.focusModeProjection);
+        if (payloadProjection) {
+            return payloadProjection;
+        }
+        const targetId = resolveGraphFocusHostedTargetId(payload || {});
+        return targetId ? resolveFocusModeProjection(targetId) : resolveGraphFocusHostedSnapshot(payload || {});
+    }
+
     function buildGraphFocusPaneReaderHtml() {
         return `
             <section class="agent-focus-pane-reader" data-agent-focus-pane-reader="true" hidden>
@@ -1362,8 +1682,8 @@
     }
 
     function buildGraphFocusHostedModeHtml(payload) {
-        const snapshot = resolveGraphFocusHostedSnapshot(payload || {});
-        if (!snapshot) {
+        const focusGraph = resolveGraphFocusHostedProjection(payload || {});
+        if (!focusGraph) {
             return `
                 <div
                     class="agent-pane-block agent-pane-block--graph-focus agent-pane-block--focus-runtime"
@@ -1373,14 +1693,18 @@
                 </div>
             `;
         }
-        const developerDetails = buildHostedGraphFocusDeveloperDetailsHtml(payload || {}, snapshot);
+        const normalizedProjection = normalizeFocusModeProjection(focusGraph);
+        const normalizedSnapshot = normalizedProjection || normalizeFocusModeSnapshot(focusGraph);
+        const developerDetails = buildHostedGraphFocusDeveloperDetailsHtml(payload || {}, normalizedSnapshot);
         return `
             <div
                 class="agent-pane-block agent-pane-block--graph-focus agent-pane-block--focus-runtime"
                 data-agent-hosted-focus-mode="true"
-                data-agent-hosted-focus-anchor-id="${escapeHtml(snapshot.anchorId)}"
+                data-agent-hosted-focus-anchor-id="${escapeHtml(normalizedSnapshot.anchorId)}"
             >
-                ${buildGraphFocusSnapshotGraphHtml(snapshot, { interactive: true })}
+                ${normalizedProjection
+                    ? buildGraphFocusProjectionGraphHtml(normalizedProjection)
+                    : buildGraphFocusSnapshotGraphHtml(normalizedSnapshot, { interactive: true })}
                 ${buildGraphFocusPaneReaderHtml()}
                 ${developerDetails}
             </div>
@@ -2535,7 +2859,7 @@
         if (!readerShell || !readerBody) {
             return false;
         }
-        const snapshot = resolveGraphFocusHostedSnapshot(payload || {});
+        const snapshot = resolveGraphFocusHostedProjection(payload || {});
         const node = resolveGraphNodeForHostedFocus(nodeId);
         const nodeLabel = resolveHostedFocusNodeLabel(nodeId, snapshot, node);
         const matchedSpans = resolveHostedFocusMatchedSpans(payload || {}, nodeId, nodeLabel);
@@ -2575,9 +2899,9 @@
         if (!normalizedNodeId) {
             return false;
         }
-        const snapshot = resolveFocusModeSnapshot(normalizedNodeId);
+        const focusGraph = resolveFocusModeProjection(normalizedNodeId);
         const node = resolveGraphNodeForHostedFocus(normalizedNodeId);
-        const nodeLabel = resolveHostedFocusNodeLabel(normalizedNodeId, snapshot, node);
+        const nodeLabel = resolveHostedFocusNodeLabel(normalizedNodeId, focusGraph, node);
         const nextPayload = {
             ...(payload || {}),
             atomId: normalizedNodeId,
@@ -2587,7 +2911,8 @@
             graphNodeId: normalizedNodeId,
             graphTargetLabel: nodeLabel || normalizedNodeId,
             title: nodeLabel || normalizedNodeId,
-            focusModeSnapshot: snapshot,
+            focusModeSnapshot: normalizeFocusModeProjection(focusGraph) ? null : focusGraph,
+            focusModeProjection: normalizeFocusModeProjection(focusGraph) ? focusGraph : null,
             presentationMode: 'focus-mode',
         };
         state.panes['graph-focus'].payload = nextPayload;
@@ -3305,176 +3630,36 @@
         }
     }
 
-    function projectHostedFuturePathLayout(treeLayout) {
-        const nodes = Array.isArray(treeLayout && treeLayout.nodes)
-            ? treeLayout.nodes
-                .map((node) => ({
-                    ...node,
-                    id: normalizeKnowledgeGraphText(node && node.id),
-                    label: normalizeKnowledgeGraphText(node && (node.label || node.id)),
-                    x: Number(node && node.x),
-                    y: Number(node && node.y),
-                }))
-                .filter((node) => node.id && Number.isFinite(node.x) && Number.isFinite(node.y))
-            : [];
-        if (nodes.length <= 0) {
-            return {
-                nodes: [],
-                edges: [],
-                hulls: [],
-                points: new Map(),
-            };
-        }
-        const minX = Math.min(...nodes.map((node) => node.x));
-        const maxX = Math.max(...nodes.map((node) => node.x));
-        const minY = Math.min(...nodes.map((node) => node.y));
-        const maxY = Math.max(...nodes.map((node) => node.y));
-        const width = Math.max(1, maxX - minX);
-        const height = Math.max(1, maxY - minY);
-        const points = new Map();
-        nodes.forEach((node) => {
-            points.set(node.id, {
-                x: 8 + ((node.x - minX) / width) * 84,
-                y: 14 + ((node.y - minY) / height) * 72,
-            });
-        });
-        const nodeIds = new Set(nodes.map((node) => node.id));
-        const edges = (Array.isArray(treeLayout && treeLayout.edges) ? treeLayout.edges : [])
-            .map((edge) => ({
-                from: normalizeKnowledgeGraphText(edge && (edge.from || edge.source || edge.sourceId)),
-                to: normalizeKnowledgeGraphText(edge && (edge.to || edge.target || edge.targetId)),
-            }))
-            .filter((edge) => nodeIds.has(edge.from) && nodeIds.has(edge.to));
-        const hulls = (Array.isArray(treeLayout && treeLayout.hulls) ? treeLayout.hulls : [])
-            .map((hull) => ({
-                groupNodeId: normalizeKnowledgeGraphText(hull && hull.groupNodeId),
-                memberIds: Array.isArray(hull && hull.memberIds)
-                    ? hull.memberIds.map((id) => normalizeKnowledgeGraphText(id)).filter((id) => nodeIds.has(id))
-                    : [],
-            }))
-            .filter((hull) => hull.groupNodeId && hull.memberIds.length > 0);
-        return {
-            nodes,
-            edges,
-            hulls,
-            points,
-        };
-    }
-
     function buildHostedFuturePathSurfaceHtml(projection) {
         const targetLabel = normalizeKnowledgeGraphText(projection && projection.targetLabel)
             || normalizeKnowledgeGraphText(projection && projection.targetId)
             || translate('agentWorkspace.learningPath.title', 'Learning Path');
         const treeLayout = projection && projection.treeLayout;
-        const projected = projectHostedFuturePathLayout(treeLayout);
-        if (!projection || !projection.available || projected.nodes.length <= 0) {
-            const reason = normalizeKnowledgeGraphText(projection && projection.reason);
-            return `
-                <div
-                    class="agent-godot-future-path-shell"
-                    data-agent-godot-future-path-shell="true"
-                    data-agent-godot-future-path-hosted="true"
-                >
-                    <div class="agent-godot-future-path-title">${escapeHtml(targetLabel)}</div>
-                    <div class="agent-godot-future-path-status" data-agent-godot-future-path-status="true">
-                        ${escapeHtml(translate('agentWorkspace.learningPath.godotFuturePathUnavailable', 'Godot Future Path target is unavailable.'))}
-                        ${reason ? ` (${escapeHtml(reason)})` : ''}
-                    </div>
-                </div>
-            `;
+        const godotRenderer = window.NoteConnectionGodotFuturePathRenderer;
+        if (godotRenderer && typeof godotRenderer.buildSurfaceHtml === 'function') {
+            return godotRenderer.buildSurfaceHtml({
+                treeLayout,
+                targetId: projection && projection.targetId,
+                currentId: projection && projection.targetId,
+                targetLabel,
+                reason: normalizeKnowledgeGraphText(projection && projection.reason),
+                focusModeEnabled: true,
+                unavailableLabel: translate('agentWorkspace.learningPath.godotFuturePathUnavailable', 'Godot Future Path target is unavailable.'),
+                statusLabel: translate('agentWorkspace.learningPath.godotFuturePathRequested', 'Godot Future Path requested: Diffusion / Core'),
+            });
         }
-        const edgeHtml = projected.edges.map((edge) => {
-            const source = projected.points.get(edge.from);
-            const target = projected.points.get(edge.to);
-            if (!source || !target) {
-                return '';
-            }
-            return `
-                <line
-                    class="agent-godot-future-path-edge"
-                    x1="${source.x}"
-                    y1="${source.y}"
-                    x2="${target.x}"
-                    y2="${target.y}"
-                ></line>
-            `;
-        }).join('');
-        const hullHtml = projected.hulls.map((hull) => {
-            const memberPoints = hull.memberIds
-                .map((nodeId) => projected.points.get(nodeId))
-                .filter(Boolean);
-            if (memberPoints.length <= 0) {
-                return '';
-            }
-            const xs = memberPoints.map((point) => point.x);
-            const ys = memberPoints.map((point) => point.y);
-            const minX = Math.max(1, Math.min(...xs) - 6);
-            const minY = Math.max(1, Math.min(...ys) - 6);
-            const width = Math.min(98 - minX, Math.max(...xs) - Math.min(...xs) + 12);
-            const height = Math.min(98 - minY, Math.max(...ys) - Math.min(...ys) + 12);
-            return `
-                <rect
-                    class="agent-godot-future-path-hull"
-                    x="${minX}"
-                    y="${minY}"
-                    width="${width}"
-                    height="${height}"
-                    rx="4"
-                    ry="4"
-                ></rect>
-            `;
-        }).join('');
-        const nodeHtml = projected.nodes.map((node) => {
-            const point = projected.points.get(node.id);
-            if (!point) {
-                return '';
-            }
-            const isCurrent = node.id === projection.targetId;
-            const nodeClass = [
-                'agent-godot-future-path-node',
-                node.isSpine ? 'agent-godot-future-path-node--spine' : 'agent-godot-future-path-node--tributary',
-                isCurrent ? 'agent-godot-future-path-node--current' : '',
-                node.isExpanded ? 'agent-godot-future-path-node--expanded' : '',
-            ].filter(Boolean).join(' ');
-            return `
-                <button
-                    type="button"
-                    class="${nodeClass}"
-                    data-agent-future-path-node-id="${escapeHtml(node.id)}"
-                    data-agent-future-path-node-spine="${node.isSpine ? 'true' : 'false'}"
-                    data-agent-future-path-node-has-prereqs="${node.hasPrereqs ? 'true' : 'false'}"
-                    data-agent-future-path-node-expanded="${node.isExpanded ? 'true' : 'false'}"
-                    style="left: ${point.x}%; top: ${point.y}%;"
-                    title="${escapeHtml(node.label || node.id)}"
-                    aria-label="${escapeHtml(node.label || node.id)}"
-                >
-                    <span>${escapeHtml(node.label || node.id)}</span>
-                    ${node.hasPrereqs && node.isSpine ? `<span class="agent-godot-future-path-node-badge">${node.isExpanded ? '-' : '+'}</span>` : ''}
-                </button>
-            `;
-        }).join('');
+        const reason = normalizeKnowledgeGraphText(projection && projection.reason) || 'missing_godot_tree_renderer';
         return `
             <div
                 class="agent-godot-future-path-shell"
                 data-agent-godot-future-path-shell="true"
                 data-agent-godot-future-path-hosted="true"
+                data-godot-tree-renderer="false"
             >
-                <div class="agent-godot-future-path-header">
-                    <div class="agent-godot-future-path-title">${escapeHtml(targetLabel)}</div>
-                    <div class="agent-godot-future-path-status" data-agent-godot-future-path-status="true">
-                        ${escapeHtml(translate('agentWorkspace.learningPath.godotFuturePathRequested', 'Godot Future Path requested: Diffusion / Core'))}
-                    </div>
-                </div>
-                <div
-                    class="agent-godot-future-path-surface"
-                    data-agent-godot-future-path-surface="true"
-                    data-agent-godot-future-path-target-id="${escapeHtml(projection.targetId)}"
-                >
-                    <svg class="agent-godot-future-path-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                        ${hullHtml}
-                        ${edgeHtml}
-                    </svg>
-                    ${nodeHtml}
+                <div class="agent-godot-future-path-title">${escapeHtml(targetLabel)}</div>
+                <div class="agent-godot-future-path-status" data-agent-godot-future-path-status="true">
+                    ${escapeHtml(translate('agentWorkspace.learningPath.godotFuturePathUnavailable', 'Godot Future Path target is unavailable.'))}
+                    ${reason ? ` (${escapeHtml(reason)})` : ''}
                 </div>
             </div>
         `;
@@ -3528,13 +3713,201 @@
         renderLearningPathBody(payload || state.panes['learning-path'].payload || {});
     }
 
+    function bindHostedFuturePathViewport(body) {
+        const viewport = body && body.querySelector('[data-godot-tree-viewport="true"]');
+        const surface = body && body.querySelector('[data-godot-tree-transform-target="true"]');
+        if (!viewport || !surface) {
+            return;
+        }
+        const readNumericAttribute = function (element, attributeName) {
+            const value = Number(element.getAttribute(attributeName));
+            return Number.isFinite(value) && value > 0 ? value : 0;
+        };
+        const readFiniteAttribute = function (element, attributeName) {
+            const value = Number(element.getAttribute(attributeName));
+            return Number.isFinite(value) ? value : null;
+        };
+        const readViewportSize = function () {
+            const rect = typeof viewport.getBoundingClientRect === 'function'
+                ? viewport.getBoundingClientRect()
+                : { width: 0, height: 0 };
+            return {
+                width: Number(viewport.clientWidth) || Number(rect.width) || 760,
+                height: Number(viewport.clientHeight) || Number(rect.height) || 460,
+            };
+        };
+        const readSurfaceSize = function () {
+            const styleWidth = parseFloat(String(surface.style.width || ''));
+            const styleHeight = parseFloat(String(surface.style.height || ''));
+            return {
+                width: readNumericAttribute(surface, 'data-godot-tree-surface-width') || Number(surface.offsetWidth) || styleWidth || 760,
+                height: readNumericAttribute(surface, 'data-godot-tree-surface-height') || Number(surface.offsetHeight) || styleHeight || 460,
+            };
+        };
+        const readTransform = function () {
+            return {
+                zoom: Number(viewport.getAttribute('data-godot-tree-zoom')) || 1,
+                panX: Number(viewport.getAttribute('data-godot-tree-pan-x')) || 0,
+                panY: Number(viewport.getAttribute('data-godot-tree-pan-y')) || 0,
+            };
+        };
+        const applyTransform = function (nextTransform) {
+            const zoom = Math.min(5, Math.max(0.1, Number(nextTransform.zoom) || 1));
+            const panX = Number.isFinite(Number(nextTransform.panX)) ? Number(nextTransform.panX) : 0;
+            const panY = Number.isFinite(Number(nextTransform.panY)) ? Number(nextTransform.panY) : 0;
+            viewport.setAttribute('data-godot-tree-zoom', String(Number(zoom.toFixed(3))));
+            viewport.setAttribute('data-godot-tree-pan-x', String(Number(panX.toFixed(1))));
+            viewport.setAttribute('data-godot-tree-pan-y', String(Number(panY.toFixed(1))));
+            surface.style.setProperty('--godot-tree-zoom', String(Number(zoom.toFixed(3))));
+            surface.style.setProperty('--godot-tree-pan-x', `${Number(panX.toFixed(1))}px`);
+            surface.style.setProperty('--godot-tree-pan-y', `${Number(panY.toFixed(1))}px`);
+        };
+        const resolveInitialTransform = function () {
+            const current = readTransform();
+            if (viewport.getAttribute('data-godot-tree-auto-fit') !== 'pending') {
+                return current;
+            }
+            const viewportSize = readViewportSize();
+            const surfaceSize = readSurfaceSize();
+            if (
+                !Number.isFinite(viewportSize.width)
+                || !Number.isFinite(viewportSize.height)
+                || !Number.isFinite(surfaceSize.width)
+                || !Number.isFinite(surfaceSize.height)
+                || viewportSize.width <= 0
+                || viewportSize.height <= 0
+                || surfaceSize.width <= 0
+                || surfaceSize.height <= 0
+            ) {
+                return current;
+            }
+            const margin = 48;
+            const availableWidth = Math.max(240, viewportSize.width - margin);
+            const availableHeight = Math.max(240, viewportSize.height - margin);
+            const fitZoom = Math.min(1, Math.max(0.18, Math.min(
+                availableWidth / surfaceSize.width,
+                availableHeight / surfaceSize.height
+            )));
+            const currentX = readFiniteAttribute(surface, 'data-godot-tree-current-x');
+            const currentY = readFiniteAttribute(surface, 'data-godot-tree-current-y');
+            if (currentX !== null && currentY !== null && currentX > 0 && currentY > 0) {
+                return {
+                    zoom: fitZoom,
+                    panX: (viewportSize.width / 2) - (currentX * fitZoom),
+                    panY: (viewportSize.height / 2) - (currentY * fitZoom),
+                };
+            }
+            return {
+                zoom: fitZoom,
+                panX: (viewportSize.width - (surfaceSize.width * fitZoom)) / 2,
+                panY: (viewportSize.height - (surfaceSize.height * fitZoom)) / 2,
+            };
+        };
+        applyTransform(resolveInitialTransform());
+        viewport.setAttribute('data-godot-tree-auto-fit', 'done');
+        viewport.addEventListener('wheel', function (event) {
+            event.preventDefault();
+            const current = readTransform();
+            const factor = event.deltaY < 0 ? 1.1 : 0.9;
+            const nextZoom = Math.min(5, Math.max(0.1, current.zoom * factor));
+            const rect = viewport.getBoundingClientRect();
+            const localX = event.clientX - rect.left + viewport.scrollLeft;
+            const localY = event.clientY - rect.top + viewport.scrollTop;
+            const worldX = (localX - current.panX) / current.zoom;
+            const worldY = (localY - current.panY) / current.zoom;
+            applyTransform({
+                zoom: nextZoom,
+                panX: localX - (worldX * nextZoom),
+                panY: localY - (worldY * nextZoom),
+            });
+        }, { passive: false });
+        let panState = null;
+        const finishPan = function () {
+            if (!panState) {
+                return;
+            }
+            panState = null;
+            viewport.classList.remove('is-panning');
+            document.removeEventListener('mousemove', movePan, true);
+            document.removeEventListener('mouseup', finishPan, true);
+        };
+        const movePan = function (event) {
+            if (!panState) {
+                return;
+            }
+            applyTransform({
+                zoom: panState.zoom,
+                panX: panState.panX + (event.clientX - panState.clientX),
+                panY: panState.panY + (event.clientY - panState.clientY),
+            });
+        };
+        viewport.addEventListener('mousedown', function (event) {
+            if (
+                event.button !== 0
+                || (
+                    event.target
+                    && typeof event.target.closest === 'function'
+                    && event.target.closest('[data-godot-tree-node-id], [data-agent-future-path-node-id]')
+                )
+            ) {
+                return;
+            }
+            event.preventDefault();
+            const current = readTransform();
+            panState = {
+                clientX: event.clientX,
+                clientY: event.clientY,
+                panX: current.panX,
+                panY: current.panY,
+                zoom: current.zoom,
+            };
+            viewport.classList.add('is-panning');
+            document.addEventListener('mousemove', movePan, true);
+            document.addEventListener('mouseup', finishPan, true);
+        });
+        viewport.addEventListener('contextmenu', function (event) {
+            if (!(event.target && typeof event.target.closest === 'function'
+                && event.target.closest('[data-godot-tree-node-id], [data-agent-future-path-node-id]'))) {
+                event.preventDefault();
+            }
+        });
+    }
+
     function bindHostedFuturePathSurface(body, payload) {
         if (!body) {
             return;
         }
-        body.querySelectorAll('[data-agent-future-path-node-id]').forEach((nodeButton) => {
+        bindHostedFuturePathViewport(body);
+        const renderer = window.NoteConnectionGodotFuturePathRenderer;
+        const projection = state.godotFuturePath.projection;
+        const treeLayout = projection && projection.treeLayout;
+        const resetActiveHull = function () {
+            if (renderer && typeof renderer.resolveActiveHullRoot === 'function' && typeof renderer.updateActiveHullRoot === 'function') {
+                renderer.updateActiveHullRoot(body, renderer.resolveActiveHullRoot(treeLayout, ''));
+            }
+        };
+        body.querySelectorAll('[data-godot-tree-node-id], [data-agent-future-path-node-id]').forEach((nodeButton) => {
             nodeButton.addEventListener('click', function (event) {
                 event.stopPropagation();
+                body.querySelectorAll('.agent-godot-future-path-node--selected').forEach((node) => {
+                    node.classList.remove('agent-godot-future-path-node--selected');
+                });
+                nodeButton.classList.add('agent-godot-future-path-node--selected');
+                const clickedBadge = event.target
+                    && typeof event.target.closest === 'function'
+                    && event.target.closest('[data-godot-tree-expansion-badge="true"]');
+                if (clickedBadge) {
+                    event.preventDefault();
+                    if (
+                        nodeButton.getAttribute('data-agent-future-path-node-spine') === 'true'
+                        && nodeButton.getAttribute('data-agent-future-path-node-has-prereqs') === 'true'
+                    ) {
+                        toggleHostedFuturePathExpansion(
+                            nodeButton.getAttribute('data-agent-future-path-node-id') || nodeButton.getAttribute('data-godot-tree-node-id'),
+                            payload || {}
+                        );
+                    }
+                }
             });
             nodeButton.addEventListener('dblclick', function (event) {
                 event.preventDefault();
@@ -3546,10 +3919,31 @@
                     return;
                 }
                 toggleHostedFuturePathExpansion(
-                    nodeButton.getAttribute('data-agent-future-path-node-id'),
+                    nodeButton.getAttribute('data-agent-future-path-node-id') || nodeButton.getAttribute('data-godot-tree-node-id'),
                     payload || {}
                 );
             });
+            nodeButton.addEventListener('contextmenu', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (
+                    nodeButton.getAttribute('data-agent-future-path-node-spine') !== 'true'
+                    || nodeButton.getAttribute('data-agent-future-path-node-has-prereqs') !== 'true'
+                ) {
+                    return;
+                }
+                toggleHostedFuturePathExpansion(
+                    nodeButton.getAttribute('data-agent-future-path-node-id') || nodeButton.getAttribute('data-godot-tree-node-id'),
+                    payload || {}
+                );
+            });
+            nodeButton.addEventListener('mouseenter', function () {
+                if (renderer && typeof renderer.resolveActiveHullRoot === 'function' && typeof renderer.updateActiveHullRoot === 'function') {
+                    const nodeId = nodeButton.getAttribute('data-agent-future-path-node-id') || nodeButton.getAttribute('data-godot-tree-node-id');
+                    renderer.updateActiveHullRoot(body, renderer.resolveActiveHullRoot(treeLayout, nodeId));
+                }
+            });
+            nodeButton.addEventListener('mouseleave', resetActiveHull);
         });
     }
 

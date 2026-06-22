@@ -14,11 +14,11 @@
 - 现有 DAG 仍在 synthesis 前由 `src/learning/graphContextAssembler.ts` 消费，并在 release-time 通过图感知 reviewer gate 再次参与判断；
 - `src/frontend/workspace_panes.js` 的命中文件列表现在使用紧凑问号帮助入口，而不是把说明文字直接堆进 workspace；
 - 命中文件的 source focus 继续以右侧 pane 为权威阅读面：点击后解析 source path、渲染 Markdown，并通过 line/snippet/offset provenance 投影 inline highlight；
-- `关联聚焦` 现在托管一个隔离的 Focus-mode pane：它在 Knowledge Focus 区域渲染同一套解析后的 Focus snapshot 语义，保持主 `#graph-container` 留在原父节点，双击关联节点只切换 pane-local anchor，双击中心节点时 Markdown 阅读器也只在该 pane 内打开；relation/debug 细节仍只在 Developer Mode 下显示；
+- `关联聚焦` 现在托管一个由 `NoteConnectionGraphView.getFocusModeProjection()` 驱动的隔离 Focus-mode pane：保持主 `#graph-container` 留在原父节点，渲染主动 Focus 节点与高密度背景 context node 层，双击关联节点只切换 pane-local anchor，双击中心节点时 Markdown 阅读器也只在该 pane 内打开；relation/debug 细节仍只在 Developer Mode 下显示；
 - `学习路径` 不再挂载浏览器 `path-container`，也不再默认要求 Tauri/Godot 显示原生 Path 窗口；它解析选中 DAG 节点后，复用现有前端 `Graph` / `PathEngine` 契约，执行 `diffusionLearning(target, 'core', ...)` 与 `getTreeLayout(..., focusMode=true, { verticalGap: 240 })`；
-- Future Path 投影固定为 `mode=diffusion`、`strategy=core`、`layout=orbital`、`focus_mode=true`；目标解析保留真实 DAG 节点 ID，UI 保留人类可读 label；
+- 托管 Future Path 通过模块化 `src/frontend/godot_future_path_renderer.js` 渲染 TreeRenderer 兼容表面，覆盖 140x50 胶囊节点、Bezier 跨层过滤、active subtree hull、spine expansion badge、hover subtree focus、保词标签换行与以目标节点为中心的 pane-local pan/zoom 自动拟合；
 - 受影响的 source/focus/path 右侧窗口现在都有 close control；
-- `scripts/verify-agent-workspace-browser.js` 的 strict browser verification 已经持有用户报告的 `water glass.md` UI 回归面，包括托管 Godot Future Path `diffusion/core` 投影、拒绝把 `#path-container` 停靠进 pane、拒绝调用 bridge/Tauri `showGodot=true`、拒绝停靠真实 `#graph-container`，以及断言托管 Focus anchor 确实是 `water glass`。
+- `scripts/verify-agent-workspace-browser.js` 的 strict browser verification 已经持有用户报告的 `water glass.md` UI 回归面，包括托管 Godot Future Path `diffusion/core` 投影、TreeRenderer marker/hull/viewport auto-fit、拒绝把 `#path-container` 停靠进 pane、拒绝调用 bridge/Tauri `showGodot=true`、拒绝停靠真实 `#graph-container`、高密度 Focus context dot，以及断言托管 Focus anchor 确实是 `water glass`。
 
 代码 / 方案对齐：
 
@@ -27,14 +27,14 @@
 | 回答区不能变成 evidence dump | `conversationComposer.ts` 发布 `answerReleaseReview.publicAnswer`；graph/evidence diagnostics 留在次级 surface。 | 已实现 |
 | 用户需要知道命中文件可点击，但 workspace 不应常驻说明文案 | `workspace_panes.js` 将说明放入 hover/focus 触发的 help icon。 | 已实现 |
 | 单击命中文件应打开源文档并高亮依据 | source focus 消费 source-line provenance、line window、snippet，并在可用时使用 offset。 | 已实现基线 |
-| `关联聚焦` 应对应 Tauri Focus-mode 状态 | pane 在本地托管 Focus-mode 行为：同一套解析后的 snapshot 语义、pane-local 双击切换、pane-local Markdown 阅读器，不修改主图运行时；诊断只在 Developer Mode 下显示。 | 已实现 |
-| `学习路径` 应对应 Godot/Path-mode 设计 | pane 通过现有前端 `Graph` / `PathEngine` 的 `diffusion/core` + `treeLayout` 路径托管 Godot Future Path 数据契约；刻意不挂载浏览器 `path-container`，也不默认显示 Godot 原生窗口。 | 已实现 |
+| `关联聚焦` 应对应 Tauri Focus-mode 状态 | pane 通过 `getFocusModeProjection()` 本地托管 Focus-mode 行为：主动 Focus 节点、toolbar/control 元数据、高密度背景 context node、pane-local 双击切换、pane-local Markdown 阅读器，不修改主图运行时；诊断只在 Developer Mode 下显示。 | 已实现 |
+| `学习路径` 应对应 Godot/Path-mode 设计 | pane 通过现有前端 `Graph` / `PathEngine` 的 `diffusion/core` + `treeLayout` 路径托管 Godot Future Path 数据契约，并由 `godot_future_path_renderer.js` 渲染；刻意不挂载浏览器 `path-container`，也不默认显示 Godot 原生窗口。 | 已实现 |
 | 最终回答需要鲁棒审核 / 纠错 owner | `answerReleaseReview.ts` 继续作为后端确定性 release-policy owner。 | 已实现基线 |
 | 兼容性必须保持 | 新增 graph-preview 与 provenance 字段保持 additive/optional；legacy response fields 继续有效。 | 已实现 |
 
 关键权衡现在更窄。
-Focus 复用现在指行为契约复用，而不是 DOM owner 转移。移动 `#graph-container` 会让右侧 pane 意外接管 Tauri 主图生命周期，也会导致 Markdown 内容打开到错误的主界面 surface。
-Path 复用现在指 Godot Future Path 的数据契约复用：使用现有 `Graph` / `PathEngine` 生成 Godot TreeRenderer 消费的 treeLayout，而不是浏览器 / Tauri Learning Path，也不是原生窗口可见性开关。
+Focus 复用现在指投影契约复用，而不是 DOM owner 转移。移动 `#graph-container` 会让右侧 pane 意外接管 Tauri 主图生命周期，也会导致 Markdown 内容打开到错误的主界面 surface。
+Path 复用现在指 Godot Future Path 的数据契约与 renderer 语义复用：使用现有 `Graph` / `PathEngine` 生成 Godot TreeRenderer 消费的 treeLayout，并在知识工作区用 TreeRenderer 兼容表面托管，而不是浏览器 / Tauri Learning Path，也不是原生窗口可见性开关。
 如果未来产品要求把 Godot 原生窗口真正嵌入右侧 pane，需要单独做 native window container/reparenting spike；它不应混入当前 Knowledge Workspace pane 实现。
 
 剩余工作已经转为校准：

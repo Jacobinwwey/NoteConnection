@@ -4540,6 +4540,334 @@ function buildGraphViewFocusModeSnapshot(nodeId) {
     };
 }
 
+function buildGraphViewFocusModeProjection(nodeId, options = {}) {
+    const focusD = resolveGraphViewNodeByIdOrLabel(nodeId);
+    if (!focusD) {
+        return null;
+    }
+    const linkList = Array.isArray(links) ? links : [];
+    const uniqueById = (items) => {
+        const seen = new Set();
+        const unique = [];
+        items.forEach((item) => {
+            const id = normalizeGraphViewText(item && item.id);
+            if (!id || seen.has(id)) {
+                return;
+            }
+            seen.add(id);
+            unique.push(item);
+        });
+        return unique;
+    };
+    const getEndpointNode = (endpoint) => {
+        if (endpoint && typeof endpoint === 'object') {
+            const endpointId = normalizeGraphViewText(endpoint.id || endpoint.nodeId || endpoint.key);
+            return endpointId ? resolveGraphViewNodeByIdOrLabel(endpointId) || endpoint : null;
+        }
+        return resolveGraphViewNodeByIdOrLabel(endpoint);
+    };
+    const getLinkWeight = (linkItem) => {
+        const numericWeight = Number(linkItem && (linkItem.weight || linkItem.confidence));
+        return Number.isFinite(numericWeight) ? numericWeight : 0.5;
+    };
+    const getRelationKind = (linkItem) => (
+        normalizeGraphViewText(linkItem && (linkItem.type || linkItem.relationKind || linkItem.kind)) || 'related'
+    );
+    const outgoing = [];
+    const incoming = [];
+    const focusEdgeMap = new Map();
+    linkList.forEach((linkItem) => {
+        const sourceId = getGraphViewLinkNodeId(linkItem && linkItem.source);
+        const targetId = getGraphViewLinkNodeId(linkItem && linkItem.target);
+        if (!sourceId || !targetId) {
+            return;
+        }
+        if (sourceId === focusD.id || targetId === focusD.id) {
+            focusEdgeMap.set(`${sourceId}-${targetId}`, linkItem);
+        }
+        if (sourceId === focusD.id) {
+            const targetNode = getEndpointNode(linkItem && linkItem.target);
+            if (targetNode) {
+                outgoing.push(targetNode);
+            }
+            return;
+        }
+        if (targetId === focusD.id) {
+            const sourceNode = getEndpointNode(linkItem && linkItem.source);
+            if (sourceNode) {
+                incoming.push(sourceNode);
+            }
+        }
+    });
+    const scoreNode = (node) => {
+        const key1 = `${focusD.id}-${node.id}`;
+        const key2 = `${node.id}-${focusD.id}`;
+        const edge = focusEdgeMap.get(key1) || focusEdgeMap.get(key2);
+        const weight = getLinkWeight(edge);
+        const degreeRatio = (Number(node && node.outDegree) || 0) / ((Number(node && node.inDegree) || 0) + 1);
+        const normalizedDegreeRatio = Math.min(degreeRatio, 5) / 5;
+        return (weight * 0.7) + (normalizedDegreeRatio * 0.3);
+    };
+    const sortByFocusScore = (left, right) => scoreNode(right) - scoreNode(left);
+    const incomingNodes = uniqueById(incoming).sort(sortByFocusScore);
+    const outgoingNodes = uniqueById(outgoing).sort(sortByFocusScore);
+    const activeIdSet = new Set([focusD.id].concat(
+        incomingNodes.map((node) => node.id),
+        outgoingNodes.map((node) => node.id)
+    ));
+    const associatedNodes = uniqueById(linkList
+        .map((linkItem) => {
+            const sourceId = getGraphViewLinkNodeId(linkItem && linkItem.source);
+            const targetId = getGraphViewLinkNodeId(linkItem && linkItem.target);
+            if ((sourceId !== focusD.id && targetId !== focusD.id) || getLinkWeight(linkItem) <= 0.6) {
+                return null;
+            }
+            const otherId = sourceId === focusD.id ? targetId : sourceId;
+            if (!otherId || activeIdSet.has(otherId)) {
+                return null;
+            }
+            return getEndpointNode(sourceId === focusD.id ? linkItem.target : linkItem.source);
+        })
+        .filter(Boolean))
+        .sort(sortByFocusScore);
+    associatedNodes.forEach((node) => activeIdSet.add(node.id));
+
+    const currentWidth = Number.isFinite(Number(width)) ? Number(width) : 1200;
+    const currentHeight = Number.isFinite(Number(height)) ? Number(height) : 800;
+    const cx = Number.isFinite(Number(focusD.x)) ? Number(focusD.x) : currentWidth / 2;
+    const cy = Number.isFinite(Number(focusD.y)) ? Number(focusD.y) : currentHeight / 2;
+    const selectedLayoutType = normalizeGraphViewText(options.layoutType)
+        || (document.getElementById('focus-layout-select') ? document.getElementById('focus-layout-select').value : '')
+        || 'horizontal';
+    const layoutType = selectedLayoutType === 'vertical' ? 'vertical' : 'horizontal';
+    const defaultLayerGap = focusSpacingSettings && focusSpacingSettings[layoutType]
+        ? Number(focusSpacingSettings[layoutType].layer)
+        : (layoutType === 'horizontal' ? 125 : 250);
+    const defaultNodeGap = focusSpacingSettings && focusSpacingSettings[layoutType]
+        ? Number(focusSpacingSettings[layoutType].node)
+        : (layoutType === 'horizontal' ? 80 : 20);
+    const layerGap = Number.isFinite(Number(options.layerGap)) ? Number(options.layerGap) : defaultLayerGap;
+    const nodeGap = Number.isFinite(Number(options.nodeGap)) ? Number(options.nodeGap) : defaultNodeGap;
+    const projectionNodes = [];
+    const projectionLabels = [];
+    const points = new Map();
+    const addProjectionNode = (node, role, x, y, labelDy, labelDx) => {
+        const id = normalizeGraphViewText(node && node.id);
+        if (!id || points.has(id)) {
+            return;
+        }
+        points.set(id, { x, y });
+        projectionNodes.push({
+            id,
+            label: getGraphViewNodeLabel(node) || id,
+            role,
+            x,
+            y,
+            score: Number(scoreNode(node).toFixed(4)),
+            inDegree: Number(node && node.inDegree) || 0,
+            outDegree: Number(node && node.outDegree) || 0,
+            sourcePath: normalizeGraphViewText(node && (
+                node.sourcePath
+                || node.filepath
+                || (node.metadata && (node.metadata.sourcePath || node.metadata.filepath))
+            )),
+            radius: role === 'anchor' ? 25 : 8,
+            labelDy,
+            labelDx,
+        });
+    };
+    addProjectionNode(focusD, 'anchor', cx, cy, 35, layoutType === 'vertical' ? 25 : 29);
+    if (layoutType === 'vertical') {
+        const spreadVertical = (nodeList, baselineX, role) => {
+            const totalHeight = (nodeList.length - 1) * nodeGap;
+            const startY = cy - totalHeight / 2;
+            nodeList.forEach((node, index) => {
+                addProjectionNode(node, role, baselineX, startY + (index * nodeGap), 25, 25);
+            });
+        };
+        spreadVertical(incomingNodes, cx - layerGap, 'incoming');
+        spreadVertical(outgoingNodes, cx + layerGap, 'outgoing');
+        projectionLabels.push({
+            text: typeof t === 'function' ? t('focus_inbound') : 'Inbound',
+            x: cx - layerGap,
+            y: cy - (incomingNodes.length * nodeGap / 2) - 40,
+            align: 'middle',
+            role: 'incoming',
+        });
+        projectionLabels.push({
+            text: typeof t === 'function' ? t('focus_outbound') : 'Outbound',
+            x: cx + layerGap,
+            y: cy - (outgoingNodes.length * nodeGap / 2) - 40,
+            align: 'middle',
+            role: 'outgoing',
+        });
+    } else {
+        const spreadHorizontal = (nodeList, baselineY, role) => {
+            const totalWidth = (nodeList.length - 1) * nodeGap;
+            const startX = cx - totalWidth / 2;
+            nodeList.forEach((node, index) => {
+                const nodeScore = scoreNode(node);
+                const stagger = (index % 2 === 0 ? -1 : 1) * 20;
+                const nodeY = baselineY + stagger + (nodeScore * 20);
+                addProjectionNode(node, role, startX + (index * nodeGap), nodeY, nodeY < baselineY ? -15 : 25, 12);
+            });
+        };
+        spreadHorizontal(outgoingNodes, cy - layerGap, 'outgoing');
+        spreadHorizontal(incomingNodes, cy + layerGap, 'incoming');
+        projectionLabels.push({
+            text: typeof t === 'function' ? t('focus_outbound') : 'Outbound',
+            x: cx,
+            y: cy - layerGap - 60,
+            align: 'middle',
+            role: 'outgoing',
+        });
+        projectionLabels.push({
+            text: typeof t === 'function' ? t('focus_inbound') : 'Inbound',
+            x: cx,
+            y: cy + layerGap + 80,
+            align: 'middle',
+            role: 'incoming',
+        });
+    }
+    if (associatedNodes.length > 0) {
+        const left = [];
+        const right = [];
+        associatedNodes.forEach((node, index) => {
+            if (index % 2 === 0) {
+                left.push(node);
+            } else {
+                right.push(node);
+            }
+        });
+        const sideGap = layerGap * 1.2;
+        const placeSide = (nodeList, direction) => {
+            nodeList.forEach((node, index) => {
+                addProjectionNode(
+                    node,
+                    'associated',
+                    cx + (direction * sideGap),
+                    cy + (index * 60) - (nodeList.length * 30),
+                    25,
+                    12
+                );
+            });
+        };
+        placeSide(left, -1);
+        placeSide(right, 1);
+    }
+
+    const visibleIds = new Set(projectionNodes.map((node) => node.id));
+    const projectionEdges = linkList
+        .map((linkItem) => {
+            const sourceId = getGraphViewLinkNodeId(linkItem && linkItem.source);
+            const targetId = getGraphViewLinkNodeId(linkItem && linkItem.target);
+            if (!sourceId || !targetId || !visibleIds.has(sourceId) || !visibleIds.has(targetId)) {
+                return null;
+            }
+            return {
+                sourceId,
+                targetId,
+                relationKind: getRelationKind(linkItem),
+                confidence: getLinkWeight(linkItem),
+                role: sourceId === focusD.id
+                    ? 'outgoing'
+                    : targetId === focusD.id
+                        ? 'incoming'
+                        : 'associated',
+            };
+        })
+        .filter(Boolean);
+    const maxContextNodes = Number.isFinite(Number(options.maxContextNodes))
+        ? Math.max(0, Math.min(500, Math.trunc(Number(options.maxContextNodes))))
+        : 220;
+    const contextNodes = maxContextNodes > 0
+        ? (Array.isArray(nodes) ? nodes : [])
+            .map((node) => {
+                const id = normalizeGraphViewText(node && node.id);
+                const x = Number(node && node.x);
+                const y = Number(node && node.y);
+                if (!id || visibleIds.has(id) || !Number.isFinite(x) || !Number.isFinite(y)) {
+                    return null;
+                }
+                const dx = x - cx;
+                const dy = y - cy;
+                const distance = Math.sqrt((dx * dx) + (dy * dy));
+                const degree = (Number(node && node.inDegree) || 0) + (Number(node && node.outDegree) || 0);
+                const degreeScore = Math.min(degree, 40) / 40;
+                const proximityScore = 1 / (1 + (distance / Math.max(layerGap, nodeGap, 1)));
+                return {
+                    id,
+                    label: getGraphViewNodeLabel(node) || id,
+                    x,
+                    y,
+                    inDegree: Number(node && node.inDegree) || 0,
+                    outDegree: Number(node && node.outDegree) || 0,
+                    score: Number(((proximityScore * 0.72) + (degreeScore * 0.28)).toFixed(4)),
+                };
+            })
+            .filter(Boolean)
+            .sort((left, right) => right.score - left.score)
+            .slice(0, maxContextNodes)
+        : [];
+    const boundsPoints = projectionNodes
+        .map((node) => ({ x: node.x, y: node.y }))
+        .concat(projectionLabels.map((label) => ({ x: label.x, y: label.y })));
+    const contextBoundsPoints = contextNodes.length > 0
+        ? contextNodes.map((node) => ({ x: node.x, y: node.y }))
+        : boundsPoints;
+    const minX = Math.min(...boundsPoints.map((point) => point.x));
+    const maxX = Math.max(...boundsPoints.map((point) => point.x));
+    const minY = Math.min(...boundsPoints.map((point) => point.y));
+    const maxY = Math.max(...boundsPoints.map((point) => point.y));
+    const contextMinX = Math.min(...contextBoundsPoints.map((point) => point.x));
+    const contextMaxX = Math.max(...contextBoundsPoints.map((point) => point.x));
+    const contextMinY = Math.min(...contextBoundsPoints.map((point) => point.y));
+    const contextMaxY = Math.max(...contextBoundsPoints.map((point) => point.y));
+    return {
+        anchorId: focusD.id,
+        anchorLabel: getGraphViewNodeLabel(focusD) || focusD.id,
+        layoutType,
+        layerGap,
+        nodeGap,
+        stats: {
+            inDegree: Number(focusD.inDegree) || incomingNodes.length,
+            outDegree: Number(focusD.outDegree) || outgoingNodes.length,
+            incomingCount: incomingNodes.length,
+            outgoingCount: outgoingNodes.length,
+            associatedCount: associatedNodes.length,
+            contextCount: contextNodes.length,
+        },
+        controls: {
+            layoutType,
+            layerGap,
+            nodeGap,
+            rendererMode: document.querySelector('input[name="rendererMode"]:checked')
+                ? document.querySelector('input[name="rendererMode"]:checked').value
+                : '',
+        },
+        labels: projectionLabels,
+        contextNodes,
+        nodes: projectionNodes,
+        edges: projectionEdges,
+        bounds: {
+            minX,
+            maxX,
+            minY,
+            maxY,
+            width: Math.max(1, maxX - minX),
+            height: Math.max(1, maxY - minY),
+        },
+        contextBounds: {
+            minX: contextMinX,
+            maxX: contextMaxX,
+            minY: contextMinY,
+            maxY: contextMaxY,
+            width: Math.max(1, contextMaxX - contextMinX),
+            height: Math.max(1, contextMaxY - contextMinY),
+        },
+    };
+}
+
 // Compatibility API for agent workspace graph-focus capabilities.
 // Keeps agent runtime decoupled from historical global helper names.
 window.NoteConnectionGraphView = {
@@ -4575,6 +4903,9 @@ window.NoteConnectionGraphView = {
     },
     getFocusModeSnapshot: function(nodeId) {
         return buildGraphViewFocusModeSnapshot(nodeId || (focusNode && focusNode.id));
+    },
+    getFocusModeProjection: function(nodeId, options) {
+        return buildGraphViewFocusModeProjection(nodeId || (focusNode && focusNode.id), options || {});
     },
     getNodeCount: function() {
         return Array.isArray(nodes) ? nodes.length : 0;

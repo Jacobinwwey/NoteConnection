@@ -18,6 +18,7 @@ type HarnessResult = {
         resolveNodeByKnowledgePoint?: jest.Mock;
         openFocusModeById: jest.Mock;
         getFocusModeSnapshot?: jest.Mock;
+        getFocusModeProjection?: jest.Mock;
         getFocusNode: jest.Mock;
     };
 };
@@ -1212,6 +1213,7 @@ function createSseResponse(events: Array<{ event: string; payload: unknown }>, o
 function loadWorkspacePanesHarness(options: { withI18n?: boolean } = {}): HarnessResult {
     const repoRoot = path.resolve(__dirname, '..');
     const markdownRuntimeScriptPath = path.join(repoRoot, 'src', 'frontend', 'markdown_runtime.js');
+    const godotFuturePathRendererScriptPath = path.join(repoRoot, 'src', 'frontend', 'godot_future_path_renderer.js');
     const scriptPath = path.join(repoRoot, 'src', 'frontend', 'workspace_panes.js');
     const dom = new JSDOM(createWorkspaceHtml(), {
         url: 'http://127.0.0.1:3000',
@@ -1223,6 +1225,7 @@ function loadWorkspacePanesHarness(options: { withI18n?: boolean } = {}): Harnes
     sandbox.window.__NC_RUNTIME_CAPS = {};
 
     loadScriptIntoSandbox(sandbox, markdownRuntimeScriptPath, 'markdown_runtime.js');
+    loadScriptIntoSandbox(sandbox, godotFuturePathRendererScriptPath, 'godot_future_path_renderer.js');
     loadScriptIntoSandbox(sandbox, scriptPath, 'workspace_panes.js');
 
     sandbox.window.NoteConnectionStorage = {
@@ -1321,6 +1324,7 @@ function installHostedFuturePathRuntime(window: any, graphData?: { nodes: Array<
 function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): HarnessResult {
     const repoRoot = path.resolve(__dirname, '..');
     const markdownRuntimeScriptPath = path.join(repoRoot, 'src', 'frontend', 'markdown_runtime.js');
+    const godotFuturePathRendererScriptPath = path.join(repoRoot, 'src', 'frontend', 'godot_future_path_renderer.js');
     const workspaceScriptPath = path.join(repoRoot, 'src', 'frontend', 'workspace_panes.js');
     const agentScriptPath = path.join(repoRoot, 'src', 'frontend', 'agent_workspace.js');
     const dom = new JSDOM(createWorkspaceHtml(), {
@@ -3443,6 +3447,7 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
         resolveNodeByKnowledgePoint: jest.fn(() => null),
         openFocusModeById: jest.fn(),
         getFocusModeSnapshot: jest.fn(() => null),
+        getFocusModeProjection: jest.fn(() => null),
         getFocusNode: jest.fn(() => null),
     };
 
@@ -3460,6 +3465,7 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
     };
 
     loadScriptIntoSandbox(sandbox, markdownRuntimeScriptPath, 'markdown_runtime.js');
+    loadScriptIntoSandbox(sandbox, godotFuturePathRendererScriptPath, 'godot_future_path_renderer.js');
     loadScriptIntoSandbox(sandbox, workspaceScriptPath, 'workspace_panes.js');
     loadScriptIntoSandbox(sandbox, agentScriptPath, 'agent_workspace.js');
     dispatchDomReady(dom.window.document);
@@ -3851,6 +3857,10 @@ describe('workspace panes controller', () => {
         expect(learningPaneBody?.querySelector('[data-agent-godot-future-path-shell="true"]')).not.toBeNull();
         expect(learningPaneBody?.querySelector('[data-agent-godot-future-path-hosted="true"]')).not.toBeNull();
         expect(learningPaneBody?.querySelector('[data-agent-godot-future-path-surface="true"]')).not.toBeNull();
+        expect(learningPaneBody?.querySelector('[data-godot-tree-renderer="true"]')).not.toBeNull();
+        expect(learningPaneBody?.querySelector('[data-godot-tree-hull-root="atom_paths"]')).not.toBeNull();
+        expect(learningPaneBody?.querySelector('[data-godot-tree-node-id="atom_paths"][data-godot-tree-node-current="true"]')).not.toBeNull();
+        expect(learningPaneBody?.querySelector('[data-godot-tree-expansion-badge="true"]')).not.toBeNull();
         expect(learningPaneBody?.querySelector('#path-container')).toBeNull();
         expect(originalParent?.querySelector('#path-container')).not.toBeNull();
         expect(pathContainer?.style.display).toBe('none');
@@ -3881,6 +3891,10 @@ describe('workspace panes controller', () => {
                 expect.objectContaining({ id: 'atom_paths', label: 'Learning Paths' }),
             ])
         );
+        const firstLayoutCallCount = pathCalls.getTreeLayout.mock.calls.length;
+        const expansionBadge = learningPaneBody?.querySelector('[data-godot-tree-expansion-badge="true"]') as HTMLElement | null;
+        expansionBadge?.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(pathCalls.getTreeLayout.mock.calls.length).toBeGreaterThan(firstLayoutCallCount);
 
         controller.clearLearningPathPane();
 
@@ -4060,6 +4074,47 @@ describe('workspace panes controller', () => {
                     { sourceId: nodeId, targetId: 'application', relationKind: 'application', confidence: 0.95 },
                 ],
             })),
+            getFocusModeProjection: jest.fn((nodeId: string) => ({
+                anchorId: nodeId,
+                anchorLabel: nodeId,
+                layoutType: 'horizontal',
+                layerGap: 250,
+                nodeGap: 80,
+                controls: { layoutType: 'horizontal', layerGap: 250, nodeGap: 80, rendererMode: 'svg' },
+                stats: { inDegree: 3, outDegree: 4, incomingCount: 3, outgoingCount: 3, associatedCount: 1, contextCount: 6 },
+                bounds: { minX: -320, maxX: 320, minY: -160, maxY: 220 },
+                labels: [
+                    { text: 'Further exploration', x: 0, y: -150, role: 'outgoing' },
+                    { text: 'Helping to understand', x: 0, y: 210, role: 'incoming' },
+                ],
+                contextNodes: [
+                    { id: 'background one', label: 'background one', x: -260, y: -40, inDegree: 2, outDegree: 1 },
+                    { id: 'background two', label: 'background two', x: -180, y: 30, inDegree: 1, outDegree: 2 },
+                    { id: 'background three', label: 'background three', x: -80, y: 80, inDegree: 2, outDegree: 2 },
+                    { id: 'background four', label: 'background four', x: 80, y: 90, inDegree: 1, outDegree: 3 },
+                    { id: 'background five', label: 'background five', x: 190, y: 10, inDegree: 0, outDegree: 2 },
+                    { id: 'background six', label: 'background six', x: 260, y: -50, inDegree: 3, outDegree: 1 },
+                ],
+                nodes: [
+                    { id: nodeId, label: nodeId, role: 'anchor', x: 0, y: 0, inDegree: 3, outDegree: 4 },
+                    { id: 'sequence', label: 'sequence', role: 'incoming', x: -120, y: 160, inDegree: 1, outDegree: 1 },
+                    { id: 'material', label: 'material prerequisite', role: 'incoming', x: 0, y: 170, inDegree: 1, outDegree: 1 },
+                    { id: 'container', label: 'container', role: 'incoming', x: 120, y: 160, inDegree: 1, outDegree: 1 },
+                    { id: 'application', label: 'application', role: 'outgoing', x: -160, y: -120, inDegree: 1, outDegree: 1 },
+                    { id: 'thermal exchange', label: 'thermal exchange', role: 'outgoing', x: 0, y: -110, inDegree: 1, outDegree: 1 },
+                    { id: 'measurement', label: 'measurement', role: 'outgoing', x: 160, y: -120, inDegree: 1, outDegree: 1 },
+                    { id: 'analogy', label: 'analogy', role: 'associated', x: 280, y: 60, inDegree: 1, outDegree: 0 },
+                ],
+                edges: [
+                    { sourceId: 'sequence', targetId: nodeId, relationKind: 'sequence', confidence: 0.98, role: 'incoming' },
+                    { sourceId: 'material', targetId: nodeId, relationKind: 'material', confidence: 0.9, role: 'incoming' },
+                    { sourceId: 'container', targetId: nodeId, relationKind: 'part_of', confidence: 0.88, role: 'incoming' },
+                    { sourceId: nodeId, targetId: 'application', relationKind: 'application', confidence: 0.95, role: 'outgoing' },
+                    { sourceId: nodeId, targetId: 'thermal exchange', relationKind: 'effect', confidence: 0.86, role: 'outgoing' },
+                    { sourceId: nodeId, targetId: 'measurement', relationKind: 'usage', confidence: 0.83, role: 'outgoing' },
+                    { sourceId: nodeId, targetId: 'analogy', relationKind: 'analogy', confidence: 0.91, role: 'associated' },
+                ],
+            })),
             getFocusNode: jest.fn(() => ({ id: 'main-focus', label: 'Main focus' })),
         };
         (window as any).NoteConnectionGraphView = graphView;
@@ -4104,7 +4159,7 @@ describe('workspace panes controller', () => {
 
         expect(graphView.resolveNodeByKnowledgePoint).toHaveBeenCalled();
         expect(graphView.openFocusModeById).not.toHaveBeenCalled();
-        expect(graphView.getFocusModeSnapshot).toHaveBeenCalledWith('water glass');
+        expect(graphView.getFocusModeProjection).toHaveBeenCalledWith('water glass', expect.anything());
 
         const hostedFocus = document.querySelector('[data-agent-hosted-focus-mode="true"]') as HTMLElement | null;
         expect(hostedFocus).not.toBeNull();
@@ -4114,6 +4169,12 @@ describe('workspace panes controller', () => {
         expect(originalParent?.querySelector('#graph-container')).toBe(graphContainer);
         expect(graphContainer?.classList.contains('agent-graph-focus-runtime-docked')).toBe(false);
         expect(document.querySelector('[data-agent-focus-mode-preview="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-agent-focus-projection-graph="true"]')).not.toBeNull();
+        expect(Number(document.querySelector('[data-agent-focus-projection-graph="true"]')?.getAttribute('data-focus-node-count') || '0')).toBeGreaterThan(3);
+        expect(Number(document.querySelector('[data-agent-focus-projection-graph="true"]')?.getAttribute('data-focus-context-node-count') || '0')).toBeGreaterThan(3);
+        expect(document.querySelector('[data-agent-focus-mode-toolbar="true"]')).not.toBeNull();
+        expect(document.querySelectorAll('[data-agent-focus-context-node-id]').length).toBeGreaterThan(3);
+        expect(document.querySelectorAll('[data-agent-focus-context-node-dot="true"]').length).toBeGreaterThan(3);
         expect(document.querySelector('[data-agent-focus-relation-map="true"]')).toBeNull();
         expect(String(document.getElementById('agent-graph-focus-body')?.textContent || '')).not.toContain('atom_h');
         expect(String(document.getElementById('agent-graph-focus-body')?.textContent || '')).toContain('water glass');
@@ -4135,7 +4196,7 @@ describe('workspace panes controller', () => {
         ) as HTMLButtonElement | null;
         relatedNodeButton?.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true, cancelable: true }));
         await new Promise((resolve) => setTimeout(resolve, 0));
-        expect(graphView.getFocusModeSnapshot).toHaveBeenLastCalledWith('application');
+        expect(graphView.getFocusModeProjection).toHaveBeenLastCalledWith('application', expect.anything());
         expect(document.querySelector('[data-agent-hosted-focus-anchor-id="application"]')).not.toBeNull();
         expect(graphView.getFocusNode()).toEqual({ id: 'main-focus', label: 'Main focus' });
 
@@ -4348,6 +4409,28 @@ describe('workspace panes controller', () => {
 
         expect(document.querySelector('[data-agent-godot-future-path-shell="true"]')).not.toBeNull();
         expect(document.querySelector('[data-agent-godot-future-path-hosted="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-godot-tree-renderer="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-godot-tree-hull-root="water glass"]')).not.toBeNull();
+        expect(document.querySelector('[data-godot-tree-node-id="water glass"]')).not.toBeNull();
+        const targetNodeLabel = document.querySelector(
+            '[data-godot-tree-node-id="water glass"] .agent-godot-future-path-node-label-line'
+        );
+        expect(targetNodeLabel?.textContent).toBe('water glass');
+        const treeViewport = document.querySelector('[data-godot-tree-viewport="true"]') as HTMLElement | null;
+        expect(treeViewport?.getAttribute('data-godot-tree-auto-fit')).toBe('done');
+        const initialZoom = Number(treeViewport?.getAttribute('data-godot-tree-zoom') || '0');
+        const initialPanX = Number(treeViewport?.getAttribute('data-godot-tree-pan-x') || 'NaN');
+        const initialPanY = Number(treeViewport?.getAttribute('data-godot-tree-pan-y') || 'NaN');
+        expect(initialZoom).toBeGreaterThan(0);
+        expect(Number.isFinite(initialPanX)).toBe(true);
+        expect(Number.isFinite(initialPanY)).toBe(true);
+        const treeSurface = document.querySelector('[data-godot-tree-transform-target="true"]') as HTMLElement | null;
+        const currentX = Number(treeSurface?.getAttribute('data-godot-tree-current-x') || 'NaN');
+        const viewportWidth = Number(treeViewport?.clientWidth || 0) || 760;
+        expect(Number.isFinite(currentX)).toBe(true);
+        expect(Math.abs((initialPanX + (currentX * initialZoom)) - (viewportWidth / 2))).toBeLessThan(1);
+        treeViewport?.dispatchEvent(new window.WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true }));
+        expect(Number(treeViewport?.getAttribute('data-godot-tree-zoom') || '0')).toBeGreaterThan(initialZoom);
         expect(document.querySelector('[data-agent-godot-future-path-target-id="water glass"]')).not.toBeNull();
         expect(document.querySelector('#agent-learning-path-body #path-container')).toBeNull();
         expect(document.querySelector('[data-agent-path-mode-preview="true"]')).toBeNull();
@@ -4461,6 +4544,10 @@ describe('workspace panes controller', () => {
             targetIds: ['atom_h'],
         }));
         expect(document.querySelector('[data-agent-godot-future-path-target-id="atom_h"]')).not.toBeNull();
+        expect(document.querySelector('[data-godot-tree-renderer="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-godot-tree-node-id="atom_h"]')).not.toBeNull();
+        expect(document.querySelector('[data-godot-tree-node-id="atom_h"] .agent-godot-future-path-node-label-line')?.textContent).toBe('water glass');
+        expect(document.querySelector('[data-godot-tree-expansion-badge="true"]')).not.toBeNull();
         const bodyText = String(document.getElementById('agent-learning-path-body')?.textContent || '');
         expect(bodyText).toContain('water glass');
         expect(bodyText).not.toContain('atom_h');
@@ -7140,6 +7227,8 @@ describe('agent workspace learning-path integration', () => {
         }));
         expect(document.querySelector('[data-agent-godot-future-path-shell="true"]')).not.toBeNull();
         expect(document.querySelector('[data-agent-godot-future-path-hosted="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-godot-tree-renderer="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-godot-tree-node-id="atom_paths"]')).not.toBeNull();
         expect(document.getElementById('agent-learning-path-body')?.querySelector('#path-container')).toBeNull();
     });
 
@@ -7193,6 +7282,8 @@ describe('agent workspace learning-path integration', () => {
             targetId: 'water glass',
             targetIds: ['water glass'],
         }));
+        expect(window.document.querySelector('[data-godot-tree-renderer="true"]')).not.toBeNull();
+        expect(window.document.querySelector('[data-godot-tree-node-id="water glass"]')).not.toBeNull();
     });
 
     test('prefers typed capability request payloads over hardcoded learning-path defaults', async () => {

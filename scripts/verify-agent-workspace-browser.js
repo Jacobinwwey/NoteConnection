@@ -358,14 +358,34 @@ function writeSeedGraphAsset(frontendDir) {
                 cluster: 0,
             },
             {
+                id: 'container',
+                label: 'container',
+                summary: 'Container prerequisite for the water glass concept.',
+                content: 'Container prerequisite for the water glass concept.',
+                inDegree: 0,
+                outDegree: 1,
+                degree: 1,
+                cluster: 0,
+            },
+            {
+                id: 'material prerequisite',
+                label: 'material prerequisite',
+                summary: 'Material prerequisite for the water glass concept.',
+                content: 'Material prerequisite for the water glass concept.',
+                inDegree: 0,
+                outDegree: 1,
+                degree: 1,
+                cluster: 0,
+            },
+            {
                 id: 'water glass',
                 label: 'water glass',
                 summary: 'A water glass node from the local knowledge graph.',
                 content: 'A water glass is a physical system.',
                 sourcePath: 'Knowledge_Base/waterglass/water glass.md',
-                inDegree: 1,
+                inDegree: 3,
                 outDegree: 2,
-                degree: 3,
+                degree: 5,
                 cluster: 0,
             },
             {
@@ -391,6 +411,8 @@ function writeSeedGraphAsset(frontendDir) {
         ],
         edges: [
             { source: 'sequence', target: 'water glass', type: 'sequence', weight: 0.98 },
+            { source: 'container', target: 'water glass', type: 'part_of', weight: 0.91 },
+            { source: 'material prerequisite', target: 'water glass', type: 'material', weight: 0.88 },
             { source: 'water glass', target: 'application', type: 'application', weight: 0.95 },
             { source: 'water glass', target: 'analogy', type: 'analogy', weight: 0.91 },
         ],
@@ -535,6 +557,7 @@ window.__NC_DYNAMIC_SMOKE__ = {
       : null;
     const focusCalls = [];
     const snapshotCalls = [];
+    const projectionCalls = [];
     const bridgeVisibilityCalls = [];
     const tauriToggleCalls = [];
     if (pathApp && originalBridgeVisibility) {
@@ -568,6 +591,53 @@ window.__NC_DYNAMIC_SMOKE__ = {
       openFocusModeById: function (id) {
         focusCalls.push(String(id || ''));
         return true;
+      },
+      getFocusModeProjection: function (id) {
+        const anchorId = String(id || '').trim() || 'water glass';
+        projectionCalls.push(anchorId);
+        return {
+          anchorId,
+          anchorLabel: anchorId,
+          layoutType: 'horizontal',
+          layerGap: 250,
+          nodeGap: 80,
+          controls: { layoutType: 'horizontal', layerGap: 250, nodeGap: 80, rendererMode: 'svg' },
+          stats: { inDegree: 3, outDegree: 4, incomingCount: 3, outgoingCount: 3, associatedCount: 1, contextCount: 8 },
+          bounds: { minX: -340, maxX: 340, minY: -170, maxY: 230 },
+          labels: [
+            { text: 'Further exploration', x: 0, y: -155, role: 'outgoing' },
+            { text: 'Helping to understand', x: 0, y: 220, role: 'incoming' }
+          ],
+          contextNodes: [
+            { id: 'linear polarization', label: 'linear polarization', x: -300, y: 20, inDegree: 2, outDegree: 2 },
+            { id: 'polarization state', label: 'polarization state', x: -210, y: 72, inDegree: 1, outDegree: 3 },
+            { id: 'refraction', label: 'refraction', x: -120, y: -72, inDegree: 2, outDegree: 1 },
+            { id: 'reflection', label: 'reflection', x: -45, y: 96, inDegree: 2, outDegree: 2 },
+            { id: 'birefringence', label: 'birefringence', x: 60, y: -80, inDegree: 3, outDegree: 1 },
+            { id: 'dichroic mirror', label: 'Dichroic Mirror', x: 145, y: 82, inDegree: 1, outDegree: 2 },
+            { id: 'laser cavity', label: 'laser cavity', x: 225, y: -20, inDegree: 1, outDegree: 2 },
+            { id: 'ordinary ray', label: 'ordinary ray', x: 290, y: 38, inDegree: 1, outDegree: 1 }
+          ],
+          nodes: [
+            { id: anchorId, label: anchorId, role: 'anchor', x: 0, y: 0, inDegree: 3, outDegree: 4 },
+            { id: 'sequence', label: 'sequence', role: 'incoming', x: -130, y: 165, inDegree: 1, outDegree: 1 },
+            { id: 'container', label: 'container', role: 'incoming', x: 0, y: 175, inDegree: 1, outDegree: 1 },
+            { id: 'material prerequisite', label: 'material prerequisite', role: 'incoming', x: 130, y: 165, inDegree: 1, outDegree: 1 },
+            { id: 'application', label: 'application', role: 'outgoing', x: -180, y: -115, inDegree: 1, outDegree: 1 },
+            { id: 'thermal exchange', label: 'thermal exchange', role: 'outgoing', x: 0, y: -105, inDegree: 1, outDegree: 1 },
+            { id: 'measurement', label: 'measurement', role: 'outgoing', x: 180, y: -115, inDegree: 1, outDegree: 1 },
+            { id: 'analogy', label: 'analogy', role: 'associated', x: 300, y: 58, inDegree: 1, outDegree: 0 }
+          ],
+          edges: [
+            { sourceId: 'sequence', targetId: anchorId, relationKind: 'sequence', confidence: 0.98, role: 'incoming' },
+            { sourceId: 'container', targetId: anchorId, relationKind: 'part_of', confidence: 0.91, role: 'incoming' },
+            { sourceId: 'material prerequisite', targetId: anchorId, relationKind: 'material', confidence: 0.88, role: 'incoming' },
+            { sourceId: anchorId, targetId: 'application', relationKind: 'application', confidence: 0.95, role: 'outgoing' },
+            { sourceId: anchorId, targetId: 'thermal exchange', relationKind: 'effect', confidence: 0.86, role: 'outgoing' },
+            { sourceId: anchorId, targetId: 'measurement', relationKind: 'usage', confidence: 0.83, role: 'outgoing' },
+            { sourceId: anchorId, targetId: 'analogy', relationKind: 'analogy', confidence: 0.91, role: 'associated' }
+          ]
+        };
       },
       getFocusModeSnapshot: function (id) {
         const anchorId = String(id || '').trim() || 'water glass';
@@ -737,6 +807,11 @@ window.__NC_DYNAMIC_SMOKE__ = {
       const godotFuturePathLayout = window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_LAYOUT || null;
       const godotFuturePathHosted = document.querySelector('[data-agent-godot-future-path-hosted="true"]');
       const godotFuturePathSurface = document.querySelector('[data-agent-godot-future-path-surface="true"]');
+      const godotTreeRenderer = document.querySelector('[data-godot-tree-renderer="true"]');
+      const godotTreeHulls = Array.from(document.querySelectorAll('[data-godot-tree-hull-root]'));
+      const godotTreeNodes = Array.from(document.querySelectorAll('[data-godot-tree-node-id]'));
+      const godotTreeTargetNode = document.querySelector('[data-godot-tree-node-id="water glass"]');
+      const godotTreeExpansionBadge = document.querySelector('[data-godot-tree-expansion-badge="true"]');
       const pathContainerInLearningPane = document.querySelector('#agent-learning-path-body #path-container');
       const pathRuntimeTitle = godotFuturePathShell ? godotFuturePathShell.textContent.replace(/\\s+/g, ' ').trim() : '';
       const pathDebugPreview = document.querySelector('[data-agent-path-mode-preview="true"]');
@@ -765,6 +840,11 @@ window.__NC_DYNAMIC_SMOKE__ = {
       const graphFocusRuntime = document.querySelector('[data-agent-graph-focus-workspace-host="true"] #graph-container');
       const graphFocusRuntimeText = graphFocusRuntime ? graphFocusRuntime.textContent.replace(/\\s+/g, ' ').trim() : '';
       const hostedGraphFocus = document.querySelector('[data-agent-hosted-focus-mode="true"]');
+      const hostedGraphProjection = document.querySelector('[data-agent-focus-projection-graph="true"]');
+      const hostedGraphToolbar = document.querySelector('[data-agent-focus-mode-toolbar="true"]');
+      const hostedGraphContextNodes = Array.from(document.querySelectorAll('[data-agent-focus-context-node-id]'));
+      const hostedGraphContextDots = Array.from(document.querySelectorAll('[data-agent-focus-context-node-dot="true"]'));
+      const godotTreeViewport = document.querySelector('[data-godot-tree-viewport="true"]');
       const hostedGraphFocusText = hostedGraphFocus ? hostedGraphFocus.textContent.replace(/\\s+/g, ' ').trim() : '';
       const hostedGraphFocusAnchorId = hostedGraphFocus ? hostedGraphFocus.getAttribute('data-agent-hosted-focus-anchor-id') || '' : '';
       const focusDeveloperDetails = document.querySelector('[data-agent-focus-developer-details="true"]');
@@ -823,6 +903,11 @@ window.__NC_DYNAMIC_SMOKE__ = {
         godotFuturePathShellPresent: Boolean(godotFuturePathShell),
         godotFuturePathHosted: Boolean(godotFuturePathHosted),
         godotFuturePathSurfacePresent: Boolean(godotFuturePathSurface),
+        godotTreeRendererPresent: Boolean(godotTreeRenderer),
+        godotTreeHullCount: godotTreeHulls.length,
+        godotTreeNodeCount: godotTreeNodes.length,
+        godotTreeTargetNodeText: godotTreeTargetNode ? godotTreeTargetNode.textContent.replace(/\\s+/g, ' ').trim() : '',
+        godotTreeExpansionBadgePresent: Boolean(godotTreeExpansionBadge),
         godotFuturePathMode: String(godotFuturePathRequest.mode || ''),
         godotFuturePathStrategy: String(godotFuturePathRequest.strategy || ''),
         godotFuturePathTargetId: String(godotFuturePathRequest.targetId || ''),
@@ -841,6 +926,11 @@ window.__NC_DYNAMIC_SMOKE__ = {
         graphFocusRuntimeDocked: Boolean(graphFocusRuntime),
         graphFocusRuntimeIsMainContainer: graphFocusRuntime ? graphFocusRuntime.id === 'graph-container' : false,
         graphFocusHosted: Boolean(hostedGraphFocus),
+        graphFocusProjectionPresent: Boolean(hostedGraphProjection),
+        graphFocusProjectionNodeCount: Number(hostedGraphProjection ? hostedGraphProjection.getAttribute('data-focus-node-count') || 0 : 0),
+        graphFocusContextNodeCount: hostedGraphContextNodes.length,
+        graphFocusContextDotCount: hostedGraphContextDots.length,
+        graphFocusToolbarPresent: Boolean(hostedGraphToolbar),
         graphFocusHostedAnchorId: hostedGraphFocusAnchorId,
         graphFocusHostedText: hostedGraphFocusText,
         graphContainerParentStable: graphContainer ? graphContainer.parentElement === graphContainerOriginalParent : false,
@@ -848,11 +938,17 @@ window.__NC_DYNAMIC_SMOKE__ = {
         graphFocusMainFocusNodeLabel: graphFocusMainFocusNode ? String(graphFocusMainFocusNode.label || graphFocusMainFocusNode.name || '') : '',
         graphFocusRuntimeText,
         focusDeveloperDetailsPresent: Boolean(focusDeveloperDetails),
+        godotTreeViewportPresent: Boolean(godotTreeViewport),
+        godotTreeViewportZoom: godotTreeViewport ? String(godotTreeViewport.getAttribute('data-godot-tree-zoom') || '') : '',
+        godotTreeViewportPanX: godotTreeViewport ? String(godotTreeViewport.getAttribute('data-godot-tree-pan-x') || '') : '',
+        godotTreeViewportPanY: godotTreeViewport ? String(godotTreeViewport.getAttribute('data-godot-tree-pan-y') || '') : '',
+        godotTreeViewportAutoFit: godotTreeViewport ? String(godotTreeViewport.getAttribute('data-godot-tree-auto-fit') || '') : '',
         focusRelationKindsText: focusRelationKinds ? focusRelationKinds.textContent.replace(/\\s+/g, ' ').trim() : '',
         focusRelationEdgesPresent: Boolean(focusRelationEdges),
         focusOutOfBoundsCount: countOutOfBounds('[data-agent-focus-mode-node-role]', document.querySelector('[data-agent-focus-mode-preview="true"]')),
         focusCalls,
         snapshotCalls,
+        projectionCalls,
         learningPathPaneOpen: learningPathPane ? learningPathPane.getAttribute('data-open') : '',
         graphFocusPaneOpen: graphFocusPane ? graphFocusPane.getAttribute('data-open') : '',
         evidencePaneOpen: evidencePane ? evidencePane.getAttribute('data-open') : '',
@@ -3004,6 +3100,32 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                 `knowledgeHitUi.godotFuturePathHosted='${String(knowledgeHitUi.godotFuturePathHosted)}:${String(knowledgeHitUi.godotFuturePathSurfacePresent)}'`
             );
         }
+        if (knowledgeHitUi.godotTreeRendererPresent !== true) {
+            failures.push(`knowledgeHitUi.godotTreeRendererPresent='${String(knowledgeHitUi.godotTreeRendererPresent)}'`);
+        }
+        if (Number(knowledgeHitUi.godotTreeHullCount || 0) <= 0) {
+            failures.push(`knowledgeHitUi.godotTreeHullCount='${String(knowledgeHitUi.godotTreeHullCount || 0)}'`);
+        }
+        if (Number(knowledgeHitUi.godotTreeNodeCount || 0) <= 0) {
+            failures.push(`knowledgeHitUi.godotTreeNodeCount='${String(knowledgeHitUi.godotTreeNodeCount || 0)}'`);
+        }
+        if (!String(knowledgeHitUi.godotTreeTargetNodeText || '').includes('water glass')) {
+            failures.push(`knowledgeHitUi.godotTreeTargetNodeText='${String(knowledgeHitUi.godotTreeTargetNodeText || '')}'`);
+        }
+        if (knowledgeHitUi.godotTreeExpansionBadgePresent !== true) {
+            failures.push(`knowledgeHitUi.godotTreeExpansionBadgePresent='${String(knowledgeHitUi.godotTreeExpansionBadgePresent)}'`);
+        }
+        if (
+            knowledgeHitUi.godotTreeViewportPresent !== true
+            || String(knowledgeHitUi.godotTreeViewportAutoFit || '') !== 'done'
+            || !(Number(knowledgeHitUi.godotTreeViewportZoom) > 0)
+            || !Number.isFinite(Number(knowledgeHitUi.godotTreeViewportPanX))
+            || !Number.isFinite(Number(knowledgeHitUi.godotTreeViewportPanY))
+        ) {
+            failures.push(
+                `knowledgeHitUi.godotTreeViewport='${String(knowledgeHitUi.godotTreeViewportPresent)}:${String(knowledgeHitUi.godotTreeViewportAutoFit || '')}:${String(knowledgeHitUi.godotTreeViewportZoom || '')}:${String(knowledgeHitUi.godotTreeViewportPanX || '')}:${String(knowledgeHitUi.godotTreeViewportPanY || '')}'`
+            );
+        }
         if (knowledgeHitUi.godotFuturePathMode !== 'diffusion') {
             failures.push(`knowledgeHitUi.godotFuturePathMode='${String(knowledgeHitUi.godotFuturePathMode)}'`);
         }
@@ -3051,6 +3173,21 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (knowledgeHitUi.graphFocusHosted !== true) {
             failures.push(`knowledgeHitUi.graphFocusHosted='${String(knowledgeHitUi.graphFocusHosted)}'`);
         }
+        if (knowledgeHitUi.graphFocusProjectionPresent !== true) {
+            failures.push(`knowledgeHitUi.graphFocusProjectionPresent='${String(knowledgeHitUi.graphFocusProjectionPresent)}'`);
+        }
+        if (Number(knowledgeHitUi.graphFocusProjectionNodeCount || 0) <= 3) {
+            failures.push(`knowledgeHitUi.graphFocusProjectionNodeCount='${String(knowledgeHitUi.graphFocusProjectionNodeCount || 0)}'`);
+        }
+        if (Number(knowledgeHitUi.graphFocusContextNodeCount || 0) <= 3) {
+            failures.push(`knowledgeHitUi.graphFocusContextNodeCount='${String(knowledgeHitUi.graphFocusContextNodeCount || 0)}'`);
+        }
+        if (Number(knowledgeHitUi.graphFocusContextDotCount || 0) <= 3) {
+            failures.push(`knowledgeHitUi.graphFocusContextDotCount='${String(knowledgeHitUi.graphFocusContextDotCount || 0)}'`);
+        }
+        if (knowledgeHitUi.graphFocusToolbarPresent !== true) {
+            failures.push(`knowledgeHitUi.graphFocusToolbarPresent='${String(knowledgeHitUi.graphFocusToolbarPresent)}'`);
+        }
         if (knowledgeHitUi.graphFocusHostedAnchorId !== 'water glass') {
             failures.push(`knowledgeHitUi.graphFocusHostedAnchorId='${String(knowledgeHitUi.graphFocusHostedAnchorId || '')}'`);
         }
@@ -3080,8 +3217,15 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (!Array.isArray(knowledgeHitUi.focusCalls) || knowledgeHitUi.focusCalls.length !== 0) {
             failures.push(`knowledgeHitUi.focusCalls='${JSON.stringify(knowledgeHitUi.focusCalls || [])}'`);
         }
-        if (!Array.isArray(knowledgeHitUi.snapshotCalls) || !knowledgeHitUi.snapshotCalls.includes('water glass')) {
+        if (
+            Array.isArray(knowledgeHitUi.snapshotCalls)
+            && knowledgeHitUi.snapshotCalls.length > 0
+            && !knowledgeHitUi.snapshotCalls.includes('water glass')
+        ) {
             failures.push(`knowledgeHitUi.snapshotCalls='${JSON.stringify(knowledgeHitUi.snapshotCalls || [])}'`);
+        }
+        if (!Array.isArray(knowledgeHitUi.projectionCalls) || !knowledgeHitUi.projectionCalls.includes('water glass')) {
+            failures.push(`knowledgeHitUi.projectionCalls='${JSON.stringify(knowledgeHitUi.projectionCalls || [])}'`);
         }
         if (knowledgeHitUi.learningPathPaneOpen !== 'true' || knowledgeHitUi.graphFocusPaneOpen !== 'true' || knowledgeHitUi.evidencePaneOpen !== 'true') {
             failures.push(`knowledgeHitUi.paneOpenState='${String(knowledgeHitUi.learningPathPaneOpen)}:${String(knowledgeHitUi.graphFocusPaneOpen)}:${String(knowledgeHitUi.evidencePaneOpen)}'`);
