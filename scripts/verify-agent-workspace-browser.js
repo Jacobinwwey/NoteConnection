@@ -828,6 +828,8 @@ window.__NC_DYNAMIC_SMOKE__ = {
       const pathDebugPreview = document.querySelector('[data-agent-path-mode-preview="true"]');
       let godotTreeClickSignal = '';
       let godotTreeRightClickSignal = '';
+      let godotTreeRightClickCollapsedTarget = false;
+      let godotTreeRightClickExpandedTarget = false;
       let godotTreeMiddleClickSignal = '';
       let godotTreeSelectedNodeId = '';
       if (godotTreeTargetNode) {
@@ -841,6 +843,11 @@ window.__NC_DYNAMIC_SMOKE__ = {
         godotTreeTargetNode.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
         godotTreeRightClickSignal = String(window.__NC_LAST_AGENT_GODOT_TREE_SIGNAL && window.__NC_LAST_AGENT_GODOT_TREE_SIGNAL.signal || '');
         await new Promise((resolve) => requestAnimationFrame(resolve));
+        const rightClickExpansionState = window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_EXPANSION_STATE || {};
+        godotTreeRightClickCollapsedTarget = Array.isArray(rightClickExpansionState.collapsedNodeIds)
+          && rightClickExpansionState.collapsedNodeIds.map(String).includes('water glass');
+        godotTreeRightClickExpandedTarget = Array.isArray(rightClickExpansionState.expandedNodeIds)
+          && rightClickExpansionState.expandedNodeIds.map(String).includes('water glass');
       }
       const refreshedGodotTreeViewport = document.querySelector('[data-godot-tree-viewport="true"]');
       if (refreshedGodotTreeViewport) {
@@ -906,6 +913,12 @@ window.__NC_DYNAMIC_SMOKE__ = {
       const hostedGraphFocus = document.querySelector('[data-agent-hosted-focus-mode="true"]');
       const hostedGraphProjection = document.querySelector('[data-agent-focus-projection-graph="true"]');
       const hostedGraphToolbar = document.querySelector('[data-agent-focus-mode-toolbar="true"]');
+      const hostedGraphEdgeLayer = hostedGraphProjection
+        ? hostedGraphProjection.querySelector('.agent-focus-mode-lines')
+        : null;
+      const hostedGraphEdges = hostedGraphProjection
+        ? Array.from(hostedGraphProjection.querySelectorAll('.agent-focus-mode-edge'))
+        : [];
       const hostedGraphContextNodes = Array.from(document.querySelectorAll('[data-agent-focus-context-node-id]'));
       const hostedGraphContextDots = Array.from(document.querySelectorAll('[data-agent-focus-context-node-dot="true"]'));
       const godotTreeViewport = document.querySelector('[data-godot-tree-viewport="true"]');
@@ -975,6 +988,8 @@ window.__NC_DYNAMIC_SMOKE__ = {
         godotTreeClickSignal,
         godotTreeSelectedNodeId,
         godotTreeRightClickSignal,
+        godotTreeRightClickCollapsedTarget,
+        godotTreeRightClickExpandedTarget,
         godotTreeMiddleClickSignal,
         godotFuturePathMode: String(godotFuturePathRequest.mode || ''),
         godotFuturePathStrategy: String(godotFuturePathRequest.strategy || ''),
@@ -999,6 +1014,10 @@ window.__NC_DYNAMIC_SMOKE__ = {
         graphFocusContextNodeCount: hostedGraphContextNodes.length,
         graphFocusContextDotCount: hostedGraphContextDots.length,
         graphFocusToolbarPresent: Boolean(hostedGraphToolbar),
+        graphFocusEdgeLayerPresent: Boolean(hostedGraphEdgeLayer),
+        graphFocusEdgeCount: hostedGraphEdges.length,
+        graphFocusMainlike: hostedGraphProjection ? String(hostedGraphProjection.getAttribute('data-agent-focus-mainlike') || '') : '',
+        graphFocusVisibleEdges: hostedGraphProjection ? String(hostedGraphProjection.getAttribute('data-agent-focus-visible-edges') || '') : '',
         graphFocusHostedAnchorId: hostedGraphFocusAnchorId,
         graphFocusHostedText: hostedGraphFocusText,
         graphFocusSwitchAction,
@@ -3197,8 +3216,13 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (knowledgeHitUi.godotTreeSelectedNodeId !== 'water glass') {
             failures.push(`knowledgeHitUi.godotTreeSelectedNodeId='${String(knowledgeHitUi.godotTreeSelectedNodeId || '')}'`);
         }
-        if (!['node_collapse_prereqs_requested', 'node_expand_prereqs_requested'].includes(String(knowledgeHitUi.godotTreeRightClickSignal || ''))) {
+        if (knowledgeHitUi.godotTreeRightClickSignal !== 'node_collapse_prereqs_requested') {
             failures.push(`knowledgeHitUi.godotTreeRightClickSignal='${String(knowledgeHitUi.godotTreeRightClickSignal || '')}'`);
+        }
+        if (knowledgeHitUi.godotTreeRightClickCollapsedTarget !== true || knowledgeHitUi.godotTreeRightClickExpandedTarget === true) {
+            failures.push(
+                `knowledgeHitUi.godotTreeRightClickExpansionState='${String(knowledgeHitUi.godotTreeRightClickCollapsedTarget)}:${String(knowledgeHitUi.godotTreeRightClickExpandedTarget)}'`
+            );
         }
         if (knowledgeHitUi.godotTreeMiddleClickSignal !== 'collapse_all_requested') {
             failures.push(`knowledgeHitUi.godotTreeMiddleClickSignal='${String(knowledgeHitUi.godotTreeMiddleClickSignal || '')}'`);
@@ -3273,8 +3297,18 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (Number(knowledgeHitUi.graphFocusContextDotCount || 0) <= 3) {
             failures.push(`knowledgeHitUi.graphFocusContextDotCount='${String(knowledgeHitUi.graphFocusContextDotCount || 0)}'`);
         }
-        if (knowledgeHitUi.graphFocusToolbarPresent !== true) {
+        if (knowledgeHitUi.graphFocusToolbarPresent !== false) {
             failures.push(`knowledgeHitUi.graphFocusToolbarPresent='${String(knowledgeHitUi.graphFocusToolbarPresent)}'`);
+        }
+        if (knowledgeHitUi.graphFocusMainlike !== 'true' || knowledgeHitUi.graphFocusVisibleEdges !== 'false') {
+            failures.push(
+                `knowledgeHitUi.graphFocusMainlike='${String(knowledgeHitUi.graphFocusMainlike || '')}:${String(knowledgeHitUi.graphFocusVisibleEdges || '')}'`
+            );
+        }
+        if (knowledgeHitUi.graphFocusEdgeLayerPresent !== false || Number(knowledgeHitUi.graphFocusEdgeCount || 0) !== 0) {
+            failures.push(
+                `knowledgeHitUi.graphFocusEdges='${String(knowledgeHitUi.graphFocusEdgeLayerPresent)}:${String(knowledgeHitUi.graphFocusEdgeCount || 0)}'`
+            );
         }
         if (knowledgeHitUi.graphFocusHostedAnchorId !== 'water glass') {
             failures.push(`knowledgeHitUi.graphFocusHostedAnchorId='${String(knowledgeHitUi.graphFocusHostedAnchorId || '')}'`);
@@ -3297,6 +3331,12 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         }
         if (!String(knowledgeHitUi.graphFocusHostedText || '').includes('water glass')) {
             failures.push(`knowledgeHitUi.graphFocusHostedText='${String(knowledgeHitUi.graphFocusHostedText || '')}'`);
+        }
+        if (
+            !/(Further exploration|继续探索)/.test(String(knowledgeHitUi.graphFocusHostedText || ''))
+            || !/(Helping to understand|帮助理解)/.test(String(knowledgeHitUi.graphFocusHostedText || ''))
+        ) {
+            failures.push(`knowledgeHitUi.graphFocusSemanticLabels='${String(knowledgeHitUi.graphFocusHostedText || '')}'`);
         }
         if (String(knowledgeHitUi.graphFocusHostedText || '').includes('atom_h')) {
             failures.push(`knowledgeHitUi.graphFocusHostedText='${String(knowledgeHitUi.graphFocusHostedText || '')}'`);

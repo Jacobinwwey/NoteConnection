@@ -1064,6 +1064,7 @@
             return '';
         }
         const interactive = Boolean(options && options.interactive === true);
+        const hideEdges = Boolean(options && options.hideEdges === true);
 
         const nodeCount = normalizedSnapshot.nodes.length;
         const anchorId = normalizedSnapshot.anchorId;
@@ -1120,7 +1121,7 @@
         assignClusterCoordinates(continueNodes, 24, 'continue');
         assignClusterCoordinates(supportNodes, 78, 'support');
 
-        const edgeHtml = normalizedSnapshot.edges.map((edge) => {
+        const edgeHtml = hideEdges ? '' : normalizedSnapshot.edges.map((edge) => {
             const source = coordinates[edge.sourceId];
             const target = coordinates[edge.targetId];
             if (!source || !target) {
@@ -1184,9 +1185,11 @@
 
         return `
             <div
-                class="agent-focus-mode-preview"
+                class="agent-focus-mode-preview${hideEdges ? ' agent-focus-mode-preview--edge-hidden agent-focus-mode-preview--hosted' : ''}"
                 data-agent-focus-mode-preview="true"
                 data-agent-focus-snapshot-graph="true"
+                data-agent-focus-mainlike="${hideEdges ? 'true' : 'false'}"
+                data-agent-focus-visible-edges="${hideEdges ? 'false' : 'true'}"
                 data-focus-mode-anchor-id="${escapeHtml(anchorId)}"
                 data-focus-node-count="${nodeCount}"
             >
@@ -1196,9 +1199,11 @@
                 <div class="agent-focus-mode-cluster-label agent-focus-mode-cluster-label--continue">
                     ${escapeHtml(translate('agentWorkspace.graphFocus.continueCluster', 'Continue exploring'))}
                 </div>
-                <svg class="agent-focus-mode-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    ${edgeHtml}
-                </svg>
+                ${hideEdges ? '' : `
+                    <svg class="agent-focus-mode-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                        ${edgeHtml}
+                    </svg>
+                `}
                 <div class="agent-focus-mode-cluster agent-focus-mode-cluster--continue" data-agent-focus-mode-cluster="continue">
                     ${continueHtml}
                 </div>
@@ -1244,22 +1249,6 @@
                 y: toPercent(node.y, bounds.minY, height),
             },
         ]));
-        const edgeHtml = normalizedProjection.edges.map((edge) => {
-            const source = pointById.get(edge.sourceId);
-            const target = pointById.get(edge.targetId);
-            if (!source || !target) {
-                return '';
-            }
-            return `
-                <line
-                    class="agent-focus-mode-edge agent-focus-mode-edge--${escapeHtml(edge.role || 'related')}"
-                    x1="${source.x}"
-                    y1="${source.y}"
-                    x2="${target.x}"
-                    y2="${target.y}"
-                ></line>
-            `;
-        }).join('');
         const labelHtml = normalizedProjection.labels.map((label) => {
             const x = toPercent(label.x, bounds.minX, width);
             const y = toPercent(label.y, bounds.minY, height);
@@ -1312,49 +1301,21 @@
                 </span>
             `;
         }).join('');
-        const stats = normalizedProjection.stats || {};
-        const controls = normalizedProjection.controls || {};
-        const layoutType = normalizeKnowledgeGraphText(controls.layoutType || normalizedProjection.layoutType) === 'vertical'
-            ? 'Vertical (L-R)'
-            : 'Horizontal (Standard)';
-        const layerGap = Number.isFinite(Number(controls.layerGap || normalizedProjection.layerGap))
-            ? Number(controls.layerGap || normalizedProjection.layerGap)
-            : null;
-        const nodeGap = Number.isFinite(Number(controls.nodeGap || normalizedProjection.nodeGap))
-            ? Number(controls.nodeGap || normalizedProjection.nodeGap)
-            : null;
-        const inDegree = Number.isFinite(Number(stats.inDegree)) ? Number(stats.inDegree) : 0;
-        const outDegree = Number.isFinite(Number(stats.outDegree)) ? Number(stats.outDegree) : 0;
-        const toolbarControlHtml = [
-            `Layout: ${layoutType}`,
-            layerGap === null ? '' : `Layer-Space: ${layerGap}`,
-            nodeGap === null ? '' : `Node-Space: ${nodeGap}`,
-        ].filter(Boolean).map((item) => `
-            <span class="agent-focus-mode-toolbar-control">${escapeHtml(item)}</span>
-        `).join('');
         return `
             <div
-                class="agent-focus-mode-preview agent-focus-mode-preview--projection"
+                class="agent-focus-mode-preview agent-focus-mode-preview--projection agent-focus-mode-preview--hosted agent-focus-mode-preview--edge-hidden"
                 data-agent-focus-mode-preview="true"
                 data-agent-focus-projection-graph="true"
+                data-agent-focus-mainlike="true"
+                data-agent-focus-visible-edges="false"
                 data-focus-mode-anchor-id="${escapeHtml(anchorId)}"
                 data-focus-node-count="${nodeCount}"
                 data-focus-context-node-count="${normalizedProjection.contextNodes.length}"
                 data-focus-layout-type="${escapeHtml(normalizedProjection.layoutType)}"
             >
-                <div class="agent-focus-mode-toolbar" data-agent-focus-mode-toolbar="true">
-                    <div class="agent-focus-mode-toolbar-node">
-                        <span class="agent-focus-mode-toolbar-title">${escapeHtml(normalizedProjection.anchorLabel || anchorId)}</span>
-                        <span class="agent-focus-mode-toolbar-stats">${escapeHtml(`In: ${inDegree} | Out: ${outDegree}`)}</span>
-                    </div>
-                    <div class="agent-focus-mode-toolbar-controls">${toolbarControlHtml}</div>
-                </div>
                 <div class="agent-focus-mode-context" aria-hidden="true">
                     ${contextHtml}
                 </div>
-                <svg class="agent-focus-mode-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    ${edgeHtml}
-                </svg>
                 ${labelHtml}
                 ${nodeHtml}
             </div>
@@ -1388,7 +1349,7 @@
         const graphHtml = normalizeFocusModeProjection(focusModeGraph)
             ? buildGraphFocusProjectionGraphHtml(focusModeGraph)
             : focusModeGraph
-                ? buildGraphFocusSnapshotGraphHtml(focusModeGraph)
+                ? buildGraphFocusSnapshotGraphHtml(focusModeGraph, { interactive: true, hideEdges: true })
             : buildGraphFocusRelationGraphHtml(anchorId, relationPath, nodeLabels);
         if (!developerMode) {
             return `
@@ -1704,7 +1665,7 @@
             >
                 ${normalizedProjection
                     ? buildGraphFocusProjectionGraphHtml(normalizedProjection)
-                    : buildGraphFocusSnapshotGraphHtml(normalizedSnapshot, { interactive: true })}
+                    : buildGraphFocusSnapshotGraphHtml(normalizedSnapshot, { interactive: true, hideEdges: true })}
                 ${buildGraphFocusPaneReaderHtml()}
                 ${developerDetails}
             </div>
@@ -3576,10 +3537,15 @@
             state.godotFuturePath.collapsedNodeIds = [];
             state.godotFuturePath.collapseAllRequested = false;
         }
-        if (!state.godotFuturePath.collapseAllRequested && !state.godotFuturePath.expandedNodeIds.includes(normalizedTargetId)) {
+        const targetExplicitlyCollapsed = state.godotFuturePath.collapsedNodeIds.includes(normalizedTargetId);
+        if (
+            !state.godotFuturePath.collapseAllRequested
+            && !targetExplicitlyCollapsed
+            && !state.godotFuturePath.expandedNodeIds.includes(normalizedTargetId)
+        ) {
             state.godotFuturePath.expandedNodeIds.unshift(normalizedTargetId);
         }
-        if (!state.godotFuturePath.collapseAllRequested) {
+        if (!state.godotFuturePath.collapseAllRequested && !targetExplicitlyCollapsed) {
             state.godotFuturePath.collapsedNodeIds = state.godotFuturePath.collapsedNodeIds
                 .filter((nodeId) => nodeId !== normalizedTargetId);
         }
@@ -3726,7 +3692,17 @@
         window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_LAYOUT = projection && projection.treeLayout
             ? JSON.parse(JSON.stringify(projection.treeLayout))
             : null;
+        publishHostedFuturePathExpansionState();
         return projection;
+    }
+
+    function publishHostedFuturePathExpansionState() {
+        window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_EXPANSION_STATE = {
+            activeTargetId: state.godotFuturePath.activeTargetId,
+            expandedNodeIds: state.godotFuturePath.expandedNodeIds.slice(),
+            collapsedNodeIds: state.godotFuturePath.collapsedNodeIds.slice(),
+            collapseAllRequested: state.godotFuturePath.collapseAllRequested === true,
+        };
     }
 
     function recordHostedGodotTreeSignal(signal, nodeId) {
@@ -3740,6 +3716,24 @@
         state.godotFuturePath.lastSignal = entry;
         window.__NC_LAST_AGENT_GODOT_TREE_SIGNAL = { ...entry };
         return entry;
+    }
+
+    function canToggleHostedFuturePathPrereqs(nodeElement) {
+        return nodeElement && (
+            nodeElement.getAttribute('data-agent-future-path-node-spine') === 'true'
+            || nodeElement.getAttribute('data-godot-tree-node-spine') === 'true'
+            || nodeElement.getAttribute('data-agent-future-path-node-has-prereqs') === 'true'
+            || nodeElement.getAttribute('data-godot-tree-node-has-prereqs') === 'true'
+            || nodeElement.getAttribute('data-agent-future-path-node-expanded') === 'true'
+            || nodeElement.getAttribute('data-godot-tree-node-expanded') === 'true'
+        );
+    }
+
+    function isHostedFuturePathPrereqsExpanded(nodeElement) {
+        return nodeElement && (
+            nodeElement.getAttribute('data-agent-future-path-node-expanded') === 'true'
+            || nodeElement.getAttribute('data-godot-tree-node-expanded') === 'true'
+        );
     }
 
     function applyHostedFuturePathSelection(body, nodeId) {
@@ -3784,6 +3778,7 @@
         state.godotFuturePath.collapseAllRequested = false;
         state.godotFuturePath.expandedNodeIds = Array.from(expandedNodeIds);
         state.godotFuturePath.collapsedNodeIds = Array.from(collapsed);
+        publishHostedFuturePathExpansionState();
         renderLearningPathBody(payload || state.panes['learning-path'].payload || {});
     }
 
@@ -3793,12 +3788,20 @@
             ? projection.treeLayout.nodes
             : [];
         const collapsedIds = treeNodes
-            .filter((node) => node && (node.isSpine === true || node.isSpine === 'true'))
+            .filter((node) => node && (
+                node.isSpine === true
+                || node.isSpine === 'true'
+                || node.hasPrereqs === true
+                || node.hasPrereqs === 'true'
+                || node.isExpanded === true
+                || node.isExpanded === 'true'
+            ))
             .map((node) => normalizeKnowledgeGraphText(node.id || node.nodeId || node.key))
             .filter(Boolean);
         state.godotFuturePath.expandedNodeIds = [];
         state.godotFuturePath.collapsedNodeIds = Array.from(new Set(collapsedIds));
         state.godotFuturePath.collapseAllRequested = true;
+        publishHostedFuturePathExpansionState();
         renderLearningPathBody(payload || state.panes['learning-path'].payload || {});
     }
 
@@ -4016,12 +4019,8 @@
                         && typeof event.target.closest === 'function'
                         && event.target.closest('[data-godot-tree-expansion-badge="true"]');
                     const nodeButton = event && event.currentTarget;
-                    if (
-                        clickedBadge
-                        && nodeButton
-                        && nodeButton.getAttribute('data-agent-future-path-node-spine') === 'true'
-                    ) {
-                        const isExpanded = nodeButton.getAttribute('data-agent-future-path-node-expanded') === 'true';
+                    if (clickedBadge && nodeButton && canToggleHostedFuturePathPrereqs(nodeButton)) {
+                        const isExpanded = isHostedFuturePathPrereqsExpanded(nodeButton);
                         recordHostedGodotTreeSignal(
                             isExpanded ? 'node_collapse_prereqs_requested' : 'node_expand_prereqs_requested',
                             nodeId

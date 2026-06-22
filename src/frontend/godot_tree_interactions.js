@@ -29,8 +29,22 @@
         );
     }
 
+    function hasPrerequisites(nodeElement) {
+        return nodeElement && (
+            nodeElement.getAttribute('data-agent-future-path-node-has-prereqs') === 'true'
+            || nodeElement.getAttribute('data-godot-tree-node-has-prereqs') === 'true'
+        );
+    }
+
     function isExpandedNode(nodeElement) {
-        return nodeElement && nodeElement.getAttribute('data-agent-future-path-node-expanded') === 'true';
+        return nodeElement && (
+            nodeElement.getAttribute('data-agent-future-path-node-expanded') === 'true'
+            || nodeElement.getAttribute('data-godot-tree-node-expanded') === 'true'
+        );
+    }
+
+    function canTogglePrerequisites(nodeElement) {
+        return isSpineNode(nodeElement) || hasPrerequisites(nodeElement) || isExpandedNode(nodeElement);
     }
 
     function emit(callbacks, name, nodeId, event) {
@@ -43,7 +57,7 @@
     }
 
     function emitExpansionSignal(nodeElement, callbacks, event) {
-        if (!isSpineNode(nodeElement)) {
+        if (!canTogglePrerequisites(nodeElement)) {
             return false;
         }
         const nodeId = readNodeId(nodeElement);
@@ -157,7 +171,7 @@
     window.NoteConnectionGodotTreeInteractions = {
         bindTreeRenderer,
         resolveExpansionSignal: function (nodeElement) {
-            if (!isSpineNode(nodeElement)) {
+            if (!canTogglePrerequisites(nodeElement)) {
                 return '';
             }
             return isExpandedNode(nodeElement)

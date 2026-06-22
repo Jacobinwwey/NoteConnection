@@ -4180,7 +4180,11 @@ describe('workspace panes controller', () => {
         expect(document.querySelector('[data-agent-focus-projection-graph="true"]')).not.toBeNull();
         expect(Number(document.querySelector('[data-agent-focus-projection-graph="true"]')?.getAttribute('data-focus-node-count') || '0')).toBeGreaterThan(3);
         expect(Number(document.querySelector('[data-agent-focus-projection-graph="true"]')?.getAttribute('data-focus-context-node-count') || '0')).toBeGreaterThan(3);
-        expect(document.querySelector('[data-agent-focus-mode-toolbar="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-agent-focus-projection-graph="true"]')?.getAttribute('data-agent-focus-mainlike')).toBe('true');
+        expect(document.querySelector('[data-agent-focus-projection-graph="true"]')?.getAttribute('data-agent-focus-visible-edges')).toBe('false');
+        expect(document.querySelector('[data-agent-focus-mode-toolbar="true"]')).toBeNull();
+        expect(document.querySelector('[data-agent-focus-projection-graph="true"] .agent-focus-mode-lines')).toBeNull();
+        expect(document.querySelector('[data-agent-focus-projection-graph="true"] .agent-focus-mode-edge')).toBeNull();
         expect(document.querySelectorAll('[data-agent-focus-context-node-id]').length).toBeGreaterThan(3);
         expect(document.querySelectorAll('[data-agent-focus-context-node-dot="true"]').length).toBeGreaterThan(3);
         expect(document.querySelector('[data-agent-focus-relation-map="true"]')).toBeNull();
@@ -4476,6 +4480,13 @@ describe('workspace panes controller', () => {
             host: 'agent-workspace',
         }));
         expect(pathCalls.getTreeLayout.mock.calls.length).toBeGreaterThan(callsBeforeRightClick);
+        const rightClickLayoutCall = pathCalls.getTreeLayout.mock.calls[pathCalls.getTreeLayout.mock.calls.length - 1];
+        expect(Array.from(rightClickLayoutCall?.[2] as Set<string>)).toContain('water glass');
+        expect(rightClickLayoutCall?.[3]).not.toContain('water glass');
+        expect((window as any).__NC_LAST_AGENT_GODOT_FUTURE_PATH_EXPANSION_STATE).toEqual(expect.objectContaining({
+            activeTargetId: 'water glass',
+            collapsedNodeIds: expect.arrayContaining(['water glass']),
+        }));
         const callsBeforeMiddleClick = pathCalls.getTreeLayout.mock.calls.length;
         treeViewport?.dispatchEvent(new window.MouseEvent('mousedown', { button: 1, bubbles: true, cancelable: true }));
         expect((window as any).__NC_LAST_AGENT_GODOT_TREE_SIGNAL).toEqual(expect.objectContaining({

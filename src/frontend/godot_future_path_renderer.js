@@ -439,6 +439,8 @@
                     data-agent-future-path-node-expanded="${node.isExpanded ? 'true' : 'false'}"
                     data-godot-tree-node-current="${node.isCurrent ? 'true' : 'false'}"
                     data-godot-tree-node-spine="${node.isSpine ? 'true' : 'false'}"
+                    data-godot-tree-node-has-prereqs="${node.hasPrereqs ? 'true' : 'false'}"
+                    data-godot-tree-node-expanded="${node.isExpanded ? 'true' : 'false'}"
                     data-godot-tree-node-in-count="${Number.isFinite(node.inDegree) ? String(node.inDegree) : String(node.inDegreeNames.length)}"
                     data-godot-tree-node-out-count="${Number.isFinite(node.outDegree) ? String(node.outDegree) : String(node.outDegreeNames.length)}"
                     style="left: ${node.projectedX.toFixed(2)}px; top: ${node.projectedY.toFixed(2)}px;"
@@ -446,7 +448,7 @@
                     aria-label="${escapeHtml(node.label)}"
                 >
                     <span class="agent-godot-future-path-node-label">${buildNodeLabelHtml(node.label)}</span>
-                    ${node.hasPrereqs && node.isSpine ? `
+                    ${node.hasPrereqs || node.isExpanded ? `
                         <span
                             class="agent-godot-future-path-node-badge"
                             data-godot-tree-expansion-badge="true"

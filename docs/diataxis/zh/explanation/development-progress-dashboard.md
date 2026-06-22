@@ -14,13 +14,13 @@
 - 现有 DAG 仍在 synthesis 前由 `src/learning/graphContextAssembler.ts` 消费，并在 release-time 通过图感知 reviewer gate 再次参与判断；
 - `src/frontend/workspace_panes.js` 的命中文件列表现在使用紧凑问号帮助入口，而不是把说明文字直接堆进 workspace；
 - 命中文件的 source focus 继续以右侧 pane 为权威阅读面：点击后解析 source path、渲染 Markdown，并通过 line/snippet/offset provenance 投影 inline highlight；
-- `关联聚焦` 现在托管一个由 `NoteConnectionGraphView.getFocusModeProjection()` 驱动的隔离 Focus-mode pane：保持主 `#graph-container` 留在原父节点，渲染主动 Focus 节点与高密度背景 context node 层，双击关联节点只切换 pane-local anchor，双击中心节点时 Markdown 阅读器也只在该 pane 内打开；relation/debug 细节仍只在 Developer Mode 下显示；
+- `关联聚焦` 现在托管一个由 `NoteConnectionGraphView.getFocusModeProjection()` 驱动的隔离 Focus-mode pane：保持主 `#graph-container` 留在原父节点，渲染主动 Focus 节点与高密度背景 context node 层，保留 Focus 语义标签，但不显示主界面的工具框和可见边线；双击关联节点只切换 pane-local anchor，双击中心节点时 Markdown 阅读器也只在该 pane 内打开；relation/debug 细节仍只在 Developer Mode 下显示；
 - `学习路径` 不再挂载浏览器 `path-container`，也不再默认要求 Tauri/Godot 显示原生 Path 窗口；它解析选中 DAG 节点后，复用现有前端 `Graph` / `PathEngine` 契约，执行 `diffusionLearning(target, 'core', ...)` 与 `getTreeLayout(..., focusMode=true, { verticalGap: 240 })`；
 - `src/frontend/focus_mode_interactions.js` 现在持有共享 Focus 双击决策模型，并同时被主图运行时与托管 Knowledge Focus pane 使用；
-- `src/frontend/godot_tree_interactions.js` 现在把托管 Future Path 的 DOM 输入映射回 Godot TreeRenderer 风格信号，而不是继续依赖 pane-local 临时 handler；
+- `src/frontend/godot_tree_interactions.js` 现在把托管 Future Path 的 DOM 输入映射回 Godot TreeRenderer 风格信号，而不是继续依赖 pane-local 临时 handler；可展开/收起的判断不再错误地只绑定 spine 节点，也覆盖有 prerequisites 或已展开状态的节点；
 - 托管 Future Path 通过模块化 `src/frontend/godot_future_path_renderer.js` 渲染 TreeRenderer 兼容表面，覆盖 140x50 胶囊节点、Bezier 跨层过滤、active subtree hull、spine expansion badge、hover subtree focus、保词标签换行与以目标节点为中心的 pane-local pan/zoom 自动拟合；
 - 受影响的 source/focus/path 右侧窗口现在都有 close control；
-- `scripts/verify-agent-workspace-browser.js` 的 strict browser verification 已经持有用户报告的 `water glass.md` UI 回归面，包括托管 Godot Future Path `diffusion/core` 投影、TreeRenderer marker/hull/viewport auto-fit、Future Path 左键 / 右键 / 中键交互信号、拒绝把 `#path-container` 停靠进 pane、拒绝调用 bridge/Tauri `showGodot=true`、拒绝停靠真实 `#graph-container`、高密度 Focus context dot、断言托管 Focus anchor 确实是 `water glass`、托管 Focus 双击切换到 `application`、pane-local reader 打开，以及全局 `reader.open` 不被调用。
+- `scripts/verify-agent-workspace-browser.js` 的 strict browser verification 已经持有用户报告的 `water glass.md` UI 回归面，包括托管 Godot Future Path `diffusion/core` 投影、TreeRenderer marker/hull/viewport auto-fit、Future Path 左键 / 右键 / 中键交互信号、`water glass` 右键后必须进入 collapsed 状态、拒绝把 `#path-container` 停靠进 pane、拒绝调用 bridge/Tauri `showGodot=true`、拒绝停靠真实 `#graph-container`、高密度 Focus context dot、断言托管 Focus anchor 确实是 `water glass`、Focus 语义标签、托管 Focus 不存在工具框 / 边线、托管 Focus 双击切换到 `application`、pane-local reader 打开，以及全局 `reader.open` 不被调用。
 
 代码 / 方案对齐：
 
@@ -29,14 +29,14 @@
 | 回答区不能变成 evidence dump | `conversationComposer.ts` 发布 `answerReleaseReview.publicAnswer`；graph/evidence diagnostics 留在次级 surface。 | 已实现 |
 | 用户需要知道命中文件可点击，但 workspace 不应常驻说明文案 | `workspace_panes.js` 将说明放入 hover/focus 触发的 help icon。 | 已实现 |
 | 单击命中文件应打开源文档并高亮依据 | source focus 消费 source-line provenance、line window、snippet，并在可用时使用 offset。 | 已实现基线 |
-| `关联聚焦` 应对应 Tauri Focus-mode 状态 | pane 通过 `getFocusModeProjection()` 与共享 `focus_mode_interactions.js` 决策模型本地托管 Focus-mode 行为：主动 Focus 节点、toolbar/control 元数据、高密度背景 context node、pane-local 双击切换、pane-local Markdown 阅读器，不修改主图运行时，也不调用全局 `reader.open`；诊断只在 Developer Mode 下显示。 | 已实现 |
+| `关联聚焦` 应对应 Tauri Focus-mode 状态 | pane 通过 `getFocusModeProjection()` 与共享 `focus_mode_interactions.js` 决策模型本地托管 Focus-mode 行为：主动 Focus 节点、Focus 语义标签、高密度背景 context node、无工具框、无可见边线、pane-local 双击切换、pane-local Markdown 阅读器，不修改主图运行时，也不调用全局 `reader.open`；诊断只在 Developer Mode 下显示。 | 已实现 |
 | `学习路径` 应对应 Godot/Path-mode 设计 | pane 通过现有前端 `Graph` / `PathEngine` 的 `diffusion/core` + `treeLayout` 路径托管 Godot Future Path 数据契约，由 `godot_future_path_renderer.js` 渲染，并通过 `godot_tree_interactions.js` 将输入路由为 TreeRenderer 风格信号；刻意不挂载浏览器 `path-container`，也不默认显示 Godot 原生窗口。 | 已实现 |
 | 最终回答需要鲁棒审核 / 纠错 owner | `answerReleaseReview.ts` 继续作为后端确定性 release-policy owner。 | 已实现基线 |
 | 兼容性必须保持 | 新增 graph-preview 与 provenance 字段保持 additive/optional；legacy response fields 继续有效。 | 已实现 |
 
 关键权衡现在更窄。
 Focus 复用现在指投影契约复用，而不是 DOM owner 转移。移动 `#graph-container` 会让右侧 pane 意外接管 Tauri 主图生命周期，也会导致 Markdown 内容打开到错误的主界面 surface。
-Path 复用现在指 Godot Future Path 的数据契约与 renderer 语义复用：使用现有 `Graph` / `PathEngine` 生成 Godot TreeRenderer 消费的 treeLayout，并在知识工作区用 TreeRenderer 兼容表面托管，而不是浏览器 / Tauri Learning Path，也不是原生窗口可见性开关。
+Path 复用现在指 Godot Future Path 的数据契约与 renderer 语义复用：使用现有 `Graph` / `PathEngine` 生成 Godot TreeRenderer 消费的 treeLayout，并在知识工作区用 TreeRenderer 兼容表面托管，而不是浏览器 / Tauri Learning Path，也不是原生窗口可见性开关。最新右键修复属于状态机修复：用户显式收起当前 target 后，该 collapsed 状态必须跨过下一次 render，而不能被“target 默认展开”的初始化不变量覆盖。
 如果未来产品要求把 Godot 原生窗口真正嵌入右侧 pane，需要单独做 native window container/reparenting spike；它不应混入当前 Knowledge Workspace pane 实现。
 
 剩余工作已经转为校准：

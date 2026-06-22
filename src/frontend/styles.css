@@ -2456,6 +2456,11 @@ body.agent-workspace-open .agent-workspace-drawer {
   isolation: isolate;
 }
 
+.agent-focus-mode-preview--hosted {
+  border: 0;
+  border-radius: 0;
+}
+
 .agent-focus-mode-context {
   position: absolute;
   inset: 0;
@@ -2573,6 +2578,10 @@ body.agent-workspace-open .agent-workspace-drawer {
   z-index: 1;
   width: 100%;
   height: 100%;
+}
+
+.agent-focus-mode-preview--edge-hidden .agent-focus-mode-lines {
+  display: none;
 }
 
 .agent-focus-mode-edge {
@@ -2693,7 +2702,7 @@ button.agent-focus-mode-node:active {
 }
 
 .agent-focus-mode-preview--projection {
-  min-height: min(64vh, 720px);
+  min-height: min(72vh, 760px);
   background:
     radial-gradient(circle at 50% 50%, rgba(255, 214, 10, 0.08), transparent 34%),
     #202020;
@@ -2781,6 +2790,7 @@ button.agent-focus-mode-node:active {
   color: #ffffff;
   font-size: 0.84rem;
   font-weight: 800;
+  max-width: 180px;
 }
 
 .agent-focus-mode-node--projection.agent-focus-mode-node--outgoing .agent-focus-mode-node-dot {
