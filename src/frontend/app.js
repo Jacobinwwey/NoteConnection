@@ -3113,11 +3113,23 @@ function handleDoubleClick(event, d) {
     // v0.9.20 Enhancement: Auto-clear selection state when entering focus mode
     // v0.9.20 增强：进入专注模式时自动清除选择状态
     
-    if (focusNode && focusNode.id === d.id) {
+    const focusInteractions = window.NoteConnectionFocusModeInteractions;
+    const focusAction = focusInteractions && typeof focusInteractions.resolveDoubleClickAction === 'function'
+        ? focusInteractions.resolveDoubleClickAction({
+            currentAnchorId: focusNode && focusNode.id,
+            clickedNodeId: d && d.id,
+        })
+        : {
+            action: focusNode && focusNode.id === d.id ? 'open-reader' : 'switch-focus',
+            clickedNodeId: d && d.id,
+            currentAnchorId: focusNode && focusNode.id,
+        };
+
+    if (focusAction.action === 'open-reader') {
         // Already focused on same node -> Open Reader
         // 已经专注于同一节点 -> 打开阅读器
         if (window.reader) window.reader.open(d);
-    } else {
+    } else if (focusAction.action === 'switch-focus') {
         // Clear any existing selection/highlight state before entering focus mode
         // 在进入专注模式前清除任何现有的选择/高亮状态
         if (window.highlightManager) {

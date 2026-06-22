@@ -381,6 +381,10 @@
         if (!projection) {
             return buildUnavailableHtml(input);
         }
+        const selectedNodeId = normalizeText(input.selectedNodeId);
+        const lastSignal = input.lastSignal && typeof input.lastSignal === 'object'
+            ? normalizeText(input.lastSignal.signal)
+            : normalizeText(input.lastSignal);
         const nodeById = new Map(projection.nodes.map((node) => [node.id, node]));
         const edgeHtml = projection.edges.map((edge) => {
             const fromNode = nodeById.get(edge.from);
@@ -421,6 +425,7 @@
                 node.isCurrent ? 'agent-godot-future-path-node--current' : '',
                 node.isCompleted ? 'agent-godot-future-path-node--completed' : '',
                 node.isExpanded ? 'agent-godot-future-path-node--expanded' : '',
+                node.id === selectedNodeId ? 'agent-godot-future-path-node--selected' : '',
                 !highlight ? 'agent-godot-future-path-node--dimmed' : '',
             ].filter(Boolean).join(' ');
             return `
@@ -461,6 +466,8 @@
                 data-agent-godot-future-path-hosted="true"
                 data-godot-tree-renderer="true"
                 data-godot-tree-active-hull-root="${escapeHtml(projection.activeHullRootId)}"
+                data-godot-tree-selected-node-id="${escapeHtml(selectedNodeId)}"
+                data-godot-tree-last-signal="${escapeHtml(lastSignal)}"
             >
                 <div class="agent-godot-future-path-header">
                     <div class="agent-godot-future-path-title">${escapeHtml(title)}</div>
@@ -485,6 +492,7 @@
                         data-godot-tree-surface-height="${projection.surfaceHeight.toFixed(0)}"
                         data-godot-tree-current-x="${projection.currentX.toFixed(2)}"
                         data-godot-tree-current-y="${projection.currentY.toFixed(2)}"
+                        data-godot-tree-selected-node-id="${escapeHtml(selectedNodeId)}"
                         style="width: ${projection.surfaceWidth.toFixed(0)}px; height: ${projection.surfaceHeight.toFixed(0)}px;"
                     >
                         <svg

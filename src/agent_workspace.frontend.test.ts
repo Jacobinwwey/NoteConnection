@@ -1213,6 +1213,8 @@ function createSseResponse(events: Array<{ event: string; payload: unknown }>, o
 function loadWorkspacePanesHarness(options: { withI18n?: boolean } = {}): HarnessResult {
     const repoRoot = path.resolve(__dirname, '..');
     const markdownRuntimeScriptPath = path.join(repoRoot, 'src', 'frontend', 'markdown_runtime.js');
+    const focusModeInteractionsScriptPath = path.join(repoRoot, 'src', 'frontend', 'focus_mode_interactions.js');
+    const godotTreeInteractionsScriptPath = path.join(repoRoot, 'src', 'frontend', 'godot_tree_interactions.js');
     const godotFuturePathRendererScriptPath = path.join(repoRoot, 'src', 'frontend', 'godot_future_path_renderer.js');
     const scriptPath = path.join(repoRoot, 'src', 'frontend', 'workspace_panes.js');
     const dom = new JSDOM(createWorkspaceHtml(), {
@@ -1225,6 +1227,8 @@ function loadWorkspacePanesHarness(options: { withI18n?: boolean } = {}): Harnes
     sandbox.window.__NC_RUNTIME_CAPS = {};
 
     loadScriptIntoSandbox(sandbox, markdownRuntimeScriptPath, 'markdown_runtime.js');
+    loadScriptIntoSandbox(sandbox, focusModeInteractionsScriptPath, 'focus_mode_interactions.js');
+    loadScriptIntoSandbox(sandbox, godotTreeInteractionsScriptPath, 'godot_tree_interactions.js');
     loadScriptIntoSandbox(sandbox, godotFuturePathRendererScriptPath, 'godot_future_path_renderer.js');
     loadScriptIntoSandbox(sandbox, scriptPath, 'workspace_panes.js');
 
@@ -1324,6 +1328,8 @@ function installHostedFuturePathRuntime(window: any, graphData?: { nodes: Array<
 function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): HarnessResult {
     const repoRoot = path.resolve(__dirname, '..');
     const markdownRuntimeScriptPath = path.join(repoRoot, 'src', 'frontend', 'markdown_runtime.js');
+    const focusModeInteractionsScriptPath = path.join(repoRoot, 'src', 'frontend', 'focus_mode_interactions.js');
+    const godotTreeInteractionsScriptPath = path.join(repoRoot, 'src', 'frontend', 'godot_tree_interactions.js');
     const godotFuturePathRendererScriptPath = path.join(repoRoot, 'src', 'frontend', 'godot_future_path_renderer.js');
     const workspaceScriptPath = path.join(repoRoot, 'src', 'frontend', 'workspace_panes.js');
     const agentScriptPath = path.join(repoRoot, 'src', 'frontend', 'agent_workspace.js');
@@ -3465,6 +3471,8 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
     };
 
     loadScriptIntoSandbox(sandbox, markdownRuntimeScriptPath, 'markdown_runtime.js');
+    loadScriptIntoSandbox(sandbox, focusModeInteractionsScriptPath, 'focus_mode_interactions.js');
+    loadScriptIntoSandbox(sandbox, godotTreeInteractionsScriptPath, 'godot_tree_interactions.js');
     loadScriptIntoSandbox(sandbox, godotFuturePathRendererScriptPath, 'godot_future_path_renderer.js');
     loadScriptIntoSandbox(sandbox, workspaceScriptPath, 'workspace_panes.js');
     loadScriptIntoSandbox(sandbox, agentScriptPath, 'agent_workspace.js');
@@ -4196,9 +4204,30 @@ describe('workspace panes controller', () => {
         ) as HTMLButtonElement | null;
         relatedNodeButton?.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true, cancelable: true }));
         await new Promise((resolve) => setTimeout(resolve, 0));
+        expect((window as any).__NC_LAST_AGENT_FOCUS_MODE_ACTION).toEqual(expect.objectContaining({
+            action: 'switch-focus',
+            clickedNodeId: 'application',
+            currentAnchorId: 'water glass',
+            host: 'agent-workspace',
+        }));
         expect(graphView.getFocusModeProjection).toHaveBeenLastCalledWith('application', expect.anything());
         expect(document.querySelector('[data-agent-hosted-focus-anchor-id="application"]')).not.toBeNull();
         expect(graphView.getFocusNode()).toEqual({ id: 'main-focus', label: 'Main focus' });
+
+        const applicationAnchorButton = document.querySelector(
+            '[data-agent-focus-mode-node-id="application"][data-agent-focus-mode-anchor="true"]'
+        ) as HTMLButtonElement | null;
+        readContent.mockClear();
+        applicationAnchorButton?.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect((window as any).__NC_LAST_AGENT_FOCUS_MODE_ACTION).toEqual(expect.objectContaining({
+            action: 'open-reader',
+            clickedNodeId: 'application',
+            currentAnchorId: 'application',
+            host: 'agent-workspace',
+        }));
+        expect((window as any).reader.open).not.toHaveBeenCalled();
+        expect(readContent).toHaveBeenCalledWith('Knowledge_Base/application.md');
 
         graphContainer?.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
         expect(preservedDoubleClickCount).toBe(1);
@@ -4431,6 +4460,32 @@ describe('workspace panes controller', () => {
         expect(Math.abs((initialPanX + (currentX * initialZoom)) - (viewportWidth / 2))).toBeLessThan(1);
         treeViewport?.dispatchEvent(new window.WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true }));
         expect(Number(treeViewport?.getAttribute('data-godot-tree-zoom') || '0')).toBeGreaterThan(initialZoom);
+        const targetNode = document.querySelector('[data-godot-tree-node-id="water glass"]') as HTMLElement | null;
+        targetNode?.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(document.querySelector('[data-godot-tree-selected-node-id="water glass"]')).not.toBeNull();
+        expect((window as any).__NC_LAST_AGENT_GODOT_TREE_SIGNAL).toEqual(expect.objectContaining({
+            signal: 'node_clicked',
+            nodeId: 'water glass',
+            host: 'agent-workspace',
+        }));
+        const callsBeforeRightClick = pathCalls.getTreeLayout.mock.calls.length;
+        targetNode?.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+        expect((window as any).__NC_LAST_AGENT_GODOT_TREE_SIGNAL).toEqual(expect.objectContaining({
+            signal: 'node_collapse_prereqs_requested',
+            nodeId: 'water glass',
+            host: 'agent-workspace',
+        }));
+        expect(pathCalls.getTreeLayout.mock.calls.length).toBeGreaterThan(callsBeforeRightClick);
+        const callsBeforeMiddleClick = pathCalls.getTreeLayout.mock.calls.length;
+        treeViewport?.dispatchEvent(new window.MouseEvent('mousedown', { button: 1, bubbles: true, cancelable: true }));
+        expect((window as any).__NC_LAST_AGENT_GODOT_TREE_SIGNAL).toEqual(expect.objectContaining({
+            signal: 'collapse_all_requested',
+            host: 'agent-workspace',
+        }));
+        expect(pathCalls.getTreeLayout.mock.calls.length).toBeGreaterThan(callsBeforeMiddleClick);
+        const collapseAllLayoutCall = pathCalls.getTreeLayout.mock.calls[pathCalls.getTreeLayout.mock.calls.length - 1];
+        expect(Array.from(collapseAllLayoutCall?.[2] as Set<string>)).toContain('water glass');
+        expect(collapseAllLayoutCall?.[3]).not.toContain('water glass');
         expect(document.querySelector('[data-agent-godot-future-path-target-id="water glass"]')).not.toBeNull();
         expect(document.querySelector('#agent-learning-path-body #path-container')).toBeNull();
         expect(document.querySelector('[data-agent-path-mode-preview="true"]')).toBeNull();

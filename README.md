@@ -35,7 +35,7 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 - Public answers remain contracted to the reviewed answer path; citations, graph context, reviewer details, provenance diagnostics, and developer traces belong to secondary panes, artifacts, traces, or exports.
 - Matched-file discoverability is now intentionally compact: users get a question-mark help affordance for "left-click opens source and highlights the basis" instead of permanent instructional text in the workspace.
 - The matched-file/source-focus path is now right-pane-first: source clicks resolve candidate paths, render Markdown, highlight matched evidence, and expose close controls for the affected right-pane surfaces.
-- `Related Focus` is implemented as a side-pane semantic projection of the Tauri Focus-mode state around the selected node; `Learning Path` is implemented as a side-pane semantic projection of Godot Path-mode-style prerequisite/anchor/next guidance.
+- `Related Focus` is implemented as a side-pane Focus-mode host backed by the shared double-click decision contract; it switches anchors and opens Markdown inside the pane without moving the main graph DOM or calling the global reader. `Learning Path` hosts the Godot Future Path `diffusion/core/treeLayout` contract and routes DOM input through TreeRenderer-style signals.
 - The current implementation uses resolved graph labels such as `water glass`, not internal atom IDs, for the knowledge graph preview surface. This behavior is pinned by strict browser verification.
 - Current code-vs-plan details are tracked in [Agent Knowledge Workspace Graph Preview and Review Closure (2026-06-20)](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) and the [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md).
 
@@ -45,7 +45,7 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 - 公开回答继续收缩到经过审核的回答路径；citation、graph context、reviewer detail、provenance diagnostics 与 developer trace 进入次级 pane、artifact、trace 或 export。
 - 命中文件可发现性现在刻意保持克制：用户通过问号帮助入口了解“左键打开源文档并高亮依据”，而不是在 workspace 中常驻说明文案。
 - 命中文件 / source-focus 路径现在以右侧 pane 为权威阅读面：单击后解析候选路径、渲染 Markdown、高亮命中依据，并在受影响的右侧 pane surface 上提供关闭控件。
-- `关联聚焦` 已实现为围绕选中节点的 Tauri Focus-mode 语义投影；`学习路径` 已实现为 Godot Path-mode 风格的 prerequisite/anchor/next 学习引导语义投影。
+- `关联聚焦` 已实现为右侧 pane 内托管的 Focus-mode：复用共享双击决策契约，在 pane 内切换 anchor 或打开 Markdown，不移动主图 DOM，也不调用全局 reader。`学习路径` 托管 Godot Future Path 的 `diffusion/core/treeLayout` 契约，并将 DOM 输入路由为 TreeRenderer 风格信号。
 - 当前实现使用 `water glass` 这类解析后的图标签，而不是内部 atom ID，作为知识图预览展示名称；该行为已由 strict browser verification 固定。
 - 当前代码 / 方案对齐详情见 [Agent 知识工作区图预览与回答审核收口（2026-06-20）](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) 与 [开发进度看板](docs/diataxis/zh/explanation/development-progress-dashboard.md)。
 

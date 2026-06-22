@@ -35,9 +35,11 @@ Current implementation status is code-backed:
 - `src/learning/conversationComposer.ts` calls `reviewAnswerRelease()` and releases `answerReleaseReview.publicAnswer`.
 - `src/learning/answerReleaseReview.ts` owns deterministic public-answer gates, including graph-causal, graph-order, graph-comparison, temporal-validity, and query-intent gates.
 - `src/frontend/workspace_panes.js` owns the Knowledge Workspace source focus pane, help affordance, matched-file action controls, hosted Focus projection pane, hosted Godot Future Path renderer surface, close controls, and provenance diagnostics.
+- `src/frontend/focus_mode_interactions.js` owns the shared Focus-mode double-click decision contract now consumed by both the main graph runtime and the hosted Knowledge Focus pane.
+- `src/frontend/godot_tree_interactions.js` owns the browser-to-Godot TreeRenderer signal adapter for hosted Future Path input: node click, right-click/double-click prerequisite expansion, middle-click collapse-all, and long-press navigation.
 - `src/frontend/godot_future_path_renderer.js` owns the modular TreeRenderer-compatible Future Path surface: 140x50 capsule nodes, Bezier skip-level edge filtering, active subtree hulls, spine expansion badges, hover subtree focus, word-preserving labels, and target-centered pane-local pan/zoom auto-fit hooks.
-- `scripts/verify-agent-workspace-browser.js` owns the strict browser regression for the latest UI defects, including the `water glass.md` display case, hosted Focus anchor/context-density assertions for `water glass`, refusal to dock the main `#graph-container`, TreeRenderer marker/hull/viewport assertions, and refusal to show the native Godot window by default.
-- `src/agent_workspace.frontend.test.ts` pins help-popover behavior, stable ARIA/control IDs, source highlight behavior, hosted Focus projection behavior, and Godot Future Path renderer semantics.
+- `scripts/verify-agent-workspace-browser.js` owns the strict browser regression for the latest UI defects, including the `water glass.md` display case, hosted Focus anchor/context-density assertions for `water glass`, pane-local Focus double-click switching and reader opening, refusal to dock the main `#graph-container`, TreeRenderer marker/hull/viewport assertions, Godot-style click/right-click/middle-click signal assertions, and refusal to show the native Godot window by default.
+- `src/agent_workspace.frontend.test.ts` pins help-popover behavior, stable ARIA/control IDs, source highlight behavior, hosted Focus projection behavior, pane-local Focus double-click semantics, and Godot Future Path renderer/input semantics.
 
 The remaining work is calibration and coverage expansion. It is not a blocker for this slice:
 
@@ -107,8 +109,8 @@ The runtime should be read as a chain of owners:
 | Left matched-file area must be scrollable and show long names such as `water glass.md` | The strict browser verifier checks visible `water glass.md`, no horizontal overflow, and interactive action targets. | Implemented | Very long filenames still need truncation plus tooltip discipline, not layout expansion. |
 | Clicking a hit should open right-side source and highlight matched evidence | Source pane logic uses source-line provenance, line windows, snippets, and offset-backed inline highlight where available. | Implemented baseline | Old payloads without offsets can only fall back conservatively. |
 | Right-side source window needs a close control | The strict browser verifier asserts three close buttons across the affected right-pane surfaces. | Implemented | Future pane additions must not bypass the shared close-control pattern. |
-| `Related Focus` should match Tauri Focus mode semantics | `workspace_panes.js` hosts a pane-local Focus-mode surface from `NoteConnectionGraphView.getFocusModeProjection()`, keeps the main `#graph-container` in its original parent, renders active Focus nodes plus high-density context dots/labels, switches the pane-local anchor on related-node double-click, and opens Markdown inside the pane-local reader on anchor double-click; relation diagnostics are Developer Mode only. | Implemented | This is projection/behavior-contract reuse, not DOM reuse. Any future attempt to reuse the live graph instance must first solve reader ownership and main-graph lifecycle isolation. |
-| `Learning Path` should match Godot/Path mode semantics and use the real node name | `workspace_panes.js` resolves the selected DAG node, uses existing frontend `Graph` / `PathEngine` `diffusion/core` plus `getTreeLayout(..., focusMode=true)`, and renders the resulting tree through `godot_future_path_renderer.js`; the strict verifier checks `water glass` labels, TreeRenderer marker/hull/viewport state, and rejects browser `#path-container` docking and bridge/Tauri `showGodot=true`. | Implemented | This does not embed the native Godot window. Native window reparenting remains a separate platform spike, not a pane feature. |
+| `Related Focus` should match Tauri Focus mode semantics | `workspace_panes.js` hosts a pane-local Focus-mode surface from `NoteConnectionGraphView.getFocusModeProjection()`, keeps the main `#graph-container` in its original parent, renders active Focus nodes plus high-density context dots/labels, and consumes `focus_mode_interactions.js` so the main graph and hosted pane share the same double-click decision model: related-node double-click switches the pane-local anchor, anchor double-click opens Markdown inside the pane-local reader, and global `reader.open` remains untouched. Relation diagnostics are Developer Mode only. | Implemented | This is projection/behavior-contract reuse, not DOM reuse. Any future attempt to reuse the live graph instance must first solve reader ownership and main-graph lifecycle isolation. |
+| `Learning Path` should match Godot/Path mode semantics and use the real node name | `workspace_panes.js` resolves the selected DAG node, uses existing frontend `Graph` / `PathEngine` `diffusion/core` plus `getTreeLayout(..., focusMode=true)`, renders the resulting tree through `godot_future_path_renderer.js`, and consumes `godot_tree_interactions.js` so browser input emits Godot TreeRenderer-style signals. The strict verifier checks `water glass` labels, TreeRenderer marker/hull/viewport state, node-click selection, right-click expansion/collapse, middle-click collapse-all, and rejects browser `#path-container` docking plus bridge/Tauri `showGodot=true`. | Implemented | This does not embed the native Godot window. Native window reparenting remains a separate platform spike, not a pane feature. |
 | Existing DAG should be visible to the LLM and reviewer | `graphContextAssembler.ts` assembles `connectionPaths`, predecessor/successor windows, temporal validity, evidence refs, and diagnostics; reviewer graph gates consume DAG context. | Implemented baseline | Ranking and reviewer calibration still need broader corpora. |
 | Final public answer needs robust review and correction | `answerReleaseReview.ts` owns deterministic release gates and is called before response release. | Implemented | Gate expansion must remain conservative to avoid false positives. |
 | Compatibility must be preserved | New fields are optional/additive; legacy `assistantMessage` and existing answer fields remain valid. | Implemented | Contract drift can reappear if new clients treat optional fields as mandatory. |
@@ -178,9 +180,9 @@ Best practice: the help control must work on hover and focus, must close on blur
 
 Status: completed.
 
-`Related Focus` hosts the selected node inside a Knowledge Focus pane without moving the main graph DOM. The pane uses the main graph's pure `getFocusModeProjection()` contract, renders the resolved node name, preserves Focus-mode density through active nodes plus background context dots/labels, supports double-click-to-switch on related nodes, and opens Markdown in a pane-local reader when the anchor is double-clicked. Relation-edge lists, relation kinds, and backend diagnostics are available only when Developer Mode is enabled.
+`Related Focus` hosts the selected node inside a Knowledge Focus pane without moving the main graph DOM. The pane uses the main graph's pure `getFocusModeProjection()` contract, renders the resolved node name, preserves Focus-mode density through active nodes plus background context dots/labels, and consumes the same `focus_mode_interactions.js` double-click decision model as the main graph runtime. Related-node double-click switches only the pane-local anchor; anchor double-click opens Markdown in the pane-local reader; global `reader.open` is not called. Relation-edge lists, relation kinds, and backend diagnostics are available only when Developer Mode is enabled.
 
-`Learning Path` does not show Tauri/browser Learning Path and does not mount browser `path-container`. It resolves the selected hit to a DAG node, then uses existing frontend `Graph` / `PathEngine` with `diffusionLearning(target, 'core', ...)` and `getTreeLayout(..., focusMode=true, { verticalGap: 240 })`. The resulting tree is rendered by `godot_future_path_renderer.js`, a modular TreeRenderer-compatible surface that keeps Godot's capsule nodes, Bezier edge filtering, active subtree hulls, spine expansion badges, hover subtree focus, word-preserving labels, and pane-local pan/zoom auto-fit.
+`Learning Path` does not show Tauri/browser Learning Path and does not mount browser `path-container`. It resolves the selected hit to a DAG node, then uses existing frontend `Graph` / `PathEngine` with `diffusionLearning(target, 'core', ...)` and `getTreeLayout(..., focusMode=true, { verticalGap: 240 })`. The resulting tree is rendered by `godot_future_path_renderer.js`, a modular TreeRenderer-compatible surface that keeps Godot's capsule nodes, Bezier edge filtering, active subtree hulls, spine expansion badges, hover subtree focus, word-preserving labels, and pane-local pan/zoom auto-fit. Input is routed through `godot_tree_interactions.js`, which maps browser events back to the Godot TreeRenderer signal contract instead of relying on ad hoc DOM handlers.
 
 Tradeoff: a hosted Focus pane avoids stealing lifecycle ownership from the main Tauri graph, but it must explicitly preserve the interaction semantics and density the user expects from Focus mode. A hosted Future Path projection avoids native window reparenting and now reuses both the Godot-facing `treeLayout` contract and TreeRenderer semantics; pixel-perfect native Godot parity or true native window docking remains a dedicated renderer extraction or embedding project.
 
@@ -211,8 +213,13 @@ The strict browser case specifically verifies:
 - action targets meet minimum hit-area expectations,
 - there is no horizontal overflow,
 - hosted Focus uses projection data, toolbar/control metadata, and a high-density background context-dot layer for target `water glass`,
+- hosted Focus related-node double-click switches the pane-local anchor to `application`,
+- hosted Focus anchor double-click opens the pane-local Markdown reader and does not call global `reader.open`,
 - hosted Godot Future Path uses `diffusion/core`, `treeLayout`, and the modular TreeRenderer-compatible renderer for target `water glass`,
 - Future Path preserves `water glass` as a word-preserving node label and exposes TreeRenderer hulls, expansion badges, and viewport auto-fit state,
+- Future Path left-click emits `node_clicked` and selects `water glass`,
+- Future Path right-click emits a TreeRenderer prerequisite expand/collapse signal,
+- Future Path middle-click on the viewport emits `collapse_all_requested`,
 - the browser `path-container` is not docked into the learning pane,
 - bridge/Tauri `showGodot=true` is not called by the pane action,
 - the real `#graph-container` stays in its original parent,
@@ -285,6 +292,21 @@ Do not collapse these questions into one prompt or one frontend component. Each 
 3. The earlier DSPy/Guidance/Semantic Kernel/LangChain/LiteLLM ideas remain useful references, but none should own DAG semantics, source provenance, or final release policy in this runtime.
 4. The main remaining risk is calibration, not missing ownership: broader reviewer corpora, more offset coverage, and ranking evaluation are the next hard work.
 5. Keep changes backward-compatible and invariant-owned; avoid pass-through layers, unbounded graph dumps, and UI-only correctness fixes.
+
+### 2026-06-22 Interaction Contract Addendum
+
+This follow-up closes the specific interaction gap behind the latest user rejection.
+The previous side-pane implementation was still too close to a visual approximation: it could prove that a Focus/Future Path-like surface existed, but it did not make the reused interaction contracts executable enough.
+
+What changed:
+
+- Focus double-click behavior is now a shared contract in `src/frontend/focus_mode_interactions.js`, used by both `src/frontend/app.js` and the hosted Knowledge Focus pane.
+- Hosted Focus remains pane-local by design: related-node double-click switches the hosted anchor, anchor double-click opens the pane-local Markdown reader, and the main graph DOM plus global reader lifecycle are not mutated.
+- Godot Future Path input is now mediated by `src/frontend/godot_tree_interactions.js`, a TreeRenderer signal adapter rather than bespoke button handlers.
+- Hosted Future Path now records and verifies Godot-style signals: `node_clicked`, prerequisite expand/collapse, and `collapse_all_requested`.
+- Strict browser verification now fails if the `water glass` Focus/Future Path pane is merely visible but not interactable.
+
+The deliberate limitation remains: this is contract and renderer-semantics reuse, not native Godot window embedding. Native window docking would require a separate platform-level owner for window parenting, input focus, teardown, and reader routing.
 
 ## 中文文档
 
@@ -558,3 +580,17 @@ strict browser case 明确验证：
 3. 先前 DSPy/Guidance/Semantic Kernel/LangChain/LiteLLM 方案仍有参考价值，但不应在本 runtime 中持有 DAG 语义、source provenance 或最终 release policy。
 4. 主要剩余风险是校准，不是 owner 缺失：更广 reviewer 语料、更多 offset 覆盖与 ranking evaluation 是下一步硬工作。
 5. 后续变更必须保持向前兼容，并由真实不变量驱动；避免 pass-through layer、无界图倾倒和 UI-only correctness fix。
+### 2026-06-22 交互契约补充
+
+本次补充收口的是最新反馈中的真实交互缺口。
+上一版右侧 pane 能证明 Focus/Future Path 风格 surface 存在，但仍不足以证明它复用了可执行的交互契约；这就是“看起来像，但左键、右键、双击不可用”的根因。
+
+已落地的变化：
+
+- Focus 双击行为现在由 `src/frontend/focus_mode_interactions.js` 持有，并同时被 `src/frontend/app.js` 与托管 Knowledge Focus pane 使用。
+- 托管 Focus 仍然保持 pane-local：双击关联节点只切换托管 anchor，双击中心节点只打开 pane 内 Markdown reader，不移动主图 DOM，也不调用全局 `reader.open`。
+- Godot Future Path 的输入现在由 `src/frontend/godot_tree_interactions.js` 适配为 TreeRenderer 信号，而不是继续散落在临时 DOM handler 中。
+- 托管 Future Path 现在记录并验证 Godot 风格信号：`node_clicked`、前置节点展开 / 折叠、`collapse_all_requested`。
+- strict browser verification 现在会在 `water glass` 的 Focus/Future Path pane 只是可见但不可交互时失败。
+
+保留的边界也必须写清楚：当前复用的是契约与 renderer 语义，不是把 Godot 原生窗口嵌入 DOM。真正的 native window docking 需要单独的平台级 owner 处理窗口父子关系、输入焦点、销毁顺序与 reader 路由，不能混入当前 Knowledge Workspace pane 修复。

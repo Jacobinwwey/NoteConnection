@@ -2920,6 +2920,16 @@
         return true;
     }
 
+    function recordHostedFocusModeAction(action) {
+        const normalizedAction = action && typeof action === 'object' ? action : {};
+        window.__NC_LAST_AGENT_FOCUS_MODE_ACTION = {
+            action: normalizeKnowledgeGraphText(normalizedAction.action) || 'noop',
+            clickedNodeId: normalizeKnowledgeGraphText(normalizedAction.clickedNodeId),
+            currentAnchorId: normalizeKnowledgeGraphText(normalizedAction.currentAnchorId),
+            host: 'agent-workspace',
+        };
+    }
+
     function bindHostedGraphFocusMode(body, payload) {
         if (!body) {
             return;
@@ -2933,6 +2943,10 @@
                 readerShell.hidden = true;
             });
         }
+        const focusModeHost = body.querySelector('[data-agent-hosted-focus-mode="true"]');
+        const currentAnchorId = normalizeKnowledgeGraphText(
+            focusModeHost && focusModeHost.getAttribute('data-agent-hosted-focus-anchor-id')
+        ) || resolveGraphFocusHostedTargetId(payload || {});
         body.querySelectorAll('[data-agent-focus-mode-node-id]').forEach((nodeButton) => {
             nodeButton.addEventListener('click', function (event) {
                 event.stopPropagation();
@@ -2944,11 +2958,27 @@
                 if (!nodeId) {
                     return;
                 }
-                if (nodeButton.getAttribute('data-agent-focus-mode-anchor') === 'true') {
+                const focusInteractions = window.NoteConnectionFocusModeInteractions;
+                const action = focusInteractions && typeof focusInteractions.resolveDoubleClickAction === 'function'
+                    ? focusInteractions.resolveDoubleClickAction({
+                        currentAnchorId,
+                        clickedNodeId: nodeId,
+                    })
+                    : {
+                        action: nodeButton.getAttribute('data-agent-focus-mode-anchor') === 'true'
+                            ? 'open-reader'
+                            : 'switch-focus',
+                        clickedNodeId: nodeId,
+                        currentAnchorId,
+                    };
+                recordHostedFocusModeAction(action);
+                if (action.action === 'open-reader') {
                     void openHostedFocusPaneReader(payload || {}, nodeId);
                     return;
                 }
-                switchHostedFocusNode(payload || {}, nodeId);
+                if (action.action === 'switch-focus') {
+                    switchHostedFocusNode(payload || {}, nodeId);
+                }
             });
         });
     }
@@ -3544,12 +3574,15 @@
             state.godotFuturePath.activeTargetId = normalizedTargetId;
             state.godotFuturePath.expandedNodeIds = [normalizedTargetId];
             state.godotFuturePath.collapsedNodeIds = [];
+            state.godotFuturePath.collapseAllRequested = false;
         }
-        if (!state.godotFuturePath.expandedNodeIds.includes(normalizedTargetId)) {
+        if (!state.godotFuturePath.collapseAllRequested && !state.godotFuturePath.expandedNodeIds.includes(normalizedTargetId)) {
             state.godotFuturePath.expandedNodeIds.unshift(normalizedTargetId);
         }
-        state.godotFuturePath.collapsedNodeIds = state.godotFuturePath.collapsedNodeIds
-            .filter((nodeId) => nodeId !== normalizedTargetId);
+        if (!state.godotFuturePath.collapseAllRequested) {
+            state.godotFuturePath.collapsedNodeIds = state.godotFuturePath.collapsedNodeIds
+                .filter((nodeId) => nodeId !== normalizedTargetId);
+        }
     }
 
     function buildHostedGodotFuturePathProjection(payload, config) {
@@ -3642,6 +3675,8 @@
                 targetId: projection && projection.targetId,
                 currentId: projection && projection.targetId,
                 targetLabel,
+                selectedNodeId: state.godotFuturePath.selectedNodeId,
+                lastSignal: state.godotFuturePath.lastSignal,
                 reason: normalizeKnowledgeGraphText(projection && projection.reason),
                 focusModeEnabled: true,
                 unavailableLabel: translate('agentWorkspace.learningPath.godotFuturePathUnavailable', 'Godot Future Path target is unavailable.'),
@@ -3694,23 +3729,108 @@
         return projection;
     }
 
-    function toggleHostedFuturePathExpansion(nodeId, payload) {
+    function recordHostedGodotTreeSignal(signal, nodeId) {
+        const normalizedSignal = normalizeKnowledgeGraphText(signal);
+        const normalizedNodeId = normalizeKnowledgeGraphText(nodeId);
+        const entry = {
+            signal: normalizedSignal,
+            nodeId: normalizedNodeId,
+            host: 'agent-workspace',
+        };
+        state.godotFuturePath.lastSignal = entry;
+        window.__NC_LAST_AGENT_GODOT_TREE_SIGNAL = { ...entry };
+        return entry;
+    }
+
+    function applyHostedFuturePathSelection(body, nodeId) {
+        const normalizedNodeId = normalizeKnowledgeGraphText(nodeId);
+        if (!normalizedNodeId || !body) {
+            return;
+        }
+        state.godotFuturePath.selectedNodeId = normalizedNodeId;
+        const shell = body.querySelector('[data-agent-godot-future-path-shell="true"]');
+        const surface = body.querySelector('[data-agent-godot-future-path-surface="true"]');
+        [shell, surface].forEach((element) => {
+            if (element) {
+                element.setAttribute('data-godot-tree-selected-node-id', normalizedNodeId);
+            }
+        });
+        body.querySelectorAll('.agent-godot-future-path-node--selected').forEach((node) => {
+            node.classList.remove('agent-godot-future-path-node--selected');
+        });
+        body.querySelectorAll('[data-godot-tree-node-id], [data-agent-future-path-node-id]').forEach((node) => {
+            const candidateId = normalizeKnowledgeGraphText(
+                node.getAttribute('data-agent-future-path-node-id')
+                || node.getAttribute('data-godot-tree-node-id')
+            );
+            node.classList.toggle('agent-godot-future-path-node--selected', candidateId === normalizedNodeId);
+        });
+    }
+
+    function setHostedFuturePathExpansion(nodeId, shouldExpand, payload) {
         const normalizedNodeId = normalizeKnowledgeGraphText(nodeId);
         if (!normalizedNodeId) {
             return;
         }
-        const expanded = new Set(state.godotFuturePath.expandedNodeIds);
+        const expandedNodeIds = new Set(state.godotFuturePath.expandedNodeIds);
         const collapsed = new Set(state.godotFuturePath.collapsedNodeIds);
-        if (expanded.has(normalizedNodeId)) {
-            expanded.delete(normalizedNodeId);
-            collapsed.add(normalizedNodeId);
-        } else {
-            expanded.add(normalizedNodeId);
+        if (shouldExpand === true) {
+            expandedNodeIds.add(normalizedNodeId);
             collapsed.delete(normalizedNodeId);
+        } else {
+            expandedNodeIds.delete(normalizedNodeId);
+            collapsed.add(normalizedNodeId);
         }
-        state.godotFuturePath.expandedNodeIds = Array.from(expanded);
+        state.godotFuturePath.collapseAllRequested = false;
+        state.godotFuturePath.expandedNodeIds = Array.from(expandedNodeIds);
         state.godotFuturePath.collapsedNodeIds = Array.from(collapsed);
         renderLearningPathBody(payload || state.panes['learning-path'].payload || {});
+    }
+
+    function collapseAllHostedFuturePathNodes(payload) {
+        const projection = state.godotFuturePath.projection;
+        const treeNodes = projection && projection.treeLayout && Array.isArray(projection.treeLayout.nodes)
+            ? projection.treeLayout.nodes
+            : [];
+        const collapsedIds = treeNodes
+            .filter((node) => node && (node.isSpine === true || node.isSpine === 'true'))
+            .map((node) => normalizeKnowledgeGraphText(node.id || node.nodeId || node.key))
+            .filter(Boolean);
+        state.godotFuturePath.expandedNodeIds = [];
+        state.godotFuturePath.collapsedNodeIds = Array.from(new Set(collapsedIds));
+        state.godotFuturePath.collapseAllRequested = true;
+        renderLearningPathBody(payload || state.panes['learning-path'].payload || {});
+    }
+
+    function switchHostedFuturePathTarget(nodeId, payload) {
+        const normalizedNodeId = normalizeKnowledgeGraphText(nodeId);
+        if (!normalizedNodeId) {
+            return;
+        }
+        const projection = state.godotFuturePath.projection;
+        const treeNodes = projection && projection.treeLayout && Array.isArray(projection.treeLayout.nodes)
+            ? projection.treeLayout.nodes
+            : [];
+        const targetNode = treeNodes.find((node) => (
+            normalizeKnowledgeGraphText(node && (node.id || node.nodeId || node.key)) === normalizedNodeId
+        ));
+        const targetLabel = normalizeKnowledgeGraphText(targetNode && (targetNode.label || targetNode.title || targetNode.name))
+            || normalizedNodeId;
+        const nextPayload = {
+            ...(payload || state.panes['learning-path'].payload || {}),
+            atomId: normalizedNodeId,
+            nodeId: normalizedNodeId,
+            targetId: normalizedNodeId,
+            graphTargetId: normalizedNodeId,
+            graphNodeId: normalizedNodeId,
+            graphTargetLabel: targetLabel,
+            title: targetLabel,
+        };
+        state.panes['learning-path'].payload = nextPayload;
+        state.godotFuturePath.activeTargetId = '';
+        state.godotFuturePath.selectedNodeId = normalizedNodeId;
+        state.godotFuturePath.collapseAllRequested = false;
+        renderLearningPathBody(nextPayload);
     }
 
     function bindHostedFuturePathViewport(body) {
@@ -3879,6 +3999,7 @@
         }
         bindHostedFuturePathViewport(body);
         const renderer = window.NoteConnectionGodotFuturePathRenderer;
+        const treeInteractions = window.NoteConnectionGodotTreeInteractions;
         const projection = state.godotFuturePath.projection;
         const treeLayout = projection && projection.treeLayout;
         const resetActiveHull = function () {
@@ -3886,57 +4007,51 @@
                 renderer.updateActiveHullRoot(body, renderer.resolveActiveHullRoot(treeLayout, ''));
             }
         };
-        body.querySelectorAll('[data-godot-tree-node-id], [data-agent-future-path-node-id]').forEach((nodeButton) => {
-            nodeButton.addEventListener('click', function (event) {
-                event.stopPropagation();
-                body.querySelectorAll('.agent-godot-future-path-node--selected').forEach((node) => {
-                    node.classList.remove('agent-godot-future-path-node--selected');
-                });
-                nodeButton.classList.add('agent-godot-future-path-node--selected');
-                const clickedBadge = event.target
-                    && typeof event.target.closest === 'function'
-                    && event.target.closest('[data-godot-tree-expansion-badge="true"]');
-                if (clickedBadge) {
-                    event.preventDefault();
+        if (treeInteractions && typeof treeInteractions.bindTreeRenderer === 'function') {
+            treeInteractions.bindTreeRenderer(body, {
+                nodeClicked: function (nodeId, event) {
+                    recordHostedGodotTreeSignal('node_clicked', nodeId);
+                    applyHostedFuturePathSelection(body, nodeId);
+                    const clickedBadge = event && event.target
+                        && typeof event.target.closest === 'function'
+                        && event.target.closest('[data-godot-tree-expansion-badge="true"]');
+                    const nodeButton = event && event.currentTarget;
                     if (
-                        nodeButton.getAttribute('data-agent-future-path-node-spine') === 'true'
-                        && nodeButton.getAttribute('data-agent-future-path-node-has-prereqs') === 'true'
+                        clickedBadge
+                        && nodeButton
+                        && nodeButton.getAttribute('data-agent-future-path-node-spine') === 'true'
                     ) {
-                        toggleHostedFuturePathExpansion(
-                            nodeButton.getAttribute('data-agent-future-path-node-id') || nodeButton.getAttribute('data-godot-tree-node-id'),
-                            payload || {}
+                        const isExpanded = nodeButton.getAttribute('data-agent-future-path-node-expanded') === 'true';
+                        recordHostedGodotTreeSignal(
+                            isExpanded ? 'node_collapse_prereqs_requested' : 'node_expand_prereqs_requested',
+                            nodeId
                         );
+                        setHostedFuturePathExpansion(nodeId, !isExpanded, payload || {});
                     }
-                }
+                },
+                nodeExpandPrereqsRequested: function (nodeId) {
+                    recordHostedGodotTreeSignal('node_expand_prereqs_requested', nodeId);
+                    setHostedFuturePathExpansion(nodeId, true, payload || {});
+                },
+                nodeCollapsePrereqsRequested: function (nodeId) {
+                    recordHostedGodotTreeSignal('node_collapse_prereqs_requested', nodeId);
+                    setHostedFuturePathExpansion(nodeId, false, payload || {});
+                },
+                collapseAllRequested: function () {
+                    recordHostedGodotTreeSignal('collapse_all_requested', '');
+                    collapseAllHostedFuturePathNodes(payload || {});
+                },
+                nodeNavigateRequested: function (nodeId) {
+                    recordHostedGodotTreeSignal('node_navigate_requested', nodeId);
+                    switchHostedFuturePathTarget(nodeId, payload || {});
+                },
+                nodeReaderRequested: function (nodeId) {
+                    recordHostedGodotTreeSignal('node_reader_requested', nodeId);
+                    applyHostedFuturePathSelection(body, nodeId);
+                },
             });
-            nodeButton.addEventListener('dblclick', function (event) {
-                event.preventDefault();
-                event.stopPropagation();
-                if (
-                    nodeButton.getAttribute('data-agent-future-path-node-spine') !== 'true'
-                    || nodeButton.getAttribute('data-agent-future-path-node-has-prereqs') !== 'true'
-                ) {
-                    return;
-                }
-                toggleHostedFuturePathExpansion(
-                    nodeButton.getAttribute('data-agent-future-path-node-id') || nodeButton.getAttribute('data-godot-tree-node-id'),
-                    payload || {}
-                );
-            });
-            nodeButton.addEventListener('contextmenu', function (event) {
-                event.preventDefault();
-                event.stopPropagation();
-                if (
-                    nodeButton.getAttribute('data-agent-future-path-node-spine') !== 'true'
-                    || nodeButton.getAttribute('data-agent-future-path-node-has-prereqs') !== 'true'
-                ) {
-                    return;
-                }
-                toggleHostedFuturePathExpansion(
-                    nodeButton.getAttribute('data-agent-future-path-node-id') || nodeButton.getAttribute('data-godot-tree-node-id'),
-                    payload || {}
-                );
-            });
+        }
+        body.querySelectorAll('[data-godot-tree-node-id], [data-agent-future-path-node-id]').forEach((nodeButton) => {
             nodeButton.addEventListener('mouseenter', function () {
                 if (renderer && typeof renderer.resolveActiveHullRoot === 'function' && typeof renderer.updateActiveHullRoot === 'function') {
                     const nodeId = nodeButton.getAttribute('data-agent-future-path-node-id') || nodeButton.getAttribute('data-godot-tree-node-id');
@@ -7531,6 +7646,9 @@
             lastDispatch: null,
             expandedNodeIds: [],
             collapsedNodeIds: [],
+            selectedNodeId: '',
+            lastSignal: null,
+            collapseAllRequested: false,
             projection: null,
         },
         panes: {
