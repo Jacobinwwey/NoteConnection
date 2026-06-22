@@ -1,7 +1,6 @@
 (function () {
     const PANE_KEYS = ['graph-focus', 'evidence', 'learning-path'];
     const PROMOTION_ATTRIBUTE = 'data-agent-workspace-promotion';
-    const GRAPH_FOCUS_RUNTIME_ELEMENT_ID = 'graph-container';
     let godotFuturePathRetryTimer = null;
     let godotFuturePathRetryCount = 0;
 
@@ -41,10 +40,6 @@
             return getElement('agent-learning-path-body');
         }
         return null;
-    }
-
-    function getGraphFocusWorkspaceHost() {
-        return getElement('agent-graph-focus-workspace-host');
     }
 
     function isDeveloperModeEnabled() {
@@ -469,7 +464,7 @@
         ).trim();
     }
 
-    function isGraphFocusRuntimeOnlyPayload(payload) {
+    function isHostedGraphFocusPayload(payload) {
         const presentationMode = normalizeKnowledgeGraphText(
             payload && (payload.presentationMode || payload.viewMode || payload.focusViewMode)
         );
@@ -902,11 +897,12 @@
         `;
     }
 
-    function buildGraphFocusSnapshotGraphHtml(snapshot) {
+    function buildGraphFocusSnapshotGraphHtml(snapshot, options) {
         const normalizedSnapshot = normalizeFocusModeSnapshot(snapshot);
         if (!normalizedSnapshot) {
             return '';
         }
+        const interactive = Boolean(options && options.interactive === true);
 
         const nodeCount = normalizedSnapshot.nodes.length;
         const anchorId = normalizedSnapshot.anchorId;
@@ -986,15 +982,22 @@
                 return '';
             }
             const role = point.role === 'anchor' ? 'anchor' : point.role;
+            const tagName = interactive ? 'button' : 'div';
+            const buttonType = interactive ? ' type="button"' : '';
+            const interactiveAttrs = interactive
+                ? ` data-agent-focus-mode-node-id="${escapeHtml(nodeId)}" data-agent-focus-mode-anchor="${nodeId === anchorId ? 'true' : 'false'}" aria-label="${escapeHtml(point.label)}"`
+                : '';
             return `
-                <div
+                <${tagName}
+                    ${buttonType}
                     class="agent-focus-mode-node agent-focus-mode-node--${role}"
                     data-agent-focus-mode-node-role="${escapeHtml(role)}"
+                    ${interactiveAttrs}
                     style="left: ${point.x}%; top: ${point.y}%;"
                     title="${escapeHtml(point.label)}"
                 >
                     ${escapeHtml(point.label)}
-                </div>
+                </${tagName}>
             `;
         };
         const continueHtml = continueNodes.map((node) => renderNode(node.id)).join('');
@@ -1247,7 +1250,7 @@
         `;
     }
 
-    function resolveGraphFocusRuntimeTargetId(payload) {
+    function resolveGraphFocusHostedTargetId(payload) {
         const candidates = [
             payload && payload.graphTargetId,
             payload && payload.graphNodeId,
@@ -1264,20 +1267,121 @@
         return '';
     }
 
-    function buildGraphFocusRuntimeOnlyHtml(payload) {
-        const developerDetails = isDeveloperModeEnabled()
-            ? buildGraphFocusRelationMapHtml(payload)
+    function resolveGraphFocusHostedSnapshot(payload) {
+        const payloadSnapshot = normalizeFocusModeSnapshot(payload && payload.focusModeSnapshot);
+        if (payloadSnapshot) {
+            return payloadSnapshot;
+        }
+        const targetId = resolveGraphFocusHostedTargetId(payload || {});
+        return targetId ? resolveFocusModeSnapshot(targetId) : null;
+    }
+
+    function buildGraphFocusPaneReaderHtml() {
+        return `
+            <section class="agent-focus-pane-reader" data-agent-focus-pane-reader="true" hidden>
+                <div class="agent-focus-pane-reader-header">
+                    <div class="agent-focus-pane-reader-title" data-agent-focus-pane-reader-title="true"></div>
+                    <button
+                        type="button"
+                        class="agent-pane-close-button agent-focus-pane-reader-close"
+                        data-agent-focus-pane-reader-close="true"
+                        aria-label="${escapeHtml(translate('agentWorkspace.actions.closePane', 'Close pane'))}"
+                    >\u00d7</button>
+                </div>
+                <div class="agent-focus-pane-reader-body" data-agent-focus-pane-reader-body="true"></div>
+            </section>
+        `;
+    }
+
+    function buildHostedGraphFocusDeveloperDetailsHtml(payload, snapshot) {
+        if (!isDeveloperModeEnabled()) {
+            return '';
+        }
+        const normalizedSnapshot = normalizeFocusModeSnapshot(snapshot);
+        const relationPath = normalizeGraphFocusRelationPath(payload || {});
+        const relationKinds = Array.from(new Set(
+            (Array.isArray(payload && payload.relationKinds) ? payload.relationKinds : [])
+                .map((kind) => normalizeKnowledgeGraphText(kind))
+                .filter(Boolean)
+                .concat(relationPath.map((edge) => edge.relationKind).filter(Boolean))
+                .concat(normalizedSnapshot ? normalizedSnapshot.edges.map((edge) => edge.relationKind).filter(Boolean) : [])
+        ));
+        if (!normalizedSnapshot && relationPath.length <= 0 && relationKinds.length <= 0) {
+            return '';
+        }
+        const nodeHtml = normalizedSnapshot
+            ? normalizedSnapshot.nodes.slice(0, 10).map((node) => `
+                <span class="agent-focus-relation-node${node.id === normalizedSnapshot.anchorId ? ' agent-focus-relation-node--anchor' : ''}">
+                    ${escapeHtml(node.id === normalizedSnapshot.anchorId
+                        ? `${translate('agentWorkspace.graphFocus.relationAnchorNode', 'Anchor')}: ${node.label}`
+                        : node.label)}
+                </span>
+            `).join('')
             : '';
+        const snapshotEdgeHtml = normalizedSnapshot && normalizedSnapshot.edges.length > 0
+            ? normalizedSnapshot.edges.map((edge) => {
+                const sourceLabel = normalizedSnapshot.nodes.find((node) => node.id === edge.sourceId)?.label || edge.sourceId;
+                const targetLabel = normalizedSnapshot.nodes.find((node) => node.id === edge.targetId)?.label || edge.targetId;
+                return `
+                    <li class="agent-focus-relation-edge">
+                        <span>${escapeHtml(sourceLabel)}</span>
+                        <span class="agent-focus-relation-kind">${escapeHtml(edge.relationKind || 'related')}</span>
+                        <span>${escapeHtml(targetLabel)}</span>
+                    </li>
+                `;
+            }).join('')
+            : '';
+        const relationEdgeHtml = relationPath.length > 0
+            ? relationPath.map((edge) => {
+                const sourceLabel = edge.sourceTitle || edge.sourceAtomId;
+                const targetLabel = edge.targetTitle || edge.targetAtomId;
+                return `
+                    <li class="agent-focus-relation-edge">
+                        <span>${escapeHtml(sourceLabel)}</span>
+                        <span class="agent-focus-relation-kind">${escapeHtml(edge.relationKind || 'related')}</span>
+                        <span>${escapeHtml(targetLabel)}</span>
+                    </li>
+                `;
+            }).join('')
+            : '';
+        const edgeHtml = snapshotEdgeHtml || relationEdgeHtml || `<li class="agent-focus-relation-empty">${escapeHtml(translate('agentWorkspace.graphFocus.relationEdgesUnavailable', 'No bounded relation edges were returned for this hit.'))}</li>`;
+        return `
+            <div
+                class="agent-focus-relation-map"
+                data-agent-focus-relation-map="true"
+                data-agent-focus-developer-mode="true"
+            >
+                <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.graphFocus.relationMapTitle', 'Relation focus'))}</div>
+                ${relationKinds.length > 0 ? `<div class="agent-focus-relation-kinds" data-agent-focus-developer-details="true">${escapeHtml(relationKinds.join(', '))}</div>` : ''}
+                <div data-agent-focus-developer-details="true">
+                    ${nodeHtml ? `<div class="agent-focus-relation-nodes">${nodeHtml}</div>` : ''}
+                    <ul class="agent-focus-relation-edges">${edgeHtml}</ul>
+                </div>
+            </div>
+        `;
+    }
+
+    function buildGraphFocusHostedModeHtml(payload) {
+        const snapshot = resolveGraphFocusHostedSnapshot(payload || {});
+        if (!snapshot) {
+            return `
+                <div
+                    class="agent-pane-block agent-pane-block--graph-focus agent-pane-block--focus-runtime"
+                    data-agent-hosted-focus-mode="true"
+                >
+                    <div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.graphFocus.runtimeUnavailable', 'Main graph runtime is unavailable.'))}</div>
+                </div>
+            `;
+        }
+        const developerDetails = buildHostedGraphFocusDeveloperDetailsHtml(payload || {}, snapshot);
         return `
             <div
                 class="agent-pane-block agent-pane-block--graph-focus agent-pane-block--focus-runtime"
-                data-agent-graph-focus-runtime-only="true"
+                data-agent-hosted-focus-mode="true"
+                data-agent-hosted-focus-anchor-id="${escapeHtml(snapshot.anchorId)}"
             >
-                <div
-                    id="agent-graph-focus-workspace-host"
-                    class="agent-graph-focus-workspace-host"
-                    data-agent-graph-focus-workspace-host="true"
-                ></div>
+                ${buildGraphFocusSnapshotGraphHtml(snapshot, { interactive: true })}
+                ${buildGraphFocusPaneReaderHtml()}
                 ${developerDetails}
             </div>
         `;
@@ -2269,14 +2373,12 @@
         state.graphFocusRenderToken += 1;
         const renderToken = state.graphFocusRenderToken;
         const diagnostics = buildGraphFocusDiagnostics(payload, matchedSpans, renderToken);
-        if (isGraphFocusRuntimeOnlyPayload(payload)) {
-            restoreGraphFocusRuntime();
-            body.innerHTML = buildGraphFocusRuntimeOnlyHtml(payload);
-            openGraphFocusRuntimeForPayload(payload);
+        if (isHostedGraphFocusPayload(payload)) {
+            body.innerHTML = buildGraphFocusHostedModeHtml(payload);
+            bindHostedGraphFocusMode(body, payload);
             setLastGraphFocusDiagnostics(null);
             return;
         }
-        restoreGraphFocusRuntime();
         body.innerHTML = buildGraphFocusLoadingHtml(payload);
         const rendered = await renderGraphFocusSourceMarkdown(body, payload, matchedSpans, renderToken, diagnostics);
         if (rendered || renderToken !== state.graphFocusRenderToken || !state.panes['graph-focus'].open) {
@@ -2296,6 +2398,234 @@
         body.innerHTML = buildGraphFocusFallbackHtml(payload, matchedSpans, diagnostics);
         setLastGraphFocusDiagnostics(diagnostics);
         publishGraphFocusDiagnostics(payload, diagnostics);
+    }
+
+    function resolveGraphNodeForHostedFocus(nodeId) {
+        const normalizedNodeId = normalizeKnowledgeGraphText(nodeId);
+        const graphView = window.NoteConnectionGraphView;
+        if (!normalizedNodeId || !graphView || typeof graphView.resolveNodeById !== 'function') {
+            return null;
+        }
+        try {
+            const node = graphView.resolveNodeById(normalizedNodeId);
+            return node && typeof node === 'object' ? node : null;
+        } catch (error) {
+            console.warn('[AgentWorkspace] hosted focus node resolver failed:', error);
+            return null;
+        }
+    }
+
+    function resolveHostedFocusNodeLabel(nodeId, snapshot, node) {
+        const normalizedNodeId = normalizeKnowledgeGraphText(nodeId);
+        const snapshotNode = snapshot && Array.isArray(snapshot.nodes)
+            ? snapshot.nodes.find((candidate) => candidate.id === normalizedNodeId)
+            : null;
+        return normalizeKnowledgeGraphText(
+            snapshotNode && snapshotNode.label
+            || node && (node.label || node.title || node.name)
+            || normalizedNodeId
+        );
+    }
+
+    function collectHostedFocusNodeSourcePaths(node, payload, matchedSpans) {
+        const paths = [];
+        const seen = new Set();
+        const appendPath = function (value) {
+            const normalized = String(value || '').trim();
+            if (!normalized || seen.has(normalized)) {
+                return;
+            }
+            seen.add(normalized);
+            paths.push(normalized);
+        };
+        const metadata = node && node.metadata && typeof node.metadata === 'object'
+            ? node.metadata
+            : {};
+        [
+            node && node.sourcePath,
+            node && node.filepath,
+            node && node.filePath,
+            metadata.sourcePath,
+            metadata.filepath,
+            metadata.filePath,
+        ].forEach(appendPath);
+        normalizeMatchedSpans(matchedSpans).forEach((span) => {
+            appendPath(span && span.sourcePath);
+            const citation = span && typeof span.citation === 'object' ? span.citation : null;
+            appendPath(citation && citation.sourcePath);
+        });
+        if (paths.length <= 0) {
+            resolveGraphFocusCandidatePaths(payload || {}, normalizeMatchedSpans(matchedSpans)).forEach(appendPath);
+        }
+        return paths;
+    }
+
+    async function resolveHostedFocusNodeSourcePaths(nodeId, payload, matchedSpans) {
+        const node = resolveGraphNodeForHostedFocus(nodeId);
+        const paths = collectHostedFocusNodeSourcePaths(node, payload, matchedSpans);
+        if (paths.length > 0) {
+            return {
+                node,
+                paths,
+            };
+        }
+        if (
+            window.reader
+            && typeof window.reader.resolveNodeTarget === 'function'
+            && normalizeKnowledgeGraphText(nodeId)
+        ) {
+            try {
+                const target = await window.reader.resolveNodeTarget(normalizeKnowledgeGraphText(nodeId), '');
+                const resolvedPath = String(target && target.filePath || '').trim();
+                if (resolvedPath) {
+                    return {
+                        node,
+                        paths: [resolvedPath],
+                    };
+                }
+            } catch (_error) {
+                // The pane-local reader can still surface a deterministic empty state below.
+            }
+        }
+        return {
+            node,
+            paths: [],
+        };
+    }
+
+    function resolveHostedFocusMatchedSpans(payload, nodeId, nodeLabel) {
+        const normalizedNodeId = normalizeKnowledgeGraphText(nodeId).toLowerCase();
+        const normalizedNodeLabel = normalizeKnowledgeGraphText(nodeLabel).toLowerCase();
+        const matchedSpans = normalizeMatchedSpans(payload && payload.matchedSpans);
+        if (matchedSpans.length <= 0) {
+            return [];
+        }
+        const payloadAnchorIds = [
+            payload && payload.graphTargetId,
+            payload && payload.graphNodeId,
+            payload && payload.targetId,
+            payload && payload.nodeId,
+            payload && payload.atomId,
+        ]
+            .map((value) => normalizeKnowledgeGraphText(value).toLowerCase())
+            .filter(Boolean);
+        if (payloadAnchorIds.includes(normalizedNodeId)) {
+            return matchedSpans;
+        }
+        return matchedSpans.filter((span) => {
+            const citation = span && typeof span.citation === 'object' ? span.citation : null;
+            const candidates = [
+                span && span.atomId,
+                span && span.title,
+                citation && citation.atomId,
+                citation && citation.title,
+            ]
+                .map((value) => normalizeKnowledgeGraphText(value).toLowerCase())
+                .filter(Boolean);
+            return candidates.includes(normalizedNodeId)
+                || (normalizedNodeLabel && candidates.includes(normalizedNodeLabel));
+        });
+    }
+
+    async function openHostedFocusPaneReader(payload, nodeId) {
+        const body = getPaneBodyElement('graph-focus');
+        const readerShell = body ? body.querySelector('[data-agent-focus-pane-reader="true"]') : null;
+        const readerTitle = readerShell ? readerShell.querySelector('[data-agent-focus-pane-reader-title="true"]') : null;
+        const readerBody = readerShell ? readerShell.querySelector('[data-agent-focus-pane-reader-body="true"]') : null;
+        if (!readerShell || !readerBody) {
+            return false;
+        }
+        const snapshot = resolveGraphFocusHostedSnapshot(payload || {});
+        const node = resolveGraphNodeForHostedFocus(nodeId);
+        const nodeLabel = resolveHostedFocusNodeLabel(nodeId, snapshot, node);
+        const matchedSpans = resolveHostedFocusMatchedSpans(payload || {}, nodeId, nodeLabel);
+        state.graphFocusReaderRenderToken += 1;
+        const renderToken = state.graphFocusReaderRenderToken;
+        if (readerTitle) {
+            readerTitle.textContent = nodeLabel || normalizeKnowledgeGraphText(nodeId);
+        }
+        readerShell.hidden = false;
+        readerBody.innerHTML = `
+            <div
+                class="agent-focus-pane-reader-markdown"
+                data-agent-focus-pane-reader-markdown="true"
+                data-agent-preview-render-token="${String(renderToken)}"
+            >
+                ${escapeHtml(translate('reader_loading', 'Loading reader content...'))}
+            </div>
+        `;
+        const renderedHost = readerBody.querySelector('[data-agent-focus-pane-reader-markdown="true"]');
+        const resolved = await resolveHostedFocusNodeSourcePaths(nodeId, payload || {}, matchedSpans);
+        if (renderToken !== state.graphFocusReaderRenderToken || !state.panes['graph-focus'].open) {
+            return true;
+        }
+        if (!resolved.paths.length) {
+            readerBody.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.knowledge.previewUnavailable', 'Source preview unavailable.'))}</div>`;
+            return false;
+        }
+        const rendered = await renderMarkdownPreviewIntoHost(renderedHost, resolved.paths, matchedSpans, renderToken);
+        if (!rendered && renderToken === state.graphFocusReaderRenderToken && state.panes['graph-focus'].open) {
+            readerBody.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.knowledge.previewUnavailable', 'Source preview unavailable.'))}</div>`;
+        }
+        return rendered;
+    }
+
+    function switchHostedFocusNode(payload, nodeId) {
+        const normalizedNodeId = normalizeKnowledgeGraphText(nodeId);
+        if (!normalizedNodeId) {
+            return false;
+        }
+        const snapshot = resolveFocusModeSnapshot(normalizedNodeId);
+        const node = resolveGraphNodeForHostedFocus(normalizedNodeId);
+        const nodeLabel = resolveHostedFocusNodeLabel(normalizedNodeId, snapshot, node);
+        const nextPayload = {
+            ...(payload || {}),
+            atomId: normalizedNodeId,
+            nodeId: normalizedNodeId,
+            targetId: normalizedNodeId,
+            graphTargetId: normalizedNodeId,
+            graphNodeId: normalizedNodeId,
+            graphTargetLabel: nodeLabel || normalizedNodeId,
+            title: nodeLabel || normalizedNodeId,
+            focusModeSnapshot: snapshot,
+            presentationMode: 'focus-mode',
+        };
+        state.panes['graph-focus'].payload = nextPayload;
+        renderGraphFocusBody(nextPayload);
+        return true;
+    }
+
+    function bindHostedGraphFocusMode(body, payload) {
+        if (!body) {
+            return;
+        }
+        const readerCloseButton = body.querySelector('[data-agent-focus-pane-reader-close="true"]');
+        const readerShell = body.querySelector('[data-agent-focus-pane-reader="true"]');
+        if (readerCloseButton && readerShell) {
+            readerCloseButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                readerShell.hidden = true;
+            });
+        }
+        body.querySelectorAll('[data-agent-focus-mode-node-id]').forEach((nodeButton) => {
+            nodeButton.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+            nodeButton.addEventListener('dblclick', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                const nodeId = normalizeKnowledgeGraphText(nodeButton.getAttribute('data-agent-focus-mode-node-id'));
+                if (!nodeId) {
+                    return;
+                }
+                if (nodeButton.getAttribute('data-agent-focus-mode-anchor') === 'true') {
+                    void openHostedFocusPaneReader(payload || {}, nodeId);
+                    return;
+                }
+                switchHostedFocusNode(payload || {}, nodeId);
+            });
+        });
     }
 
     function resolveKnowledgePointSourcePath(item) {
@@ -2412,45 +2742,11 @@
         }
     }
 
-    function focusKnowledgePointInGraphRuntime(atomId) {
-        const normalizedAtomId = String(atomId || '').trim();
-        if (!normalizedAtomId) {
-            return false;
-        }
-        try {
-            if (
-                window.NoteConnectionGraphView
-                && typeof window.NoteConnectionGraphView.openFocusModeById === 'function'
-            ) {
-                return window.NoteConnectionGraphView.openFocusModeById(normalizedAtomId) === true;
-            }
-            if (typeof window.focusOnNode === 'function') {
-                window.focusOnNode(normalizedAtomId);
-                return true;
-            }
-            if (
-                window.NoteConnectionGraphView
-                && typeof window.NoteConnectionGraphView.resolveNodeById === 'function'
-                && typeof window.enterFocusMode === 'function'
-            ) {
-                const node = window.NoteConnectionGraphView.resolveNodeById(normalizedAtomId);
-                if (node) {
-                    window.enterFocusMode(node);
-                    return true;
-                }
-            }
-        } catch (error) {
-            console.warn('[AgentWorkspace] graph focus runtime rejected knowledge point focus:', error);
-        }
-        return false;
-    }
-
     function openRelatedFocusForKnowledgePoint(item) {
         ensureWorkspaceVisible();
         const graphTarget = resolveKnowledgePointGraphTarget(item, null, {
             includeFocusModeSnapshot: isDeveloperModeEnabled(),
         });
-        focusKnowledgePointInGraphRuntime(graphTarget.graphNodeId || graphTarget.atomId);
         const payload = buildKnowledgePointFocusPayload(item, graphTarget);
         payload.presentationMode = 'focus-mode';
         if (!payload.focusModeSnapshot && isDeveloperModeEnabled()) {
@@ -2800,133 +3096,461 @@
         };
     }
 
-    function scheduleGodotFuturePathRetry(payload) {
-        if (godotFuturePathRetryCount >= 8) {
+    function resolveHostedFuturePathSourceGraphData() {
+        if (typeof graphData !== 'undefined' && graphData && Array.isArray(graphData.nodes)) {
+            return graphData;
+        }
+        if (window.graphData && Array.isArray(window.graphData.nodes)) {
+            return window.graphData;
+        }
+        return null;
+    }
+
+    function normalizeHostedFuturePathNodeLabel(node) {
+        return normalizeKnowledgeGraphText(node && (node.label || node.title || node.name || node.id));
+    }
+
+    function resolveHostedFuturePathTargetNode(config, payload, sourceData) {
+        const sourceNodes = sourceData && Array.isArray(sourceData.nodes) ? sourceData.nodes : [];
+        const candidates = []
+            .concat(config && config.targetId ? [config.targetId] : [])
+            .concat(Array.isArray(config && config.targetIds) ? config.targetIds : [])
+            .concat([
+                payload && payload.graphTargetLabel,
+                payload && payload.title,
+                payload && payload.atomId,
+            ])
+            .map((value) => normalizeKnowledgeGraphText(value))
+            .filter(Boolean);
+        const seen = new Set();
+        for (const candidate of candidates) {
+            if (seen.has(candidate)) {
+                continue;
+            }
+            seen.add(candidate);
+            const exactId = sourceNodes.find((node) => normalizeKnowledgeGraphText(node && node.id) === candidate);
+            if (exactId) {
+                return exactId;
+            }
+            const lookupKey = candidate.toLowerCase();
+            const labelMatches = sourceNodes.filter((node) => normalizeHostedFuturePathNodeLabel(node).toLowerCase() === lookupKey);
+            if (labelMatches.length === 1) {
+                return labelMatches[0];
+            }
+        }
+        const graphView = window.NoteConnectionGraphView;
+        if (graphView && typeof graphView.resolveNodeById === 'function') {
+            for (const candidate of candidates) {
+                try {
+                    const resolvedNode = graphView.resolveNodeById(candidate);
+                    const resolvedId = normalizeKnowledgeGraphText(resolvedNode && resolvedNode.id);
+                    if (!resolvedId) {
+                        continue;
+                    }
+                    const exactId = sourceNodes.find((node) => normalizeKnowledgeGraphText(node && node.id) === resolvedId);
+                    if (exactId) {
+                        return exactId;
+                    }
+                } catch (_error) {
+                    // Fall back to the source graph lookup above.
+                }
+            }
+        }
+        return null;
+    }
+
+    function createHostedFuturePathGraph(sourceData) {
+        const GraphCtor = window.Graph;
+        const PathEngineCtor = window.PathEngine;
+        if (typeof GraphCtor !== 'function' || typeof PathEngineCtor !== 'function') {
+            return null;
+        }
+        const graph = new GraphCtor();
+        const sourceNodes = Array.isArray(sourceData && sourceData.nodes) ? sourceData.nodes : [];
+        const sourceEdges = Array.isArray(sourceData && sourceData.edges)
+            ? sourceData.edges
+            : (Array.isArray(sourceData && sourceData.links) ? sourceData.links : []);
+        sourceNodes.forEach((node) => {
+            const nodeId = normalizeKnowledgeGraphText(node && node.id);
+            if (!nodeId) {
+                return;
+            }
+            graph.addNode({
+                ...node,
+                id: nodeId,
+                label: normalizeHostedFuturePathNodeLabel(node) || nodeId,
+                inDegree: Number(node && node.inDegree) || 0,
+                outDegree: Number(node && node.outDegree) || 0,
+                centrality: Number(node && node.centrality) || 0,
+            });
+        });
+        sourceEdges.forEach((edge) => {
+            const sourceId = normalizeKnowledgeGraphText(edge && (typeof edge.source === 'object' ? edge.source.id : edge.source));
+            const targetId = normalizeKnowledgeGraphText(edge && (typeof edge.target === 'object' ? edge.target.id : edge.target));
+            if (!sourceId || !targetId) {
+                return;
+            }
+            try {
+                graph.addEdge(
+                    sourceId,
+                    targetId,
+                    normalizeKnowledgeGraphText(edge && (edge.type || edge.relationKind || edge.kind)) || 'related',
+                    Number(edge && edge.weight) || 1
+                );
+            } catch (_error) {
+                // Ignore edges whose endpoints are absent from the bundled graph data.
+            }
+        });
+        return {
+            graph,
+            engine: new PathEngineCtor(graph),
+        };
+    }
+
+    function ensureHostedFuturePathExpansionState(targetId) {
+        const normalizedTargetId = normalizeKnowledgeGraphText(targetId);
+        if (!normalizedTargetId) {
+            state.godotFuturePath.expandedNodeIds = [];
+            state.godotFuturePath.collapsedNodeIds = [];
+            state.godotFuturePath.activeTargetId = '';
             return;
         }
-        godotFuturePathRetryCount += 1;
-        if (godotFuturePathRetryTimer) {
-            clearTimeout(godotFuturePathRetryTimer);
+        if (state.godotFuturePath.activeTargetId !== normalizedTargetId) {
+            state.godotFuturePath.activeTargetId = normalizedTargetId;
+            state.godotFuturePath.expandedNodeIds = [normalizedTargetId];
+            state.godotFuturePath.collapsedNodeIds = [];
         }
-        godotFuturePathRetryTimer = setTimeout(function () {
-            godotFuturePathRetryTimer = null;
-            dispatchGodotFuturePathForPayload(payload || {});
-        }, 150);
+        if (!state.godotFuturePath.expandedNodeIds.includes(normalizedTargetId)) {
+            state.godotFuturePath.expandedNodeIds.unshift(normalizedTargetId);
+        }
+        state.godotFuturePath.collapsedNodeIds = state.godotFuturePath.collapsedNodeIds
+            .filter((nodeId) => nodeId !== normalizedTargetId);
     }
 
-    function applyGodotFuturePathProducerState(pathApp, config) {
-        if (!pathApp || !config || !config.targetId) {
-            return;
+    function buildHostedGodotFuturePathProjection(payload, config) {
+        const sourceData = resolveHostedFuturePathSourceGraphData();
+        if (!sourceData) {
+            return {
+                config,
+                available: false,
+                reason: 'missing_graph_data',
+                treeLayout: null,
+                targetId: config && config.targetId || '',
+                targetLabel: resolveLearningPathTitle(payload || {}),
+            };
         }
-        if (pathApp.runtimeConfig && typeof pathApp.runtimeConfig === 'object') {
-            pathApp.runtimeConfig.mode = 'diffusion';
-            pathApp.runtimeConfig.strategy = 'core';
-            pathApp.runtimeConfig.layout = 'orbital';
-            pathApp.runtimeConfig.targetId = config.targetId;
-            pathApp.runtimeConfig.targetIds = Array.isArray(config.targetIds)
-                ? config.targetIds.slice()
-                : [config.targetId];
+        const targetNode = resolveHostedFuturePathTargetNode(config, payload || {}, sourceData);
+        if (!targetNode) {
+            return {
+                config,
+                available: false,
+                reason: 'target_not_found',
+                treeLayout: null,
+                targetId: config && config.targetId || '',
+                targetLabel: resolveLearningPathTitle(payload || {}),
+            };
         }
-        pathApp.currentTargetId = config.targetId;
-        pathApp.currentTargetIds = Array.isArray(config.targetIds)
-            ? config.targetIds.slice()
-            : [config.targetId];
-        pathApp.centralNodeId = config.targetId;
+        const targetId = normalizeKnowledgeGraphText(targetNode.id);
+        const targetLabel = normalizeHostedFuturePathNodeLabel(targetNode) || targetId;
+        const graphRuntime = createHostedFuturePathGraph(sourceData);
+        if (!graphRuntime) {
+            return {
+                config,
+                available: false,
+                reason: 'missing_path_core',
+                treeLayout: null,
+                targetId,
+                targetLabel,
+            };
+        }
+        ensureHostedFuturePathExpansionState(targetId);
+        try {
+            const completedSet = new Set();
+            const forcedExpansionSet = new Set([targetId]);
+            const result = graphRuntime.engine.diffusionLearning(targetId, 'core', completedSet, forcedExpansionSet);
+            const collapsedSet = new Set(state.godotFuturePath.collapsedNodeIds);
+            const expansionOrder = state.godotFuturePath.expandedNodeIds.slice();
+            const treeLayout = graphRuntime.engine.getTreeLayout(
+                targetId,
+                result,
+                collapsedSet,
+                expansionOrder,
+                true,
+                { verticalGap: 240 }
+            );
+            return {
+                config: {
+                    ...config,
+                    targetId,
+                    target_id: targetId,
+                    targetIds: [targetId].concat((config.targetIds || []).filter((id) => id !== targetId)),
+                },
+                available: Boolean(treeLayout && Array.isArray(treeLayout.nodes) && treeLayout.nodes.length > 0),
+                reason: treeLayout ? '' : 'empty_tree_layout',
+                treeLayout,
+                targetId,
+                targetLabel,
+                pathNodeCount: Array.isArray(result && result.nodes) ? result.nodes.length : 0,
+                pathEdgeCount: Array.isArray(result && result.edges) ? result.edges.length : 0,
+            };
+        } catch (error) {
+            return {
+                config,
+                available: false,
+                reason: String(error && error.message || error || 'path_engine_failed'),
+                treeLayout: null,
+                targetId,
+                targetLabel,
+            };
+        }
     }
 
-    function dispatchGodotFuturePathViaPathApp(config) {
-        const pathApp = window.pathApp;
-        if (!pathApp || typeof pathApp !== 'object') {
-            return false;
+    function projectHostedFuturePathLayout(treeLayout) {
+        const nodes = Array.isArray(treeLayout && treeLayout.nodes)
+            ? treeLayout.nodes
+                .map((node) => ({
+                    ...node,
+                    id: normalizeKnowledgeGraphText(node && node.id),
+                    label: normalizeKnowledgeGraphText(node && (node.label || node.id)),
+                    x: Number(node && node.x),
+                    y: Number(node && node.y),
+                }))
+                .filter((node) => node.id && Number.isFinite(node.x) && Number.isFinite(node.y))
+            : [];
+        if (nodes.length <= 0) {
+            return {
+                nodes: [],
+                edges: [],
+                hulls: [],
+                points: new Map(),
+            };
         }
-        applyGodotFuturePathProducerState(pathApp, config);
-        if (!window.__NC_AGENT_GODOT_FUTURE_PATH_INITIALIZED && typeof pathApp.init === 'function') {
-            pathApp.init(config.targetId);
-            window.__NC_AGENT_GODOT_FUTURE_PATH_INITIALIZED = true;
-        }
-        applyGodotFuturePathProducerState(pathApp, config);
-        if (typeof pathApp.applyRemoteConfigure === 'function') {
-            pathApp.applyRemoteConfigure(config);
-        }
-        if (typeof pathApp._sendBridgeMessage === 'function') {
-            pathApp._sendBridgeMessage('configure', config);
-        }
-        if (typeof pathApp.triggerUpdate === 'function') {
-            pathApp.triggerUpdate();
-        }
-        return true;
+        const minX = Math.min(...nodes.map((node) => node.x));
+        const maxX = Math.max(...nodes.map((node) => node.x));
+        const minY = Math.min(...nodes.map((node) => node.y));
+        const maxY = Math.max(...nodes.map((node) => node.y));
+        const width = Math.max(1, maxX - minX);
+        const height = Math.max(1, maxY - minY);
+        const points = new Map();
+        nodes.forEach((node) => {
+            points.set(node.id, {
+                x: 8 + ((node.x - minX) / width) * 84,
+                y: 14 + ((node.y - minY) / height) * 72,
+            });
+        });
+        const nodeIds = new Set(nodes.map((node) => node.id));
+        const edges = (Array.isArray(treeLayout && treeLayout.edges) ? treeLayout.edges : [])
+            .map((edge) => ({
+                from: normalizeKnowledgeGraphText(edge && (edge.from || edge.source || edge.sourceId)),
+                to: normalizeKnowledgeGraphText(edge && (edge.to || edge.target || edge.targetId)),
+            }))
+            .filter((edge) => nodeIds.has(edge.from) && nodeIds.has(edge.to));
+        const hulls = (Array.isArray(treeLayout && treeLayout.hulls) ? treeLayout.hulls : [])
+            .map((hull) => ({
+                groupNodeId: normalizeKnowledgeGraphText(hull && hull.groupNodeId),
+                memberIds: Array.isArray(hull && hull.memberIds)
+                    ? hull.memberIds.map((id) => normalizeKnowledgeGraphText(id)).filter((id) => nodeIds.has(id))
+                    : [],
+            }))
+            .filter((hull) => hull.groupNodeId && hull.memberIds.length > 0);
+        return {
+            nodes,
+            edges,
+            hulls,
+            points,
+        };
     }
 
-    function dispatchGodotFuturePathForPayload(payload) {
+    function buildHostedFuturePathSurfaceHtml(projection) {
+        const targetLabel = normalizeKnowledgeGraphText(projection && projection.targetLabel)
+            || normalizeKnowledgeGraphText(projection && projection.targetId)
+            || translate('agentWorkspace.learningPath.title', 'Learning Path');
+        const treeLayout = projection && projection.treeLayout;
+        const projected = projectHostedFuturePathLayout(treeLayout);
+        if (!projection || !projection.available || projected.nodes.length <= 0) {
+            const reason = normalizeKnowledgeGraphText(projection && projection.reason);
+            return `
+                <div
+                    class="agent-godot-future-path-shell"
+                    data-agent-godot-future-path-shell="true"
+                    data-agent-godot-future-path-hosted="true"
+                >
+                    <div class="agent-godot-future-path-title">${escapeHtml(targetLabel)}</div>
+                    <div class="agent-godot-future-path-status" data-agent-godot-future-path-status="true">
+                        ${escapeHtml(translate('agentWorkspace.learningPath.godotFuturePathUnavailable', 'Godot Future Path target is unavailable.'))}
+                        ${reason ? ` (${escapeHtml(reason)})` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        const edgeHtml = projected.edges.map((edge) => {
+            const source = projected.points.get(edge.from);
+            const target = projected.points.get(edge.to);
+            if (!source || !target) {
+                return '';
+            }
+            return `
+                <line
+                    class="agent-godot-future-path-edge"
+                    x1="${source.x}"
+                    y1="${source.y}"
+                    x2="${target.x}"
+                    y2="${target.y}"
+                ></line>
+            `;
+        }).join('');
+        const hullHtml = projected.hulls.map((hull) => {
+            const memberPoints = hull.memberIds
+                .map((nodeId) => projected.points.get(nodeId))
+                .filter(Boolean);
+            if (memberPoints.length <= 0) {
+                return '';
+            }
+            const xs = memberPoints.map((point) => point.x);
+            const ys = memberPoints.map((point) => point.y);
+            const minX = Math.max(1, Math.min(...xs) - 6);
+            const minY = Math.max(1, Math.min(...ys) - 6);
+            const width = Math.min(98 - minX, Math.max(...xs) - Math.min(...xs) + 12);
+            const height = Math.min(98 - minY, Math.max(...ys) - Math.min(...ys) + 12);
+            return `
+                <rect
+                    class="agent-godot-future-path-hull"
+                    x="${minX}"
+                    y="${minY}"
+                    width="${width}"
+                    height="${height}"
+                    rx="4"
+                    ry="4"
+                ></rect>
+            `;
+        }).join('');
+        const nodeHtml = projected.nodes.map((node) => {
+            const point = projected.points.get(node.id);
+            if (!point) {
+                return '';
+            }
+            const isCurrent = node.id === projection.targetId;
+            const nodeClass = [
+                'agent-godot-future-path-node',
+                node.isSpine ? 'agent-godot-future-path-node--spine' : 'agent-godot-future-path-node--tributary',
+                isCurrent ? 'agent-godot-future-path-node--current' : '',
+                node.isExpanded ? 'agent-godot-future-path-node--expanded' : '',
+            ].filter(Boolean).join(' ');
+            return `
+                <button
+                    type="button"
+                    class="${nodeClass}"
+                    data-agent-future-path-node-id="${escapeHtml(node.id)}"
+                    data-agent-future-path-node-spine="${node.isSpine ? 'true' : 'false'}"
+                    data-agent-future-path-node-has-prereqs="${node.hasPrereqs ? 'true' : 'false'}"
+                    data-agent-future-path-node-expanded="${node.isExpanded ? 'true' : 'false'}"
+                    style="left: ${point.x}%; top: ${point.y}%;"
+                    title="${escapeHtml(node.label || node.id)}"
+                    aria-label="${escapeHtml(node.label || node.id)}"
+                >
+                    <span>${escapeHtml(node.label || node.id)}</span>
+                    ${node.hasPrereqs && node.isSpine ? `<span class="agent-godot-future-path-node-badge">${node.isExpanded ? '-' : '+'}</span>` : ''}
+                </button>
+            `;
+        }).join('');
+        return `
+            <div
+                class="agent-godot-future-path-shell"
+                data-agent-godot-future-path-shell="true"
+                data-agent-godot-future-path-hosted="true"
+            >
+                <div class="agent-godot-future-path-header">
+                    <div class="agent-godot-future-path-title">${escapeHtml(targetLabel)}</div>
+                    <div class="agent-godot-future-path-status" data-agent-godot-future-path-status="true">
+                        ${escapeHtml(translate('agentWorkspace.learningPath.godotFuturePathRequested', 'Godot Future Path requested: Diffusion / Core'))}
+                    </div>
+                </div>
+                <div
+                    class="agent-godot-future-path-surface"
+                    data-agent-godot-future-path-surface="true"
+                    data-agent-godot-future-path-target-id="${escapeHtml(projection.targetId)}"
+                >
+                    <svg class="agent-godot-future-path-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                        ${hullHtml}
+                        ${edgeHtml}
+                    </svg>
+                    ${nodeHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    function buildHostedGodotFuturePathForPayload(payload) {
         const config = buildGodotFuturePathRequest(payload || {});
         if (!config) {
-            scheduleGodotFuturePathRetry(payload || {});
-            return false;
+            state.godotFuturePath.request = null;
+            state.godotFuturePath.projection = null;
+            return null;
         }
-        state.godotFuturePath.request = { ...config };
-        window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST = { ...config };
-
-        let dispatched = false;
-        const pathModeApi = window.NoteConnectionPathMode;
-        if (
-            pathModeApi
-            && typeof pathModeApi.openGodotFuturePathById === 'function'
-        ) {
-            try {
-                const result = pathModeApi.openGodotFuturePathById(config.targetId, {
-                    config,
-                    source: 'agent-workspace-learning-path',
-                });
-                dispatched = true;
-                state.godotFuturePath.lastDispatch = {
-                    runtime: 'NoteConnectionPathMode',
-                    async: Boolean(result && typeof result.then === 'function'),
-                    targetId: config.targetId,
-                };
-                if (result && typeof result.catch === 'function') {
-                    result.catch((error) => {
-                        console.warn('[AgentWorkspace] Godot Future Path dispatch failed:', error);
-                        scheduleGodotFuturePathRetry(payload || {});
-                    });
-                }
-            } catch (error) {
-                console.warn('[AgentWorkspace] Godot Future Path API rejected request:', error);
+        const projection = buildHostedGodotFuturePathProjection(payload || {}, config);
+        const effectiveConfig = projection && projection.config ? projection.config : config;
+        state.godotFuturePath.request = { ...effectiveConfig };
+        state.godotFuturePath.projection = projection ? JSON.parse(JSON.stringify(projection)) : null;
+        state.godotFuturePath.lastDispatch = projection
+            ? {
+                runtime: 'hosted-path-engine',
+                targetId: projection.targetId,
+                available: projection.available === true,
+                reason: projection.reason || '',
+                treeNodeCount: projection.treeLayout && Array.isArray(projection.treeLayout.nodes)
+                    ? projection.treeLayout.nodes.length
+                    : 0,
             }
-        }
+            : null;
+        window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST = { ...effectiveConfig };
+        window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_LAYOUT = projection && projection.treeLayout
+            ? JSON.parse(JSON.stringify(projection.treeLayout))
+            : null;
+        return projection;
+    }
 
-        if (!dispatched) {
-            dispatched = dispatchGodotFuturePathViaPathApp(config);
-            if (dispatched) {
-                state.godotFuturePath.lastDispatch = {
-                    runtime: 'pathApp',
-                    targetId: config.targetId,
-                };
-            }
+    function toggleHostedFuturePathExpansion(nodeId, payload) {
+        const normalizedNodeId = normalizeKnowledgeGraphText(nodeId);
+        if (!normalizedNodeId) {
+            return;
         }
-
-        const pathApp = window.pathApp;
-        if (pathApp && typeof pathApp.requestBridgeWindowVisibility === 'function') {
-            void pathApp.requestBridgeWindowVisibility(true, {
-                waitMs: 1600,
-                reason: 'agent-workspace-godot-future-path',
-            });
-        }
-        if (
-            window.__TAURI__
-            && window.__TAURI__.core
-            && typeof window.__TAURI__.core.invoke === 'function'
-        ) {
-            void window.__TAURI__.core.invoke('toggle_pathmode_window', { showGodot: true })
-                .catch((error) => {
-                    console.warn('[AgentWorkspace] toggle_pathmode_window failed for Godot Future Path:', error);
-                });
-        }
-        if (!dispatched) {
-            scheduleGodotFuturePathRetry(payload || {});
+        const expanded = new Set(state.godotFuturePath.expandedNodeIds);
+        const collapsed = new Set(state.godotFuturePath.collapsedNodeIds);
+        if (expanded.has(normalizedNodeId)) {
+            expanded.delete(normalizedNodeId);
+            collapsed.add(normalizedNodeId);
         } else {
-            godotFuturePathRetryCount = 0;
+            expanded.add(normalizedNodeId);
+            collapsed.delete(normalizedNodeId);
         }
-        return dispatched;
+        state.godotFuturePath.expandedNodeIds = Array.from(expanded);
+        state.godotFuturePath.collapsedNodeIds = Array.from(collapsed);
+        renderLearningPathBody(payload || state.panes['learning-path'].payload || {});
+    }
+
+    function bindHostedFuturePathSurface(body, payload) {
+        if (!body) {
+            return;
+        }
+        body.querySelectorAll('[data-agent-future-path-node-id]').forEach((nodeButton) => {
+            nodeButton.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+            nodeButton.addEventListener('dblclick', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (
+                    nodeButton.getAttribute('data-agent-future-path-node-spine') !== 'true'
+                    || nodeButton.getAttribute('data-agent-future-path-node-has-prereqs') !== 'true'
+                ) {
+                    return;
+                }
+                toggleHostedFuturePathExpansion(
+                    nodeButton.getAttribute('data-agent-future-path-node-id'),
+                    payload || {}
+                );
+            });
+        });
     }
 
     function renderLearningPathBody(payload) {
@@ -2934,23 +3558,12 @@
         if (!body) {
             return;
         }
-        const title = resolveLearningPathTitle(payload || {});
-        const config = buildGodotFuturePathRequest(payload || {});
-        const targetLabel = normalizeKnowledgeGraphText(payload && payload.graphTargetLabel) || title;
+        const projection = buildHostedGodotFuturePathForPayload(payload || {});
         body.innerHTML = `
-            <div
-                class="agent-godot-future-path-shell"
-                data-agent-godot-future-path-shell="true"
-            >
-                <div class="agent-godot-future-path-title">${escapeHtml(targetLabel)}</div>
-                <div class="agent-godot-future-path-status" data-agent-godot-future-path-status="true">
-                    ${escapeHtml(config
-                        ? translate('agentWorkspace.learningPath.godotFuturePathRequested', 'Godot Future Path requested: Diffusion / Core')
-                        : translate('agentWorkspace.learningPath.godotFuturePathUnavailable', 'Godot Future Path target is unavailable.'))}
-                </div>
-            </div>
+            ${buildHostedFuturePathSurfaceHtml(projection)}
             ${buildLearningPathDeveloperDetailsHtml(payload || {})}
         `;
+        bindHostedFuturePathSurface(body, payload || {});
     }
 
     function humanizeEvidenceRelationKind(value) {
@@ -6517,14 +7130,14 @@
         initialized: false,
         promotionPane: null,
         graphFocusRenderToken: 0,
+        graphFocusReaderRenderToken: 0,
         graphFocusDiagnostics: null,
-        graphFocusRuntime: {
-            mounted: false,
-            snapshot: null,
-        },
         godotFuturePath: {
             request: null,
             lastDispatch: null,
+            expandedNodeIds: [],
+            collapsedNodeIds: [],
+            projection: null,
         },
         panes: {
             'graph-focus': {
@@ -6655,95 +7268,6 @@
         return rendered;
     }
 
-    function rememberGraphFocusRuntimeNode() {
-        if (state.graphFocusRuntime.snapshot) {
-            return state.graphFocusRuntime.snapshot;
-        }
-        const node = getElement(GRAPH_FOCUS_RUNTIME_ELEMENT_ID);
-        if (!node) {
-            return null;
-        }
-        const parent = node.parentNode;
-        const nextSibling = node.nextSibling;
-        const snapshot = {
-            node,
-            parent,
-            nextSibling,
-            display: node.style.display || '',
-        };
-        state.graphFocusRuntime.snapshot = snapshot;
-        return snapshot;
-    }
-
-    function requestGraphFocusRuntimeResize() {
-        if (typeof window.dispatchEvent === 'function' && typeof window.Event === 'function') {
-            window.dispatchEvent(new Event('resize'));
-        }
-        window.setTimeout(function () {
-            if (typeof window.dispatchEvent === 'function' && typeof window.Event === 'function') {
-                window.dispatchEvent(new Event('resize'));
-            }
-        }, 60);
-    }
-
-    function mountGraphFocusRuntime() {
-        const host = getGraphFocusWorkspaceHost();
-        if (!host) {
-            return false;
-        }
-        const snapshot = rememberGraphFocusRuntimeNode();
-        if (!snapshot || !snapshot.node) {
-            host.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.graphFocus.runtimeUnavailable', 'Main graph runtime is unavailable.'))}</div>`;
-            return false;
-        }
-        if (snapshot.node.contains(host)) {
-            host.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.graphFocus.runtimeUnavailable', 'Main graph runtime is unavailable.'))}</div>`;
-            return false;
-        }
-        host.appendChild(snapshot.node);
-        snapshot.node.classList.add('agent-graph-focus-runtime-docked');
-        snapshot.node.style.display = 'block';
-        state.graphFocusRuntime.mounted = true;
-        requestGraphFocusRuntimeResize();
-        return true;
-    }
-
-    function restoreGraphFocusRuntime() {
-        const snapshot = state.graphFocusRuntime.snapshot;
-        if (!snapshot || !snapshot.node || !snapshot.parent) {
-            state.graphFocusRuntime.mounted = false;
-            return;
-        }
-        if (snapshot.nextSibling && snapshot.nextSibling.parentNode === snapshot.parent) {
-            snapshot.parent.insertBefore(snapshot.node, snapshot.nextSibling);
-        } else {
-            snapshot.parent.appendChild(snapshot.node);
-        }
-        snapshot.node.classList.remove('agent-graph-focus-runtime-docked');
-        snapshot.node.style.display = snapshot.display;
-        state.graphFocusRuntime.mounted = false;
-        requestGraphFocusRuntimeResize();
-    }
-
-    function openGraphFocusRuntimeForPayload(payload) {
-        const mounted = mountGraphFocusRuntime();
-        const targetId = resolveGraphFocusRuntimeTargetId(payload);
-        const graphView = window.NoteConnectionGraphView;
-        if (
-            targetId
-            && graphView
-            && typeof graphView.openFocusModeById === 'function'
-        ) {
-            try {
-                graphView.openFocusModeById(targetId);
-            } catch (error) {
-                console.warn('[AgentWorkspace] graph focus runtime rejected target:', error);
-            }
-        }
-        requestGraphFocusRuntimeResize();
-        return mounted;
-    }
-
     function syncPaneState(paneKey) {
         const paneState = state.panes[paneKey];
         setPaneAttribute(paneKey, 'data-open', paneState.open);
@@ -6754,8 +7278,6 @@
         updatePaneControlLabels();
         if (state.panes['graph-focus'].open) {
             renderGraphFocusBody(state.panes['graph-focus'].payload || {});
-        } else {
-            restoreGraphFocusRuntime();
         }
         if (state.panes['evidence'].open) {
             renderEvidenceBody(state.panes['evidence'].payload || {});
@@ -6767,7 +7289,6 @@
         }
         if (state.panes['learning-path'].open) {
             renderLearningPathBody(state.panes['learning-path'].payload || {});
-            dispatchGodotFuturePathForPayload(state.panes['learning-path'].payload || {});
         } else {
             const body = getPaneBodyElement('learning-path');
             if (body) {
@@ -7376,7 +7897,6 @@
             state.panes['graph-focus'].payload = null;
             state.graphFocusDiagnostics = null;
             window.__NC_LAST_AGENT_GRAPH_FOCUS_DIAGNOSTICS = null;
-            restoreGraphFocusRuntime();
             const body = getPaneBodyElement('graph-focus');
             if (body) {
                 body.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.graphFocus.emptyIdle', 'Graph focus pane is idle.'))}</div>`;
@@ -7409,7 +7929,6 @@
             }
             godotFuturePathRetryCount = 0;
             renderLearningPathBody(payload || {});
-            dispatchGodotFuturePathForPayload(payload || {});
             syncPaneState('learning-path');
             updatePaneControlLabels();
         },

@@ -2522,7 +2522,8 @@ body.agent-workspace-open .agent-workspace-drawer {
   align-items: center;
   justify-content: center;
   max-width: min(30%, 136px);
-  min-height: 34px;
+  min-width: 44px;
+  min-height: 44px;
   border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 999px;
   color: #f8fbff;
@@ -2533,6 +2534,33 @@ body.agent-workspace-open .agent-workspace-drawer {
   text-align: center;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.38);
   overflow-wrap: anywhere;
+}
+
+button.agent-focus-mode-node {
+  appearance: none;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+button.agent-focus-mode-node:hover {
+  filter: brightness(1.08);
+}
+
+button.agent-focus-mode-node:focus {
+  outline: none;
+}
+
+button.agent-focus-mode-node:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.95);
+  outline-offset: 3px;
+}
+
+button.agent-focus-mode-node:active {
+  filter: brightness(0.96);
 }
 
 .agent-focus-mode-node--anchor {
@@ -2703,39 +2731,74 @@ body.agent-workspace-open .agent-workspace-drawer {
   margin-top: 12px;
 }
 
-.agent-graph-focus-workspace-host {
-  min-height: min(72vh, 760px);
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.18);
+.agent-focus-pane-reader {
+  display: grid;
+  gap: 10px;
+  min-height: 220px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 8px;
-  background: rgba(2, 6, 12, 0.48);
+  background: rgba(2, 6, 12, 0.44);
+  overflow: hidden;
 }
 
-.agent-graph-focus-workspace-host #graph-container {
-  position: relative !important;
-  inset: auto !important;
-  width: 100% !important;
-  height: min(72vh, 760px) !important;
-  min-height: 360px;
+.agent-focus-pane-reader[hidden] {
+  display: none;
 }
 
-.agent-graph-focus-runtime-docked {
-  display: block !important;
+.agent-focus-pane-reader-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 10px 8px 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.54);
+}
+
+.agent-focus-pane-reader-title {
+  min-width: 0;
+  color: #f8fbff;
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.agent-focus-pane-reader-body {
+  min-height: 0;
+  max-height: min(48vh, 520px);
+  overflow: auto;
+  padding: 12px 14px 14px;
+}
+
+.agent-focus-pane-reader-markdown {
+  color: #dbe7f3;
+  font-size: 0.9rem;
+  line-height: 1.62;
 }
 
 .agent-godot-future-path-shell {
   display: grid;
-  gap: 10px;
-  min-height: 120px;
+  gap: 12px;
+  min-height: 280px;
   align-content: start;
 }
 
+.agent-godot-future-path-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .agent-godot-future-path-title {
+  min-width: 0;
   color: #f8fbff;
   font-size: 0.95rem;
   font-weight: 800;
   line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .agent-godot-future-path-status {
@@ -2746,6 +2809,126 @@ body.agent-workspace-open .agent-workspace-drawer {
   font-size: 0.84rem;
   line-height: 1.45;
   padding: 10px 12px;
+}
+
+.agent-godot-future-path-surface {
+  position: relative;
+  min-height: min(58vh, 620px);
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(2, 6, 12, 0.92)),
+    #0b1120;
+  isolation: isolate;
+}
+
+.agent-godot-future-path-lines {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.agent-godot-future-path-edge {
+  stroke: rgba(125, 211, 252, 0.38);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.agent-godot-future-path-hull {
+  fill: rgba(20, 184, 166, 0.08);
+  stroke: rgba(45, 212, 191, 0.24);
+  stroke-width: 0.8;
+  vector-effect: non-scaling-stroke;
+}
+
+.agent-godot-future-path-node {
+  appearance: none;
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  max-width: min(34%, 160px);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #dbeafe;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 750;
+  line-height: 1.22;
+  padding: 8px 10px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.agent-godot-future-path-node:hover {
+  border-color: rgba(125, 211, 252, 0.54);
+  filter: brightness(1.08);
+}
+
+.agent-godot-future-path-node:focus {
+  outline: none;
+}
+
+.agent-godot-future-path-node:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.95);
+  outline-offset: 3px;
+}
+
+.agent-godot-future-path-node:active {
+  filter: brightness(0.96);
+}
+
+.agent-godot-future-path-node--spine {
+  border-color: rgba(125, 211, 252, 0.44);
+  background: rgba(14, 116, 144, 0.78);
+  color: #ecfeff;
+}
+
+.agent-godot-future-path-node--tributary {
+  background: rgba(30, 41, 59, 0.88);
+}
+
+.agent-godot-future-path-node--current {
+  z-index: 3;
+  min-width: 76px;
+  min-height: 76px;
+  border-color: rgba(251, 191, 36, 0.78);
+  background: #facc15;
+  color: #1f1300;
+  box-shadow:
+    0 0 0 12px rgba(250, 204, 21, 0.12),
+    0 0 0 24px rgba(250, 204, 21, 0.05);
+}
+
+.agent-godot-future-path-node--expanded {
+  border-style: solid;
+}
+
+.agent-godot-future-path-node-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 0.78rem;
+  font-weight: 900;
 }
 
 body[data-agent-workspace-promotion="graph-focus"] #agent-learning-path-pane,

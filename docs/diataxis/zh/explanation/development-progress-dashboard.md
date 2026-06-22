@@ -3,10 +3,10 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
-## 2026-06-21 知识工作区运行时复用收口
+## 2026-06-22 知识工作区托管 Focus/Future Path 收口
 
 最新收口不是新的框架方向。
-它修正了上一版“图预览”折中：Knowledge Workspace 现在优先复用项目已有的图与路径运行时 owner，而不是维护一套平行的假预览。
+它修正了上一版“复用”的错误边界：Knowledge Workspace 现在复用已有 Focus-mode 与 Godot Future Path 的行为 / 数据契约，而不是把 Tauri 主图 DOM 重新挂到右侧 pane，也不是默认唤起 Godot 原生窗口。
 
 当前代码已经成立的事实：
 
@@ -14,11 +14,11 @@
 - 现有 DAG 仍在 synthesis 前由 `src/learning/graphContextAssembler.ts` 消费，并在 release-time 通过图感知 reviewer gate 再次参与判断；
 - `src/frontend/workspace_panes.js` 的命中文件列表现在使用紧凑问号帮助入口，而不是把说明文字直接堆进 workspace；
 - 命中文件的 source focus 继续以右侧 pane 为权威阅读面：点击后解析 source path、渲染 Markdown，并通过 line/snippet/offset provenance 投影 inline highlight；
-- `关联聚焦` 现在把真实主图 `#graph-container` 搬运到右侧 Knowledge Focus pane，并调用现有 graph-view Focus mode 打开解析后的节点；双击切换节点、双击打开内容等交互继续由同一套主图运行时负责；
-- `学习路径` 不再把浏览器 `path-container` 挂入右侧 pane，而是把选中的 DAG 节点通过 `NoteConnectionPathMode` / `path_app.js` / PathBridge 调度到现有 Godot Future Path 运行时；
-- Godot Future Path 请求固定为 `mode=diffusion`、`strategy=core`、`layout=orbital`、`focus_mode=true`；目标解析保留真实 DAG 节点 ID，UI 保留人类可读 label；
+- `关联聚焦` 现在托管一个隔离的 Focus-mode pane：它在 Knowledge Focus 区域渲染同一套解析后的 Focus snapshot 语义，保持主 `#graph-container` 留在原父节点，双击关联节点只切换 pane-local anchor，双击中心节点时 Markdown 阅读器也只在该 pane 内打开；relation/debug 细节仍只在 Developer Mode 下显示；
+- `学习路径` 不再挂载浏览器 `path-container`，也不再默认要求 Tauri/Godot 显示原生 Path 窗口；它解析选中 DAG 节点后，复用现有前端 `Graph` / `PathEngine` 契约，执行 `diffusionLearning(target, 'core', ...)` 与 `getTreeLayout(..., focusMode=true, { verticalGap: 240 })`；
+- Future Path 投影固定为 `mode=diffusion`、`strategy=core`、`layout=orbital`、`focus_mode=true`；目标解析保留真实 DAG 节点 ID，UI 保留人类可读 label；
 - 受影响的 source/focus/path 右侧窗口现在都有 close control；
-- `scripts/verify-agent-workspace-browser.js` 的 strict browser verification 已经持有用户报告的 `water glass.md` UI 回归面，包括 Godot Future Path `diffusion/core` 调度、拒绝把 `#path-container` 停靠进 pane、`关联聚焦` 停靠真实 `#graph-container`，以及通过 `NoteConnectionGraphView.getFocusNode()` 断言复用后的 Focus runtime 确实落到 `water glass`。
+- `scripts/verify-agent-workspace-browser.js` 的 strict browser verification 已经持有用户报告的 `water glass.md` UI 回归面，包括托管 Godot Future Path `diffusion/core` 投影、拒绝把 `#path-container` 停靠进 pane、拒绝调用 bridge/Tauri `showGodot=true`、拒绝停靠真实 `#graph-container`，以及断言托管 Focus anchor 确实是 `water glass`。
 
 代码 / 方案对齐：
 
@@ -27,15 +27,15 @@
 | 回答区不能变成 evidence dump | `conversationComposer.ts` 发布 `answerReleaseReview.publicAnswer`；graph/evidence diagnostics 留在次级 surface。 | 已实现 |
 | 用户需要知道命中文件可点击，但 workspace 不应常驻说明文案 | `workspace_panes.js` 将说明放入 hover/focus 触发的 help icon。 | 已实现 |
 | 单击命中文件应打开源文档并高亮依据 | source focus 消费 source-line provenance、line window、snippet，并在可用时使用 offset。 | 已实现基线 |
-| `关联聚焦` 应对应 Tauri Focus-mode 状态 | pane 停靠真实主图 `#graph-container`，并对解析后的节点调用现有 Focus mode；snapshot/relation 诊断只在 Developer Mode 下显示。 | 已实现 |
-| `学习路径` 应对应 Godot/Path-mode 设计 | pane 只作为状态/调度面，把解析后的 DAG 节点发给现有 Godot Future Path runtime，强制 `diffusion/core`，并刻意不挂载浏览器 `path-container`。 | 已实现 |
+| `关联聚焦` 应对应 Tauri Focus-mode 状态 | pane 在本地托管 Focus-mode 行为：同一套解析后的 snapshot 语义、pane-local 双击切换、pane-local Markdown 阅读器，不修改主图运行时；诊断只在 Developer Mode 下显示。 | 已实现 |
+| `学习路径` 应对应 Godot/Path-mode 设计 | pane 通过现有前端 `Graph` / `PathEngine` 的 `diffusion/core` + `treeLayout` 路径托管 Godot Future Path 数据契约；刻意不挂载浏览器 `path-container`，也不默认显示 Godot 原生窗口。 | 已实现 |
 | 最终回答需要鲁棒审核 / 纠错 owner | `answerReleaseReview.ts` 继续作为后端确定性 release-policy owner。 | 已实现基线 |
 | 兼容性必须保持 | 新增 graph-preview 与 provenance 字段保持 additive/optional；legacy response fields 继续有效。 | 已实现 |
 
 关键权衡现在更窄。
-Path 使用现有 Godot Future Path runtime，因为用户要求的对象是 Godot 扩散模式 / 核心策略下的 Future Path，而不是浏览器 Learning Path。
-Focus 可以直接复用主图 DOM/D3 运行时，因为它本来就在同一个 WebView 内；移动 `#graph-container` 比克隆或重画更能保持双击、reader 打开、focus 切换等行为一致。
-如果未来产品要求把 Godot 原生窗口真正嵌入右侧 pane，需要做原生窗口 reparent/container 级别的 Tauri/Godot 集成；当前最稳妥的复用是桥接调度并让 Godot 原窗口承载 Future Path。
+Focus 复用现在指行为契约复用，而不是 DOM owner 转移。移动 `#graph-container` 会让右侧 pane 意外接管 Tauri 主图生命周期，也会导致 Markdown 内容打开到错误的主界面 surface。
+Path 复用现在指 Godot Future Path 的数据契约复用：使用现有 `Graph` / `PathEngine` 生成 Godot TreeRenderer 消费的 treeLayout，而不是浏览器 / Tauri Learning Path，也不是原生窗口可见性开关。
+如果未来产品要求把 Godot 原生窗口真正嵌入右侧 pane，需要单独做 native window container/reparenting spike；它不应混入当前 Knowledge Workspace pane 实现。
 
 剩余工作已经转为校准：
 
@@ -1046,7 +1046,7 @@ Tauri-first reply rendering 基线已交付：
 - conversation 路由现在已返回带 typed capability descriptor 的本地知识点，当前已覆盖 `focus`、`learning path`、tutor 侧 `generate_quiz` / `recap` / `generate_transfer` / `generate_counterexample` / `follow_up`、query 侧 `compare_query_backends` / `inspect_query_backend_diagnostics` / `inspect_query_backend_comparison_history` / `inspect_query_backend_comparison_trend`、导师诊断侧 `inspect_tutor_adapter_telemetry` / `inspect_tutor_trace_diagnostics`、质量/会话诊断侧 `inspect_learning_quality_trend` / `inspect_learning_quality_history` / `inspect_session_plan_quality_trend` / `inspect_session_plan_quality_history`、session 侧 `inspect_session_history` / `build_study_session`，以及对话记忆召回 `inspect_conversation_memory`，并补齐 execution / failure / UI hint 语义（`src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/learning/types.ts`），
 - conversation 知识点动作链路现已收敛为 typed-only（`capabilities` 为唯一动作来源），后端响应与前端 pane 渲染均已移除 legacy `availableActions` fallback/统计路径（`src/learning/types.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/workspace_panes.js`、`src/agent_workspace.frontend.test.ts`、`src/knowledge.api.contract.test.ts`），
 - agent workspace 的 capability 执行分发已收敛为显式 execution-kind handlers（不再执行 legacy action fallback）；knowledge operation 已拆分为独立的 transport registry 与 request-builder registry，result presentation 也已拆分为 custom presenter、card-presentation descriptor 与 payload-builder 三层，并对 `unsupported_result_presentation*` 漂移统一走 fail-fast；parity 与前端 diagnostics 现已覆盖 transport / request-builder / custom-presentation / card-presentation / payload-builder / execution-kind 六类注册表完整性（`src/frontend/agent_workspace.js`、`src/agent_workspace.frontend.test.ts`、`src/agent_workspace.contract.parity.test.ts`），
-- 点击 `Learning Path` 不再停在文本预览，也不再停靠浏览器 `path-container`，而是通过 `NoteConnectionPathMode` / `path_app.js` / PathBridge 将解析后的 DAG 节点调度到现有 Godot Future Path runtime（`src/frontend/workspace_panes.js`、`src/frontend/agent_workspace.js`、`src/frontend/app.js`），
+- 点击 `Learning Path` 不再停在文本预览，也不再停靠浏览器 `path-container`，而是通过现有前端 `Graph` / `PathEngine` 的 `diffusion/core` + `treeLayout` 流程为解析后的 DAG 节点托管 Godot Future Path 数据契约，且默认不显示 Godot 原生窗口（`src/frontend/workspace_panes.js`、`src/frontend/agent_workspace.js`、`src/frontend/app.js`），
 - 主图谱区域已经为 workspace 预留真实宽度，使 conversation + graph focus + learning path 可以在同一 host-owned 布局中并存（`src/frontend/styles.css`），
 - graph focus 的 fullscreen 已升级为真实 graph workspace promotion，而不是只把右侧元信息卡片放大（`src/frontend/workspace_panes.js`、`src/frontend/styles.css`），
 - scoped-knowledge conversation 流现在也更诚实了：active folder target 会进入 request contract，server 会 selective hydrate 可能 title-match 的文档进入 workspace，conversation trace 也会返回 readiness + miss diagnostics，而不再只是给出一个空 top-k（`src/frontend/source_manager.js`、`src/frontend/agent_workspace.js`、`src/server.ts`、`src/routes/data.ts`、`src/learning/KnowledgeLearningPlatform.ts`），

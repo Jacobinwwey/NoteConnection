@@ -3,10 +3,10 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
-## 2026-06-21 Knowledge Workspace Runtime Reuse Closure
+## 2026-06-22 Knowledge Workspace Hosted Focus/Future Path Closure
 
 The latest closure is not a new framework direction.
-It corrects the prior graph-preview compromise: the Knowledge Workspace now reuses the existing main graph Focus runtime and Godot Path runtime where the project already has owners, instead of maintaining parallel fake preview paths.
+It corrects the prior reuse mistake: the Knowledge Workspace now reuses the existing Focus-mode and Godot Future Path behavior/data contracts without reparenting the main Tauri graph DOM or opening the native Godot window as the default pane behavior.
 
 What is now true in code:
 
@@ -14,11 +14,11 @@ What is now true in code:
 - the existing DAG is still consumed before synthesis by `src/learning/graphContextAssembler.ts` and again at release time through graph-aware reviewer gates,
 - the matched-file list in `src/frontend/workspace_panes.js` now uses a compact question-mark help affordance instead of dumping instructional copy into the workspace,
 - matched-file source focus remains right-pane-first: clicks resolve source paths, render Markdown, and project inline highlights through line/snippet/offset provenance paths,
-- `Related Focus` now docks the existing main graph `#graph-container` inside the Knowledge Focus pane and lets the same Focus-mode handlers own double-click switching and content opening; relation-edge/debug details remain Developer Mode only,
-- `Learning Path` no longer mounts the browser `path-container`; it dispatches the selected DAG node to the existing Godot Future Path runtime through `NoteConnectionPathMode` / `path_app.js` / PathBridge with `mode=diffusion` and `strategy=core`,
-- the learning-path target is resolved before dispatch so the Godot runtime receives the real graph node identity while the right pane keeps the human label visible,
+- `Related Focus` now hosts an isolated Focus-mode pane: it renders the same resolved Focus snapshot semantics in the Knowledge Focus area, keeps the main `#graph-container` in its original parent, switches the pane-local anchor on related-node double click, and opens Markdown content inside the pane-local reader when the anchor is double-clicked; relation-edge/debug details remain Developer Mode only,
+- `Learning Path` no longer mounts the browser `path-container` and no longer asks Tauri/Godot to show the native Path window by default; it resolves the selected DAG node and runs the existing frontend `Graph` / `PathEngine` contract with `diffusionLearning(target, 'core', ...)` plus `getTreeLayout(..., focusMode=true, { verticalGap: 240 })`,
+- the learning-path target is resolved before projection so the hosted Future Path uses the real graph node identity while the right pane keeps the human label visible,
 - right-pane windows now expose close controls on the affected source/focus/path surfaces,
-- strict browser verification in `scripts/verify-agent-workspace-browser.js` now owns the user-reported `water glass.md` UI regression surface, including Godot Future Path `diffusion/core` dispatch for `water glass`, refusal to dock `#path-container`, docking of the real `#graph-container` for Related Focus, and a `NoteConnectionGraphView.getFocusNode()` assertion that the reused Focus runtime actually lands on `water glass`.
+- strict browser verification in `scripts/verify-agent-workspace-browser.js` now owns the user-reported `water glass.md` UI regression surface, including hosted Godot Future Path `diffusion/core` projection for `water glass`, refusal to dock `#path-container`, refusal to call bridge/Tauri `showGodot=true`, refusal to dock the real `#graph-container`, and a hosted Focus anchor assertion for `water glass`.
 
 Code-vs-plan reconciliation:
 
@@ -27,15 +27,15 @@ Code-vs-plan reconciliation:
 | The answer area should not become an evidence dump | `conversationComposer.ts` publishes `answerReleaseReview.publicAnswer`; graph/evidence diagnostics stay in secondary surfaces. | Implemented |
 | Users need to discover that matched files are clickable without permanent workspace clutter | `workspace_panes.js` renders the instruction behind a help icon that appears on hover/focus. | Implemented |
 | Clicking a matched file should open source and highlight the basis | Source focus consumes source-line provenance, line windows, snippets, and offsets where available. | Implemented baseline |
-| `Related Focus` should correspond to the Tauri Focus-mode state | The pane docks the real main graph container and opens the existing Focus mode for the resolved node; snapshot/relation diagnostics are Developer Mode only. | Implemented |
-| `Learning Path` should correspond to the Godot/Path-mode design | The pane dispatches `diffusion/core` to the existing Godot Future Path runtime for the resolved DAG node and deliberately does not mount browser `path-container`. | Implemented |
+| `Related Focus` should correspond to the Tauri Focus-mode state | The pane hosts Focus-mode behavior locally: same resolved snapshot semantics, pane-local double-click switching, pane-local Markdown reader, no mutation of the main graph runtime; diagnostics are Developer Mode only. | Implemented |
+| `Learning Path` should correspond to the Godot/Path-mode design | The pane hosts the Godot Future Path data contract by using the existing frontend `Graph` / `PathEngine` `diffusion/core` + `treeLayout` path for the resolved DAG node; it deliberately does not mount browser `path-container` or show the native Godot window by default. | Implemented |
 | Final answers need a robust review/correction owner | `answerReleaseReview.ts` remains the deterministic backend release-policy owner. | Implemented baseline |
 | Compatibility must hold | New provenance/runtime-dispatch fields remain additive/optional; legacy response fields remain valid. | Implemented |
 
 The important tradeoff is now narrower.
-Focus reuses the same DOM/runtime owner by moving `#graph-container`; that preserves the main graph's event handlers instead of cloning a second graph.
-Path uses the existing Godot Future Path runtime because the requested surface is native Godot's diffusion/core Future Path, not Tauri/browser Learning Path.
-The browser pane is only a dispatch/status surface; embedding or reparenting the native Godot window into a DOM subtree would require a separate native window-container contract and is intentionally out of this slice.
+Focus reuse now means behavior-contract reuse, not DOM ownership transfer. Moving `#graph-container` made the pane accidentally own the main Tauri graph lifecycle, which violated isolation and opened Markdown in the wrong surface.
+Path reuse now means Godot Future Path data-contract reuse through the existing `Graph` / `PathEngine` tree layout consumed by Godot's TreeRenderer, not the browser/Tauri Learning Path and not a native-window visibility toggle.
+Embedding the native Godot window into the DOM remains a separate native window-container spike; it should not be smuggled into the Knowledge Workspace pane implementation.
 
 Remaining work has moved to calibration:
 
@@ -1033,7 +1033,7 @@ Current branch status for this slice:
 - default server bootstrap now injects a concrete local `tutorAdapter` while preserving the multi-adapter catalog (`local` + `cloud`), so normal runtime tutor execution can emit adapter telemetry and still degrade explicitly to guarded fallback behavior when needed,
 - conversation knowledge points are now typed-only (`capabilities` is the single action source), and legacy `availableActions` fallback telemetry/synthesis has been removed from both backend response shape and pane rendering (`src/learning/types.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/workspace_panes.js`, `src/agent_workspace.frontend.test.ts`, `src/knowledge.api.contract.test.ts`),
 - agent workspace capability execution dispatch now enforces explicit execution-kind handlers without legacy action fallback execution; knowledge operations are split into independent transport and request-builder registries, while result presentation is split into custom presenters plus card-presentation descriptors and payload-builder registries with fail-fast `unsupported_result_presentation*` drift semantics, and parity/frontend diagnostics now cover transport/request-builder/custom-presentation/card-presentation/payload-builder/execution-kind completeness (`src/frontend/agent_workspace.js`, `src/agent_workspace.frontend.test.ts`, `src/agent_workspace.contract.parity.test.ts`),
-- clicking `Learning Path` now dispatches the resolved DAG node to the existing Godot Future Path runtime through `NoteConnectionPathMode` / `path_app.js` / PathBridge instead of stopping at a text-only preview or docking the browser `path-container` (`src/frontend/workspace_panes.js`, `src/frontend/agent_workspace.js`, `src/frontend/app.js`),
+- clicking `Learning Path` now hosts the Godot Future Path data contract for the resolved DAG node through the existing frontend `Graph` / `PathEngine` `diffusion/core` + `treeLayout` flow instead of stopping at a text-only preview, docking the browser `path-container`, or showing the native Godot window by default (`src/frontend/workspace_panes.js`, `src/frontend/agent_workspace.js`, `src/frontend/app.js`),
 - the graph surface now reserves workspace width so conversation + graph-focus + learning-path can coexist in one host-owned layout (`src/frontend/styles.css`),
 - graph-focus fullscreen now promotes the real graph workspace instead of only enlarging a metadata card (`src/frontend/workspace_panes.js`, `src/frontend/styles.css`),
 - the scoped-knowledge conversation flow is now materially more honest about corpus readiness: active folder target flows into the request contract, the server selectively hydrates likely title-matching documents into the workspace, and conversation traces now include readiness + miss diagnostics instead of only returning an empty top-k result (`src/frontend/source_manager.js`, `src/frontend/agent_workspace.js`, `src/server.ts`, `src/routes/data.ts`, `src/learning/KnowledgeLearningPlatform.ts`),

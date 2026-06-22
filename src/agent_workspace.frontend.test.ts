@@ -1243,6 +1243,81 @@ function loadWorkspacePanesHarness(options: { withI18n?: boolean } = {}): Harnes
     };
 }
 
+function installHostedFuturePathRuntime(window: any, graphData?: { nodes: Array<Record<string, unknown>>; edges: Array<Record<string, unknown>> }) {
+    const sourceGraph = graphData || {
+        nodes: [
+            { id: 'sequence', label: 'sequence', outDegree: 1 },
+            { id: 'water glass', label: 'water glass', inDegree: 1, outDegree: 1, centrality: 1 },
+            { id: 'application', label: 'application', inDegree: 1 },
+            { id: 'atom_paths', label: 'Learning Paths', centrality: 0.7 },
+        ],
+        edges: [
+            { source: 'sequence', target: 'water glass', type: 'sequence', weight: 1 },
+            { source: 'water glass', target: 'application', type: 'application', weight: 1 },
+        ],
+    };
+    const calls = {
+        addNode: jest.fn(),
+        addEdge: jest.fn(),
+        diffusionLearning: jest.fn((...args: unknown[]) => {
+            const targetId = String(args[0] || '');
+            const strategy = String(args[1] || '');
+            return {
+            nodes: [{ id: targetId, strategy }],
+            edges: [],
+            };
+        }),
+        getTreeLayout: jest.fn((...args: unknown[]) => {
+            const targetId = String(args[0] || '');
+            const targetNode = sourceGraph.nodes.find((node) => String(node.id) === targetId);
+            const targetLabel = String(targetNode?.label || targetId);
+            return {
+                nodes: [
+                    { id: 'sequence', label: 'sequence', x: -180, y: 0, isSpine: true, hasPrereqs: false },
+                    { id: targetId, label: targetLabel, x: 0, y: 240, isSpine: true, hasPrereqs: true, isExpanded: true },
+                    { id: 'application', label: 'application', x: 180, y: 480, isSpine: false, hasPrereqs: false },
+                ],
+                edges: [
+                    { from: 'sequence', to: targetId },
+                    { from: targetId, to: 'application' },
+                ],
+                hulls: [
+                    { groupNodeId: targetId, memberIds: ['sequence', targetId, 'application'] },
+                ],
+            };
+        }),
+    };
+    class TestGraph {
+        addNode(node: Record<string, unknown>) {
+            calls.addNode(node);
+        }
+
+        addEdge(source: string, target: string, kind: string, weight: number) {
+            calls.addEdge(source, target, kind, weight);
+        }
+    }
+    class TestPathEngine {
+        diffusionLearning(targetId: string, strategy: string, completed: Set<string>, forcedExpansion: Set<string>) {
+            return calls.diffusionLearning(targetId, strategy, completed, forcedExpansion);
+        }
+
+        getTreeLayout(
+            targetId: string,
+            result: unknown,
+            collapsed: Set<string>,
+            expansionOrder: string[],
+            focusMode: boolean,
+            options: Record<string, unknown>
+        ) {
+            return calls.getTreeLayout(targetId, result, collapsed, expansionOrder, focusMode, options);
+        }
+    }
+    window.graphData = sourceGraph;
+    window.Graph = TestGraph;
+    window.PathEngine = TestPathEngine;
+    return calls;
+}
+
 function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): HarnessResult {
     const repoRoot = path.resolve(__dirname, '..');
     const markdownRuntimeScriptPath = path.join(repoRoot, 'src', 'frontend', 'markdown_runtime.js');
@@ -3742,12 +3817,23 @@ describe('workspace panes controller', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('supersedes');
     });
 
-    test('opens Godot Future Path without moving the browser path workspace into the pane', () => {
+    test('hosts Godot Future Path data without moving the browser path workspace into the pane', () => {
         const { controller, document, window } = loadWorkspacePanesHarness();
         const openGodotFuturePathById = jest.fn();
         (window as any).NoteConnectionPathMode = {
             openGodotFuturePathById,
         };
+        const pathCalls = installHostedFuturePathRuntime(window, {
+            nodes: [
+                { id: 'atom_paths', label: 'Learning Paths' },
+                { id: 'sequence', label: 'sequence' },
+                { id: 'application', label: 'application' },
+            ],
+            edges: [
+                { source: 'sequence', target: 'atom_paths', type: 'sequence' },
+                { source: 'atom_paths', target: 'application', type: 'application' },
+            ],
+        });
         controller.init();
 
         const pathContainer = document.getElementById('path-container');
@@ -3763,17 +3849,38 @@ describe('workspace panes controller', () => {
 
         const learningPaneBody = document.getElementById('agent-learning-path-body');
         expect(learningPaneBody?.querySelector('[data-agent-godot-future-path-shell="true"]')).not.toBeNull();
+        expect(learningPaneBody?.querySelector('[data-agent-godot-future-path-hosted="true"]')).not.toBeNull();
+        expect(learningPaneBody?.querySelector('[data-agent-godot-future-path-surface="true"]')).not.toBeNull();
         expect(learningPaneBody?.querySelector('#path-container')).toBeNull();
         expect(originalParent?.querySelector('#path-container')).not.toBeNull();
         expect(pathContainer?.style.display).toBe('none');
-        expect(openGodotFuturePathById).toHaveBeenCalledWith('atom_paths', expect.objectContaining({
-            config: expect.objectContaining({
-                mode: 'diffusion',
-                strategy: 'core',
-                targetId: 'atom_paths',
-                targetIds: ['atom_paths'],
-            }),
+        expect(openGodotFuturePathById).not.toHaveBeenCalled();
+        expect(pathCalls.diffusionLearning).toHaveBeenCalledWith(
+            'atom_paths',
+            'core',
+            expect.anything(),
+            expect.anything()
+        );
+        expect(pathCalls.getTreeLayout).toHaveBeenCalledWith(
+            'atom_paths',
+            expect.anything(),
+            expect.anything(),
+            expect.arrayContaining(['atom_paths']),
+            true,
+            expect.objectContaining({ verticalGap: 240 })
+        );
+        expect((window as any).__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST).toEqual(expect.objectContaining({
+            mode: 'diffusion',
+            strategy: 'core',
+            focus_mode: true,
+            targetId: 'atom_paths',
+            targetIds: ['atom_paths'],
         }));
+        expect((window as any).__NC_LAST_AGENT_GODOT_FUTURE_PATH_LAYOUT?.nodes || []).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ id: 'atom_paths', label: 'Learning Paths' }),
+            ])
+        );
 
         controller.clearLearningPathPane();
 
@@ -3785,6 +3892,14 @@ describe('workspace panes controller', () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
         const graphView = {
             openFocusModeById: jest.fn(() => true),
+            getFocusModeSnapshot: jest.fn(() => ({
+                anchorId: 'atom_paths',
+                anchorLabel: 'Learning Paths',
+                nodes: [
+                    { id: 'atom_paths', label: 'Learning Paths', role: 'anchor', x: 50, y: 50 },
+                ],
+                edges: [],
+            })),
         };
         (window as any).NoteConnectionGraphView = graphView;
         const onCapability = jest.fn();
@@ -3878,7 +3993,8 @@ describe('workspace panes controller', () => {
         expect(onCapability.mock.calls[0]?.[1]?.actionId).toBe('open_learning_path');
 
         buttonsBefore[1]?.click();
-        expect(graphView?.openFocusModeById).toHaveBeenCalledWith('atom_paths');
+        expect(graphView?.openFocusModeById).not.toHaveBeenCalled();
+        expect(graphView?.getFocusModeSnapshot).toHaveBeenCalledWith('atom_paths');
         expect(document.getElementById('agent-graph-focus-pane')?.getAttribute('data-open')).toBe('true');
 
         await window.i18n.setLanguage('zh');
@@ -3911,14 +4027,52 @@ describe('workspace panes controller', () => {
         expect(chatPaneRule).not.toContain('overflow: hidden');
     });
 
-    test('docks the existing graph Focus mode runtime with resolved node names instead of atom ids', async () => {
+    test('hosts graph Focus mode with resolved node names without mutating the main graph runtime', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'A water glass is a physical system made of a transparent container and water.',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement) => {
+            container.innerHTML = '<article><p>A water glass is a physical system made of a transparent container and water.</p></article>';
+        });
         const graphView = {
             resolveNodeByKnowledgePoint: jest.fn(() => ({ id: 'water glass', label: 'water glass' })),
+            resolveNodeById: jest.fn((nodeId: string) => ({
+                id: nodeId,
+                label: nodeId,
+                sourcePath: nodeId === 'water glass'
+                    ? 'Knowledge_Base/waterglass/water glass.md'
+                    : `Knowledge_Base/${nodeId}.md`,
+            })),
             openFocusModeById: jest.fn(() => true),
-            getFocusModeSnapshot: jest.fn(),
+            getFocusModeSnapshot: jest.fn((nodeId: string) => ({
+                anchorId: nodeId,
+                anchorLabel: nodeId,
+                nodes: [
+                    { id: nodeId, label: nodeId, role: 'anchor', x: 50, y: 50 },
+                    { id: 'sequence', label: 'sequence', role: 'incoming', x: 22, y: 40 },
+                    { id: 'application', label: 'application', role: 'outgoing', x: 78, y: 60 },
+                ],
+                edges: [
+                    { sourceId: 'sequence', targetId: nodeId, relationKind: 'sequence', confidence: 0.98 },
+                    { sourceId: nodeId, targetId: 'application', relationKind: 'application', confidence: 0.95 },
+                ],
+            })),
+            getFocusNode: jest.fn(() => ({ id: 'main-focus', label: 'Main focus' })),
         };
         (window as any).NoteConnectionGraphView = graphView;
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({ readContent }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+        (window as any).reader = {
+            open: jest.fn(),
+            resolveNodeTarget: jest.fn(),
+        };
         controller.init();
         const graphContainer = document.getElementById('graph-container') as HTMLElement | null;
         const originalParent = graphContainer?.parentElement;
@@ -3949,16 +4103,41 @@ describe('workspace panes controller', () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
 
         expect(graphView.resolveNodeByKnowledgePoint).toHaveBeenCalled();
-        expect(graphView.openFocusModeById).toHaveBeenCalledWith('water glass');
-        expect(graphView.getFocusModeSnapshot).not.toHaveBeenCalled();
+        expect(graphView.openFocusModeById).not.toHaveBeenCalled();
+        expect(graphView.getFocusModeSnapshot).toHaveBeenCalledWith('water glass');
 
-        const runtimeHost = document.querySelector('[data-agent-graph-focus-workspace-host="true"]');
-        expect(runtimeHost).not.toBeNull();
-        expect(runtimeHost?.querySelector('#graph-container')).toBe(graphContainer);
-        expect(graphContainer?.classList.contains('agent-graph-focus-runtime-docked')).toBe(true);
-        expect(document.querySelector('[data-agent-focus-mode-preview="true"]')).toBeNull();
+        const hostedFocus = document.querySelector('[data-agent-hosted-focus-mode="true"]') as HTMLElement | null;
+        expect(hostedFocus).not.toBeNull();
+        expect(hostedFocus?.getAttribute('data-agent-hosted-focus-anchor-id')).toBe('water glass');
+        expect(document.querySelector('[data-agent-graph-focus-workspace-host="true"]')).toBeNull();
+        expect(document.querySelector('[data-agent-graph-focus-workspace-host="true"] #graph-container')).toBeNull();
+        expect(originalParent?.querySelector('#graph-container')).toBe(graphContainer);
+        expect(graphContainer?.classList.contains('agent-graph-focus-runtime-docked')).toBe(false);
+        expect(document.querySelector('[data-agent-focus-mode-preview="true"]')).not.toBeNull();
         expect(document.querySelector('[data-agent-focus-relation-map="true"]')).toBeNull();
         expect(String(document.getElementById('agent-graph-focus-body')?.textContent || '')).not.toContain('atom_h');
+        expect(String(document.getElementById('agent-graph-focus-body')?.textContent || '')).toContain('water glass');
+
+        const anchorButton = document.querySelector(
+            '[data-agent-focus-mode-node-id="water glass"][data-agent-focus-mode-anchor="true"]'
+        ) as HTMLButtonElement | null;
+        anchorButton?.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect((window as any).reader.open).not.toHaveBeenCalled();
+        expect(readContent).toHaveBeenCalledWith('Knowledge_Base/waterglass/water glass.md');
+        const paneReader = document.querySelector('[data-agent-focus-pane-reader="true"]') as HTMLElement | null;
+        expect(paneReader).not.toBeNull();
+        expect(paneReader?.hidden).toBe(false);
+        expect(String(paneReader?.textContent || '')).toContain('A water glass is a physical system');
+
+        const relatedNodeButton = document.querySelector(
+            '[data-agent-focus-mode-node-id="application"]'
+        ) as HTMLButtonElement | null;
+        relatedNodeButton?.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(graphView.getFocusModeSnapshot).toHaveBeenLastCalledWith('application');
+        expect(document.querySelector('[data-agent-hosted-focus-anchor-id="application"]')).not.toBeNull();
+        expect(graphView.getFocusNode()).toEqual({ id: 'main-focus', label: 'Main focus' });
 
         graphContainer?.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
         expect(preservedDoubleClickCount).toBe(1);
@@ -3971,11 +4150,24 @@ describe('workspace panes controller', () => {
         }
     });
 
-    test('keeps the moved graph Focus mode runtime alive across repeated runtime pane renders', async () => {
+    test('keeps hosted graph Focus mode isolated across repeated pane renders', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
         const graphView = {
+            resolveNodeById: jest.fn((nodeId: string) => ({ id: nodeId, label: nodeId })),
             openFocusModeById: jest.fn(() => true),
-            getFocusModeSnapshot: jest.fn(),
+            getFocusModeSnapshot: jest.fn((nodeId: string) => ({
+                anchorId: nodeId,
+                anchorLabel: nodeId,
+                nodes: [
+                    { id: nodeId, label: nodeId, role: 'anchor', x: 50, y: 50 },
+                    { id: `${nodeId} prerequisite`, label: `${nodeId} prerequisite`, role: 'incoming', x: 24, y: 42 },
+                    { id: `${nodeId} usage`, label: `${nodeId} usage`, role: 'outgoing', x: 76, y: 58 },
+                ],
+                edges: [
+                    { sourceId: `${nodeId} prerequisite`, targetId: nodeId, relationKind: 'sequence', confidence: 0.9 },
+                    { sourceId: nodeId, targetId: `${nodeId} usage`, relationKind: 'application', confidence: 0.9 },
+                ],
+            })),
         };
         (window as any).NoteConnectionGraphView = graphView;
         controller.init();
@@ -4001,9 +4193,13 @@ describe('workspace panes controller', () => {
         });
         await new Promise((resolve) => setTimeout(resolve, 0));
 
-        const firstRuntimeHost = document.querySelector('[data-agent-graph-focus-workspace-host="true"]');
-        expect(firstRuntimeHost?.querySelector('#graph-container')).toBe(graphContainer);
-        expect(graphView.openFocusModeById).toHaveBeenLastCalledWith('water glass');
+        const firstHostedFocus = document.querySelector('[data-agent-hosted-focus-mode="true"]');
+        expect(firstHostedFocus).not.toBeNull();
+        expect(document.querySelector('[data-agent-hosted-focus-anchor-id="water glass"]')).not.toBeNull();
+        expect(document.querySelector('[data-agent-graph-focus-workspace-host="true"]')).toBeNull();
+        expect(originalParent?.querySelector('#graph-container')).toBe(graphContainer);
+        expect(graphView.openFocusModeById).not.toHaveBeenCalled();
+        expect(graphView.getFocusModeSnapshot).toHaveBeenLastCalledWith('water glass');
 
         controller.openGraphFocusPane({
             atomId: 'atom_heat',
@@ -4014,13 +4210,15 @@ describe('workspace panes controller', () => {
         });
         await new Promise((resolve) => setTimeout(resolve, 0));
 
-        const secondRuntimeHost = document.querySelector('[data-agent-graph-focus-workspace-host="true"]');
-        expect(secondRuntimeHost?.querySelector('#graph-container')).toBe(graphContainer);
+        const secondHostedFocus = document.querySelector('[data-agent-hosted-focus-mode="true"]');
+        expect(secondHostedFocus).not.toBeNull();
+        expect(document.querySelector('[data-agent-hosted-focus-anchor-id="heat transfer"]')).not.toBeNull();
+        expect(document.querySelector('[data-agent-graph-focus-workspace-host="true"]')).toBeNull();
         expect(document.querySelectorAll('#graph-container')).toHaveLength(1);
         expect(graphContainer?.querySelector('[data-runtime-marker="preserved"]')).toBe(retainedRuntimeChild);
-        expect(graphContainer?.classList.contains('agent-graph-focus-runtime-docked')).toBe(true);
-        expect(graphView.openFocusModeById).toHaveBeenLastCalledWith('heat transfer');
-        expect(graphView.getFocusModeSnapshot).not.toHaveBeenCalled();
+        expect(graphContainer?.classList.contains('agent-graph-focus-runtime-docked')).toBe(false);
+        expect(graphView.openFocusModeById).not.toHaveBeenCalled();
+        expect(graphView.getFocusModeSnapshot).toHaveBeenLastCalledWith('heat transfer');
 
         graphContainer?.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
         expect(preservedDoubleClickCount).toBe(1);
@@ -4089,7 +4287,9 @@ describe('workspace panes controller', () => {
         relatedFocusButton?.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
 
-        expect(document.querySelector('[data-agent-graph-focus-workspace-host="true"] #graph-container')).not.toBeNull();
+        expect(graphView.openFocusModeById).not.toHaveBeenCalled();
+        expect(document.querySelector('[data-agent-hosted-focus-mode="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-agent-graph-focus-workspace-host="true"] #graph-container')).toBeNull();
         const relationMap = document.querySelector('[data-agent-focus-relation-map="true"]');
         expect(relationMap?.getAttribute('data-agent-focus-developer-mode')).toBe('true');
         expect(relationMap?.querySelector('[data-agent-focus-developer-details="true"]')).not.toBeNull();
@@ -4097,7 +4297,7 @@ describe('workspace panes controller', () => {
         expect(relationMap?.querySelector('.agent-focus-relation-edges')).not.toBeNull();
     });
 
-    test('dispatches Godot Future Path with resolved node names for relation hits', () => {
+    test('hosts Godot Future Path with resolved node names for relation hits', () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
         const graphView = {
             resolveNodeByKnowledgePoint: jest.fn(() => ({ id: 'water glass', label: 'water glass' })),
@@ -4107,9 +4307,11 @@ describe('workspace panes controller', () => {
             switchCentral: jest.fn(),
             applyRemoteConfigure: jest.fn(),
             triggerUpdate: jest.fn(),
+            requestBridgeWindowVisibility: jest.fn(),
         };
         (window as any).NoteConnectionGraphView = graphView;
         (window as any).pathApp = pathApp;
+        const pathCalls = installHostedFuturePathRuntime(window);
         controller.init();
 
         controller.renderKnowledgePoints([
@@ -4145,16 +4347,35 @@ describe('workspace panes controller', () => {
         learningPathButton?.click();
 
         expect(document.querySelector('[data-agent-godot-future-path-shell="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-agent-godot-future-path-hosted="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-agent-godot-future-path-target-id="water glass"]')).not.toBeNull();
         expect(document.querySelector('#agent-learning-path-body #path-container')).toBeNull();
         expect(document.querySelector('[data-agent-path-mode-preview="true"]')).toBeNull();
-        expect(pathApp.init).toHaveBeenCalledWith('water glass');
-        expect(pathApp.applyRemoteConfigure).toHaveBeenCalledWith(expect.objectContaining({
+        expect(pathApp.init).not.toHaveBeenCalled();
+        expect(pathApp.applyRemoteConfigure).not.toHaveBeenCalled();
+        expect(pathApp.triggerUpdate).not.toHaveBeenCalled();
+        expect(pathApp.requestBridgeWindowVisibility).not.toHaveBeenCalled();
+        expect(pathCalls.diffusionLearning).toHaveBeenCalledWith('water glass', 'core', expect.anything(), expect.anything());
+        expect(pathCalls.getTreeLayout).toHaveBeenCalledWith(
+            'water glass',
+            expect.anything(),
+            expect.anything(),
+            expect.arrayContaining(['water glass']),
+            true,
+            expect.objectContaining({ verticalGap: 240 })
+        );
+        expect((window as any).__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST).toEqual(expect.objectContaining({
             mode: 'diffusion',
             strategy: 'core',
+            focus_mode: true,
             targetId: 'water glass',
             targetIds: ['water glass'],
         }));
-        expect(pathApp.triggerUpdate).toHaveBeenCalled();
+        expect((window as any).__NC_LAST_AGENT_GODOT_FUTURE_PATH_LAYOUT?.nodes || []).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ id: 'water glass', label: 'water glass' }),
+            ])
+        );
         expect(document.getElementById('agent-graph-focus-pane')?.getAttribute('data-open')).not.toBe('true');
         const bodyText = String(document.getElementById('agent-learning-path-body')?.textContent || '');
         expect(bodyText).toContain('water glass');
@@ -4171,10 +4392,11 @@ describe('workspace panes controller', () => {
             switchCentral: jest.fn(),
             applyRemoteConfigure: jest.fn(),
             triggerUpdate: jest.fn(),
+            requestBridgeWindowVisibility: jest.fn(),
             runtimeConfig: {},
             nodes: [],
         };
-        (window as any).graphData = {
+        const pathCalls = installHostedFuturePathRuntime(window, {
             nodes: [
                 { id: 'atom_f', label: 'sequence' },
                 { id: 'atom_h', label: 'water glass', sourcePath: 'Knowledge_Base/waterglass/water glass.md' },
@@ -4184,7 +4406,7 @@ describe('workspace panes controller', () => {
                 { source: 'atom_f', target: 'atom_h', type: 'sequence' },
                 { source: 'atom_h', target: 'atom_j', type: 'application' },
             ],
-        };
+        });
         (window as any).NoteConnectionGraphView = graphView;
         (window as any).pathApp = pathApp;
         controller.init();
@@ -4218,15 +4440,27 @@ describe('workspace panes controller', () => {
         ) as HTMLButtonElement | null;
         learningPathButton?.click();
 
-        expect(pathApp.init).toHaveBeenCalledWith('atom_h');
-        expect(pathApp.applyRemoteConfigure).toHaveBeenCalledWith(expect.objectContaining({
+        expect(pathApp.init).not.toHaveBeenCalled();
+        expect(pathApp.applyRemoteConfigure).not.toHaveBeenCalled();
+        expect(pathApp.triggerUpdate).not.toHaveBeenCalled();
+        expect(pathApp.requestBridgeWindowVisibility).not.toHaveBeenCalled();
+        expect(pathCalls.diffusionLearning).toHaveBeenCalledWith('atom_h', 'core', expect.anything(), expect.anything());
+        expect(pathCalls.getTreeLayout).toHaveBeenCalledWith(
+            'atom_h',
+            expect.anything(),
+            expect.anything(),
+            expect.arrayContaining(['atom_h']),
+            true,
+            expect.objectContaining({ verticalGap: 240 })
+        );
+        expect((window as any).__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST).toEqual(expect.objectContaining({
             mode: 'diffusion',
             strategy: 'core',
+            focus_mode: true,
             targetId: 'atom_h',
             targetIds: ['atom_h'],
         }));
-        expect((pathApp as any).currentTargetId).toBe('atom_h');
-        expect((pathApp as any).centralNodeId).toBe('atom_h');
+        expect(document.querySelector('[data-agent-godot-future-path-target-id="atom_h"]')).not.toBeNull();
         const bodyText = String(document.getElementById('agent-learning-path-body')?.textContent || '');
         expect(bodyText).toContain('water glass');
         expect(bodyText).not.toContain('atom_h');
@@ -6868,13 +7102,14 @@ describe('agent workspace learning-path integration', () => {
         ).toBe(true);
     });
 
-    test('reuses the existing pathApp producer for Godot Future Path pane actions', async () => {
+    test('hosts Godot Future Path pane actions through the PathEngine contract', async () => {
         const {
             document,
             window,
             fetchMock,
             pathApp,
         } = loadAgentWorkspaceHarness();
+        const pathCalls = installHostedFuturePathRuntime(window);
 
         await (window as any).NoteConnectionAgentWorkspace.openLearningPath({
             atomId: 'atom_paths',
@@ -6884,19 +7119,31 @@ describe('agent workspace learning-path integration', () => {
         expect(fetchMock).toHaveBeenCalledWith('/api/knowledge/path', expect.objectContaining({
             method: 'POST',
         }));
-        expect(pathApp?.init).toHaveBeenCalledWith('atom_paths');
-        expect(pathApp?.applyRemoteConfigure).toHaveBeenCalledWith(expect.objectContaining({
+        expect(pathApp?.init).not.toHaveBeenCalled();
+        expect(pathApp?.applyRemoteConfigure).not.toHaveBeenCalled();
+        expect(pathApp?.triggerUpdate).not.toHaveBeenCalled();
+        expect(pathCalls.diffusionLearning).toHaveBeenCalledWith('atom_paths', 'core', expect.anything(), expect.anything());
+        expect(pathCalls.getTreeLayout).toHaveBeenCalledWith(
+            'atom_paths',
+            expect.anything(),
+            expect.anything(),
+            expect.arrayContaining(['atom_paths']),
+            true,
+            expect.objectContaining({ verticalGap: 240 })
+        );
+        expect((window as any).__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST).toEqual(expect.objectContaining({
             mode: 'diffusion',
             strategy: 'core',
+            focus_mode: true,
             targetId: 'atom_paths',
             targetIds: ['atom_paths'],
         }));
-        expect(pathApp?.triggerUpdate).toHaveBeenCalled();
         expect(document.querySelector('[data-agent-godot-future-path-shell="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-agent-godot-future-path-hosted="true"]')).not.toBeNull();
         expect(document.getElementById('agent-learning-path-body')?.querySelector('#path-container')).toBeNull();
     });
 
-    test('keeps atom ids for learning API but configures pathApp with the resolved graph node', async () => {
+    test('keeps atom ids for learning API but hosts Future Path with the resolved graph node', async () => {
         const {
             window,
             fetchMock,
@@ -6904,6 +7151,7 @@ describe('agent workspace learning-path integration', () => {
             graphView,
         } = loadAgentWorkspaceHarness();
         graphView?.resolveNodeByKnowledgePoint?.mockReturnValue({ id: 'water glass', label: 'water glass' });
+        const pathCalls = installHostedFuturePathRuntime(window);
 
         await (window as any).NoteConnectionAgentWorkspace.openLearningPath({
             atomId: 'atom_h',
@@ -6926,10 +7174,22 @@ describe('agent workspace learning-path integration', () => {
         const requestBody = JSON.parse(String(fetchCall?.[1]?.body || '{}'));
         expect(requestBody.focusAtomIds).toEqual(['atom_h']);
         expect(graphView?.resolveNodeByKnowledgePoint).toHaveBeenCalled();
-        expect(pathApp?.init).toHaveBeenCalledWith('water glass');
-        expect(pathApp?.applyRemoteConfigure).toHaveBeenCalledWith(expect.objectContaining({
+        expect(pathApp?.init).not.toHaveBeenCalled();
+        expect(pathApp?.applyRemoteConfigure).not.toHaveBeenCalled();
+        expect(pathApp?.triggerUpdate).not.toHaveBeenCalled();
+        expect(pathCalls.diffusionLearning).toHaveBeenCalledWith('water glass', 'core', expect.anything(), expect.anything());
+        expect(pathCalls.getTreeLayout).toHaveBeenCalledWith(
+            'water glass',
+            expect.anything(),
+            expect.anything(),
+            expect.arrayContaining(['water glass']),
+            true,
+            expect.objectContaining({ verticalGap: 240 })
+        );
+        expect((window as any).__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST).toEqual(expect.objectContaining({
             mode: 'diffusion',
             strategy: 'core',
+            focus_mode: true,
             targetId: 'water glass',
             targetIds: ['water glass'],
         }));

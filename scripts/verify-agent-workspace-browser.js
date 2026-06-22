@@ -213,7 +213,18 @@ function normalizeRawValue(raw) {
         return '';
     }
     try {
-        return JSON.parse(trimmed);
+        const parsed = JSON.parse(trimmed);
+        if (typeof parsed === 'string') {
+            const nested = parsed.trim();
+            if ((nested.startsWith('{') && nested.endsWith('}')) || (nested.startsWith('[') && nested.endsWith(']'))) {
+                try {
+                    return JSON.parse(nested);
+                } catch (_nestedError) {
+                    return parsed;
+                }
+            }
+        }
+        return parsed;
     } catch (_error) {
         return trimmed;
     }
@@ -512,28 +523,68 @@ window.__NC_DYNAMIC_SMOKE__ = {
       await window.i18n.setLanguage('en');
     }
     const originalGraphView = window.NoteConnectionGraphView;
-    const originalOpenFocusModeById = originalGraphView && typeof originalGraphView.openFocusModeById === 'function'
-      ? originalGraphView.openFocusModeById.bind(originalGraphView)
+    const graphContainer = document.querySelector('#graph-container');
+    const graphContainerOriginalParent = graphContainer ? graphContainer.parentElement : null;
+    const pathApp = window.pathApp || null;
+    const originalBridgeVisibility = pathApp && typeof pathApp.requestBridgeWindowVisibility === 'function'
+      ? pathApp.requestBridgeWindowVisibility.bind(pathApp)
       : null;
-    const originalGetFocusModeSnapshot = originalGraphView && typeof originalGraphView.getFocusModeSnapshot === 'function'
-      ? originalGraphView.getFocusModeSnapshot.bind(originalGraphView)
+    const tauriCore = window.__TAURI__ && window.__TAURI__.core ? window.__TAURI__.core : null;
+    const originalTauriInvoke = tauriCore && typeof tauriCore.invoke === 'function'
+      ? tauriCore.invoke.bind(tauriCore)
       : null;
     const focusCalls = [];
     const snapshotCalls = [];
+    const bridgeVisibilityCalls = [];
+    const tauriToggleCalls = [];
+    if (pathApp && originalBridgeVisibility) {
+      pathApp.requestBridgeWindowVisibility = function (visible, options) {
+        bridgeVisibilityCalls.push({ visible: Boolean(visible), options: options || null });
+        return Promise.resolve(true);
+      };
+    }
+    if (tauriCore && originalTauriInvoke) {
+      tauriCore.invoke = function (command, args) {
+        if (String(command || '') === 'toggle_pathmode_window') {
+          tauriToggleCalls.push(args || {});
+        }
+        return Promise.resolve(null);
+      };
+    }
     window.NoteConnectionGraphView = Object.assign({}, originalGraphView || {}, {
       resolveNodeByKnowledgePoint: function () {
         return { id: 'water glass', label: 'water glass' };
       },
+      resolveNodeById: function (id) {
+        const nodeId = String(id || '').trim();
+        return {
+          id: nodeId,
+          label: nodeId,
+          sourcePath: nodeId === 'water glass'
+            ? 'Knowledge_Base/waterglass/water glass.md'
+            : 'Knowledge_Base/' + nodeId + '.md'
+        };
+      },
       openFocusModeById: function (id) {
         focusCalls.push(String(id || ''));
-        if (originalOpenFocusModeById) {
-          return originalOpenFocusModeById(id);
-        }
         return true;
       },
       getFocusModeSnapshot: function (id) {
-        snapshotCalls.push(String(id || ''));
-        return originalGetFocusModeSnapshot ? originalGetFocusModeSnapshot(id) : null;
+        const anchorId = String(id || '').trim() || 'water glass';
+        snapshotCalls.push(anchorId);
+        return {
+          anchorId,
+          anchorLabel: anchorId,
+          nodes: [
+            { id: anchorId, label: anchorId, role: 'anchor', x: 50, y: 52 },
+            { id: 'sequence', label: 'sequence', role: 'incoming', x: 22, y: 38 },
+            { id: 'application', label: 'application', role: 'outgoing', x: 78, y: 62 }
+          ],
+          edges: [
+            { sourceId: 'sequence', targetId: anchorId, relationKind: 'sequence', confidence: 0.98 },
+            { sourceId: anchorId, targetId: 'application', relationKind: 'application', confidence: 0.95 }
+          ]
+        };
       }
     });
     try {
@@ -597,6 +648,8 @@ window.__NC_DYNAMIC_SMOKE__ = {
       const learningPathButton = document.querySelector('[data-agent-knowledge-action="learning-path"]');
       const relatedFocusButton = document.querySelector('[data-agent-knowledge-action="related-focus"]');
       const chatPane = document.querySelector('#agent-chat-pane');
+      let godotFuturePathFeedbackMs = null;
+      let graphFocusFeedbackMs = null;
       const isFullyVisibleWithin = function (node, container) {
         if (!node || !container) {
           return false;
@@ -647,6 +700,20 @@ window.__NC_DYNAMIC_SMOKE__ = {
         }
       }
       if (learningPathButton) {
+        const pathCoreStartedAt = Date.now();
+        while ((Date.now() - pathCoreStartedAt) < 2500) {
+          const hasGraphData = (typeof graphData !== 'undefined' && graphData && Array.isArray(graphData.nodes))
+            || (window.graphData && Array.isArray(window.graphData.nodes));
+          if (
+            typeof window.Graph === 'function'
+            && typeof window.PathEngine === 'function'
+            && hasGraphData
+          ) {
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        const clickedAt = Date.now();
         learningPathButton.click();
         const startedAt = Date.now();
         while ((Date.now() - startedAt) < 2500) {
@@ -659,6 +726,7 @@ window.__NC_DYNAMIC_SMOKE__ = {
             && request.strategy === 'core'
             && request.targetId === 'water glass'
           ) {
+            godotFuturePathFeedbackMs = Date.now() - clickedAt;
             break;
           }
           await new Promise((resolve) => setTimeout(resolve, 50));
@@ -666,18 +734,20 @@ window.__NC_DYNAMIC_SMOKE__ = {
       }
       const godotFuturePathShell = document.querySelector('[data-agent-godot-future-path-shell="true"]');
       const godotFuturePathRequest = window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST || window.__NC_LAST_GODOT_FUTURE_PATH_REQUEST || {};
+      const godotFuturePathLayout = window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_LAYOUT || null;
+      const godotFuturePathHosted = document.querySelector('[data-agent-godot-future-path-hosted="true"]');
+      const godotFuturePathSurface = document.querySelector('[data-agent-godot-future-path-surface="true"]');
       const pathContainerInLearningPane = document.querySelector('#agent-learning-path-body #path-container');
       const pathRuntimeTitle = godotFuturePathShell ? godotFuturePathShell.textContent.replace(/\\s+/g, ' ').trim() : '';
       const pathDebugPreview = document.querySelector('[data-agent-path-mode-preview="true"]');
       if (relatedFocusButton) {
+        const clickedAt = Date.now();
         relatedFocusButton.click();
         const startedAt = Date.now();
         while ((Date.now() - startedAt) < 2500) {
-          const focusNode = window.NoteConnectionGraphView
-            && typeof window.NoteConnectionGraphView.getFocusNode === 'function'
-              ? window.NoteConnectionGraphView.getFocusNode()
-              : null;
-          if (focusNode && String(focusNode.id || '') === 'water glass') {
+          const hostedFocus = document.querySelector('[data-agent-hosted-focus-mode="true"][data-agent-hosted-focus-anchor-id="water glass"]');
+          if (hostedFocus) {
+            graphFocusFeedbackMs = Date.now() - clickedAt;
             break;
           }
           await new Promise((resolve) => setTimeout(resolve, 50));
@@ -688,12 +758,15 @@ window.__NC_DYNAMIC_SMOKE__ = {
         title: 'Evidence Inspector',
         scopeLabel: 'water glass'
       });
-      const graphFocusRuntimeFocusNode = window.NoteConnectionGraphView
-        && typeof window.NoteConnectionGraphView.getFocusNode === 'function'
-          ? window.NoteConnectionGraphView.getFocusNode()
+      const graphFocusMainFocusNode = originalGraphView
+        && typeof originalGraphView.getFocusNode === 'function'
+          ? originalGraphView.getFocusNode()
           : null;
       const graphFocusRuntime = document.querySelector('[data-agent-graph-focus-workspace-host="true"] #graph-container');
       const graphFocusRuntimeText = graphFocusRuntime ? graphFocusRuntime.textContent.replace(/\\s+/g, ' ').trim() : '';
+      const hostedGraphFocus = document.querySelector('[data-agent-hosted-focus-mode="true"]');
+      const hostedGraphFocusText = hostedGraphFocus ? hostedGraphFocus.textContent.replace(/\\s+/g, ' ').trim() : '';
+      const hostedGraphFocusAnchorId = hostedGraphFocus ? hostedGraphFocus.getAttribute('data-agent-hosted-focus-anchor-id') || '' : '';
       const focusDeveloperDetails = document.querySelector('[data-agent-focus-developer-details="true"]');
       const focusRelationKinds = document.querySelector('.agent-focus-relation-kinds');
       const focusRelationEdges = document.querySelector('.agent-focus-relation-edges');
@@ -748,17 +821,31 @@ window.__NC_DYNAMIC_SMOKE__ = {
         learningPathReachableAfterLeftPaneScroll: leftPaneScrollProbe.learningPathReachableAfterScroll,
         relatedFocusReachableAfterLeftPaneScroll: leftPaneScrollProbe.relatedFocusReachableAfterScroll,
         godotFuturePathShellPresent: Boolean(godotFuturePathShell),
+        godotFuturePathHosted: Boolean(godotFuturePathHosted),
+        godotFuturePathSurfacePresent: Boolean(godotFuturePathSurface),
         godotFuturePathMode: String(godotFuturePathRequest.mode || ''),
         godotFuturePathStrategy: String(godotFuturePathRequest.strategy || ''),
         godotFuturePathTargetId: String(godotFuturePathRequest.targetId || ''),
         godotFuturePathTargetIds: Array.isArray(godotFuturePathRequest.targetIds) ? godotFuturePathRequest.targetIds.map(String) : [],
+        godotFuturePathLayoutNodeCount: godotFuturePathLayout && Array.isArray(godotFuturePathLayout.nodes) ? godotFuturePathLayout.nodes.length : 0,
+        godotFuturePathLayoutTargetLabels: godotFuturePathLayout && Array.isArray(godotFuturePathLayout.nodes)
+          ? godotFuturePathLayout.nodes.map((node) => String(node && (node.label || node.id) || ''))
+          : [],
+        godotFuturePathFeedbackMs,
+        graphFocusFeedbackMs,
+        bridgeVisibilityTrueCalls: bridgeVisibilityCalls.filter((entry) => entry && entry.visible === true).length,
+        tauriShowGodotTrueCalls: tauriToggleCalls.filter((entry) => entry && entry.showGodot === true).length,
         pathContainerDockedInLearningPane: Boolean(pathContainerInLearningPane),
         pathRuntimeTitle,
         pathDebugPreviewPresent: Boolean(pathDebugPreview),
         graphFocusRuntimeDocked: Boolean(graphFocusRuntime),
         graphFocusRuntimeIsMainContainer: graphFocusRuntime ? graphFocusRuntime.id === 'graph-container' : false,
-        graphFocusRuntimeFocusNodeId: graphFocusRuntimeFocusNode ? String(graphFocusRuntimeFocusNode.id || '') : '',
-        graphFocusRuntimeFocusNodeLabel: graphFocusRuntimeFocusNode ? String(graphFocusRuntimeFocusNode.label || graphFocusRuntimeFocusNode.name || '') : '',
+        graphFocusHosted: Boolean(hostedGraphFocus),
+        graphFocusHostedAnchorId: hostedGraphFocusAnchorId,
+        graphFocusHostedText: hostedGraphFocusText,
+        graphContainerParentStable: graphContainer ? graphContainer.parentElement === graphContainerOriginalParent : false,
+        graphFocusMainFocusNodeId: graphFocusMainFocusNode ? String(graphFocusMainFocusNode.id || '') : '',
+        graphFocusMainFocusNodeLabel: graphFocusMainFocusNode ? String(graphFocusMainFocusNode.label || graphFocusMainFocusNode.name || '') : '',
         graphFocusRuntimeText,
         focusDeveloperDetailsPresent: Boolean(focusDeveloperDetails),
         focusRelationKindsText: focusRelationKinds ? focusRelationKinds.textContent.replace(/\\s+/g, ' ').trim() : '',
@@ -773,6 +860,12 @@ window.__NC_DYNAMIC_SMOKE__ = {
       };
     } finally {
       window.NoteConnectionGraphView = originalGraphView;
+      if (pathApp && originalBridgeVisibility) {
+        pathApp.requestBridgeWindowVisibility = originalBridgeVisibility;
+      }
+      if (tauriCore && originalTauriInvoke) {
+        tauriCore.invoke = originalTauriInvoke;
+      }
     }
   },
   openRunbookCard: async function (kind) {
@@ -2221,23 +2314,23 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                 ? null
                 : promotionStateAfterEscapeRaw;
 
-        const knowledgeHitUiState = normalizeRawValue(
-            runPwcli(
-                pwcli,
-                sessionArgs.concat([
-                    '--raw',
-                    'eval',
-                    `(async () => {
-                        const smoke = window.__NC_DYNAMIC_SMOKE__;
-                        if (!smoke || typeof smoke.verifyKnowledgeHitUi !== 'function') {
-                            return { ok: false, reason: 'knowledge_hit_ui_harness_unavailable' };
-                        }
-                        return await smoke.verifyKnowledgeHitUi();
-                    })()`,
-                ]),
-                { cwd: artifactDir }
-            ).stdout
-        );
+        const knowledgeHitUiRawOutput = runPwcli(
+            pwcli,
+            sessionArgs.concat([
+                '--raw',
+                'eval',
+                `(async () => {
+                    const smoke = window.__NC_DYNAMIC_SMOKE__;
+                    if (!smoke || typeof smoke.verifyKnowledgeHitUi !== 'function') {
+                        return JSON.stringify({ ok: false, reason: 'knowledge_hit_ui_harness_unavailable' });
+                    }
+                    return JSON.stringify(await smoke.verifyKnowledgeHitUi());
+                })()`,
+            ]),
+            { cwd: artifactDir }
+        ).stdout;
+        const knowledgeHitUiState = normalizeRawValue(knowledgeHitUiRawOutput);
+        const knowledgeHitUiRawPreview = String(knowledgeHitUiRawOutput || '').trim().slice(0, 300);
 
         const screenshotOutput = runPwcli(pwcli, sessionArgs.concat(['screenshot']), { cwd: artifactDir });
         const consoleOutput = runPwcli(pwcli, sessionArgs.concat(['console']), { cwd: artifactDir });
@@ -2453,7 +2546,7 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
                 promotionStateAfterEscape,
                 knowledgeHitUi: knowledgeHitUiState && typeof knowledgeHitUiState === 'object'
                     ? knowledgeHitUiState
-                    : { ok: false, reason: 'knowledge_hit_ui_state_unavailable' },
+                    : { ok: false, reason: 'knowledge_hit_ui_state_unavailable', rawPreview: knowledgeHitUiRawPreview },
             },
         };
 
@@ -2854,6 +2947,10 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             : {};
         if (knowledgeHitUi.ok !== true) {
             failures.push(`knowledgeHitUi.ok='${String(knowledgeHitUi.ok)}'`);
+            failures.push(`knowledgeHitUi.reason='${String(knowledgeHitUi.reason || '')}'`);
+            if (knowledgeHitUi.rawPreview) {
+                failures.push(`knowledgeHitUi.rawPreview='${String(knowledgeHitUi.rawPreview)}'`);
+            }
         }
         if (knowledgeHitUi.initialTextIncludesHint !== false) {
             failures.push(`knowledgeHitUi.initialTextIncludesHint='${String(knowledgeHitUi.initialTextIncludesHint)}'`);
@@ -2902,6 +2999,11 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (knowledgeHitUi.godotFuturePathShellPresent !== true) {
             failures.push(`knowledgeHitUi.godotFuturePathShellPresent='${String(knowledgeHitUi.godotFuturePathShellPresent)}'`);
         }
+        if (knowledgeHitUi.godotFuturePathHosted !== true || knowledgeHitUi.godotFuturePathSurfacePresent !== true) {
+            failures.push(
+                `knowledgeHitUi.godotFuturePathHosted='${String(knowledgeHitUi.godotFuturePathHosted)}:${String(knowledgeHitUi.godotFuturePathSurfacePresent)}'`
+            );
+        }
         if (knowledgeHitUi.godotFuturePathMode !== 'diffusion') {
             failures.push(`knowledgeHitUi.godotFuturePathMode='${String(knowledgeHitUi.godotFuturePathMode)}'`);
         }
@@ -2914,6 +3016,24 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (!Array.isArray(knowledgeHitUi.godotFuturePathTargetIds) || !knowledgeHitUi.godotFuturePathTargetIds.includes('water glass')) {
             failures.push(`knowledgeHitUi.godotFuturePathTargetIds='${JSON.stringify(knowledgeHitUi.godotFuturePathTargetIds || [])}'`);
         }
+        if (Number(knowledgeHitUi.godotFuturePathLayoutNodeCount || 0) <= 0) {
+            failures.push(`knowledgeHitUi.godotFuturePathLayoutNodeCount='${String(knowledgeHitUi.godotFuturePathLayoutNodeCount || 0)}'`);
+        }
+        if (!Array.isArray(knowledgeHitUi.godotFuturePathLayoutTargetLabels) || !knowledgeHitUi.godotFuturePathLayoutTargetLabels.includes('water glass')) {
+            failures.push(`knowledgeHitUi.godotFuturePathLayoutTargetLabels='${JSON.stringify(knowledgeHitUi.godotFuturePathLayoutTargetLabels || [])}'`);
+        }
+        if (!Number.isFinite(Number(knowledgeHitUi.godotFuturePathFeedbackMs)) || Number(knowledgeHitUi.godotFuturePathFeedbackMs) > 400) {
+            failures.push(`knowledgeHitUi.godotFuturePathFeedbackMs='${String(knowledgeHitUi.godotFuturePathFeedbackMs)}'`);
+        }
+        if (!Number.isFinite(Number(knowledgeHitUi.graphFocusFeedbackMs)) || Number(knowledgeHitUi.graphFocusFeedbackMs) > 400) {
+            failures.push(`knowledgeHitUi.graphFocusFeedbackMs='${String(knowledgeHitUi.graphFocusFeedbackMs)}'`);
+        }
+        if (Number(knowledgeHitUi.bridgeVisibilityTrueCalls || 0) !== 0) {
+            failures.push(`knowledgeHitUi.bridgeVisibilityTrueCalls='${String(knowledgeHitUi.bridgeVisibilityTrueCalls || 0)}'`);
+        }
+        if (Number(knowledgeHitUi.tauriShowGodotTrueCalls || 0) !== 0) {
+            failures.push(`knowledgeHitUi.tauriShowGodotTrueCalls='${String(knowledgeHitUi.tauriShowGodotTrueCalls || 0)}'`);
+        }
         if (knowledgeHitUi.pathContainerDockedInLearningPane !== false) {
             failures.push(`knowledgeHitUi.pathContainerDockedInLearningPane='${String(knowledgeHitUi.pathContainerDockedInLearningPane)}'`);
         }
@@ -2923,16 +3043,25 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (knowledgeHitUi.pathDebugPreviewPresent !== false) {
             failures.push(`knowledgeHitUi.pathDebugPreviewPresent='${String(knowledgeHitUi.pathDebugPreviewPresent)}'`);
         }
-        if (knowledgeHitUi.graphFocusRuntimeDocked !== true || knowledgeHitUi.graphFocusRuntimeIsMainContainer !== true) {
+        if (knowledgeHitUi.graphFocusRuntimeDocked !== false || knowledgeHitUi.graphFocusRuntimeIsMainContainer !== false) {
             failures.push(
                 `knowledgeHitUi.graphFocusRuntime='${String(knowledgeHitUi.graphFocusRuntimeDocked)}:${String(knowledgeHitUi.graphFocusRuntimeIsMainContainer)}'`
             );
         }
-        if (knowledgeHitUi.graphFocusRuntimeFocusNodeId !== 'water glass') {
-            failures.push(`knowledgeHitUi.graphFocusRuntimeFocusNodeId='${String(knowledgeHitUi.graphFocusRuntimeFocusNodeId || '')}'`);
+        if (knowledgeHitUi.graphFocusHosted !== true) {
+            failures.push(`knowledgeHitUi.graphFocusHosted='${String(knowledgeHitUi.graphFocusHosted)}'`);
         }
-        if (!String(knowledgeHitUi.graphFocusRuntimeFocusNodeLabel || '').includes('water glass')) {
-            failures.push(`knowledgeHitUi.graphFocusRuntimeFocusNodeLabel='${String(knowledgeHitUi.graphFocusRuntimeFocusNodeLabel || '')}'`);
+        if (knowledgeHitUi.graphFocusHostedAnchorId !== 'water glass') {
+            failures.push(`knowledgeHitUi.graphFocusHostedAnchorId='${String(knowledgeHitUi.graphFocusHostedAnchorId || '')}'`);
+        }
+        if (knowledgeHitUi.graphContainerParentStable !== true) {
+            failures.push(`knowledgeHitUi.graphContainerParentStable='${String(knowledgeHitUi.graphContainerParentStable)}'`);
+        }
+        if (!String(knowledgeHitUi.graphFocusHostedText || '').includes('water glass')) {
+            failures.push(`knowledgeHitUi.graphFocusHostedText='${String(knowledgeHitUi.graphFocusHostedText || '')}'`);
+        }
+        if (String(knowledgeHitUi.graphFocusHostedText || '').includes('atom_h')) {
+            failures.push(`knowledgeHitUi.graphFocusHostedText='${String(knowledgeHitUi.graphFocusHostedText || '')}'`);
         }
         if (String(knowledgeHitUi.graphFocusRuntimeText || '').includes('atom_h')) {
             failures.push(`knowledgeHitUi.graphFocusRuntimeText='${String(knowledgeHitUi.graphFocusRuntimeText || '')}'`);
@@ -2948,10 +3077,10 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (Number(knowledgeHitUi.focusOutOfBoundsCount || 0) !== 0) {
             failures.push(`knowledgeHitUi.focusOutOfBoundsCount='${String(knowledgeHitUi.focusOutOfBoundsCount)}'`);
         }
-        if (!Array.isArray(knowledgeHitUi.focusCalls) || !knowledgeHitUi.focusCalls.includes('water glass')) {
+        if (!Array.isArray(knowledgeHitUi.focusCalls) || knowledgeHitUi.focusCalls.length !== 0) {
             failures.push(`knowledgeHitUi.focusCalls='${JSON.stringify(knowledgeHitUi.focusCalls || [])}'`);
         }
-        if (Array.isArray(knowledgeHitUi.snapshotCalls) && knowledgeHitUi.snapshotCalls.includes('water glass')) {
+        if (!Array.isArray(knowledgeHitUi.snapshotCalls) || !knowledgeHitUi.snapshotCalls.includes('water glass')) {
             failures.push(`knowledgeHitUi.snapshotCalls='${JSON.stringify(knowledgeHitUi.snapshotCalls || [])}'`);
         }
         if (knowledgeHitUi.learningPathPaneOpen !== 'true' || knowledgeHitUi.graphFocusPaneOpen !== 'true' || knowledgeHitUi.evidencePaneOpen !== 'true') {
