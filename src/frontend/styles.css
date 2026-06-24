@@ -2461,6 +2461,137 @@ body.agent-workspace-open .agent-workspace-drawer {
   border-radius: 0;
 }
 
+.agent-focus-mode-hosted-shell {
+  position: relative;
+  min-height: min(58vh, 640px);
+  overflow: hidden;
+  border-radius: 8px;
+  background: #202020;
+  isolation: isolate;
+}
+
+.agent-focus-mode-viewport {
+  position: relative;
+  min-height: min(58vh, 640px);
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+
+.agent-focus-mode-viewport.is-panning {
+  cursor: grabbing;
+}
+
+.agent-focus-mode-viewport .agent-focus-mode-preview--hosted {
+  min-height: inherit;
+  height: 100%;
+  transform:
+    translate(var(--agent-focus-pan-x, 0px), var(--agent-focus-pan-y, 0px))
+    scale(var(--agent-focus-zoom, 1));
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.agent-focus-mode-pane-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background: rgba(2, 6, 12, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.agent-focus-mode-icon-button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(125, 211, 252, 0.26);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #dbeafe;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.agent-focus-mode-icon-button:hover {
+  border-color: rgba(125, 211, 252, 0.54);
+  background: rgba(30, 64, 175, 0.58);
+}
+
+.agent-focus-mode-icon-button:focus {
+  outline: none;
+}
+
+.agent-focus-mode-icon-button:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.95);
+  outline-offset: 2px;
+}
+
+.agent-focus-mode-history-control {
+  position: relative;
+}
+
+.agent-focus-mode-history-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  gap: 2px;
+  width: min(220px, 54vw);
+  max-height: min(260px, 42vh);
+  overflow: auto;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+  padding: 6px;
+}
+
+.agent-focus-mode-history-menu[hidden] {
+  display: none;
+}
+
+.agent-focus-mode-history-item {
+  appearance: none;
+  min-width: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #dbeafe;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.25;
+  overflow: hidden;
+  padding: 7px 8px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-focus-mode-history-item:hover,
+.agent-focus-mode-history-item[data-agent-focus-history-current="true"] {
+  background: rgba(37, 99, 235, 0.28);
+}
+
+.agent-focus-mode-history-empty {
+  color: #94a3b8;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  padding: 7px 8px;
+}
+
 .agent-focus-mode-context {
   position: absolute;
   inset: 0;
@@ -2706,6 +2837,10 @@ button.agent-focus-mode-node:active {
   background:
     radial-gradient(circle at 50% 50%, rgba(255, 214, 10, 0.08), transparent 34%),
     #202020;
+}
+
+.agent-focus-mode-viewport .agent-focus-mode-preview--projection {
+  min-height: inherit;
 }
 
 .agent-focus-mode-cluster-label--projection {

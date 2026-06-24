@@ -447,6 +447,9 @@
       "relationAnchorNode": "Anchor",
       "continueCluster": "Continue exploring",
       "supportCluster": "Helps understanding",
+      "resetView": "Reset view",
+      "history": "Focus history",
+      "historyEmpty": "No focus history yet.",
       "relationEdgesUnavailable": "No bounded relation edges were returned for this hit.",
       "runtimeUnavailable": "Focus runtime is unavailable."
     },

@@ -569,12 +569,16 @@ window.__NC_DYNAMIC_SMOKE__ = {
     const originalReaderOpen = readerObject && typeof readerObject.open === 'function'
       ? readerObject.open
       : null;
+    const originalStorageRuntime = window.NoteConnectionStorage;
+    const originalMarkdownRuntime = window.NoteConnectionMarkdownRuntime;
     const focusCalls = [];
     const snapshotCalls = [];
     const projectionCalls = [];
     const bridgeVisibilityCalls = [];
     const tauriToggleCalls = [];
     const readerOpenCalls = [];
+    const storageReadCalls = [];
+    const markdownRenderCalls = [];
     if (pathApp && originalBridgeVisibility) {
       pathApp.requestBridgeWindowVisibility = function (visible, options) {
         bridgeVisibilityCalls.push({ visible: Boolean(visible), options: options || null });
@@ -595,6 +599,35 @@ window.__NC_DYNAMIC_SMOKE__ = {
         return true;
       };
     }
+    window.NoteConnectionStorage = {
+      createProvider: function () {
+        return {
+          readContent: async function (sourcePath) {
+            const normalizedPath = String(sourcePath || '').trim();
+            storageReadCalls.push(normalizedPath);
+            return [
+              '# Water Glass',
+              '',
+              'A water glass is opened from the hosted Future Path pane.',
+              '',
+              'A water glass is a physical system.'
+            ].join('\\n');
+          }
+        };
+      }
+    };
+    window.NoteConnectionMarkdownRuntime = Object.assign({}, originalMarkdownRuntime || {}, {
+      renderMarkdownInto: async function (target, markdownSource) {
+        markdownRenderCalls.push(String(markdownSource || ''));
+        if (target) {
+          target.innerHTML = '<article><h1>Water Glass</h1><p>A water glass is opened from the hosted Future Path pane.</p></article>';
+        }
+        return {
+          sourceBlockCount: 1,
+          attributedNodeCount: 1
+        };
+      }
+    });
     window.NoteConnectionGraphView = Object.assign({}, originalGraphView || {}, {
       resolveNodeByKnowledgePoint: function () {
         return { id: 'water glass', label: 'water glass' };
@@ -865,11 +898,15 @@ window.__NC_DYNAMIC_SMOKE__ = {
       const pathRuntimeTitle = godotFuturePathShell ? godotFuturePathShell.textContent.replace(/\\s+/g, ' ').trim() : '';
       const pathDebugPreview = document.querySelector('[data-agent-path-mode-preview="true"]');
       let godotTreeClickSignal = '';
+      let godotTreeDoubleClickSignal = '';
       let godotTreeRightClickSignal = '';
       let godotTreeRightClickCollapsedTarget = false;
       let godotTreeRightClickExpandedTarget = false;
       let godotTreeMiddleClickSignal = '';
       let godotTreeSelectedNodeId = '';
+      let learningPathPaneReaderOpen = false;
+      let learningPathPaneReaderText = '';
+      let learningPathPaneReaderTitle = '';
       if (godotTreeTargetNode) {
         godotTreeTargetNode.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
         godotTreeClickSignal = String(window.__NC_LAST_AGENT_GODOT_TREE_SIGNAL && window.__NC_LAST_AGENT_GODOT_TREE_SIGNAL.signal || '');
@@ -878,6 +915,14 @@ window.__NC_DYNAMIC_SMOKE__ = {
           || document.querySelector('[data-agent-godot-future-path-shell="true"]')?.getAttribute('data-godot-tree-selected-node-id')
           || ''
         );
+        godotTreeTargetNode.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        godotTreeDoubleClickSignal = String(window.__NC_LAST_AGENT_GODOT_TREE_SIGNAL && window.__NC_LAST_AGENT_GODOT_TREE_SIGNAL.signal || '');
+        const learningPathPaneReader = document.querySelector('[data-agent-learning-path-pane-reader="true"]');
+        const learningPathPaneReaderTitleNode = document.querySelector('[data-agent-learning-path-pane-reader-title="true"]');
+        learningPathPaneReaderOpen = Boolean(learningPathPaneReader && learningPathPaneReader.hidden === false);
+        learningPathPaneReaderText = learningPathPaneReader ? learningPathPaneReader.textContent.replace(/\\s+/g, ' ').trim() : '';
+        learningPathPaneReaderTitle = learningPathPaneReaderTitleNode ? learningPathPaneReaderTitleNode.textContent.replace(/\\s+/g, ' ').trim() : '';
         godotTreeTargetNode.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
         godotTreeRightClickSignal = String(window.__NC_LAST_AGENT_GODOT_TREE_SIGNAL && window.__NC_LAST_AGENT_GODOT_TREE_SIGNAL.signal || '');
         await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -899,6 +944,15 @@ window.__NC_DYNAMIC_SMOKE__ = {
       let graphFocusSwitchedAnchorId = '';
       let graphFocusOpenReaderAction = '';
       let graphFocusPaneReaderOpen = false;
+      let graphFocusViewportPresent = false;
+      let graphFocusWheelZoom = 0;
+      let graphFocusResetZoom = 0;
+      let graphFocusResetPanX = null;
+      let graphFocusResetPanY = null;
+      let graphFocusHistoryButtonPresent = false;
+      let graphFocusHistoryExpanded = '';
+      let graphFocusHistoryLabels = [];
+      let graphFocusHistorySwitchedAnchorId = '';
       if (relatedFocusButton) {
         const clickedAt = Date.now();
         relatedFocusButton.click();
@@ -918,6 +972,27 @@ window.__NC_DYNAMIC_SMOKE__ = {
         graphFocusInitialText = hostedFocusBeforeInteraction
           ? hostedFocusBeforeInteraction.textContent.replace(/\\s+/g, ' ').trim()
           : '';
+        const focusViewport = document.querySelector('[data-agent-focus-viewport="true"]');
+        graphFocusViewportPresent = Boolean(focusViewport);
+        if (focusViewport) {
+          focusViewport.dispatchEvent(new WheelEvent('wheel', {
+            deltaY: -100,
+            clientX: 120,
+            clientY: 120,
+            bubbles: true,
+            cancelable: true
+          }));
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+          graphFocusWheelZoom = Number(focusViewport.getAttribute('data-agent-focus-zoom') || 0);
+          const focusResetButton = document.querySelector('[data-agent-focus-control="reset"]');
+          if (focusResetButton) {
+            focusResetButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+          }
+          graphFocusResetZoom = Number(focusViewport.getAttribute('data-agent-focus-zoom') || 0);
+          graphFocusResetPanX = Number(focusViewport.getAttribute('data-agent-focus-pan-x') || 0);
+          graphFocusResetPanY = Number(focusViewport.getAttribute('data-agent-focus-pan-y') || 0);
+        }
         const relatedFocusNode = document.querySelector('[data-agent-focus-mode-node-id="application"]');
         if (relatedFocusNode) {
           relatedFocusNode.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
@@ -934,6 +1009,25 @@ window.__NC_DYNAMIC_SMOKE__ = {
             graphFocusOpenReaderAction = String(window.__NC_LAST_AGENT_FOCUS_MODE_ACTION && window.__NC_LAST_AGENT_FOCUS_MODE_ACTION.action || '');
             const paneReader = document.querySelector('[data-agent-focus-pane-reader="true"]');
             graphFocusPaneReaderOpen = Boolean(paneReader && paneReader.hidden === false);
+          }
+        }
+        const focusHistoryButton = document.querySelector('[data-agent-focus-control="history"]');
+        graphFocusHistoryButtonPresent = Boolean(focusHistoryButton);
+        if (focusHistoryButton) {
+          focusHistoryButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+          graphFocusHistoryExpanded = String(focusHistoryButton.getAttribute('aria-expanded') || '');
+          graphFocusHistoryLabels = Array.from(document.querySelectorAll('[data-agent-focus-history-item="true"]'))
+            .map((node) => node.textContent.replace(/\\s+/g, ' ').trim())
+            .filter(Boolean);
+          const waterGlassHistoryItem = document.querySelector('[data-agent-focus-history-item="true"][data-agent-focus-history-node-id="water glass"]');
+          if (waterGlassHistoryItem) {
+            waterGlassHistoryItem.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+            const historySwitchedFocus = document.querySelector('[data-agent-hosted-focus-mode="true"]');
+            graphFocusHistorySwitchedAnchorId = historySwitchedFocus
+              ? historySwitchedFocus.getAttribute('data-agent-hosted-focus-anchor-id') || ''
+              : '';
           }
         }
       }
@@ -1024,7 +1118,13 @@ window.__NC_DYNAMIC_SMOKE__ = {
         godotTreeTargetNodeText: godotTreeTargetNode ? godotTreeTargetNode.textContent.replace(/\\s+/g, ' ').trim() : '',
         godotTreeExpansionBadgePresent: Boolean(godotTreeExpansionBadge),
         godotTreeClickSignal,
+        godotTreeDoubleClickSignal,
         godotTreeSelectedNodeId,
+        learningPathPaneReaderOpen,
+        learningPathPaneReaderTitle,
+        learningPathPaneReaderText,
+        learningPathStorageReadCalls: storageReadCalls.slice(),
+        learningPathMarkdownRenderCallCount: markdownRenderCalls.length,
         godotTreeRightClickSignal,
         godotTreeRightClickCollapsedTarget,
         godotTreeRightClickExpandedTarget,
@@ -1070,6 +1170,15 @@ window.__NC_DYNAMIC_SMOKE__ = {
         graphFocusSwitchedAnchorId,
         graphFocusOpenReaderAction,
         graphFocusPaneReaderOpen,
+        graphFocusViewportPresent,
+        graphFocusWheelZoom,
+        graphFocusResetZoom,
+        graphFocusResetPanX,
+        graphFocusResetPanY,
+        graphFocusHistoryButtonPresent,
+        graphFocusHistoryExpanded,
+        graphFocusHistoryLabels,
+        graphFocusHistorySwitchedAnchorId,
         graphFocusGlobalReaderOpenCallCount: readerOpenCalls.length,
         graphContainerParentStable: graphContainer ? graphContainer.parentElement === graphContainerOriginalParent : false,
         graphFocusMainFocusNodeId: graphFocusMainFocusNode ? String(graphFocusMainFocusNode.id || '') : '',
@@ -1113,6 +1222,16 @@ window.__NC_DYNAMIC_SMOKE__ = {
       }
       if (readerObject && originalReaderOpen) {
         readerObject.open = originalReaderOpen;
+      }
+      if (typeof originalStorageRuntime === 'undefined') {
+        delete window.NoteConnectionStorage;
+      } else {
+        window.NoteConnectionStorage = originalStorageRuntime;
+      }
+      if (typeof originalMarkdownRuntime === 'undefined') {
+        delete window.NoteConnectionMarkdownRuntime;
+      } else {
+        window.NoteConnectionMarkdownRuntime = originalMarkdownRuntime;
       }
     }
   },
@@ -3273,6 +3392,27 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
         if (knowledgeHitUi.godotTreeSelectedNodeId !== 'water glass') {
             failures.push(`knowledgeHitUi.godotTreeSelectedNodeId='${String(knowledgeHitUi.godotTreeSelectedNodeId || '')}'`);
         }
+        if (knowledgeHitUi.godotTreeDoubleClickSignal !== 'node_reader_requested') {
+            failures.push(`knowledgeHitUi.godotTreeDoubleClickSignal='${String(knowledgeHitUi.godotTreeDoubleClickSignal || '')}'`);
+        }
+        if (knowledgeHitUi.learningPathPaneReaderOpen !== true) {
+            failures.push(`knowledgeHitUi.learningPathPaneReaderOpen='${String(knowledgeHitUi.learningPathPaneReaderOpen)}'`);
+        }
+        if (!String(knowledgeHitUi.learningPathPaneReaderTitle || '').includes('water glass')) {
+            failures.push(`knowledgeHitUi.learningPathPaneReaderTitle='${String(knowledgeHitUi.learningPathPaneReaderTitle || '')}'`);
+        }
+        if (!String(knowledgeHitUi.learningPathPaneReaderText || '').includes('A water glass is opened from the hosted Future Path pane')) {
+            failures.push(`knowledgeHitUi.learningPathPaneReaderText='${String(knowledgeHitUi.learningPathPaneReaderText || '')}'`);
+        }
+        if (
+            !Array.isArray(knowledgeHitUi.learningPathStorageReadCalls)
+            || !knowledgeHitUi.learningPathStorageReadCalls.includes('Knowledge_Base/waterglass/water glass.md')
+        ) {
+            failures.push(`knowledgeHitUi.learningPathStorageReadCalls='${JSON.stringify(knowledgeHitUi.learningPathStorageReadCalls || [])}'`);
+        }
+        if (Number(knowledgeHitUi.learningPathMarkdownRenderCallCount || 0) <= 0) {
+            failures.push(`knowledgeHitUi.learningPathMarkdownRenderCallCount='${String(knowledgeHitUi.learningPathMarkdownRenderCallCount || 0)}'`);
+        }
         if (knowledgeHitUi.godotTreeRightClickSignal !== 'node_collapse_prereqs_requested') {
             failures.push(`knowledgeHitUi.godotTreeRightClickSignal='${String(knowledgeHitUi.godotTreeRightClickSignal || '')}'`);
         }
@@ -3397,6 +3537,36 @@ async function verifyAgentWorkspaceBrowser(options = {}) {
             failures.push(
                 `knowledgeHitUi.graphFocusPaneReader='${String(knowledgeHitUi.graphFocusOpenReaderAction || '')}:${String(knowledgeHitUi.graphFocusPaneReaderOpen)}'`
             );
+        }
+        if (knowledgeHitUi.graphFocusViewportPresent !== true) {
+            failures.push(`knowledgeHitUi.graphFocusViewportPresent='${String(knowledgeHitUi.graphFocusViewportPresent)}'`);
+        }
+        if (!(Number(knowledgeHitUi.graphFocusWheelZoom) > 1)) {
+            failures.push(`knowledgeHitUi.graphFocusWheelZoom='${String(knowledgeHitUi.graphFocusWheelZoom)}'`);
+        }
+        if (
+            Number(knowledgeHitUi.graphFocusResetZoom) !== 1
+            || Number(knowledgeHitUi.graphFocusResetPanX) !== 0
+            || Number(knowledgeHitUi.graphFocusResetPanY) !== 0
+        ) {
+            failures.push(
+                `knowledgeHitUi.graphFocusReset='${String(knowledgeHitUi.graphFocusResetZoom)}:${String(knowledgeHitUi.graphFocusResetPanX)}:${String(knowledgeHitUi.graphFocusResetPanY)}'`
+            );
+        }
+        if (knowledgeHitUi.graphFocusHistoryButtonPresent !== true || knowledgeHitUi.graphFocusHistoryExpanded !== 'true') {
+            failures.push(
+                `knowledgeHitUi.graphFocusHistoryControl='${String(knowledgeHitUi.graphFocusHistoryButtonPresent)}:${String(knowledgeHitUi.graphFocusHistoryExpanded || '')}'`
+            );
+        }
+        if (
+            !Array.isArray(knowledgeHitUi.graphFocusHistoryLabels)
+            || !knowledgeHitUi.graphFocusHistoryLabels.includes('water glass')
+            || !knowledgeHitUi.graphFocusHistoryLabels.includes('application')
+        ) {
+            failures.push(`knowledgeHitUi.graphFocusHistoryLabels='${JSON.stringify(knowledgeHitUi.graphFocusHistoryLabels || [])}'`);
+        }
+        if (knowledgeHitUi.graphFocusHistorySwitchedAnchorId !== 'water glass') {
+            failures.push(`knowledgeHitUi.graphFocusHistorySwitchedAnchorId='${String(knowledgeHitUi.graphFocusHistorySwitchedAnchorId || '')}'`);
         }
         if (Number(knowledgeHitUi.graphFocusGlobalReaderOpenCallCount || 0) !== 0) {
             failures.push(`knowledgeHitUi.graphFocusGlobalReaderOpenCallCount='${String(knowledgeHitUi.graphFocusGlobalReaderOpenCallCount || 0)}'`);

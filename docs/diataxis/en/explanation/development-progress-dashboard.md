@@ -3,6 +3,38 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-06-24 Knowledge Workspace Hosted Interaction Parity
+
+This increment closes two remaining pane-hosting gaps without changing the ownership model established on 2026-06-22.
+The Knowledge Workspace still reuses Focus/Future Path behavior contracts locally; it does not reparent the Tauri main graph DOM and does not open or embed the native Godot window by default.
+
+What is now true in code:
+
+- `src/frontend/workspace_panes.js` wraps the hosted Focus projection in a pane-local viewport with wheel zoom, pointer panning, icon reset, and icon focus-history controls.
+- Hosted Focus history is scoped to the Knowledge Focus pane, bounded to the most recent anchors, and switches anchors through the same hosted `switchHostedFocusNode()` path instead of mutating the main graph runtime.
+- Hosted Focus still hides the dense gray context-dot background, visible edge layer, and main toolbar frame by default, while preserving Focus semantic labels and active node density.
+- `src/frontend/godot_tree_interactions.js` now lets callers provide `nodeReaderRequested`; hosted Future Path uses that callback so double-click opens concrete node Markdown in the Guided Learning pane, while callers without the callback keep the previous prerequisite expand/collapse fallback.
+- `src/frontend/workspace_panes.js` now uses a shared pane-local reader path for both Knowledge Focus and Guided Learning, so node content opens inside the pane that owns the interaction and global `reader.open` remains untouched.
+- `src/frontend/locales/en.json` and `src/frontend/locales/zh.json` now include the new Focus viewport control labels, keeping locale contracts intact.
+- `scripts/verify-agent-workspace-browser.js` now asserts the real browser regression path: Future Path double-click emits `node_reader_requested`, reads `Knowledge_Base/waterglass/water glass.md`, renders Markdown inside the learning-path pane, keeps global reader calls at zero, zooms the hosted Focus viewport by wheel, resets to `1/0/0`, opens focus history, and switches history back to `water glass`.
+- `src/agent_workspace.frontend.test.ts` now pins the same contracts at jsdom level for fast regression feedback.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Knowledge Focus should behave like Focus mode in a small right-side pane | Hosted Focus uses the existing projection/double-click contract plus pane-local wheel zoom, reset, and history controls. | Implemented |
+| Knowledge Focus controls must not take over the Tauri main graph | The hosted viewport stores transform state on pane-local DOM attributes and calls hosted anchor switching only. | Implemented |
+| Learning Path double-click should open concrete node content in-place | Hosted Future Path passes `nodeReaderRequested` into the TreeRenderer adapter and opens the shared pane-local Markdown reader. | Implemented |
+| Reuse must remain compatible | The TreeRenderer adapter falls back to the prior expansion behavior when no reader callback is supplied. | Implemented |
+| Regression coverage must be executable | Strict browser verification now checks `water glass` Focus/Future Path interactions, source read path, Markdown render, zoom/reset/history, and global reader non-use. | Implemented |
+
+Tradeoff:
+
+This still deliberately avoids native Godot window docking.
+That is the correct boundary for now: embedding native windows would require platform-specific ownership of window parenting, input focus, teardown, and reader routing.
+The shipped path reuses the stable graph/path contracts and renderer semantics inside the web workspace, which is lower risk and keeps the main Tauri surface isolated.
+
 ## 2026-06-22 Knowledge Workspace Hosted Focus/Future Path Closure
 
 The latest closure is not a new framework direction.

@@ -447,6 +447,9 @@
       "relationAnchorNode": "锚点",
       "continueCluster": "继续探索",
       "supportCluster": "帮助理解",
+      "resetView": "\u91cd\u7f6e\u89c6\u56fe",
+      "history": "\u805a\u7126\u5386\u53f2",
+      "historyEmpty": "\u6682\u65e0\u805a\u7126\u5386\u53f2\u3002",
       "relationEdgesUnavailable": "当前命中未返回有界关系边。",
       "runtimeUnavailable": "专注运行时不可用。"
     },

@@ -27,7 +27,7 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
-## Current Mainline Architecture Status (2026-06-20)
+## Current Mainline Architecture Status (2026-06-24)
 
 ### English
 
@@ -36,6 +36,8 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 - Matched-file discoverability is now intentionally compact: users get a question-mark help affordance for "left-click opens source and highlights the basis" instead of permanent instructional text in the workspace.
 - The matched-file/source-focus path is now right-pane-first: source clicks resolve candidate paths, render Markdown, highlight matched evidence, and expose close controls for the affected right-pane surfaces.
 - `Related Focus` is implemented as a side-pane Focus-mode host backed by the main graph projection contract and the shared double-click decision contract; it switches anchors and opens Markdown inside the pane without moving the main graph DOM or calling the global reader, and the hosted view intentionally omits the main toolbar frame, visible edge layer, and dense background context dots. `Learning Path` hosts the Godot Future Path `diffusion/core/treeLayout` contract, inherits matching Path-mode expansion/collapse/completion state when the live target matches, and routes DOM input through TreeRenderer-style spine-only signals, including right-click prerequisite collapse for the selected node.
+- The hosted `Related Focus` viewport now has pane-local wheel zoom, icon reset, and icon focus-history controls; these controls are intentionally scoped to the right-side Knowledge Focus pane and do not mutate the Tauri main graph runtime.
+- The hosted `Learning Path` Future Path surface now routes node double-click to the same pane-local Markdown reader used by Knowledge Focus, so opening concrete node text stays inside the Guided Learning pane instead of delegating to the global reader.
 - The current implementation uses resolved graph labels such as `water glass`, not internal atom IDs, for the knowledge graph preview surface. This behavior is pinned by strict browser verification.
 - Current code-vs-plan details are tracked in [Agent Knowledge Workspace Graph Preview and Review Closure (2026-06-20)](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) and the [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md).
 
@@ -46,6 +48,8 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 - 命中文件可发现性现在刻意保持克制：用户通过问号帮助入口了解“左键打开源文档并高亮依据”，而不是在 workspace 中常驻说明文案。
 - 命中文件 / source-focus 路径现在以右侧 pane 为权威阅读面：单击后解析候选路径、渲染 Markdown、高亮命中依据，并在受影响的右侧 pane surface 上提供关闭控件。
 - `关联聚焦` 已实现为右侧 pane 内托管的 Focus-mode：复用主图投影契约与共享双击决策契约，在 pane 内切换 anchor 或打开 Markdown，不移动主图 DOM，也不调用全局 reader；托管视图刻意不显示主界面的工具框、可见边线与密集灰色背景 context 点。`学习路径` 托管 Godot Future Path 的 `diffusion/core/treeLayout` 契约；当主 Path mode 当前 target 匹配时，会继承其 expansion/collapse/completion 状态包，并将 DOM 输入路由为 TreeRenderer 风格的 spine-only 信号，包括对选中主干节点的右键 prerequisite 收起。
+- 托管 `关联聚焦` viewport 现在具备 pane-local 滚轮缩放、图标式 reset 与图标式 focus history 控件；这些控制只作用于右侧知识聚焦 pane，不会修改 Tauri 主图运行时。
+- 托管 `学习路径` Future Path surface 现在把节点双击路由到与知识聚焦相同的 pane-local Markdown reader，因此打开具体节点文本会留在引导式学习 pane 内，而不是委托给全局 reader。
 - 当前实现使用 `water glass` 这类解析后的图标签，而不是内部 atom ID，作为知识图预览展示名称；该行为已由 strict browser verification 固定。
 - 当前代码 / 方案对齐详情见 [Agent 知识工作区图预览与回答审核收口（2026-06-20）](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) 与 [开发进度看板](docs/diataxis/zh/explanation/development-progress-dashboard.md)。
 

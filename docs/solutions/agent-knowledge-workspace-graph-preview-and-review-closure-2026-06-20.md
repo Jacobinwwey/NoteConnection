@@ -3,9 +3,9 @@ module: architecture
 tags: [agent-workspace, knowledge-workspace, dag, graph-preview, answer-release-review, frontend, robustness, compatibility]
 problem_type: implementation-plan
 created: 2026-06-20
-updated: 2026-06-22
+updated: 2026-06-24
 status: completed
-version: 2026.06.22
+version: 2026.06.24
 ---
 
 # 2026-06-20 v1.7.0 - Agent Knowledge Workspace Graph Preview and Review Closure
@@ -27,6 +27,25 @@ It reconciles the user's latest UI expectations with the already-landed DAG answ
 
 This is not a recommendation to introduce another RAG framework. The right owner is already inside this codebase: the existing DAG, the learning runtime, the answer composer/reviewer, the main graph Focus-mode semantics, and the Godot Future Path `treeLayout` contract.
 
+### 2026-06-24 Incremental Alignment
+
+This update closes the remaining hosted-interaction parity issues reported after the 2026-06-22 slice.
+It does not change the reuse boundary: the workspace still reuses contracts and renderer semantics, not the live Tauri main graph DOM and not the native Godot window.
+
+What changed:
+
+- Hosted `Related Focus` now has a pane-local viewport for wheel zoom, pointer panning, icon reset, and icon focus history. The transform state is scoped to the right-side pane and never mutates the main graph runtime.
+- Hosted Focus history is bounded and uses the same hosted anchor switch path as double-click focus switching, so the pane can move between `water glass` and `application` without calling `openFocusModeById()` or the global reader.
+- Hosted `Learning Path` now treats Future Path node double-click as a pane-local reader request. It reuses the existing source-path resolution and Markdown preview/highlight pipeline already used by Knowledge Focus.
+- `src/frontend/godot_tree_interactions.js` remains backward-compatible: `nodeReaderRequested` is optional, and callers that omit it still get the previous double-click prerequisite expand/collapse fallback.
+- The strict browser verifier now owns this exact regression: it checks `node_reader_requested`, verifies `Knowledge_Base/waterglass/water glass.md` is read, verifies Markdown appears inside the learning-path pane, verifies global `reader.open` remains unused, and verifies Focus wheel zoom, reset, history open, and history switching back to `water glass`.
+
+Best-practice boundary:
+
+- Do not add a second Focus renderer just to gain controls. Keep using `getFocusModeProjection()` plus the shared double-click decision contract.
+- Do not wire Future Path double-click to global `reader.open`. The reader owner is the pane that received the graph interaction.
+- Do not treat native Godot docking as a small UI change. It is a platform-window ownership problem and should remain a separate spike if product direction later requires it.
+
 ### Completion Boundary
 
 Current implementation status is code-backed:
@@ -34,12 +53,12 @@ Current implementation status is code-backed:
 - `src/learning/graphContextAssembler.ts` owns graph-conditioned context assembly before answer synthesis.
 - `src/learning/conversationComposer.ts` calls `reviewAnswerRelease()` and releases `answerReleaseReview.publicAnswer`.
 - `src/learning/answerReleaseReview.ts` owns deterministic public-answer gates, including graph-causal, graph-order, graph-comparison, temporal-validity, and query-intent gates.
-- `src/frontend/workspace_panes.js` owns the Knowledge Workspace source focus pane, help affordance, matched-file action controls, hosted Focus projection pane, hosted Godot Future Path renderer surface, close controls, and provenance diagnostics.
+- `src/frontend/workspace_panes.js` owns the Knowledge Workspace source focus pane, help affordance, matched-file action controls, hosted Focus projection pane, pane-local Focus viewport controls, bounded Focus history, hosted Godot Future Path renderer surface, pane-local node readers, close controls, and provenance diagnostics.
 - `src/frontend/focus_mode_interactions.js` owns the shared Focus-mode double-click decision contract now consumed by both the main graph runtime and the hosted Knowledge Focus pane.
-- `src/frontend/godot_tree_interactions.js` owns the browser-to-Godot TreeRenderer signal adapter for hosted Future Path input: node click, spine-only right-click/double-click prerequisite expansion, middle-click collapse-all, and long-press navigation. Toggle eligibility follows the Godot TreeRenderer contract instead of widening to non-spine prerequisite nodes.
+- `src/frontend/godot_tree_interactions.js` owns the browser-to-Godot TreeRenderer signal adapter for hosted Future Path input: node click, optional pane-local reader requests on double-click, spine-only right-click/double-click prerequisite expansion fallback, middle-click collapse-all, and long-press navigation. Toggle eligibility follows the Godot TreeRenderer contract instead of widening to non-spine prerequisite nodes.
 - `src/frontend/godot_future_path_renderer.js` owns the modular TreeRenderer-compatible Future Path surface: 140x50 capsule nodes, Bezier skip-level edge filtering, active subtree hulls, spine expansion badges, hover subtree focus, word-preserving labels, and target-centered pane-local pan/zoom auto-fit hooks.
-- `scripts/verify-agent-workspace-browser.js` owns the strict browser regression for the latest UI defects, including the `water glass.md` display case, hosted Focus anchor/no-context-dot assertions for `water glass`, hosted Focus semantic-label assertions, absence of the hosted Focus toolbar/edge layer, pane-local Focus double-click switching and reader opening, refusal to dock the main `#graph-container`, live Path-mode expansion-state inheritance, TreeRenderer marker/hull/viewport assertions, Godot-style click/right-click/middle-click signal assertions, right-click collapse state for `water glass`, and refusal to show the native Godot window by default.
-- `src/agent_workspace.frontend.test.ts` pins help-popover behavior, stable ARIA/control IDs, source highlight behavior, hosted Focus projection behavior, pane-local Focus double-click semantics, and Godot Future Path renderer/input semantics.
+- `scripts/verify-agent-workspace-browser.js` owns the strict browser regression for the latest UI defects, including the `water glass.md` display case, hosted Focus anchor/no-context-dot assertions for `water glass`, hosted Focus semantic-label assertions, absence of the hosted Focus toolbar/edge layer, Focus wheel zoom/reset/history behavior, pane-local Focus double-click switching and reader opening, refusal to dock the main `#graph-container`, live Path-mode expansion-state inheritance, TreeRenderer marker/hull/viewport assertions, Future Path double-click pane-local Markdown opening, Godot-style click/right-click/middle-click signal assertions, right-click collapse state for `water glass`, and refusal to show the native Godot window by default.
+- `src/agent_workspace.frontend.test.ts` pins help-popover behavior, stable ARIA/control IDs, source highlight behavior, hosted Focus projection behavior, pane-local Focus viewport/history controls, pane-local Focus double-click semantics, hosted Future Path pane-local node reader behavior, and Godot Future Path renderer/input semantics.
 
 The remaining work is calibration and coverage expansion. It is not a blocker for this slice:
 
@@ -328,6 +347,25 @@ The deliberate limitation remains: this is contract and renderer-semantics reuse
 
 这不是引入另一套 RAG 框架的理由。正确 owner 已经在本项目内部：现有 DAG、learning runtime、answer composer/reviewer、主图 Focus-mode 语义，以及 Godot Future Path 的 `treeLayout` 契约。
 
+### 2026-06-24 增量对齐
+
+本次更新收口 2026-06-22 后继续暴露的托管交互 parity 问题。
+它不改变复用边界：工作区继续复用契约与 renderer 语义，而不是复用 Tauri 主图的 live DOM，也不是复用 Godot 原生窗口。
+
+当前变化：
+
+- 托管 `关联聚焦` 现在具备 pane-local viewport，支持滚轮缩放、指针拖拽平移、图标式 reset 与图标式 focus history。transform 状态只作用于右侧 pane，不会修改主图运行时。
+- 托管 Focus history 有数量上限，并复用与双击切换相同的 hosted anchor switch 路径，因此 pane 可以在 `water glass` 与 `application` 之间移动，而不调用 `openFocusModeById()` 或全局 reader。
+- 托管 `学习路径` 现在将 Future Path 节点双击视为 pane-local reader 请求。它复用知识聚焦已经使用的 source-path 解析与 Markdown preview/highlight 管线。
+- `src/frontend/godot_tree_interactions.js` 继续保持向前兼容：`nodeReaderRequested` 是可选 callback，未提供该 callback 的调用方仍保留旧的双击 prerequisite 展开 / 收起回退行为。
+- strict browser verifier 已经持有这条准确回归：检查 `node_reader_requested`、确认读取 `Knowledge_Base/waterglass/water glass.md`、确认 Markdown 出现在 learning-path pane 内、确认全局 `reader.open` 未被调用，并确认 Focus 可滚轮缩放、reset、打开 history、通过 history 回跳到 `water glass`。
+
+最佳实践边界：
+
+- 不要为了拿到控件而再写一套 Focus renderer。继续复用 `getFocusModeProjection()` 与共享双击决策契约。
+- 不要把 Future Path 双击接到全局 `reader.open`。reader owner 应该是接收图交互的 pane。
+- 不要把 Godot 原生 docking 当成小 UI 改动。它是平台窗口 owner 问题；如果后续产品方向需要，应作为独立 spike 处理。
+
 ### 完成边界
 
 当前实现已经有代码证据：
@@ -335,10 +373,10 @@ The deliberate limitation remains: this is contract and renderer-semantics reuse
 - `src/learning/graphContextAssembler.ts` 在回答合成前持有 graph-conditioned context assembly。
 - `src/learning/conversationComposer.ts` 调用 `reviewAnswerRelease()`，并发布 `answerReleaseReview.publicAnswer`。
 - `src/learning/answerReleaseReview.ts` 持有确定性公开回答门禁，包括 graph-causal、graph-order、graph-comparison、temporal-validity 与 query-intent 门禁。
-- `src/frontend/workspace_panes.js` 持有 Knowledge Workspace 的 source focus pane、帮助提示、命中文件 action、托管 Focus pane、托管 Godot Future Path 投影、关闭控件与 provenance 诊断。
-- `src/frontend/godot_tree_interactions.js` 持有托管 Future Path 的 TreeRenderer 风格输入信号适配：节点点击、spine-only 右键 / 双击 prerequisite 展开收起、中键全部收起与长按导航；可展开判定重新对齐 Godot TreeRenderer，而不是扩展到非 spine prerequisite 节点。
-- `scripts/verify-agent-workspace-browser.js` 固定了最新 UI 缺陷的严格浏览器回归，包括 `water glass.md` 展示案例、托管 Focus anchor 必须为 `water glass`、Focus 语义标签、默认无密集 context 点、托管 Focus 不存在工具框 / 可见边线、拒绝停靠主 `#graph-container`、live Path-mode expansion 状态继承、`water glass` 右键后必须进入 collapsed 状态，以及默认拒绝显示 Godot 原生窗口。
-- `src/agent_workspace.frontend.test.ts` 固定 help popover、稳定 ARIA/control ID、source highlight 与 path role 渲染。
+- `src/frontend/workspace_panes.js` 持有 Knowledge Workspace 的 source focus pane、帮助提示、命中文件 action、托管 Focus pane、pane-local Focus viewport 控件、有界 Focus history、托管 Godot Future Path 投影、pane-local node reader、关闭控件与 provenance 诊断。
+- `src/frontend/godot_tree_interactions.js` 持有托管 Future Path 的 TreeRenderer 风格输入信号适配：节点点击、可选 pane-local reader 请求、spine-only 右键 / 双击 prerequisite 展开收起回退、中键全部收起与长按导航；可展开判定重新对齐 Godot TreeRenderer，而不是扩展到非 spine prerequisite 节点。
+- `scripts/verify-agent-workspace-browser.js` 固定了最新 UI 缺陷的严格浏览器回归，包括 `water glass.md` 展示案例、托管 Focus anchor 必须为 `water glass`、Focus 语义标签、默认无密集 context 点、托管 Focus 不存在工具框 / 可见边线、Focus 滚轮缩放 / reset / history 行为、拒绝停靠主 `#graph-container`、live Path-mode expansion 状态继承、Future Path 双击在 pane 内打开 Markdown、`water glass` 右键后必须进入 collapsed 状态，以及默认拒绝显示 Godot 原生窗口。
+- `src/agent_workspace.frontend.test.ts` 固定 help popover、稳定 ARIA/control ID、source highlight、托管 Focus viewport/history 控件、pane-local Focus 双击语义、托管 Future Path pane-local node reader 行为与 path role 渲染。
 
 剩余工作属于校准和覆盖扩展，不是本切片阻塞项：
 

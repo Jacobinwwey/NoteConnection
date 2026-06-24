@@ -3,6 +3,38 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-06-24 知识工作区托管交互对齐
+
+本次增量收口两个剩余的 pane 托管缺口，但不改变 2026-06-22 已确定的 owner 边界。
+Knowledge Workspace 继续在本地复用 Focus/Future Path 的行为契约；它不重挂 Tauri 主图 DOM，也不默认打开或嵌入 Godot 原生窗口。
+
+当前代码已经成立的事实：
+
+- `src/frontend/workspace_panes.js` 为托管 Focus projection 增加了 pane-local viewport，支持滚轮缩放、指针拖拽平移、图标式 reset 与图标式 focus history 控件。
+- 托管 Focus history 只作用于知识聚焦 pane，限制最近 anchor 数量，并通过同一条托管 `switchHostedFocusNode()` 路径切换 anchor，而不是修改主图运行时。
+- 托管 Focus 继续默认隐藏密集灰色 context-dot 背景、可见边线与主界面工具框，同时保留 Focus 语义标签和主节点信息密度。
+- `src/frontend/godot_tree_interactions.js` 现在允许调用方提供 `nodeReaderRequested`；托管 Future Path 使用该回调让双击节点在引导式学习 pane 内打开具体 Markdown，而未提供该回调的调用方仍回退到原有 prerequisite 展开 / 收起行为。
+- `src/frontend/workspace_panes.js` 现在让知识聚焦与引导式学习共用 pane-local reader 路径，因此节点内容会在发起交互的 pane 内打开，全局 `reader.open` 不会被调用。
+- `src/frontend/locales/en.json` 与 `src/frontend/locales/zh.json` 已补齐新的 Focus viewport 控件文案，locale contract 继续成立。
+- `scripts/verify-agent-workspace-browser.js` 现在断言真实浏览器回归路径：Future Path 双击发出 `node_reader_requested`，读取 `Knowledge_Base/waterglass/water glass.md`，在 learning-path pane 内渲染 Markdown，全局 reader 调用保持为零，托管 Focus viewport 可滚轮缩放、reset 回到 `1/0/0`、打开 focus history，并可通过 history 回跳到 `water glass`。
+- `src/agent_workspace.frontend.test.ts` 在 jsdom 层固定同一组契约，提供更快的回归反馈。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 知识聚焦应在较小右侧 pane 中具备 Focus mode 级交互 | 托管 Focus 复用现有 projection / double-click 契约，并补齐 pane-local 滚轮缩放、reset、history 控件。 | 已实现 |
+| 知识聚焦控件不得接管 Tauri 主图 | 托管 viewport 的 transform 状态只写入 pane-local DOM 属性，anchor 切换也只走 hosted path。 | 已实现 |
+| 学习路径双击节点应在本 pane 内打开具体内容 | 托管 Future Path 将 `nodeReaderRequested` 传入 TreeRenderer 适配层，并打开共享 pane-local Markdown reader。 | 已实现 |
+| 复用必须保持兼容 | TreeRenderer 适配层在未提供 reader callback 时继续回退到旧的展开 / 收起行为。 | 已实现 |
+| 回归覆盖必须可执行 | strict browser verification 已检查 `water glass` Focus/Future Path 交互、源文档读取、Markdown 渲染、缩放 / reset / history，以及全局 reader 不被调用。 | 已实现 |
+
+关键取舍：
+
+这里仍然刻意不做 Godot 原生窗口 docking。
+这个边界是正确的：嵌入原生窗口需要平台级 owner 处理 window parenting、输入焦点、teardown 与 reader 路由。
+当前落地路径是在 web workspace 内复用稳定的 graph/path 契约与 renderer 语义，风险更低，也能保持 Tauri 主界面隔离。
+
 ## 2026-06-22 知识工作区托管 Focus/Future Path 收口
 
 最新收口不是新的框架方向。

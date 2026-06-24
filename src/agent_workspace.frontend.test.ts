@@ -4258,6 +4258,18 @@ describe('workspace panes controller', () => {
         expect(document.querySelector('[data-agent-focus-relation-map="true"]')).toBeNull();
         expect(String(document.getElementById('agent-graph-focus-body')?.textContent || '')).not.toContain('atom_h');
         expect(String(document.getElementById('agent-graph-focus-body')?.textContent || '')).toContain('water glass');
+        const focusViewport = document.querySelector('[data-agent-focus-viewport="true"]') as HTMLElement | null;
+        const focusTransformTarget = document.querySelector('[data-agent-focus-transform-target="true"]') as HTMLElement | null;
+        expect(focusViewport).not.toBeNull();
+        expect(focusTransformTarget).not.toBeNull();
+        expect(focusViewport?.getAttribute('data-agent-focus-zoom')).toBe('1');
+        focusViewport?.dispatchEvent(new window.WheelEvent('wheel', { deltaY: -100, clientX: 120, clientY: 120, bubbles: true, cancelable: true }));
+        expect(Number(focusViewport?.getAttribute('data-agent-focus-zoom') || '0')).toBeGreaterThan(1);
+        const focusResetButton = document.querySelector('[data-agent-focus-control="reset"]') as HTMLButtonElement | null;
+        focusResetButton?.click();
+        expect(focusViewport?.getAttribute('data-agent-focus-zoom')).toBe('1');
+        expect(focusViewport?.getAttribute('data-agent-focus-pan-x')).toBe('0');
+        expect(focusViewport?.getAttribute('data-agent-focus-pan-y')).toBe('0');
 
         const anchorButton = document.querySelector(
             '[data-agent-focus-mode-node-id="water glass"][data-agent-focus-mode-anchor="true"]'
@@ -4300,6 +4312,20 @@ describe('workspace panes controller', () => {
         }));
         expect((window as any).reader.open).not.toHaveBeenCalled();
         expect(readContent).toHaveBeenCalledWith('Knowledge_Base/application.md');
+        const focusHistoryButton = document.querySelector('[data-agent-focus-control="history"]') as HTMLButtonElement | null;
+        focusHistoryButton?.click();
+        const focusHistoryMenu = document.querySelector('[data-agent-focus-history-menu="true"]') as HTMLElement | null;
+        expect(focusHistoryButton?.getAttribute('aria-expanded')).toBe('true');
+        expect(focusHistoryMenu?.hidden).toBe(false);
+        const focusHistoryLabels = Array.from(document.querySelectorAll('[data-agent-focus-history-item="true"]'))
+            .map((node) => String(node.textContent || '').trim());
+        expect(focusHistoryLabels).toEqual(expect.arrayContaining(['water glass', 'application']));
+        const waterGlassHistoryItem = document.querySelector(
+            '[data-agent-focus-history-item="true"][data-agent-focus-history-node-id="water glass"]'
+        ) as HTMLButtonElement | null;
+        waterGlassHistoryItem?.click();
+        expect(document.querySelector('[data-agent-hosted-focus-anchor-id="water glass"]')).not.toBeNull();
+        expect(graphView.getFocusModeProjection).toHaveBeenLastCalledWith('water glass', expect.anything());
 
         graphContainer?.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
         expect(preservedDoubleClickCount).toBe(1);
@@ -4459,10 +4485,25 @@ describe('workspace panes controller', () => {
         expect(relationMap?.querySelector('.agent-focus-relation-edges')).not.toBeNull();
     });
 
-    test('hosts Godot Future Path with resolved node names for relation hits', () => {
+    test('hosts Godot Future Path with resolved node names for relation hits', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
+        const readContent = jest.fn(async () => [
+            '# Water Glass',
+            '',
+            'A water glass is opened from the hosted Future Path pane.',
+        ].join('\n'));
+        const renderMarkdownInto = jest.fn(async (container: HTMLElement) => {
+            container.innerHTML = '<article><p>A water glass is opened from the hosted Future Path pane.</p></article>';
+        });
         const graphView = {
             resolveNodeByKnowledgePoint: jest.fn(() => ({ id: 'water glass', label: 'water glass' })),
+            resolveNodeById: jest.fn((nodeId: string) => ({
+                id: nodeId,
+                label: nodeId,
+                sourcePath: nodeId === 'water glass'
+                    ? 'Knowledge_Base/waterglass/water glass.md'
+                    : `Knowledge_Base/${nodeId}.md`,
+            })),
         };
         const pathApp = {
             init: jest.fn(),
@@ -4473,6 +4514,16 @@ describe('workspace panes controller', () => {
         };
         (window as any).NoteConnectionGraphView = graphView;
         (window as any).pathApp = pathApp;
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({ readContent }),
+        };
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
+        markdownRuntime.renderMarkdownInto = renderMarkdownInto;
+        (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+        (window as any).reader = {
+            open: jest.fn(),
+            resolveNodeTarget: jest.fn(),
+        };
         const pathCalls = installHostedFuturePathRuntime(window);
         controller.init();
 
@@ -4540,11 +4591,24 @@ describe('workspace panes controller', () => {
             nodeId: 'water glass',
             host: 'agent-workspace',
         }));
+        targetNode?.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect((window as any).__NC_LAST_AGENT_GODOT_TREE_SIGNAL).toEqual(expect.objectContaining({
+            signal: 'node_reader_requested',
+            nodeId: 'water glass',
+            host: 'agent-workspace',
+        }));
+        expect((window as any).reader.open).not.toHaveBeenCalled();
+        expect(readContent).toHaveBeenCalledWith('Knowledge_Base/waterglass/water glass.md');
+        const learningPathReader = document.querySelector('[data-agent-learning-path-pane-reader="true"]') as HTMLElement | null;
+        expect(learningPathReader).not.toBeNull();
+        expect(learningPathReader?.hidden).toBe(false);
+        expect(String(learningPathReader?.textContent || '')).toContain('A water glass is opened from the hosted Future Path pane');
         const nonSpineNode = document.querySelector('[data-godot-tree-node-id="application"]') as HTMLElement | null;
         const callsBeforeNonSpineRightClick = pathCalls.getTreeLayout.mock.calls.length;
         nonSpineNode?.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
         expect((window as any).__NC_LAST_AGENT_GODOT_TREE_SIGNAL).toEqual(expect.objectContaining({
-            signal: 'node_clicked',
+            signal: 'node_reader_requested',
             nodeId: 'water glass',
             host: 'agent-workspace',
         }));

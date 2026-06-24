@@ -1,6 +1,7 @@
 (function () {
     const PANE_KEYS = ['graph-focus', 'evidence', 'learning-path'];
     const PROMOTION_ATTRIBUTE = 'data-agent-workspace-promotion';
+    const HOSTED_FOCUS_HISTORY_LIMIT = 10;
     let godotFuturePathRetryTimer = null;
     let godotFuturePathRetryCount = 0;
 
@@ -1199,6 +1200,7 @@
                 data-focus-mode-anchor-id="${escapeHtml(anchorId)}"
                 data-focus-node-count="${nodeCount}"
                 data-focus-context-node-count="${hideContext ? 0 : Math.min(18, Math.max(0, normalizedSnapshot.nodes.length - 1))}"
+                data-agent-focus-transform-target="true"
             >
                 ${contextLayerHtml}
                 <div class="agent-focus-mode-cluster-label agent-focus-mode-cluster-label--continue">
@@ -1323,10 +1325,101 @@
                 data-focus-node-count="${nodeCount}"
                 data-focus-context-node-count="${hideContext ? 0 : normalizedProjection.contextNodes.length}"
                 data-focus-layout-type="${escapeHtml(normalizedProjection.layoutType)}"
+                data-agent-focus-transform-target="true"
             >
                 ${contextLayerHtml}
                 ${labelHtml}
                 ${nodeHtml}
+            </div>
+        `;
+    }
+
+    function rememberHostedFocusAnchor(anchorId, anchorLabel) {
+        const normalizedAnchorId = normalizeKnowledgeGraphText(anchorId);
+        if (!normalizedAnchorId) {
+            return;
+        }
+        const normalizedLabel = normalizeKnowledgeGraphText(anchorLabel) || normalizedAnchorId;
+        state.hostedFocusHistory = state.hostedFocusHistory
+            .filter((entry) => normalizeKnowledgeGraphText(entry && entry.nodeId) !== normalizedAnchorId);
+        state.hostedFocusHistory.unshift({
+            nodeId: normalizedAnchorId,
+            label: normalizedLabel,
+        });
+        state.hostedFocusHistory = state.hostedFocusHistory.slice(0, HOSTED_FOCUS_HISTORY_LIMIT);
+    }
+
+    function buildHostedFocusHistoryMenuHtml(currentAnchorId) {
+        const normalizedCurrentAnchorId = normalizeKnowledgeGraphText(currentAnchorId);
+        const entries = Array.isArray(state.hostedFocusHistory) ? state.hostedFocusHistory : [];
+        const itemHtml = entries.length > 0
+            ? entries.map((entry) => {
+                const nodeId = normalizeKnowledgeGraphText(entry && entry.nodeId);
+                const label = normalizeKnowledgeGraphText(entry && entry.label) || nodeId;
+                if (!nodeId) {
+                    return '';
+                }
+                return `
+                    <button
+                        type="button"
+                        class="agent-focus-mode-history-item"
+                        data-agent-focus-history-item="true"
+                        data-agent-focus-history-node-id="${escapeHtml(nodeId)}"
+                        data-agent-focus-history-current="${nodeId === normalizedCurrentAnchorId ? 'true' : 'false'}"
+                    >
+                        ${escapeHtml(label)}
+                    </button>
+                `;
+            }).join('')
+            : `<div class="agent-focus-mode-history-empty">${escapeHtml(translate('agentWorkspace.graphFocus.historyEmpty', 'No focus history yet.'))}</div>`;
+        return `
+            <div class="agent-focus-mode-history-menu" data-agent-focus-history-menu="true" hidden>
+                ${itemHtml}
+            </div>
+        `;
+    }
+
+    function buildHostedFocusControlsHtml(currentAnchorId) {
+        return `
+            <div class="agent-focus-mode-pane-controls" data-agent-focus-pane-controls="true">
+                <button
+                    type="button"
+                    class="agent-focus-mode-icon-button"
+                    data-agent-focus-control="reset"
+                    title="${escapeHtml(translate('agentWorkspace.graphFocus.resetView', 'Reset view'))}"
+                    aria-label="${escapeHtml(translate('agentWorkspace.graphFocus.resetView', 'Reset view'))}"
+                >&#8634;</button>
+                <div class="agent-focus-mode-history-control">
+                    <button
+                        type="button"
+                        class="agent-focus-mode-icon-button"
+                        data-agent-focus-control="history"
+                        title="${escapeHtml(translate('agentWorkspace.graphFocus.history', 'Focus history'))}"
+                        aria-label="${escapeHtml(translate('agentWorkspace.graphFocus.history', 'Focus history'))}"
+                        aria-expanded="false"
+                    >&#8630;</button>
+                    ${buildHostedFocusHistoryMenuHtml(currentAnchorId)}
+                </div>
+            </div>
+        `;
+    }
+
+    function buildHostedFocusViewportHtml(graphHtml, currentAnchorId) {
+        return `
+            <div
+                class="agent-focus-mode-hosted-shell"
+                data-agent-focus-hosted-shell="true"
+            >
+                ${buildHostedFocusControlsHtml(currentAnchorId)}
+                <div
+                    class="agent-focus-mode-viewport"
+                    data-agent-focus-viewport="true"
+                    data-agent-focus-zoom="1"
+                    data-agent-focus-pan-x="0"
+                    data-agent-focus-pan-y="0"
+                >
+                    ${graphHtml}
+                </div>
             </div>
         `;
     }
@@ -1566,21 +1659,46 @@
         return targetId ? resolveFocusModeProjection(targetId) : resolveGraphFocusHostedSnapshot(payload || {});
     }
 
-    function buildGraphFocusPaneReaderHtml() {
+    function buildPaneLocalNodeReaderHtml(config) {
+        const readerAttribute = config && config.readerAttribute;
+        const titleAttribute = config && config.titleAttribute;
+        const closeAttribute = config && config.closeAttribute;
+        const bodyAttribute = config && config.bodyAttribute;
+        if (!readerAttribute || !titleAttribute || !closeAttribute || !bodyAttribute) {
+            return '';
+        }
         return `
-            <section class="agent-focus-pane-reader" data-agent-focus-pane-reader="true" hidden>
+            <section class="agent-focus-pane-reader" ${readerAttribute}="true" hidden>
                 <div class="agent-focus-pane-reader-header">
-                    <div class="agent-focus-pane-reader-title" data-agent-focus-pane-reader-title="true"></div>
+                    <div class="agent-focus-pane-reader-title" ${titleAttribute}="true"></div>
                     <button
                         type="button"
                         class="agent-pane-close-button agent-focus-pane-reader-close"
-                        data-agent-focus-pane-reader-close="true"
+                        ${closeAttribute}="true"
                         aria-label="${escapeHtml(translate('agentWorkspace.actions.closePane', 'Close pane'))}"
                     >\u00d7</button>
                 </div>
-                <div class="agent-focus-pane-reader-body" data-agent-focus-pane-reader-body="true"></div>
+                <div class="agent-focus-pane-reader-body" ${bodyAttribute}="true"></div>
             </section>
         `;
+    }
+
+    function buildGraphFocusPaneReaderHtml() {
+        return buildPaneLocalNodeReaderHtml({
+            readerAttribute: 'data-agent-focus-pane-reader',
+            titleAttribute: 'data-agent-focus-pane-reader-title',
+            closeAttribute: 'data-agent-focus-pane-reader-close',
+            bodyAttribute: 'data-agent-focus-pane-reader-body',
+        });
+    }
+
+    function buildLearningPathPaneReaderHtml() {
+        return buildPaneLocalNodeReaderHtml({
+            readerAttribute: 'data-agent-learning-path-pane-reader',
+            titleAttribute: 'data-agent-learning-path-pane-reader-title',
+            closeAttribute: 'data-agent-learning-path-pane-reader-close',
+            bodyAttribute: 'data-agent-learning-path-pane-reader-body',
+        });
     }
 
     function buildHostedGraphFocusDeveloperDetailsHtml(payload, snapshot) {
@@ -1651,8 +1769,10 @@
         `;
     }
 
-    function buildGraphFocusHostedModeHtml(payload) {
-        const focusGraph = resolveGraphFocusHostedProjection(payload || {});
+    function buildGraphFocusHostedModeHtml(payload, focusGraph) {
+        if (!focusGraph) {
+            focusGraph = resolveGraphFocusHostedProjection(payload || {});
+        }
         if (!focusGraph) {
             return `
                 <div
@@ -1666,15 +1786,16 @@
         const normalizedProjection = normalizeFocusModeProjection(focusGraph);
         const normalizedSnapshot = normalizedProjection || normalizeFocusModeSnapshot(focusGraph);
         const developerDetails = buildHostedGraphFocusDeveloperDetailsHtml(payload || {}, normalizedSnapshot);
+        const graphHtml = normalizedProjection
+            ? buildGraphFocusProjectionGraphHtml(normalizedProjection, { hideContext: true })
+            : buildGraphFocusSnapshotGraphHtml(normalizedSnapshot, { interactive: true, hideEdges: true, hideContext: true });
         return `
             <div
                 class="agent-pane-block agent-pane-block--graph-focus agent-pane-block--focus-runtime"
                 data-agent-hosted-focus-mode="true"
                 data-agent-hosted-focus-anchor-id="${escapeHtml(normalizedSnapshot.anchorId)}"
             >
-                ${normalizedProjection
-                    ? buildGraphFocusProjectionGraphHtml(normalizedProjection, { hideContext: true })
-                    : buildGraphFocusSnapshotGraphHtml(normalizedSnapshot, { interactive: true, hideEdges: true, hideContext: true })}
+                ${buildHostedFocusViewportHtml(graphHtml, normalizedSnapshot.anchorId)}
                 ${buildGraphFocusPaneReaderHtml()}
                 ${developerDetails}
             </div>
@@ -2668,7 +2789,16 @@
         const renderToken = state.graphFocusRenderToken;
         const diagnostics = buildGraphFocusDiagnostics(payload, matchedSpans, renderToken);
         if (isHostedGraphFocusPayload(payload)) {
-            body.innerHTML = buildGraphFocusHostedModeHtml(payload);
+            const focusGraph = resolveGraphFocusHostedProjection(payload || {});
+            const normalizedProjection = normalizeFocusModeProjection(focusGraph);
+            const normalizedSnapshot = normalizedProjection || normalizeFocusModeSnapshot(focusGraph);
+            if (normalizedSnapshot) {
+                rememberHostedFocusAnchor(
+                    normalizedSnapshot.anchorId,
+                    normalizedSnapshot.anchorLabel || normalizedSnapshot.anchorId
+                );
+            }
+            body.innerHTML = buildGraphFocusHostedModeHtml(payload, focusGraph);
             bindHostedGraphFocusMode(body, payload);
             setLastGraphFocusDiagnostics(null);
             return;
@@ -2821,20 +2951,47 @@
         });
     }
 
-    async function openHostedFocusPaneReader(payload, nodeId) {
-        const body = getPaneBodyElement('graph-focus');
-        const readerShell = body ? body.querySelector('[data-agent-focus-pane-reader="true"]') : null;
-        const readerTitle = readerShell ? readerShell.querySelector('[data-agent-focus-pane-reader-title="true"]') : null;
-        const readerBody = readerShell ? readerShell.querySelector('[data-agent-focus-pane-reader-body="true"]') : null;
+    function resolvePaneLocalNodeReaderConfig(paneKey) {
+        if (paneKey === 'graph-focus') {
+            return {
+                readerAttribute: 'data-agent-focus-pane-reader',
+                titleAttribute: 'data-agent-focus-pane-reader-title',
+                bodyAttribute: 'data-agent-focus-pane-reader-body',
+                closeAttribute: 'data-agent-focus-pane-reader-close',
+                tokenKey: 'graphFocusReaderRenderToken',
+            };
+        }
+        if (paneKey === 'learning-path') {
+            return {
+                readerAttribute: 'data-agent-learning-path-pane-reader',
+                titleAttribute: 'data-agent-learning-path-pane-reader-title',
+                bodyAttribute: 'data-agent-learning-path-pane-reader-body',
+                closeAttribute: 'data-agent-learning-path-pane-reader-close',
+                tokenKey: 'learningPathReaderRenderToken',
+            };
+        }
+        return null;
+    }
+
+    async function openPaneLocalNodeReader(paneKey, payload, nodeId) {
+        const readerConfig = resolvePaneLocalNodeReaderConfig(paneKey);
+        const body = getPaneBodyElement(paneKey);
+        const readerShell = body && readerConfig ? body.querySelector(`[${readerConfig.readerAttribute}="true"]`) : null;
+        const readerTitle = readerShell && readerConfig ? readerShell.querySelector(`[${readerConfig.titleAttribute}="true"]`) : null;
+        const readerBody = readerShell && readerConfig ? readerShell.querySelector(`[${readerConfig.bodyAttribute}="true"]`) : null;
         if (!readerShell || !readerBody) {
             return false;
         }
-        const snapshot = resolveGraphFocusHostedProjection(payload || {});
+        const snapshot = paneKey === 'graph-focus'
+            ? resolveGraphFocusHostedProjection(payload || {})
+            : state.godotFuturePath.projection && state.godotFuturePath.projection.treeLayout
+                ? { nodes: state.godotFuturePath.projection.treeLayout.nodes || [] }
+                : null;
         const node = resolveGraphNodeForHostedFocus(nodeId);
         const nodeLabel = resolveHostedFocusNodeLabel(nodeId, snapshot, node);
         const matchedSpans = resolveHostedFocusMatchedSpans(payload || {}, nodeId, nodeLabel);
-        state.graphFocusReaderRenderToken += 1;
-        const renderToken = state.graphFocusReaderRenderToken;
+        state[readerConfig.tokenKey] += 1;
+        const renderToken = state[readerConfig.tokenKey];
         if (readerTitle) {
             readerTitle.textContent = nodeLabel || normalizeKnowledgeGraphText(nodeId);
         }
@@ -2850,7 +3007,7 @@
         `;
         const renderedHost = readerBody.querySelector('[data-agent-focus-pane-reader-markdown="true"]');
         const resolved = await resolveHostedFocusNodeSourcePaths(nodeId, payload || {}, matchedSpans);
-        if (renderToken !== state.graphFocusReaderRenderToken || !state.panes['graph-focus'].open) {
+        if (renderToken !== state[readerConfig.tokenKey] || !state.panes[paneKey].open) {
             return true;
         }
         if (!resolved.paths.length) {
@@ -2858,10 +3015,18 @@
             return false;
         }
         const rendered = await renderMarkdownPreviewIntoHost(renderedHost, resolved.paths, matchedSpans, renderToken);
-        if (!rendered && renderToken === state.graphFocusReaderRenderToken && state.panes['graph-focus'].open) {
+        if (!rendered && renderToken === state[readerConfig.tokenKey] && state.panes[paneKey].open) {
             readerBody.innerHTML = `<div class="agent-pane-empty">${escapeHtml(translate('agentWorkspace.knowledge.previewUnavailable', 'Source preview unavailable.'))}</div>`;
         }
         return rendered;
+    }
+
+    function openHostedFocusPaneReader(payload, nodeId) {
+        return openPaneLocalNodeReader('graph-focus', payload, nodeId);
+    }
+
+    function openHostedLearningPathPaneReader(payload, nodeId) {
+        return openPaneLocalNodeReader('learning-path', payload, nodeId);
     }
 
     function switchHostedFocusNode(payload, nodeId) {
@@ -2900,12 +3065,163 @@
         };
     }
 
-    function bindHostedGraphFocusMode(body, payload) {
-        if (!body) {
+    function publishHostedFocusViewportState(viewport) {
+        window.__NC_LAST_AGENT_FOCUS_VIEWPORT_STATE = {
+            anchorId: normalizeKnowledgeGraphText(
+                viewport && viewport.closest('[data-agent-hosted-focus-anchor-id]')
+                    ? viewport.closest('[data-agent-hosted-focus-anchor-id]').getAttribute('data-agent-hosted-focus-anchor-id')
+                    : ''
+            ),
+            zoom: Number(viewport && viewport.getAttribute('data-agent-focus-zoom')) || 1,
+            panX: Number(viewport && viewport.getAttribute('data-agent-focus-pan-x')) || 0,
+            panY: Number(viewport && viewport.getAttribute('data-agent-focus-pan-y')) || 0,
+        };
+    }
+
+    function bindHostedGraphFocusViewport(body, payload) {
+        const viewport = body && body.querySelector('[data-agent-focus-viewport="true"]');
+        const transformTarget = viewport && viewport.querySelector('[data-agent-focus-transform-target="true"]');
+        if (!viewport || !transformTarget) {
             return;
         }
-        const readerCloseButton = body.querySelector('[data-agent-focus-pane-reader-close="true"]');
-        const readerShell = body.querySelector('[data-agent-focus-pane-reader="true"]');
+        const readTransform = function () {
+            return {
+                zoom: Number(viewport.getAttribute('data-agent-focus-zoom')) || 1,
+                panX: Number(viewport.getAttribute('data-agent-focus-pan-x')) || 0,
+                panY: Number(viewport.getAttribute('data-agent-focus-pan-y')) || 0,
+            };
+        };
+        const applyTransform = function (nextTransform) {
+            const zoom = Math.min(4, Math.max(0.35, Number(nextTransform.zoom) || 1));
+            const panX = Number.isFinite(Number(nextTransform.panX)) ? Number(nextTransform.panX) : 0;
+            const panY = Number.isFinite(Number(nextTransform.panY)) ? Number(nextTransform.panY) : 0;
+            viewport.setAttribute('data-agent-focus-zoom', String(Number(zoom.toFixed(3))));
+            viewport.setAttribute('data-agent-focus-pan-x', String(Number(panX.toFixed(1))));
+            viewport.setAttribute('data-agent-focus-pan-y', String(Number(panY.toFixed(1))));
+            transformTarget.style.setProperty('--agent-focus-zoom', String(Number(zoom.toFixed(3))));
+            transformTarget.style.setProperty('--agent-focus-pan-x', `${Number(panX.toFixed(1))}px`);
+            transformTarget.style.setProperty('--agent-focus-pan-y', `${Number(panY.toFixed(1))}px`);
+            publishHostedFocusViewportState(viewport);
+        };
+        const resetTransform = function () {
+            applyTransform({ zoom: 1, panX: 0, panY: 0 });
+        };
+        resetTransform();
+
+        viewport.addEventListener('wheel', function (event) {
+            event.preventDefault();
+            const current = readTransform();
+            const factor = event.deltaY < 0 ? 1.12 : 0.88;
+            const nextZoom = Math.min(4, Math.max(0.35, current.zoom * factor));
+            const rect = viewport.getBoundingClientRect();
+            const localX = event.clientX - rect.left;
+            const localY = event.clientY - rect.top;
+            const worldX = (localX - current.panX) / current.zoom;
+            const worldY = (localY - current.panY) / current.zoom;
+            applyTransform({
+                zoom: nextZoom,
+                panX: localX - (worldX * nextZoom),
+                panY: localY - (worldY * nextZoom),
+            });
+        }, { passive: false });
+
+        let panState = null;
+        const finishPan = function () {
+            if (!panState) {
+                return;
+            }
+            panState = null;
+            viewport.classList.remove('is-panning');
+            document.removeEventListener('mousemove', movePan, true);
+            document.removeEventListener('mouseup', finishPan, true);
+        };
+        const movePan = function (event) {
+            if (!panState) {
+                return;
+            }
+            applyTransform({
+                zoom: panState.zoom,
+                panX: panState.panX + (event.clientX - panState.clientX),
+                panY: panState.panY + (event.clientY - panState.clientY),
+            });
+        };
+        viewport.addEventListener('mousedown', function (event) {
+            if (
+                event.button !== 0
+                || (
+                    event.target
+                    && typeof event.target.closest === 'function'
+                    && event.target.closest('[data-agent-focus-mode-node-id], [data-agent-focus-pane-controls="true"], [data-agent-focus-history-menu="true"]')
+                )
+            ) {
+                return;
+            }
+            event.preventDefault();
+            const current = readTransform();
+            panState = {
+                clientX: event.clientX,
+                clientY: event.clientY,
+                panX: current.panX,
+                panY: current.panY,
+                zoom: current.zoom,
+            };
+            viewport.classList.add('is-panning');
+            document.addEventListener('mousemove', movePan, true);
+            document.addEventListener('mouseup', finishPan, true);
+        });
+
+        const resetButton = body.querySelector('[data-agent-focus-control="reset"]');
+        if (resetButton) {
+            resetButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                resetTransform();
+            });
+        }
+
+        const historyButton = body.querySelector('[data-agent-focus-control="history"]');
+        const historyMenu = body.querySelector('[data-agent-focus-history-menu="true"]');
+        if (historyButton && historyMenu) {
+            historyButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                const nextOpen = historyMenu.hidden === true;
+                historyMenu.hidden = !nextOpen;
+                historyButton.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+            });
+            historyMenu.querySelectorAll('[data-agent-focus-history-item="true"]').forEach((itemButton) => {
+                itemButton.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const nodeId = normalizeKnowledgeGraphText(itemButton.getAttribute('data-agent-focus-history-node-id'));
+                    historyMenu.hidden = true;
+                    historyButton.setAttribute('aria-expanded', 'false');
+                    if (nodeId) {
+                        switchHostedFocusNode(payload || {}, nodeId);
+                    }
+                });
+            });
+            document.addEventListener('click', function (event) {
+                if (
+                    historyMenu.hidden
+                    || (
+                        event.target
+                        && typeof event.target.closest === 'function'
+                        && event.target.closest('[data-agent-focus-control="history"], [data-agent-focus-history-menu="true"]')
+                    )
+                ) {
+                    return;
+                }
+                historyMenu.hidden = true;
+                historyButton.setAttribute('aria-expanded', 'false');
+            }, { once: true });
+        }
+    }
+
+    function bindPaneLocalNodeReaderClose(body, paneKey) {
+        const readerConfig = resolvePaneLocalNodeReaderConfig(paneKey);
+        const readerCloseButton = body && readerConfig ? body.querySelector(`[${readerConfig.closeAttribute}="true"]`) : null;
+        const readerShell = body && readerConfig ? body.querySelector(`[${readerConfig.readerAttribute}="true"]`) : null;
         if (readerCloseButton && readerShell) {
             readerCloseButton.addEventListener('click', function (event) {
                 event.preventDefault();
@@ -2913,6 +3229,14 @@
                 readerShell.hidden = true;
             });
         }
+    }
+
+    function bindHostedGraphFocusMode(body, payload) {
+        if (!body) {
+            return;
+        }
+        bindHostedGraphFocusViewport(body, payload || {});
+        bindPaneLocalNodeReaderClose(body, 'graph-focus');
         const focusModeHost = body.querySelector('[data-agent-hosted-focus-mode="true"]');
         const currentAnchorId = normalizeKnowledgeGraphText(
             focusModeHost && focusModeHost.getAttribute('data-agent-hosted-focus-anchor-id')
@@ -4195,6 +4519,7 @@
                 nodeReaderRequested: function (nodeId) {
                     recordHostedGodotTreeSignal('node_reader_requested', nodeId);
                     applyHostedFuturePathSelection(body, nodeId);
+                    void openHostedLearningPathPaneReader(payload || {}, nodeId);
                 },
             });
         }
@@ -4217,8 +4542,10 @@
         const projection = buildHostedGodotFuturePathForPayload(payload || {});
         body.innerHTML = `
             ${buildHostedFuturePathSurfaceHtml(projection)}
+            ${buildLearningPathPaneReaderHtml()}
             ${buildLearningPathDeveloperDetailsHtml(payload || {})}
         `;
+        bindPaneLocalNodeReaderClose(body, 'learning-path');
         bindHostedFuturePathSurface(body, payload || {});
     }
 
@@ -7787,7 +8114,9 @@
         promotionPane: null,
         graphFocusRenderToken: 0,
         graphFocusReaderRenderToken: 0,
+        learningPathReaderRenderToken: 0,
         graphFocusDiagnostics: null,
+        hostedFocusHistory: [],
         godotFuturePath: {
             request: null,
             lastDispatch: null,

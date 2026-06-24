@@ -134,6 +134,9 @@
                 event.preventDefault();
                 event.stopPropagation();
                 clearLongPress();
+                if (emit(callbacks, 'nodeReaderRequested', readNodeId(nodeElement), event)) {
+                    return;
+                }
                 emitExpansionSignal(nodeElement, callbacks, event);
             });
 
