@@ -4,7 +4,7 @@
     const HOSTED_FOCUS_HISTORY_LIMIT = 10;
     let godotFuturePathRetryTimer = null;
     let godotFuturePathRetryCount = 0;
-    let hostedFuturePathGraphRuntimeCache = null;
+    let hostedFuturePathRuntimeManager = null;
 
     function getElement(id) {
         return document.getElementById(id);
@@ -101,6 +101,10 @@
             }
         }
         return formatTemplate(fallback, params || {});
+    }
+
+    function cloneJsonPayload(value) {
+        return value == null ? null : JSON.parse(JSON.stringify(value));
     }
 
     function ensureWorkspaceVisible() {
@@ -3835,6 +3839,35 @@
                 </li>
             `).join('')
             : `<li class="agent-pane-list-empty">${escapeHtml(translate('agentWorkspace.learningPath.emptyLoaded', 'No learning path loaded yet.'))}</li>`;
+        const runtimeDiagnostics = state.godotFuturePath.runtimeDiagnostics && typeof state.godotFuturePath.runtimeDiagnostics === 'object'
+            ? state.godotFuturePath.runtimeDiagnostics
+            : null;
+        const runtimeDetailsHtml = runtimeDiagnostics
+            ? `
+                <ul class="agent-pane-list">
+                    <li class="agent-pane-list-item">
+                        <span class="agent-pane-list-index">R</span>
+                        <span class="agent-pane-list-label">${escapeHtml(translate('agentWorkspace.learningPath.runtimeCacheState', 'Runtime cache state'))}: ${escapeHtml(String(runtimeDiagnostics.cacheState || 'none'))}</span>
+                    </li>
+                    <li class="agent-pane-list-item">
+                        <span class="agent-pane-list-index">R</span>
+                        <span class="agent-pane-list-label">${escapeHtml(translate('agentWorkspace.learningPath.runtimeCacheCounts', 'Cache hits / misses / builds'))}: ${escapeHtml(`${String(runtimeDiagnostics.cacheHitCount == null ? 0 : runtimeDiagnostics.cacheHitCount)} / ${String(runtimeDiagnostics.cacheMissCount == null ? 0 : runtimeDiagnostics.cacheMissCount)} / ${String(runtimeDiagnostics.runtimeBuildCount == null ? 0 : runtimeDiagnostics.runtimeBuildCount)}`)}</span>
+                    </li>
+                    <li class="agent-pane-list-item">
+                        <span class="agent-pane-list-index">R</span>
+                        <span class="agent-pane-list-label">${escapeHtml(translate('agentWorkspace.learningPath.runtimeSourceSize', 'Source nodes / edges'))}: ${escapeHtml(`${String(runtimeDiagnostics.sourceNodeCount == null ? 0 : runtimeDiagnostics.sourceNodeCount)} / ${String(runtimeDiagnostics.sourceEdgeCount == null ? 0 : runtimeDiagnostics.sourceEdgeCount)}`)}</span>
+                    </li>
+                    <li class="agent-pane-list-item">
+                        <span class="agent-pane-list-index">R</span>
+                        <span class="agent-pane-list-label">${escapeHtml(translate('agentWorkspace.learningPath.runtimeLatency', 'Resolve ms / build ms'))}: ${escapeHtml(`${String(runtimeDiagnostics.resolveMs == null ? 0 : runtimeDiagnostics.resolveMs)} / ${String(runtimeDiagnostics.buildMs == null ? 0 : runtimeDiagnostics.buildMs)}`)}</span>
+                    </li>
+                    <li class="agent-pane-list-item">
+                        <span class="agent-pane-list-index">R</span>
+                        <span class="agent-pane-list-label">${escapeHtml(translate('agentWorkspace.learningPath.runtimeSignature', 'Graph signature'))}: ${escapeHtml(String(runtimeDiagnostics.signature || 'none'))}</span>
+                    </li>
+                </ul>
+            `
+            : '';
         return `
             <div
                 class="agent-pane-block agent-learning-path-developer-details"
@@ -3842,6 +3875,7 @@
             >
                 <div class="agent-focus-hit-heading">${escapeHtml(translate('agentWorkspace.graphFocus.diagnosticsTitle', 'Render diagnostics'))}</div>
                 <ul class="agent-pane-list">${listHtml}</ul>
+                ${runtimeDetailsHtml}
             </div>
         `;
     }
@@ -4007,6 +4041,17 @@
         };
     }
 
+    function readHostedFuturePathSourceGraphStats(sourceData) {
+        const sourceNodes = Array.isArray(sourceData && sourceData.nodes) ? sourceData.nodes : [];
+        const sourceEdges = Array.isArray(sourceData && sourceData.edges)
+            ? sourceData.edges
+            : (Array.isArray(sourceData && sourceData.links) ? sourceData.links : []);
+        return {
+            nodeCount: sourceNodes.length,
+            edgeCount: sourceEdges.length,
+        };
+    }
+
     function buildHostedFuturePathGraphSourceSignature(sourceData) {
         const sourceNodes = Array.isArray(sourceData && sourceData.nodes) ? sourceData.nodes : [];
         const sourceEdges = Array.isArray(sourceData && sourceData.edges)
@@ -4035,24 +4080,100 @@
         ].join('::');
     }
 
-    function getHostedFuturePathGraphRuntime(sourceData) {
-        const signature = buildHostedFuturePathGraphSourceSignature(sourceData);
-        if (
-            hostedFuturePathGraphRuntimeCache
-            && hostedFuturePathGraphRuntimeCache.sourceData === sourceData
-            && hostedFuturePathGraphRuntimeCache.signature === signature
-        ) {
-            return hostedFuturePathGraphRuntimeCache.runtime;
+    function getHostedFuturePathRuntimeManager() {
+        if (hostedFuturePathRuntimeManager) {
+            return hostedFuturePathRuntimeManager;
         }
-        const runtime = createHostedFuturePathGraph(sourceData);
-        hostedFuturePathGraphRuntimeCache = runtime
-            ? {
-                sourceData,
-                signature,
-                runtime,
-            }
-            : null;
-        return runtime;
+        const runtimeModule = window.NoteConnectionHostedFuturePathRuntime;
+        const createRuntimeCacheManager = runtimeModule && typeof runtimeModule.createRuntimeCacheManager === 'function'
+            ? runtimeModule.createRuntimeCacheManager
+            : function (options) {
+                let cacheEntry = null;
+                let lastDiagnostics = null;
+                return {
+                    resolve: function (sourceData) {
+                        const signature = options.buildSignature(sourceData);
+                        const stats = options.readStats(sourceData);
+                        if (
+                            cacheEntry
+                            && cacheEntry.sourceData === sourceData
+                            && cacheEntry.signature === signature
+                        ) {
+                            lastDiagnostics = {
+                                cacheLabel: String(options.label || 'hosted-future-path-runtime'),
+                                signature,
+                                sourceNodeCount: Number(stats && stats.nodeCount || 0),
+                                sourceEdgeCount: Number(stats && stats.edgeCount || 0),
+                                cacheHit: true,
+                                cacheMiss: false,
+                                cacheState: 'hit',
+                                runtimeBuildCount: 1,
+                            cacheHitCount: 1,
+                            cacheMissCount: 0,
+                            resolveMs: 0,
+                            buildMs: 0,
+                            reason: 'runtime_reused',
+                        };
+                            return {
+                                runtime: cacheEntry.runtime,
+                                diagnostics: cloneJsonPayload(lastDiagnostics),
+                            };
+                        }
+                        const runtime = options.createRuntime(sourceData);
+                        cacheEntry = runtime ? { sourceData, signature, runtime } : null;
+                        lastDiagnostics = {
+                            cacheLabel: String(options.label || 'hosted-future-path-runtime'),
+                            signature,
+                            sourceNodeCount: Number(stats && stats.nodeCount || 0),
+                            sourceEdgeCount: Number(stats && stats.edgeCount || 0),
+                            cacheHit: false,
+                            cacheMiss: true,
+                            cacheState: 'miss_cold',
+                            runtimeBuildCount: runtime ? 1 : 0,
+                            cacheHitCount: 0,
+                            cacheMissCount: 1,
+                            resolveMs: 0,
+                            buildMs: 0,
+                            reason: runtime ? 'runtime_ready' : 'runtime_unavailable',
+                        };
+                        return {
+                            runtime,
+                            diagnostics: cloneJsonPayload(lastDiagnostics),
+                        };
+                    },
+                    clear: function () {
+                        cacheEntry = null;
+                        lastDiagnostics = null;
+                    },
+                    getDiagnostics: function () {
+                        return cloneJsonPayload(lastDiagnostics);
+                    },
+                    getAggregateSnapshot: function () {
+                        return cloneJsonPayload(lastDiagnostics);
+                    },
+                };
+            };
+        hostedFuturePathRuntimeManager = createRuntimeCacheManager({
+            label: 'hosted-future-path-runtime',
+            createRuntime: createHostedFuturePathGraph,
+            buildSignature: buildHostedFuturePathGraphSourceSignature,
+            readStats: readHostedFuturePathSourceGraphStats,
+        });
+        return hostedFuturePathRuntimeManager;
+    }
+
+    function setHostedFuturePathRuntimeDiagnostics(diagnostics) {
+        state.godotFuturePath.runtimeDiagnostics = cloneJsonPayload(diagnostics);
+        window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_RUNTIME_DIAGNOSTICS = cloneJsonPayload(diagnostics);
+    }
+
+    function getHostedFuturePathGraphRuntime(sourceData) {
+        const manager = getHostedFuturePathRuntimeManager();
+        const resolved = manager && typeof manager.resolve === 'function'
+            ? manager.resolve(sourceData)
+            : { runtime: createHostedFuturePathGraph(sourceData), diagnostics: null };
+        setHostedFuturePathRuntimeDiagnostics(resolved && resolved.diagnostics ? resolved.diagnostics : null);
+        return resolved ? resolved.runtime : null;
     }
 
     function getHostedFuturePathValidNodeIds(sourceData) {
@@ -4220,6 +4341,21 @@
     function buildHostedGodotFuturePathProjection(payload, config) {
         const sourceData = resolveHostedFuturePathSourceGraphData();
         if (!sourceData) {
+            setHostedFuturePathRuntimeDiagnostics({
+                cacheLabel: 'hosted-future-path-runtime',
+                signature: '',
+                sourceNodeCount: 0,
+                sourceEdgeCount: 0,
+                cacheHit: false,
+                cacheMiss: false,
+                cacheState: 'unavailable',
+                runtimeBuildCount: 0,
+                cacheHitCount: 0,
+                cacheMissCount: 0,
+                resolveMs: 0,
+                buildMs: 0,
+                reason: 'missing_graph_data',
+            });
             return {
                 config,
                 available: false,
@@ -4231,6 +4367,22 @@
         }
         const targetNode = resolveHostedFuturePathTargetNode(config, payload || {}, sourceData);
         if (!targetNode) {
+            const graphStats = readHostedFuturePathSourceGraphStats(sourceData);
+            setHostedFuturePathRuntimeDiagnostics({
+                cacheLabel: 'hosted-future-path-runtime',
+                signature: buildHostedFuturePathGraphSourceSignature(sourceData),
+                sourceNodeCount: Number(graphStats.nodeCount || 0),
+                sourceEdgeCount: Number(graphStats.edgeCount || 0),
+                cacheHit: false,
+                cacheMiss: false,
+                cacheState: 'target_not_found',
+                runtimeBuildCount: 0,
+                cacheHitCount: 0,
+                cacheMissCount: 0,
+                resolveMs: 0,
+                buildMs: 0,
+                reason: 'target_not_found',
+            });
             return {
                 config,
                 available: false,
@@ -4359,6 +4511,9 @@
                 treeNodeCount: projection.treeLayout && Array.isArray(projection.treeLayout.nodes)
                     ? projection.treeLayout.nodes.length
                     : 0,
+                runtimeDiagnostics: state.godotFuturePath.runtimeDiagnostics
+                    ? cloneJsonPayload(state.godotFuturePath.runtimeDiagnostics)
+                    : null,
             }
             : null;
         window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST = { ...effectiveConfig };
@@ -4763,6 +4918,9 @@
             available: false,
             reason: 'pending_learning_path',
             treeNodeCount: 0,
+            runtimeDiagnostics: state.godotFuturePath.runtimeDiagnostics
+                ? cloneJsonPayload(state.godotFuturePath.runtimeDiagnostics)
+                : null,
         };
         window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST = null;
         window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_LAYOUT = null;
@@ -8359,6 +8517,7 @@
         godotFuturePath: {
             request: null,
             lastDispatch: null,
+            runtimeDiagnostics: null,
             expandedNodeIds: [],
             collapsedNodeIds: [],
             forcedExpansionNodeIds: [],
@@ -9098,6 +9257,9 @@
         },
         getLastGraphFocusDiagnostics: function () {
             return state.graphFocusDiagnostics ? JSON.parse(JSON.stringify(state.graphFocusDiagnostics)) : null;
+        },
+        getHostedFuturePathRuntimeDiagnostics: function () {
+            return state.godotFuturePath.runtimeDiagnostics ? cloneJsonPayload(state.godotFuturePath.runtimeDiagnostics) : null;
         },
         resolveKnowledgePointGraphTarget: function (item, capability) {
             return resolveKnowledgePointGraphTarget(item, capability);

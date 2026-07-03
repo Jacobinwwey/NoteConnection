@@ -145,6 +145,10 @@ Audit flow:
   - it must not change main-graph ownership,
   - it must not imply native Godot window embedding,
   - cache invalidation policy remains snapshot/signature-based unless future graph mutation paths require a stronger contract.
+- `src/frontend/hosted_future_path_runtime.js` is now the dedicated cache/telemetry owner for hosted Future Path runtime reuse:
+  - it records cache hit/miss/build counters,
+  - it records source node/edge counts plus resolve/build timing,
+  - the latest snapshot is exposed through `NoteConnectionWorkspacePanes.getHostedFuturePathRuntimeDiagnostics()` and `window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_RUNTIME_DIAGNOSTICS`.
 - The local references under `ref/enterprise_agent_platform` and `ref/codex` are now part of the documented design evidence set for this slice. They remain external references only; no runtime dependency is introduced.
 - Boundary rule:
   - Mermaid syntax healing stays in `MermaidProcessor.ts` and `reader_renderer.ts`, not in `PathBridge`,

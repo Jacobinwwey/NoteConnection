@@ -16,6 +16,7 @@
 - `src/notemd/MermaidProcessor.ts` 与 `src/reader_renderer.ts` 现在都会在解析/渲染前按“逐行”方式归一化 bracketed Mermaid node label 内部多余的双引号。已知的 `Superior Overall` 故障类现在会在 NoteMD 源修复边界与本地 renderer fallback 边界同时自愈。
 - Mermaid 修复路径是刻意有界的：新归一化逻辑只按行工作，不跨语句边界，也不会破坏原有的 dangling-bracket label repair。
 - `src/frontend/workspace_panes.js` 现在会按 source-graph signature 缓存托管 Future Path 的 `Graph` / `PathEngine` 运行时。对同一 Guided Learning 投影的再次打开或 rerender 不再每次都完整重建托管图运行时。
+- 托管 Future Path cache 现在有了更窄的 owner：`src/frontend/hosted_future_path_runtime.js` 持有按签名复用与冷/热路径诊断，`workspace_panes.js` 只消费这个 owner 并暴露最近一次诊断快照。
 - `src/frontend/agent_workspace.js` 保留了先前引入的 pending-pane 行为，因此 `/api/knowledge/path` 尚未返回时 Guided Learning 仍会立即打开；现在 runtime 复用则进一步去掉了其后的重复图重建成本。
 - `src/learning/graphContextAssembler.ts` 现在会发射 additive 的 `anchorGraphProfile`，为当前 anchor 提供有界的 in-degree / out-degree / centrality 事实，predecessor/successor window 也会保留可选 degree metadata。
 - `src/learning/conversationComposer.ts` 与 `src/learning/answerReleaseReview.ts` 现在已经在公开回答路径消费有界的 path / degree context。回答仍然保持收缩，但不再被迫固定成“第一条 direct sentence 或 `title: summary`”。
@@ -27,6 +28,7 @@
 |---|---|---|
 | 回退 Mermaid 渲染不应在已知畸形 bracketed-label 模式上崩溃 | `MermaidProcessor.ts` 与 `reader_renderer.ts` 现已按行归一化 stray quote；`src/notemd.core.test.ts` 与 `src/reader_renderer.test.ts` 固定该回归。 | 已实现 |
 | Guided Learning 首次打开不应对同一图快照重复执行完整托管运行时重建 | `workspace_panes.js` 现按 source-graph signature 缓存托管 Future Path runtime，`src/agent_workspace.frontend.test.ts` 验证同一快照不会重复构造 nodes/edges。 | 已实现 |
+| 托管运行时复用应能给出可观测的冷/热路径证据 | `hosted_future_path_runtime.js` 现在持有复用诊断，`src/agent_workspace.frontend.test.ts` 现在同时验证同一快照复用与签名变化后的重建。 | 已实现 |
 | 主公开回答应消费有界图上下文，而不是只释放 top-hit 首句 | `graphContextAssembler.ts` 已提供 `anchorGraphProfile`，`conversationComposer.ts` 与 `answerReleaseReview.ts` 已在公开回答路径消费有界 path/degree context。 | 已实现 |
 
 2026-07-03 当日新鲜验证证据：
@@ -44,7 +46,7 @@
 | Knowledge Workspace 应把证据和图细节留在主回答面之外 | 主回答继续收缩，图细节继续留在 pane-backed evidence 与 trace surface。 | 已实现 |
 | Hosted Guided Learning 不应在每次重开时重复构建同一套运行时 | `workspace_panes.js` 现在按 source-graph signature 复用 hosted `Graph` / `PathEngine` runtime。 | 已实现 |
 | 平台应吸收参考架构经验，但不能把 runtime owner 外包给参考仓库 | `ref/enterprise_agent_platform` 强化 evidence / retrieval / runtime / review separation；`ref/codex` 强化 bounded model-visible context 与 additive fragment。 | 已吸收为设计输入 |
-| 架构压力应逐步下降 | 当前压力仍集中在 `src/server.ts`（约 `15850`）、`KnowledgeLearningPlatform.ts`（约 `11200`）、`workspace_panes.js`（约 `9289`）、`agent_workspace.js`（约 `4882`）与 `answerReleaseReview.ts`（约 `4261`）。 | 仍然落后 |
+| 架构压力应逐步下降 | 当前压力仍集中在 `src/server.ts`（约 `15850`）、`KnowledgeLearningPlatform.ts`（约 `11200`）、`workspace_panes.js`（约 `9289`）、`agent_workspace.js`（约 `4882`）与 `answerReleaseReview.ts`（约 `4261`），但 `hosted_future_path_runtime.js` 已开始把一项真实 cache/telemetry 不变量从 `workspace_panes.js` 中抽出。 | 有所改善，但仍然落后 |
 
 这会改变后续判断：
 

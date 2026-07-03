@@ -25,6 +25,7 @@
 
 - 通过 Node 侧 renderer 暴露出来的 Mermaid 回退失败类现在已经在正确 owner 处关闭：`src/notemd/MermaidProcessor.ts` 与 `src/reader_renderer.ts` 现在都会在解析/渲染前按行归一化畸形带引号 bracketed-node label；`PathBridge` 继续只做 transport。
 - Guided Learning 对同一图快照不再重复支付完整托管 `Graph` / `PathEngine` 重建成本。`src/frontend/workspace_panes.js` 现在会按 source-graph signature 复用 hosted Future Path runtime，同时保留 `src/frontend/agent_workspace.js` 中已有的 pending-pane 行为。
+- Hosted Future Path runtime 复用现在也有了更窄的 owner：`src/frontend/hosted_future_path_runtime.js` 持有按签名复用的 cache identity 与冷/热路径诊断，`workspace_panes.js` 不再内联持有整套 cache 逻辑。
 - Knowledge Workspace 的公开回答现在已经在主回答路径消费有界 DAG context，而不再只退化成首条 top-hit 句子。`src/learning/graphContextAssembler.ts` 现在会发射 `anchorGraphProfile`，`conversationComposer.ts` 与 `answerReleaseReview.ts` 会在保持回答收缩的前提下使用 bounded path / degree context。
 - 本地 `ref/enterprise_agent_platform` 与 `ref/codex` 设计参考现在进一步支撑当前 owner 切分：runtime / retrieval / memory / release-review 继续留在本地运行时，model-visible context 继续保持 bounded + additive。
 - 相对 2026-05-25 到 2026-06-18 的方案链，当前缺口已经不再是“DAG context 有没有真正进入公开回答路径”。剩余缺口主要是回答校准，以及少数大 owner 内的架构集中度。

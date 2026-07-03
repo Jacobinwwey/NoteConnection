@@ -1216,6 +1216,7 @@ function loadWorkspacePanesHarness(options: { withI18n?: boolean } = {}): Harnes
     const focusModeInteractionsScriptPath = path.join(repoRoot, 'src', 'frontend', 'focus_mode_interactions.js');
     const godotTreeInteractionsScriptPath = path.join(repoRoot, 'src', 'frontend', 'godot_tree_interactions.js');
     const godotFuturePathRendererScriptPath = path.join(repoRoot, 'src', 'frontend', 'godot_future_path_renderer.js');
+    const hostedFuturePathRuntimeScriptPath = path.join(repoRoot, 'src', 'frontend', 'hosted_future_path_runtime.js');
     const scriptPath = path.join(repoRoot, 'src', 'frontend', 'workspace_panes.js');
     const dom = new JSDOM(createWorkspaceHtml(), {
         url: 'http://127.0.0.1:3000',
@@ -1230,6 +1231,7 @@ function loadWorkspacePanesHarness(options: { withI18n?: boolean } = {}): Harnes
     loadScriptIntoSandbox(sandbox, focusModeInteractionsScriptPath, 'focus_mode_interactions.js');
     loadScriptIntoSandbox(sandbox, godotTreeInteractionsScriptPath, 'godot_tree_interactions.js');
     loadScriptIntoSandbox(sandbox, godotFuturePathRendererScriptPath, 'godot_future_path_renderer.js');
+    loadScriptIntoSandbox(sandbox, hostedFuturePathRuntimeScriptPath, 'hosted_future_path_runtime.js');
     loadScriptIntoSandbox(sandbox, scriptPath, 'workspace_panes.js');
 
     sandbox.window.NoteConnectionStorage = {
@@ -1331,6 +1333,7 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
     const focusModeInteractionsScriptPath = path.join(repoRoot, 'src', 'frontend', 'focus_mode_interactions.js');
     const godotTreeInteractionsScriptPath = path.join(repoRoot, 'src', 'frontend', 'godot_tree_interactions.js');
     const godotFuturePathRendererScriptPath = path.join(repoRoot, 'src', 'frontend', 'godot_future_path_renderer.js');
+    const hostedFuturePathRuntimeScriptPath = path.join(repoRoot, 'src', 'frontend', 'hosted_future_path_runtime.js');
     const workspaceScriptPath = path.join(repoRoot, 'src', 'frontend', 'workspace_panes.js');
     const agentScriptPath = path.join(repoRoot, 'src', 'frontend', 'agent_workspace.js');
     const dom = new JSDOM(createWorkspaceHtml(), {
@@ -3474,6 +3477,7 @@ function loadAgentWorkspaceHarness(options: { withI18n?: boolean } = {}): Harnes
     loadScriptIntoSandbox(sandbox, focusModeInteractionsScriptPath, 'focus_mode_interactions.js');
     loadScriptIntoSandbox(sandbox, godotTreeInteractionsScriptPath, 'godot_tree_interactions.js');
     loadScriptIntoSandbox(sandbox, godotFuturePathRendererScriptPath, 'godot_future_path_renderer.js');
+    loadScriptIntoSandbox(sandbox, hostedFuturePathRuntimeScriptPath, 'hosted_future_path_runtime.js');
     loadScriptIntoSandbox(sandbox, workspaceScriptPath, 'workspace_panes.js');
     loadScriptIntoSandbox(sandbox, agentScriptPath, 'agent_workspace.js');
     dispatchDomReady(dom.window.document);
@@ -7562,6 +7566,79 @@ describe('agent workspace learning-path integration', () => {
         expect(pathCalls.addEdge.mock.calls.length).toBe(firstAddEdgeCallCount);
         expect(pathCalls.diffusionLearning.mock.calls.length).toBeGreaterThanOrEqual(2);
         expect(pathCalls.getTreeLayout.mock.calls.length).toBeGreaterThanOrEqual(2);
+        expect((controller as any).getHostedFuturePathRuntimeDiagnostics()).toEqual(expect.objectContaining({
+            cacheHit: true,
+            cacheMiss: false,
+            cacheState: 'hit',
+            runtimeBuildCount: 1,
+            cacheHitCount: 1,
+            cacheMissCount: 1,
+            sourceNodeCount: 3,
+            sourceEdgeCount: 2,
+            reason: 'runtime_reused',
+        }));
+        expect((window as any).__NC_LAST_AGENT_GODOT_FUTURE_PATH_RUNTIME_DIAGNOSTICS).toEqual(expect.objectContaining({
+            cacheState: 'hit',
+            runtimeBuildCount: 1,
+        }));
+    });
+
+    test('rebuilds the hosted Future Path graph runtime when the source graph signature changes', () => {
+        const { controller, window } = loadWorkspacePanesHarness();
+        const pathCalls = installHostedFuturePathRuntime(window, {
+            nodes: [
+                { id: 'atom_paths', label: 'Learning Paths' },
+                { id: 'sequence', label: 'sequence' },
+            ],
+            edges: [
+                { source: 'sequence', target: 'atom_paths', type: 'sequence' },
+            ],
+        });
+        controller.init();
+
+        controller.openLearningPathPane({
+            atomId: 'atom_paths',
+            graphTargetId: 'atom_paths',
+            targetIds: ['atom_paths'],
+            title: 'Learning Paths',
+            items: [{ atomId: 'atom_paths', title: 'Learning Paths' }],
+        });
+
+        const initialNodeBuildCount = pathCalls.addNode.mock.calls.length;
+        expect(initialNodeBuildCount).toBeGreaterThan(0);
+
+        (window as any).graphData = {
+            nodes: [
+                { id: 'atom_paths', label: 'Learning Paths' },
+                { id: 'sequence', label: 'sequence' },
+                { id: 'application', label: 'application' },
+            ],
+            edges: [
+                { source: 'sequence', target: 'atom_paths', type: 'sequence' },
+                { source: 'atom_paths', target: 'application', type: 'application' },
+            ],
+        };
+
+        controller.openLearningPathPane({
+            atomId: 'atom_paths',
+            graphTargetId: 'atom_paths',
+            targetIds: ['atom_paths'],
+            title: 'Learning Paths',
+            items: [{ atomId: 'atom_paths', title: 'Learning Paths' }],
+        });
+
+        expect(pathCalls.addNode.mock.calls.length).toBeGreaterThan(initialNodeBuildCount);
+        expect((controller as any).getHostedFuturePathRuntimeDiagnostics()).toEqual(expect.objectContaining({
+            cacheHit: false,
+            cacheMiss: true,
+            cacheState: 'miss_rebuild',
+            runtimeBuildCount: 2,
+            cacheHitCount: 0,
+            cacheMissCount: 2,
+            sourceNodeCount: 3,
+            sourceEdgeCount: 2,
+            reason: 'runtime_ready',
+        }));
     });
 
     test('keeps atom ids for learning API but hosts Future Path with the resolved graph node', async () => {

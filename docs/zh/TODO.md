@@ -12,6 +12,7 @@
 - [x] 当前事实源文档与开发进度看板已经记录这次切片。
 - [x] 2026-07-03 当日新鲜验证证据已经通过 `tsc`、focused Jest、`build:mini` 与 runtime `waterglass` 验证重新采集。
 - [x] 当前方案链复审已经明确：剩余缺口已不再是“DAG context 有没有进入回答路径”，而是少数本地大 owner 内的校准与缩 owner。
+- [x] Hosted Future Path runtime 复用现在已经有了独立 owner：`src/frontend/hosted_future_path_runtime.js` 会提供签名复用诊断，并以“同一快照复用 + 签名变化重建”回归用例固定边界。
 - [ ] 在进入更深的前端性能工作前，先量化 representative large corpus 下 Guided Learning 的 first-open 与 hot-reopen 时延。
 - [ ] 只有当真实 graph mutation 路径证明 signature-based 复用不足时，才继续增加更强的 hosted Future Path cache invalidation。
 - [ ] 继续保持 graph-aware public answer 有界且 evidence-first；更丰富的图遥测仍留在次级 surface。

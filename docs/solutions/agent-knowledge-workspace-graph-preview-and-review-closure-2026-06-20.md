@@ -62,7 +62,9 @@ What changed:
   - existing dangling-bracket label repairs continue to work,
   - the same malformed pattern is now covered at both the NoteMD source-fix boundary and the local renderer fallback boundary.
 - `src/frontend/workspace_panes.js` now caches the hosted Future Path `Graph` / `PathEngine` runtime by source-graph signature. Reopening or rerendering the same Guided Learning projection no longer rebuilds the full hosted graph runtime on every render.
+- The hosted Future Path runtime cache is no longer just a top-level mutable variable inside `workspace_panes.js`. A dedicated `src/frontend/hosted_future_path_runtime.js` owner now holds signature-based reuse plus cold/hot-path diagnostics, and `workspace_panes.js` consumes that owner instead of open-coding cache behavior.
 - The pending-pane path introduced in `src/frontend/agent_workspace.js` stays intact: the Guided Learning pane still opens immediately while `/api/knowledge/path` resolves, and the runtime cache now removes the repeated graph-rebuild cost behind that UI.
+- Developer-mode Guided Learning now exposes runtime-cache diagnostics for the hosted Future Path surface, including cache state, hit/miss/build counters, source node/edge counts, and resolve/build timing. The same diagnostics are also published through `getHostedFuturePathRuntimeDiagnostics()` and `window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_RUNTIME_DIAGNOSTICS`.
 - `src/learning/graphContextAssembler.ts` now produces an additive `anchorGraphProfile` carrying bounded in-degree / out-degree / centrality facts for the selected anchor, and predecessor/successor windows now also preserve optional degree metadata.
 - `src/learning/conversationComposer.ts` no longer treats the main public answer as only “first direct sentence or `title: summary`”. It now uses the existing bounded DAG context to add a strongest-path sentence plus a compact graph-profile sentence when that context materially improves the answer.
 - `src/learning/answerReleaseReview.ts` now preserves that richer bounded graph-aware answer shape during deterministic `revise` flows instead of collapsing revised answers back to a single top-hit snippet.
@@ -77,6 +79,7 @@ Current code-vs-plan reading:
 |---|---|---|---|
 | Fallback Mermaid rendering should not crash on the known malformed bracketed-label pattern | `MermaidProcessor.ts` and `reader_renderer.ts` now normalize stray quotes per line; `src/notemd.core.test.ts` and `src/reader_renderer.test.ts` pin the regression. | Implemented | If future imports generate new malformed Mermaid shapes, push repair upstream into source/diagram generation instead of piling fallback heuristics into the bridge. |
 | First Learning Path open should avoid repeated full hosted runtime rebuilds | `workspace_panes.js` caches the hosted Future Path runtime by source-graph signature, and `src/agent_workspace.frontend.test.ts` verifies node/edge construction is not repeated for the same graph snapshot. | Implemented | Large-graph latency still needs real-corpus measurement; cache invalidation may need strengthening if live graph data mutates in place without a signature change. |
+| Hosted runtime reuse should have a real owner and observable cold/hot-path evidence | `hosted_future_path_runtime.js` now owns runtime-cache reuse and diagnostics; `src/agent_workspace.frontend.test.ts` now verifies both hot reuse for the same snapshot and rebuild on signature change. | Implemented partial owner reduction | This is instrumentation and owner tightening, not the final latency study. Real corpus measurement is still the next required step. |
 | Public answers should use bounded graph context instead of only the top-hit sentence | `graphContextAssembler.ts` now supplies `anchorGraphProfile`; `conversationComposer.ts` and `answerReleaseReview.ts` now use bounded path/degree context on the public-answer path. | Implemented | This is still intentionally budgeted, not a full graph dump. The remaining work is answer-organization calibration, not more answer volume by default. |
 
 Fresh verification captured on 2026-07-03:
@@ -105,14 +108,15 @@ Current reconciliation:
 | DAG structure should affect answer planning rather than staying a shallow retrieval bonus | `graphContextAssembler.ts` now emits `connectionPaths`, `anchorGraphProfile`, `predecessorWindow`, `successorWindow`, and `evidenceSourceRefs`; `conversationComposer.ts` and `answerReleaseReview.ts` now use bounded path/degree context on the public-answer path. | Implemented stronger baseline | Calibrate answer organization on real corpora before adding more graph-derived sentences or weights. |
 | RSE-style document augmentation should stay evidence-backed and bounded | The current `graphContext` remains additive and budgeted; `evidenceSourceRefs`, explicit path windows, and anchor degree/profile facts augment the answer path without turning the main response into a trace dump. | Implemented bounded baseline, not final closure | Expand only through measured retrieval/ranking gains and explicit weak-evidence behavior, not through larger prompt payloads. |
 | Hosted Guided Learning should feel responsive without violating owner boundaries | `workspace_panes.js` reuses hosted `Graph` / `PathEngine` runtime by source-graph signature, while `agent_workspace.js` keeps the immediate pending-pane open behavior. | Implemented | Capture cold-open vs hot-reopen evidence on large corpora before changing cache invalidation semantics. |
+| Hosted Guided Learning cache identity and telemetry should belong to a narrow owner instead of a workspace-global mutable variable | `hosted_future_path_runtime.js` now owns signature-based reuse, cache hit/miss/build counters, and resolve/build timing; `workspace_panes.js` consumes that owner and exposes the last diagnostics snapshot. | Implemented improvement | More owner reduction is still needed elsewhere; this only removes one local concentration point. |
 | The system should learn from reference architectures without importing their runtime ownership wholesale | `ref/enterprise_agent_platform` reinforces evidence/retrieval/runtime/review separation and RAG failure ledgers; `ref/codex` reinforces bounded model-visible context, additive fragments, and hard context caps. | Integrated as design guidance | Keep using local TypeScript owners for DAG semantics, release review, and pane behavior instead of delegating them to external orchestration stacks. |
-| Mainline architecture pressure should fall over time instead of concentrating into bigger files | Current line counts remain high: `src/server.ts` about `15850`, `src/learning/KnowledgeLearningPlatform.ts` about `11200`, `src/frontend/workspace_panes.js` about `9289`, `src/frontend/agent_workspace.js` about `4882`, and `src/learning/answerReleaseReview.ts` about `4261`; the newly introduced `src/learning/graphContextAssembler.ts` is about `792`. | Behind target | Prefer narrow extractions such as bounded graph-answer sentence builders or hosted-runtime cache owners only when the new module owns a real invariant. |
+| Mainline architecture pressure should fall over time instead of concentrating into bigger files | Current line counts remain high: `src/server.ts` about `15850`, `src/learning/KnowledgeLearningPlatform.ts` about `11200`, `src/frontend/workspace_panes.js` about `9289`, `src/frontend/agent_workspace.js` about `4882`, and `src/learning/answerReleaseReview.ts` about `4261`; the newly introduced `src/learning/graphContextAssembler.ts` is about `792`, and the new `src/frontend/hosted_future_path_runtime.js` now holds the hosted Future Path cache/diagnostics invariant outside `workspace_panes.js`. | Improved, still behind | Continue preferring narrow extractions only when the new module owns a real invariant such as cache identity, telemetry, or answer-boundary policy. |
 
 Progress reading:
 
 - The main gap is no longer "whether the existing DAG reaches the answer path." That closure now exists in code.
 - The main gap is also no longer "whether Learning Path can reuse the hosted runtime." That closure now exists in code.
-- The remaining risk is architectural concentration: too much answer policy, pane behavior, and runtime orchestration still live inside a few oversized owners.
+- The remaining risk is still architectural concentration, but this slice now starts to reduce it with a real owner extraction for hosted Future Path cache identity and diagnostics.
 - The right next move is therefore calibration plus ownership reduction, not another broad framework comparison pass.
 
 Best-practice boundary:
@@ -460,7 +464,9 @@ The deliberate limitation remains: this is contract and renderer-semantics reuse
   - 原有 dangling-bracket label repair 继续有效，
   - 相同的 malformed 模式现在同时被 source-fix 边界与 local renderer fallback 边界覆盖。
 - `src/frontend/workspace_panes.js` 现在会按 source-graph signature 缓存托管 Future Path 的 `Graph` / `PathEngine` 运行时。对同一 Guided Learning 投影的再次打开或 rerender 不再每次都重建整套托管图运行时。
+- 托管 Future Path runtime cache 现在也不再只是 `workspace_panes.js` 顶层的可变变量。新的 `src/frontend/hosted_future_path_runtime.js` 已经成为独立 owner，负责按签名复用运行时并记录冷/热路径诊断。
 - `src/frontend/agent_workspace.js` 里已有的 pending-pane 路径继续保留：`/api/knowledge/path` 尚未返回时，Guided Learning pane 仍立即打开；现在托管运行时缓存则进一步去掉了其后的重复图重建成本。
+- Developer Mode 下的 Guided Learning 现在会显示 hosted Future Path runtime-cache 诊断，包括 cache state、hit/miss/build 计数、source node/edge 数量，以及 resolve/build 时延；同一组诊断也会通过 `getHostedFuturePathRuntimeDiagnostics()` 与 `window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_RUNTIME_DIAGNOSTICS` 暴露出来。
 - `src/learning/graphContextAssembler.ts` 现在会生成 additive 的 `anchorGraphProfile`，为当前 anchor 提供有界的 in-degree / out-degree / centrality 事实；predecessor/successor window 现在也会保留可选 degree metadata。
 - `src/learning/conversationComposer.ts` 不再把主公开回答固定成“第一条 direct sentence 或 `title: summary`”。现在只要有界 DAG context 确实能提升回答，它就会补一条 strongest-path 句子和一条紧凑 graph-profile 句子。
 - `src/learning/answerReleaseReview.ts` 现在也会在确定性 `revise` 路径中保留这种 richer 但仍受预算约束的 graph-aware 回答形态，而不再把 revised answer 折回成单个 top-hit snippet。
@@ -475,6 +481,7 @@ The deliberate limitation remains: this is contract and renderer-semantics reuse
 |---|---|---|---|
 | 回退 Mermaid 渲染不应在已知畸形 bracketed-label 模式上崩溃 | `MermaidProcessor.ts` 与 `reader_renderer.ts` 已按行归一化 stray quote；`src/notemd.core.test.ts` 与 `src/reader_renderer.test.ts` 固定回归。 | 已实现 | 如果未来导入链继续生成新的 malformed Mermaid 形态，应优先把修复前移到 source/diagram 生成层，而不是继续向 bridge 堆 heuristic。 |
 | 首次打开 Learning Path 不应为同一图快照重复执行完整托管运行时重建 | `workspace_panes.js` 现按 source-graph signature 缓存托管 Future Path runtime，`src/agent_workspace.frontend.test.ts` 验证同一图快照不会重复构造 nodes/edges。 | 已实现 | 大图下的真实首开时延仍需语料级量测；如果 live graph 数据会原地变异而不变更签名，缓存失效策略可能还需加强。 |
+| 托管运行时复用应有真实 owner，并能给出冷/热路径证据 | `hosted_future_path_runtime.js` 现在持有 runtime-cache 复用与诊断；`src/agent_workspace.frontend.test.ts` 现在同时验证同一快照热复用与签名变化后的重建。 | 已实现，属于局部 owner 缩减 | 这还只是仪表化和 owner 收紧，不等于已完成真实大语料时延研究。下一步仍需量测。 |
 | 主公开回答应消费有界图上下文，而不是只释放 top-hit 首句 | `graphContextAssembler.ts` 已提供 `anchorGraphProfile`，`conversationComposer.ts` 与 `answerReleaseReview.ts` 已在公开回答路径消费有界 path/degree context。 | 已实现 | 这仍然是“有界增强”，不是全图倾倒。剩余工作是回答组织校准，而不是默认增加回答体积。 |
 
 2026-07-03 当日新鲜验证证据：
@@ -503,14 +510,15 @@ The deliberate limitation remains: this is contract and renderer-semantics reuse
 | DAG 结构应参与回答规划，而不是只当浅层 retrieval bonus | `graphContextAssembler.ts` 现在会发射 `connectionPaths`、`anchorGraphProfile`、`predecessorWindow`、`successorWindow` 与 `evidenceSourceRefs`；`conversationComposer.ts` 与 `answerReleaseReview.ts` 已在公开回答路径消费有界 path/degree context。 | 更强基线已实现 | 先用真实语料校准回答组织，再决定是否增加更多图派生句子或权重。 |
 | RSE 风格 document augmentation 必须 evidence-backed 且保持有界 | 当前 `graphContext` 仍是 additive 且 budgeted；`evidenceSourceRefs`、显式路径窗口与 anchor 度数画像会增强回答路径，但不会把主回答面变成 trace dump。 | 有界基线已实现，尚非最终闭环 | 只在量化到真实检索/排序收益时再扩展，不通过增大 prompt 载荷来“堆增强”。 |
 | Hosted Guided Learning 应更流畅，但不能破坏 owner 边界 | `workspace_panes.js` 现在按 source-graph signature 复用 hosted `Graph` / `PathEngine` runtime；`agent_workspace.js` 保留立即打开 pending pane 的交互。 | 已实现 | 先采集大语料下 cold-open / hot-reopen 证据，再决定是否修改缓存失效语义。 |
+| Hosted Guided Learning 的 cache identity 与 telemetry 不应继续作为 workspace-global mutable variable 漂浮在大文件里 | `hosted_future_path_runtime.js` 现在持有 signature-based reuse、cache hit/miss/build counter 与 resolve/build timing；`workspace_panes.js` 通过该 owner 消费并暴露最后一次诊断快照。 | 已实现改进 | 其他大 owner 仍需类似原则推进；这只是先抽出一个真实不变量。 |
 | 系统应吸收参考架构的分层经验，但不能把 runtime owner 外包给参考仓库 | `ref/enterprise_agent_platform` 强化了 evidence / retrieval / runtime / review separation 与 RAG failure ledger；`ref/codex` 强化了 bounded model-visible context、additive fragment 与 hard context cap。 | 已吸收为设计输入 | 继续让本地 TypeScript owner 持有 DAG semantics、release review 与 pane 行为，不把它们委托给外部 orchestration stack。 |
-| 主线架构压力应逐步下降，而不是继续堆大文件 | 当前行数压力仍高：`src/server.ts` 约 `15850`、`src/learning/KnowledgeLearningPlatform.ts` 约 `11200`、`src/frontend/workspace_panes.js` 约 `9289`、`src/frontend/agent_workspace.js` 约 `4882`、`src/learning/answerReleaseReview.ts` 约 `4261`；新引入的 `src/learning/graphContextAssembler.ts` 约 `792`。 | 仍然落后 | 只在新模块能持有真实不变量时再做窄提取，例如有界 graph-answer sentence builder 或 hosted-runtime cache owner。 |
+| 主线架构压力应逐步下降，而不是继续堆大文件 | 当前行数压力仍高：`src/server.ts` 约 `15850`、`src/learning/KnowledgeLearningPlatform.ts` 约 `11200`、`src/frontend/workspace_panes.js` 约 `9289`、`src/frontend/agent_workspace.js` 约 `4882`、`src/learning/answerReleaseReview.ts` 约 `4261`；新引入的 `src/learning/graphContextAssembler.ts` 约 `792`，而新的 `src/frontend/hosted_future_path_runtime.js` 已开始承接 hosted Future Path cache/diagnostics 这一真实不变量。 | 有所改善，但仍落后 | 继续只在新模块能持有真实不变量时再做窄提取，例如 answer-boundary policy 或 provenance selection owner。 |
 
 当前进展判断：
 
 - 当前主缺口已经不再是“现有 DAG 有没有真正进入回答路径”，这一点现在已有代码闭环。
 - 当前主缺口也不再是“Learning Path 能否复用 hosted runtime”，这一点现在已有代码闭环。
-- 剩余主要风险是架构集中度过高：过多 answer policy、pane behavior 与 runtime orchestration 仍压在少数大 owner 上。
+- 剩余主要风险仍是架构集中度过高，但本切片已开始用真实 owner 抽取来缓解它：过多 answer policy、pane behavior 与 runtime orchestration 仍压在少数大 owner 上。
 - 因此下一步正确动作是“校准 + 缩 owner”，而不是再做一轮宽泛 framework 对标。
 
 最佳实践边界：

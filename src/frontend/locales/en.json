@@ -508,7 +508,12 @@
       "pendingCopy": "Opening the workspace now while the path service builds graph-aware guidance.",
       "previewTitle": "Path mode preview",
       "godotFuturePathRequested": "Godot Future Path requested: Diffusion / Core",
-      "godotFuturePathUnavailable": "Godot Future Path target is unavailable."
+      "godotFuturePathUnavailable": "Godot Future Path target is unavailable.",
+      "runtimeCacheState": "Runtime cache state",
+      "runtimeCacheCounts": "Cache hits / misses / builds",
+      "runtimeSourceSize": "Source nodes / edges",
+      "runtimeLatency": "Resolve ms / build ms",
+      "runtimeSignature": "Graph signature"
     },
     "actions": {
       "openWorkspace": "Knowledge Workspace",

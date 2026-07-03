@@ -12,6 +12,7 @@ Keep the active TODO aligned with the 2026-07-03 Knowledge Workspace slice that 
 - [x] The current fact-source note and development-progress dashboards now record this slice.
 - [x] Fresh 2026-07-03 verification evidence was recaptured with `tsc`, focused Jest, `build:mini`, and runtime `waterglass` verification.
 - [x] The current plan-chain re-audit now records that the missing gap is no longer DAG-context entry into the answer path, but calibration plus ownership reduction in oversized local owners.
+- [x] Hosted Future Path runtime reuse now has a dedicated owner in `src/frontend/hosted_future_path_runtime.js`, with signature-based reuse diagnostics and regression coverage for same-snapshot reuse plus signature-change rebuilds.
 - [ ] Measure first-open versus hot-reopen Guided Learning latency on representative large corpora before taking on deeper frontend performance work.
 - [ ] Only add stronger hosted Future Path cache invalidation if real graph mutation paths prove signature-based reuse insufficient.
 - [ ] Keep graph-aware public answers bounded and evidence-first; richer graph telemetry stays in secondary surfaces.

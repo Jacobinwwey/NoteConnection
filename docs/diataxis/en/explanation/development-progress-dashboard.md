@@ -16,6 +16,7 @@ What is now true in code:
 - `src/notemd/MermaidProcessor.ts` and `src/reader_renderer.ts` now normalize stray inner double quotes inside bracketed Mermaid node labels on a per-line basis before parsing/rendering. The known `Superior Overall` failure class now self-heals at both the NoteMD source-fix boundary and the local renderer fallback boundary.
 - The Mermaid repair path is intentionally bounded: the new normalization is line-scoped so it does not cross statement boundaries or break the existing dangling-bracket label repair path.
 - `src/frontend/workspace_panes.js` now caches the hosted Future Path `Graph` / `PathEngine` runtime by source-graph signature. Reopening or rerendering the same Guided Learning projection no longer rebuilds the full hosted graph runtime every time.
+- The hosted Future Path cache now has a narrower owner: `src/frontend/hosted_future_path_runtime.js` owns signature-based reuse plus cold/hot-path diagnostics, while `workspace_panes.js` consumes that owner and exposes the last diagnostics snapshot.
 - `src/frontend/agent_workspace.js` keeps the pending-pane behavior introduced earlier, so Guided Learning still opens immediately while `/api/knowledge/path` resolves; runtime reuse now removes the repeated graph-rebuild cost behind that UI.
 - `src/learning/graphContextAssembler.ts` now emits additive `anchorGraphProfile` data carrying bounded in-degree, out-degree, and centrality facts for the selected anchor, and predecessor/successor windows now preserve optional degree metadata.
 - `src/learning/conversationComposer.ts` and `src/learning/answerReleaseReview.ts` now use bounded graph-derived path and degree context on the public-answer path. The answer remains contracted, but it is no longer forced to stay at “first direct sentence or `title: summary`” when stronger DAG context is already available.
@@ -27,6 +28,7 @@ Code-vs-plan reconciliation:
 |---|---|---|
 | Fallback Mermaid rendering should not crash on the known malformed bracketed-label pattern | `MermaidProcessor.ts` and `reader_renderer.ts` now normalize stray quotes per line; `src/notemd.core.test.ts` and `src/reader_renderer.test.ts` pin the regression. | Implemented |
 | First Guided Learning open should avoid repeated hosted runtime rebuilds for the same graph snapshot | `workspace_panes.js` caches the hosted Future Path runtime by source-graph signature, and `src/agent_workspace.frontend.test.ts` verifies repeated pane renders do not rebuild nodes/edges for the same snapshot. | Implemented |
+| Hosted runtime reuse should expose observable cold/hot-path evidence | `hosted_future_path_runtime.js` now owns reuse diagnostics, and `src/agent_workspace.frontend.test.ts` verifies both same-snapshot reuse and signature-change rebuilds. | Implemented |
 | Public answers should use bounded graph context instead of only the top-hit sentence | `graphContextAssembler.ts` now supplies `anchorGraphProfile`; `conversationComposer.ts` and `answerReleaseReview.ts` now use bounded path/degree context on the public-answer path. | Implemented |
 
 Fresh verification captured on 2026-07-03:
@@ -44,7 +46,7 @@ Architecture progress against the earlier plan chain:
 | Knowledge Workspace should keep evidence and graph detail out of the main answer surface | The main answer remains contracted, while graph detail stays in pane-backed evidence and trace surfaces. | Implemented |
 | Hosted Guided Learning should not rebuild the same runtime on every reopen | `workspace_panes.js` now reuses hosted `Graph` / `PathEngine` runtime by source-graph signature. | Implemented |
 | The platform should learn from reference architectures without importing their runtime owners | `ref/enterprise_agent_platform` reinforces evidence/retrieval/runtime/review separation; `ref/codex` reinforces bounded model-visible context and additive fragments. | Implemented as design guidance |
-| Architecture pressure should fall over time | It is still concentrated in `src/server.ts` (~15850), `KnowledgeLearningPlatform.ts` (~11200), `workspace_panes.js` (~9289), `agent_workspace.js` (~4882), and `answerReleaseReview.ts` (~4261). | Still behind |
+| Architecture pressure should fall over time | It is still concentrated in `src/server.ts` (~15850), `KnowledgeLearningPlatform.ts` (~11200), `workspace_panes.js` (~9289), `agent_workspace.js` (~4882), and `answerReleaseReview.ts` (~4261), but `hosted_future_path_runtime.js` now pulls one real cache/telemetry invariant out of `workspace_panes.js`. | Improved, still behind |
 
 This changes the forward reading:
 

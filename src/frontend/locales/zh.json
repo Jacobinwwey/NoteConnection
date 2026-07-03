@@ -508,7 +508,12 @@
       "pendingCopy": "工作区会先打开，路径服务将在后台构建结合图结构的学习引导。",
       "previewTitle": "Path mode 预览",
       "godotFuturePathRequested": "已请求 Godot Future Path：Diffusion / Core",
-      "godotFuturePathUnavailable": "Godot Future Path 目标不可用。"
+      "godotFuturePathUnavailable": "Godot Future Path 目标不可用。",
+      "runtimeCacheState": "运行时缓存状态",
+      "runtimeCacheCounts": "缓存命中 / 未命中 / 构建次数",
+      "runtimeSourceSize": "源节点 / 边数量",
+      "runtimeLatency": "解析毫秒 / 构建毫秒",
+      "runtimeSignature": "图签名"
     },
     "actions": {
       "openWorkspace": "知识工作区",

@@ -153,6 +153,10 @@
   - 不改变主图 owner，
   - 不意味着嵌入 Godot 原生窗口，
   - 除非未来真实 graph mutation 路径要求更强契约，否则缓存失效仍按 snapshot/signature 处理。
+- `src/frontend/hosted_future_path_runtime.js` 现在已经成为 hosted Future Path runtime 复用的专属 cache/telemetry owner：
+  - 负责记录 cache hit/miss/build 计数，
+  - 负责记录 source node/edge 数量与 resolve/build 时延，
+  - 最近一次诊断快照会通过 `NoteConnectionWorkspacePanes.getHostedFuturePathRuntimeDiagnostics()` 与 `window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_RUNTIME_DIAGNOSTICS` 暴露。
 - `ref/enterprise_agent_platform` 与 `ref/codex` 现在已进入本切片的文档化设计证据集，但它们仍只是外部参考，不引入运行时依赖。
 - 边界规则：
   - Mermaid 语法自愈继续留在 `MermaidProcessor.ts` 与 `reader_renderer.ts`，而不是迁移到 `PathBridge`，
