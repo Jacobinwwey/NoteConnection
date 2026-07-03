@@ -86,6 +86,35 @@ Fresh verification captured on 2026-07-03:
 - `npm.cmd run build:mini`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
+### 2026-07-03 Architecture Progress Audit
+
+This re-audit compares the current code against the earlier plan chain instead of treating the 2026-07-03 slice as an isolated fix set:
+
+- `docs/brainstorms/2026-05-25-multiplatform-lightweight-rag-agent-architecture-plan.md`
+- `docs/brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md`
+- `docs/solutions/architecture-progress-alignment-2026-06-06.md`
+- `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`
+- `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`
+- `docs/solutions/agent-final-reply-review-robustness-plan-2026-06-18.md`
+
+Current reconciliation:
+
+| Prior expectation | Current code evidence | Progress reading | Next direction |
+|---|---|---|---|
+| The runtime should close the full scoped path from scope -> retrieval -> graph context -> answer -> review -> pane-backed evidence | `KnowledgeLearningPlatform.ts` normalizes graph context including `anchorGraphProfile`; `graphContextAssembler.ts` assembles bounded graph context; `conversationComposer.ts` composes the bounded public answer; `answerReleaseReview.ts` remains the deterministic final gate; `workspace_panes.js` holds pane-backed evidence and graph projections. | Implemented baseline | Keep tightening owner boundaries, not by adding a framework, but by shrinking oversized local owners around real invariants. |
+| DAG structure should affect answer planning rather than staying a shallow retrieval bonus | `graphContextAssembler.ts` now emits `connectionPaths`, `anchorGraphProfile`, `predecessorWindow`, `successorWindow`, and `evidenceSourceRefs`; `conversationComposer.ts` and `answerReleaseReview.ts` now use bounded path/degree context on the public-answer path. | Implemented stronger baseline | Calibrate answer organization on real corpora before adding more graph-derived sentences or weights. |
+| RSE-style document augmentation should stay evidence-backed and bounded | The current `graphContext` remains additive and budgeted; `evidenceSourceRefs`, explicit path windows, and anchor degree/profile facts augment the answer path without turning the main response into a trace dump. | Implemented bounded baseline, not final closure | Expand only through measured retrieval/ranking gains and explicit weak-evidence behavior, not through larger prompt payloads. |
+| Hosted Guided Learning should feel responsive without violating owner boundaries | `workspace_panes.js` reuses hosted `Graph` / `PathEngine` runtime by source-graph signature, while `agent_workspace.js` keeps the immediate pending-pane open behavior. | Implemented | Capture cold-open vs hot-reopen evidence on large corpora before changing cache invalidation semantics. |
+| The system should learn from reference architectures without importing their runtime ownership wholesale | `ref/enterprise_agent_platform` reinforces evidence/retrieval/runtime/review separation and RAG failure ledgers; `ref/codex` reinforces bounded model-visible context, additive fragments, and hard context caps. | Integrated as design guidance | Keep using local TypeScript owners for DAG semantics, release review, and pane behavior instead of delegating them to external orchestration stacks. |
+| Mainline architecture pressure should fall over time instead of concentrating into bigger files | Current line counts remain high: `src/server.ts` about `15850`, `src/learning/KnowledgeLearningPlatform.ts` about `11200`, `src/frontend/workspace_panes.js` about `9289`, `src/frontend/agent_workspace.js` about `4882`, and `src/learning/answerReleaseReview.ts` about `4261`; the newly introduced `src/learning/graphContextAssembler.ts` is about `792`. | Behind target | Prefer narrow extractions such as bounded graph-answer sentence builders or hosted-runtime cache owners only when the new module owns a real invariant. |
+
+Progress reading:
+
+- The main gap is no longer "whether the existing DAG reaches the answer path." That closure now exists in code.
+- The main gap is also no longer "whether Learning Path can reuse the hosted runtime." That closure now exists in code.
+- The remaining risk is architectural concentration: too much answer policy, pane behavior, and runtime orchestration still live inside a few oversized owners.
+- The right next move is therefore calibration plus ownership reduction, not another broad framework comparison pass.
+
 Best-practice boundary:
 
 - Keep Mermaid repair in the source-fix and renderer-fallback owners; do not move syntax healing into `PathBridge`.
@@ -454,6 +483,35 @@ The deliberate limitation remains: this is contract and renderer-semantics reuse
 - `npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeWorkspaceConversationRegression.test.ts src/learning/conversationComposer.test.ts src/agent_workspace.frontend.test.ts src/notemd.core.test.ts src/reader_renderer.test.ts --runInBand --no-cache`
 - `npm.cmd run build:mini`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
+### 2026-07-03 架构推进复审
+
+这次复审不把 2026-07-03 切片当作孤立 bugfix，而是把它放回先前方案链中重新对比：
+
+- `docs/brainstorms/2026-05-25-multiplatform-lightweight-rag-agent-architecture-plan.md`
+- `docs/brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md`
+- `docs/solutions/architecture-progress-alignment-2026-06-06.md`
+- `docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md`
+- `docs/solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md`
+- `docs/solutions/agent-final-reply-review-robustness-plan-2026-06-18.md`
+
+当前对齐结论：
+
+| 先前预期 | 当前代码证据 | 进度判断 | 后续方向 |
+|---|---|---|---|
+| 运行时应闭合 scope -> retrieval -> graph context -> answer -> review -> pane-backed evidence 全链路 | `KnowledgeLearningPlatform.ts` 已归一化 `anchorGraphProfile` 等图上下文；`graphContextAssembler.ts` 装配有界 graph context；`conversationComposer.ts` 负责有界公开回答；`answerReleaseReview.ts` 继续作为确定性最终门禁；`workspace_panes.js` 持有 pane-backed evidence 与图投影。 | 基线已实现 | 后续继续收紧 owner 边界，但方式不是再引入一层框架，而是在本地大文件中围绕真实不变量缩 owner。 |
+| DAG 结构应参与回答规划，而不是只当浅层 retrieval bonus | `graphContextAssembler.ts` 现在会发射 `connectionPaths`、`anchorGraphProfile`、`predecessorWindow`、`successorWindow` 与 `evidenceSourceRefs`；`conversationComposer.ts` 与 `answerReleaseReview.ts` 已在公开回答路径消费有界 path/degree context。 | 更强基线已实现 | 先用真实语料校准回答组织，再决定是否增加更多图派生句子或权重。 |
+| RSE 风格 document augmentation 必须 evidence-backed 且保持有界 | 当前 `graphContext` 仍是 additive 且 budgeted；`evidenceSourceRefs`、显式路径窗口与 anchor 度数画像会增强回答路径，但不会把主回答面变成 trace dump。 | 有界基线已实现，尚非最终闭环 | 只在量化到真实检索/排序收益时再扩展，不通过增大 prompt 载荷来“堆增强”。 |
+| Hosted Guided Learning 应更流畅，但不能破坏 owner 边界 | `workspace_panes.js` 现在按 source-graph signature 复用 hosted `Graph` / `PathEngine` runtime；`agent_workspace.js` 保留立即打开 pending pane 的交互。 | 已实现 | 先采集大语料下 cold-open / hot-reopen 证据，再决定是否修改缓存失效语义。 |
+| 系统应吸收参考架构的分层经验，但不能把 runtime owner 外包给参考仓库 | `ref/enterprise_agent_platform` 强化了 evidence / retrieval / runtime / review separation 与 RAG failure ledger；`ref/codex` 强化了 bounded model-visible context、additive fragment 与 hard context cap。 | 已吸收为设计输入 | 继续让本地 TypeScript owner 持有 DAG semantics、release review 与 pane 行为，不把它们委托给外部 orchestration stack。 |
+| 主线架构压力应逐步下降，而不是继续堆大文件 | 当前行数压力仍高：`src/server.ts` 约 `15850`、`src/learning/KnowledgeLearningPlatform.ts` 约 `11200`、`src/frontend/workspace_panes.js` 约 `9289`、`src/frontend/agent_workspace.js` 约 `4882`、`src/learning/answerReleaseReview.ts` 约 `4261`；新引入的 `src/learning/graphContextAssembler.ts` 约 `792`。 | 仍然落后 | 只在新模块能持有真实不变量时再做窄提取，例如有界 graph-answer sentence builder 或 hosted-runtime cache owner。 |
+
+当前进展判断：
+
+- 当前主缺口已经不再是“现有 DAG 有没有真正进入回答路径”，这一点现在已有代码闭环。
+- 当前主缺口也不再是“Learning Path 能否复用 hosted runtime”，这一点现在已有代码闭环。
+- 剩余主要风险是架构集中度过高：过多 answer policy、pane behavior 与 runtime orchestration 仍压在少数大 owner 上。
+- 因此下一步正确动作是“校准 + 缩 owner”，而不是再做一轮宽泛 framework 对标。
 
 最佳实践边界：
 

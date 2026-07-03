@@ -11,9 +11,12 @@ Keep the active TODO aligned with the 2026-07-03 Knowledge Workspace slice that 
 - [x] `src/learning/graphContextAssembler.ts` now emits `anchorGraphProfile`, and the public answer plus deterministic revise path now consume bounded path/degree context.
 - [x] The current fact-source note and development-progress dashboards now record this slice.
 - [x] Fresh 2026-07-03 verification evidence was recaptured with `tsc`, focused Jest, `build:mini`, and runtime `waterglass` verification.
+- [x] The current plan-chain re-audit now records that the missing gap is no longer DAG-context entry into the answer path, but calibration plus ownership reduction in oversized local owners.
 - [ ] Measure first-open versus hot-reopen Guided Learning latency on representative large corpora before taking on deeper frontend performance work.
 - [ ] Only add stronger hosted Future Path cache invalidation if real graph mutation paths prove signature-based reuse insufficient.
 - [ ] Keep graph-aware public answers bounded and evidence-first; richer graph telemetry stays in secondary surfaces.
+- [ ] Reduce architecture pressure only through real owners. The main current hotspots remain `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/workspace_panes.js`, `src/frontend/agent_workspace.js`, and `src/learning/answerReleaseReview.ts`.
+- [ ] Define the next bounded RSE calibration set explicitly: which question classes benefit from path/degree context, which should remain direct-definition answers, and which should degrade to weak-evidence states instead of adding more prose.
 
 ---
 

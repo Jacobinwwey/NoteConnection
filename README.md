@@ -35,6 +35,8 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 - Guided Learning no longer pays repeated full hosted `Graph` / `PathEngine` reconstruction for the same graph snapshot. `src/frontend/workspace_panes.js` now reuses the hosted Future Path runtime by source-graph signature while keeping the pending-pane behavior in `src/frontend/agent_workspace.js`.
 - Knowledge Workspace public answers now consume bounded DAG context on the main answer path instead of collapsing to only the first top-hit sentence. `src/learning/graphContextAssembler.ts` now emits `anchorGraphProfile`, and `conversationComposer.ts` plus `answerReleaseReview.ts` use bounded path and degree context while keeping the public answer contracted.
 - The local design references under `ref/enterprise_agent_platform` and `ref/codex` now reinforce the current owner split: runtime/retrieval/memory/release-review stay local, and model-visible context stays bounded and additive.
+- Compared with the 2026-05-25 through 2026-06-18 plan chain, the missing gap is no longer whether DAG context reaches the public answer path. The remaining gap is calibration and architecture concentration inside a few oversized owners.
+- Current architecture pressure is still concentrated in `src/server.ts` (~15850 lines), `src/learning/KnowledgeLearningPlatform.ts` (~11200), `src/frontend/workspace_panes.js` (~9289), `src/frontend/agent_workspace.js` (~4882), and `src/learning/answerReleaseReview.ts` (~4261). The next step is narrower extraction around real invariants, not another framework import pass.
 - Current code-vs-plan details are tracked in [Agent Knowledge Workspace Graph Preview and Review Closure (2026-06-20)](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) and the [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md).
 
 ### 中文
@@ -43,6 +45,8 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 - Guided Learning 对同一图快照不再重复支付完整托管 `Graph` / `PathEngine` 重建成本。`src/frontend/workspace_panes.js` 现在会按 source-graph signature 复用 hosted Future Path runtime，同时保留 `src/frontend/agent_workspace.js` 中已有的 pending-pane 行为。
 - Knowledge Workspace 的公开回答现在已经在主回答路径消费有界 DAG context，而不再只退化成首条 top-hit 句子。`src/learning/graphContextAssembler.ts` 现在会发射 `anchorGraphProfile`，`conversationComposer.ts` 与 `answerReleaseReview.ts` 会在保持回答收缩的前提下使用 bounded path / degree context。
 - 本地 `ref/enterprise_agent_platform` 与 `ref/codex` 设计参考现在进一步支撑当前 owner 切分：runtime / retrieval / memory / release-review 继续留在本地运行时，model-visible context 继续保持 bounded + additive。
+- 相对 2026-05-25 到 2026-06-18 的方案链，当前缺口已经不再是“DAG context 有没有真正进入公开回答路径”。剩余缺口主要是回答校准，以及少数大 owner 内的架构集中度。
+- 当前架构压力仍集中在 `src/server.ts`（约 `15850` 行）、`src/learning/KnowledgeLearningPlatform.ts`（约 `11200` 行）、`src/frontend/workspace_panes.js`（约 `9289` 行）、`src/frontend/agent_workspace.js`（约 `4882` 行）与 `src/learning/answerReleaseReview.ts`（约 `4261` 行）。下一步应该围绕真实不变量做窄提取，而不是再做一轮框架导入。
 - 当前代码 / 方案对齐详情见 [Agent 知识工作区图预览与回答审核收口（2026-06-20）](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) 与 [开发进度看板](docs/diataxis/zh/explanation/development-progress-dashboard.md)。
 
 ---

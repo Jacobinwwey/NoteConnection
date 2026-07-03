@@ -36,6 +36,22 @@ Fresh verification captured on 2026-07-03:
 - `npm.cmd run build:mini`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
+Architecture progress against the earlier plan chain:
+
+| Earlier expectation | Current reading on 2026-07-03 | Progress call |
+|---|---|---|
+| The existing DAG should become an answer-time structure instead of a shallow relation bonus | `graphContextAssembler.ts` now emits bounded `connectionPaths`, `anchorGraphProfile`, predecessor/successor windows, and evidence refs; `conversationComposer.ts` plus `answerReleaseReview.ts` now use that bounded context on the public-answer path. | Implemented stronger baseline |
+| Knowledge Workspace should keep evidence and graph detail out of the main answer surface | The main answer remains contracted, while graph detail stays in pane-backed evidence and trace surfaces. | Implemented |
+| Hosted Guided Learning should not rebuild the same runtime on every reopen | `workspace_panes.js` now reuses hosted `Graph` / `PathEngine` runtime by source-graph signature. | Implemented |
+| The platform should learn from reference architectures without importing their runtime owners | `ref/enterprise_agent_platform` reinforces evidence/retrieval/runtime/review separation; `ref/codex` reinforces bounded model-visible context and additive fragments. | Implemented as design guidance |
+| Architecture pressure should fall over time | It is still concentrated in `src/server.ts` (~15850), `KnowledgeLearningPlatform.ts` (~11200), `workspace_panes.js` (~9289), `agent_workspace.js` (~4882), and `answerReleaseReview.ts` (~4261). | Still behind |
+
+This changes the forward reading:
+
+- The remaining gap is no longer "does DAG context reach the answer path?"
+- The remaining gap is no longer "can Learning Path reuse hosted runtime?"
+- The remaining gap is calibration plus ownership reduction inside a few oversized local owners.
+
 The next movement is narrower than another “framework pass”:
 
 - measure first-open versus hot-reopen Guided Learning latency on large corpora,

@@ -11,9 +11,12 @@ Keep the active TODO aligned with the 2026-07-03 Knowledge Workspace slice that 
 - [x] `src/learning/graphContextAssembler.ts` now emits `anchorGraphProfile`, and the public answer plus deterministic revise path now consume bounded path/degree context.
 - [x] The current fact-source note and development-progress dashboards now record this slice.
 - [x] Fresh 2026-07-03 verification evidence was recaptured with `tsc`, focused Jest, `build:mini`, and runtime `waterglass` verification.
+- [x] The current plan-chain re-audit now records that the missing gap is no longer DAG-context entry into the answer path, but calibration plus ownership reduction in oversized local owners.
 - [ ] Measure first-open versus hot-reopen Guided Learning latency on representative large corpora before taking on deeper frontend performance work.
 - [ ] Only add stronger hosted Future Path cache invalidation if real graph mutation paths prove signature-based reuse insufficient.
 - [ ] Keep graph-aware public answers bounded and evidence-first; richer graph telemetry stays in secondary surfaces.
+- [ ] Reduce architecture pressure only through real owners. The main current hotspots remain `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/workspace_panes.js`, `src/frontend/agent_workspace.js`, and `src/learning/answerReleaseReview.ts`.
+- [ ] Define the next bounded RSE calibration set explicitly: which question classes benefit from path/degree context, which should remain direct-definition answers, and which should degrade to weak-evidence states instead of adding more prose.
 
 ## 中文文档
 
@@ -26,9 +29,12 @@ Keep the active TODO aligned with the 2026-07-03 Knowledge Workspace slice that 
 - [x] `src/learning/graphContextAssembler.ts` 现在会发射 `anchorGraphProfile`，公开回答和确定性 revise 路径现在都会消费有界的 path / degree context。
 - [x] 当前事实源文档与开发进度看板已经记录这次切片。
 - [x] 2026-07-03 当日新鲜验证证据已经通过 `tsc`、focused Jest、`build:mini` 与 runtime `waterglass` 验证重新采集。
+- [x] 当前方案链复审已经明确：剩余缺口已不再是“DAG context 有没有进入回答路径”，而是少数本地大 owner 内的校准与缩 owner。
 - [ ] 在进入更深的前端性能工作前，先量化 representative large corpus 下 Guided Learning 的 first-open 与 hot-reopen 时延。
 - [ ] 只有当真实 graph mutation 路径证明 signature-based 复用不足时，才继续增加更强的 hosted Future Path cache invalidation。
 - [ ] 继续保持 graph-aware public answer 有界且 evidence-first；更丰富的图遥测仍留在次级 surface。
+- [ ] 只通过真实 owner 来降低架构压力。当前主要热点仍是 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/workspace_panes.js`、`src/frontend/agent_workspace.js` 与 `src/learning/answerReleaseReview.ts`。
+- [ ] 明确下一轮有界 RSE 校准集：哪些问题类型值得引入 path / degree context，哪些应继续保持直接定义式回答，哪些应在弱证据下退化为显式状态而不是继续加长回答。
 
 ---
 

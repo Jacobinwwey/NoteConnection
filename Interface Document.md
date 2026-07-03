@@ -138,11 +138,18 @@ Audit flow:
   - `centrality`
 - `predecessorWindow` and `successorWindow` entries may now also carry optional `inDegree`, `outDegree`, and `centrality` fields.
 - Public answer synthesis and deterministic `revise` flows may now consume bounded graph-derived path and degree context from `graphContext`, but citation lists, raw diagnostics, and full graph telemetry remain secondary surfaces.
+- `graphContext` is now also the bounded RSE/document-augmentation contract for this slice:
+  - model-visible fields stay limited to `evidenceSourceRefs`, `connectionPaths`, `anchorGraphProfile`, and bounded predecessor/successor windows,
+  - full graph state, raw diagnostics, and developer telemetry are not part of the main public-answer context budget.
 - Hosted Guided Learning may reuse a cached `Graph` / `PathEngine` runtime keyed by the current source-graph signature. This is a pane-local performance optimization only:
   - it must not change main-graph ownership,
   - it must not imply native Godot window embedding,
   - cache invalidation policy remains snapshot/signature-based unless future graph mutation paths require a stronger contract.
 - The local references under `ref/enterprise_agent_platform` and `ref/codex` are now part of the documented design evidence set for this slice. They remain external references only; no runtime dependency is introduced.
+- Boundary rule:
+  - Mermaid syntax healing stays in `MermaidProcessor.ts` and `reader_renderer.ts`, not in `PathBridge`,
+  - hosted runtime reuse must not become a mutable cross-graph singleton,
+  - public answers must not inject unbounded graph telemetry just because richer graph state exists locally.
 - Compatibility rule: all graph-profile and runtime-reuse fields remain optional/additive. Clients that ignore them must remain valid.
 
 ---

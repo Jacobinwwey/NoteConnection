@@ -146,11 +146,18 @@
   - `centrality`
 - `predecessorWindow` 与 `successorWindow` 的节点项现在也可以携带可选 `inDegree`、`outDegree` 与 `centrality`。
 - 公开回答合成与确定性 `revise` 路径现在可以消费 `graphContext` 中有界的图路径与度数上下文，但 citation list、原始 diagnostics 与完整图遥测仍然属于次级 surface。
+- `graphContext` 现在也是本切片中“有界 RSE / document augmentation 契约”的承载体：
+  - 对模型可见的字段仅限于 `evidenceSourceRefs`、`connectionPaths`、`anchorGraphProfile` 以及有界 predecessor/successor window，
+  - 完整图状态、原始 diagnostics 与 developer telemetry 不属于主公开回答的上下文预算。
 - Hosted Guided Learning 现在可以按当前 source-graph signature 复用缓存的 `Graph` / `PathEngine` runtime。这只是 pane-local 性能优化：
   - 不改变主图 owner，
   - 不意味着嵌入 Godot 原生窗口，
   - 除非未来真实 graph mutation 路径要求更强契约，否则缓存失效仍按 snapshot/signature 处理。
 - `ref/enterprise_agent_platform` 与 `ref/codex` 现在已进入本切片的文档化设计证据集，但它们仍只是外部参考，不引入运行时依赖。
+- 边界规则：
+  - Mermaid 语法自愈继续留在 `MermaidProcessor.ts` 与 `reader_renderer.ts`，而不是迁移到 `PathBridge`，
+  - hosted runtime 复用不能演化成跨图共享的可变全局单例，
+  - 不能因为本地有更丰富的图状态，就把无界图遥测直接注入公开回答。
 - 兼容性规则：所有 graph-profile 与 runtime-reuse 字段都必须保持 optional/additive。忽略这些字段的客户端仍必须有效。
 
 ## 0. 开发前速查入口（Godot + NoteMD + Markdown）

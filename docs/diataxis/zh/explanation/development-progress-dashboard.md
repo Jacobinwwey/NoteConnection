@@ -36,6 +36,22 @@
 - `npm.cmd run build:mini`
 - `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
 
+相对先前方案链的架构推进判断：
+
+| 先前预期 | 2026-07-03 当前结论 | 进度判断 |
+|---|---|---|
+| 现有 DAG 应成为回答时结构，而不只是浅层 relation bonus | `graphContextAssembler.ts` 现在会发射有界的 `connectionPaths`、`anchorGraphProfile`、前驱/后继窗口与 evidence ref；`conversationComposer.ts` 与 `answerReleaseReview.ts` 已在公开回答路径消费这些有界上下文。 | 更强基线已实现 |
+| Knowledge Workspace 应把证据和图细节留在主回答面之外 | 主回答继续收缩，图细节继续留在 pane-backed evidence 与 trace surface。 | 已实现 |
+| Hosted Guided Learning 不应在每次重开时重复构建同一套运行时 | `workspace_panes.js` 现在按 source-graph signature 复用 hosted `Graph` / `PathEngine` runtime。 | 已实现 |
+| 平台应吸收参考架构经验，但不能把 runtime owner 外包给参考仓库 | `ref/enterprise_agent_platform` 强化 evidence / retrieval / runtime / review separation；`ref/codex` 强化 bounded model-visible context 与 additive fragment。 | 已吸收为设计输入 |
+| 架构压力应逐步下降 | 当前压力仍集中在 `src/server.ts`（约 `15850`）、`KnowledgeLearningPlatform.ts`（约 `11200`）、`workspace_panes.js`（约 `9289`）、`agent_workspace.js`（约 `4882`）与 `answerReleaseReview.ts`（约 `4261`）。 | 仍然落后 |
+
+这会改变后续判断：
+
+- 剩余缺口已经不再是“DAG context 有没有进入回答路径”；
+- 剩余缺口也不再是“Learning Path 能不能复用 hosted runtime”；
+- 剩余缺口主要变成少数大 owner 内的校准与缩 owner。
+
 下一步比“再做一轮 framework 对标”更窄：
 
 - 先量化 representative large corpus 下 Guided Learning 的 first-open / hot-reopen 时延，
