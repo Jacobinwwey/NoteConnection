@@ -18,6 +18,8 @@
 - `src/frontend/workspace_panes.js` 现在会按 source-graph signature 缓存托管 Future Path 的 `Graph` / `PathEngine` 运行时。对同一 Guided Learning 投影的再次打开或 rerender 不再每次都完整重建托管图运行时。
 - 托管 Future Path cache 现在有了更窄的 owner：`src/frontend/hosted_future_path_runtime.js` 持有按签名复用与冷/热路径诊断，`workspace_panes.js` 只消费这个 owner 并暴露最近一次诊断快照。
 - `src/frontend/agent_workspace.js` 保留了先前引入的 pending-pane 行为，因此 `/api/knowledge/path` 尚未返回时 Guided Learning 仍会立即打开；现在 runtime 复用则进一步去掉了其后的重复图重建成本。
+- Guided Learning 的 pending 状态在首开时也更有用了：只要本地图状态足够，`workspace_panes.js` 现在会先渲染 hosted Future Path 投影，并在 `/api/knowledge/path` 仍在构建 richer response 时保留 pending 状态提示。
+- `src/frontend/agent_workspace.js` 现在会按归一化 payload 对相同的 `/api/knowledge/path` 在途请求做 dedupe，因此对同一 Learning Path 目标的重复点击不会再触发并行重复后端工作。
 - `src/learning/graphContextAssembler.ts` 现在会发射 additive 的 `anchorGraphProfile`，为当前 anchor 提供有界的 in-degree / out-degree / centrality 事实，predecessor/successor window 也会保留可选 degree metadata。
 - `src/learning/conversationComposer.ts` 与 `src/learning/answerReleaseReview.ts` 现在已经在公开回答路径消费有界的 path / degree context。回答仍然保持收缩，但不再被迫固定成“第一条 direct sentence 或 `title: summary`”。
 - 本地 `ref/enterprise_agent_platform` 与 `ref/codex` 现在进一步证明当前 owner 切分合理：runtime / retrieval / memory / release-review 继续留在本地运行时，model-visible context 继续保持 bounded + additive。
@@ -28,7 +30,9 @@
 |---|---|---|
 | 回退 Mermaid 渲染不应在已知畸形 bracketed-label 模式上崩溃 | `MermaidProcessor.ts` 与 `reader_renderer.ts` 现已按行归一化 stray quote；`src/notemd.core.test.ts` 与 `src/reader_renderer.test.ts` 固定该回归。 | 已实现 |
 | Guided Learning 首次打开不应对同一图快照重复执行完整托管运行时重建 | `workspace_panes.js` 现按 source-graph signature 缓存托管 Future Path runtime，`src/agent_workspace.frontend.test.ts` 验证同一快照不会重复构造 nodes/edges。 | 已实现 |
+| Guided Learning 首次打开时，应在后端路径请求完成前先展示路径结构 | `workspace_panes.js` 现在会在 pending 阶段先渲染 hosted projection，`src/agent_workspace.frontend.test.ts` 现在验证 deferred 响应返回前会同时看到 pending 状态和 hosted path surface。 | 已实现 |
 | 托管运行时复用应能给出可观测的冷/热路径证据 | `hosted_future_path_runtime.js` 现在持有复用诊断，`src/agent_workspace.frontend.test.ts` 现在同时验证同一快照复用与签名变化后的重建。 | 已实现 |
+| Learning Path 链路不应对相同在途请求重复打后端 | `agent_workspace.js` 现在会对相同 `/api/knowledge/path` 在途调用做 dedupe，`src/agent_workspace.frontend.test.ts` 现在验证同一目标的两次打开会共享一条后端请求。 | 已实现 |
 | 主公开回答应消费有界图上下文，而不是只释放 top-hit 首句 | `graphContextAssembler.ts` 已提供 `anchorGraphProfile`，`conversationComposer.ts` 与 `answerReleaseReview.ts` 已在公开回答路径消费有界 path/degree context。 | 已实现 |
 
 2026-07-03 当日新鲜验证证据：

@@ -7460,9 +7460,11 @@ describe('agent workspace learning-path integration', () => {
 
         expect(document.getElementById('agent-learning-path-pane')?.getAttribute('data-open')).toBe('true');
         expect(document.querySelector('[data-agent-learning-path-pending="true"]')).not.toBeNull();
+        expect(document.querySelector('[data-agent-learning-path-pending-mode="preview"]')).not.toBeNull();
         expect(String(document.getElementById('agent-learning-path-body')?.textContent || '')).toContain('Preparing Learning Path');
-        expect(pathCalls.diffusionLearning).not.toHaveBeenCalled();
-        expect(pathCalls.getTreeLayout).not.toHaveBeenCalled();
+        expect(document.querySelector('[data-agent-godot-future-path-shell="true"]')).not.toBeNull();
+        expect(pathCalls.diffusionLearning).toHaveBeenCalledWith('atom_paths', 'core', expect.anything(), expect.anything());
+        expect(pathCalls.getTreeLayout).toHaveBeenCalled();
 
         pathRequest.resolve({
             ok: true,
@@ -7481,6 +7483,57 @@ describe('agent workspace learning-path integration', () => {
         expect(document.querySelector('[data-agent-learning-path-pending="true"]')).toBeNull();
         expect(pathCalls.diffusionLearning).toHaveBeenCalledWith('atom_paths', 'core', expect.anything(), expect.anything());
         expect(pathCalls.getTreeLayout).toHaveBeenCalled();
+    });
+
+    test('dedupes identical inflight learning-path requests while keeping the pending pane open', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness();
+        const deferredResponse = new Promise((resolve) => {
+            (window as any).__TEST_RESOLVE_LEARNING_PATH = resolve;
+        });
+        fetchMock!.mockImplementation((url: string) => {
+            if (url === '/api/knowledge/path') {
+                return deferredResponse as Promise<Response>;
+            }
+            return Promise.resolve({
+                ok: true,
+                text: async () => JSON.stringify({ success: true, result: {} }),
+            } as Response);
+        });
+        const firstPromise = (window as any).NoteConnectionAgentWorkspace.openLearningPath({
+            atomId: 'atom_paths',
+            title: 'Learning Paths',
+        });
+        const secondPromise = (window as any).NoteConnectionAgentWorkspace.openLearningPath({
+            atomId: 'atom_paths',
+            title: 'Learning Paths',
+        });
+        await Promise.resolve();
+
+        expect(fetchMock!).toHaveBeenCalledTimes(1);
+        expect(document.querySelector('[data-agent-learning-path-pending="true"]')).not.toBeNull();
+        expect((window as any).__NC_LAST_AGENT_LEARNING_PATH_REQUEST_DEDUPE).toEqual(expect.objectContaining({
+            reusedInflight: true,
+        }));
+
+        (window as any).__TEST_RESOLVE_LEARNING_PATH({
+            ok: true,
+            text: async () => JSON.stringify({
+                success: true,
+                result: {
+                    masteryPaths: [
+                        { atomId: 'atom_paths', title: 'Learning Paths' },
+                    ],
+                    recommendedActions: [],
+                },
+            }),
+        } as Response);
+
+        await Promise.all([firstPromise, secondPromise]);
+        expect(document.querySelector('[data-agent-learning-path-pending="true"]')).toBeNull();
     });
 
     test('hosts Godot Future Path pane actions through the PathEngine contract', async () => {

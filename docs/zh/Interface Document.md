@@ -157,6 +157,10 @@
   - 负责记录 cache hit/miss/build 计数，
   - 负责记录 source node/edge 数量与 resolve/build 时延，
   - 最近一次诊断快照会通过 `NoteConnectionWorkspacePanes.getHostedFuturePathRuntimeDiagnostics()` 与 `window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_RUNTIME_DIAGNOSTICS` 暴露。
+- Guided Learning 的 pending 行为现在是一个两阶段契约：
+  - 首次打开时，只要本地 graph target 与 source graph snapshot 已可用，pane 就可以在 `/api/knowledge/path` 返回前先渲染 hosted Future Path 投影，
+  - pending 状态提示会继续保留，直到后端响应替换或补全该 pane payload。
+- `src/frontend/agent_workspace.js` 现在会按归一化 payload 对相同的 `/api/knowledge/path` 在途请求做 dedupe，同时保持相同的 pending-pane 契约。
 - `ref/enterprise_agent_platform` 与 `ref/codex` 现在已进入本切片的文档化设计证据集，但它们仍只是外部参考，不引入运行时依赖。
 - 边界规则：
   - Mermaid 语法自愈继续留在 `MermaidProcessor.ts` 与 `reader_renderer.ts`，而不是迁移到 `PathBridge`，

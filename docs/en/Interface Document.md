@@ -158,6 +158,10 @@ Compatibility rules:
   - it records cache hit/miss/build counters,
   - it records source node/edge counts plus resolve/build timing,
   - the latest snapshot is exposed through `NoteConnectionWorkspacePanes.getHostedFuturePathRuntimeDiagnostics()` and `window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_RUNTIME_DIAGNOSTICS`.
+- Guided Learning pending behavior is now a two-stage contract:
+  - on first open, if local graph target plus source graph snapshot are already available, the pane may render an immediate hosted Future Path projection before `/api/knowledge/path` returns,
+  - the pending status remains visible until the backend response replaces or enriches the pane payload.
+- `src/frontend/agent_workspace.js` now dedupes identical in-flight `/api/knowledge/path` requests by normalized payload while preserving the same pending-pane contract.
 - The local references under `ref/enterprise_agent_platform` and `ref/codex` are now part of the documented design evidence set for this slice. They remain external references only; no runtime dependency is introduced.
 - Boundary rule:
   - Mermaid syntax healing stays in `MermaidProcessor.ts` and `reader_renderer.ts`, not in `PathBridge`,

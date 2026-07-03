@@ -4892,12 +4892,13 @@
         return String(payload && payload.status || '').trim().toLowerCase() === 'pending';
     }
 
-    function buildLearningPathPendingHtml(payload) {
+    function buildLearningPathPendingHtml(payload, options) {
         const title = resolveLearningPathTitle(payload || {});
         const sourcePath = String(payload && payload.sourcePath || '').trim();
         const targetLabel = String(payload && (payload.graphTargetLabel || payload.graphTargetId || payload.atomId) || '').trim();
+        const pendingMode = options && options.previewAvailable === true ? 'preview' : 'placeholder';
         return `
-            <div class="agent-learning-path-pending" data-agent-learning-path-pending="true">
+            <div class="agent-learning-path-pending" data-agent-learning-path-pending="true" data-agent-learning-path-pending-mode="${escapeHtml(pendingMode)}">
                 <div class="agent-learning-path-pending-title">${escapeHtml(translate('agentWorkspace.learningPath.pendingTitle', 'Preparing Learning Path'))}</div>
                 <div class="agent-learning-path-pending-copy">${escapeHtml(translate('agentWorkspace.learningPath.pendingCopy', 'Opening the workspace now while the path service builds graph-aware guidance.'))}</div>
                 <div class="agent-learning-path-pending-meta">
@@ -4932,8 +4933,20 @@
             return;
         }
         if (isLearningPathPendingPayload(payload || {})) {
+            const projection = buildHostedGodotFuturePathForPayload(payload || {});
+            if (projection && projection.available === true) {
+                body.innerHTML = `
+                    ${buildLearningPathPendingHtml(payload || {}, { previewAvailable: true })}
+                    ${buildHostedFuturePathSurfaceHtml(projection)}
+                    ${buildLearningPathPaneReaderHtml()}
+                    ${buildLearningPathDeveloperDetailsHtml(payload || {})}
+                `;
+                bindPaneLocalNodeReaderClose(body, 'learning-path');
+                bindHostedFuturePathSurface(body, payload || {});
+                return;
+            }
             clearHostedGodotFuturePathProjection();
-            body.innerHTML = buildLearningPathPendingHtml(payload || {});
+            body.innerHTML = buildLearningPathPendingHtml(payload || {}, { previewAvailable: false });
             return;
         }
         const projection = buildHostedGodotFuturePathForPayload(payload || {});

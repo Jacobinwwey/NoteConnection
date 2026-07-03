@@ -515,6 +515,7 @@
 
     // Keep this exported diagnostics field for compatibility, but no action is executed via legacy fallback anymore.
     const LEGACY_ACTION_FALLBACK_HANDLERS = Object.freeze({});
+    const learningPathInflightRequests = new Map();
 
     async function requestJson(endpoint, init, options) {
         const requestOptions = options && typeof options === 'object'
@@ -4342,6 +4343,57 @@
         });
     }
 
+    function buildLearningPathRequestKey(requestPayload) {
+        if (!requestPayload || typeof requestPayload !== 'object') {
+            return '';
+        }
+        return JSON.stringify({
+            userId: String(requestPayload.userId || '').trim(),
+            focusAtomIds: Array.isArray(requestPayload.focusAtomIds)
+                ? requestPayload.focusAtomIds.map((atomId) => String(atomId || '').trim()).filter(Boolean)
+                : [],
+            maxMasteryPaths: Number.isFinite(Number(requestPayload.maxMasteryPaths))
+                ? Number(requestPayload.maxMasteryPaths)
+                : 0,
+            maxDivergencePaths: Number.isFinite(Number(requestPayload.maxDivergencePaths))
+                ? Number(requestPayload.maxDivergencePaths)
+                : 0,
+            recommendedActionLimit: Number.isFinite(Number(requestPayload.recommendedActionLimit))
+                ? Number(requestPayload.recommendedActionLimit)
+                : 0,
+        });
+    }
+
+    function requestLearningPath(requestPayload) {
+        const requestKey = buildLearningPathRequestKey(requestPayload);
+        if (requestKey && learningPathInflightRequests.has(requestKey)) {
+            window.__NC_LAST_AGENT_LEARNING_PATH_REQUEST_DEDUPE = {
+                requestKey,
+                reusedInflight: true,
+            };
+            return learningPathInflightRequests.get(requestKey);
+        }
+        const requestPromise = requestJson('/api/knowledge/path', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestPayload),
+        }).finally(() => {
+            if (requestKey) {
+                learningPathInflightRequests.delete(requestKey);
+            }
+        });
+        if (requestKey) {
+            learningPathInflightRequests.set(requestKey, requestPromise);
+        }
+        window.__NC_LAST_AGENT_LEARNING_PATH_REQUEST_DEDUPE = {
+            requestKey,
+            reusedInflight: false,
+        };
+        return requestPromise;
+    }
+
     async function openLearningPath(item, capability) {
         const nodeId = resolveCapabilityTargetAtomId(item, capability);
         if (!nodeId) {
@@ -4350,13 +4402,7 @@
         try {
             const requestPayload = resolveLearningPathRequestPayload(item, capability);
             openPendingLearningPathPane(item, capability, requestPayload);
-            const result = await requestJson('/api/knowledge/path', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestPayload),
-            });
+            const result = await requestLearningPath(requestPayload);
             presentLearningPathResult(item, capability, result, requestPayload);
         } catch (error) {
             presentLearningPathFailure(item, capability, error);
