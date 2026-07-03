@@ -172,8 +172,43 @@ function stripWrappingDoubleQuotes(text: string): string {
     return trimmed;
 }
 
+function normalizeMermaidQuotedNodeLabels(source: string): string {
+    return String(source || "")
+        .split("\n")
+        .map((line) => {
+            const text = String(line || "");
+            const startPattern = /([A-Za-z_][A-Za-z0-9_]*)\["/g;
+            let result = "";
+            let cursor = 0;
+            let match: RegExpExecArray | null;
+
+            while ((match = startPattern.exec(text)) !== null) {
+                const labelStart = match.index + match[0].length;
+                let labelEnd = -1;
+                for (let index = labelStart; index < text.length - 1; index += 1) {
+                    if (text.charAt(index) === "\"" && text.charAt(index - 1) !== "\\" && text.charAt(index + 1) === "]") {
+                        labelEnd = index;
+                        break;
+                    }
+                }
+
+                if (labelEnd < 0) {
+                    continue;
+                }
+
+                result += text.slice(cursor, labelStart);
+                result += escapeMermaidQuotedNodeLabel(text.slice(labelStart, labelEnd));
+                result += "\"]";
+                cursor = labelEnd + 2;
+                startPattern.lastIndex = cursor;
+            }
+
+            return result + text.slice(cursor);
+        })
+        .join("\n");
+}
 function splitMermaidTopLevelStatements(source: string): string {
-    const text = normalizeMermaidLineBreaks(source)
+    const text = normalizeMermaidQuotedNodeLabels(normalizeMermaidLineBreaks(source))
         .split('\n')
         .map((line) => rewriteQuotedLabelAfterSemicolonLine(line) || line)
         .join('\n');
@@ -397,6 +432,12 @@ function escapeMermaidLabel(rawValue: string): string {
         .trim();
 }
 
+function escapeMermaidQuotedNodeLabel(rawValue: string): string {
+    return String(rawValue || "")
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g, "#quot;")
+        .trim();
+}
 function isMermaidControlLine(line: string): boolean {
     return /^\s*(?:graph|flowchart|subgraph|end|classDef|class|style|linkStyle|click|%%)\b/i.test(line);
 }

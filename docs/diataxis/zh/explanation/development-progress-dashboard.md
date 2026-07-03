@@ -3,6 +3,45 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-07-03 Mermaid 回退修复、Future Path 运行时复用与图感知公开回答
+
+本次切片收口的是 hosted interaction parity 之后仍然存在的三类具体缺口：
+
+- Node 侧回退 Mermaid renderer 在畸形 bracketed-node label 上仍可能失败，
+- Guided Learning 首次打开仍可能重复支付托管 `Graph` / `PathEngine` 重建成本，
+- 主公开回答路径仍然低估已有的有界 DAG context，经常退化成单个 top-hit 句子。
+
+当前代码已经成立的事实：
+
+- `src/notemd/MermaidProcessor.ts` 与 `src/reader_renderer.ts` 现在都会在解析/渲染前按“逐行”方式归一化 bracketed Mermaid node label 内部多余的双引号。已知的 `Superior Overall` 故障类现在会在 NoteMD 源修复边界与本地 renderer fallback 边界同时自愈。
+- Mermaid 修复路径是刻意有界的：新归一化逻辑只按行工作，不跨语句边界，也不会破坏原有的 dangling-bracket label repair。
+- `src/frontend/workspace_panes.js` 现在会按 source-graph signature 缓存托管 Future Path 的 `Graph` / `PathEngine` 运行时。对同一 Guided Learning 投影的再次打开或 rerender 不再每次都完整重建托管图运行时。
+- `src/frontend/agent_workspace.js` 保留了先前引入的 pending-pane 行为，因此 `/api/knowledge/path` 尚未返回时 Guided Learning 仍会立即打开；现在 runtime 复用则进一步去掉了其后的重复图重建成本。
+- `src/learning/graphContextAssembler.ts` 现在会发射 additive 的 `anchorGraphProfile`，为当前 anchor 提供有界的 in-degree / out-degree / centrality 事实，predecessor/successor window 也会保留可选 degree metadata。
+- `src/learning/conversationComposer.ts` 与 `src/learning/answerReleaseReview.ts` 现在已经在公开回答路径消费有界的 path / degree context。回答仍然保持收缩，但不再被迫固定成“第一条 direct sentence 或 `title: summary`”。
+- 本地 `ref/enterprise_agent_platform` 与 `ref/codex` 现在进一步证明当前 owner 切分合理：runtime / retrieval / memory / release-review 继续留在本地运行时，model-visible context 继续保持 bounded + additive。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 回退 Mermaid 渲染不应在已知畸形 bracketed-label 模式上崩溃 | `MermaidProcessor.ts` 与 `reader_renderer.ts` 现已按行归一化 stray quote；`src/notemd.core.test.ts` 与 `src/reader_renderer.test.ts` 固定该回归。 | 已实现 |
+| Guided Learning 首次打开不应对同一图快照重复执行完整托管运行时重建 | `workspace_panes.js` 现按 source-graph signature 缓存托管 Future Path runtime，`src/agent_workspace.frontend.test.ts` 验证同一快照不会重复构造 nodes/edges。 | 已实现 |
+| 主公开回答应消费有界图上下文，而不是只释放 top-hit 首句 | `graphContextAssembler.ts` 已提供 `anchorGraphProfile`，`conversationComposer.ts` 与 `answerReleaseReview.ts` 已在公开回答路径消费有界 path/degree context。 | 已实现 |
+
+2026-07-03 当日新鲜验证证据：
+
+- `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeWorkspaceConversationRegression.test.ts src/learning/conversationComposer.test.ts src/agent_workspace.frontend.test.ts src/notemd.core.test.ts src/reader_renderer.test.ts --runInBand --no-cache`
+- `npm.cmd run build:mini`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
+下一步比“再做一轮 framework 对标”更窄：
+
+- 先量化 representative large corpus 下 Guided Learning 的 first-open / hot-reopen 时延，
+- 只有当真实 graph mutation 路径证明 signature 复用不足时，才继续增加 hosted Future Path cache invalidation，
+- 继续把 graph-aware public answer 保持为“有界 RSE 式增强”，不要把主回答面演化成 graph-inspection surface。
+
 ## 2026-06-24 知识工作区托管交互对齐
 
 本次增量收口两个剩余的 pane 托管缺口，但不改变 2026-06-22 已确定的 owner 边界。

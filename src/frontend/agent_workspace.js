@@ -4257,15 +4257,14 @@
         }
     }
 
-    function presentLearningPathResult(item, capability, result, requestPayload) {
+    function buildLearningPathPanePayload(item, capability, requestPayload, result, status) {
         const nodeId = resolveCapabilityTargetAtomId(item, capability);
         const graphTarget = resolveGraphTargetForKnowledgePoint(item, capability);
         const pathRuntimeTargetId = graphTarget.graphNodeId || nodeId;
-        const pathRuntimeTargetIds = pathRuntimeTargetId ? [pathRuntimeTargetId] : requestPayload.focusAtomIds;
-        const controller = getController();
-        if (!controller) {
-            return;
-        }
+        const requestedFocusAtomIds = Array.isArray(requestPayload && requestPayload.focusAtomIds)
+            ? requestPayload.focusAtomIds.map((atomId) => String(atomId || '').trim()).filter(Boolean)
+            : [];
+        const pathRuntimeTargetIds = pathRuntimeTargetId ? [pathRuntimeTargetId] : requestedFocusAtomIds;
         const items = [];
         const masteryPaths = Array.isArray(result && result.masteryPaths) ? result.masteryPaths : [];
         masteryPaths.forEach((path) => {
@@ -4283,12 +4282,19 @@
                 title: String(action && action.title || action && action.atomId || ''),
             });
         });
-        controller.openLearningPathPane({
+        if (items.length <= 0 && nodeId) {
+            items.push({
+                atomId: nodeId,
+                title: String(item && item.title || nodeId),
+            });
+        }
+        return {
+            status: String(status || 'ready'),
             atomId: nodeId,
             graphTargetId: pathRuntimeTargetId,
             targetIds: pathRuntimeTargetIds,
             graphTargetLabel: graphTarget.graphNodeLabel,
-            title: String(item.title || nodeId),
+            title: String(item && item.title || nodeId),
             sourcePath: resolveKnowledgePointSourcePath(item),
             language: getActiveLanguage(),
             userId: getUserId(),
@@ -4299,7 +4305,23 @@
             relationKinds: Array.isArray(item && item.relationKinds)
                 ? item.relationKinds.map((kind) => String(kind || '').trim()).filter(Boolean)
                 : [],
-        });
+        };
+    }
+
+    function openPendingLearningPathPane(item, capability, requestPayload) {
+        const controller = getController();
+        if (!controller || typeof controller.openLearningPathPane !== 'function') {
+            return;
+        }
+        controller.openLearningPathPane(buildLearningPathPanePayload(item, capability, requestPayload, null, 'pending'));
+    }
+
+    function presentLearningPathResult(item, capability, result, requestPayload) {
+        const controller = getController();
+        if (!controller) {
+            return;
+        }
+        controller.openLearningPathPane(buildLearningPathPanePayload(item, capability, requestPayload, result, 'ready'));
     }
 
     function presentLearningPathFailure(item, capability, error) {
@@ -4327,6 +4349,7 @@
         }
         try {
             const requestPayload = resolveLearningPathRequestPayload(item, capability);
+            openPendingLearningPathPane(item, capability, requestPayload);
             const result = await requestJson('/api/knowledge/path', {
                 method: 'POST',
                 headers: {
@@ -4685,6 +4708,9 @@
             return;
         }
         const requestPayload = requestBuilder(item, capability);
+        if (operationId === 'build_learning_path') {
+            openPendingLearningPathPane(item, capability, requestPayload);
+        }
 
         try {
             const method = String(transportDescriptor.method || 'POST').toUpperCase();
@@ -4884,6 +4910,9 @@
         }
         if (backdrop) {
             backdrop.hidden = !isOpen;
+        }
+        if (isOpen) {
+            renderWorkspaceScopeSelector();
         }
     }
 

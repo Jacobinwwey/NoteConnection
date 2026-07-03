@@ -133,6 +133,27 @@ Compatibility rules:
 - graphdb and ANN status wording must distinguish operational baselines from production closure until release-grade thresholds and repeated evidence exist.
 - Release runbooks should use `verify:foundation:release-evidence` after generating sqlite and ANN release reports to confirm latest evidence freshness, required runtime modes, and release gates before treating host evidence as current. Use `verify:foundation:release-evidence:strict` when repeated evidence is required, and `verify:foundation:release-evidence:multi-host` when a release window requires host diversity. Foundation readiness exposes the default and strict commands through `foundation_release_evidence_freshness` and `foundation_release_evidence_history`; the current Windows host passes the strict gate with sqlite `3/3` and ANN `3/3`, but each release host/window must regenerate enough fresh reports that satisfy the current release contract, and multi-host release windows must cover enough distinct host keys.
 
+## 0.0E Knowledge Workspace RSE and Hosted Runtime Addendum (2026-07-03)
+
+- Mermaid syntax recovery is now a two-owner contract:
+  - `src/notemd/MermaidProcessor.ts` may normalize malformed quoted bracketed-node labels while repairing Mermaid blocks at source,
+  - `src/reader_renderer.ts` may apply the same per-line normalization inside the local fallback renderer path before Mermaid parse/render.
+- This quoted-label normalization is intentionally line-scoped. It must not cross line boundaries and must not break the existing dangling-bracket label repair path.
+- `AgentConversationGraphContext` may now carry optional `anchorGraphProfile` with:
+  - `atomId`
+  - `title`
+  - `inDegree`
+  - `outDegree`
+  - `centrality`
+- `predecessorWindow` and `successorWindow` entries may now also carry optional `inDegree`, `outDegree`, and `centrality`.
+- Public answer synthesis and deterministic `revise` flows may now consume bounded graph-derived path and degree context from `graphContext`, but citation lists, raw diagnostics, and full graph telemetry remain secondary surfaces.
+- Hosted Guided Learning may reuse a cached `Graph` / `PathEngine` runtime keyed by the current source-graph signature. This is a pane-local performance optimization only:
+  - it must not change main-graph ownership,
+  - it must not imply native Godot window embedding,
+  - cache invalidation remains snapshot/signature-based unless future graph mutation paths require a stronger contract.
+- The local references under `ref/enterprise_agent_platform` and `ref/codex` are now part of the documented design evidence set for this slice. They remain external references only; no runtime dependency is introduced.
+- Compatibility rule: all graph-profile and runtime-reuse fields remain optional/additive. Clients that ignore them must remain valid.
+
 ## 0. Fast Track Links (Godot + NoteMD + Markdown)
 
 Before starting the next integrated feature slice, execute against these docs first:

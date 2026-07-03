@@ -3978,7 +3978,7 @@ describe('workspace panes controller', () => {
         expect(document.querySelector('[data-godot-tree-node-id="water glass"]')).not.toBeNull();
     });
 
-    test('renders only fixed graph-learning actions in the primary hit list', async () => {
+    test('keeps scope visible and hides knowledge actions behind long-press hit menus', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
         const graphView = {
             openFocusModeById: jest.fn(() => true),
@@ -4033,6 +4033,11 @@ describe('workspace panes controller', () => {
         expect(document.querySelector('.agent-knowledge-click-hint')).toBeNull();
         expect(String(knowledgeRegion?.textContent || '')).not.toContain('Left-click a matched file');
 
+        const scopeStyle = fs.readFileSync(path.join(__dirname, 'frontend', 'styles.css'), 'utf8')
+            .match(/\.agent-scope-control\s*\{[^}]*\}/)?.[0] || '';
+        expect(scopeStyle).toContain('position: sticky');
+        expect(scopeStyle).toContain('top: 0');
+
         const helpButton = document.querySelector('[data-agent-knowledge-help-button="true"]') as HTMLButtonElement | null;
         const helpPopover = document.querySelector('[data-agent-knowledge-help-popover="true"]') as HTMLElement | null;
         expect(helpButton).not.toBeNull();
@@ -4069,8 +4074,20 @@ describe('workspace panes controller', () => {
         expect(helpButton?.getAttribute('aria-expanded')).toBe('false');
         expect(helpPopover?.hasAttribute('hidden')).toBe(true);
 
+        expect(document.querySelectorAll('.agent-knowledge-actions button')).toHaveLength(0);
+        const fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
+        expect(fileButton).not.toBeNull();
+        expect(fileButton?.getAttribute('aria-haspopup')).toBe('menu');
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
+
+        fileButton?.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+        const actionMenu = document.querySelector('[data-agent-knowledge-action-menu="true"]') as HTMLElement | null;
+        expect(actionMenu).not.toBeNull();
+        expect(actionMenu?.hidden).toBe(false);
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('true');
+
         const buttonsBefore = Array.from(
-            document.querySelectorAll('.agent-knowledge-actions button')
+            document.querySelectorAll('[data-agent-knowledge-action-menu="true"] button')
         ) as HTMLButtonElement[];
         expect(buttonsBefore.map((node) => node.textContent)).toEqual(['Learning Path', 'Related Focus']);
         expect(buttonsBefore.map((node) => node.getAttribute('data-agent-knowledge-action'))).toEqual([
@@ -4082,7 +4099,11 @@ describe('workspace panes controller', () => {
         expect(onCapability).toHaveBeenCalledTimes(1);
         expect(onCapability.mock.calls[0]?.[1]?.actionId).toBe('open_learning_path');
 
-        buttonsBefore[1]?.click();
+        fileButton?.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+        const reopenedButtons = Array.from(
+            document.querySelectorAll('[data-agent-knowledge-action-menu="true"] button')
+        ) as HTMLButtonElement[];
+        reopenedButtons[1]?.click();
         expect(graphView?.openFocusModeById).not.toHaveBeenCalled();
         expect(graphView?.getFocusModeSnapshot).toHaveBeenCalledWith('atom_paths');
         expect(document.getElementById('agent-graph-focus-pane')?.getAttribute('data-open')).toBe('true');
@@ -4099,22 +4120,27 @@ describe('workspace panes controller', () => {
         expect(translatedHelpPopover?.hasAttribute('hidden')).toBe(false);
         expect(translatedHelpPopover?.textContent || '').toContain('左键单击');
 
+        const translatedFileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
+        translatedFileButton?.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
         const buttonsAfter = Array.from(
-            document.querySelectorAll('.agent-knowledge-actions button')
+            document.querySelectorAll('[data-agent-knowledge-action-menu="true"] button')
         ).map((node) => node.textContent);
         expect(buttonsAfter).toEqual(['学习路径', '关联聚焦']);
     });
 
-    test('keeps the left knowledge workspace pane vertically scrollable when hit actions overflow the viewport', () => {
+    test('partitions conversation and knowledge hit scrolling so the composer remains reachable', () => {
         const stylesPath = path.join(__dirname, 'frontend', 'styles.css');
         const styles = fs.readFileSync(stylesPath, 'utf8');
         const chatPaneRule = styles.match(/\.agent-chat-pane\s*\{[^}]*\}/)?.[0] || '';
+        const chatMessagesRule = styles.match(/\.agent-chat-messages\s*\{[^}]*\}/)?.[0] || '';
+        const knowledgePointsRule = styles.match(/\.agent-knowledge-points\s*\{[^}]*\}/)?.[0] || '';
 
         expect(chatPaneRule).toContain('overflow-x: hidden');
-        expect(chatPaneRule).toContain('overflow-y: auto');
-        expect(chatPaneRule).toContain('overscroll-behavior: contain');
-        expect(chatPaneRule).toContain('scrollbar-gutter: stable');
+        expect(chatPaneRule).toContain('overflow-y: hidden');
         expect(chatPaneRule).not.toContain('overflow: hidden');
+        expect(chatMessagesRule).toContain('overflow-y: auto');
+        expect(knowledgePointsRule).toContain('overflow-y: auto');
+        expect(knowledgePointsRule).toContain('max-height: clamp');
     });
 
     test('hosts graph Focus mode with resolved node names without mutating the main graph runtime', async () => {
@@ -4858,7 +4884,7 @@ describe('workspace panes controller', () => {
 
         const refreshedCard = document.querySelector('.agent-knowledge-card') as HTMLElement | null;
         const refreshedButton = refreshedCard?.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
-        expect(refreshedButton?.getAttribute('aria-expanded')).toBeNull();
+        expect(refreshedButton?.getAttribute('aria-expanded')).toBe('false');
         expect(readContent).toHaveBeenCalledWith('Knowledge_Base/waterglass/water glass.md');
         expect(renderMarkdownInto).toHaveBeenCalled();
         expect(refreshedCard?.querySelector('.agent-knowledge-preview')).toBeNull();
@@ -4873,7 +4899,10 @@ describe('workspace panes controller', () => {
         const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
         expect(highlighted.length).toBeGreaterThan(0);
         expect(String(highlighted[0]?.textContent || '')).toContain('A water glass is a physical system');
-        const actionButtons = Array.from(refreshedCard?.querySelectorAll('.agent-knowledge-actions button') || []);
+        expect(refreshedCard?.querySelectorAll('.agent-knowledge-actions button')).toHaveLength(0);
+        const actionMenu = refreshedCard?.querySelector('[data-agent-knowledge-action-menu="true"]') as HTMLElement | null;
+        expect(actionMenu?.hidden).toBe(true);
+        const actionButtons = Array.from(actionMenu?.querySelectorAll('button') || []);
         expect(actionButtons).toHaveLength(2);
         expect(actionButtons.map((button) => button.getAttribute('data-agent-knowledge-action'))).toEqual([
             'learning-path',
@@ -4935,7 +4964,7 @@ describe('workspace panes controller', () => {
         await Promise.resolve();
 
         let fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
-        expect(fileButton?.getAttribute('aria-expanded')).toBeNull();
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
         expect(document.querySelector('.agent-knowledge-preview')).toBeNull();
 
         fileButton?.click();
@@ -4950,13 +4979,13 @@ describe('workspace panes controller', () => {
         await Promise.resolve();
 
         fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
-        expect(fileButton?.getAttribute('aria-expanded')).toBeNull();
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
         expect(document.querySelector('.agent-knowledge-preview')).toBeNull();
 
         await window.i18n.setLanguage('zh');
 
         fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
-        expect(fileButton?.getAttribute('aria-expanded')).toBeNull();
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
         expect(document.querySelector('.agent-knowledge-preview')).toBeNull();
     });
 
@@ -5761,8 +5790,9 @@ describe('workspace panes controller', () => {
             onCapability: jest.fn(),
         });
 
+        expect(document.querySelectorAll('.agent-knowledge-actions button')).toHaveLength(0);
         const actionButtons = Array.from(
-            document.querySelectorAll('.agent-knowledge-actions button')
+            document.querySelectorAll('[data-agent-knowledge-action-menu="true"] button')
         );
         expect(actionButtons.map((button) => button.getAttribute('data-agent-knowledge-action'))).toEqual([
             'learning-path',
@@ -5805,8 +5835,10 @@ describe('workspace panes controller', () => {
         const cards = Array.from(document.querySelectorAll('.agent-knowledge-card'));
         expect(cards.length).toBe(2);
 
-        const firstCardButtons = cards[0]?.querySelectorAll('.agent-knowledge-actions button') || [];
-        const secondCardButtons = cards[1]?.querySelectorAll('.agent-knowledge-actions button') || [];
+        expect(cards[0]?.querySelectorAll('.agent-knowledge-actions button')).toHaveLength(0);
+        expect(cards[1]?.querySelectorAll('.agent-knowledge-actions button')).toHaveLength(0);
+        const firstCardButtons = cards[0]?.querySelectorAll('[data-agent-knowledge-action-menu="true"] button') || [];
+        const secondCardButtons = cards[1]?.querySelectorAll('[data-agent-knowledge-action-menu="true"] button') || [];
         expect(Array.from(firstCardButtons).map((button) => button.getAttribute('data-agent-knowledge-action'))).toEqual([
             'learning-path',
             'related-focus',
@@ -7396,6 +7428,57 @@ describe('agent workspace learning-path integration', () => {
         ).toBe(true);
     });
 
+    test('opens a lightweight pending Learning Path pane before the first path API call resolves', async () => {
+        const {
+            document,
+            window,
+        } = loadAgentWorkspaceHarness();
+        const pathCalls = installHostedFuturePathRuntime(window);
+        const pathRequest = { resolve: (_value: unknown) => {} };
+        const deferredPathResponse = new Promise((resolve) => {
+            pathRequest.resolve = resolve;
+        });
+        window.fetch = jest.fn((url: string, init?: Record<string, unknown>) => {
+            if (url === '/api/knowledge/path') {
+                return deferredPathResponse as Promise<Response>;
+            }
+            return Promise.resolve({
+                ok: true,
+                text: async () => JSON.stringify({ success: true, result: {} }),
+            } as Response);
+        });
+
+        const openPromise = (window as any).NoteConnectionAgentWorkspace.openLearningPath({
+            atomId: 'atom_paths',
+            title: 'Learning Paths',
+        });
+        await Promise.resolve();
+
+        expect(document.getElementById('agent-learning-path-pane')?.getAttribute('data-open')).toBe('true');
+        expect(document.querySelector('[data-agent-learning-path-pending="true"]')).not.toBeNull();
+        expect(String(document.getElementById('agent-learning-path-body')?.textContent || '')).toContain('Preparing Learning Path');
+        expect(pathCalls.diffusionLearning).not.toHaveBeenCalled();
+        expect(pathCalls.getTreeLayout).not.toHaveBeenCalled();
+
+        pathRequest.resolve({
+            ok: true,
+            text: async () => JSON.stringify({
+                success: true,
+                result: {
+                    masteryPaths: [
+                        { atomId: 'atom_paths', title: 'Learning Paths' },
+                    ],
+                    recommendedActions: [],
+                },
+            }),
+        } as Response);
+        await openPromise;
+
+        expect(document.querySelector('[data-agent-learning-path-pending="true"]')).toBeNull();
+        expect(pathCalls.diffusionLearning).toHaveBeenCalledWith('atom_paths', 'core', expect.anything(), expect.anything());
+        expect(pathCalls.getTreeLayout).toHaveBeenCalled();
+    });
+
     test('hosts Godot Future Path pane actions through the PathEngine contract', async () => {
         const {
             document,
@@ -7437,6 +7520,48 @@ describe('agent workspace learning-path integration', () => {
         expect(document.querySelector('[data-godot-tree-renderer="true"]')).not.toBeNull();
         expect(document.querySelector('[data-godot-tree-node-id="atom_paths"]')).not.toBeNull();
         expect(document.getElementById('agent-learning-path-body')?.querySelector('#path-container')).toBeNull();
+    });
+
+    test('reuses the hosted Future Path graph runtime across repeated pane renders for the same graph snapshot', () => {
+        const { controller, window } = loadWorkspacePanesHarness();
+        const pathCalls = installHostedFuturePathRuntime(window, {
+            nodes: [
+                { id: 'atom_paths', label: 'Learning Paths' },
+                { id: 'sequence', label: 'sequence' },
+                { id: 'application', label: 'application' },
+            ],
+            edges: [
+                { source: 'sequence', target: 'atom_paths', type: 'sequence' },
+                { source: 'atom_paths', target: 'application', type: 'application' },
+            ],
+        });
+        controller.init();
+
+        controller.openLearningPathPane({
+            atomId: 'atom_paths',
+            graphTargetId: 'atom_paths',
+            targetIds: ['atom_paths'],
+            title: 'Learning Paths',
+            items: [{ atomId: 'atom_paths', title: 'Learning Paths' }],
+        });
+
+        const firstAddNodeCallCount = pathCalls.addNode.mock.calls.length;
+        const firstAddEdgeCallCount = pathCalls.addEdge.mock.calls.length;
+        expect(firstAddNodeCallCount).toBeGreaterThan(0);
+        expect(firstAddEdgeCallCount).toBeGreaterThan(0);
+
+        controller.openLearningPathPane({
+            atomId: 'atom_paths',
+            graphTargetId: 'atom_paths',
+            targetIds: ['atom_paths'],
+            title: 'Learning Paths',
+            items: [{ atomId: 'atom_paths', title: 'Learning Paths' }],
+        });
+
+        expect(pathCalls.addNode.mock.calls.length).toBe(firstAddNodeCallCount);
+        expect(pathCalls.addEdge.mock.calls.length).toBe(firstAddEdgeCallCount);
+        expect(pathCalls.diffusionLearning.mock.calls.length).toBeGreaterThanOrEqual(2);
+        expect(pathCalls.getTreeLayout.mock.calls.length).toBeGreaterThanOrEqual(2);
     });
 
     test('keeps atom ids for learning API but hosts Future Path with the resolved graph node', async () => {

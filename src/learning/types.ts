@@ -1115,9 +1115,15 @@ export interface AgentConversationGraphConnectionPath {
     length: number;
 }
 
-export interface AgentConversationGraphWindowNode {
+export interface AgentConversationGraphNodeProfile {
     atomId: string;
     title: string;
+    inDegree?: number;
+    outDegree?: number;
+    centrality?: number;
+}
+
+export interface AgentConversationGraphWindowNode extends AgentConversationGraphNodeProfile {
     relationKind?: RelationKind;
     confidence?: number;
 }
@@ -1148,6 +1154,7 @@ export interface AgentConversationGraphContext {
     anchorAtomId: string;
     anchorTitle: string;
     anchorDocumentId?: string;
+    anchorGraphProfile?: AgentConversationGraphNodeProfile;
     supportingAtomIds: string[];
     supportingTitles: string[];
     relationKinds: RelationKind[];

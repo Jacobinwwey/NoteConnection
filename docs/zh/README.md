@@ -21,6 +21,16 @@
 
 ---
 
+## 当前主线架构状态（2026-07-03）
+
+- 通过 Node 侧 renderer 暴露出来的 Mermaid 回退失败类现在已经在正确 owner 处关闭：`src/notemd/MermaidProcessor.ts` 与 `src/reader_renderer.ts` 现在都会在解析/渲染前按行归一化畸形带引号 bracketed-node label；`PathBridge` 继续只做 transport。
+- Guided Learning 对同一图快照不再重复支付完整托管 `Graph` / `PathEngine` 重建成本。`src/frontend/workspace_panes.js` 现在会按 source-graph signature 复用 hosted Future Path runtime，同时保留 `src/frontend/agent_workspace.js` 中已有的 pending-pane 行为。
+- Knowledge Workspace 的公开回答现在已经在主回答路径消费有界 DAG context，而不再只退化成首条 top-hit 句子。`src/learning/graphContextAssembler.ts` 现在会发射 `anchorGraphProfile`，`conversationComposer.ts` 与 `answerReleaseReview.ts` 会在保持回答收缩的前提下使用 bounded path / degree context。
+- 本地 `ref/enterprise_agent_platform` 与 `ref/codex` 设计参考现在进一步支撑当前 owner 切分：runtime / retrieval / memory / release-review 继续留在本地运行时，model-visible context 继续保持 bounded + additive。
+- 当前代码 / 方案详细对齐请查看 [Agent Knowledge Workspace Graph Preview and Review Closure（2026-06-20）](../solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) 与 [开发进度看板](../diataxis/zh/explanation/development-progress-dashboard.md)。
+
+---
+
 ## 当前主线架构状态（2026-06-19）
 
 - 公开回答审核层现在已经是实际运行时 owner，而不是未来方案占位：`src/learning/answerReleaseReview.ts` 会在 scoped retrieval 与 graph-context assembly 之后执行，负责从 public surface 剥离内部诊断、校验证据充分性，以及 lexical / query-intent / structured / structured-comparison / attribute / containment / composition / purpose / dependency / location / subject / state / polarity / graph-causal / graph-order / graph-comparison / temporal-validity 一致性，并把 gate 结果持久化到 conversation trace / export 流程中；位置谓词也已从 state slice 排除，避免错 owner。

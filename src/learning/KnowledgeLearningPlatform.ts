@@ -3518,6 +3518,21 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             anchorAtomId: String(value.anchorAtomId || '').trim(),
             anchorTitle: String(value.anchorTitle || '').trim(),
             anchorDocumentId: typeof value.anchorDocumentId === 'string' ? value.anchorDocumentId : undefined,
+            anchorGraphProfile: (value as any).anchorGraphProfile && typeof (value as any).anchorGraphProfile === 'object'
+                ? {
+                    atomId: String((value as any).anchorGraphProfile.atomId || '').trim(),
+                    title: String((value as any).anchorGraphProfile.title || '').trim(),
+                    inDegree: Number.isFinite(Number((value as any).anchorGraphProfile.inDegree))
+                        ? Number((value as any).anchorGraphProfile.inDegree)
+                        : undefined,
+                    outDegree: Number.isFinite(Number((value as any).anchorGraphProfile.outDegree))
+                        ? Number((value as any).anchorGraphProfile.outDegree)
+                        : undefined,
+                    centrality: Number.isFinite(Number((value as any).anchorGraphProfile.centrality))
+                        ? Number((value as any).anchorGraphProfile.centrality)
+                        : undefined,
+                }
+                : undefined,
             supportingAtomIds: Array.isArray(value.supportingAtomIds)
                 ? value.supportingAtomIds.map((atomId) => String(atomId || '').trim()).filter(Boolean)
                 : [],
@@ -3575,6 +3590,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     title: String(node.title || '').trim(),
                     relationKind: node.relationKind,
                     confidence: Number.isFinite(Number(node.confidence)) ? Number(node.confidence) : undefined,
+                    inDegree: Number.isFinite(Number(node.inDegree)) ? Number(node.inDegree) : undefined,
+                    outDegree: Number.isFinite(Number(node.outDegree)) ? Number(node.outDegree) : undefined,
+                    centrality: Number.isFinite(Number(node.centrality)) ? Number(node.centrality) : undefined,
                 }))
                 : [],
             successorWindow: Array.isArray((value as any).successorWindow)
@@ -3583,6 +3601,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     title: String(node.title || '').trim(),
                     relationKind: node.relationKind,
                     confidence: Number.isFinite(Number(node.confidence)) ? Number(node.confidence) : undefined,
+                    inDegree: Number.isFinite(Number(node.inDegree)) ? Number(node.inDegree) : undefined,
+                    outDegree: Number.isFinite(Number(node.outDegree)) ? Number(node.outDegree) : undefined,
+                    centrality: Number.isFinite(Number(node.centrality)) ? Number(node.centrality) : undefined,
                 }))
                 : [],
             evidenceSourceRefs: Array.isArray((value as any).evidenceSourceRefs)

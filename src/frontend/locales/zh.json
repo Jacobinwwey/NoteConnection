@@ -411,7 +411,7 @@
       "togglePreview": "切换命中知识预览：{file}",
       "hitFilesTitle": "命中文件",
       "helpLabel": "命中帮助",
-      "clickHint": "左键单击命中文件可打开源文档并高亮命中依据。使用“学习路径”查看顺序引导，使用“关联聚焦”查看引用关系。",
+      "clickHint": "单击命中文件可打开源文档并高亮命中依据。长按或使用上下文菜单可打开“学习路径”和“关联聚焦”操作。",
       "previewLoading": "正在加载源文档预览...",
       "previewUnavailable": "源文档预览不可用。",
       "openFile": "打开命中的知识点：{file}",
@@ -504,6 +504,8 @@
       "title": "引导式学习",
       "emptyIdle": "学习路径面板当前为空。",
       "emptyLoaded": "尚未加载学习路径。",
+      "pendingTitle": "正在准备学习路径",
+      "pendingCopy": "工作区会先打开，路径服务将在后台构建结合图结构的学习引导。",
       "previewTitle": "Path mode 预览",
       "godotFuturePathRequested": "已请求 Godot Future Path：Diffusion / Core",
       "godotFuturePathUnavailable": "Godot Future Path 目标不可用。"

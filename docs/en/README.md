@@ -25,6 +25,16 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
+## Current Mainline Architecture Status (2026-07-03)
+
+- The Mermaid fallback failure class reported through the Node-side renderer is now closed at the correct owners: `src/notemd/MermaidProcessor.ts` and `src/reader_renderer.ts` both normalize malformed quoted bracketed-node labels per line before parse/render. `PathBridge` remains transport-only.
+- Guided Learning no longer pays repeated full hosted `Graph` / `PathEngine` reconstruction for the same graph snapshot. `src/frontend/workspace_panes.js` now reuses the hosted Future Path runtime by source-graph signature while keeping the pending-pane behavior in `src/frontend/agent_workspace.js`.
+- Knowledge Workspace public answers now consume bounded DAG context on the main answer path instead of collapsing to only the first top-hit sentence. `src/learning/graphContextAssembler.ts` now emits `anchorGraphProfile`, and `conversationComposer.ts` plus `answerReleaseReview.ts` use bounded path and degree context while keeping the public answer contracted.
+- The local design references under `ref/enterprise_agent_platform` and `ref/codex` now reinforce the current owner split: runtime/retrieval/memory/release-review stay local, and model-visible context stays bounded and additive.
+- Current code-vs-plan details: [Agent Knowledge Workspace Graph Preview and Review Closure (2026-06-20)](../solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) and the [Development Progress Dashboard](../diataxis/en/explanation/development-progress-dashboard.md).
+
+---
+
 ## Current Mainline Architecture Status (2026-06-19)
 
 - The public-answer reviewer is now a real runtime owner, not a future idea: `src/learning/answerReleaseReview.ts` runs after scoped retrieval and graph-context assembly, strips internal diagnostics from the public surface, checks evidence sufficiency plus lexical/query-intent/structured/structured-comparison/attribute/containment/composition/purpose/dependency/location/subject/state/polarity/graph-causal/graph-order/graph-comparison/temporal-validity consistency, and persists gate outcomes through conversation trace/export flows; locative predicates are excluded from the state slice so location contradictions stay owned by the correct gate.

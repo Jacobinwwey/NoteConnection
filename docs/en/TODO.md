@@ -1,3 +1,22 @@
+# 2026-07-03 v1.7.0 - Knowledge Workspace RSE and Hosted Runtime Alignment TODO
+
+## English Document
+
+### Objective
+Keep the active TODO aligned with the 2026-07-03 Knowledge Workspace slice that closed the Mermaid fallback parse failure, reduced first-open Guided Learning runtime cost, and promoted bounded DAG context onto the public-answer path.
+
+### Current Status
+- [x] Mermaid fallback parse failure is now closed at both `src/notemd/MermaidProcessor.ts` and `src/reader_renderer.ts`.
+- [x] Hosted Guided Learning now reuses a cached Future Path `Graph` / `PathEngine` runtime for identical graph snapshots instead of rebuilding it on every pane render.
+- [x] `src/learning/graphContextAssembler.ts` now emits `anchorGraphProfile`, and the public answer plus deterministic revise path now consume bounded path/degree context.
+- [x] The current fact-source note and development-progress dashboards now record this slice.
+- [x] Fresh 2026-07-03 verification evidence was recaptured with `tsc`, focused Jest, `build:mini`, and runtime `waterglass` verification.
+- [ ] Measure first-open versus hot-reopen Guided Learning latency on representative large corpora before taking on deeper frontend performance work.
+- [ ] Only add stronger hosted Future Path cache invalidation if real graph mutation paths prove signature-based reuse insufficient.
+- [ ] Keep graph-aware public answers bounded and evidence-first; richer graph telemetry stays in secondary surfaces.
+
+---
+
 # 2026-04-07 v1.7.0 - Git LFS Migration Build-Flow Audit Closure
 
 ## English Document

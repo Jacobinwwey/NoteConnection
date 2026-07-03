@@ -29,6 +29,49 @@ function escapeMermaidLabel(rawValue: string): string {
         .trim();
 }
 
+function escapeMermaidQuotedNodeLabel(rawValue: string): string {
+    return String(rawValue || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '#quot;')
+        .trim();
+}
+
+function normalizeMermaidQuotedNodeLabels(source: string): string {
+    return String(source || '')
+        .split('\n')
+        .map((line) => {
+            const text = String(line || '');
+            const startPattern = /([A-Za-z_][A-Za-z0-9_]*)\["/g;
+            let result = '';
+            let cursor = 0;
+            let match: RegExpExecArray | null;
+
+            while ((match = startPattern.exec(text)) !== null) {
+                const labelStart = match.index + match[0].length;
+                let labelEnd = -1;
+                for (let index = labelStart; index < text.length - 1; index += 1) {
+                    if (text.charAt(index) === '"' && text.charAt(index - 1) !== '\\' && text.charAt(index + 1) === ']') {
+                        labelEnd = index;
+                        break;
+                    }
+                }
+
+                if (labelEnd < 0) {
+                    continue;
+                }
+
+                result += text.slice(cursor, labelStart);
+                result += escapeMermaidQuotedNodeLabel(text.slice(labelStart, labelEnd));
+                result += '"]';
+                cursor = labelEnd + 2;
+                startPattern.lastIndex = cursor;
+            }
+
+            return result + text.slice(cursor);
+        })
+        .join('\n');
+}
+
 function protectTableLines(content: string): { next: string; protectedLines: string[] } {
     const protectedLines: string[] = [];
     const tableSeparatorRegex = /^\s*\|(?:[\s\t]*:?[\s\t]*-+[\s\t]*:?[\s\t]*\|)+[\s\t]*$/;
@@ -431,7 +474,11 @@ function applyDeepDebugMermaid(content: string): { next: string; fixes: string[]
 function fixMermaidBlock(blockSource: string): BlockFixResult {
     const fixes: string[] = [];
     const protectedTables = protectTableLines(blockSource);
-    let next = splitTopLevelStatements(protectedTables.next);
+    let next = normalizeMermaidQuotedNodeLabels(protectedTables.next);
+    if (next !== protectedTables.next) {
+        fixes.push('Escaped stray double quotes inside Mermaid node labels.');
+    }
+    next = splitTopLevelStatements(next);
 
     const deepDebug = applyDeepDebugMermaid(next);
     next = deepDebug.next;

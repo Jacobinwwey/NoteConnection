@@ -123,6 +123,21 @@ describe('NoteMD core primitives', () => {
     expect(result.content).toContain('InteractionPoint["作用点 Interaction Point"]');
   });
 
+  test('fixMermaidSyntax escapes stray quotes inside Mermaid bracketed node labels', () => {
+    const source = [
+      '```mermaid',
+      'flowchart TD',
+      'HQWG["High Quality Water Glass"] -->|"&gt;Superior Overall"| FS["Final Score "&gt;Superior Overall"| FS"]',
+      '```',
+    ].join('\n');
+
+    const result = fixMermaidSyntax(source);
+    expect(result.changed).toBe(true);
+    expect(result.content).toContain('High Quality Water Glass');
+    expect(result.content).toContain('Final Score #quot;&gt;Superior Overall#quot;| FS');
+    expect(result.fixes).toContain('Escaped stray double quotes inside Mermaid node labels.');
+  });
+
   test('DuplicateDetector reports repeated terms and wiki-links', () => {
     const detector = new DuplicateDetector();
     const content = 'Graph graph graph [[Node]] [[Node]] [[Edge]]';

@@ -501,7 +501,121 @@ function classifyScopedConversationIntent(message: string): 'explain' | 'compare
     return 'generic';
 }
 
-function buildScopedConversationAnswer(params: ScopedConversationReplyParams): string {
+function containsCjk(value: string): boolean {
+    return /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/u.test(String(value || ''));
+}
+
+function stripConversationAnswerTerminalPunctuation(value: string): string {
+    return normalizeWhitespace(String(value || '').replace(/[.!?\u3002\uFF01\uFF1F]+$/u, ''));
+}
+
+function normalizeConversationAnswerSentence(value: string, useChinese: boolean): string {
+    const normalized = normalizeWhitespace(String(value || ''));
+    if (!normalized) {
+        return '';
+    }
+    return /[.!?\u3002\uFF01\uFF1F]$/u.test(normalized)
+        ? normalized
+        : `${normalized}${useChinese ? '。' : '.'}`;
+}
+
+function appendConversationAnswerSentence(sentences: string[], sentence: string, useChinese: boolean): void {
+    const normalizedSentence = normalizeConversationAnswerSentence(sentence, useChinese);
+    if (!normalizedSentence) {
+        return;
+    }
+    const normalizedKey = stripConversationAnswerTerminalPunctuation(normalizedSentence).toLowerCase();
+    const alreadyPresent = sentences.some((existingSentence) => (
+        stripConversationAnswerTerminalPunctuation(existingSentence).toLowerCase() === normalizedKey
+    ));
+    if (!alreadyPresent) {
+        sentences.push(normalizedSentence);
+    }
+}
+
+function buildGraphConnectionPathAnswerSentence(
+    graphContext: AgentConversationGraphContext | null,
+    useChinese: boolean
+): string {
+    const connectionPath = graphContext && Array.isArray(graphContext.connectionPaths)
+        ? graphContext.connectionPaths[0]
+        : null;
+    const pathTitles = connectionPath && Array.isArray(connectionPath.pathTitles)
+        ? connectionPath.pathTitles.map((title) => normalizeWhitespace(String(title || '').trim())).filter(Boolean)
+        : [];
+    if (pathTitles.length <= 1) {
+        return '';
+    }
+    if (useChinese) {
+        return `当前图中的关键路径是 ${pathTitles.join(' -> ')}`;
+    }
+    return `The strongest graph path runs through ${pathTitles.join(' -> ')}`;
+}
+
+function buildGraphProfileAnswerSentence(
+    graphContext: AgentConversationGraphContext | null,
+    useChinese: boolean
+): string {
+    if (!graphContext) {
+        return '';
+    }
+    const anchorProfile = graphContext.anchorGraphProfile && typeof graphContext.anchorGraphProfile === 'object'
+        ? graphContext.anchorGraphProfile
+        : null;
+    const anchorTitle = normalizeWhitespace(String(graphContext.anchorTitle || anchorProfile?.title || '').trim());
+    const predecessorTitles = Array.isArray(graphContext.predecessorWindow)
+        ? graphContext.predecessorWindow
+            .map((node) => normalizeWhitespace(String(node && node.title || '').trim()))
+            .filter(Boolean)
+            .slice(0, 2)
+        : [];
+    const successorTitles = Array.isArray(graphContext.successorWindow)
+        ? graphContext.successorWindow
+            .map((node) => normalizeWhitespace(String(node && node.title || '').trim()))
+            .filter(Boolean)
+            .slice(0, 2)
+        : [];
+    const degreeParts: string[] = [];
+    if (Number.isFinite(Number(anchorProfile && anchorProfile.inDegree))) {
+        degreeParts.push(useChinese ? `入度为 ${Number(anchorProfile?.inDegree)}` : `${Number(anchorProfile?.inDegree)} incoming`);
+    }
+    if (Number.isFinite(Number(anchorProfile && anchorProfile.outDegree))) {
+        degreeParts.push(useChinese ? `出度为 ${Number(anchorProfile?.outDegree)}` : `${Number(anchorProfile?.outDegree)} outgoing`);
+    }
+    if (degreeParts.length <= 0 && predecessorTitles.length <= 0 && successorTitles.length <= 0) {
+        return '';
+    }
+    if (useChinese) {
+        const fragments: string[] = [];
+        if (degreeParts.length > 0) {
+            fragments.push(`${anchorTitle || '当前锚点'}在当前图中的${degreeParts.join('，')}`);
+        }
+        if (predecessorTitles.length > 0) {
+            fragments.push(`紧邻前置节点包括 ${predecessorTitles.join('、')}`);
+        }
+        if (successorTitles.length > 0) {
+            fragments.push(`后续分支包括 ${successorTitles.join('、')}`);
+        }
+        return fragments.join('，');
+    }
+    const fragments: string[] = [];
+    if (degreeParts.length > 0) {
+        fragments.push(`${anchorTitle || 'The current anchor'} has ${degreeParts.join(' and ')} links in the current graph`);
+    }
+    if (predecessorTitles.length > 0 && successorTitles.length > 0) {
+        fragments.push(`its immediate predecessors include ${predecessorTitles.join(', ')}, and likely next nodes include ${successorTitles.join(', ')}`);
+    } else if (predecessorTitles.length > 0) {
+        fragments.push(`its immediate predecessors include ${predecessorTitles.join(', ')}`);
+    } else if (successorTitles.length > 0) {
+        fragments.push(`its likely next nodes include ${successorTitles.join(', ')}`);
+    }
+    return fragments.join('; ');
+}
+
+function buildScopedConversationAnswer(
+    params: ScopedConversationReplyParams,
+    graphContext: AgentConversationGraphContext | null
+): string {
     if (params.knowledgePoints.length <= 0) {
         const readinessMessage = String(params.usedScope.readiness?.message || '').trim();
         const missMessage = String(params.usedScope.missDiagnostics?.message || '').trim();
@@ -512,16 +626,44 @@ function buildScopedConversationAnswer(params: ScopedConversationReplyParams): s
     }
 
     const leadingPoint = params.knowledgePoints[0];
+    const useChinese = containsCjk([
+        params.message,
+        leadingPoint.title,
+        leadingPoint.summary,
+        graphContext && graphContext.anchorTitle,
+    ].filter(Boolean).join(' '));
+    const answerSentences: string[] = [];
     const directSentence = selectScopedConversationDirectSentence(params.message, leadingPoint);
     if (directSentence) {
-        return directSentence;
+        appendConversationAnswerSentence(answerSentences, directSentence, useChinese);
     }
-    const title = normalizeWhitespace(String(leadingPoint.title || '').trim());
-    const fallback = normalizeWhitespace(String(leadingPoint.evidenceSnippet || leadingPoint.summary || '').trim());
-    if (title && fallback && title !== fallback) {
-        return `${title}: ${fallback}`;
+    if (answerSentences.length <= 0) {
+        const title = normalizeWhitespace(String(leadingPoint.title || '').trim());
+        const fallback = normalizeWhitespace(String(leadingPoint.evidenceSnippet || leadingPoint.summary || '').trim());
+        if (title && fallback && title !== fallback) {
+            appendConversationAnswerSentence(answerSentences, `${title}: ${fallback}`, useChinese);
+        } else {
+            appendConversationAnswerSentence(answerSentences, fallback || title || normalizeWhitespace(String(params.message || '')), useChinese);
+        }
     }
-    return fallback || title || normalizeWhitespace(String(params.message || ''));
+    appendConversationAnswerSentence(
+        answerSentences,
+        buildGraphConnectionPathAnswerSentence(graphContext, useChinese),
+        useChinese
+    );
+    appendConversationAnswerSentence(
+        answerSentences,
+        buildGraphProfileAnswerSentence(graphContext, useChinese),
+        useChinese
+    );
+    if (answerSentences.length < 2 && params.knowledgePoints.length > 1) {
+        appendConversationAnswerSentence(
+            answerSentences,
+            selectScopedConversationDirectSentence(params.message, params.knowledgePoints[1]),
+            useChinese
+        );
+    }
+    return answerSentences.slice(0, 3).join(useChinese ? '' : ' ');
 }
 
 function buildScopedConversationOverviewMarkdown(
@@ -1197,8 +1339,8 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     answerReleaseReview: AnswerReleaseReview;
 } {
     const blocks: AgentConversationAssistantBlock[] = [];
-    const draftAnswer = buildScopedConversationAnswer(params);
     const graphContext = params.graphContext || buildAgentConversationGraphContextFromKnowledgePoints(params.knowledgePoints);
+    const draftAnswer = buildScopedConversationAnswer(params, graphContext);
     const knowledgeRun = buildKnowledgeRun(params, graphContext);
     const answerReleaseReview = reviewAnswerRelease({
         message: params.message,

@@ -132,6 +132,27 @@
 - graphdb 与 ANN 状态描述必须区分 operational baseline 与 production closure；没有发布级阈值与多轮证据时不得宣称生产闭环。
 - 发布 runbook 应在生成 sqlite 与 ANN release 报告后执行 `verify:foundation:release-evidence`，先确认 latest evidence 新鲜、必需 runtime mode 存在且 release gates 通过，再把该宿主证据作为当前有效证据。需要 repeated evidence 时使用 `verify:foundation:release-evidence:strict`；release window 需要宿主多样性时使用 `verify:foundation:release-evidence:multi-host`。Foundation readiness 现在通过 `foundation_release_evidence_freshness` 与 `foundation_release_evidence_history` 暴露默认与严格命令；当前 Windows 宿主已以 sqlite `3/3` 与 ANN `3/3` 通过严格门禁，但每个发布宿主 / release window 仍必须重新生成足够数量、且满足当前 release contract 的新鲜报告；多宿主 release window 还必须覆盖足够不同的 host key。
 
+## 0.0E Knowledge Workspace RSE 与 Hosted Runtime 补充（2026-07-03）
+
+- Mermaid 语法恢复现在是双 owner 契约：
+  - `src/notemd/MermaidProcessor.ts` 可以在源 Mermaid block 修复阶段归一化畸形带引号的 bracketed-node label，
+  - `src/reader_renderer.ts` 可以在本地 fallback renderer 路径里，在 Mermaid parse/render 之前执行同一套逐行归一化。
+- 这条 quoted-label 归一化刻意保持为“按行”工作。它不能跨行扩散，也不能破坏原有 dangling-bracket label repair。
+- `AgentConversationGraphContext` 现在可以携带可选 `anchorGraphProfile`，包含：
+  - `atomId`
+  - `title`
+  - `inDegree`
+  - `outDegree`
+  - `centrality`
+- `predecessorWindow` 与 `successorWindow` 的节点项现在也可以携带可选 `inDegree`、`outDegree` 与 `centrality`。
+- 公开回答合成与确定性 `revise` 路径现在可以消费 `graphContext` 中有界的图路径与度数上下文，但 citation list、原始 diagnostics 与完整图遥测仍然属于次级 surface。
+- Hosted Guided Learning 现在可以按当前 source-graph signature 复用缓存的 `Graph` / `PathEngine` runtime。这只是 pane-local 性能优化：
+  - 不改变主图 owner，
+  - 不意味着嵌入 Godot 原生窗口，
+  - 除非未来真实 graph mutation 路径要求更强契约，否则缓存失效仍按 snapshot/signature 处理。
+- `ref/enterprise_agent_platform` 与 `ref/codex` 现在已进入本切片的文档化设计证据集，但它们仍只是外部参考，不引入运行时依赖。
+- 兼容性规则：所有 graph-profile 与 runtime-reuse 字段都必须保持 optional/additive。忽略这些字段的客户端仍必须有效。
+
 ## 0. 开发前速查入口（Godot + NoteMD + Markdown）
 
 进入下一阶段集成功能开发前，请先以以下文档为执行基线：

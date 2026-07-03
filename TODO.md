@@ -1,3 +1,37 @@
+# 2026-07-03 v1.7.0 - Knowledge Workspace RSE and Hosted Runtime Alignment TODO
+
+## English Document
+
+### Objective
+Keep the active TODO aligned with the 2026-07-03 Knowledge Workspace slice that closed the Mermaid fallback parse failure, reduced first-open Guided Learning runtime cost, and promoted bounded DAG context onto the public-answer path.
+
+### Current Status
+- [x] Mermaid fallback parse failure is now closed at both `src/notemd/MermaidProcessor.ts` and `src/reader_renderer.ts`.
+- [x] Hosted Guided Learning now reuses a cached Future Path `Graph` / `PathEngine` runtime for identical graph snapshots instead of rebuilding it on every pane render.
+- [x] `src/learning/graphContextAssembler.ts` now emits `anchorGraphProfile`, and the public answer plus deterministic revise path now consume bounded path/degree context.
+- [x] The current fact-source note and development-progress dashboards now record this slice.
+- [x] Fresh 2026-07-03 verification evidence was recaptured with `tsc`, focused Jest, `build:mini`, and runtime `waterglass` verification.
+- [ ] Measure first-open versus hot-reopen Guided Learning latency on representative large corpora before taking on deeper frontend performance work.
+- [ ] Only add stronger hosted Future Path cache invalidation if real graph mutation paths prove signature-based reuse insufficient.
+- [ ] Keep graph-aware public answers bounded and evidence-first; richer graph telemetry stays in secondary surfaces.
+
+## 中文文档
+
+### 目标
+让活跃 TODO 与 2026-07-03 的 Knowledge Workspace 切片保持一致：该切片关闭了 Mermaid 回退解析失败，降低了 Guided Learning 首次打开时的托管运行时成本，并把有界 DAG context 推进到了公开回答路径。
+
+### 当前状态
+- [x] Mermaid 回退解析失败现在已经在 `src/notemd/MermaidProcessor.ts` 与 `src/reader_renderer.ts` 两个 owner 处关闭。
+- [x] 托管 Guided Learning 现在会对同一图快照复用缓存的 Future Path `Graph` / `PathEngine` runtime，而不再每次 pane render 都完整重建。
+- [x] `src/learning/graphContextAssembler.ts` 现在会发射 `anchorGraphProfile`，公开回答和确定性 revise 路径现在都会消费有界的 path / degree context。
+- [x] 当前事实源文档与开发进度看板已经记录这次切片。
+- [x] 2026-07-03 当日新鲜验证证据已经通过 `tsc`、focused Jest、`build:mini` 与 runtime `waterglass` 验证重新采集。
+- [ ] 在进入更深的前端性能工作前，先量化 representative large corpus 下 Guided Learning 的 first-open 与 hot-reopen 时延。
+- [ ] 只有当真实 graph mutation 路径证明 signature-based 复用不足时，才继续增加更强的 hosted Future Path cache invalidation。
+- [ ] 继续保持 graph-aware public answer 有界且 evidence-first；更丰富的图遥测仍留在次级 surface。
+
+---
+
 # 2026-06-20 v1.7.0 - Agent Knowledge Workspace Graph Preview and Review Closure TODO
 
 ## English Document

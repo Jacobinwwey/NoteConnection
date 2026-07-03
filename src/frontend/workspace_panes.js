@@ -4,6 +4,7 @@
     const HOSTED_FOCUS_HISTORY_LIMIT = 10;
     let godotFuturePathRetryTimer = null;
     let godotFuturePathRetryCount = 0;
+    let hostedFuturePathGraphRuntimeCache = null;
 
     function getElement(id) {
         return document.getElementById(id);
@@ -3450,6 +3451,156 @@
         return button;
     }
 
+    function closeKnowledgePointActionMenu(fileButton, menu) {
+        if (!fileButton || !menu) {
+            return;
+        }
+        menu.hidden = true;
+        fileButton.setAttribute('aria-expanded', 'false');
+    }
+
+    function openKnowledgePointActionMenu(fileButton, menu) {
+        if (!fileButton || !menu) {
+            return;
+        }
+        menu.hidden = false;
+        fileButton.setAttribute('aria-expanded', 'true');
+        const firstAction = menu.querySelector('button:not(:disabled)');
+        if (firstAction && typeof firstAction.focus === 'function') {
+            firstAction.focus();
+        }
+    }
+
+    function closeSiblingKnowledgePointActionMenus(activeMenu) {
+        document.querySelectorAll('[data-agent-knowledge-action-menu="true"]').forEach((menu) => {
+            if (menu === activeMenu) {
+                return;
+            }
+            const ownerId = menu.getAttribute('aria-labelledby');
+            const owner = ownerId ? document.getElementById(ownerId) : null;
+            closeKnowledgePointActionMenu(owner, menu);
+        });
+    }
+
+    function markKnowledgePointCardSelected(card) {
+        document.querySelectorAll('[data-agent-knowledge-card="true"][data-selected="true"]').forEach((node) => {
+            if (node !== card) {
+                node.setAttribute('data-selected', 'false');
+            }
+        });
+        if (card) {
+            card.setAttribute('data-selected', 'true');
+        }
+    }
+
+    function bindKnowledgePointActionMenu(card, fileButton, menu) {
+        let longPressTimer = null;
+        let suppressNextClick = false;
+        const clearLongPressTimer = function () {
+            if (longPressTimer !== null) {
+                window.clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        };
+        const openMenu = function () {
+            clearLongPressTimer();
+            closeSiblingKnowledgePointActionMenus(menu);
+            markKnowledgePointCardSelected(card);
+            openKnowledgePointActionMenu(fileButton, menu);
+        };
+        const closeMenu = function () {
+            closeKnowledgePointActionMenu(fileButton, menu);
+        };
+
+        fileButton.addEventListener('pointerdown', function (event) {
+            clearLongPressTimer();
+            if (event.button !== undefined && event.button !== 0) {
+                return;
+            }
+            longPressTimer = window.setTimeout(function () {
+                suppressNextClick = true;
+                openMenu();
+            }, 520);
+        });
+        fileButton.addEventListener('pointerup', clearLongPressTimer);
+        fileButton.addEventListener('pointerleave', clearLongPressTimer);
+        fileButton.addEventListener('pointercancel', clearLongPressTimer);
+        fileButton.addEventListener('contextmenu', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            suppressNextClick = true;
+            openMenu();
+        });
+        fileButton.addEventListener('keydown', function (event) {
+            if ((event.shiftKey && event.key === 'F10') || event.key === 'ContextMenu' || event.key === 'ArrowDown') {
+                event.preventDefault();
+                event.stopPropagation();
+                openMenu();
+            }
+        });
+        fileButton.addEventListener('click', function (event) {
+            if (!suppressNextClick) {
+                return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            suppressNextClick = false;
+        }, true);
+        menu.addEventListener('click', function (event) {
+            const target = event.target;
+            if (target && typeof target.closest === 'function' && target.closest('button')) {
+                closeMenu();
+            }
+        });
+        menu.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeMenu();
+                fileButton.focus();
+            }
+        });
+        document.addEventListener('click', function (event) {
+            if (menu.hidden || card.contains(event.target)) {
+                return;
+            }
+            closeMenu();
+        });
+    }
+
+    function createKnowledgePointActionMenu(item, handlers, fileName, actionAtomId) {
+        const menu = document.createElement('div');
+        menu.className = 'agent-knowledge-action-menu';
+        menu.setAttribute('data-agent-knowledge-action-menu', 'true');
+        menu.setAttribute('role', 'menu');
+        menu.setAttribute(
+            'aria-label',
+            translate('agentWorkspace.knowledge.actionsMenu', 'Knowledge point actions')
+        );
+        menu.hidden = true;
+        menu.appendChild(createKnowledgePointGraphActionButton(
+            'learning-path',
+            translate('agentWorkspace.knowledge.learningPathAction', 'Learning Path'),
+            translate('agentWorkspace.knowledge.learningPathActionLabel', 'Show learning path for {file}', {
+                file: fileName,
+            }),
+            !actionAtomId,
+            () => openLearningPathForKnowledgePoint(item, handlers)
+        ));
+        menu.appendChild(createKnowledgePointGraphActionButton(
+            'related-focus',
+            translate('agentWorkspace.knowledge.relatedFocusAction', 'Related Focus'),
+            translate('agentWorkspace.knowledge.relatedFocusActionLabel', 'Show citation focus for {file}', {
+                file: fileName,
+            }),
+            false,
+            () => openRelatedFocusForKnowledgePoint(item)
+        ));
+        menu.querySelectorAll('button').forEach((button) => {
+            button.setAttribute('role', 'menuitem');
+        });
+        return menu;
+    }
+
     function dismissActiveKnowledgeHelp() {
         if (typeof state.knowledgePoints.activeHelpDismiss === 'function') {
             state.knowledgePoints.activeHelpDismiss();
@@ -3856,6 +4007,54 @@
         };
     }
 
+    function buildHostedFuturePathGraphSourceSignature(sourceData) {
+        const sourceNodes = Array.isArray(sourceData && sourceData.nodes) ? sourceData.nodes : [];
+        const sourceEdges = Array.isArray(sourceData && sourceData.edges)
+            ? sourceData.edges
+            : (Array.isArray(sourceData && sourceData.links) ? sourceData.links : []);
+        const nodeSample = sourceNodes
+            .slice(0, 4)
+            .map((node) => normalizeKnowledgeGraphText(node && node.id))
+            .filter(Boolean)
+            .join('|');
+        const edgeSample = sourceEdges
+            .slice(0, 4)
+            .map((edge) => {
+                const sourceId = normalizeKnowledgeGraphText(edge && (typeof edge.source === 'object' ? edge.source.id : edge.source));
+                const targetId = normalizeKnowledgeGraphText(edge && (typeof edge.target === 'object' ? edge.target.id : edge.target));
+                const relationKind = normalizeKnowledgeGraphText(edge && (edge.type || edge.relationKind || edge.kind));
+                return [sourceId, relationKind, targetId].filter(Boolean).join(':');
+            })
+            .filter(Boolean)
+            .join('|');
+        return [
+            sourceNodes.length,
+            sourceEdges.length,
+            nodeSample,
+            edgeSample,
+        ].join('::');
+    }
+
+    function getHostedFuturePathGraphRuntime(sourceData) {
+        const signature = buildHostedFuturePathGraphSourceSignature(sourceData);
+        if (
+            hostedFuturePathGraphRuntimeCache
+            && hostedFuturePathGraphRuntimeCache.sourceData === sourceData
+            && hostedFuturePathGraphRuntimeCache.signature === signature
+        ) {
+            return hostedFuturePathGraphRuntimeCache.runtime;
+        }
+        const runtime = createHostedFuturePathGraph(sourceData);
+        hostedFuturePathGraphRuntimeCache = runtime
+            ? {
+                sourceData,
+                signature,
+                runtime,
+            }
+            : null;
+        return runtime;
+    }
+
     function getHostedFuturePathValidNodeIds(sourceData) {
         const sourceNodes = Array.isArray(sourceData && sourceData.nodes) ? sourceData.nodes : [];
         return new Set(sourceNodes
@@ -4043,7 +4242,7 @@
         }
         const targetId = normalizeKnowledgeGraphText(targetNode.id);
         const targetLabel = normalizeHostedFuturePathNodeLabel(targetNode) || targetId;
-        const graphRuntime = createHostedFuturePathGraph(sourceData);
+        const graphRuntime = getHostedFuturePathGraphRuntime(sourceData);
         if (!graphRuntime) {
             return {
                 config,
@@ -4534,9 +4733,49 @@
         });
     }
 
+    function isLearningPathPendingPayload(payload) {
+        return String(payload && payload.status || '').trim().toLowerCase() === 'pending';
+    }
+
+    function buildLearningPathPendingHtml(payload) {
+        const title = resolveLearningPathTitle(payload || {});
+        const sourcePath = String(payload && payload.sourcePath || '').trim();
+        const targetLabel = String(payload && (payload.graphTargetLabel || payload.graphTargetId || payload.atomId) || '').trim();
+        return `
+            <div class="agent-learning-path-pending" data-agent-learning-path-pending="true">
+                <div class="agent-learning-path-pending-title">${escapeHtml(translate('agentWorkspace.learningPath.pendingTitle', 'Preparing Learning Path'))}</div>
+                <div class="agent-learning-path-pending-copy">${escapeHtml(translate('agentWorkspace.learningPath.pendingCopy', 'Opening the workspace now while the path service builds graph-aware guidance.'))}</div>
+                <div class="agent-learning-path-pending-meta">
+                    ${targetLabel ? `<span>${escapeHtml(targetLabel)}</span>` : ''}
+                    ${sourcePath ? `<span>${escapeHtml(sourcePath)}</span>` : ''}
+                    ${title ? `<span>${escapeHtml(title)}</span>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    function clearHostedGodotFuturePathProjection() {
+        state.godotFuturePath.request = null;
+        state.godotFuturePath.projection = null;
+        state.godotFuturePath.lastDispatch = {
+            runtime: 'hosted-path-engine',
+            targetId: '',
+            available: false,
+            reason: 'pending_learning_path',
+            treeNodeCount: 0,
+        };
+        window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_REQUEST = null;
+        window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_LAYOUT = null;
+    }
+
     function renderLearningPathBody(payload) {
         const body = getPaneBodyElement('learning-path');
         if (!body) {
+            return;
+        }
+        if (isLearningPathPendingPayload(payload || {})) {
+            clearHostedGodotFuturePathProjection();
+            body.innerHTML = buildLearningPathPendingHtml(payload || {});
             return;
         }
         const projection = buildHostedGodotFuturePathForPayload(payload || {});
@@ -9335,6 +9574,10 @@
                 fileButton.type = 'button';
                 fileButton.className = 'agent-knowledge-file-button';
                 fileButton.textContent = fileName;
+                const fileButtonId = `agent-knowledge-file-${state.knowledgePoints.resultSetKey.replace(/[^a-zA-Z0-9_-]+/g, '_') || 'hit'}-${String(container.children.length)}`;
+                fileButton.id = fileButtonId;
+                fileButton.setAttribute('aria-haspopup', 'menu');
+                fileButton.setAttribute('aria-expanded', 'false');
                 fileButton.setAttribute(
                     'aria-label',
                     translate('agentWorkspace.knowledge.openFile', 'Open matched knowledge point: {file}', {
@@ -9345,7 +9588,12 @@
                     file: fileName,
                 });
                 header.appendChild(fileButton);
+                const actionMenu = createKnowledgePointActionMenu(item, handlers, fileName, actionAtomId);
+                actionMenu.setAttribute('aria-labelledby', fileButtonId);
+                card.appendChild(actionMenu);
+                bindKnowledgePointActionMenu(card, fileButton, actionMenu);
                 fileButton.addEventListener('click', function () {
+                    markKnowledgePointCardSelected(card);
                     ensureWorkspaceVisible();
                     api.openGraphFocusPane(buildKnowledgePointFocusPayload(item));
                 });
@@ -9355,32 +9603,6 @@
                         fileButton.click();
                     }
                 });
-
-                const actions = document.createElement('div');
-                actions.className = 'agent-knowledge-actions';
-                actions.setAttribute(
-                    'aria-label',
-                    translate('agentWorkspace.knowledge.actionsMenu', 'Knowledge point actions')
-                );
-                actions.appendChild(createKnowledgePointGraphActionButton(
-                    'learning-path',
-                    translate('agentWorkspace.knowledge.learningPathAction', 'Learning Path'),
-                    translate('agentWorkspace.knowledge.learningPathActionLabel', 'Show learning path for {file}', {
-                        file: fileName,
-                    }),
-                    !actionAtomId,
-                    () => openLearningPathForKnowledgePoint(item, handlers)
-                ));
-                actions.appendChild(createKnowledgePointGraphActionButton(
-                    'related-focus',
-                    translate('agentWorkspace.knowledge.relatedFocusAction', 'Related Focus'),
-                    translate('agentWorkspace.knowledge.relatedFocusActionLabel', 'Show citation focus for {file}', {
-                        file: fileName,
-                    }),
-                    false,
-                    () => openRelatedFocusForKnowledgePoint(item)
-                ));
-                header.appendChild(actions);
 
                 if (sourcePath) {
                     const pathNode = document.createElement('div');

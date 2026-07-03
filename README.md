@@ -27,6 +27,26 @@ Unlike traditional "network" views that show a messy web of links, NoteConnectio
 
 ---
 
+## Current Mainline Architecture Status (2026-07-03)
+
+### English
+
+- The Mermaid fallback failure class reported through the Node-side renderer is now closed at the correct owners: `src/notemd/MermaidProcessor.ts` and `src/reader_renderer.ts` both normalize malformed quoted bracketed-node labels per line before parse/render. `PathBridge` remains transport-only.
+- Guided Learning no longer pays repeated full hosted `Graph` / `PathEngine` reconstruction for the same graph snapshot. `src/frontend/workspace_panes.js` now reuses the hosted Future Path runtime by source-graph signature while keeping the pending-pane behavior in `src/frontend/agent_workspace.js`.
+- Knowledge Workspace public answers now consume bounded DAG context on the main answer path instead of collapsing to only the first top-hit sentence. `src/learning/graphContextAssembler.ts` now emits `anchorGraphProfile`, and `conversationComposer.ts` plus `answerReleaseReview.ts` use bounded path and degree context while keeping the public answer contracted.
+- The local design references under `ref/enterprise_agent_platform` and `ref/codex` now reinforce the current owner split: runtime/retrieval/memory/release-review stay local, and model-visible context stays bounded and additive.
+- Current code-vs-plan details are tracked in [Agent Knowledge Workspace Graph Preview and Review Closure (2026-06-20)](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) and the [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md).
+
+### 中文
+
+- 通过 Node 侧 renderer 暴露出来的 Mermaid 回退失败类现在已经在正确 owner 处关闭：`src/notemd/MermaidProcessor.ts` 与 `src/reader_renderer.ts` 现在都会在解析/渲染前按行归一化畸形带引号 bracketed-node label；`PathBridge` 继续只做 transport。
+- Guided Learning 对同一图快照不再重复支付完整托管 `Graph` / `PathEngine` 重建成本。`src/frontend/workspace_panes.js` 现在会按 source-graph signature 复用 hosted Future Path runtime，同时保留 `src/frontend/agent_workspace.js` 中已有的 pending-pane 行为。
+- Knowledge Workspace 的公开回答现在已经在主回答路径消费有界 DAG context，而不再只退化成首条 top-hit 句子。`src/learning/graphContextAssembler.ts` 现在会发射 `anchorGraphProfile`，`conversationComposer.ts` 与 `answerReleaseReview.ts` 会在保持回答收缩的前提下使用 bounded path / degree context。
+- 本地 `ref/enterprise_agent_platform` 与 `ref/codex` 设计参考现在进一步支撑当前 owner 切分：runtime / retrieval / memory / release-review 继续留在本地运行时，model-visible context 继续保持 bounded + additive。
+- 当前代码 / 方案对齐详情见 [Agent 知识工作区图预览与回答审核收口（2026-06-20）](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) 与 [开发进度看板](docs/diataxis/zh/explanation/development-progress-dashboard.md)。
+
+---
+
 ## Current Mainline Architecture Status (2026-06-24)
 
 ### English

@@ -1,3 +1,22 @@
+# 2026-07-03 v1.7.0 - Knowledge Workspace RSE 与 Hosted Runtime 对齐 TODO
+
+## 中文文档
+
+### 目标
+让活跃 TODO 与 2026-07-03 的 Knowledge Workspace 切片保持一致：该切片关闭了 Mermaid 回退解析失败，降低了 Guided Learning 首次打开时的托管运行时成本，并把有界 DAG context 推进到了公开回答路径。
+
+### 当前状态
+- [x] Mermaid 回退解析失败现在已经在 `src/notemd/MermaidProcessor.ts` 与 `src/reader_renderer.ts` 两个 owner 处关闭。
+- [x] 托管 Guided Learning 现在会对同一图快照复用缓存的 Future Path `Graph` / `PathEngine` runtime，而不再每次 pane render 都完整重建。
+- [x] `src/learning/graphContextAssembler.ts` 现在会发射 `anchorGraphProfile`，公开回答和确定性 revise 路径现在都会消费有界的 path / degree context。
+- [x] 当前事实源文档与开发进度看板已经记录这次切片。
+- [x] 2026-07-03 当日新鲜验证证据已经通过 `tsc`、focused Jest、`build:mini` 与 runtime `waterglass` 验证重新采集。
+- [ ] 在进入更深的前端性能工作前，先量化 representative large corpus 下 Guided Learning 的 first-open 与 hot-reopen 时延。
+- [ ] 只有当真实 graph mutation 路径证明 signature-based 复用不足时，才继续增加更强的 hosted Future Path cache invalidation。
+- [ ] 继续保持 graph-aware public answer 有界且 evidence-first；更丰富的图遥测仍留在次级 surface。
+
+---
+
 # 2026-04-07 v1.7.0 - Git LFS 迁移构建流审计闭环
 
 ## 中文文档

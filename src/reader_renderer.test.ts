@@ -283,6 +283,23 @@ describe('reader_renderer', () => {
         expect(svg).toContain('吸收');
     });
 
+    it("escapes stray quotes inside Mermaid bracketed node labels before rendering", () => {
+        const svg = runRenderer(
+            "renderMermaidSvg",
+            [
+                "flowchart TD",
+                "HQWG[\"High Quality Water Glass\"] -->|\"&gt;Superior Overall\"| FS[\"Final Score \"&gt;Superior Overall\"| FS\"]",
+            ].join("\n"),
+            { theme: "dark" },
+        );
+
+        expect(svg.startsWith("<svg")).toBe(true);
+        expect(svg).toContain("High Quality Water Glass");
+        expect(svg).toContain("Superior");
+        expect(svg).toContain("Overall");
+        expect(svg).toContain("Final Score");
+    });
+
     it('does not leak JSDOM globals onto Node global scope after Mermaid rendering', () => {
         const scopeProbe = runRendererScopeProbe(
             ['flowchart TD', 'A[Start] --> B{Check}', 'B -->|Yes| C[Done]', 'B -->|No| D[Retry]'].join('\n'),

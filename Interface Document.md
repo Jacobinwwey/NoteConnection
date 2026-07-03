@@ -124,6 +124,27 @@ Audit flow:
 - Compatibility rule: these graph-preview contracts are additive UI/runtime contracts. Existing clients that only consume `assistantMessage`, `answer`, `assistantBlocks`, citations, or `trace.graphContext` must remain valid.
 - Runtime boundary rule: the Knowledge Workspace pane currently projects Focus/Path semantics instead of embedding live Tauri/Godot canvases. Exact renderer parity should be introduced only through a shared graph projection/renderer contract, not by ad hoc pane-level runtime embedding.
 
+## 0.2E Knowledge Workspace RSE and Hosted Runtime Addendum (2026-07-03)
+
+- Mermaid syntax recovery is now a two-owner contract:
+  - `src/notemd/MermaidProcessor.ts` may normalize malformed quoted bracketed-node labels while repairing Mermaid blocks at source,
+  - `src/reader_renderer.ts` may apply the same per-line normalization inside the local fallback renderer path before Mermaid parse/render.
+- This quoted-label normalization is intentionally line-scoped. It must not cross line boundaries and must not break the existing dangling-bracket label repair path.
+- `AgentConversationGraphContext` may now carry optional `anchorGraphProfile` with:
+  - `atomId`
+  - `title`
+  - `inDegree`
+  - `outDegree`
+  - `centrality`
+- `predecessorWindow` and `successorWindow` entries may now also carry optional `inDegree`, `outDegree`, and `centrality` fields.
+- Public answer synthesis and deterministic `revise` flows may now consume bounded graph-derived path and degree context from `graphContext`, but citation lists, raw diagnostics, and full graph telemetry remain secondary surfaces.
+- Hosted Guided Learning may reuse a cached `Graph` / `PathEngine` runtime keyed by the current source-graph signature. This is a pane-local performance optimization only:
+  - it must not change main-graph ownership,
+  - it must not imply native Godot window embedding,
+  - cache invalidation policy remains snapshot/signature-based unless future graph mutation paths require a stronger contract.
+- The local references under `ref/enterprise_agent_platform` and `ref/codex` are now part of the documented design evidence set for this slice. They remain external references only; no runtime dependency is introduced.
+- Compatibility rule: all graph-profile and runtime-reuse fields remain optional/additive. Clients that ignore them must remain valid.
+
 ---
 
 ## 1. Runtime and Path Contracts

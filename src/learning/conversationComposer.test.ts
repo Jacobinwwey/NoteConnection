@@ -661,6 +661,13 @@ describe('conversationComposer', () => {
                     missingPredecessorAtomIds: [],
                     missingSuccessorAtomIds: [],
                 },
+                anchorGraphProfile: {
+                    atomId: 'atom_anchor',
+                    title: 'Ground State',
+                    inDegree: 2,
+                    outDegree: 1,
+                    centrality: 0.81,
+                },
                 temporalValidity: {
                     checkedAt: '2026-06-10T09:00:00.000Z',
                     allPointsValid: true,
@@ -692,6 +699,18 @@ describe('conversationComposer', () => {
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Review the path order: Foundation Note -> Bridge Layer -> Ground State');
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Inspect prerequisite context from Bridge Layer');
         expect(structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '').toContain('Use likely next-step nodes such as Application Example');
+        expect(reply.answer).toContain('Ground State');
+        expect(reply.answer).toContain('Bridge Layer');
+        expect(reply.answer).toContain('Application Example');
+        expect(reply.answer).toContain('2 incoming');
+        expect(reply.answer).toContain('1 outgoing');
+        expect(
+            reply.answer
+                .split(/[.!?\u3002\uFF01\uFF1F]/u)
+                .map((sentence) => sentence.trim())
+                .filter(Boolean)
+                .length
+        ).toBeGreaterThanOrEqual(2);
         expect(reply.knowledgeRun.quality.gates).toEqual(expect.arrayContaining([
             expect.objectContaining({ gateId: 'graph_prerequisite_order', passed: true }),
             expect.objectContaining({ gateId: 'graph_op_fallback', passed: true }),

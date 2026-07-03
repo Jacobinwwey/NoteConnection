@@ -411,7 +411,7 @@
       "togglePreview": "Toggle matched knowledge preview: {file}",
       "hitFilesTitle": "Matched files",
       "helpLabel": "Knowledge hit help",
-      "clickHint": "Left-click a matched file to open the source with highlighted evidence. Use Learning Path for sequence guidance or Related Focus for citation links.",
+      "clickHint": "Click a matched file to open the source with highlighted evidence. Long-press or use the context menu for Learning Path and Related Focus actions.",
       "previewLoading": "Loading source preview...",
       "previewUnavailable": "Source preview unavailable.",
       "openFile": "Open matched knowledge point: {file}",
@@ -504,6 +504,8 @@
       "title": "Guided Learning",
       "emptyIdle": "Learning path pane is idle.",
       "emptyLoaded": "No learning path loaded yet.",
+      "pendingTitle": "Preparing Learning Path",
+      "pendingCopy": "Opening the workspace now while the path service builds graph-aware guidance.",
       "previewTitle": "Path mode preview",
       "godotFuturePathRequested": "Godot Future Path requested: Diffusion / Core",
       "godotFuturePathUnavailable": "Godot Future Path target is unavailable."

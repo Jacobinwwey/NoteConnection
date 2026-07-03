@@ -3,9 +3,9 @@ module: architecture
 tags: [agent-workspace, knowledge-workspace, dag, graph-preview, answer-release-review, frontend, robustness, compatibility]
 problem_type: implementation-plan
 created: 2026-06-20
-updated: 2026-06-24
+updated: 2026-07-03
 status: completed
-version: 2026.06.24
+version: 2026.07.03
 ---
 
 # 2026-06-20 v1.7.0 - Agent Knowledge Workspace Graph Preview and Review Closure
@@ -45,6 +45,52 @@ Best-practice boundary:
 - Do not add a second Focus renderer just to gain controls. Keep using `getFocusModeProjection()` plus the shared double-click decision contract.
 - Do not wire Future Path double-click to global `reader.open`. The reader owner is the pane that received the graph interaction.
 - Do not treat native Godot docking as a small UI change. It is a platform-window ownership problem and should remain a separate spike if product direction later requires it.
+
+### 2026-07-03 Incremental Alignment
+
+This update closes three concrete gaps that remained after the hosted-interaction parity pass:
+
+1. a fallback Mermaid parse failure on malformed quoted node labels,
+2. first-open Guided Learning latency caused by repeated hosted Future Path runtime reconstruction,
+3. public answers that still collapsed to the first top-hit sentence even when bounded DAG context had already been assembled.
+
+What changed:
+
+- `src/notemd/MermaidProcessor.ts` and `src/reader_renderer.ts` now normalize stray inner double quotes inside bracketed Mermaid node labels on a per-line basis before parsing/rendering. This closes the known `Superior Overall` failure class without moving syntax repair into `PathBridge`; the bridge remains a transport owner, not a Mermaid repair owner.
+- The Mermaid repair path was tightened rather than widened blindly:
+  - per-line normalization prevents the quote-escape pass from crossing line boundaries,
+  - existing dangling-bracket label repairs continue to work,
+  - the same malformed pattern is now covered at both the NoteMD source-fix boundary and the local renderer fallback boundary.
+- `src/frontend/workspace_panes.js` now caches the hosted Future Path `Graph` / `PathEngine` runtime by source-graph signature. Reopening or rerendering the same Guided Learning projection no longer rebuilds the full hosted graph runtime on every render.
+- The pending-pane path introduced in `src/frontend/agent_workspace.js` stays intact: the Guided Learning pane still opens immediately while `/api/knowledge/path` resolves, and the runtime cache now removes the repeated graph-rebuild cost behind that UI.
+- `src/learning/graphContextAssembler.ts` now produces an additive `anchorGraphProfile` carrying bounded in-degree / out-degree / centrality facts for the selected anchor, and predecessor/successor windows now also preserve optional degree metadata.
+- `src/learning/conversationComposer.ts` no longer treats the main public answer as only “first direct sentence or `title: summary`”. It now uses the existing bounded DAG context to add a strongest-path sentence plus a compact graph-profile sentence when that context materially improves the answer.
+- `src/learning/answerReleaseReview.ts` now preserves that richer bounded graph-aware answer shape during deterministic `revise` flows instead of collapsing revised answers back to a single top-hit snippet.
+- The local references under `ref/enterprise_agent_platform` and `ref/codex` now support the chosen owner split:
+  - `enterprise_agent_platform` reinforces runtime/retrieval/memory/evidence separation,
+  - `codex` reinforces bounded model-visible context and additive context fragments,
+  - neither suggests moving DAG semantics or release review into an external framework runtime.
+
+Current code-vs-plan reading:
+
+| Requirement | Current implementation evidence | Progress call | Remaining risk |
+|---|---|---|---|
+| Fallback Mermaid rendering should not crash on the known malformed bracketed-label pattern | `MermaidProcessor.ts` and `reader_renderer.ts` now normalize stray quotes per line; `src/notemd.core.test.ts` and `src/reader_renderer.test.ts` pin the regression. | Implemented | If future imports generate new malformed Mermaid shapes, push repair upstream into source/diagram generation instead of piling fallback heuristics into the bridge. |
+| First Learning Path open should avoid repeated full hosted runtime rebuilds | `workspace_panes.js` caches the hosted Future Path runtime by source-graph signature, and `src/agent_workspace.frontend.test.ts` verifies node/edge construction is not repeated for the same graph snapshot. | Implemented | Large-graph latency still needs real-corpus measurement; cache invalidation may need strengthening if live graph data mutates in place without a signature change. |
+| Public answers should use bounded graph context instead of only the top-hit sentence | `graphContextAssembler.ts` now supplies `anchorGraphProfile`; `conversationComposer.ts` and `answerReleaseReview.ts` now use bounded path/degree context on the public-answer path. | Implemented | This is still intentionally budgeted, not a full graph dump. The remaining work is answer-organization calibration, not more answer volume by default. |
+
+Fresh verification captured on 2026-07-03:
+
+- `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeWorkspaceConversationRegression.test.ts src/learning/conversationComposer.test.ts src/agent_workspace.frontend.test.ts src/notemd.core.test.ts src/reader_renderer.test.ts --runInBand --no-cache`
+- `npm.cmd run build:mini`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
+Best-practice boundary:
+
+- Keep Mermaid repair in the source-fix and renderer-fallback owners; do not move syntax healing into `PathBridge`.
+- Keep hosted Future Path runtime reuse keyed to graph snapshot identity/signature; do not turn it into a global mutable singleton that can leak state across unrelated graphs.
+- Keep graph-aware public answers bounded. Rich graph telemetry still belongs in traces, panes, artifacts, and export surfaces.
 
 ### Completion Boundary
 
@@ -271,6 +317,9 @@ The strict browser case specifically verifies:
 3. Calibrate graph-aware ranking with real corpora before increasing relation-weight bonuses.
 4. Extract frontend owners only when the new module owns a real invariant, for example graph-projection normalization or source-provenance selection.
 5. Keep strict browser UI verification in CI for this surface if matched-file interactions continue evolving.
+6. Add explicit hosted Future Path runtime-cache invalidation only if real graph-mutation paths prove that source-graph signature reuse is insufficient.
+7. Measure first-open versus hot-reopen Guided Learning latency on representative large corpora before taking on deeper frontend performance work.
+8. Keep the graph-aware public-answer path aligned with bounded RSE-style augmentation: use anchor, path, and degree context to strengthen the answer, but do not turn the main answer area into a graph-inspection surface.
 
 ### Thought Model
 
@@ -365,6 +414,52 @@ The deliberate limitation remains: this is contract and renderer-semantics reuse
 - 不要为了拿到控件而再写一套 Focus renderer。继续复用 `getFocusModeProjection()` 与共享双击决策契约。
 - 不要把 Future Path 双击接到全局 `reader.open`。reader owner 应该是接收图交互的 pane。
 - 不要把 Godot 原生 docking 当成小 UI 改动。它是平台窗口 owner 问题；如果后续产品方向需要，应作为独立 spike 处理。
+
+### 2026-07-03 增量对齐
+
+这次更新收口的是 hosted-interaction parity 之后仍然存在的三类具体缺口：
+
+1. 回退 Mermaid 渲染在畸形带引号节点标签上的解析失败，
+2. Guided Learning 首次打开时因为重复重建托管 Future Path 运行时而产生的卡顿，
+3. 明明已经装配出有界 DAG context，但主公开回答仍只退化成首条 top-hit 句子的过短回答。
+
+当前变化：
+
+- `src/notemd/MermaidProcessor.ts` 与 `src/reader_renderer.ts` 现在都会在解析/渲染前按“逐行”方式归一化 bracketed Mermaid node label 内部多余的双引号。这使已知的 `Superior Overall` 故障类在 NoteMD 源修复层与本地 renderer fallback 层都可被自愈，而不需要把语法修复错误地塞进 `PathBridge`；bridge 继续只做 transport owner。
+- Mermaid 修复路径这次是“收紧而不是放宽”：
+  - 逐行归一化避免新的 quote-escape 逻辑跨行污染其他 Mermaid 语句，
+  - 原有 dangling-bracket label repair 继续有效，
+  - 相同的 malformed 模式现在同时被 source-fix 边界与 local renderer fallback 边界覆盖。
+- `src/frontend/workspace_panes.js` 现在会按 source-graph signature 缓存托管 Future Path 的 `Graph` / `PathEngine` 运行时。对同一 Guided Learning 投影的再次打开或 rerender 不再每次都重建整套托管图运行时。
+- `src/frontend/agent_workspace.js` 里已有的 pending-pane 路径继续保留：`/api/knowledge/path` 尚未返回时，Guided Learning pane 仍立即打开；现在托管运行时缓存则进一步去掉了其后的重复图重建成本。
+- `src/learning/graphContextAssembler.ts` 现在会生成 additive 的 `anchorGraphProfile`，为当前 anchor 提供有界的 in-degree / out-degree / centrality 事实；predecessor/successor window 现在也会保留可选 degree metadata。
+- `src/learning/conversationComposer.ts` 不再把主公开回答固定成“第一条 direct sentence 或 `title: summary`”。现在只要有界 DAG context 确实能提升回答，它就会补一条 strongest-path 句子和一条紧凑 graph-profile 句子。
+- `src/learning/answerReleaseReview.ts` 现在也会在确定性 `revise` 路径中保留这种 richer 但仍受预算约束的 graph-aware 回答形态，而不再把 revised answer 折回成单个 top-hit snippet。
+- 本地 `ref/enterprise_agent_platform` 与 `ref/codex` 现在进一步支撑当前 owner 切分：
+  - `enterprise_agent_platform` 强化 runtime / retrieval / memory / evidence separation，
+  - `codex` 强化 bounded model-visible context 与 additive context fragment，
+  - 两者都没有给出“把 DAG semantics 或 release review 挪进外部 framework runtime”的正当理由。
+
+当前代码 / 先前方案对比结论：
+
+| 要求 | 当前实现证据 | 进度判断 | 剩余风险 |
+|---|---|---|---|
+| 回退 Mermaid 渲染不应在已知畸形 bracketed-label 模式上崩溃 | `MermaidProcessor.ts` 与 `reader_renderer.ts` 已按行归一化 stray quote；`src/notemd.core.test.ts` 与 `src/reader_renderer.test.ts` 固定回归。 | 已实现 | 如果未来导入链继续生成新的 malformed Mermaid 形态，应优先把修复前移到 source/diagram 生成层，而不是继续向 bridge 堆 heuristic。 |
+| 首次打开 Learning Path 不应为同一图快照重复执行完整托管运行时重建 | `workspace_panes.js` 现按 source-graph signature 缓存托管 Future Path runtime，`src/agent_workspace.frontend.test.ts` 验证同一图快照不会重复构造 nodes/edges。 | 已实现 | 大图下的真实首开时延仍需语料级量测；如果 live graph 数据会原地变异而不变更签名，缓存失效策略可能还需加强。 |
+| 主公开回答应消费有界图上下文，而不是只释放 top-hit 首句 | `graphContextAssembler.ts` 已提供 `anchorGraphProfile`，`conversationComposer.ts` 与 `answerReleaseReview.ts` 已在公开回答路径消费有界 path/degree context。 | 已实现 | 这仍然是“有界增强”，不是全图倾倒。剩余工作是回答组织校准，而不是默认增加回答体积。 |
+
+2026-07-03 当日新鲜验证证据：
+
+- `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeWorkspaceConversationRegression.test.ts src/learning/conversationComposer.test.ts src/agent_workspace.frontend.test.ts src/notemd.core.test.ts src/reader_renderer.test.ts --runInBand --no-cache`
+- `npm.cmd run build:mini`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
+最佳实践边界：
+
+- Mermaid 修复继续放在 source-fix 与 renderer-fallback owner 中，不要把语法自愈搬进 `PathBridge`。
+- 托管 Future Path runtime 复用必须绑定到图快照身份 / 签名，不要升级成跨图共享的可变全局单例。
+- graph-aware public answer 继续保持有界；更丰富的图遥测仍属于 trace、pane、artifact 与 export surface。
 
 ### 完成边界
 
@@ -584,6 +679,9 @@ strict browser case 明确验证：
 3. 在提高 relation-weight bonus 前，用真实语料校准 graph-aware ranking。
 4. 只有当新模块持有真实不变量时才继续拆前端 owner，例如 graph-projection normalization 或 source-provenance selection。
 5. 如果 matched-file interaction 后续还会演进，应把 strict browser UI verification 持续保留在 CI。
+6. 只有当真实 graph mutation 路径证明 source-graph signature 复用不足时，才继续增加托管 Future Path runtime-cache invalidation 机制。
+7. 在进入更深的前端性能工作前，先量化 representative large corpus 下 Guided Learning 的 first-open 与 hot-reopen 时延。
+8. 继续把 graph-aware public-answer 路径保持为“有界 RSE 式增强”：使用 anchor、path 与 degree context 提升回答，但不要把主回答面改成 graph-inspection surface。
 
 ### 思维模型
 

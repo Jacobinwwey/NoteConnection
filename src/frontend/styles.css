@@ -1566,7 +1566,7 @@ body.agent-workspace-open .agent-workspace-drawer {
   padding: 16px;
   gap: 12px;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
@@ -1604,13 +1604,17 @@ body.agent-workspace-open .agent-workspace-drawer {
 }
 
 .agent-scope-control {
+  position: sticky;
+  top: 0;
+  z-index: 4;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   padding: 10px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 8px;
-  background: rgba(15, 23, 42, 0.42);
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(8px);
 }
 
 .agent-scope-control label {
@@ -1769,6 +1773,8 @@ body.agent-workspace-open .agent-workspace-drawer {
   flex-direction: column;
   gap: 10px;
   padding-right: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .agent-chat-message {
@@ -2161,7 +2167,7 @@ body.agent-workspace-open .agent-workspace-drawer {
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 8px;
   background: rgba(15, 23, 42, 0.42);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .agent-knowledge-card-header {
@@ -2193,8 +2199,10 @@ body.agent-workspace-open .agent-workspace-drawer {
   overflow-wrap: anywhere;
 }
 
+.agent-knowledge-card[data-selected="true"] .agent-knowledge-file-button,
 .agent-knowledge-file-button:hover,
-.agent-knowledge-file-button:focus-visible {
+.agent-knowledge-file-button:focus-visible,
+.agent-knowledge-file-button[aria-expanded="true"] {
   background: rgba(125, 211, 252, 0.1);
   outline: 1px solid rgba(125, 211, 252, 0.28);
   outline-offset: -1px;
@@ -2208,33 +2216,45 @@ body.agent-workspace-open .agent-workspace-drawer {
   overflow-wrap: anywhere;
 }
 
-.agent-knowledge-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 0 12px 12px;
+.agent-knowledge-action-menu {
+  position: absolute;
+  right: 8px;
+  top: calc(100% - 4px);
+  z-index: 6;
+  display: grid;
+  gap: 6px;
+  min-width: 172px;
+  padding: 8px;
+  border: 1px solid rgba(125, 211, 252, 0.26);
+  border-radius: 8px;
+  background: rgba(2, 6, 12, 0.96);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
 }
 
-.agent-knowledge-actions button {
-  min-height: 44px;
+.agent-knowledge-action-menu[hidden] {
+  display: none !important;
+}
+
+.agent-knowledge-action-menu button {
+  width: 100%;
+  min-height: 40px;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;
-  background: rgba(2, 6, 12, 0.52);
+  background: rgba(15, 23, 42, 0.74);
   color: #dbeafe;
   cursor: pointer;
-  padding: 9px 12px;
+  padding: 8px 10px;
+  text-align: left;
   white-space: nowrap;
 }
 
-.agent-knowledge-actions button:hover,
-.agent-knowledge-actions button:focus-visible {
+.agent-knowledge-action-menu button:hover,
+.agent-knowledge-action-menu button:focus-visible {
   background: rgba(14, 116, 144, 0.22);
   border-color: rgba(125, 211, 252, 0.38);
 }
 
-.agent-knowledge-actions button:disabled {
+.agent-knowledge-action-menu button:disabled {
   cursor: not-allowed;
   opacity: 0.46;
 }
@@ -3134,6 +3154,48 @@ button.agent-focus-mode-node:active {
   line-height: 1.62;
 }
 
+.agent-learning-path-pending {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-height: 180px;
+  padding: 14px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 8px;
+  background: rgba(14, 116, 144, 0.12);
+  color: #dbeafe;
+}
+
+.agent-learning-path-pending-title {
+  color: #f8fbff;
+  font-size: 0.96rem;
+  font-weight: 800;
+}
+
+.agent-learning-path-pending-copy {
+  color: #c7e9f6;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.agent-learning-path-pending-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.agent-learning-path-pending-meta span {
+  max-width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  background: rgba(2, 6, 12, 0.42);
+  color: #bae6fd;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  padding: 4px 8px;
+  overflow-wrap: anywhere;
+}
+
 .agent-godot-future-path-shell {
   display: grid;
   gap: 12px;
@@ -3455,11 +3517,6 @@ body[data-agent-workspace-promotion="learning-path"] #agent-learning-path-pane {
   .agent-knowledge-card-header {
     flex-direction: column;
     gap: 0;
-  }
-
-  .agent-knowledge-actions {
-    justify-content: flex-start;
-    padding: 0 12px 10px;
   }
 
   .agent-focus-mode-preview {

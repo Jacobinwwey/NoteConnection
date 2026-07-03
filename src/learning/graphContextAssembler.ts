@@ -5,6 +5,7 @@ import type {
     AgentConversationGraphContext,
     AgentConversationGraphDiagnostics,
     AgentConversationGraphKnowledgePointRelation,
+    AgentConversationGraphNodeProfile,
     AgentConversationGraphRelationSummary,
     AgentConversationGraphTemporalContext,
     AgentConversationGraphWindowNode,
@@ -45,6 +46,12 @@ type AnchorSelection = {
     point: AgentConversationKnowledgePoint;
     index: number;
     reason: string;
+};
+
+type CachedGraphNodeMetrics = {
+    inDegree?: number;
+    outDegree?: number;
+    centrality?: number;
 };
 
 function normalizeWhitespace(value: string): string {
@@ -480,6 +487,62 @@ async function resolveNodeTitle(opsStore: KnowledgeGraphOpsAdapter, atomId: stri
     return resolvedTitle;
 }
 
+async function resolveNodeMetrics(
+    opsStore: KnowledgeGraphOpsAdapter,
+    atomId: string,
+    cache: Map<string, CachedGraphNodeMetrics | null>
+): Promise<CachedGraphNodeMetrics | null> {
+    const normalizedAtomId = String(atomId || '').trim();
+    if (!normalizedAtomId) {
+        return null;
+    }
+    if (cache.has(normalizedAtomId)) {
+        return cache.get(normalizedAtomId) || null;
+    }
+    const atom = await opsStore.getNode(normalizedAtomId);
+    if (!atom) {
+        cache.set(normalizedAtomId, null);
+        return null;
+    }
+    const graphNode = atom as any;
+    const metrics: CachedGraphNodeMetrics = {
+        inDegree: Number.isFinite(Number(graphNode.inDegree)) ? Number(graphNode.inDegree) : undefined,
+        outDegree: Number.isFinite(Number(graphNode.outDegree)) ? Number(graphNode.outDegree) : undefined,
+        centrality: Number.isFinite(Number(graphNode.centrality)) ? Number(Number(graphNode.centrality).toFixed(4)) : undefined,
+    };
+    cache.set(normalizedAtomId, metrics);
+    return metrics;
+}
+
+async function buildAnchorGraphProfile(
+    opsStore: KnowledgeGraphOpsAdapter,
+    anchorPoint: AgentConversationKnowledgePoint,
+    titleCache: Map<string, string>,
+    metricsCache: Map<string, CachedGraphNodeMetrics | null>
+): Promise<AgentConversationGraphNodeProfile | undefined> {
+    const anchorAtomId = String(anchorPoint.atomId || '').trim();
+    if (!anchorAtomId) {
+        return undefined;
+    }
+    const title = normalizeWhitespace(String(anchorPoint.title || '').trim())
+        || await resolveNodeTitle(opsStore, anchorAtomId, titleCache)
+        || anchorAtomId;
+    const metrics = await resolveNodeMetrics(opsStore, anchorAtomId, metricsCache);
+    if (!metrics) {
+        return {
+            atomId: anchorAtomId,
+            title,
+        };
+    }
+    return {
+        atomId: anchorAtomId,
+        title,
+        inDegree: metrics.inDegree,
+        outDegree: metrics.outDegree,
+        centrality: metrics.centrality,
+    };
+}
+
 function rankRelationEdges(edges: RelationEdge[]): RelationEdge[] {
     return edges
         .slice()
@@ -494,6 +557,7 @@ async function buildWindowNodes(
     edges: RelationEdge[],
     direction: 'predecessor' | 'successor',
     titleCache: Map<string, string>,
+    metricsCache: Map<string, CachedGraphNodeMetrics | null>,
     limit: number,
     missingIds: Set<string>
 ): Promise<AgentConversationGraphWindowNode[]> {
@@ -511,11 +575,15 @@ async function buildWindowNodes(
             missingIds.add(relatedAtomId);
             continue;
         }
+        const metrics = await resolveNodeMetrics(opsStore, relatedAtomId, metricsCache);
         nodes.push({
             atomId: relatedAtomId,
             title,
             relationKind: edge.relationKind,
             confidence: Number(Number(edge.confidence || 0).toFixed(4)),
+            inDegree: metrics?.inDegree,
+            outDegree: metrics?.outDegree,
+            centrality: metrics?.centrality,
         });
     }
     return nodes;
@@ -688,6 +756,7 @@ export async function assembleAgentConversationGraphContext(
 
     const opsStore = params.store;
     const titleCache = new Map<string, string>();
+    const metricsCache = new Map<string, CachedGraphNodeMetrics | null>();
     orderedKnowledgePoints.forEach((point) => {
         pointAtomIds(point).forEach((atomId) => {
             titleCache.set(atomId, normalizeWhitespace(String(point.title || '').trim()) || atomId);
@@ -711,6 +780,7 @@ export async function assembleAgentConversationGraphContext(
             await opsStore.queryEdges({ toNodeId: baseGraphContext.anchorAtomId, limit: budget.maxPredecessors * 4 }),
             'predecessor',
             titleCache,
+            metricsCache,
             budget.maxPredecessors,
             missingPredecessorAtomIds
         )
@@ -721,15 +791,23 @@ export async function assembleAgentConversationGraphContext(
             await opsStore.queryEdges({ fromNodeId: baseGraphContext.anchorAtomId, limit: budget.maxSuccessors * 4 }),
             'successor',
             titleCache,
+            metricsCache,
             budget.maxSuccessors,
             missingSuccessorAtomIds
         )
         : [];
+    const anchorGraphProfile = await buildAnchorGraphProfile(
+        opsStore,
+        anchorPoint,
+        titleCache,
+        metricsCache
+    );
 
     return {
         knowledgePoints: orderedKnowledgePoints,
         graphContext: {
             ...baseGraphContext,
+            anchorGraphProfile,
             connectionPaths,
             predecessorWindow,
             successorWindow,

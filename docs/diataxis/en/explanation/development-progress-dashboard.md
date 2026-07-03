@@ -3,6 +3,45 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-07-03 Mermaid Fallback, Future Path Runtime Reuse, and Graph-Aware Public Answers
+
+This slice closes three concrete gaps that remained after the hosted interaction parity work:
+
+- malformed Mermaid bracketed-node labels could still fail in the Node-side fallback renderer,
+- the first Guided Learning open could still pay for repeated hosted `Graph` / `PathEngine` reconstruction,
+- the public answer path still underused bounded DAG context and often collapsed to a single top-hit sentence.
+
+What is now true in code:
+
+- `src/notemd/MermaidProcessor.ts` and `src/reader_renderer.ts` now normalize stray inner double quotes inside bracketed Mermaid node labels on a per-line basis before parsing/rendering. The known `Superior Overall` failure class now self-heals at both the NoteMD source-fix boundary and the local renderer fallback boundary.
+- The Mermaid repair path is intentionally bounded: the new normalization is line-scoped so it does not cross statement boundaries or break the existing dangling-bracket label repair path.
+- `src/frontend/workspace_panes.js` now caches the hosted Future Path `Graph` / `PathEngine` runtime by source-graph signature. Reopening or rerendering the same Guided Learning projection no longer rebuilds the full hosted graph runtime every time.
+- `src/frontend/agent_workspace.js` keeps the pending-pane behavior introduced earlier, so Guided Learning still opens immediately while `/api/knowledge/path` resolves; runtime reuse now removes the repeated graph-rebuild cost behind that UI.
+- `src/learning/graphContextAssembler.ts` now emits additive `anchorGraphProfile` data carrying bounded in-degree, out-degree, and centrality facts for the selected anchor, and predecessor/successor windows now preserve optional degree metadata.
+- `src/learning/conversationComposer.ts` and `src/learning/answerReleaseReview.ts` now use bounded graph-derived path and degree context on the public-answer path. The answer remains contracted, but it is no longer forced to stay at “first direct sentence or `title: summary`” when stronger DAG context is already available.
+- The local references under `ref/enterprise_agent_platform` and `ref/codex` now reinforce the chosen owner split: runtime/retrieval/memory/release-review remain local runtime owners, while model-visible context remains bounded and additive.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| Fallback Mermaid rendering should not crash on the known malformed bracketed-label pattern | `MermaidProcessor.ts` and `reader_renderer.ts` now normalize stray quotes per line; `src/notemd.core.test.ts` and `src/reader_renderer.test.ts` pin the regression. | Implemented |
+| First Guided Learning open should avoid repeated hosted runtime rebuilds for the same graph snapshot | `workspace_panes.js` caches the hosted Future Path runtime by source-graph signature, and `src/agent_workspace.frontend.test.ts` verifies repeated pane renders do not rebuild nodes/edges for the same snapshot. | Implemented |
+| Public answers should use bounded graph context instead of only the top-hit sentence | `graphContextAssembler.ts` now supplies `anchorGraphProfile`; `conversationComposer.ts` and `answerReleaseReview.ts` now use bounded path/degree context on the public-answer path. | Implemented |
+
+Fresh verification captured on 2026-07-03:
+
+- `npm.cmd exec -- tsc --noEmit`
+- `npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts src/learning/KnowledgeWorkspaceConversationRegression.test.ts src/learning/conversationComposer.test.ts src/agent_workspace.frontend.test.ts src/notemd.core.test.ts src/reader_renderer.test.ts --runInBand --no-cache`
+- `npm.cmd run build:mini`
+- `node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+
+The next movement is narrower than another “framework pass”:
+
+- measure first-open versus hot-reopen Guided Learning latency on large corpora,
+- add explicit hosted Future Path cache invalidation only if real graph-mutation paths prove signature reuse is insufficient,
+- keep graph-aware public answers aligned with bounded RSE-style augmentation instead of turning the main answer area into a graph-inspection surface.
+
 ## 2026-06-24 Knowledge Workspace Hosted Interaction Parity
 
 This increment closes two remaining pane-hosting gaps without changing the ownership model established on 2026-06-22.
