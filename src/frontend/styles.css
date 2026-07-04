@@ -1544,7 +1544,11 @@ body.agent-workspace-open .agent-workspace-drawer {
   grid-template-columns: minmax(320px, 0.92fr) minmax(360px, 1.08fr);
   gap: 16px;
   padding: 16px;
-  overflow: hidden;
+  align-content: start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .agent-chat-pane,

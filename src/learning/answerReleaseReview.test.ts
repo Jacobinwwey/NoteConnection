@@ -447,10 +447,113 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).toContain('水杯 (water glass) 是一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。');
         expect(review.publicAnswer).toContain('热力学：热量传递');
         expect(review.publicAnswer).toContain('关键技术规格');
+        expect(review.publicAnswer).toContain('证据摘要还显示');
         expect(review.publicAnswer).toContain('入度为 1');
         expect(review.publicAnswer).toContain('出度为 2');
         expect(review.publicAnswer).toContain('紧邻前置节点包括 材料科学');
         expect(review.publicAnswer).toContain('后续分支包括 热量传递模型');
+    });
+
+    test('enriches releasable definition answers with bounded evidence and graph context', () => {
+        const baseCitation = makeKnowledgePoint().citation as KnowledgeCitation;
+        const thermalCitation: KnowledgeCitation = {
+            ...baseCitation,
+            citationId: 'citation_thermal_model',
+            atomId: 'atom_thermal_model',
+            title: 'Thermal Model',
+            snippet: 'Thermal Model explains that the water glass exchanges heat with its environment through conduction and convection.',
+            startLine: 12,
+            endLine: 13,
+            score: 0.84,
+        };
+        const mermaidCitation: KnowledgeCitation = {
+            ...baseCitation,
+            citationId: 'citation_thermal_model_mermaid',
+            atomId: 'atom_thermal_model_mermaid',
+            title: 'Thermal Model (mermaid block)',
+            snippet: '```mermaid graph LR A[Water Glass] --> B[Thermal Model]',
+            startLine: 14,
+            endLine: 15,
+            score: 0.79,
+        };
+        const point = makeKnowledgePoint({
+            citations: [baseCitation, thermalCitation, mermaidCitation],
+            matchedSpans: [
+                {
+                    atomId: 'atom_thermal_model',
+                    title: 'Thermal Model',
+                    snippet: thermalCitation.snippet,
+                    sourcePath: thermalCitation.sourcePath,
+                    startLine: 12,
+                    endLine: 13,
+                    score: 0.84,
+                    citation: thermalCitation,
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: 'Water glass is a transparent container filled with water.',
+            knowledgePoints: [point],
+            citations: [baseCitation, thermalCitation, mermaidCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({
+                anchorGraphProfile: {
+                    atomId: 'atom_water_glass',
+                    title: 'Water Glass',
+                    inDegree: 1,
+                    outDegree: 1,
+                },
+                predecessorWindow: [
+                    {
+                        atomId: 'atom_water_glass',
+                        title: 'Water Glass',
+                        relationKind: 'reference',
+                        confidence: 0.99,
+                    },
+                    {
+                        atomId: 'atom_container_physics',
+                        title: 'Container Physics',
+                        relationKind: 'prerequisite',
+                        confidence: 0.91,
+                    },
+                ],
+                successorWindow: [
+                    {
+                        atomId: 'atom_water_glass_alias',
+                        title: 'Water Glass',
+                        relationKind: 'reference',
+                        confidence: 0.98,
+                    },
+                    {
+                        atomId: 'atom_thermal_model_mermaid',
+                        title: 'Thermal Model (mermaid block)',
+                        relationKind: 'sequence',
+                        confidence: 0.85,
+                    },
+                    {
+                        atomId: 'atom_thermal_model',
+                        title: 'Thermal Model',
+                        relationKind: 'sequence',
+                        confidence: 0.84,
+                    },
+                ],
+            }),
+            reviewedAt: '2026-07-04T08:20:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.revised).toBe(true);
+        expect(review.publicAnswer).toContain('Water glass is a transparent container filled with water.');
+        expect(review.publicAnswer).toContain('The same knowledge point also covers Thermal Model.');
+        expect(review.publicAnswer).toContain('Evidence highlights: Thermal Model');
+        expect(review.publicAnswer).toContain('Water Glass has 1 incoming and 1 outgoing links');
+        expect(review.publicAnswer).toContain('its immediate predecessors include Container Physics');
+        expect(review.publicAnswer).toContain('likely next nodes include Thermal Model');
+        expect(review.publicAnswer).not.toContain('predecessors include Water Glass');
+        expect(review.publicAnswer).not.toContain('next nodes include Water Glass');
+        expect(review.publicAnswer).not.toContain('(mermaid block)');
+        expect(review.publicAnswer).not.toContain('```');
     });
 
     test('revises grounded answers when structured numeric facts conflict with support', () => {

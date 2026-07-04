@@ -11,41 +11,41 @@
 当前代码已经成立的事实：
 
 - `src/frontend/index.html` 现在把 `agent-scope-control--workspace` 放入左侧知识工作区 conversation pane，位置在 learner id、消息、命中文件与 composer 之前。scope 不再只是 toolbar 附属控件或隐藏请求载荷。
-- `src/frontend/styles.css` 将 drawer toolbar 收口为标题与关闭按钮，并为 chat pane 增加稳定的 scope、消息历史、命中文件、composer、动作区与 API 状态 grid 行。conversation stream 与命中文件列表继续保持独立滚动。
-- `src/frontend/workspace_panes.js` 的知识命中列表以文件名按钮为主视图，同时恢复低强调 `.agent-knowledge-actions` 兼容操作条，保留 `学习路径` 与 `关联聚焦`；固定 44px 的 `...` 操作入口、长按、右键和键盘菜单继续兼容，并且都复用同一组 action 定义。
+- `src/frontend/styles.css` 将 drawer toolbar 收口为标题与关闭按钮，并为 chat pane 增加稳定的 scope、消息历史、命中文件、composer、动作区与 API 状态 grid 行。conversation stream 与命中文件列表继续保持独立滚动；外层 workspace shell 现在在桌面与移动端都有纵向滚动兜底，因此命中返回后不会把提问区和 composer 挤出可达范围。
+- `src/frontend/workspace_panes.js` 的知识命中列表以文件名按钮为主视图，同时恢复低强调 `.agent-knowledge-actions` 兼容操作条，保留 `学习路径` 与 `聚焦`；固定 44px 的 `...` 操作入口、长按、右键和键盘菜单继续兼容，并且都复用同一组 action 定义。
 - 点击命中文件后，右侧 graph-focus pane 会以 source path / citation / matched span provenance 渲染 Markdown，在命中段落内做 inline highlight，并把第一处主命中滚入视野。
 - `src/frontend/agent_workspace.js` 将 RSE、document augmentation、图上下文、记忆召回、readiness 与 scope recovery 等编排细节保留在后端结果元数据和 status/evidence surface 中。聊天流只呈现该回合面向用户的一条 assistant 消息，structured-answer markdown 小节继续保留在后端 payload 中，但不再作为可见编排说明渲染到聊天气泡里。
 - `src/learning/queryBackend.ts` 现在允许本地向量后端复用全局索引，但候选打分和 ANN 过滤必须落回当前 scope；当全局 ANN 候选全部越界时，会退回 scoped full scan。
 - `src/learning/graphContextAssembler.ts` 现在会对同一个聚合知识点下的所有命中 atom 查询前驱/后继边，再对图窗口去重，并把结构性邻居排在 bibliography/reference 类节点之前；这修复了真实关系挂在次级命中 atom 上时图上下文变薄或变错的问题，也避免 `参考文献` 在定义回答的后继分支文案中压过真正的语义邻居。
-- `src/learning/answerReleaseReview.ts` 现在会让定义型意图的修订回答保持简洁但更完整：它可以释放同一知识点的 document augmentation 标题与有界图邻域，而不是把 scoped answer 压缩成一句泛化定义。
-- `src/learning/conversationComposer.ts` 与 `answerReleaseReview.ts` 现在会防止缺失 graph-degree profile 时输出 `NaN incoming/outgoing`。
+- `src/learning/answerReleaseReview.ts` 现在会让定义型意图的修订回答保持简洁但更完整：它可以释放同一知识点的 document augmentation 标题、有界证据摘要与有界图邻域，而不是把 scoped answer 压缩成一句泛化定义。
+- `src/learning/conversationComposer.ts` 与 `answerReleaseReview.ts` 现在会防止缺失 graph-degree profile 时输出 `NaN incoming/outgoing`；两个公开回答路径都会过滤与 anchor 等价的图邻居、按可见标题去重 graph window，并在用户可见回答前归一化 `(mermaid block)` 这类解析产物标题。
 - `src/learning/KnowledgeLearningPlatform.ts` 新增 `warmQueryBackend()`，`src/server.ts` 在启动和 `/api/knowledge/state` 后台预热知识查询后端；这降低首次打开知识工作区时的检索冷启动噪声。
 - `src/learning/KnowledgeLearningPlatform.ts` 还新增只读 `previewLearningPath()` 路径，`src/server.ts` 的 `/api/knowledge/path` 使用该路径，因此 Learning Path 预览不会触发同步 snapshot 持久化；需要耐久 artifact 的写路径仍保留 `buildLearningPath()` 行为。
 - `src/frontend/agent_workspace.js` 现在会对首个命中知识点预热 Learning Path，并用一个有界的 16 项、2 分钟 TTL preview cache 复用结果；通用 `build_learning_path` capability 路径和直接 `openLearningPath()` 路径共用该缓存，因此首次可见点击可以复用已完成或进行中的预览请求，而不是重复启动后端工作。
 - `queryKnowledge()` 不再对只读查询结果调用 `persistIfNeeded()`。写操作仍在 ingest、会话、配置和其他真实状态变更路径持久化，读路径不再重写巨大 graph snapshot。
+- 参考实现对比已经体现在边界设计中：`ref/codex` 要求 model-visible context 必须有界、结构化并有硬封顶；`ref/enterprise_agent_platform` 将 RAG 定义为可回放证据管线（`retrieve` -> `rerank` -> `assemble_context` -> `generate_answer` -> `verify_citations`）。知识工作区把这些编排细节留在后端 trace / release-review payload，聊天表面只接收一条公开回答。
 
 代码 / 方案对齐：
 
 | 要求 | 当前实现证据 | 进度判断 |
 |---|---|---|
 | 知识工作区内必须默认展示并可切换 scope | `index.html` 将 scope selector 放在 `agent-chat-pane` 内；`src/agent_workspace.frontend.test.ts` 验证 selector 位于 `.agent-scope-control--workspace`，并且选中 scope 会进入 conversation request。 | 已实现 |
-| 返回命中后，提问与回复窗口仍必须可见 | 前端布局回归 `partitions conversation and knowledge hit scrolling so the composer remains reachable` 固定独立滚动契约。 | 已实现 |
-| 命中内容只优先显示可交互知识点文件名，同时保持 Learning Path / 聚焦可发现 | `workspace_panes.js` 的 `renderKnowledgePoints` 渲染 file-first button，恢复带 `data-capability-action-id` 的兼容 `.agent-knowledge-actions` 操作条，并保留 44px 菜单入口；测试验证操作条和菜单都暴露同一组 `学习路径` / `关联聚焦` action 定义。 | 已实现 |
+| 返回命中后，提问与回复窗口仍必须可见 | 前端布局回归 `partitions conversation and knowledge hit scrolling so the composer remains reachable` 现在同时固定内部滚动分区与外层 shell 纵向滚动兜底。 | 已实现 |
+| 命中内容只优先显示可交互知识点文件名，同时保持 Learning Path / 聚焦可发现 | `workspace_panes.js` 的 `renderKnowledgePoints` 渲染 file-first button，恢复带 `data-capability-action-id` 的兼容 `.agent-knowledge-actions` 操作条，并保留 44px 菜单入口；测试验证操作条和菜单都暴露同一组 `学习路径` / `聚焦` action 定义。 | 已实现 |
 | 一个 conversation turn 应只产生一条用户可见回答，编排细节留在后台 | `agent_workspace.js` 将 grounding state 发布到 `__NC_LAST_AGENT_CONVERSATION_GROUNDING` 供 status/evidence pane 使用；前端测试验证 streamed answer 只出现一次，不会追加 `Grounding: scope=...` assistant/system 消息，并且后端 structured markdown 继续留在 result payload 而不是聊天气泡里。 | 已实现 |
 | 点击知识点后应在右侧高亮命中段落 | `normalizes citation-backed knowledge hits before opening graph focus` 现在验证 source 渲染、matched-span highlight、primary-highlight 标记，以及 `scrollIntoView({ block: 'center', inline: 'nearest' })`。 | 已实现 |
 | 同一知识点不应重复拆成多个主列表项 | conversation grouping 与 matched-span provenance 将同源命中收束到同一知识点；graph context 现在会跨该知识点下所有聚合 atom 展开，而不重复主命中列表。 | 已实现基线，后续继续压测大语料重复片段 |
-| RAG 应基于 RSE 与 document augmentation 提升回答质量 | scoped retrieval 以文档/知识点为返回单位；answer release 在修订公开回答时会保留定义证据、document augmentation 标题与有界前驱/后继图上下文。 | 已实现更强基线 |
+| RAG 应基于 RSE 与 document augmentation 提升回答质量 | scoped retrieval 以文档/知识点为返回单位；answer release 在修订或增强公开回答时会保留定义证据、document augmentation 标题与有界前驱/后继图上下文，同时过滤解析产物和与 anchor 等价的图邻居。 | 已实现更强基线 |
 | 首次点击 Learning Path 不应被持久化阻塞，也不应重复启动后端工作 | `/api/knowledge/path` 现在使用 `previewLearningPath()`，耐久 artifact 记录仍保留在 `buildLearningPath()`；`agent_workspace.js` 会预热首个命中知识点，并在通用 capability 路径复用有界 preview cache。 | 已实现 |
-| 首问不能被读路径持久化拖慢 | `queryKnowledge()` 移除 read-only persist；运行态 `water glass` scoped 探针首问 330ms、第二问 5ms，命中文件为 `Knowledge_Base/waterglass/water glass.md`。 | 已修复 |
+| 首问不能被读路径持久化拖慢 | `queryKnowledge()` 移除 read-only persist；最新 `what is waterglass?` scoped runtime 探针返回 `ok: true`，聚合到一个 `Knowledge_Base/waterglass/water glass.md` 知识点、6 条引用，并返回直接定义回答，而不是先前的 scoped-miss 回复。 | 已修复 |
 
 2026-07-04 当日新鲜验证证据：
 
 - `rtk npm.cmd exec -- jest src/agent_workspace.frontend.test.ts --runInBand`
 - `rtk npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts src/learning/graphContextAssembler.test.ts src/learning/conversationComposer.test.ts src/learning/answerReleaseReview.test.ts --runInBand`
-- `rtk powershell -NoProfile -Command 'python C:\Users\jacob\.codex\skills\frontend-law-auditor\scripts\law_audit.py --input output\frontend-law-evidence.json --output output\frontend-law-audit.md --json-out output\frontend-law-audit.json'`
 - `rtk npm.cmd run build`
 - `rtk npm.cmd run build:vite`
-- `rtk node scripts/verify-knowledge-workspace-runtime.js --case waterglass_explicit_scope_compact_zh`
+- `rtk node scripts/verify-knowledge-workspace-runtime.js --target waterglass --query "what is waterglass?"`
 
 相对先前方案链的架构推进判断：
 

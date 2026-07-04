@@ -313,6 +313,9 @@ const STRUCTURED_UNIT_ALIASES: Record<string, string> = {
 };
 
 const STRUCTURED_FACT_PATTERN = /(-?\d{1,4}(?:,\d{3})*(?:\.\d+)?)(?:\s*(kg\/m(?:³|3)|gpa|mpa|kpa|pa|km\/h|m\/s|km|cm|mm|ml|mb|gb|tb|kw|mw|%|percent|percentage|years?|yrs?|yr|year|°c|℃|℉|年))?/giu;
+const ANSWER_RELEASE_PUBLIC_CHAR_LIMIT = 900;
+const ANSWER_RELEASE_SENTENCE_BUDGET = 6;
+const DEFINITION_EVIDENCE_HIGHLIGHT_LIMIT = 2;
 
 const YEAR_CONTEXT_PATTERN = /\b(?:year|years|dated|since|until|from|during|after|before|in|on)\b|年/iu;
 const ENGLISH_DEFINITION_QUERY_PATTERN = /\b(?:what\s+is|what'?s|what\s+are|who\s+is|define|definition\s+of|meaning\s+of)\b/iu;
@@ -547,25 +550,41 @@ function appendRevisionAnswerSentence(sentences: string[], sentence: string, use
     const normalizedKey = stripTerminalSentencePunctuation(normalizedSentence).toLowerCase();
     const alreadyPresent = sentences.some((existingSentence) => (
         stripTerminalSentencePunctuation(existingSentence).toLowerCase() === normalizedKey
+        || (
+            normalizedKey.length >= 32
+            && stripTerminalSentencePunctuation(existingSentence).toLowerCase().includes(normalizedKey)
+        )
     ));
     if (!alreadyPresent) {
         sentences.push(normalizedSentence);
     }
 }
 
+function normalizeDefinitionEvidenceTitle(value: unknown): string {
+    return normalizeWhitespace(
+        String(value || '')
+            .replace(/\s*\((?:mermaid|code|diagram)\s+block\)\s*$/iu, '')
+            .trim()
+    );
+}
+
+function normalizeDefinitionEvidenceTitleKey(value: unknown): string {
+    return normalizeDefinitionEvidenceTitle(value).toLowerCase();
+}
+
 function collectDefinitionAugmentationTitles(context: AnswerReleaseReviewContext): string[] {
     const leadingPoint = context.knowledgePoints[0];
-    const anchorTitle = normalizeWhitespace(String(
+    const anchorTitle = normalizeDefinitionEvidenceTitle(
         leadingPoint?.title
         || context.graphContext?.anchorTitle
         || ''
-    ));
-    const anchorComparableTitle = anchorTitle.toLowerCase();
+    );
+    const anchorComparableTitle = normalizeDefinitionEvidenceTitleKey(anchorTitle);
     const titles: string[] = [];
     const seen = new Set<string>();
     const appendTitle = (value: unknown) => {
-        const title = normalizeWhitespace(String(value || '').trim());
-        const comparableTitle = title.toLowerCase();
+        const title = normalizeDefinitionEvidenceTitle(value);
+        const comparableTitle = normalizeDefinitionEvidenceTitleKey(title);
         if (
             !title
             || comparableTitle === anchorComparableTitle
@@ -585,6 +604,102 @@ function collectDefinitionAugmentationTitles(context: AnswerReleaseReviewContext
     }
     context.citations.forEach((citation) => appendTitle(citation && citation.title));
     return titles.slice(0, 3);
+}
+
+function stripMarkdownScaffolding(value: string): string {
+    return normalizeWhitespace(
+        String(value || '')
+            .replace(/```[\s\S]*?(?:```|$)/gu, ' ')
+            .replace(/!\[[^\]]*\]\([^)]*\)/gu, ' ')
+            .replace(/\[[^\]]+\]\([^)]*\)/gu, ' ')
+            .replace(/<[^>]+>/gu, ' ')
+            .replace(/^#{1,6}\s+/gu, '')
+            .replace(/\s*\|\s*/gu, ' ')
+            .replace(/\s{2,}/gu, ' ')
+    );
+}
+
+function removeLeadingEvidenceTitle(value: string, title: string): string {
+    const normalized = normalizeWhitespace(value);
+    const normalizedTitle = normalizeWhitespace(title);
+    if (!normalized || !normalizedTitle) {
+        return normalized;
+    }
+    const escapedTitle = escapeRegExp(normalizedTitle);
+    return normalizeWhitespace(
+        normalized.replace(new RegExp(`^#{0,6}\\s*${escapedTitle}\\s*[:：-]?\\s*`, 'iu'), '')
+    );
+}
+
+function selectPublicEvidenceClause(snippet: string, title: string): string {
+    const cleaned = removeLeadingEvidenceTitle(stripMarkdownScaffolding(snippet), title);
+    if (!cleaned) {
+        return '';
+    }
+    const clauseSeparator = containsCjk(cleaned)
+        ? /[。！？；\n\r]+/u
+        : /[.!?;\n\r]+/u;
+    const clauses = cleaned
+        .split(clauseSeparator)
+        .map((clause) => normalizeWhitespace(clause))
+        .filter((clause) => (
+            clause.length >= 8
+            && !ENGLISH_META_DOCUMENTARY_PATTERN.test(clause)
+            && !CHINESE_META_DOCUMENTARY_PATTERN.test(clause)
+            && !/^[:：\-–—]+$/u.test(clause)
+        ));
+    const selected = clauses[0] || cleaned;
+    return selected.length > 120
+        ? `${selected.slice(0, 118).trim()}...`
+        : selected;
+}
+
+function collectDefinitionEvidenceHighlights(context: AnswerReleaseReviewContext): string[] {
+    const leadingPoint = context.knowledgePoints[0];
+    const anchorTitle = normalizeDefinitionEvidenceTitle(
+        leadingPoint?.title
+        || context.graphContext?.anchorTitle
+        || ''
+    );
+    const anchorComparableTitle = normalizeDefinitionEvidenceTitleKey(anchorTitle);
+    const citations = [
+        ...(Array.isArray(leadingPoint?.citations) ? leadingPoint.citations : []),
+        ...context.citations,
+    ];
+    const seen = new Set<string>();
+    const highlights: string[] = [];
+    citations.forEach((citation) => {
+        const title = normalizeDefinitionEvidenceTitle(citation && citation.title);
+        const comparableTitle = normalizeDefinitionEvidenceTitleKey(title);
+        if (
+            !title
+            || comparableTitle === anchorComparableTitle
+            || comparableTitle.includes('preamble')
+            || seen.has(comparableTitle)
+        ) {
+            return;
+        }
+        seen.add(comparableTitle);
+        const clause = selectPublicEvidenceClause(String(citation && citation.snippet || ''), title);
+        if (clause) {
+            highlights.push(`${title}: ${clause}`);
+        }
+    });
+    return highlights.slice(0, DEFINITION_EVIDENCE_HIGHLIGHT_LIMIT);
+}
+
+function buildDefinitionEvidenceHighlightSentence(
+    context: AnswerReleaseReviewContext,
+    useChinese: boolean
+): string {
+    const highlights = collectDefinitionEvidenceHighlights(context);
+    if (highlights.length <= 0) {
+        return '';
+    }
+    if (useChinese) {
+        return `证据摘要还显示：${highlights.join('；')}`;
+    }
+    return `Evidence highlights: ${highlights.join('; ')}`;
 }
 
 function buildDefinitionAugmentationSentence(
@@ -609,7 +724,7 @@ function buildRevisionGraphConnectionSentence(
         ? context.graphContext.connectionPaths[0]
         : null;
     const pathTitles = connectionPath && Array.isArray(connectionPath.pathTitles)
-        ? connectionPath.pathTitles.map((title) => normalizeWhitespace(String(title || '').trim())).filter(Boolean)
+        ? connectionPath.pathTitles.map((title) => normalizeDefinitionEvidenceTitle(title)).filter(Boolean)
         : [];
     if (pathTitles.length <= 1) {
         return '';
@@ -618,6 +733,45 @@ function buildRevisionGraphConnectionSentence(
         return `当前图中的关键路径是 ${pathTitles.join(' -> ')}`;
     }
     return `The strongest graph path runs through ${pathTitles.join(' -> ')}`;
+}
+
+function normalizeRevisionGraphComparableTitle(value: unknown): string {
+    return normalizeDefinitionEvidenceTitle(value).toLowerCase();
+}
+
+function collectRevisionGraphWindowTitles(
+    graphContext: AgentConversationGraphContext | null,
+    windowKey: 'predecessorWindow' | 'successorWindow',
+    limit: number
+): string[] {
+    if (!graphContext || !Array.isArray(graphContext[windowKey])) {
+        return [];
+    }
+    const anchorProfile = graphContext.anchorGraphProfile && typeof graphContext.anchorGraphProfile === 'object'
+        ? graphContext.anchorGraphProfile
+        : null;
+    const anchorAtomId = normalizeWhitespace(String(graphContext.anchorAtomId || anchorProfile?.atomId || '').trim());
+    const anchorTitle = normalizeRevisionGraphComparableTitle(graphContext.anchorTitle || anchorProfile?.title || '');
+    const seen = new Set<string>();
+    const titles: string[] = [];
+    for (const node of graphContext[windowKey] || []) {
+        const atomId = normalizeWhitespace(String(node && node.atomId || '').trim());
+        const title = normalizeDefinitionEvidenceTitle(node && node.title);
+        const comparableTitle = normalizeRevisionGraphComparableTitle(title);
+        if (!title || (atomId && atomId === anchorAtomId) || (comparableTitle && comparableTitle === anchorTitle)) {
+            continue;
+        }
+        const key = comparableTitle || atomId;
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        titles.push(title);
+        if (titles.length >= limit) {
+            break;
+        }
+    }
+    return titles;
 }
 
 function buildRevisionGraphProfileSentence(
@@ -631,19 +785,9 @@ function buildRevisionGraphProfileSentence(
     const anchorProfile = graphContext.anchorGraphProfile && typeof graphContext.anchorGraphProfile === 'object'
         ? graphContext.anchorGraphProfile
         : null;
-    const anchorTitle = normalizeWhitespace(String(graphContext.anchorTitle || anchorProfile?.title || '').trim());
-    const predecessorTitles = Array.isArray(graphContext.predecessorWindow)
-        ? graphContext.predecessorWindow
-            .map((node) => normalizeWhitespace(String(node && node.title || '').trim()))
-            .filter(Boolean)
-            .slice(0, 2)
-        : [];
-    const successorTitles = Array.isArray(graphContext.successorWindow)
-        ? graphContext.successorWindow
-            .map((node) => normalizeWhitespace(String(node && node.title || '').trim()))
-            .filter(Boolean)
-            .slice(0, 2)
-        : [];
+    const anchorTitle = normalizeDefinitionEvidenceTitle(graphContext.anchorTitle || anchorProfile?.title || '');
+    const predecessorTitles = collectRevisionGraphWindowTitles(graphContext, 'predecessorWindow', 2);
+    const successorTitles = collectRevisionGraphWindowTitles(graphContext, 'successorWindow', 2);
     const degreeParts: string[] = [];
     const inDegree = anchorProfile ? Number(anchorProfile.inDegree) : NaN;
     const outDegree = anchorProfile ? Number(anchorProfile.outDegree) : NaN;
@@ -694,7 +838,7 @@ function expandAnswerWithGraphContext(
     extraSentences.forEach((sentence) => appendRevisionAnswerSentence(sentences, sentence, useChinese));
     appendRevisionAnswerSentence(sentences, buildRevisionGraphConnectionSentence(context, useChinese), useChinese);
     appendRevisionAnswerSentence(sentences, buildRevisionGraphProfileSentence(context, useChinese), useChinese);
-    return sentences.slice(0, 4).join(useChinese ? '' : ' ');
+    return sentences.slice(0, ANSWER_RELEASE_SENTENCE_BUDGET).join(useChinese ? '' : ' ');
 }
 
 function hasStrongEnglishAnchorCaseSignal(value: string): boolean {
@@ -761,6 +905,7 @@ function buildDefinitionIntentRevisionAnswer(
             : `${canonicalizedSurface}.`;
         return expandAnswerWithGraphContext(baseAnswer, context, useChinese, [
             buildDefinitionAugmentationSentence(context, useChinese),
+            buildDefinitionEvidenceHighlightSentence(context, useChinese),
         ]);
     }
     if (!subject || !value) {
@@ -768,17 +913,41 @@ function buildDefinitionIntentRevisionAnswer(
             normalizeWhitespace(supportFrame.surface || buildGroundedRevisionAnswer(context)),
             context,
             useChinese,
-            [buildDefinitionAugmentationSentence(context, useChinese)]
+            [
+                buildDefinitionAugmentationSentence(context, useChinese),
+                buildDefinitionEvidenceHighlightSentence(context, useChinese),
+            ]
         );
     }
     if (useChinese) {
         const separator = /[A-Za-z0-9)\]]$/u.test(subject) ? ' 是' : '是';
         return expandAnswerWithGraphContext(`${subject}${separator}${value}。`, context, useChinese, [
             buildDefinitionAugmentationSentence(context, useChinese),
+            buildDefinitionEvidenceHighlightSentence(context, useChinese),
         ]);
     }
     return expandAnswerWithGraphContext(`${subject} is ${value}.`, context, useChinese, [
         buildDefinitionAugmentationSentence(context, useChinese),
+        buildDefinitionEvidenceHighlightSentence(context, useChinese),
+    ]);
+}
+
+function buildReleasedPublicAnswer(
+    context: AnswerReleaseReviewContext,
+    draftAnswer: string
+): string {
+    if (!isDefinitionIntentQuery(context.message)) {
+        return draftAnswer;
+    }
+    const useChinese = containsCjk([
+        context.message,
+        draftAnswer,
+        context.knowledgePoints[0]?.title || '',
+        context.graphContext?.anchorTitle || '',
+    ].join(' '));
+    return expandAnswerWithGraphContext(draftAnswer, context, useChinese, [
+        buildDefinitionAugmentationSentence(context, useChinese),
+        buildDefinitionEvidenceHighlightSentence(context, useChinese),
     ]);
 }
 
@@ -3997,7 +4166,7 @@ function evaluateTemporalValidityConsistency(
 
 function checkPublicSurfaceContraction(answer: string): boolean {
     const normalizedAnswer = String(answer || '');
-    if (normalizeWhitespace(normalizedAnswer).length > 320) {
+    if (normalizeWhitespace(normalizedAnswer).length > ANSWER_RELEASE_PUBLIC_CHAR_LIMIT) {
         return false;
     }
     return !(
@@ -4305,7 +4474,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                             ? buildDefinitionIntentRevisionAnswer(context, queryIntentAlignment.supportFrame)
                         : buildGroundedRevisionAnswer(context)
                 )
-                : draftAnswer
+                : buildReleasedPublicAnswer(context, draftAnswer)
     );
     const abstentionHygienePassed = decision !== 'abstain'
         || (

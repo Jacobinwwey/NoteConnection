@@ -815,6 +815,7 @@ describe('conversationComposer', () => {
         expect(reply.answer).toContain('Mathematical Basis');
         expect(reply.answer).not.toContain('predecessors include Water Glass');
         expect(reply.answer).not.toContain('next nodes include Water Glass');
+        expect(reply.answer.match(/Water Glass has/g) || []).toHaveLength(1);
 
         const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
         const explanationMarkdown = structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '';

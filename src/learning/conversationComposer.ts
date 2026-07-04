@@ -552,8 +552,16 @@ function buildGraphConnectionPathAnswerSentence(
     return `The strongest graph path runs through ${pathTitles.join(' -> ')}`;
 }
 
+function normalizeGraphAnswerDisplayTitle(value: string): string {
+    return normalizeWhitespace(
+        String(value || '')
+            .replace(/\s*\((?:mermaid|code|diagram)\s+block\)\s*$/iu, '')
+            .trim()
+    );
+}
+
 function normalizeGraphAnswerComparableTitle(value: string): string {
-    return normalizeWhitespace(String(value || '').toLowerCase());
+    return normalizeGraphAnswerDisplayTitle(value).toLowerCase();
 }
 
 function collectGraphWindowTitles(
@@ -570,12 +578,12 @@ function collectGraphWindowTitles(
     const titles: string[] = [];
     for (const node of graphContext[windowKey] || []) {
         const atomId = normalizeWhitespace(String(node && node.atomId || '').trim());
-        const title = normalizeWhitespace(String(node && node.title || '').trim());
+        const title = normalizeGraphAnswerDisplayTitle(String(node && node.title || ''));
         const comparableTitle = normalizeGraphAnswerComparableTitle(title);
         if (!title || (atomId && atomId === anchorAtomId) || (comparableTitle && comparableTitle === anchorTitle)) {
             continue;
         }
-        const key = atomId + '|' + comparableTitle;
+        const key = comparableTitle || atomId;
         if (seen.has(key)) {
             continue;
         }

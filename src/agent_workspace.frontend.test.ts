@@ -110,14 +110,14 @@ function createI18nStub() {
             'agentWorkspace.knowledge.citation': 'Citation',
             'agentWorkspace.knowledge.score': 'Score',
             'agentWorkspace.knowledge.togglePreview': 'Toggle matched knowledge preview: {file}',
-            'agentWorkspace.knowledge.clickHint': 'Left-click a matched file to open the source with highlighted evidence. Use Learning Path for sequence guidance or Related Focus for citation links.',
+            'agentWorkspace.knowledge.clickHint': 'Left-click a matched file to open the source with highlighted evidence. Use Learning Path or Focus for graph-guided follow-up actions.',
             'agentWorkspace.knowledge.previewLoading': 'Loading source preview...',
             'agentWorkspace.knowledge.previewUnavailable': 'Source preview unavailable.',
             'agentWorkspace.knowledge.openFile': 'Open matched knowledge point: {file}',
             'agentWorkspace.knowledge.learningPathAction': 'Learning Path',
             'agentWorkspace.knowledge.learningPathActionLabel': 'Show learning path for {file}',
-            'agentWorkspace.knowledge.relatedFocusAction': 'Related Focus',
-            'agentWorkspace.knowledge.relatedFocusActionLabel': 'Show citation focus for {file}',
+            'agentWorkspace.knowledge.relatedFocusAction': 'Focus',
+            'agentWorkspace.knowledge.relatedFocusActionLabel': 'Show focus for {file}',
             'agentWorkspace.knowledge.actionsMenu': 'Knowledge point actions',
             'agentWorkspace.knowledge.actionsMenuButtonLabel': 'Open knowledge point actions for {file}',
             'agentWorkspace.reply.flashcardBatch.cardTitle': 'Review Card Batch',
@@ -929,14 +929,14 @@ function createI18nStub() {
             'agentWorkspace.graphFocus.relationAnchorNode': '锚点',
             'agentWorkspace.graphFocus.relationEdgesUnavailable': '当前命中未返回有界关系边。',
             'agentWorkspace.knowledge.togglePreview': '切换命中知识预览：{file}',
-            'agentWorkspace.knowledge.clickHint': '左键单击命中文件可打开源文档并高亮命中依据。使用“学习路径”查看顺序引导，使用“关联聚焦”查看引用关系。',
+            'agentWorkspace.knowledge.clickHint': '左键单击命中文件可打开源文档并高亮命中依据。使用“学习路径”或“聚焦”继续图谱引导操作。',
             'agentWorkspace.knowledge.previewLoading': '正在加载源文档预览...',
             'agentWorkspace.knowledge.previewUnavailable': '源文档预览不可用。',
             'agentWorkspace.knowledge.openFile': '打开命中的知识点：{file}',
             'agentWorkspace.knowledge.learningPathAction': '学习路径',
             'agentWorkspace.knowledge.learningPathActionLabel': '显示 {file} 的学习路径',
-            'agentWorkspace.knowledge.relatedFocusAction': '关联聚焦',
-            'agentWorkspace.knowledge.relatedFocusActionLabel': '显示 {file} 的引用关联聚焦',
+            'agentWorkspace.knowledge.relatedFocusAction': '聚焦',
+            'agentWorkspace.knowledge.relatedFocusActionLabel': '显示 {file} 的聚焦视图',
             'agentWorkspace.knowledge.actionsMenu': '知识点操作',
             'agentWorkspace.knowledge.actionsMenuButtonLabel': '打开 {file} 的知识点操作',
             'agentWorkspace.reply.citations': '引用',
@@ -4114,7 +4114,7 @@ describe('workspace panes controller', () => {
         const compatibilityButtons = Array.from(
             document.querySelectorAll('.agent-knowledge-actions button')
         ) as HTMLButtonElement[];
-        expect(compatibilityButtons.map((node) => node.textContent)).toEqual(['Learning Path', 'Related Focus']);
+        expect(compatibilityButtons.map((node) => node.textContent)).toEqual(['Learning Path', 'Focus']);
         expect(compatibilityButtons.map((node) => node.getAttribute('data-agent-knowledge-action'))).toEqual([
             'learning-path',
             'related-focus',
@@ -4153,7 +4153,7 @@ describe('workspace panes controller', () => {
         const buttonsBefore = Array.from(
             document.querySelectorAll('[data-agent-knowledge-action-menu="true"] button')
         ) as HTMLButtonElement[];
-        expect(buttonsBefore.map((node) => node.textContent)).toEqual(['Learning Path', 'Related Focus']);
+        expect(buttonsBefore.map((node) => node.textContent)).toEqual(['Learning Path', 'Focus']);
         expect(buttonsBefore.map((node) => node.getAttribute('data-agent-knowledge-action'))).toEqual([
             'learning-path',
             'related-focus',
@@ -4193,17 +4193,23 @@ describe('workspace panes controller', () => {
         const buttonsAfter = Array.from(
             document.querySelectorAll('[data-agent-knowledge-action-menu="true"] button')
         ).map((node) => node.textContent);
-        expect(buttonsAfter).toEqual(['学习路径', '关联聚焦']);
+        expect(buttonsAfter).toEqual(['学习路径', '聚焦']);
     });
 
     test('partitions conversation and knowledge hit scrolling so the composer remains reachable', () => {
         const stylesPath = path.join(__dirname, 'frontend', 'styles.css');
         const styles = fs.readFileSync(stylesPath, 'utf8');
+        const shellRule = styles.match(/\.agent-workspace-shell\s*\{[^}]*\}/)?.[0] || '';
         const chatPaneRule = styles.match(/\.agent-chat-pane\s*\{[^}]*\}/)?.[0] || '';
         const chatMessagesRule = styles.match(/\.agent-chat-messages\s*\{[^}]*\}/)?.[0] || '';
         const knowledgePointsRule = styles.match(/\.agent-knowledge-points\s*\{[^}]*\}/)?.[0] || '';
         const responsiveShellRule = styles.match(/@media \(max-width: 1180px\)\s*\{[\s\S]*?\.agent-workspace-shell\s*\{[^}]*\}/)?.[0] || '';
 
+        expect(shellRule).toContain('align-content: start');
+        expect(shellRule).toContain('overflow-x: hidden');
+        expect(shellRule).toContain('overflow-y: auto');
+        expect(shellRule).not.toContain('overflow: hidden');
+        expect(shellRule).toContain('scrollbar-gutter: stable');
         expect(chatPaneRule).toContain('overflow-x: hidden');
         expect(chatPaneRule).toContain('overflow-y: auto');
         expect(chatPaneRule).not.toContain('overflow: hidden');

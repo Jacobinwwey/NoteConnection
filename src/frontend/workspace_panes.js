@@ -3502,8 +3502,8 @@
             {
                 actionKind: 'related-focus',
                 capabilityActionId: 'open_focus_mode',
-                label: translate('agentWorkspace.knowledge.relatedFocusAction', 'Related Focus'),
-                ariaLabel: translate('agentWorkspace.knowledge.relatedFocusActionLabel', 'Show citation focus for {file}', {
+                label: translate('agentWorkspace.knowledge.relatedFocusAction', 'Focus'),
+                ariaLabel: translate('agentWorkspace.knowledge.relatedFocusActionLabel', 'Show focus for {file}', {
                     file: fileName,
                 }),
                 disabled: false,
@@ -3753,7 +3753,7 @@
         popover.hidden = true;
         const helpText = translate(
             'agentWorkspace.knowledge.clickHint',
-            'Left-click a matched file to open the source with highlighted evidence. Use Learning Path for sequence guidance or Related Focus for citation links.'
+            'Left-click a matched file to open the source with highlighted evidence. Use Learning Path or Focus for graph-guided follow-up actions.'
         );
         button.setAttribute('aria-describedby', popoverId);
 
