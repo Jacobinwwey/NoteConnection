@@ -18,6 +18,7 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
         KNOWLEDGE_GRAPHDB_FALLBACK_ENABLED,
         KNOWLEDGE_GRAPHDB_OPERATION_MODE,
         runtimeRunbookOps,
+        scheduleKnowledgeLearningPlatformWarmup,
     } = ctx;
 
     const api = (path: string) => `/api/knowledge${path}`;
@@ -52,6 +53,7 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             path: api('/state'),
             handler: async (_req, res) => {
                 try {
+                    scheduleKnowledgeLearningPlatformWarmup?.('knowledge_state_request');
                     const payload = await knowledgeLearningPlatform.getKnowledgeState();
                     ok(res, payload);
                 } catch (e) { fail(res, e, 'GET /api/knowledge/state'); }

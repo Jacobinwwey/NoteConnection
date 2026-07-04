@@ -5,10 +5,12 @@
 import { registerAllRoutes, type ServerContext } from './index';
 
 function createMockContext(): ServerContext {
+    const scheduleKnowledgeLearningPlatformWarmup = jest.fn();
     return {
         knowledgeLearningPlatform: {
             getKnowledgeState: async () => ({ documents: 0 })
         } as any,
+        scheduleKnowledgeLearningPlatformWarmup,
         knowledgeIngestor: { ingestKnowledge: async () => ({}), averageIngestLatencyMs: () => 0, getDiagnostics: () => ({}) } as any,
         knowledgeQuerier: { queryKnowledge: async () => ({}), getDiagnosticsSummary: () => ({}) } as any,
         conversationManager: { getDiagnosticsSummary: () => ({}) } as any,
@@ -140,5 +142,6 @@ describe('Route Registry', () => {
         // The handler should produce a JSON response
         expect(mockRes._statusCode).toBeGreaterThanOrEqual(200);
         expect(mockRes._statusCode).toBeLessThan(600);
+        expect(ctx.scheduleKnowledgeLearningPlatformWarmup).toHaveBeenCalledWith('knowledge_state_request');
     });
 });

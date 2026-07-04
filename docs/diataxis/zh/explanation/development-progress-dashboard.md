@@ -3,6 +3,57 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-07-04 知识工作区 scope 可见性、首问阻塞与命中文件交互收口
+
+本次切片回应的是知识工作区窗口中的三个用户可见问题：scope 不明显且不便切换、命中结果返回后问答区像是被挤出视野、命中内容列表暴露了过多操作而不是先给出可点击知识点文件名。
+代码审计和运行态探针显示，前端交互契约已经在源码中落地；真正造成“设置/状态像是不能载入”的主阻塞，是 HTTP 首个 scoped query 在只读查询末尾触发完整 SQLite graph snapshot 持久化，导致响应被写盘成本拖到几十秒。
+
+当前代码已经成立的事实：
+
+- `src/frontend/index.html` 在知识工作区 toolbar 内默认放置 `agent-scope-control--toolbar`，scope 控件不再只依赖全局文件夹或隐藏请求载荷。
+- `src/frontend/workspace_panes.js` 的知识命中列表以文件名按钮为主视图；长按、右键和键盘菜单才暴露聚焦、学习路径等扩展操作。
+- 点击命中文件后，右侧 graph-focus pane 会以 source path / citation / matched span provenance 渲染 Markdown，并在命中段落内做 inline highlight。
+- `src/frontend/styles.css` 与 `workspace_panes.js` 已将 conversation stream、composer、knowledge hit list 和右侧 pane 拆成独立滚动区域，命中结果增加后不应把提问与回复入口推出可达区域。
+- `src/learning/queryBackend.ts` 现在允许本地向量后端复用全局索引，但候选打分和 ANN 过滤必须落回当前 scope；当全局 ANN 候选全部越界时，会退回 scoped full scan。
+- `src/learning/KnowledgeLearningPlatform.ts` 新增 `warmQueryBackend()`，`src/server.ts` 在启动和 `/api/knowledge/state` 后台预热知识查询后端；这降低首次打开知识工作区时的检索冷启动噪声。
+- `queryKnowledge()` 不再对只读查询结果调用 `persistIfNeeded()`。写操作仍在 ingest、会话、配置和其他真实状态变更路径持久化，读路径不再重写巨大 graph snapshot。
+
+代码 / 方案对齐：
+
+| 要求 | 当前实现证据 | 进度判断 |
+|---|---|---|
+| 知识工作区内必须默认展示并可切换 scope | `index.html` 的 toolbar scope control 加上 `src/agent_workspace.frontend.test.ts` 的 `shows a workspace scope selector and uses it for conversation requests` / `keeps scope visible...` 回归。 | 已实现 |
+| 返回命中后，提问与回复窗口仍必须可见 | 前端布局回归 `partitions conversation and knowledge hit scrolling so the composer remains reachable` 固定独立滚动契约。 | 已实现 |
+| 命中内容只优先显示可交互知识点文件名 | `workspace_panes.js` 的 `renderKnowledgePoints` 渲染 file-first button；`renders knowledge hits as file entries...` 和 `keeps file-first hit rendering stable...` 固定回归。 | 已实现 |
+| 同一知识点不应重复拆成多个主列表项 | 现有 conversation grouping 与 matched-span provenance 将同源命中收束到同一知识点，并在右侧 pane 标出具体命中段落。 | 已实现，后续继续压测大语料重复片段 |
+| RAG 应基于 RSE 与 document augmentation 提升回答质量 | scoped retrieval 现在以文档/知识点为稳定返回单位，source-authenticated fragment projection 与 graph context 继续作为 additive context 进入回答与 evidence pane。 | 已实现当前基线 |
+| 首问不能被读路径持久化拖慢 | `queryKnowledge()` 移除 read-only persist；运行态 `water glass` scoped 探针首问 330ms、第二问 5ms，命中文件为 `Knowledge_Base/waterglass/water glass.md`。 | 已修复 |
+
+2026-07-04 当日新鲜验证证据：
+
+- `npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts --runInBand --testNamePattern "queryKnowledge does not persist"`
+- `npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts src/learning/queryBackend.test.ts src/routes/registry.contract.test.ts src/server.migration.test.ts --runInBand`
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts --runInBand`
+- `npm.cmd run build`
+- `npm.cmd run build:vite`
+- `node E:\Knowledge_project\knowledge-warmup-probe.js`
+
+相对先前方案链的架构推进判断：
+
+| 先前预期 | 2026-07-04 当前结论 | 进度判断 |
+|---|---|---|
+| Knowledge Workspace 的 scope 必须成为窗口内显式任务状态 | 前端已满足；如果运行中的 Tauri 窗口仍看不到，优先判断为 dev sidecar / WebView 仍加载旧构建或未刷新，而不是源码缺失。 | 实现已在当前构建中成立 |
+| RAG 命中应按知识点返回并突出命中片段 | 文件名主列表 + 右侧 source-highlight pane 已成立；后续重点是继续压测同一文档内多段命中的排序和折叠。 | 基线已实现 |
+| API 状态必须让用户判断可用性与稳定性 | 后台 hydration / query backend warmup 已进入 server lifecycle；前端状态条已由 conversation 成功调用更新。下一步应把 warmup latency、backend id、scope readiness 更直接地暴露给普通用户。 | 后端基础已实现，UI 状态仍可增强 |
+| 查询链路必须鲁棒且向前兼容 | 全局索引复用与 scoped scoring 已解耦；读查询不再写 snapshot，避免 SQLite 大快照阻塞 HTTP。 | 已显著改善 |
+| 架构压力应继续下降 | `KnowledgeLearningPlatform.ts` 仍承载 hydrate、retrieval、store snapshot 和 query context assembly 等多个 owner；本次先收紧读写边界，后续应继续拆小持久化 owner 与 retrieval context owner。 | 改善但仍需推进 |
+
+后续推进方向：
+
+- 优先把 API 状态面板从“成功/失败”推进到“scope readiness、backend warmup、最近延迟、缓存命中、索引规模”的可读状态，而不是把诊断藏在 developer detail 中。
+- 用 representative large corpus 重复压测 `water glass` 类 title-like query，确认 scoped ANN fallback、document augmentation 和 grouped hit rendering 在大语料下仍稳定。
+- 继续把 `KnowledgeLearningPlatform.ts` 中的 snapshot persistence、query context assembly 和 retrieval telemetry 拆到更窄 owner，避免下一次读写边界再被混在同一个大类里。
+
 ## 2026-07-03 Mermaid 回退修复、Future Path 运行时复用与图感知公开回答
 
 本次切片收口的是 hosted interaction parity 之后仍然存在的三类具体缺口：

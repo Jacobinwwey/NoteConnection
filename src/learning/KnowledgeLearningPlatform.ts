@@ -1005,8 +1005,38 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             items: execution.items,
             trace: execution.trace,
         };
-        await this.persistIfNeeded();
         return response;
+    }
+
+    public async warmQueryBackend(request: Partial<KnowledgeQueryRequest> = {}): Promise<{
+        warmed: boolean;
+        backendId: string;
+        latencyMs: number;
+        candidateCount: number;
+        totalAtomsInScope: number;
+    }> {
+        await this.ensureHydrated();
+        const backend = normalizeGraphQueryBackendType(request.queryBackend || this.currentGraphQueryBackendType);
+        const contextBundle = this.buildQueryBackendContext({
+            ...request,
+            query: normalizeWhitespace(String(request.query || 'knowledge workspace warmup')),
+            topK: clamp(Math.floor(Number(request.topK) || 1), 1, 20),
+        }, backend);
+        const backendInstance = backend === this.currentGraphQueryBackendType
+            ? this.graphQueryBackend
+            : createGraphQueryBackend({
+                ...this.graphQueryBackendFactoryOptions,
+                backend,
+            });
+        const startedAtMs = Date.now();
+        const result = await backendInstance.query(contextBundle.context);
+        return {
+            warmed: true,
+            backendId: backendInstance.id,
+            latencyMs: Date.now() - startedAtMs,
+            candidateCount: Array.isArray(result.candidates) ? result.candidates.length : 0,
+            totalAtomsInScope: contextBundle.atoms.length,
+        };
     }
 
     public async inspectKnowledgeWorkspaceRequest(request: {
@@ -4272,6 +4302,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             queryVariants: string[];
             asOf: string;
             topK: number;
+            indexAtoms: KnowledgeAtom[];
             atoms: KnowledgeAtom[];
             activeEdges: RelationEdge[];
             atomTemporalValidity: Record<string, {
@@ -4379,6 +4410,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 queryVariants: [...titleLikeQueries],
                 asOf,
                 topK,
+                indexAtoms: unscopedAtoms,
                 atoms: scopedAtomsResult.atoms,
                 activeEdges,
                 atomTemporalValidity,

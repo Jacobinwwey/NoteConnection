@@ -24,6 +24,7 @@ export interface GraphQueryBackendContext {
     queryVariants?: string[];
     asOf: string;
     topK: number;
+    indexAtoms?: KnowledgeAtom[];
     atoms: KnowledgeAtom[];
     activeEdges: RelationEdge[];
     atomTemporalValidity?: Record<string, GraphQueryTemporalSignal>;
@@ -1751,7 +1752,8 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
     }
 
     public async query(context: GraphQueryBackendContext): Promise<GraphQueryBackendResult> {
-        const index = await this.ensureIndex(context.atoms);
+        const indexAtoms = this.resolveIndexAtoms(context);
+        const index = await this.ensureIndex(indexAtoms);
         const querySemanticTokens = buildQuerySemanticTokens(context);
         const queryFrequency = buildTokenFrequency(querySemanticTokens);
         const graphFeatureIndex = buildGraphFeatureIndex(context, querySemanticTokens);
@@ -1788,9 +1790,6 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
         }
         this.refreshAccelerationAdapterHealth();
         this.lastAnnSelectionMode = annCandidateSelection.mode;
-        this.lastAnnCandidateCount = annCandidateSelection.used
-            ? annCandidateSelection.candidateAtomIds.size
-            : index.atomCount;
         this.lastAnnAdapterId = annCandidateSelection.adapterId;
         this.lastAnnAdapterError = annCandidateSelection.adapterError;
         const representationTelemetry = this.resolveAccelerationRepresentationTelemetry(index);
@@ -1808,8 +1807,25 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
             this.lastError = strictMismatchError;
             throw new Error(strictMismatchError);
         }
+        const scopedAtomIds = new Set(context.atoms.map((atom) => atom.id));
+        const scopedAnnCandidateAtomIds = annCandidateSelection.used
+            ? Array.from(annCandidateSelection.candidateAtomIds.values())
+                .filter((atomId) => scopedAtomIds.has(atomId))
+            : [];
+        const annScopedPrefilterUsable = (
+            annCandidateSelection.used
+            && scopedAtomIds.size > 0
+            && scopedAnnCandidateAtomIds.length > 0
+        );
+        const atomIdsToScore = annScopedPrefilterUsable
+            ? scopedAnnCandidateAtomIds
+            : context.atoms.map((atom) => atom.id);
+        this.lastAnnCandidateCount = annScopedPrefilterUsable
+            ? scopedAnnCandidateAtomIds.length
+            : scopedAtomIds.size;
         const accelerationMode: GraphQueryBackendVectorAccelerationTrace['mode'] = (
             this.localVectorAnnPrefilterEnabled
+            && annScopedPrefilterUsable
             && annCandidateSelection.mode !== 'full_scan'
         ) ? 'ann_prefilter' : 'full_scan';
         const vectorAccelerationTrace: GraphQueryBackendVectorAccelerationTrace = {
@@ -1834,9 +1850,6 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
             representationStatusReason: representationTelemetry.representationStatusReason,
             representationStrictMode: this.localVectorAccelerationRepresentationStrict,
         };
-        const atomIdsToScore = annCandidateSelection.used
-            ? Array.from(annCandidateSelection.candidateAtomIds.values())
-            : context.atoms.map((atom) => atom.id);
         const candidates: GraphQueryCandidate[] = [];
 
         atomIdsToScore.forEach((atomId) => {
@@ -1873,7 +1886,7 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
                     'graph_path_confidence',
                     'graph_intent_match',
                     'temporal_filter',
-                    ...(annCandidateSelection.used ? ['ann_prefilter'] : []),
+                    ...(annScopedPrefilterUsable ? ['ann_prefilter'] : []),
                 ],
                 modeWeights: {
                     vector: 0.58,
@@ -1884,6 +1897,27 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
                 vectorAcceleration: vectorAccelerationTrace,
             },
         };
+    }
+
+    private resolveIndexAtoms(context: GraphQueryBackendContext): KnowledgeAtom[] {
+        const atomsById = new Map<string, KnowledgeAtom>();
+        const candidateIndexAtoms = (
+            Array.isArray(context.indexAtoms)
+            && context.indexAtoms.length >= context.atoms.length
+        )
+            ? context.indexAtoms
+            : context.atoms;
+        candidateIndexAtoms.forEach((atom) => {
+            if (atom && atom.id) {
+                atomsById.set(atom.id, atom);
+            }
+        });
+        context.atoms.forEach((atom) => {
+            if (atom && atom.id && !atomsById.has(atom.id)) {
+                atomsById.set(atom.id, atom);
+            }
+        });
+        return Array.from(atomsById.values());
     }
 
     public getDiagnostics(): GraphQueryBackendDiagnostics {

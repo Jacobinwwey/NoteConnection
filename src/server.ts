@@ -7197,6 +7197,73 @@ const knowledgeLearningPlatform = createKnowledgeLearningPlatform({
     ],
 });
 
+let knowledgeLearningPlatformWarmupPromise: Promise<void> | null = null;
+let knowledgeLearningPlatformWarmupCompleted = false;
+let knowledgeLearningPlatformWarmupScheduled = false;
+
+function warmKnowledgeLearningPlatform(reason: string): Promise<void> {
+    if (knowledgeLearningPlatformWarmupCompleted) {
+        return Promise.resolve();
+    }
+    if (!knowledgeLearningPlatformWarmupPromise) {
+        const normalizedReason = String(reason || '').trim() || 'unspecified';
+        const startedAt = Date.now();
+        logDiagnostic('[Learning Workspace] Background hydration started.', {
+            reason: normalizedReason,
+        });
+        knowledgeLearningPlatformWarmupPromise = knowledgeLearningPlatform.ensureReady()
+            .then(async () => {
+                const hydrationLatencyMs = Date.now() - startedAt;
+                const backendWarmup = await knowledgeLearningPlatform.warmQueryBackend({
+                    query: 'knowledge workspace warmup',
+                    topK: 1,
+                });
+                knowledgeLearningPlatformWarmupCompleted = true;
+                logDiagnostic('[Learning Workspace] Background hydration completed.', {
+                    reason: normalizedReason,
+                    hydrationLatencyMs,
+                    queryBackendWarmupLatencyMs: backendWarmup.latencyMs,
+                    queryBackendWarmupCandidateCount: backendWarmup.candidateCount,
+                    queryBackendWarmupAtomCount: backendWarmup.totalAtomsInScope,
+                    totalLatencyMs: Date.now() - startedAt,
+                });
+            })
+            .catch((error) => {
+                warnDiagnostic('[Learning Workspace] Background hydration failed.', {
+                    reason: normalizedReason,
+                    error: error instanceof Error ? error.message : String(error),
+                });
+                throw error;
+            })
+            .finally(() => {
+                knowledgeLearningPlatformWarmupPromise = null;
+            });
+    }
+    return knowledgeLearningPlatformWarmupPromise;
+}
+
+function scheduleKnowledgeLearningPlatformWarmup(reason: string): void {
+    if (
+        knowledgeLearningPlatformWarmupCompleted
+        || knowledgeLearningPlatformWarmupPromise
+        || knowledgeLearningPlatformWarmupScheduled
+    ) {
+        return;
+    }
+    knowledgeLearningPlatformWarmupScheduled = true;
+    const startWarmup = (): void => {
+        knowledgeLearningPlatformWarmupScheduled = false;
+        void warmKnowledgeLearningPlatform(reason).catch(() => {
+            // The next state or query request will retry through the platform hydration path.
+        });
+    };
+    if (typeof setImmediate === 'function') {
+        setImmediate(startWarmup);
+        return;
+    }
+    setTimeout(startWarmup, 0);
+}
+
 // Domain class wrappers (gradual extraction from monolith)
 const knowledgeIngestor = new KnowledgeIngestor(knowledgeLearningPlatform);
 const knowledgeQuerier = new KnowledgeQuerier(knowledgeLearningPlatform);
@@ -13903,6 +13970,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
     const routeContext: ServerContext = {
         knowledgeLearningPlatform,
+        scheduleKnowledgeLearningPlatformWarmup,
         knowledgeIngestor,
         knowledgeQuerier,
         conversationManager,
@@ -16626,6 +16694,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             if (hasCliBuild) {
                     logDiagnostic('[CLI] Ready.');
             }
+            scheduleKnowledgeLearningPlatformWarmup('server_startup');
         };
 
         const attachListenHandlers = (targetPort: number): void => {

@@ -51,6 +51,7 @@ export interface RuntimeRunbookRouteOps {
 
 export interface ServerContext {
     knowledgeLearningPlatform: any;
+    scheduleKnowledgeLearningPlatformWarmup?: (reason: string) => void;
     knowledgeIngestor: any;
     knowledgeQuerier: any;
     conversationManager: any;

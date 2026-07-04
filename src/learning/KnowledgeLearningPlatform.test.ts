@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { KnowledgeLearningPlatform } from './KnowledgeLearningPlatform';
+import type { GraphQueryBackend, GraphQueryBackendContext } from './queryBackend';
 import {
     createGraphDbSnapshotAdapter,
     createKnowledgeGraphStore,
@@ -66,6 +67,121 @@ describe('KnowledgeLearningPlatform', () => {
         expect(updatedIngest.summary.changedDocuments).toBe(1);
         expect(updatedIngest.staleness[0]?.status).toBe('updated');
         expect(updatedIngest.temporalEdges.length).toBeGreaterThan(0);
+    });
+
+    test('warmQueryBackend primes the configured backend without recording user query latency', async () => {
+        const backendQuery = jest.fn(async (context: GraphQueryBackendContext) => ({
+            candidates: context.atoms.slice(0, 1).map((atom) => ({
+                atomId: atom.id,
+                score: 1,
+            })),
+            trace: {
+                retrievalModes: ['warmup_probe'],
+            },
+        }));
+        const warmPlatform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            graphQueryBackend: {
+                id: 'warmup-test-backend',
+                query: backendQuery,
+                getDiagnostics: () => ({
+                    backendId: 'warmup-test-backend',
+                    ready: true,
+                }),
+            } satisfies GraphQueryBackend,
+            graphQueryBackendFactoryOptions: {
+                backend: 'local_hybrid',
+            },
+        });
+        await warmPlatform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_warmup_backend',
+                    sourcePath: 'Knowledge_Base/warmup/backend.md',
+                    language: 'en',
+                    content: '# Warmup Backend\nWarmup should prime the configured query backend.',
+                },
+                {
+                    documentId: 'doc_warmup_other',
+                    sourcePath: 'Knowledge_Base/other/backend.md',
+                    language: 'en',
+                    content: '# Other Backend\nThis note stays outside the requested warmup scope.',
+                },
+            ],
+        });
+
+        const before = warmPlatform.getKnowledgeState().retrievalTelemetry.queryCount;
+        const result = await warmPlatform.warmQueryBackend({
+            query: 'warmup backend',
+            topK: 1,
+            scope: {
+                sourcePathPrefixes: ['Knowledge_Base/warmup'],
+            },
+        });
+        const after = warmPlatform.getKnowledgeState().retrievalTelemetry.queryCount;
+
+        expect(backendQuery).toHaveBeenCalledTimes(1);
+        expect(backendQuery.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
+            query: 'warmup backend',
+            topK: 1,
+            atoms: expect.arrayContaining([
+                expect.objectContaining({ documentId: 'doc_warmup_backend' }),
+            ]),
+            indexAtoms: expect.arrayContaining([
+                expect.objectContaining({ documentId: 'doc_warmup_backend' }),
+                expect.objectContaining({ documentId: 'doc_warmup_other' }),
+            ]),
+        }));
+        expect(backendQuery.mock.calls[0]?.[0].atoms).toHaveLength(1);
+        expect(backendQuery.mock.calls[0]?.[0].indexAtoms).toHaveLength(2);
+        expect(result).toEqual(expect.objectContaining({
+            warmed: true,
+            backendId: 'warmup-test-backend',
+            totalAtomsInScope: 1,
+            candidateCount: 1,
+        }));
+        expect(after).toBe(before);
+    });
+
+    test('queryKnowledge does not persist a read-only query response', async () => {
+        const saveSnapshot = jest.fn(async () => undefined);
+        const readOnlyPlatform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store: {
+                loadSnapshot: jest.fn(async () => null),
+                saveSnapshot,
+                getDiagnostics: () => ({
+                    storeType: 'memory',
+                    exists: false,
+                    loaded: false,
+                }),
+            },
+        });
+        await readOnlyPlatform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_read_only_query',
+                    sourcePath: 'Knowledge_Base/read_only/query.md',
+                    language: 'en',
+                    content: '# Read Only Query\nRetrieval should not rewrite the graph store.',
+                },
+            ],
+        });
+        expect(saveSnapshot).toHaveBeenCalledTimes(1);
+        saveSnapshot.mockClear();
+
+        const result = await readOnlyPlatform.queryKnowledge({
+            query: 'read only retrieval',
+            topK: 1,
+            scope: {
+                sourcePathPrefixes: ['Knowledge_Base/read_only'],
+            },
+        });
+
+        expect(result.items.length).toBeGreaterThan(0);
+        expect(saveSnapshot).not.toHaveBeenCalled();
     });
 
     test('query returns evidence-first results with relation path and temporal validity', async () => {

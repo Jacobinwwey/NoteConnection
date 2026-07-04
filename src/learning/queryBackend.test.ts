@@ -156,6 +156,86 @@ describe('query backend factory', () => {
         expect(typeof result.trace?.vectorAcceleration?.embeddingDimension).toBe('number');
     });
 
+    test('local vector backend reuses a global index while enforcing scoped candidate scoring', async () => {
+        const backend = createGraphQueryBackend({
+            backend: 'local_vector',
+            localVectorAnnPrefilterEnabled: false,
+        });
+        const atoms: KnowledgeAtom[] = [
+            makeAtom('waterglass_atom', 'Water Glass', 'A water glass is a physical container for drinking water.', ['water', 'glass']),
+            makeAtom('physics_atom', 'Physics', 'Thermodynamics and mass-energy conservation.', ['physics']),
+            makeAtom('finance_atom', 'Finance', 'Equity risk premium and cash-flow discounting.', ['finance']),
+        ];
+        const activeEdges: RelationEdge[] = [];
+        await backend.query({
+            request: {
+                query: 'warmup',
+                topK: 3,
+            },
+            query: 'warmup',
+            queryTokens: ['warmup'],
+            asOf: '2026-01-01T00:00:00.000Z',
+            topK: 3,
+            atoms,
+            activeEdges,
+        });
+        expect(backend.getDiagnostics).toBeDefined();
+        const globalSignature = backend.getDiagnostics!().vectorIndex?.signature;
+
+        const scopedResult = await backend.query({
+            request: {
+                query: 'water glass',
+                topK: 3,
+            },
+            query: 'water glass',
+            queryTokens: ['water', 'glass'],
+            asOf: '2026-01-01T00:00:00.000Z',
+            topK: 3,
+            atoms: [atoms[0]],
+            indexAtoms: atoms,
+            activeEdges,
+        });
+
+        expect(backend.getDiagnostics!().vectorIndex?.signature).toBe(globalSignature);
+        expect(scopedResult.candidates.map((candidate) => candidate.atomId)).toEqual(['waterglass_atom']);
+    });
+
+    test('local vector backend falls back to scoped scoring when global ann candidates miss the scope', async () => {
+        const backend = createGraphQueryBackend({
+            backend: 'local_vector',
+            localVectorAccelerationAdapter: {
+                id: 'scope-miss-adapter-v1',
+                selectCandidates: () => ({
+                    used: true,
+                    candidateAtomIds: ['finance_atom'],
+                    mode: 'token_prefilter',
+                }),
+            },
+        });
+        const atoms: KnowledgeAtom[] = [
+            makeAtom('waterglass_atom', 'Water Glass', 'A water glass is a physical container for drinking water.', ['water', 'glass']),
+            makeAtom('finance_atom', 'Finance', 'Equity risk premium and cash-flow discounting.', ['finance']),
+        ];
+
+        const scopedResult = await backend.query({
+            request: {
+                query: 'water glass',
+                topK: 3,
+            },
+            query: 'water glass',
+            queryTokens: ['water', 'glass'],
+            asOf: '2026-01-01T00:00:00.000Z',
+            topK: 3,
+            atoms: [atoms[0]],
+            indexAtoms: atoms,
+            activeEdges: [],
+        });
+
+        expect(scopedResult.candidates.map((candidate) => candidate.atomId)).toEqual(['waterglass_atom']);
+        expect(scopedResult.trace?.retrievalModes).not.toContain('ann_prefilter');
+        expect(scopedResult.trace?.vectorAcceleration?.mode).toBe('full_scan');
+    });
+
     test('local vector backend matches Chinese semantic overlap without ASCII-only token loss', async () => {
         const backend = createGraphQueryBackend({ backend: 'local_vector' });
         const atoms: KnowledgeAtom[] = [

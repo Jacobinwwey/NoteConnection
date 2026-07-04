@@ -3,6 +3,57 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-07-04 Knowledge Workspace Scope Visibility, First-Query Blocking, and File-First Hit Interaction
+
+This slice addresses three user-visible Knowledge Workspace problems: the scope was not obvious or easy to switch inside the workspace window, the conversation area appeared unreachable after retrieval hits arrived, and the hit list exposed too many actions instead of first presenting clickable knowledge-point filenames.
+The frontend audit and runtime probe show that the source-level interaction contract is already implemented; the real blocker behind the “settings/status cannot load” symptom was the first HTTP scoped query rewriting the full SQLite graph snapshot after a read-only query, stretching the response into tens of seconds.
+
+What is now true in code:
+
+- `src/frontend/index.html` places `agent-scope-control--toolbar` directly in the Knowledge Workspace toolbar, so scope selection no longer depends only on the global folder selector or hidden request payload state.
+- `src/frontend/workspace_panes.js` renders knowledge hits as filename-first buttons; long-press, context-menu, and keyboard menu flows expose focus, learning-path, and other secondary actions.
+- Clicking a hit filename opens the right-side graph-focus pane, resolves source path / citation / matched-span provenance, renders Markdown, and highlights the matched passage inline.
+- `src/frontend/styles.css` plus `workspace_panes.js` keep the conversation stream, composer, knowledge hit list, and right-side panes in independent scroll regions, so retrieved hits should not push the prompt and response area out of reach.
+- `src/learning/queryBackend.ts` now lets the local vector backend reuse a global index while enforcing scoped candidate scoring; if global ANN candidates all miss the active scope, retrieval falls back to a scoped full scan.
+- `src/learning/KnowledgeLearningPlatform.ts` adds `warmQueryBackend()`, and `src/server.ts` schedules background warmup at startup and after `/api/knowledge/state`; this reduces cold-start noise when opening the Knowledge Workspace.
+- `queryKnowledge()` no longer calls `persistIfNeeded()` for a read-only query response. Mutating paths such as ingest, sessions, configuration, and real state changes still persist; reads no longer rewrite the large graph snapshot.
+
+Code-vs-plan reconciliation:
+
+| Requirement | Current implementation evidence | Progress call |
+|---|---|---|
+| The Knowledge Workspace must show and switch scope inside the workspace window by default | The toolbar scope control in `index.html` plus `src/agent_workspace.frontend.test.ts` regressions `shows a workspace scope selector and uses it for conversation requests` / `keeps scope visible...`. | Implemented |
+| The prompt and response area must remain reachable after hits are returned | The frontend regression `partitions conversation and knowledge hit scrolling so the composer remains reachable` pins the independent-scroll contract. | Implemented |
+| The hit surface should prioritize interactive knowledge-point filenames | `workspace_panes.js` renders file-first buttons through `renderKnowledgePoints`; `renders knowledge hits as file entries...` and `keeps file-first hit rendering stable...` pin the behavior. | Implemented |
+| The same knowledge point should not appear as duplicate primary list entries | Conversation grouping and matched-span provenance collapse same-source hits into one knowledge point and mark the exact matched passage in the right-side pane. | Implemented baseline; large-corpus duplicate-fragment pressure still needs continued testing |
+| RAG should use RSE and document augmentation to improve answer quality | Scoped retrieval now returns stable document/knowledge-point units, while source-authenticated fragment projection and graph context remain additive context for the answer and evidence pane. | Current baseline implemented |
+| The first query must not be blocked by persistence on the read path | `queryKnowledge()` removed read-only persistence; the runtime `water glass` scoped probe now returns first query in 330ms, second query in 5ms, with `Knowledge_Base/waterglass/water glass.md` as the matched file. | Fixed |
+
+Fresh verification captured on 2026-07-04:
+
+- `npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts --runInBand --testNamePattern "queryKnowledge does not persist"`
+- `npm.cmd exec -- jest src/learning/KnowledgeLearningPlatform.test.ts src/learning/queryBackend.test.ts src/routes/registry.contract.test.ts src/server.migration.test.ts --runInBand`
+- `npm.cmd exec -- jest src/agent_workspace.frontend.test.ts --runInBand`
+- `npm.cmd run build`
+- `npm.cmd run build:vite`
+- `node E:\Knowledge_project\knowledge-warmup-probe.js`
+
+Architecture progress against the earlier plan chain:
+
+| Earlier expectation | Current reading on 2026-07-04 | Progress call |
+|---|---|---|
+| Knowledge Workspace scope must become explicit task state inside the workspace window | The frontend now satisfies this. If a running Tauri window still does not show it, the first assumption should be a stale dev sidecar / WebView build rather than missing source behavior. | Implemented in the current build |
+| RAG hits should return by knowledge point and highlight matched fragments | The filename-first list plus right-side source-highlight pane now provides this baseline; the next pressure point is ranking and folding multiple matched spans inside one document. | Baseline implemented |
+| API status must let users judge availability and stability | Background hydration and query-backend warmup are now in the server lifecycle, and the frontend status strip updates after successful conversation calls. The next UI step is exposing warmup latency, backend id, and scope readiness more directly to non-developer users. | Backend base implemented; user-facing status can still improve |
+| The query chain must be robust and forward compatible | Global index reuse and scoped scoring are now separated, and read queries no longer write snapshots, avoiding SQLite large-snapshot stalls on HTTP. | Significantly improved |
+| Architecture pressure should continue to fall | `KnowledgeLearningPlatform.ts` still owns hydration, retrieval, store snapshots, and query context assembly. This slice narrows the read/write boundary first; future work should extract persistence and retrieval-context owners. | Improved, still needs owner reduction |
+
+Next movement:
+
+- Promote the API status panel from coarse success/failure to readable `scope readiness`, backend warmup, recent latency, cache hit, and index-size state instead of hiding most diagnostics behind developer details.
+- Repeat `water glass`-style title-like queries on representative large corpora to confirm scoped ANN fallback, document augmentation, and grouped hit rendering remain stable.
+- Continue splitting snapshot persistence, query context assembly, and retrieval telemetry out of `KnowledgeLearningPlatform.ts` into narrower owners so read/write boundaries stay enforceable.
+
 ## 2026-07-03 Mermaid Fallback, Future Path Runtime Reuse, and Graph-Aware Public Answers
 
 This slice closes three concrete gaps that remained after the hosted interaction parity work:
