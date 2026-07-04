@@ -3467,13 +3467,14 @@
         });
     }
 
-    function createKnowledgePointGraphActionButton(actionKind, label, ariaLabel, disabled, onClick) {
+    function createKnowledgePointGraphActionButton(actionKind, capabilityActionId, label, ariaLabel, disabled, onClick) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'agent-knowledge-action-button';
         button.textContent = label;
         button.disabled = disabled === true;
         button.setAttribute('data-agent-knowledge-action', actionKind);
+        button.setAttribute('data-capability-action-id', capabilityActionId);
         button.setAttribute('aria-label', ariaLabel);
         button.addEventListener('click', function (event) {
             event.preventDefault();
@@ -3484,6 +3485,52 @@
             onClick();
         });
         return button;
+    }
+
+    function buildKnowledgePointGraphActionSpecs(item, handlers, fileName, actionAtomId) {
+        return [
+            {
+                actionKind: 'learning-path',
+                capabilityActionId: 'open_learning_path',
+                label: translate('agentWorkspace.knowledge.learningPathAction', 'Learning Path'),
+                ariaLabel: translate('agentWorkspace.knowledge.learningPathActionLabel', 'Show learning path for {file}', {
+                    file: fileName,
+                }),
+                disabled: !actionAtomId,
+                run: () => openLearningPathForKnowledgePoint(item, handlers),
+            },
+            {
+                actionKind: 'related-focus',
+                capabilityActionId: 'open_focus_mode',
+                label: translate('agentWorkspace.knowledge.relatedFocusAction', 'Related Focus'),
+                ariaLabel: translate('agentWorkspace.knowledge.relatedFocusActionLabel', 'Show citation focus for {file}', {
+                    file: fileName,
+                }),
+                disabled: false,
+                run: () => openRelatedFocusForKnowledgePoint(item),
+            },
+        ];
+    }
+
+    function createKnowledgePointGraphActionButtonFromSpec(spec) {
+        return createKnowledgePointGraphActionButton(
+            spec.actionKind,
+            spec.capabilityActionId,
+            spec.label,
+            spec.ariaLabel,
+            spec.disabled,
+            spec.run
+        );
+    }
+
+    function createKnowledgePointActionStrip(actionSpecs) {
+        const actions = document.createElement('div');
+        actions.className = 'agent-knowledge-actions';
+        actions.setAttribute('data-agent-knowledge-actions', 'true');
+        actionSpecs.forEach((spec) => {
+            actions.appendChild(createKnowledgePointGraphActionButtonFromSpec(spec));
+        });
+        return actions;
     }
 
     function syncKnowledgePointActionMenuExpanded(fileButton, menuButton, expanded) {
@@ -3654,7 +3701,7 @@
         return button;
     }
 
-    function createKnowledgePointActionMenu(item, handlers, fileName, actionAtomId) {
+    function createKnowledgePointActionMenu(actionSpecs) {
         const menu = document.createElement('div');
         menu.className = 'agent-knowledge-action-menu';
         menu.setAttribute('data-agent-knowledge-action-menu', 'true');
@@ -3664,24 +3711,9 @@
             translate('agentWorkspace.knowledge.actionsMenu', 'Knowledge point actions')
         );
         menu.hidden = true;
-        menu.appendChild(createKnowledgePointGraphActionButton(
-            'learning-path',
-            translate('agentWorkspace.knowledge.learningPathAction', 'Learning Path'),
-            translate('agentWorkspace.knowledge.learningPathActionLabel', 'Show learning path for {file}', {
-                file: fileName,
-            }),
-            !actionAtomId,
-            () => openLearningPathForKnowledgePoint(item, handlers)
-        ));
-        menu.appendChild(createKnowledgePointGraphActionButton(
-            'related-focus',
-            translate('agentWorkspace.knowledge.relatedFocusAction', 'Related Focus'),
-            translate('agentWorkspace.knowledge.relatedFocusActionLabel', 'Show citation focus for {file}', {
-                file: fileName,
-            }),
-            false,
-            () => openRelatedFocusForKnowledgePoint(item)
-        ));
+        actionSpecs.forEach((spec) => {
+            menu.appendChild(createKnowledgePointGraphActionButtonFromSpec(spec));
+        });
         menu.querySelectorAll('button').forEach((button) => {
             button.setAttribute('role', 'menuitem');
         });
@@ -8866,19 +8898,6 @@
         return wrapper;
     }
 
-    async function renderStructuredAnswerMarkdownSection(container, markdownRuntime, markdown) {
-        const normalizedMarkdown = String(markdown || '').trim();
-        if (!normalizedMarkdown) {
-            return false;
-        }
-        if (markdownRuntime && typeof markdownRuntime.renderMarkdownInto === 'function') {
-            await markdownRuntime.renderMarkdownInto(container, normalizedMarkdown);
-        } else {
-            container.textContent = normalizedMarkdown;
-        }
-        return true;
-    }
-
     async function createStructuredAnswerBlockNode(block, markdownRuntime) {
         const wrapper = document.createElement('div');
         wrapper.className = 'agent-chat-inline-card agent-chat-structured-answer-card';
@@ -8898,37 +8917,6 @@
             summary.textContent = directAnswer;
             summary.setAttribute('data-structured-answer-section', 'directAnswer');
             wrapper.appendChild(summary);
-        }
-
-        const sections = [
-            {
-                key: 'overviewMarkdown',
-                className: 'agent-chat-structured-answer-overview',
-            },
-            {
-                key: 'explanationMarkdown',
-                className: 'agent-chat-structured-answer-explanation',
-            },
-            {
-                key: 'evidenceMarkdown',
-                className: 'agent-chat-structured-answer-evidence',
-            },
-            {
-                key: 'nextActionsMarkdown',
-                className: 'agent-chat-structured-answer-next-actions',
-            },
-        ];
-
-        for (const section of sections) {
-            const markdown = String(block && block[section.key] || '').trim();
-            if (!markdown) {
-                continue;
-            }
-            const sectionNode = document.createElement('div');
-            sectionNode.className = `agent-chat-markdown agent-chat-structured-answer-section ${section.className}`;
-            sectionNode.setAttribute('data-structured-answer-section', section.key);
-            await renderStructuredAnswerMarkdownSection(sectionNode, markdownRuntime, markdown);
-            wrapper.appendChild(sectionNode);
         }
 
         return wrapper;
@@ -9874,7 +9862,10 @@
                 const menuButton = createKnowledgePointActionMenuButton(fileName);
                 menuButton.id = `${fileButtonId}-actions`;
                 header.appendChild(menuButton);
-                const actionMenu = createKnowledgePointActionMenu(item, handlers, fileName, actionAtomId);
+                const actionSpecs = buildKnowledgePointGraphActionSpecs(item, handlers, fileName, actionAtomId);
+                const actionStrip = createKnowledgePointActionStrip(actionSpecs);
+                card.appendChild(actionStrip);
+                const actionMenu = createKnowledgePointActionMenu(actionSpecs);
                 const actionMenuId = `${fileButtonId}-menu`;
                 actionMenu.id = actionMenuId;
                 actionMenu.setAttribute('aria-labelledby', fileButtonId);

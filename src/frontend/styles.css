@@ -1567,11 +1567,12 @@ body.agent-workspace-open .agent-workspace-drawer {
     auto
     auto
     auto
-    minmax(160px, 1fr)
-    minmax(96px, 0.45fr)
+    minmax(128px, 0.92fr)
+    minmax(128px, 0.62fr)
     auto
     auto
     auto;
+  max-height: calc(100vh - 142px);
   padding: 16px;
   gap: 12px;
   overflow-x: hidden;
@@ -2125,6 +2126,7 @@ body.agent-workspace-open .agent-workspace-drawer {
   padding-right: 6px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .agent-chat-input-field textarea {
@@ -2274,6 +2276,42 @@ body.agent-workspace-open .agent-workspace-drawer {
   font-size: 0.76rem;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+.agent-knowledge-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0 8px 8px;
+}
+
+.agent-knowledge-actions .agent-knowledge-action-button {
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.52);
+  color: #c7e8ff;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 8px 10px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.agent-knowledge-actions .agent-knowledge-action-button:hover,
+.agent-knowledge-actions .agent-knowledge-action-button:focus-visible {
+  background: rgba(14, 116, 144, 0.2);
+  border-color: rgba(125, 211, 252, 0.38);
+  outline: 2px solid rgba(125, 211, 252, 0.28);
+  outline-offset: 1px;
+}
+
+.agent-knowledge-actions .agent-knowledge-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
 }
 
 .agent-knowledge-action-menu {
@@ -3555,6 +3593,13 @@ body[data-agent-workspace-promotion="learning-path"] #agent-learning-path-pane {
 @media (max-width: 1180px) {
   .agent-workspace-shell {
     grid-template-columns: 1fr;
+    align-content: start;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .agent-chat-pane {
+    max-height: none;
   }
 
   .agent-side-work-area {

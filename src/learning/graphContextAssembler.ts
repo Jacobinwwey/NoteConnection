@@ -653,6 +653,50 @@ function rankRelationEdges(edges: RelationEdge[]): RelationEdge[] {
         ));
 }
 
+function graphWindowRelationPriority(relationKind: RelationKind | undefined): number {
+    switch (relationKind) {
+        case 'prerequisite':
+            return 90;
+        case 'sequence':
+            return 82;
+        case 'application':
+            return 74;
+        case 'causal':
+            return 68;
+        case 'contrast':
+            return 58;
+        case 'analogy':
+            return 52;
+        case 'reference':
+            return 18;
+        default:
+            return 0;
+    }
+}
+
+function isBibliographyLikeGraphWindowTitle(title: string): boolean {
+    const normalized = normalizeGraphComparableTitle(title);
+    if (!normalized) {
+        return false;
+    }
+    return normalized === 'reference'
+        || normalized === 'references'
+        || normalized === 'bibliography'
+        || normalized === 'works cited'
+        || normalized === 'citations'
+        || normalized.includes('参考文献')
+        || normalized.includes('参考资料')
+        || normalized.includes('引用文献')
+        || normalized.includes('文献引用');
+}
+
+function scoreGraphWindowCandidate(edge: RelationEdge, title: string): number {
+    const confidenceScore = Math.max(0, Math.min(1, Number(edge.confidence || 0))) * 10;
+    const provenanceScore = edge.provenance === 'fact' ? 2 : 0;
+    const bibliographyPenalty = isBibliographyLikeGraphWindowTitle(title) ? 1000 : 0;
+    return graphWindowRelationPriority(edge.relationKind) + confidenceScore + provenanceScore - bibliographyPenalty;
+}
+
 async function buildWindowNodes(
     opsStore: KnowledgeGraphOpsAdapter,
     edges: RelationEdge[],
@@ -664,12 +708,13 @@ async function buildWindowNodes(
     missingIds: Set<string>
 ): Promise<AgentConversationGraphWindowNode[]> {
     const rankedEdges = rankRelationEdges(edges);
-    const nodes: AgentConversationGraphWindowNode[] = [];
+    const candidates: Array<{
+        node: AgentConversationGraphWindowNode;
+        score: number;
+        confidence: number;
+    }> = [];
     const seenNodeKeys = new Set<string>();
     for (const edge of rankedEdges) {
-        if (nodes.length >= limit) {
-            break;
-        }
         const relatedAtomId = direction === 'predecessor'
             ? String(edge.sourceAtomId || '').trim()
             : String(edge.targetAtomId || '').trim();
@@ -684,23 +729,38 @@ async function buildWindowNodes(
         if (isAnchorEquivalentNode(relatedAtomId, title, exclusion)) {
             continue;
         }
+        if (isBibliographyLikeGraphWindowTitle(title)) {
+            continue;
+        }
         const nodeKey = relatedAtomId + '|' + normalizeGraphComparableTitle(title);
         if (seenNodeKeys.has(nodeKey)) {
             continue;
         }
         seenNodeKeys.add(nodeKey);
         const metrics = await resolveNodeMetrics(opsStore, relatedAtomId, metricsCache);
-        nodes.push({
-            atomId: relatedAtomId,
-            title,
-            relationKind: edge.relationKind,
-            confidence: Number(Number(edge.confidence || 0).toFixed(4)),
-            inDegree: metrics?.inDegree,
-            outDegree: metrics?.outDegree,
-            centrality: metrics?.centrality,
+        const confidence = Number(Number(edge.confidence || 0).toFixed(4));
+        candidates.push({
+            score: scoreGraphWindowCandidate(edge, title),
+            confidence,
+            node: {
+                atomId: relatedAtomId,
+                title,
+                relationKind: edge.relationKind,
+                confidence,
+                inDegree: metrics?.inDegree,
+                outDegree: metrics?.outDegree,
+                centrality: metrics?.centrality,
+            },
         });
     }
-    return nodes;
+    return candidates
+        .sort((left, right) => (
+            right.score - left.score
+            || right.confidence - left.confidence
+            || left.node.title.localeCompare(right.node.title)
+        ))
+        .slice(0, limit)
+        .map((candidate) => candidate.node);
 }
 
 async function buildConnectionPaths(

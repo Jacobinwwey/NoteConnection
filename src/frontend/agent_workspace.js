@@ -516,6 +516,9 @@
     // Keep this exported diagnostics field for compatibility, but no action is executed via legacy fallback anymore.
     const LEGACY_ACTION_FALLBACK_HANDLERS = Object.freeze({});
     const learningPathInflightRequests = new Map();
+    const learningPathPreviewCache = new Map();
+    const LEARNING_PATH_PREVIEW_CACHE_LIMIT = 16;
+    const LEARNING_PATH_PREVIEW_CACHE_TTL_MS = 2 * 60 * 1000;
 
     async function requestJson(endpoint, init, options) {
         const requestOptions = options && typeof options === 'object'
@@ -4375,12 +4378,63 @@
         });
     }
 
+    function pruneLearningPathPreviewCache(now) {
+        const timestamp = Number.isFinite(Number(now)) ? Number(now) : Date.now();
+        Array.from(learningPathPreviewCache.entries()).forEach(([requestKey, entry]) => {
+            const storedAt = Number(entry && entry.storedAt);
+            if (!Number.isFinite(storedAt) || (timestamp - storedAt) > LEARNING_PATH_PREVIEW_CACHE_TTL_MS) {
+                learningPathPreviewCache.delete(requestKey);
+            }
+        });
+        while (learningPathPreviewCache.size > LEARNING_PATH_PREVIEW_CACHE_LIMIT) {
+            const oldestKey = learningPathPreviewCache.keys().next().value;
+            if (!oldestKey) {
+                break;
+            }
+            learningPathPreviewCache.delete(oldestKey);
+        }
+    }
+
+    function readLearningPathPreviewCache(requestKey) {
+        if (!requestKey) {
+            return null;
+        }
+        pruneLearningPathPreviewCache(Date.now());
+        const cached = learningPathPreviewCache.get(requestKey);
+        if (!cached) {
+            return null;
+        }
+        window.__NC_LAST_AGENT_LEARNING_PATH_REQUEST_DEDUPE = {
+            requestKey,
+            reusedInflight: false,
+            reusedCache: true,
+        };
+        return cached.result;
+    }
+
+    function writeLearningPathPreviewCache(requestKey, result) {
+        if (!requestKey) {
+            return;
+        }
+        learningPathPreviewCache.delete(requestKey);
+        learningPathPreviewCache.set(requestKey, {
+            storedAt: Date.now(),
+            result,
+        });
+        pruneLearningPathPreviewCache(Date.now());
+    }
+
     function requestLearningPath(requestPayload) {
         const requestKey = buildLearningPathRequestKey(requestPayload);
+        const cachedResult = readLearningPathPreviewCache(requestKey);
+        if (cachedResult) {
+            return Promise.resolve(cachedResult);
+        }
         if (requestKey && learningPathInflightRequests.has(requestKey)) {
             window.__NC_LAST_AGENT_LEARNING_PATH_REQUEST_DEDUPE = {
                 requestKey,
                 reusedInflight: true,
+                reusedCache: false,
             };
             return learningPathInflightRequests.get(requestKey);
         }
@@ -4390,6 +4444,9 @@
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(requestPayload),
+        }).then((result) => {
+            writeLearningPathPreviewCache(requestKey, result);
+            return result;
         }).finally(() => {
             if (requestKey) {
                 learningPathInflightRequests.delete(requestKey);
@@ -4401,8 +4458,65 @@
         window.__NC_LAST_AGENT_LEARNING_PATH_REQUEST_DEDUPE = {
             requestKey,
             reusedInflight: false,
+            reusedCache: false,
         };
         return requestPromise;
+    }
+
+    function scheduleLearningPathPrewarm(item, capability) {
+        const run = function () {
+            try {
+                const requestPayload = resolveLearningPathRequestPayload(item, capability);
+                const requestKey = buildLearningPathRequestKey(requestPayload);
+                if (!requestKey || learningPathInflightRequests.has(requestKey) || readLearningPathPreviewCache(requestKey)) {
+                    return;
+                }
+                window.__NC_LAST_AGENT_LEARNING_PATH_PREWARM = {
+                    requestKey,
+                    targetAtomIds: Array.isArray(requestPayload.focusAtomIds) ? requestPayload.focusAtomIds.slice() : [],
+                    status: 'started',
+                };
+                requestLearningPath(requestPayload)
+                    .then(() => {
+                        window.__NC_LAST_AGENT_LEARNING_PATH_PREWARM = {
+                            requestKey,
+                            targetAtomIds: Array.isArray(requestPayload.focusAtomIds) ? requestPayload.focusAtomIds.slice() : [],
+                            status: 'ready',
+                        };
+                    })
+                    .catch((error) => {
+                        window.__NC_LAST_AGENT_LEARNING_PATH_PREWARM = {
+                            requestKey,
+                            targetAtomIds: Array.isArray(requestPayload.focusAtomIds) ? requestPayload.focusAtomIds.slice() : [],
+                            status: 'failed',
+                            error: String(error && error.message || error || 'unknown_error').slice(0, 180),
+                        };
+                    });
+            } catch (error) {
+                window.__NC_LAST_AGENT_LEARNING_PATH_PREWARM = {
+                    requestKey: '',
+                    targetAtomIds: [],
+                    status: 'failed',
+                    error: String(error && error.message || error || 'unknown_error').slice(0, 180),
+                };
+            }
+        };
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(run, { timeout: 1200 });
+            return;
+        }
+        window.setTimeout(run, 0);
+    }
+
+    function prewarmFirstLearningPath(knowledgePoints) {
+        if (!Array.isArray(knowledgePoints) || knowledgePoints.length <= 0) {
+            return;
+        }
+        const candidate = knowledgePoints.find((point) => Boolean(resolveCapabilityTargetAtomId(point, null)));
+        if (!candidate) {
+            return;
+        }
+        scheduleLearningPathPrewarm(candidate, null);
     }
 
     async function openLearningPath(item, capability) {
@@ -4767,6 +4881,20 @@
         const requestPayload = requestBuilder(item, capability);
         if (operationId === 'build_learning_path') {
             openPendingLearningPathPane(item, capability, requestPayload);
+            try {
+                const result = await requestLearningPath(requestPayload);
+                presentKnowledgeOperationResult(resultPresentation, {
+                    item,
+                    capability,
+                    result,
+                    responseEnvelope: null,
+                    requestPayload,
+                    executionContext: executionContext || null,
+                });
+            } catch (error) {
+                presentLearningPathFailure(item, capability, error);
+            }
+            return;
         }
 
         try {
@@ -4912,8 +5040,9 @@
                     || summary.generatedAt
                     || ''
                 ).trim();
+                const knowledgePoints = Array.isArray(result && result.knowledgePoints) ? result.knowledgePoints : [];
                 controller.renderKnowledgePoints(
-                    Array.isArray(result && result.knowledgePoints) ? result.knowledgePoints : [],
+                    knowledgePoints,
                     {
                         resultSetKey: resultSetKey || undefined,
                         onCapability: function (item, capability) {
@@ -4921,6 +5050,7 @@
                         },
                     }
                 );
+                prewarmFirstLearningPath(knowledgePoints);
             }
         } catch (error) {
             updateConversationApiStatus({

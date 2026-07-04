@@ -4111,7 +4111,18 @@ describe('workspace panes controller', () => {
         expect(helpButton?.getAttribute('aria-expanded')).toBe('false');
         expect(helpPopover?.hasAttribute('hidden')).toBe(true);
 
-        expect(document.querySelectorAll('.agent-knowledge-actions button')).toHaveLength(0);
+        const compatibilityButtons = Array.from(
+            document.querySelectorAll('.agent-knowledge-actions button')
+        ) as HTMLButtonElement[];
+        expect(compatibilityButtons.map((node) => node.textContent)).toEqual(['Learning Path', 'Related Focus']);
+        expect(compatibilityButtons.map((node) => node.getAttribute('data-agent-knowledge-action'))).toEqual([
+            'learning-path',
+            'related-focus',
+        ]);
+        expect(compatibilityButtons.map((node) => node.getAttribute('data-capability-action-id'))).toEqual([
+            'open_learning_path',
+            'open_focus_mode',
+        ]);
         const fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
         expect(fileButton).not.toBeNull();
         expect(fileButton?.getAttribute('aria-haspopup')).toBe('menu');
@@ -4191,18 +4202,23 @@ describe('workspace panes controller', () => {
         const chatPaneRule = styles.match(/\.agent-chat-pane\s*\{[^}]*\}/)?.[0] || '';
         const chatMessagesRule = styles.match(/\.agent-chat-messages\s*\{[^}]*\}/)?.[0] || '';
         const knowledgePointsRule = styles.match(/\.agent-knowledge-points\s*\{[^}]*\}/)?.[0] || '';
+        const responsiveShellRule = styles.match(/@media \(max-width: 1180px\)\s*\{[\s\S]*?\.agent-workspace-shell\s*\{[^}]*\}/)?.[0] || '';
 
         expect(chatPaneRule).toContain('overflow-x: hidden');
         expect(chatPaneRule).toContain('overflow-y: auto');
         expect(chatPaneRule).not.toContain('overflow: hidden');
         expect(chatPaneRule).toContain('display: grid');
         expect(chatPaneRule).toContain('grid-template-rows:');
-        expect(chatPaneRule).toContain('minmax(96px, 0.45fr)');
+        expect(chatPaneRule).toContain('minmax(128px, 0.62fr)');
+        expect(chatPaneRule).toContain('max-height: calc(100vh - 142px)');
         expect(chatMessagesRule).toContain('overflow-y: auto');
         expect(chatMessagesRule).toContain('min-height: 0');
         expect(knowledgePointsRule).toContain('overflow-y: auto');
         expect(knowledgePointsRule).toContain('min-height: 0');
+        expect(knowledgePointsRule).toContain('scrollbar-gutter: stable');
         expect(knowledgePointsRule).not.toContain('max-height: clamp');
+        expect(responsiveShellRule).toContain('overflow-y: auto');
+        expect(responsiveShellRule).toContain('overflow-x: hidden');
     });
 
     test('keeps the newest conversation turn visible after appending chat content', async () => {
@@ -4996,7 +5012,17 @@ describe('workspace panes controller', () => {
         const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
         expect(highlighted.length).toBeGreaterThan(0);
         expect(String(highlighted[0]?.textContent || '')).toContain('A water glass is a physical system');
-        expect(refreshedCard?.querySelectorAll('.agent-knowledge-actions button')).toHaveLength(0);
+        const compatibilityButtons = Array.from(
+            refreshedCard?.querySelectorAll('.agent-knowledge-actions button') || []
+        );
+        expect(compatibilityButtons.map((button) => button.getAttribute('data-agent-knowledge-action'))).toEqual([
+            'learning-path',
+            'related-focus',
+        ]);
+        expect(compatibilityButtons.map((button) => button.getAttribute('data-capability-action-id'))).toEqual([
+            'open_learning_path',
+            'open_focus_mode',
+        ]);
         const actionMenu = refreshedCard?.querySelector('[data-agent-knowledge-action-menu="true"]') as HTMLElement | null;
         expect(actionMenu?.hidden).toBe(true);
         const actionButtons = Array.from(actionMenu?.querySelectorAll('button') || []);
@@ -5898,7 +5924,13 @@ describe('workspace panes controller', () => {
             onCapability: jest.fn(),
         });
 
-        expect(document.querySelectorAll('.agent-knowledge-actions button')).toHaveLength(0);
+        const compatibilityButtons = Array.from(
+            document.querySelectorAll('.agent-knowledge-actions button')
+        );
+        expect(compatibilityButtons.map((button) => button.getAttribute('data-capability-action-id'))).toEqual([
+            'open_learning_path',
+            'open_focus_mode',
+        ]);
         const actionButtons = Array.from(
             document.querySelectorAll('[data-agent-knowledge-action-menu="true"] button')
         );
@@ -5943,8 +5975,12 @@ describe('workspace panes controller', () => {
         const cards = Array.from(document.querySelectorAll('.agent-knowledge-card'));
         expect(cards.length).toBe(2);
 
-        expect(cards[0]?.querySelectorAll('.agent-knowledge-actions button')).toHaveLength(0);
-        expect(cards[1]?.querySelectorAll('.agent-knowledge-actions button')).toHaveLength(0);
+        expect(Array.from(cards[0]?.querySelectorAll('.agent-knowledge-actions button') || []).map(
+            (button) => button.getAttribute('data-agent-knowledge-action')
+        )).toEqual(['learning-path', 'related-focus']);
+        expect(Array.from(cards[1]?.querySelectorAll('.agent-knowledge-actions button') || []).map(
+            (button) => button.getAttribute('data-agent-knowledge-action')
+        )).toEqual(['learning-path', 'related-focus']);
         const firstCardButtons = cards[0]?.querySelectorAll('[data-agent-knowledge-action-menu="true"] button') || [];
         const secondCardButtons = cards[1]?.querySelectorAll('[data-agent-knowledge-action-menu="true"] button') || [];
         expect(Array.from(firstCardButtons).map((button) => button.getAttribute('data-agent-knowledge-action'))).toEqual([
@@ -6877,16 +6913,20 @@ describe('agent workspace learning-path integration', () => {
         expect(assistantNode?.querySelector('.agent-chat-inline-card-title')?.textContent).toBe('Grounded Answer');
         expect(String(assistantNode?.textContent || '')).toContain('Scoped Answer');
         expect(assistantNode?.querySelector('[data-structured-answer-section="directAnswer"]')).not.toBeNull();
-        expect(assistantNode?.querySelector('[data-structured-answer-section="overviewMarkdown"]')).not.toBeNull();
-        expect(assistantNode?.querySelector('[data-structured-answer-section="explanationMarkdown"]')).not.toBeNull();
-        expect(assistantNode?.querySelector('[data-structured-answer-section="evidenceMarkdown"]')).not.toBeNull();
-        expect(String(assistantNode?.textContent || '')).toContain('Answer Context');
-        expect(String(assistantNode?.textContent || '')).toContain('Evidence Summary');
+        expect(assistantNode?.querySelector('[data-structured-answer-section="overviewMarkdown"]')).toBeNull();
+        expect(assistantNode?.querySelector('[data-structured-answer-section="explanationMarkdown"]')).toBeNull();
+        expect(assistantNode?.querySelector('[data-structured-answer-section="evidenceMarkdown"]')).toBeNull();
+        expect(String(assistantNode?.textContent || '')).not.toContain('Answer Context');
+        expect(String(assistantNode?.textContent || '')).not.toContain('Evidence Summary');
         expect(String(assistantNode?.textContent || '')).not.toContain('Knowledge Run');
         expect(String(assistantNode?.textContent || '')).not.toContain('Inspect Run');
-        expect(renderMathInElement).toHaveBeenCalled();
-        expect((window as any).mermaid.initialize).toHaveBeenCalled();
-        expect(mermaidRender).toHaveBeenCalled();
+        expect(renderMathInElement).not.toHaveBeenCalled();
+        expect((window as any).mermaid.initialize).not.toHaveBeenCalled();
+        expect(mermaidRender).not.toHaveBeenCalled();
+        expect((window as any).NoteConnectionAgentWorkspace.getLastConversationResult()?.assistantBlocks?.[0]).toEqual(expect.objectContaining({
+            overviewMarkdown: expect.stringContaining('## Answer Context'),
+            evidenceMarkdown: expect.stringContaining('## Evidence Summary'),
+        }));
         expect((window as any).NoteConnectionAgentWorkspace.getLastConversationResult()).toEqual(
             expect.objectContaining({
                 answer: 'Scoped Answer',
@@ -7475,6 +7515,97 @@ describe('agent workspace learning-path integration', () => {
         expect(statusText).toContain('Scope: financial');
         expect(statusText).toContain('Recovered: Knowledge_Base/waterglass/water glass.md');
         expect(statusText).toMatch(/\d+ ms/);
+    });
+
+    test('prewarms the first matched Learning Path and reuses the cached preview on first click', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+        installHostedFuturePathRuntime(window);
+        let pathCallCount = 0;
+        fetchMock.mockImplementation(async (url: string) => {
+            if (url === '/api/knowledge/path') {
+                pathCallCount += 1;
+                return createJsonResponse({
+                    success: true,
+                    result: {
+                        masteryPaths: [
+                            { atomId: 'atom_status', title: 'Water Glass' },
+                        ],
+                        recommendedActions: [],
+                    },
+                });
+            }
+            return createSseResponse([
+                {
+                    event: 'turn_completed',
+                    payload: {
+                        type: 'turn_completed',
+                        turnId: 'turn_prewarm_path',
+                        emittedAt: '2026-04-13T00:00:00.120Z',
+                        result: {
+                            assistantMessage: 'A water glass is a physical system.',
+                            answer: 'A water glass is a physical system.',
+                            citations: [],
+                            recalledMemories: [],
+                            memoryActions: [],
+                            knowledgePoints: [
+                                {
+                                    atomId: 'atom_status',
+                                    documentId: 'doc_status',
+                                    title: 'Water Glass',
+                                    summary: 'A water glass is a physical system.',
+                                    evidenceSnippet: 'A water glass is a physical system.',
+                                    matchCount: 1,
+                                    matchedSpans: [],
+                                    score: 0.9,
+                                    capabilities: [],
+                                },
+                            ],
+                            summary: {
+                                generatedAt: '2026-04-13T00:00:00.120Z',
+                                topK: 6,
+                                returnedKnowledgePoints: 1,
+                                returnedCitations: 0,
+                            },
+                        },
+                    },
+                },
+            ]);
+        });
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'what is water glass?';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        await Promise.resolve();
+
+        expect(pathCallCount).toBe(1);
+        expect((window as any).__NC_LAST_AGENT_LEARNING_PATH_PREWARM).toEqual(expect.objectContaining({
+            status: 'ready',
+            targetAtomIds: ['atom_status'],
+        }));
+
+        const learningPathButton = document.querySelector(
+            '.agent-knowledge-actions [data-agent-knowledge-action="learning-path"]'
+        ) as HTMLButtonElement | null;
+        expect(learningPathButton).not.toBeNull();
+        learningPathButton?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        expect(pathCallCount).toBe(1);
+        expect((window as any).__NC_LAST_AGENT_LEARNING_PATH_REQUEST_DEDUPE).toEqual(expect.objectContaining({
+            reusedCache: true,
+            reusedInflight: false,
+        }));
+        expect(document.getElementById('agent-learning-path-pane')?.getAttribute('data-open')).toBe('true');
+        expect(document.querySelector('[data-agent-godot-future-path-shell="true"]')).not.toBeNull();
     });
 
     test('falls back to sync conversation request when streamed turn payload is incomplete', async () => {
