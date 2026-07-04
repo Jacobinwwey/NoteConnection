@@ -8714,6 +8714,29 @@
         return runtime;
     }
 
+    function revealLatestConversationMessage(container, node) {
+        if (!container || !node) {
+            return;
+        }
+        const reveal = function () {
+            if (typeof container.scrollHeight === 'number') {
+                container.scrollTop = container.scrollHeight;
+            }
+            if (typeof node.scrollIntoView === 'function') {
+                try {
+                    node.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                } catch (_error) {
+                    node.scrollIntoView();
+                }
+            }
+        };
+        if (window && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(reveal);
+            return;
+        }
+        window.setTimeout(reveal, 0);
+    }
+
     function createHtmlArtifactPreview(block) {
         const wrapper = document.createElement('div');
         wrapper.className = 'agent-chat-inline-artifact';
@@ -9402,6 +9425,7 @@
                 }
             }
             container.appendChild(node);
+            revealLatestConversationMessage(container, node);
             return node;
         },
         appendConversationBlocks: async function (entry) {
@@ -9421,7 +9445,9 @@
                 })
             );
             container.appendChild(node);
+            revealLatestConversationMessage(container, node);
             await renderConversationBlocksIntoNode(node, entry || {});
+            revealLatestConversationMessage(container, node);
             return node;
         },
         appendStudySessionCard: function (payload) {
@@ -9739,7 +9765,6 @@
                 card.className = 'agent-knowledge-card';
                 const fileName = resolveKnowledgePointFileName(item);
                 card.setAttribute('data-agent-knowledge-card', 'true');
-                const sourcePath = resolveKnowledgePointSourcePath(item);
                 const actionAtomId = resolveKnowledgePointActionAtomId(item);
                 const header = document.createElement('div');
                 header.className = 'agent-knowledge-card-header';
@@ -9779,12 +9804,6 @@
                     }
                 });
 
-                if (sourcePath) {
-                    const pathNode = document.createElement('div');
-                    pathNode.className = 'agent-knowledge-source-path';
-                    pathNode.textContent = sourcePath;
-                    card.appendChild(pathNode);
-                }
                 container.appendChild(card);
             });
         },

@@ -10366,6 +10366,66 @@ function replayAgentConversationTurnEvents(
     }
 }
 
+function buildAgentConversationInitialTurnEvents(params: {
+    turnId: string;
+    emittedAt: string;
+    requestPayload: AgentConversationRequest;
+    topK: number;
+}): AgentConversationTurnEvent[] {
+    return [
+        {
+            type: 'turn_started',
+            turnId: params.turnId,
+            emittedAt: params.emittedAt,
+            request: {
+                userId: params.requestPayload.userId,
+                topK: params.topK,
+            },
+        },
+        {
+            type: 'capability_planned',
+            turnId: params.turnId,
+            emittedAt: params.emittedAt,
+            capabilities: [
+                'query_local_knowledge',
+                'compose_assistant_message',
+                'emit_typed_capabilities',
+            ],
+        },
+        {
+            type: 'capability_progress',
+            turnId: params.turnId,
+            emittedAt: params.emittedAt,
+            stage: 'query_local_knowledge',
+            progressPct: 35,
+        },
+    ];
+}
+
+function emitAgentConversationInitialTurnEvents(params: {
+    record: AgentConversationTurnCacheRecord;
+    requestPayload: AgentConversationRequest;
+    topK: number;
+    emittedAt: string;
+    writeLiveEvent?: (event: AgentConversationTurnEvent) => void;
+}): void {
+    if (params.record.events.some((event) => event.type === 'turn_started')) {
+        return;
+    }
+    const events = buildAgentConversationInitialTurnEvents({
+        turnId: params.record.turnId,
+        emittedAt: params.emittedAt,
+        requestPayload: params.requestPayload,
+        topK: params.topK,
+    });
+    events.forEach((event) => {
+        appendAgentConversationTurnCacheEvent(params.record, event);
+        if (params.writeLiveEvent) {
+            params.writeLiveEvent(event);
+        }
+    });
+}
+
 async function ensureAgentConversationTurnExecution(
     record: AgentConversationTurnCacheRecord,
     requestPayload: AgentConversationRequest,
@@ -10394,31 +10454,12 @@ async function ensureAgentConversationTurnExecution(
 
     const execution = (async () => {
         AGENT_CONVERSATION_TURN_CACHE_COUNTERS.executionStartCount += 1;
-        emit({
-            type: 'turn_started',
-            turnId: record.turnId,
+        emitAgentConversationInitialTurnEvents({
+            record,
+            requestPayload,
+            topK,
             emittedAt: nowIso(),
-            request: {
-                userId: requestPayload.userId,
-                topK,
-            },
-        });
-        emit({
-            type: 'capability_planned',
-            turnId: record.turnId,
-            emittedAt: nowIso(),
-            capabilities: [
-                'query_local_knowledge',
-                'compose_assistant_message',
-                'emit_typed_capabilities',
-            ],
-        });
-        emit({
-            type: 'capability_progress',
-            turnId: record.turnId,
-            emittedAt: nowIso(),
-            stage: 'query_local_knowledge',
-            progressPct: 35,
+            writeLiveEvent: emitLiveEvent,
         });
 
         try {
@@ -14876,6 +14917,16 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     }
 
                     if (shouldEmitLive) {
+                        emitAgentConversationInitialTurnEvents({
+                            record: turnRecord,
+                            requestPayload,
+                            topK: normalizeAgentConversationTopK(requestPayload.topK),
+                            emittedAt: new Date().toISOString(),
+                            writeLiveEvent: (event) => {
+                                writeSseEvent(res, event.type, event);
+                            },
+                        });
+                        await new Promise<void>((resolve) => setImmediate(resolve));
                         await ensureAgentConversationTurnExecution(turnRecord, requestPayload, {
                             emitLiveEvent: (event) => {
                                 writeSseEvent(res, event.type, event);

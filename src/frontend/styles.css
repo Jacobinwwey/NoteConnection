@@ -1498,9 +1498,9 @@ body.agent-workspace-open .agent-workspace-drawer {
 }
 
 .agent-workspace-drawer-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(240px, 340px) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 14px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -1528,6 +1528,7 @@ body.agent-workspace-open .agent-workspace-drawer {
 }
 
 .agent-workspace-drawer-close {
+  justify-self: end;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.04);
   color: #edf2f7;
@@ -1604,9 +1605,6 @@ body.agent-workspace-open .agent-workspace-drawer {
 }
 
 .agent-scope-control {
-  position: sticky;
-  top: 0;
-  z-index: 4;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
@@ -1615,6 +1613,15 @@ body.agent-workspace-open .agent-workspace-drawer {
   border-radius: 8px;
   background: rgba(15, 23, 42, 0.92);
   backdrop-filter: blur(8px);
+}
+
+.agent-scope-control--toolbar {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  background: rgba(2, 6, 12, 0.5);
 }
 
 .agent-scope-control label {
@@ -1634,12 +1641,23 @@ body.agent-workspace-open .agent-workspace-drawer {
   box-sizing: border-box;
 }
 
+.agent-scope-control--toolbar select {
+  min-height: 38px;
+  padding: 7px 9px;
+}
+
 .agent-scope-summary {
   min-height: 18px;
   color: #93c5fd;
   font-size: 0.78rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.agent-scope-control--toolbar .agent-scope-summary {
+  grid-column: 1 / -1;
+  min-height: 16px;
+  font-size: 0.74rem;
 }
 
 .agent-pane-field label {
@@ -1767,8 +1785,8 @@ body.agent-workspace-open .agent-workspace-drawer {
 }
 
 .agent-chat-messages {
-  flex: 1 1 120px;
-  min-height: 104px;
+  flex: 1 1 clamp(180px, 36vh, 460px);
+  min-height: 180px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2083,9 +2101,9 @@ body.agent-workspace-open .agent-workspace-drawer {
 }
 
 .agent-knowledge-points {
-  flex: 0 1 clamp(160px, 30vh, 360px);
-  min-height: 132px;
-  max-height: clamp(180px, 34vh, 360px);
+  flex: 0 1 clamp(96px, 18vh, 240px);
+  min-height: 88px;
+  max-height: clamp(112px, 22vh, 240px);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2209,6 +2227,7 @@ body.agent-workspace-open .agent-workspace-drawer {
 }
 
 .agent-knowledge-source-path {
+  display: none;
   padding: 0 12px 10px;
   color: #93a4b8;
   font-size: 0.76rem;
@@ -3506,7 +3525,12 @@ body[data-agent-workspace-promotion="learning-path"] #agent-learning-path-pane {
   }
 
   .agent-workspace-drawer-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
     padding: 12px 14px;
+  }
+
+  .agent-scope-control--toolbar {
+    grid-column: 1 / -1;
   }
 
   .agent-workspace-shell {

@@ -1027,14 +1027,18 @@ function createWorkspaceHtml() {
               <option value="waterglass">waterglass</option>
             </select>
             <div id="graph-wrapper">
+              <div class="agent-workspace-drawer-toolbar">
+                <div class="agent-workspace-drawer-heading"></div>
+                <div class="agent-scope-control agent-scope-control--toolbar">
+                  <label for="agent-workspace-scope-select">Scope</label>
+                  <select id="agent-workspace-scope-select"></select>
+                  <div id="agent-workspace-scope-summary"></div>
+                </div>
+                <button id="btn-close-agent-workspace"></button>
+              </div>
               <div id="agent-workspace-shell">
                 <section id="agent-chat-pane">
                   <input id="agent-workspace-user-id" value="path_user_default" />
-                  <div class="agent-scope-control">
-                    <label for="agent-workspace-scope-select">Scope</label>
-                    <select id="agent-workspace-scope-select"></select>
-                    <div id="agent-workspace-scope-summary"></div>
-                  </div>
                   <div id="agent-workspace-chat-messages"></div>
                   <textarea id="agent-workspace-chat-input"></textarea>
                   <button id="btn-agent-workspace-send"></button>
@@ -4037,10 +4041,20 @@ describe('workspace panes controller', () => {
         expect(document.querySelector('.agent-knowledge-click-hint')).toBeNull();
         expect(String(knowledgeRegion?.textContent || '')).not.toContain('Left-click a matched file');
 
-        const scopeStyle = fs.readFileSync(path.join(__dirname, 'frontend', 'styles.css'), 'utf8')
-            .match(/\.agent-scope-control\s*\{[^}]*\}/)?.[0] || '';
-        expect(scopeStyle).toContain('position: sticky');
-        expect(scopeStyle).toContain('top: 0');
+        const frontendRoot = path.join(__dirname, 'frontend');
+        const styles = fs.readFileSync(path.join(frontendRoot, 'styles.css'), 'utf8');
+        const indexHtml = fs.readFileSync(path.join(frontendRoot, 'index.html'), 'utf8');
+        const toolbarRule = styles.match(/\.agent-workspace-drawer-toolbar\s*\{[^}]*\}/)?.[0] || '';
+        const toolbarScopeRule = styles.match(/\.agent-scope-control--toolbar\s*\{[^}]*\}/)?.[0] || '';
+        const scopeStyle = styles.match(/\.agent-scope-control\s*\{[^}]*\}/)?.[0] || '';
+        expect(toolbarRule).toContain('display: grid');
+        expect(toolbarRule).toContain('grid-template-columns: minmax(180px, 1fr) minmax(240px, 340px) auto');
+        expect(toolbarScopeRule).toContain('grid-template-columns: auto minmax(0, 1fr)');
+        expect(scopeStyle).not.toContain('position: sticky');
+        expect(indexHtml.indexOf('agent-scope-control agent-scope-control--toolbar')).toBeGreaterThan(-1);
+        expect(indexHtml.indexOf('agent-scope-control agent-scope-control--toolbar')).toBeLessThan(
+            indexHtml.indexOf('id="agent-workspace-shell"')
+        );
 
         const helpButton = document.querySelector('[data-agent-knowledge-help-button="true"]') as HTMLButtonElement | null;
         const helpPopover = document.querySelector('[data-agent-knowledge-help-popover="true"]') as HTMLElement | null;
@@ -4146,6 +4160,43 @@ describe('workspace panes controller', () => {
         expect(knowledgePointsRule).toContain('overflow-y: auto');
         expect(knowledgePointsRule).toContain('max-height: clamp');
         expect(knowledgePointsRule).toContain('flex: 0 1');
+    });
+
+    test('keeps the newest conversation turn visible after appending chat content', async () => {
+        const { controller, document, window } = loadWorkspacePanesHarness();
+        const messages = document.getElementById('agent-workspace-chat-messages') as HTMLElement;
+        Object.defineProperty(messages, 'scrollHeight', {
+            configurable: true,
+            value: 720,
+        });
+        (window as any).requestAnimationFrame = (callback: FrameRequestCallback) => {
+            callback(0);
+            return 1;
+        };
+
+        controller.appendConversationMessage({
+            role: 'user',
+            message: 'what is water glass?',
+        });
+
+        expect(messages.scrollTop).toBe(720);
+
+        Object.defineProperty(messages, 'scrollHeight', {
+            configurable: true,
+            value: 940,
+        });
+        await controller.appendConversationBlocks({
+            role: 'assistant',
+            fallbackMessage: 'A water glass is a bounded physical system.',
+            blocks: [
+                {
+                    type: 'markdown',
+                    markdown: 'A water glass is a bounded physical system.',
+                },
+            ],
+        });
+
+        expect(messages.scrollTop).toBe(940);
     });
 
     test('hosts graph Focus mode with resolved node names without mutating the main graph runtime', async () => {
@@ -4879,9 +4930,7 @@ describe('workspace panes controller', () => {
         expect(String(fileButton?.textContent || '')).toBe('water glass.md');
         expect(cards[0]?.querySelector('.agent-knowledge-summary')).toBeNull();
         expect(cards[0]?.querySelectorAll('.agent-knowledge-hit')).toHaveLength(0);
-        expect(String(cards[0]?.querySelector('.agent-knowledge-source-path')?.textContent || '')).toContain(
-            'Knowledge_Base/waterglass/water glass.md'
-        );
+        expect(cards[0]?.querySelector('.agent-knowledge-source-path')).toBeNull();
 
         fileButton.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -5234,7 +5283,7 @@ describe('workspace panes controller', () => {
         const fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
         const sourcePathNode = document.querySelector('.agent-knowledge-source-path') as HTMLElement | null;
         expect(fileButton?.textContent).toBe('water glass.md');
-        expect(String(sourcePathNode?.textContent || '')).toContain('Knowledge_Base/waterglass/water glass.md');
+        expect(sourcePathNode).toBeNull();
 
         fileButton?.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -5316,7 +5365,7 @@ describe('workspace panes controller', () => {
         const fileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
         const sourcePathNode = document.querySelector('.agent-knowledge-source-path') as HTMLElement | null;
         expect(fileButton?.textContent).toBe('water glass.md');
-        expect(String(sourcePathNode?.textContent || '')).toContain('Knowledge_Base/waterglass/water glass.md');
+        expect(sourcePathNode).toBeNull();
 
         fileButton?.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -6091,6 +6140,7 @@ describe('agent workspace learning-path integration', () => {
 
         const scopeSelect = document.getElementById('agent-workspace-scope-select') as HTMLSelectElement;
         expect(scopeSelect).not.toBeNull();
+        expect(scopeSelect.closest('.agent-scope-control--toolbar')).not.toBeNull();
         expect(Array.from(scopeSelect.options).map((option) => option.value)).toEqual([
             'ALL_FOLDERS',
             'financial',
