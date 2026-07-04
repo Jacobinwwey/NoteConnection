@@ -4,6 +4,7 @@ import {
     mergeAgentConversationKnowledgePoints,
 } from './conversationComposer';
 import type {
+    AgentConversationGraphContext,
     AgentConversationKnowledgePoint,
     AgentConversationMemoryAction,
     AgentConversationMemoryRecord,
@@ -716,6 +717,115 @@ describe('conversationComposer', () => {
             expect.objectContaining({ gateId: 'graph_op_fallback', passed: true }),
             expect.objectContaining({ gateId: 'graph_budget', passed: true }),
         ]));
+    });
+
+    test('filters anchor-equivalent graph neighbors while composing scoped answers', () => {
+        const knowledgePoints = [
+            {
+                atomId: 'atom_water_glass',
+                atomIds: ['atom_water_glass'],
+                documentId: 'doc_water_glass',
+                sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                title: 'Water Glass',
+                summary: 'A water glass is a physical system made of a transparent container and water.',
+                evidenceSnippet: 'A water glass is a physical system made of a transparent container and water.',
+                score: 0.96,
+                citation: null,
+                citations: [],
+                matchedSpans: [],
+                matchCount: 0,
+                relationPath: [],
+                relationPathAtomIds: [],
+                relationKinds: [],
+                temporalValidity: {
+                    isValid: true,
+                    checkedAt: '2026-06-10T09:00:00.000Z',
+                    reasons: [],
+                    details: [],
+                } as any,
+                capabilities: [],
+            },
+        ] as AgentConversationKnowledgePoint[];
+        const graphContext: AgentConversationGraphContext = {
+            anchorAtomId: 'atom_water_glass',
+            anchorTitle: 'Water Glass',
+            anchorDocumentId: 'doc_water_glass',
+            anchorGraphProfile: {
+                atomId: 'atom_water_glass',
+                title: 'Water Glass',
+                inDegree: 1,
+                outDegree: 1,
+            },
+            supportingAtomIds: ['atom_container_physics', 'atom_mathematical_basis'],
+            supportingTitles: ['Container Physics', 'Mathematical Basis'],
+            relationKinds: ['prerequisite', 'sequence'],
+            relationSummaries: [],
+            knowledgePointRelations: [],
+            predecessorWindow: [
+                {
+                    atomId: 'atom_water_glass',
+                    title: 'Water Glass',
+                    relationKind: 'reference',
+                    confidence: 0.99,
+                },
+                {
+                    atomId: 'atom_container_physics',
+                    title: 'Container Physics',
+                    relationKind: 'prerequisite',
+                    confidence: 0.92,
+                },
+            ],
+            successorWindow: [
+                {
+                    atomId: 'atom_water_glass_alias',
+                    title: 'Water Glass',
+                    relationKind: 'reference',
+                    confidence: 0.98,
+                },
+                {
+                    atomId: 'atom_mathematical_basis',
+                    title: 'Mathematical Basis',
+                    relationKind: 'sequence',
+                    confidence: 0.9,
+                },
+            ],
+            temporalValidity: {
+                checkedAt: '2026-06-10T09:00:00.000Z',
+                allPointsValid: true,
+                warningReasons: [],
+                invalidKnowledgePointTitles: [],
+                edgeKinds: [],
+                details: [],
+            },
+        };
+
+        let blockCounter = 0;
+        const reply = buildScopedConversationReply({
+            message: 'what is waterglass?',
+            knowledgePoints,
+            citations: [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            graphContext,
+        });
+
+        expect(reply.answer).toContain('Container Physics');
+        expect(reply.answer).toContain('Mathematical Basis');
+        expect(reply.answer).not.toContain('predecessors include Water Glass');
+        expect(reply.answer).not.toContain('next nodes include Water Glass');
+
+        const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
+        const explanationMarkdown = structuredBlock && 'explanationMarkdown' in structuredBlock ? structuredBlock.explanationMarkdown : '';
+        const nextActionsMarkdown = structuredBlock && 'nextActionsMarkdown' in structuredBlock ? structuredBlock.nextActionsMarkdown : '';
+        expect(explanationMarkdown).toContain('Immediate predecessor window: Container Physics.');
+        expect(explanationMarkdown).toContain('Immediate successor window: Mathematical Basis.');
+        expect(explanationMarkdown).not.toContain('Immediate predecessor window: Water Glass');
+        expect(explanationMarkdown).not.toContain('Immediate successor window: Water Glass');
+        expect(nextActionsMarkdown).toContain('Inspect prerequisite context from Container Physics');
+        expect(nextActionsMarkdown).toContain('Use likely next-step nodes such as Mathematical Basis');
+        expect(nextActionsMarkdown).not.toContain('Inspect prerequisite context from Water Glass');
     });
 
     test('builds a verified knowledge run with evidence quality gates and review cards', () => {

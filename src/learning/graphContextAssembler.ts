@@ -54,6 +54,63 @@ type CachedGraphNodeMetrics = {
     centrality?: number;
 };
 
+type AnchorNodeExclusion = {
+    atomIds: Set<string>;
+    titles: Set<string>;
+};
+
+function normalizeGraphComparableTitle(value: string): string {
+    return normalizeWhitespace(String(value || '').toLowerCase());
+}
+
+function buildAnchorNodeExclusion(
+    anchorPoint: AgentConversationKnowledgePoint,
+    graphContext: AgentConversationGraphContext
+): AnchorNodeExclusion {
+    const atomIds = new Set<string>([
+        graphContext.anchorAtomId,
+        ...pointAtomIds(anchorPoint),
+    ].map((atomId) => String(atomId || '').trim()).filter(Boolean));
+    const titles = new Set<string>([
+        graphContext.anchorTitle,
+        anchorPoint.title,
+    ].map(normalizeGraphComparableTitle).filter(Boolean));
+    return { atomIds, titles };
+}
+
+function isAnchorEquivalentNode(atomId: string, title: string, exclusion: AnchorNodeExclusion): boolean {
+    const normalizedAtomId = String(atomId || '').trim();
+    if (normalizedAtomId && exclusion.atomIds.has(normalizedAtomId)) {
+        return true;
+    }
+    const normalizedTitle = normalizeGraphComparableTitle(title);
+    return Boolean(normalizedTitle && exclusion.titles.has(normalizedTitle));
+}
+
+async function countUsableAdjacentNodes(
+    opsStore: KnowledgeGraphOpsAdapter,
+    edges: RelationEdge[],
+    direction: 'predecessor' | 'successor',
+    exclusion: AnchorNodeExclusion,
+    titleCache: Map<string, string>
+): Promise<number> {
+    const seenNodeKeys = new Set<string>();
+    for (const edge of edges) {
+        const relatedAtomId = direction === 'predecessor'
+            ? String(edge.sourceAtomId || '').trim()
+            : String(edge.targetAtomId || '').trim();
+        if (!relatedAtomId || exclusion.atomIds.has(relatedAtomId)) {
+            continue;
+        }
+        const title = await resolveNodeTitle(opsStore, relatedAtomId, titleCache);
+        if (!title || isAnchorEquivalentNode(relatedAtomId, title, exclusion)) {
+            continue;
+        }
+        seenNodeKeys.add(relatedAtomId + '|' + normalizeGraphComparableTitle(title));
+    }
+    return seenNodeKeys.size;
+}
+
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
@@ -518,7 +575,11 @@ async function buildAnchorGraphProfile(
     opsStore: KnowledgeGraphOpsAdapter,
     anchorPoint: AgentConversationKnowledgePoint,
     titleCache: Map<string, string>,
-    metricsCache: Map<string, CachedGraphNodeMetrics | null>
+    metricsCache: Map<string, CachedGraphNodeMetrics | null>,
+    incomingEdges: RelationEdge[],
+    outgoingEdges: RelationEdge[],
+    exclusion: AnchorNodeExclusion,
+    useCompleteNeighborhoodDegree: boolean
 ): Promise<AgentConversationGraphNodeProfile | undefined> {
     const anchorAtomId = String(anchorPoint.atomId || '').trim();
     if (!anchorAtomId) {
@@ -528,18 +589,18 @@ async function buildAnchorGraphProfile(
         || await resolveNodeTitle(opsStore, anchorAtomId, titleCache)
         || anchorAtomId;
     const metrics = await resolveNodeMetrics(opsStore, anchorAtomId, metricsCache);
-    if (!metrics) {
-        return {
-            atomId: anchorAtomId,
-            title,
-        };
-    }
+    const derivedInDegree = useCompleteNeighborhoodDegree
+        ? await countUsableAdjacentNodes(opsStore, incomingEdges, 'predecessor', exclusion, titleCache)
+        : undefined;
+    const derivedOutDegree = useCompleteNeighborhoodDegree
+        ? await countUsableAdjacentNodes(opsStore, outgoingEdges, 'successor', exclusion, titleCache)
+        : undefined;
     return {
         atomId: anchorAtomId,
         title,
-        inDegree: metrics.inDegree,
-        outDegree: metrics.outDegree,
-        centrality: metrics.centrality,
+        inDegree: Number.isFinite(Number(derivedInDegree)) ? derivedInDegree : metrics?.inDegree,
+        outDegree: Number.isFinite(Number(derivedOutDegree)) ? derivedOutDegree : metrics?.outDegree,
+        centrality: metrics?.centrality,
     };
 }
 
@@ -558,16 +619,21 @@ async function buildWindowNodes(
     direction: 'predecessor' | 'successor',
     titleCache: Map<string, string>,
     metricsCache: Map<string, CachedGraphNodeMetrics | null>,
+    exclusion: AnchorNodeExclusion,
     limit: number,
     missingIds: Set<string>
 ): Promise<AgentConversationGraphWindowNode[]> {
-    const selectedEdges = rankRelationEdges(edges).slice(0, limit);
+    const rankedEdges = rankRelationEdges(edges);
     const nodes: AgentConversationGraphWindowNode[] = [];
-    for (const edge of selectedEdges) {
+    const seenNodeKeys = new Set<string>();
+    for (const edge of rankedEdges) {
+        if (nodes.length >= limit) {
+            break;
+        }
         const relatedAtomId = direction === 'predecessor'
             ? String(edge.sourceAtomId || '').trim()
             : String(edge.targetAtomId || '').trim();
-        if (!relatedAtomId) {
+        if (!relatedAtomId || exclusion.atomIds.has(relatedAtomId)) {
             continue;
         }
         const title = await resolveNodeTitle(opsStore, relatedAtomId, titleCache);
@@ -575,6 +641,14 @@ async function buildWindowNodes(
             missingIds.add(relatedAtomId);
             continue;
         }
+        if (isAnchorEquivalentNode(relatedAtomId, title, exclusion)) {
+            continue;
+        }
+        const nodeKey = relatedAtomId + '|' + normalizeGraphComparableTitle(title);
+        if (seenNodeKeys.has(nodeKey)) {
+            continue;
+        }
+        seenNodeKeys.add(nodeKey);
         const metrics = await resolveNodeMetrics(opsStore, relatedAtomId, metricsCache);
         nodes.push({
             atomId: relatedAtomId,
@@ -774,13 +848,29 @@ export async function assembleAgentConversationGraphContext(
         titleCache,
         missingConnectionPathSourceAtomIds
     );
+    const anchorExclusion = buildAnchorNodeExclusion(anchorPoint, baseGraphContext);
+    const capabilities = opsStore.getCapabilities();
+    const useCompleteNeighborhoodDegree = capabilities.serverSideQuery !== true;
+    const predecessorEdgeLimit = Math.max(budget.maxPredecessors * 8, 24);
+    const successorEdgeLimit = Math.max(budget.maxSuccessors * 8, 24);
+    const predecessorEdges = useCompleteNeighborhoodDegree || budget.maxPredecessors > 0
+        ? await opsStore.queryEdges(useCompleteNeighborhoodDegree
+            ? { toNodeId: baseGraphContext.anchorAtomId }
+            : { toNodeId: baseGraphContext.anchorAtomId, limit: predecessorEdgeLimit })
+        : [];
+    const successorEdges = useCompleteNeighborhoodDegree || budget.maxSuccessors > 0
+        ? await opsStore.queryEdges(useCompleteNeighborhoodDegree
+            ? { fromNodeId: baseGraphContext.anchorAtomId }
+            : { fromNodeId: baseGraphContext.anchorAtomId, limit: successorEdgeLimit })
+        : [];
     const predecessorWindow = budget.maxPredecessors > 0
         ? await buildWindowNodes(
             opsStore,
-            await opsStore.queryEdges({ toNodeId: baseGraphContext.anchorAtomId, limit: budget.maxPredecessors * 4 }),
+            predecessorEdges,
             'predecessor',
             titleCache,
             metricsCache,
+            anchorExclusion,
             budget.maxPredecessors,
             missingPredecessorAtomIds
         )
@@ -788,10 +878,11 @@ export async function assembleAgentConversationGraphContext(
     const successorWindow = budget.maxSuccessors > 0
         ? await buildWindowNodes(
             opsStore,
-            await opsStore.queryEdges({ fromNodeId: baseGraphContext.anchorAtomId, limit: budget.maxSuccessors * 4 }),
+            successorEdges,
             'successor',
             titleCache,
             metricsCache,
+            anchorExclusion,
             budget.maxSuccessors,
             missingSuccessorAtomIds
         )
@@ -800,7 +891,11 @@ export async function assembleAgentConversationGraphContext(
         opsStore,
         anchorPoint,
         titleCache,
-        metricsCache
+        metricsCache,
+        predecessorEdges,
+        successorEdges,
+        anchorExclusion,
+        useCompleteNeighborhoodDegree
     );
 
     return {

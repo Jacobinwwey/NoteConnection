@@ -552,6 +552,41 @@ function buildGraphConnectionPathAnswerSentence(
     return `The strongest graph path runs through ${pathTitles.join(' -> ')}`;
 }
 
+function normalizeGraphAnswerComparableTitle(value: string): string {
+    return normalizeWhitespace(String(value || '').toLowerCase());
+}
+
+function collectGraphWindowTitles(
+    graphContext: AgentConversationGraphContext | null,
+    windowKey: 'predecessorWindow' | 'successorWindow',
+    limit: number
+): string[] {
+    if (!graphContext || !Array.isArray(graphContext[windowKey])) {
+        return [];
+    }
+    const anchorAtomId = normalizeWhitespace(String(graphContext.anchorAtomId || '').trim());
+    const anchorTitle = normalizeGraphAnswerComparableTitle(graphContext.anchorTitle);
+    const seen = new Set<string>();
+    const titles: string[] = [];
+    for (const node of graphContext[windowKey] || []) {
+        const atomId = normalizeWhitespace(String(node && node.atomId || '').trim());
+        const title = normalizeWhitespace(String(node && node.title || '').trim());
+        const comparableTitle = normalizeGraphAnswerComparableTitle(title);
+        if (!title || (atomId && atomId === anchorAtomId) || (comparableTitle && comparableTitle === anchorTitle)) {
+            continue;
+        }
+        const key = atomId + '|' + comparableTitle;
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        titles.push(title);
+        if (titles.length >= limit) {
+            break;
+        }
+    }
+    return titles;
+}
 function buildGraphProfileAnswerSentence(
     graphContext: AgentConversationGraphContext | null,
     useChinese: boolean
@@ -563,18 +598,8 @@ function buildGraphProfileAnswerSentence(
         ? graphContext.anchorGraphProfile
         : null;
     const anchorTitle = normalizeWhitespace(String(graphContext.anchorTitle || anchorProfile?.title || '').trim());
-    const predecessorTitles = Array.isArray(graphContext.predecessorWindow)
-        ? graphContext.predecessorWindow
-            .map((node) => normalizeWhitespace(String(node && node.title || '').trim()))
-            .filter(Boolean)
-            .slice(0, 2)
-        : [];
-    const successorTitles = Array.isArray(graphContext.successorWindow)
-        ? graphContext.successorWindow
-            .map((node) => normalizeWhitespace(String(node && node.title || '').trim()))
-            .filter(Boolean)
-            .slice(0, 2)
-        : [];
+    const predecessorTitles = collectGraphWindowTitles(graphContext, 'predecessorWindow', 2);
+    const successorTitles = collectGraphWindowTitles(graphContext, 'successorWindow', 2);
     const degreeParts: string[] = [];
     if (Number.isFinite(Number(anchorProfile && anchorProfile.inDegree))) {
         degreeParts.push(useChinese ? `入度为 ${Number(anchorProfile?.inDegree)}` : `${Number(anchorProfile?.inDegree)} incoming`);
@@ -755,28 +780,16 @@ function buildScopedConversationExplanationMarkdown(
             `Explicit graph path: ${formatGraphConnectionPath(graphContext.connectionPaths[0])}.`
         );
     }
-    if (graphContext && Array.isArray(graphContext.predecessorWindow) && graphContext.predecessorWindow.length > 0) {
-        const predecessorTitles = graphContext.predecessorWindow
-            .map((node) => normalizeWhitespace(String(node.title || '').trim()))
-            .filter(Boolean)
-            .slice(0, 3);
+    if (graphContext) {
+        const predecessorTitles = collectGraphWindowTitles(graphContext, 'predecessorWindow', 3);
         if (predecessorTitles.length > 0) {
-            explanationLines.push(
-                '',
-                `Immediate predecessor window: ${predecessorTitles.join(', ')}.`
-            );
+            explanationLines.push('', 'Immediate predecessor window: ' + predecessorTitles.join(', ') + '.');
         }
     }
-    if (graphContext && Array.isArray(graphContext.successorWindow) && graphContext.successorWindow.length > 0) {
-        const successorTitles = graphContext.successorWindow
-            .map((node) => normalizeWhitespace(String(node.title || '').trim()))
-            .filter(Boolean)
-            .slice(0, 3);
+    if (graphContext) {
+        const successorTitles = collectGraphWindowTitles(graphContext, 'successorWindow', 3);
         if (successorTitles.length > 0) {
-            explanationLines.push(
-                '',
-                `Immediate successor window: ${successorTitles.join(', ')}.`
-            );
+            explanationLines.push('', 'Immediate successor window: ' + successorTitles.join(', ') + '.');
         }
     }
     if (graphContext && graphContext.temporalValidity.allPointsValid === false) {
@@ -896,22 +909,16 @@ function buildScopedConversationActionGuideMarkdown(
             graphActionHints.push(`- Review the path order: ${titles.join(' -> ')}.`);
         }
     }
-    if (graphContext && Array.isArray(graphContext.predecessorWindow) && graphContext.predecessorWindow.length > 0) {
-        const predecessorTitles = graphContext.predecessorWindow
-            .map((node) => normalizeWhitespace(String(node.title || '').trim()))
-            .filter(Boolean)
-            .slice(0, 2);
+    if (graphContext) {
+        const predecessorTitles = collectGraphWindowTitles(graphContext, 'predecessorWindow', 2);
         if (predecessorTitles.length > 0) {
-            graphActionHints.push(`- Inspect prerequisite context from ${predecessorTitles.join(', ')} before expanding the answer.`);
+            graphActionHints.push('- Inspect prerequisite context from ' + predecessorTitles.join(', ') + ' before expanding the answer.');
         }
     }
-    if (graphContext && Array.isArray(graphContext.successorWindow) && graphContext.successorWindow.length > 0) {
-        const successorTitles = graphContext.successorWindow
-            .map((node) => normalizeWhitespace(String(node.title || '').trim()))
-            .filter(Boolean)
-            .slice(0, 2);
+    if (graphContext) {
+        const successorTitles = collectGraphWindowTitles(graphContext, 'successorWindow', 2);
         if (successorTitles.length > 0) {
-            graphActionHints.push(`- Use likely next-step nodes such as ${successorTitles.join(', ')} to continue follow-through after this answer.`);
+            graphActionHints.push('- Use likely next-step nodes such as ' + successorTitles.join(', ') + ' to continue follow-through after this answer.');
         }
     }
     return [

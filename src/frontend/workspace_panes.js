@@ -8790,8 +8790,8 @@
             const summary = document.createElement('div');
             summary.className = 'agent-chat-inline-card-summary agent-chat-structured-answer-direct';
             summary.textContent = directAnswer;
+            summary.setAttribute('data-structured-answer-section', 'directAnswer');
             wrapper.appendChild(summary);
-            return wrapper;
         }
 
         const sections = [

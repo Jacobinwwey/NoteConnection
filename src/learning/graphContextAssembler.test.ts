@@ -174,6 +174,30 @@ function createKnowledgePoint(overrides: Partial<AgentConversationKnowledgePoint
     };
 }
 
+function createAtom(overrides: Partial<KnowledgeAtom>): KnowledgeAtom {
+    const id = String(overrides.id || 'atom_default');
+    return {
+        id,
+        stableKey: id,
+        documentId: 'doc_default',
+        sourcePath: `Knowledge_Base/${id}.md`,
+        title: id,
+        content: `${id} content.`,
+        representationType: 'text',
+        keywords: [],
+        evidenceSpanIds: [],
+        createdAt: '2026-06-17T00:00:00.000Z',
+        updatedAt: '2026-06-17T00:00:00.000Z',
+        metadata: {
+            sectionPath: [],
+            version: 1,
+            sourceHash: id,
+            language: 'en',
+        },
+        ...overrides,
+    };
+}
+
 describe('assembleAgentConversationGraphContext', () => {
     test('selects a title-mentioned anchor and enriches bounded graph windows before answer synthesis', async () => {
         const atoms: KnowledgeAtom[] = [
@@ -417,6 +441,138 @@ describe('assembleAgentConversationGraphContext', () => {
                 relationKind: 'sequence',
             }),
         ]));
+    });
+
+    test('filters anchor-equivalent graph neighbors before reporting windows and local degree', async () => {
+        const atoms: KnowledgeAtom[] = [
+            createAtom({
+                id: 'atom_water_glass',
+                stableKey: 'water_glass',
+                title: 'Water Glass',
+            }),
+            createAtom({
+                id: 'atom_water_glass_alias',
+                stableKey: 'water_glass_alias',
+                title: 'Water Glass',
+            }),
+            createAtom({
+                id: 'atom_container_physics',
+                stableKey: 'container_physics',
+                title: 'Container Physics',
+            }),
+            createAtom({
+                id: 'atom_mathematical_basis',
+                stableKey: 'mathematical_basis',
+                title: 'Mathematical Basis',
+            }),
+        ];
+        const edges: RelationEdge[] = [
+            {
+                id: 'edge_anchor_self',
+                sourceAtomId: 'atom_water_glass',
+                targetAtomId: 'atom_water_glass',
+                relationKind: 'reference',
+                provenance: 'fact',
+                confidence: 0.99,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-06-17T00:00:00.000Z',
+                },
+            },
+            {
+                id: 'edge_alias_anchor',
+                sourceAtomId: 'atom_water_glass_alias',
+                targetAtomId: 'atom_water_glass',
+                relationKind: 'reference',
+                provenance: 'fact',
+                confidence: 0.98,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-06-17T00:00:00.000Z',
+                },
+            },
+            {
+                id: 'edge_container_anchor',
+                sourceAtomId: 'atom_container_physics',
+                targetAtomId: 'atom_water_glass',
+                relationKind: 'prerequisite',
+                provenance: 'fact',
+                confidence: 0.92,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-06-17T00:00:00.000Z',
+                },
+            },
+            {
+                id: 'edge_anchor_math',
+                sourceAtomId: 'atom_water_glass',
+                targetAtomId: 'atom_mathematical_basis',
+                relationKind: 'sequence',
+                provenance: 'fact',
+                confidence: 0.9,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-06-17T00:00:00.000Z',
+                },
+            },
+            {
+                id: 'edge_anchor_math_duplicate',
+                sourceAtomId: 'atom_water_glass',
+                targetAtomId: 'atom_mathematical_basis',
+                relationKind: 'reference',
+                provenance: 'fact',
+                confidence: 0.82,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-06-17T00:00:00.000Z',
+                },
+            },
+        ];
+        const store = new InMemoryOpsStore(atoms, edges);
+        const knowledgePoints: AgentConversationKnowledgePoint[] = [
+            createKnowledgePoint({
+                atomId: 'atom_water_glass',
+                atomIds: ['atom_water_glass'],
+                documentId: 'doc_water_glass',
+                sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                title: 'Water Glass',
+                summary: 'A water glass is a physical system made of a transparent container and water.',
+                evidenceSnippet: 'A water glass is a physical system made of a transparent container and water.',
+                score: 0.96,
+            }),
+        ];
+
+        const result = await assembleAgentConversationGraphContext({
+            message: 'what is waterglass?',
+            usedScope: globalScope,
+            knowledgePoints,
+            store,
+            budget: {
+                maxPredecessors: 3,
+                maxSuccessors: 3,
+            },
+        });
+
+        expect((result.graphContext as any)?.predecessorWindow).toEqual([
+            expect.objectContaining({
+                atomId: 'atom_container_physics',
+                title: 'Container Physics',
+                relationKind: 'prerequisite',
+            }),
+        ]);
+        expect((result.graphContext as any)?.successorWindow).toEqual([
+            expect.objectContaining({
+                atomId: 'atom_mathematical_basis',
+                title: 'Mathematical Basis',
+                relationKind: 'sequence',
+            }),
+        ]);
+        expect((result.graphContext as any)?.anchorGraphProfile).toEqual(expect.objectContaining({
+            atomId: 'atom_water_glass',
+            title: 'Water Glass',
+            inDegree: 1,
+            outDegree: 1,
+        }));
     });
 
     test('fails open to retrieval-shaped graph context when graph ops are unavailable', async () => {

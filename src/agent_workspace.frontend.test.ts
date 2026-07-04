@@ -4140,11 +4140,12 @@ describe('workspace panes controller', () => {
         const knowledgePointsRule = styles.match(/\.agent-knowledge-points\s*\{[^}]*\}/)?.[0] || '';
 
         expect(chatPaneRule).toContain('overflow-x: hidden');
-        expect(chatPaneRule).toContain('overflow-y: hidden');
+        expect(chatPaneRule).toContain('overflow-y: auto');
         expect(chatPaneRule).not.toContain('overflow: hidden');
         expect(chatMessagesRule).toContain('overflow-y: auto');
         expect(knowledgePointsRule).toContain('overflow-y: auto');
         expect(knowledgePointsRule).toContain('max-height: clamp');
+        expect(knowledgePointsRule).toContain('flex: 0 1');
     });
 
     test('hosts graph Focus mode with resolved node names without mutating the main graph runtime', async () => {
@@ -6768,14 +6769,17 @@ describe('agent workspace learning-path integration', () => {
         expect(assistantNode).not.toBeNull();
         expect(assistantNode?.querySelector('.agent-chat-inline-card-title')?.textContent).toBe('Grounded Answer');
         expect(String(assistantNode?.textContent || '')).toContain('Scoped Answer');
-        expect(assistantNode?.querySelector('h2')).toBeNull();
-        expect(String(assistantNode?.textContent || '')).not.toContain('Answer Context');
-        expect(String(assistantNode?.textContent || '')).not.toContain('Evidence Summary');
+        expect(assistantNode?.querySelector('[data-structured-answer-section="directAnswer"]')).not.toBeNull();
+        expect(assistantNode?.querySelector('[data-structured-answer-section="overviewMarkdown"]')).not.toBeNull();
+        expect(assistantNode?.querySelector('[data-structured-answer-section="explanationMarkdown"]')).not.toBeNull();
+        expect(assistantNode?.querySelector('[data-structured-answer-section="evidenceMarkdown"]')).not.toBeNull();
+        expect(String(assistantNode?.textContent || '')).toContain('Answer Context');
+        expect(String(assistantNode?.textContent || '')).toContain('Evidence Summary');
         expect(String(assistantNode?.textContent || '')).not.toContain('Knowledge Run');
         expect(String(assistantNode?.textContent || '')).not.toContain('Inspect Run');
-        expect(renderMathInElement).not.toHaveBeenCalled();
-        expect((window as any).mermaid.initialize).not.toHaveBeenCalled();
-        expect(mermaidRender).not.toHaveBeenCalled();
+        expect(renderMathInElement).toHaveBeenCalled();
+        expect((window as any).mermaid.initialize).toHaveBeenCalled();
+        expect(mermaidRender).toHaveBeenCalled();
         expect((window as any).NoteConnectionAgentWorkspace.getLastConversationResult()).toEqual(
             expect.objectContaining({
                 answer: 'Scoped Answer',
