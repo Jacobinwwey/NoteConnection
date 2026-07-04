@@ -184,6 +184,57 @@ describe('KnowledgeLearningPlatform', () => {
         expect(saveSnapshot).not.toHaveBeenCalled();
     });
 
+    test('previewLearningPath avoids synchronous snapshot persistence while buildLearningPath keeps artifact durability', async () => {
+        const saveSnapshot = jest.fn(async () => undefined);
+        const pathPlatform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store: {
+                loadSnapshot: jest.fn(async () => null),
+                saveSnapshot,
+                getDiagnostics: () => ({
+                    storeType: 'memory',
+                    exists: false,
+                    loaded: false,
+                }),
+            },
+        });
+        const ingest = await pathPlatform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_learning_path_preview',
+                    sourcePath: 'Knowledge_Base/path/preview.md',
+                    language: 'en',
+                    content: '# Learning Path Preview\nPreviewing a learning path should not block on durable artifact persistence.',
+                },
+            ],
+        });
+        const atomId = ingest.atoms[0]?.id as string;
+        expect(atomId).toBeDefined();
+        expect(saveSnapshot).toHaveBeenCalledTimes(1);
+        saveSnapshot.mockClear();
+
+        const preview = await pathPlatform.previewLearningPath({
+            userId: 'preview_user',
+            focusAtomIds: [atomId],
+            maxMasteryPaths: 1,
+            maxDivergencePaths: 0,
+        });
+
+        expect(preview.masteryPaths.length).toBeGreaterThan(0);
+        expect(saveSnapshot).not.toHaveBeenCalled();
+
+        const durable = await pathPlatform.buildLearningPath({
+            userId: 'preview_user',
+            focusAtomIds: [atomId],
+            maxMasteryPaths: 1,
+            maxDivergencePaths: 0,
+        });
+
+        expect(durable.masteryPaths.length).toBeGreaterThan(0);
+        expect(saveSnapshot).toHaveBeenCalledTimes(1);
+    });
+
     test('query returns evidence-first results with relation path and temporal validity', async () => {
         await platform.ingestKnowledge({
             incremental: true,

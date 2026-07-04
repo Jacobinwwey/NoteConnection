@@ -119,6 +119,7 @@ function createI18nStub() {
             'agentWorkspace.knowledge.relatedFocusAction': 'Related Focus',
             'agentWorkspace.knowledge.relatedFocusActionLabel': 'Show citation focus for {file}',
             'agentWorkspace.knowledge.actionsMenu': 'Knowledge point actions',
+            'agentWorkspace.knowledge.actionsMenuButtonLabel': 'Open knowledge point actions for {file}',
             'agentWorkspace.reply.flashcardBatch.cardTitle': 'Review Card Batch',
             'agentWorkspace.reply.flashcardBatch.summary': '{returnedArtifacts} artifact(s), {remainingCards}/{totalCards} review card(s) remaining.',
             'agentWorkspace.reply.flashcardBatch.metricsHeading': 'Key Metrics',
@@ -937,6 +938,7 @@ function createI18nStub() {
             'agentWorkspace.knowledge.relatedFocusAction': '关联聚焦',
             'agentWorkspace.knowledge.relatedFocusActionLabel': '显示 {file} 的引用关联聚焦',
             'agentWorkspace.knowledge.actionsMenu': '知识点操作',
+            'agentWorkspace.knowledge.actionsMenuButtonLabel': '打开 {file} 的知识点操作',
             'agentWorkspace.reply.citations': '引用',
             'agentWorkspace.reply.citationsEmpty': '未返回引用。',
             'agentWorkspace.reply.citationUntitled': '未命名引用',
@@ -1029,21 +1031,21 @@ function createWorkspaceHtml() {
             <div id="graph-wrapper">
               <div class="agent-workspace-drawer-toolbar">
                 <div class="agent-workspace-drawer-heading"></div>
-                <div class="agent-scope-control agent-scope-control--toolbar">
-                  <label for="agent-workspace-scope-select">Scope</label>
-                  <select id="agent-workspace-scope-select"></select>
-                  <div id="agent-workspace-scope-summary"></div>
-                </div>
                 <button id="btn-close-agent-workspace"></button>
               </div>
               <div id="agent-workspace-shell">
                 <section id="agent-chat-pane">
+                  <div class="agent-scope-control agent-scope-control--workspace">
+                    <label for="agent-workspace-scope-select">Scope</label>
+                    <select id="agent-workspace-scope-select"></select>
+                    <div id="agent-workspace-scope-summary"></div>
+                  </div>
                   <input id="agent-workspace-user-id" value="path_user_default" />
                   <div id="agent-workspace-chat-messages"></div>
+                  <div id="agent-workspace-knowledge-points"></div>
                   <textarea id="agent-workspace-chat-input"></textarea>
                   <button id="btn-agent-workspace-send"></button>
                   <div id="agent-workspace-api-status"></div>
-                  <div id="agent-workspace-knowledge-points"></div>
                 </section>
                 <div id="agent-side-work-area">
                   <section id="agent-graph-focus-pane" class="agent-workspace-pane">
@@ -3986,7 +3988,7 @@ describe('workspace panes controller', () => {
         expect(document.querySelector('[data-godot-tree-node-id="water glass"]')).not.toBeNull();
     });
 
-    test('keeps scope visible and hides knowledge actions behind long-press hit menus', async () => {
+    test('keeps scope visible and exposes knowledge actions through hit menus', async () => {
         const { controller, document, window } = loadWorkspacePanesHarness({ withI18n: true });
         const graphView = {
             openFocusModeById: jest.fn(() => true),
@@ -4045,16 +4047,33 @@ describe('workspace panes controller', () => {
         const styles = fs.readFileSync(path.join(frontendRoot, 'styles.css'), 'utf8');
         const indexHtml = fs.readFileSync(path.join(frontendRoot, 'index.html'), 'utf8');
         const toolbarRule = styles.match(/\.agent-workspace-drawer-toolbar\s*\{[^}]*\}/)?.[0] || '';
-        const toolbarScopeRule = styles.match(/\.agent-scope-control--toolbar\s*\{[^}]*\}/)?.[0] || '';
+        const workspaceScopeRule = styles.match(/\.agent-scope-control--workspace\s*\{[^}]*\}/)?.[0] || '';
         const scopeStyle = styles.match(/\.agent-scope-control\s*\{[^}]*\}/)?.[0] || '';
+        const chatPaneRule = styles.match(/\.agent-chat-pane\s*\{[^}]*\}/)?.[0] || '';
+        const knowledgePointsRule = styles.match(/\.agent-knowledge-points\s*\{[^}]*\}/)?.[0] || '';
+        const knowledgeCardHeaderRule = styles.match(/\.agent-knowledge-card-header\s*\{[^}]*\}/)?.[0] || '';
+        const knowledgeMenuButtonRule = styles.match(/\.agent-knowledge-menu-button\s*\{[^}]*\}/)?.[0] || '';
         expect(toolbarRule).toContain('display: grid');
-        expect(toolbarRule).toContain('grid-template-columns: minmax(180px, 1fr) minmax(240px, 340px) auto');
-        expect(toolbarScopeRule).toContain('grid-template-columns: auto minmax(0, 1fr)');
+        expect(toolbarRule).toContain('grid-template-columns: minmax(180px, 1fr) auto');
+        expect(workspaceScopeRule).toContain('grid-template-columns: minmax(94px, auto) minmax(0, 1fr)');
         expect(scopeStyle).not.toContain('position: sticky');
-        expect(indexHtml.indexOf('agent-scope-control agent-scope-control--toolbar')).toBeGreaterThan(-1);
-        expect(indexHtml.indexOf('agent-scope-control agent-scope-control--toolbar')).toBeLessThan(
-            indexHtml.indexOf('id="agent-workspace-shell"')
+        expect(chatPaneRule).toContain('display: grid');
+        expect(chatPaneRule).toContain('grid-template-rows:');
+        expect(knowledgePointsRule).toContain('overflow-y: auto');
+        expect(knowledgeCardHeaderRule).toContain('grid-template-columns: minmax(0, 1fr) 44px');
+        expect(knowledgeMenuButtonRule).toContain('width: 44px');
+        expect(knowledgeMenuButtonRule).toContain('min-height: 44px');
+        expect(indexHtml).not.toContain('agent-scope-control agent-scope-control--toolbar');
+        expect(indexHtml.indexOf('agent-scope-control agent-scope-control--workspace')).toBeGreaterThan(
+            indexHtml.indexOf('id="agent-chat-pane"')
         );
+        expect(indexHtml.indexOf('agent-scope-control agent-scope-control--workspace')).toBeLessThan(
+            indexHtml.indexOf('id="agent-workspace-user-id"')
+        );
+        expect(indexHtml.indexOf('id="agent-workspace-knowledge-points"')).toBeLessThan(
+            indexHtml.indexOf('id="agent-workspace-chat-input"')
+        );
+        expect(document.querySelector('.agent-scope-control--workspace')).not.toBeNull();
 
         const helpButton = document.querySelector('[data-agent-knowledge-help-button="true"]') as HTMLButtonElement | null;
         const helpPopover = document.querySelector('[data-agent-knowledge-help-popover="true"]') as HTMLElement | null;
@@ -4097,12 +4116,28 @@ describe('workspace panes controller', () => {
         expect(fileButton).not.toBeNull();
         expect(fileButton?.getAttribute('aria-haspopup')).toBe('menu');
         expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
+        const menuButton = document.querySelector('[data-agent-knowledge-menu-button="true"]') as HTMLButtonElement | null;
+        expect(menuButton).not.toBeNull();
+        expect(menuButton?.textContent?.trim()).toBe('...');
+        expect(menuButton?.getAttribute('aria-haspopup')).toBe('menu');
+        expect(menuButton?.getAttribute('aria-expanded')).toBe('false');
+        expect(menuButton?.getAttribute('aria-label')).toBe('Open knowledge point actions for Learning Paths');
+        expect(menuButton?.getAttribute('aria-controls')).toBe(fileButton?.getAttribute('aria-controls'));
 
-        fileButton?.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-        const actionMenu = document.querySelector('[data-agent-knowledge-action-menu="true"]') as HTMLElement | null;
+        menuButton?.click();
+        let actionMenu = document.querySelector('[data-agent-knowledge-action-menu="true"]') as HTMLElement | null;
         expect(actionMenu).not.toBeNull();
         expect(actionMenu?.hidden).toBe(false);
         expect(fileButton?.getAttribute('aria-expanded')).toBe('true');
+        expect(menuButton?.getAttribute('aria-expanded')).toBe('true');
+        expect(actionMenu?.getAttribute('data-agent-knowledge-menu-button-id')).toBe(menuButton?.id);
+
+        fileButton?.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+        actionMenu = document.querySelector('[data-agent-knowledge-action-menu="true"]') as HTMLElement | null;
+        expect(actionMenu).not.toBeNull();
+        expect(actionMenu?.hidden).toBe(false);
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('true');
+        expect(menuButton?.getAttribute('aria-expanded')).toBe('true');
 
         const buttonsBefore = Array.from(
             document.querySelectorAll('[data-agent-knowledge-action-menu="true"] button')
@@ -4116,6 +4151,8 @@ describe('workspace panes controller', () => {
         buttonsBefore[0]?.click();
         expect(onCapability).toHaveBeenCalledTimes(1);
         expect(onCapability.mock.calls[0]?.[1]?.actionId).toBe('open_learning_path');
+        expect(fileButton?.getAttribute('aria-expanded')).toBe('false');
+        expect(menuButton?.getAttribute('aria-expanded')).toBe('false');
 
         fileButton?.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
         const reopenedButtons = Array.from(
@@ -4139,6 +4176,8 @@ describe('workspace panes controller', () => {
         expect(translatedHelpPopover?.textContent || '').toContain('左键单击');
 
         const translatedFileButton = document.querySelector('.agent-knowledge-file-button') as HTMLButtonElement | null;
+        const translatedMenuButton = document.querySelector('[data-agent-knowledge-menu-button="true"]') as HTMLButtonElement | null;
+        expect(translatedMenuButton?.getAttribute('aria-label')).toBe('打开 Learning Paths 的知识点操作');
         translatedFileButton?.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
         const buttonsAfter = Array.from(
             document.querySelectorAll('[data-agent-knowledge-action-menu="true"] button')
@@ -4156,10 +4195,14 @@ describe('workspace panes controller', () => {
         expect(chatPaneRule).toContain('overflow-x: hidden');
         expect(chatPaneRule).toContain('overflow-y: auto');
         expect(chatPaneRule).not.toContain('overflow: hidden');
+        expect(chatPaneRule).toContain('display: grid');
+        expect(chatPaneRule).toContain('grid-template-rows:');
+        expect(chatPaneRule).toContain('minmax(96px, 0.45fr)');
         expect(chatMessagesRule).toContain('overflow-y: auto');
+        expect(chatMessagesRule).toContain('min-height: 0');
         expect(knowledgePointsRule).toContain('overflow-y: auto');
-        expect(knowledgePointsRule).toContain('max-height: clamp');
-        expect(knowledgePointsRule).toContain('flex: 0 1');
+        expect(knowledgePointsRule).toContain('min-height: 0');
+        expect(knowledgePointsRule).not.toContain('max-height: clamp');
     });
 
     test('keeps the newest conversation turn visible after appending chat content', async () => {
@@ -5239,6 +5282,15 @@ describe('workspace panes controller', () => {
         const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime || {};
         markdownRuntime.renderMarkdownInto = renderMarkdownInto;
         (window as any).NoteConnectionMarkdownRuntime = markdownRuntime;
+        const scrollIntoView = jest.fn();
+        Object.defineProperty(window.HTMLElement.prototype, 'scrollIntoView', {
+            configurable: true,
+            value: scrollIntoView,
+        });
+        (window as any).requestAnimationFrame = (callback: FrameRequestCallback) => {
+            callback(0);
+            return 1;
+        };
 
         controller.init();
         controller.renderKnowledgePoints([
@@ -5295,6 +5347,8 @@ describe('workspace panes controller', () => {
         expect(String(graphBody?.textContent || '')).toContain('A water glass is a physical system often used in basic thermodynamics examples.');
         const highlighted = Array.from(graphBody?.querySelectorAll('[data-agent-focus-highlight="true"]') || []);
         expect(highlighted.length).toBeGreaterThan(0);
+        expect((highlighted[0] as HTMLElement).getAttribute('data-agent-focus-primary-highlight')).toBe('true');
+        expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', inline: 'nearest' });
         expect((controller as any).getLastGraphFocusDiagnostics()).toEqual(expect.objectContaining({
             requestedSourcePath: 'Knowledge_Base/waterglass/water glass.md',
             candidateSourcePaths: ['Knowledge_Base/waterglass/water glass.md'],
@@ -6140,7 +6194,7 @@ describe('agent workspace learning-path integration', () => {
 
         const scopeSelect = document.getElementById('agent-workspace-scope-select') as HTMLSelectElement;
         expect(scopeSelect).not.toBeNull();
-        expect(scopeSelect.closest('.agent-scope-control--toolbar')).not.toBeNull();
+        expect(scopeSelect.closest('.agent-scope-control--workspace')).not.toBeNull();
         expect(Array.from(scopeSelect.options).map((option) => option.value)).toEqual([
             'ALL_FOLDERS',
             'financial',
@@ -6316,8 +6370,11 @@ describe('agent workspace learning-path integration', () => {
             document.querySelectorAll('.agent-chat-message-assistant')
         ).map((node) => String(node.textContent || ''));
         expect(
-            assistantMessages.some((message) => message.includes('streamed assistant response'))
-        ).toBe(true);
+            assistantMessages.filter((message) => message.includes('streamed assistant response'))
+        ).toHaveLength(1);
+        expect(
+            assistantMessages.filter((message) => message.includes('Grounding: scope='))
+        ).toHaveLength(0);
         const systemMessages = Array.from(
             document.querySelectorAll('.agent-chat-message-system')
         ).map((node) => String(node.textContent || ''));
@@ -7760,6 +7817,7 @@ describe('agent workspace learning-path integration', () => {
 
         await (window as any).NoteConnectionAgentWorkspace.openLearningPath({
             atomId: 'atom_h',
+            atomIds: ['atom_h', 'atom_e'],
             title: 'water glass',
             relationPath: [
                 { sourceAtomId: 'atom_f', targetAtomId: 'atom_h', relationKind: 'sequence', confidence: 0.98 },
@@ -7777,7 +7835,7 @@ describe('agent workspace learning-path integration', () => {
 
         const fetchCall = fetchMock?.mock.calls.find((call) => call[0] === '/api/knowledge/path');
         const requestBody = JSON.parse(String(fetchCall?.[1]?.body || '{}'));
-        expect(requestBody.focusAtomIds).toEqual(['atom_h']);
+        expect(requestBody.focusAtomIds).toEqual(['atom_h', 'atom_e']);
         expect(graphView?.resolveNodeByKnowledgePoint).toHaveBeenCalled();
         expect(pathApp?.init).not.toHaveBeenCalled();
         expect(pathApp?.applyRemoteConfigure).not.toHaveBeenCalled();

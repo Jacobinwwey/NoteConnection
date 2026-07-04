@@ -15053,7 +15053,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 try {
                     const payload = await readJsonBody(req);
                     const requestPayload = normalizeLearningPathRequestPayload(payload);
-                    const result = await knowledgeLearningPlatform.buildLearningPath(requestPayload);
+                    const result = await knowledgeLearningPlatform.previewLearningPath(requestPayload);
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: true, result }));
                 } catch (error) {

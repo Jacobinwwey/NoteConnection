@@ -356,6 +356,103 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).toBe('水杯 (water glass) 是一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。');
     });
 
+    test('keeps definition revisions comprehensive with augmented evidence and graph neighborhood context', () => {
+        const definitionCitation: KnowledgeCitation = {
+            ...(makeKnowledgePoint().citation as KnowledgeCitation),
+            atomId: 'atom_water_glass_definition',
+            title: '水杯 (water glass)',
+            snippet: '本技术文档旨在对“水杯”这一系统进行全面的科学分析。此处的“水杯”被定义为一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。',
+        };
+        const thermalCitation: KnowledgeCitation = {
+            ...(makeKnowledgePoint().citation as KnowledgeCitation),
+            citationId: 'citation_thermal',
+            atomId: 'atom_water_glass_thermal',
+            title: '4. 热力学：热量传递',
+            snippet: '水杯系统与环境之间通过传导、对流和辐射进行热交换。',
+        };
+        const specificationCitation: KnowledgeCitation = {
+            ...(makeKnowledgePoint().citation as KnowledgeCitation),
+            citationId: 'citation_specs',
+            atomId: 'atom_water_glass_specs',
+            title: '关键技术规格',
+            snippet: '标准水杯系统在标准温度和压力下包含钠钙玻璃和水的密度、杨氏模量、泊松比等参数。',
+        };
+        const point = makeKnowledgePoint({
+            atomId: 'atom_water_glass_definition',
+            atomIds: ['atom_water_glass_definition', 'atom_water_glass_thermal', 'atom_water_glass_specs'],
+            title: '水杯 (water glass)',
+            summary: definitionCitation.snippet,
+            evidenceSnippet: definitionCitation.snippet,
+            citation: definitionCitation,
+            citations: [definitionCitation, thermalCitation, specificationCitation],
+            matchedSpans: [
+                {
+                    atomId: 'atom_water_glass_thermal',
+                    title: '4. 热力学：热量传递',
+                    snippet: thermalCitation.snippet,
+                    sourcePath: thermalCitation.sourcePath,
+                    startLine: 57,
+                    endLine: 89,
+                    score: 0.81,
+                    citation: thermalCitation,
+                },
+                {
+                    atomId: 'atom_water_glass_specs',
+                    title: '关键技术规格',
+                    snippet: specificationCitation.snippet,
+                    sourcePath: specificationCitation.sourcePath,
+                    startLine: 90,
+                    endLine: 105,
+                    score: 0.79,
+                    citation: specificationCitation,
+                },
+            ],
+        });
+        const review = reviewAnswerRelease({
+            message: '什么是waterglass?',
+            draftAnswer: '水杯 (water glass) 本技术文档旨在对“水杯”这一系统进行全面的科学分析。',
+            knowledgePoints: [point],
+            citations: [definitionCitation, thermalCitation, specificationCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({
+                anchorTitle: '水杯 (water glass)',
+                anchorGraphProfile: {
+                    atomId: 'atom_water_glass_definition',
+                    title: '水杯 (water glass)',
+                    inDegree: 1,
+                    outDegree: 2,
+                },
+                predecessorWindow: [
+                    {
+                        atomId: 'atom_material_science',
+                        title: '材料科学',
+                        relationKind: 'prerequisite',
+                        confidence: 0.92,
+                    },
+                ],
+                successorWindow: [
+                    {
+                        atomId: 'atom_thermal_model',
+                        title: '热量传递模型',
+                        relationKind: 'sequence',
+                        confidence: 0.88,
+                    },
+                ],
+            }),
+            reviewedAt: '2026-07-04T08:00:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('query_intent_alignment');
+        expect(review.publicAnswer).toContain('水杯 (water glass) 是一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。');
+        expect(review.publicAnswer).toContain('热力学：热量传递');
+        expect(review.publicAnswer).toContain('关键技术规格');
+        expect(review.publicAnswer).toContain('入度为 1');
+        expect(review.publicAnswer).toContain('出度为 2');
+        expect(review.publicAnswer).toContain('紧邻前置节点包括 材料科学');
+        expect(review.publicAnswer).toContain('后续分支包括 热量传递模型');
+    });
+
     test('revises grounded answers when structured numeric facts conflict with support', () => {
         const densityPoint = makeKnowledgePoint({
             title: 'Water Density',

@@ -420,6 +420,7 @@
       "relatedFocusAction": "关联聚焦",
       "relatedFocusActionLabel": "显示 {file} 的引用关联聚焦",
       "actionsMenu": "知识点操作",
+      "actionsMenuButtonLabel": "打开 {file} 的知识点操作",
       "untitled": "未命名知识点"
     },
     "apiStatus": {

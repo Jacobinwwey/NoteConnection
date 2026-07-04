@@ -2627,12 +2627,40 @@
             candidate.setAttribute('data-agent-focus-highlight', 'true');
         });
         const inlineHighlightResult = applyGraphFocusInlineHighlights(prunedEntries, markdownSource);
+        revealGraphFocusPrimaryHighlight(container);
         return {
             highlightedNodeCount: prunedNodes.length,
             inlineHighlightCount: Number(inlineHighlightResult && inlineHighlightResult.inlineHighlightCount || 0),
             inlineHighlightStrategy: String(inlineHighlightResult && inlineHighlightResult.inlineHighlightStrategy || 'none'),
             highlightStrategy,
         };
+    }
+
+    function revealGraphFocusPrimaryHighlight(container) {
+        if (!container || typeof container.querySelector !== 'function') {
+            return;
+        }
+        const firstInlineHighlight = container.querySelector('.agent-focus-inline-highlight');
+        const firstBlockHighlight = container.querySelector('[data-agent-focus-highlight="true"]');
+        const target = firstInlineHighlight && typeof firstInlineHighlight.closest === 'function'
+            ? (firstInlineHighlight.closest('[data-agent-focus-highlight="true"]') || firstInlineHighlight)
+            : (firstInlineHighlight || firstBlockHighlight);
+        if (!target || typeof target.scrollIntoView !== 'function') {
+            return;
+        }
+        target.setAttribute('data-agent-focus-primary-highlight', 'true');
+        const reveal = function () {
+            try {
+                target.scrollIntoView({ block: 'center', inline: 'nearest' });
+            } catch (_error) {
+                target.scrollIntoView();
+            }
+        };
+        if (window && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(reveal);
+            return;
+        }
+        window.setTimeout(reveal, 0);
     }
 
     async function readGraphFocusMarkdownSource(previewRuntime, candidateSourcePaths, diagnostics) {
@@ -2666,6 +2694,9 @@
 
     async function renderMarkdownPreviewIntoHost(renderedHost, candidateSourcePaths, matchedSpans, renderToken, diagnostics) {
         const previewRuntime = resolveMarkdownPreviewRuntime();
+        const normalizedCandidateSourcePaths = Array.isArray(candidateSourcePaths)
+            ? candidateSourcePaths
+            : [candidateSourcePaths].map((value) => String(value || '').trim()).filter(Boolean);
         if (diagnostics) {
             diagnostics.markdownRuntimeAvailable = Boolean(
                 previewRuntime
@@ -2678,9 +2709,9 @@
                 && typeof previewRuntime.storageProvider.readContent === 'function'
             );
         }
-        if (!renderedHost || !previewRuntime || !Array.isArray(candidateSourcePaths) || candidateSourcePaths.length <= 0) {
+        if (!renderedHost || !previewRuntime || normalizedCandidateSourcePaths.length <= 0) {
             if (diagnostics && !diagnostics.failureReason) {
-                diagnostics.failureReason = !Array.isArray(candidateSourcePaths) || candidateSourcePaths.length <= 0
+                diagnostics.failureReason = normalizedCandidateSourcePaths.length <= 0
                     ? 'missing_source_path'
                     : !diagnostics.markdownRuntimeAvailable
                         ? 'missing_markdown_runtime'
@@ -2692,7 +2723,7 @@
         }
 
         try {
-            const resolvedSource = await readGraphFocusMarkdownSource(previewRuntime, candidateSourcePaths, diagnostics);
+            const resolvedSource = await readGraphFocusMarkdownSource(previewRuntime, normalizedCandidateSourcePaths, diagnostics);
             if (!resolvedSource) {
                 if (diagnostics && !diagnostics.failureReason) {
                     diagnostics.failureReason = diagnostics.attemptedSourcePaths.length > 0
@@ -3455,20 +3486,30 @@
         return button;
     }
 
-    function closeKnowledgePointActionMenu(fileButton, menu) {
-        if (!fileButton || !menu) {
+    function syncKnowledgePointActionMenuExpanded(fileButton, menuButton, expanded) {
+        const expandedValue = expanded ? 'true' : 'false';
+        if (fileButton) {
+            fileButton.setAttribute('aria-expanded', expandedValue);
+        }
+        if (menuButton) {
+            menuButton.setAttribute('aria-expanded', expandedValue);
+        }
+    }
+
+    function closeKnowledgePointActionMenu(fileButton, menu, menuButton) {
+        if (!menu) {
             return;
         }
         menu.hidden = true;
-        fileButton.setAttribute('aria-expanded', 'false');
+        syncKnowledgePointActionMenuExpanded(fileButton, menuButton, false);
     }
 
-    function openKnowledgePointActionMenu(fileButton, menu) {
-        if (!fileButton || !menu) {
+    function openKnowledgePointActionMenu(fileButton, menu, menuButton) {
+        if (!menu) {
             return;
         }
         menu.hidden = false;
-        fileButton.setAttribute('aria-expanded', 'true');
+        syncKnowledgePointActionMenuExpanded(fileButton, menuButton, true);
         const firstAction = menu.querySelector('button:not(:disabled)');
         if (firstAction && typeof firstAction.focus === 'function') {
             firstAction.focus();
@@ -3482,7 +3523,9 @@
             }
             const ownerId = menu.getAttribute('aria-labelledby');
             const owner = ownerId ? document.getElementById(ownerId) : null;
-            closeKnowledgePointActionMenu(owner, menu);
+            const menuButtonId = menu.getAttribute('data-agent-knowledge-menu-button-id');
+            const menuButton = menuButtonId ? document.getElementById(menuButtonId) : null;
+            closeKnowledgePointActionMenu(owner, menu, menuButton);
         });
     }
 
@@ -3497,7 +3540,7 @@
         }
     }
 
-    function bindKnowledgePointActionMenu(card, fileButton, menu) {
+    function bindKnowledgePointActionMenu(card, fileButton, menu, menuButton) {
         let longPressTimer = null;
         let suppressNextClick = false;
         const clearLongPressTimer = function () {
@@ -3510,10 +3553,10 @@
             clearLongPressTimer();
             closeSiblingKnowledgePointActionMenus(menu);
             markKnowledgePointCardSelected(card);
-            openKnowledgePointActionMenu(fileButton, menu);
+            openKnowledgePointActionMenu(fileButton, menu, menuButton);
         };
         const closeMenu = function () {
-            closeKnowledgePointActionMenu(fileButton, menu);
+            closeKnowledgePointActionMenu(fileButton, menu, menuButton);
         };
 
         fileButton.addEventListener('pointerdown', function (event) {
@@ -3550,12 +3593,36 @@
             event.stopPropagation();
             suppressNextClick = false;
         }, true);
+        if (menuButton) {
+            menuButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (menu.hidden) {
+                    openMenu();
+                    return;
+                }
+                closeMenu();
+            });
+            menuButton.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openMenu();
+                } else if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeMenu();
+                }
+            });
+        }
         menu.addEventListener('click', function (event) {
             const target = event.target;
-            if (target && typeof target.closest === 'function' && target.closest('button')) {
+            const button = target && typeof target.closest === 'function'
+                ? target.closest('button')
+                : null;
+            if (button && button.disabled !== true) {
                 closeMenu();
             }
-        });
+        }, true);
         menu.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 event.preventDefault();
@@ -3569,6 +3636,22 @@
             }
             closeMenu();
         });
+    }
+
+    function createKnowledgePointActionMenuButton(fileName) {
+        const button = document.createElement('button');
+        const label = translate('agentWorkspace.knowledge.actionsMenuButtonLabel', 'Open knowledge point actions for {file}', {
+            file: fileName,
+        });
+        button.type = 'button';
+        button.className = 'agent-knowledge-menu-button';
+        button.textContent = '...';
+        button.setAttribute('data-agent-knowledge-menu-button', 'true');
+        button.setAttribute('aria-haspopup', 'menu');
+        button.setAttribute('aria-expanded', 'false');
+        button.setAttribute('aria-label', label);
+        button.title = label;
+        return button;
     }
 
     function createKnowledgePointActionMenu(item, handlers, fileName, actionAtomId) {
@@ -9788,13 +9871,22 @@
                     file: fileName,
                 });
                 header.appendChild(fileButton);
+                const menuButton = createKnowledgePointActionMenuButton(fileName);
+                menuButton.id = `${fileButtonId}-actions`;
+                header.appendChild(menuButton);
                 const actionMenu = createKnowledgePointActionMenu(item, handlers, fileName, actionAtomId);
+                const actionMenuId = `${fileButtonId}-menu`;
+                actionMenu.id = actionMenuId;
                 actionMenu.setAttribute('aria-labelledby', fileButtonId);
+                actionMenu.setAttribute('data-agent-knowledge-menu-button-id', menuButton.id);
+                fileButton.setAttribute('aria-controls', actionMenuId);
+                menuButton.setAttribute('aria-controls', actionMenuId);
                 card.appendChild(actionMenu);
-                bindKnowledgePointActionMenu(card, fileButton, actionMenu);
+                bindKnowledgePointActionMenu(card, fileButton, actionMenu, menuButton);
                 fileButton.addEventListener('click', function () {
                     markKnowledgePointCardSelected(card);
                     ensureWorkspaceVisible();
+                    closeKnowledgePointActionMenu(fileButton, actionMenu, menuButton);
                     api.openGraphFocusPane(buildKnowledgePointFocusPayload(item));
                 });
                 fileButton.addEventListener('keydown', function (event) {

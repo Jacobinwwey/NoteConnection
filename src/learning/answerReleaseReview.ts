@@ -553,6 +553,54 @@ function appendRevisionAnswerSentence(sentences: string[], sentence: string, use
     }
 }
 
+function collectDefinitionAugmentationTitles(context: AnswerReleaseReviewContext): string[] {
+    const leadingPoint = context.knowledgePoints[0];
+    const anchorTitle = normalizeWhitespace(String(
+        leadingPoint?.title
+        || context.graphContext?.anchorTitle
+        || ''
+    ));
+    const anchorComparableTitle = anchorTitle.toLowerCase();
+    const titles: string[] = [];
+    const seen = new Set<string>();
+    const appendTitle = (value: unknown) => {
+        const title = normalizeWhitespace(String(value || '').trim());
+        const comparableTitle = title.toLowerCase();
+        if (
+            !title
+            || comparableTitle === anchorComparableTitle
+            || comparableTitle.includes('preamble')
+            || seen.has(comparableTitle)
+        ) {
+            return;
+        }
+        seen.add(comparableTitle);
+        titles.push(title);
+    };
+    if (Array.isArray(leadingPoint?.matchedSpans)) {
+        leadingPoint.matchedSpans.forEach((span) => appendTitle(span && span.title));
+    }
+    if (Array.isArray(leadingPoint?.citations)) {
+        leadingPoint.citations.forEach((citation) => appendTitle(citation && citation.title));
+    }
+    context.citations.forEach((citation) => appendTitle(citation && citation.title));
+    return titles.slice(0, 3);
+}
+
+function buildDefinitionAugmentationSentence(
+    context: AnswerReleaseReviewContext,
+    useChinese: boolean
+): string {
+    const augmentationTitles = collectDefinitionAugmentationTitles(context);
+    if (augmentationTitles.length <= 0) {
+        return '';
+    }
+    if (useChinese) {
+        return `同一知识点还覆盖 ${augmentationTitles.join('、')}`;
+    }
+    return `The same knowledge point also covers ${augmentationTitles.join(', ')}`;
+}
+
 function buildRevisionGraphConnectionSentence(
     context: AnswerReleaseReviewContext,
     useChinese: boolean
@@ -597,11 +645,13 @@ function buildRevisionGraphProfileSentence(
             .slice(0, 2)
         : [];
     const degreeParts: string[] = [];
-    if (Number.isFinite(Number(anchorProfile && anchorProfile.inDegree))) {
-        degreeParts.push(useChinese ? `入度为 ${Number(anchorProfile?.inDegree)}` : `${Number(anchorProfile?.inDegree)} incoming`);
+    const inDegree = anchorProfile ? Number(anchorProfile.inDegree) : NaN;
+    const outDegree = anchorProfile ? Number(anchorProfile.outDegree) : NaN;
+    if (Number.isFinite(inDegree)) {
+        degreeParts.push(useChinese ? `入度为 ${inDegree}` : `${inDegree} incoming`);
     }
-    if (Number.isFinite(Number(anchorProfile && anchorProfile.outDegree))) {
-        degreeParts.push(useChinese ? `出度为 ${Number(anchorProfile?.outDegree)}` : `${Number(anchorProfile?.outDegree)} outgoing`);
+    if (Number.isFinite(outDegree)) {
+        degreeParts.push(useChinese ? `出度为 ${outDegree}` : `${outDegree} outgoing`);
     }
     if (degreeParts.length <= 0 && predecessorTitles.length <= 0 && successorTitles.length <= 0) {
         return '';
@@ -636,13 +686,15 @@ function buildRevisionGraphProfileSentence(
 function expandAnswerWithGraphContext(
     baseAnswer: string,
     context: AnswerReleaseReviewContext,
-    useChinese: boolean
+    useChinese: boolean,
+    extraSentences: string[] = []
 ): string {
     const sentences: string[] = [];
     appendRevisionAnswerSentence(sentences, baseAnswer, useChinese);
+    extraSentences.forEach((sentence) => appendRevisionAnswerSentence(sentences, sentence, useChinese));
     appendRevisionAnswerSentence(sentences, buildRevisionGraphConnectionSentence(context, useChinese), useChinese);
     appendRevisionAnswerSentence(sentences, buildRevisionGraphProfileSentence(context, useChinese), useChinese);
-    return sentences.slice(0, 3).join(useChinese ? '' : ' ');
+    return sentences.slice(0, 4).join(useChinese ? '' : ' ');
 }
 
 function hasStrongEnglishAnchorCaseSignal(value: string): boolean {
@@ -707,20 +759,27 @@ function buildDefinitionIntentRevisionAnswer(
         const baseAnswer = /[.!?\u3002\uFF01\uFF1F]$/u.test(canonicalizedSurface)
             ? canonicalizedSurface
             : `${canonicalizedSurface}.`;
-        return expandAnswerWithGraphContext(baseAnswer, context, useChinese);
+        return expandAnswerWithGraphContext(baseAnswer, context, useChinese, [
+            buildDefinitionAugmentationSentence(context, useChinese),
+        ]);
     }
     if (!subject || !value) {
         return expandAnswerWithGraphContext(
             normalizeWhitespace(supportFrame.surface || buildGroundedRevisionAnswer(context)),
             context,
-            useChinese
+            useChinese,
+            [buildDefinitionAugmentationSentence(context, useChinese)]
         );
     }
     if (useChinese) {
         const separator = /[A-Za-z0-9)\]]$/u.test(subject) ? ' 是' : '是';
-        return expandAnswerWithGraphContext(`${subject}${separator}${value}。`, context, useChinese);
+        return expandAnswerWithGraphContext(`${subject}${separator}${value}。`, context, useChinese, [
+            buildDefinitionAugmentationSentence(context, useChinese),
+        ]);
     }
-    return expandAnswerWithGraphContext(`${subject} is ${value}.`, context, useChinese);
+    return expandAnswerWithGraphContext(`${subject} is ${value}.`, context, useChinese, [
+        buildDefinitionAugmentationSentence(context, useChinese),
+    ]);
 }
 
 function buildGraphOrderRevisionAnswer(

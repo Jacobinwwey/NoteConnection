@@ -1213,7 +1213,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
-    public async buildLearningPath(request: LearningPathRequest): Promise<LearningPathResponse> {
+    private async composeLearningPathResponse(request: LearningPathRequest): Promise<{
+        response: LearningPathResponse;
+        userId: string;
+        generatedAt: string;
+        focusAtomIds: string[];
+    }> {
         await this.ensureHydrated();
         const userId = String(request.userId || '').trim();
         if (!userId) {
@@ -1249,6 +1254,26 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             divergencePaths,
             recommendedActions,
         };
+        return {
+            response,
+            userId,
+            generatedAt,
+            focusAtomIds,
+        };
+    }
+
+    public async previewLearningPath(request: LearningPathRequest): Promise<LearningPathResponse> {
+        const { response } = await this.composeLearningPathResponse(request);
+        return response;
+    }
+
+    public async buildLearningPath(request: LearningPathRequest): Promise<LearningPathResponse> {
+        const {
+            response,
+            userId,
+            generatedAt,
+            focusAtomIds,
+        } = await this.composeLearningPathResponse(request);
         const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(focusAtomIds);
         this.recordWorkflowArtifact({
             kind: 'learning_path',
@@ -1258,7 +1283,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             corpusId: scopedWorkspace.corpusId,
             title: `Learning path for ${focusAtomIds[0] || 'global scope'}`,
             sourceAtomIds: focusAtomIds,
-            summary: `Generated ${masteryPaths.length} mastery path(s), ${divergencePaths.length} divergence path(s), and ${recommendedActions.length} recommended action(s).`,
+            summary: `Generated ${response.masteryPaths.length} mastery path(s), ${response.divergencePaths.length} divergence path(s), and ${response.recommendedActions.length} recommended action(s).`,
             payload: response as unknown as Record<string, unknown>,
             recordedAt: generatedAt,
         });

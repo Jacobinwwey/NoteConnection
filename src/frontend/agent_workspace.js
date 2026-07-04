@@ -1294,7 +1294,7 @@
         });
     }
 
-    function appendGroundingSummaryMessage(result) {
+    function publishConversationGroundingState(result) {
         const groundingPayload = buildConversationGroundingPayload(result);
         if (window && typeof window === 'object') {
             window.__NC_LAST_AGENT_CONVERSATION_GROUNDING = groundingPayload;
@@ -1456,9 +1456,20 @@
         const capabilityRequest = capability && typeof capability.request === 'object'
             ? capability.request
             : {};
-        const focusAtomIds = Array.isArray(capabilityRequest.focusAtomIds) && capabilityRequest.focusAtomIds.length > 0
-            ? capabilityRequest.focusAtomIds.map((atomId) => String(atomId || '').trim()).filter(Boolean)
-            : [nodeId];
+        const focusAtomIds = [];
+        const appendFocusAtomId = function (atomId) {
+            const normalizedAtomId = String(atomId || '').trim();
+            if (normalizedAtomId && !focusAtomIds.includes(normalizedAtomId)) {
+                focusAtomIds.push(normalizedAtomId);
+            }
+        };
+        if (Array.isArray(capabilityRequest.focusAtomIds)) {
+            capabilityRequest.focusAtomIds.forEach(appendFocusAtomId);
+        }
+        if (Array.isArray(item && item.atomIds)) {
+            item.atomIds.forEach(appendFocusAtomId);
+        }
+        appendFocusAtomId(nodeId);
         return {
             userId: getUserId(),
             focusAtomIds,
@@ -4888,7 +4899,7 @@
                     'No grounded response.'
                 );
             }
-            appendGroundingSummaryMessage(result);
+            publishConversationGroundingState(result);
             const controller = getController();
             if (controller) {
                 const trace = result && typeof result.trace === 'object' ? result.trace : {};

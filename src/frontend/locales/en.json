@@ -420,6 +420,7 @@
       "relatedFocusAction": "Related Focus",
       "relatedFocusActionLabel": "Show citation focus for {file}",
       "actionsMenu": "Knowledge point actions",
+      "actionsMenuButtonLabel": "Open knowledge point actions for {file}",
       "untitled": "Untitled knowledge point"
     },
     "apiStatus": {

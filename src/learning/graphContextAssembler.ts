@@ -87,6 +87,45 @@ function isAnchorEquivalentNode(atomId: string, title: string, exclusion: Anchor
     return Boolean(normalizedTitle && exclusion.titles.has(normalizedTitle));
 }
 
+function relationEdgeKey(edge: RelationEdge): string {
+    const edgeId = String((edge as any).edgeId || edge.id || '').trim();
+    if (edgeId) {
+        return `id:${edgeId}`;
+    }
+    return [
+        String(edge.sourceAtomId || '').trim(),
+        String(edge.targetAtomId || '').trim(),
+        String(edge.relationKind || '').trim(),
+        String(edge.provenance || '').trim(),
+    ].join('|');
+}
+
+async function queryAdjacentEdgesForAnchorAtoms(
+    opsStore: KnowledgeGraphOpsAdapter,
+    anchorAtomIds: string[],
+    direction: 'predecessor' | 'successor',
+    edgeLimit?: number
+): Promise<RelationEdge[]> {
+    const edgesByKey = new Map<string, RelationEdge>();
+    const normalizedAnchorAtomIds = Array.from(new Set(
+        anchorAtomIds
+            .map((atomId) => String(atomId || '').trim())
+            .filter(Boolean)
+    ));
+    for (const atomId of normalizedAnchorAtomIds) {
+        const edges = await opsStore.queryEdges({
+            ...(direction === 'predecessor' ? { toNodeId: atomId } : { fromNodeId: atomId }),
+            ...(Number.isFinite(Number(edgeLimit)) && Number(edgeLimit) > 0
+                ? { limit: Math.max(1, Math.floor(Number(edgeLimit))) }
+                : {}),
+        });
+        edges.forEach((edge) => {
+            edgesByKey.set(relationEdgeKey(edge), edge);
+        });
+    }
+    return Array.from(edgesByKey.values());
+}
+
 async function countUsableAdjacentNodes(
     opsStore: KnowledgeGraphOpsAdapter,
     edges: RelationEdge[],
@@ -377,14 +416,15 @@ function buildBaseGraphContext(
         if (!edge || !edge.relationKind) {
             return;
         }
+        const edgeId = String((edge as any).edgeId || (edge as any).id || '').trim();
         const summary = relationSummaryMap.get(edge.relationKind) || {
             edgeIds: new Set<string>(),
             sourceAtomIds: new Set<string>(),
             targetAtomIds: new Set<string>(),
             confidenceValues: [],
         };
-        if (edge.edgeId) {
-            summary.edgeIds.add(String(edge.edgeId));
+        if (edgeId) {
+            summary.edgeIds.add(edgeId);
         }
         const sourceAtomId = String(edge.sourceAtomId || '').trim();
         const targetAtomId = String(edge.targetAtomId || '').trim();
@@ -412,13 +452,13 @@ function buildBaseGraphContext(
                 && sourcePoint.pointAtomId !== targetPoint.pointAtomId
             ) {
                 const relationKey = [
-                    String(edge.edgeId || '').trim(),
+                    edgeId,
                     sourcePoint.pointAtomId,
                     targetPoint.pointAtomId,
                     edge.relationKind,
                 ].join('|');
                 knowledgePointRelationMap.set(relationKey, {
-                    edgeId: String(edge.edgeId || '').trim(),
+                    edgeId,
                     relationKind: edge.relationKind,
                     sourceAtomId: sourcePoint.pointAtomId,
                     sourceTitle: sourcePoint.title,
@@ -853,15 +893,22 @@ export async function assembleAgentConversationGraphContext(
     const useCompleteNeighborhoodDegree = capabilities.serverSideQuery !== true;
     const predecessorEdgeLimit = Math.max(budget.maxPredecessors * 8, 24);
     const successorEdgeLimit = Math.max(budget.maxSuccessors * 8, 24);
+    const anchorAtomIds = pointAtomIds(anchorPoint);
     const predecessorEdges = useCompleteNeighborhoodDegree || budget.maxPredecessors > 0
-        ? await opsStore.queryEdges(useCompleteNeighborhoodDegree
-            ? { toNodeId: baseGraphContext.anchorAtomId }
-            : { toNodeId: baseGraphContext.anchorAtomId, limit: predecessorEdgeLimit })
+        ? await queryAdjacentEdgesForAnchorAtoms(
+            opsStore,
+            anchorAtomIds,
+            'predecessor',
+            useCompleteNeighborhoodDegree ? undefined : predecessorEdgeLimit
+        )
         : [];
     const successorEdges = useCompleteNeighborhoodDegree || budget.maxSuccessors > 0
-        ? await opsStore.queryEdges(useCompleteNeighborhoodDegree
-            ? { fromNodeId: baseGraphContext.anchorAtomId }
-            : { fromNodeId: baseGraphContext.anchorAtomId, limit: successorEdgeLimit })
+        ? await queryAdjacentEdgesForAnchorAtoms(
+            opsStore,
+            anchorAtomIds,
+            'successor',
+            useCompleteNeighborhoodDegree ? undefined : successorEdgeLimit
+        )
         : [];
     const predecessorWindow = budget.maxPredecessors > 0
         ? await buildWindowNodes(

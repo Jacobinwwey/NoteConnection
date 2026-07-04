@@ -601,11 +601,13 @@ function buildGraphProfileAnswerSentence(
     const predecessorTitles = collectGraphWindowTitles(graphContext, 'predecessorWindow', 2);
     const successorTitles = collectGraphWindowTitles(graphContext, 'successorWindow', 2);
     const degreeParts: string[] = [];
-    if (Number.isFinite(Number(anchorProfile && anchorProfile.inDegree))) {
-        degreeParts.push(useChinese ? `入度为 ${Number(anchorProfile?.inDegree)}` : `${Number(anchorProfile?.inDegree)} incoming`);
+    const inDegree = anchorProfile ? Number(anchorProfile.inDegree) : NaN;
+    const outDegree = anchorProfile ? Number(anchorProfile.outDegree) : NaN;
+    if (Number.isFinite(inDegree)) {
+        degreeParts.push(useChinese ? `入度为 ${inDegree}` : `${inDegree} incoming`);
     }
-    if (Number.isFinite(Number(anchorProfile && anchorProfile.outDegree))) {
-        degreeParts.push(useChinese ? `出度为 ${Number(anchorProfile?.outDegree)}` : `${Number(anchorProfile?.outDegree)} outgoing`);
+    if (Number.isFinite(outDegree)) {
+        degreeParts.push(useChinese ? `出度为 ${outDegree}` : `${outDegree} outgoing`);
     }
     if (degreeParts.length <= 0 && predecessorTitles.length <= 0 && successorTitles.length <= 0) {
         return '';

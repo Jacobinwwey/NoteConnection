@@ -575,6 +575,100 @@ describe('assembleAgentConversationGraphContext', () => {
         }));
     });
 
+    test('builds graph windows from every atom grouped under the matched knowledge point', async () => {
+        const atoms: KnowledgeAtom[] = [
+            createAtom({
+                id: 'atom_water_glass_heading',
+                stableKey: 'water_glass_heading',
+                title: 'Water Glass',
+            }),
+            createAtom({
+                id: 'atom_water_glass_physics',
+                stableKey: 'water_glass_physics',
+                title: 'Water Glass Physics',
+            }),
+            createAtom({
+                id: 'atom_material_science',
+                stableKey: 'material_science',
+                title: 'Material Science',
+            }),
+            createAtom({
+                id: 'atom_thermal_model',
+                stableKey: 'thermal_model',
+                title: 'Thermal Model',
+            }),
+        ];
+        const edges: RelationEdge[] = [
+            {
+                id: 'edge_material_to_secondary',
+                sourceAtomId: 'atom_material_science',
+                targetAtomId: 'atom_water_glass_physics',
+                relationKind: 'prerequisite',
+                provenance: 'fact',
+                confidence: 0.93,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-06-17T00:00:00.000Z',
+                },
+            },
+            {
+                id: 'edge_secondary_to_thermal',
+                sourceAtomId: 'atom_water_glass_physics',
+                targetAtomId: 'atom_thermal_model',
+                relationKind: 'sequence',
+                provenance: 'fact',
+                confidence: 0.91,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-06-17T00:00:00.000Z',
+                },
+            },
+        ];
+        const knowledgePoints: AgentConversationKnowledgePoint[] = [
+            createKnowledgePoint({
+                atomId: 'atom_water_glass_heading',
+                atomIds: ['atom_water_glass_heading', 'atom_water_glass_physics'],
+                documentId: 'doc_water_glass',
+                sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                title: 'Water Glass',
+                summary: 'A water glass is a physical system made of a transparent container and water.',
+                evidenceSnippet: 'A water glass is a physical system made of a transparent container and water.',
+                score: 0.96,
+            }),
+        ];
+
+        const result = await assembleAgentConversationGraphContext({
+            message: 'what is waterglass?',
+            usedScope: globalScope,
+            knowledgePoints,
+            store: new InMemoryOpsStore(atoms, edges),
+            budget: {
+                maxPredecessors: 3,
+                maxSuccessors: 3,
+            },
+        });
+
+        expect((result.graphContext as any)?.predecessorWindow).toEqual([
+            expect.objectContaining({
+                atomId: 'atom_material_science',
+                title: 'Material Science',
+                relationKind: 'prerequisite',
+            }),
+        ]);
+        expect((result.graphContext as any)?.successorWindow).toEqual([
+            expect.objectContaining({
+                atomId: 'atom_thermal_model',
+                title: 'Thermal Model',
+                relationKind: 'sequence',
+            }),
+        ]);
+        expect((result.graphContext as any)?.anchorGraphProfile).toEqual(expect.objectContaining({
+            atomId: 'atom_water_glass_heading',
+            inDegree: 1,
+            outDegree: 1,
+        }));
+    });
+
     test('fails open to retrieval-shaped graph context when graph ops are unavailable', async () => {
         const knowledgePoints: AgentConversationKnowledgePoint[] = [
             createKnowledgePoint({

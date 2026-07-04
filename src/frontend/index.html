@@ -167,15 +167,6 @@
               <span class="agent-workspace-drawer-title" data-i18n="agentWorkspace.title">Knowledge Workspace</span>
               <span class="agent-workspace-drawer-subtitle" data-i18n="agentWorkspace.subtitle">Grounded conversation, knowledge search, and guided learning</span>
             </div>
-            <div class="agent-scope-control agent-scope-control--toolbar">
-              <label for="agent-workspace-scope-select" data-i18n="agentWorkspace.scope.label">Knowledge Scope</label>
-              <select id="agent-workspace-scope-select" aria-describedby="agent-workspace-scope-summary"></select>
-              <div
-                id="agent-workspace-scope-summary"
-                class="agent-scope-summary"
-                data-i18n="agentWorkspace.scope.summaryAll"
-              >All folders</div>
-            </div>
             <button
               id="btn-close-agent-workspace"
               type="button"
@@ -192,12 +183,24 @@
                 <h3 data-i18n="agentWorkspace.conversationTitle">Grounded Conversation</h3>
                 <span class="agent-pane-subtitle" data-i18n="agentWorkspace.conversationSubtitle">Scoped knowledge, citations, and guided learning actions</span>
               </div>
+              <div class="agent-scope-control agent-scope-control--workspace">
+                <label for="agent-workspace-scope-select" data-i18n="agentWorkspace.scope.label">Knowledge Scope</label>
+                <select id="agent-workspace-scope-select" aria-describedby="agent-workspace-scope-summary"></select>
+                <div
+                  id="agent-workspace-scope-summary"
+                  class="agent-scope-summary"
+                  data-i18n="agentWorkspace.scope.summaryAll"
+                >All folders</div>
+              </div>
               <div class="agent-pane-field">
                 <label for="agent-workspace-user-id" data-i18n="agentWorkspace.userId">Learner ID</label>
                 <input id="agent-workspace-user-id" type="text" value="path_user_default" />
               </div>
               <div id="agent-workspace-chat-messages" class="agent-chat-messages"></div>
-              <div class="agent-pane-field">
+              <div id="agent-workspace-knowledge-points" class="agent-knowledge-points">
+                <div class="agent-knowledge-empty" data-i18n="agentWorkspace.knowledge.emptyInitial">No scoped knowledge matches yet.</div>
+              </div>
+              <div class="agent-pane-field agent-chat-input-field">
                 <label for="agent-workspace-chat-input" data-i18n="agentWorkspace.inputLabel">Ask the scoped knowledge corpus</label>
                 <textarea
                   id="agent-workspace-chat-input"
@@ -215,9 +218,6 @@
                 data-api-state="idle"
                 aria-live="polite"
               ></div>
-              <div id="agent-workspace-knowledge-points" class="agent-knowledge-points">
-                  <div class="agent-knowledge-empty" data-i18n="agentWorkspace.knowledge.emptyInitial">No scoped knowledge matches yet.</div>
-                </div>
             </section>
 
             <div id="agent-side-work-area" class="agent-side-work-area">
