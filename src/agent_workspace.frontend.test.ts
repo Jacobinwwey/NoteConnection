@@ -6731,6 +6731,15 @@ describe('agent workspace learning-path integration', () => {
                                     parent_context: 1,
                                 },
                             },
+                            ragFailureClassifications: [
+                                {
+                                    stage: 'context_assembly',
+                                    code: 'context_budget_limited',
+                                    severity: 'warning',
+                                    message: 'RAG context was budget-limited before release.',
+                                    evidence: ['fragment_truncated'],
+                                },
+                            ],
                         },
                     },
                 },
@@ -6755,6 +6764,12 @@ describe('agent workspace learning-path integration', () => {
                     attempted: true,
                     afterStatus: 'sufficient',
                 }),
+                ragFailureClassifications: expect.arrayContaining([
+                    expect.objectContaining({
+                        stage: 'context_assembly',
+                        code: 'context_budget_limited',
+                    }),
+                ]),
             })
         );
 
@@ -6779,6 +6794,8 @@ describe('agent workspace learning-path integration', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('Document augmentation');
         expect(String(evidenceBody?.textContent || '')).toContain('Graph neighbor support');
         expect(String(evidenceBody?.textContent || '')).toContain('Truncated fragments');
+        expect(String(evidenceBody?.textContent || '')).toContain('Failure stages');
+        expect(String(evidenceBody?.textContent || '')).toContain('context assembly');
         expect(String(evidenceBody?.textContent || '')).toContain('none');
         expect(String(evidenceBody?.textContent || '')).toContain('evidence recovery succeeded');
         expect(String(evidenceBody?.textContent || '')).not.toContain('Water glass is a transparent sodium silicate solution.');

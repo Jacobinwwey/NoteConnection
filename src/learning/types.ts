@@ -422,6 +422,34 @@ export interface RagSufficiencyReview {
     degradationState?: 'none' | 'partial_coverage' | 'conflict' | 'stale_evidence' | 'insufficient_evidence';
 }
 
+export type RagFailureStage =
+    | 'parsing_source'
+    | 'indexing'
+    | 'retrieval'
+    | 'reranking'
+    | 'context_assembly'
+    | 'graph_evidence'
+    | 'generation'
+    | 'citation_verification'
+    | 'permission_scope';
+
+export interface RagFailureClassification {
+    stage: RagFailureStage;
+    code: string;
+    severity: 'info' | 'warning' | 'error';
+    message: string;
+    evidence: string[];
+}
+
+export interface AgentConversationAnswerClaimCitation {
+    claimId: string;
+    text: string;
+    citationIds: string[];
+    fragmentIds: string[];
+    sourcePaths: string[];
+    supportStatus: 'supported' | 'weak' | 'unsupported';
+}
+
 export interface RagEvidenceRecoveryTrace {
     attempted: boolean;
     strategy: 'expanded_context_pack';
@@ -1309,6 +1337,8 @@ export interface AgentConversationTrace {
     ragContextPack?: RagContextPack;
     ragSufficiencyReview?: RagSufficiencyReview;
     ragRecovery?: RagEvidenceRecoveryTrace;
+    ragFailureClassifications?: RagFailureClassification[];
+    answerClaimCitations?: AgentConversationAnswerClaimCitation[];
     answerReleaseReview?: AnswerReleaseReview;
 }
 

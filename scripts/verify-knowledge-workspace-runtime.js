@@ -390,6 +390,7 @@ function validatePositiveConversationResult(summary, options) {
     expectedRagLlmJudgeUsed,
     expectedRagRecoveryAttempted,
     acceptedRagDegradationStates,
+    requiredRagFailureStages,
     minimumRagRecoveryBeforeSourceDecisionStatusCounts,
     requiredRagRecoveryBeforeReasonFragments,
     requiredFirstGraphSuccessorTitle,
@@ -559,6 +560,20 @@ function validatePositiveConversationResult(summary, options) {
         `RAG degradation state outside accepted set for query=${query}: accepted=${JSON.stringify(acceptedRagDegradationStates)} actual=${JSON.stringify(summary.ragSufficiencyReview)}`
       );
     }
+  }
+  if (Array.isArray(requiredRagFailureStages) && requiredRagFailureStages.length > 0) {
+    const observedStages = Array.isArray(summary.ragFailureClassifications)
+      ? summary.ragFailureClassifications
+        .map((classification) => String(classification && classification.stage || '').trim())
+        .filter(Boolean)
+      : [];
+    requiredRagFailureStages.forEach((stage) => {
+      if (!observedStages.includes(stage)) {
+        throw new Error(
+          `RAG failure stage missing "${stage}" for query=${query}: observed=${JSON.stringify(observedStages)} classifications=${JSON.stringify(summary.ragFailureClassifications)}`
+        );
+      }
+    });
   }
   if (
     minimumRagSourceDecisionStatusCounts
@@ -779,6 +794,9 @@ async function main() {
         const ragContextPack = result.trace && result.trace.ragContextPack ? result.trace.ragContextPack : null;
         const ragSufficiencyReview = result.trace && result.trace.ragSufficiencyReview ? result.trace.ragSufficiencyReview : null;
         const ragRecovery = result.trace && result.trace.ragRecovery ? result.trace.ragRecovery : null;
+        const ragFailureClassifications = result.trace && Array.isArray(result.trace.ragFailureClassifications)
+          ? result.trace.ragFailureClassifications
+          : [];
         const graphContext = result.trace && result.trace.graphContext ? result.trace.graphContext : null;
 
         const summary = {
@@ -883,6 +901,9 @@ async function main() {
         const ragContextPack = result.trace && result.trace.ragContextPack ? result.trace.ragContextPack : null;
         const ragSufficiencyReview = result.trace && result.trace.ragSufficiencyReview ? result.trace.ragSufficiencyReview : null;
         const ragRecovery = result.trace && result.trace.ragRecovery ? result.trace.ragRecovery : null;
+        const ragFailureClassifications = result.trace && Array.isArray(result.trace.ragFailureClassifications)
+          ? result.trace.ragFailureClassifications
+          : [];
         const graphContext = result.trace && result.trace.graphContext ? result.trace.graphContext : null;
 
         const summary = {
@@ -908,6 +929,7 @@ async function main() {
           ragContextPack,
           ragSufficiencyReview,
           ragRecovery,
+          ragFailureClassifications,
           runtimeProviderFixture: runtimeProviderFixture ? runtimeProviderFixture.summary() : null,
           answer: result.answer,
         };
@@ -934,6 +956,8 @@ async function main() {
           expectedRagLlmJudgeUsed: regressionCase.expected.expectedRagLlmJudgeUsed,
           expectedRagRecoveryAttempted: regressionCase.expected.expectedRagRecoveryAttempted,
           acceptedRagDegradationStates: regressionCase.expected.acceptedRagDegradationStates,
+          requiredRagFailureStages: regressionCase.expected.runtimeRequiredRagFailureStages
+            || regressionCase.expected.requiredRagFailureStages,
           minimumRagRecoveryBeforeSourceDecisionStatusCounts: regressionCase.expected.minimumRagRecoveryBeforeSourceDecisionStatusCounts,
           requiredRagRecoveryBeforeReasonFragments: regressionCase.expected.runtimeRequiredRagRecoveryBeforeReasonFragments
             || regressionCase.expected.requiredRagRecoveryBeforeReasonFragments,

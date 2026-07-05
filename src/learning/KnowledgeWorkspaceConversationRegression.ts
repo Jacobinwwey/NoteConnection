@@ -3,6 +3,7 @@ import type {
     AnswerReleaseGateId,
     KnowledgeQueryResolvedScope,
     RagEvidenceRole,
+    RagFailureStage,
     RagSourceDecision,
     RagSourceBoundary,
     RagSufficiencyReview,
@@ -28,6 +29,8 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     acceptedRagSufficiencyStatuses?: Array<RagSufficiencyReview['status']>;
     minimumRagSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
     inMemoryMinimumRagSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
+    requiredRagFailureStages?: RagFailureStage[];
+    runtimeRequiredRagFailureStages?: RagFailureStage[];
     expectedRagDeterministic?: boolean;
     expectedRagLlmJudgeUsed?: boolean;
     expectedRagRecoveryAttempted?: boolean;
@@ -254,6 +257,7 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
                 read: 1,
                 fragment_truncated: 1,
             },
+            requiredRagFailureStages: ['context_assembly'],
             expectedRagDeterministic: true,
             expectedRagLlmJudgeUsed: false,
             expectedRagRecoveryAttempted: false,
@@ -284,6 +288,7 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
                 read: 1,
                 fragment_dropped: 1,
             },
+            requiredRagFailureStages: ['context_assembly'],
             expectedRagDeterministic: true,
             expectedRagLlmJudgeUsed: false,
             expectedRagRecoveryAttempted: false,
@@ -328,6 +333,8 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             minimumRagRecoveryBeforeSourceDecisionStatusCounts: {
                 fragment_dropped: 1,
             },
+            requiredRagFailureStages: ['context_assembly'],
+            runtimeRequiredRagFailureStages: ['context_assembly', 'generation'],
             runtimeRequiredRagRecoveryBeforeReasonFragments: ['llm_judge_failed'],
         },
     },
@@ -362,6 +369,8 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             minimumRagRecoveryBeforeSourceDecisionStatusCounts: {
                 fragment_dropped: 1,
             },
+            requiredRagFailureStages: ['context_assembly'],
+            runtimeRequiredRagFailureStages: ['context_assembly', 'generation'],
             runtimeRequiredRagRecoveryBeforeReasonFragments: ['llm_judge_failed'],
         },
     },

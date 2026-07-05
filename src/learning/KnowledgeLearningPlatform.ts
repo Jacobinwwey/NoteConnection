@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { KnowledgeLearningPlatformAPI } from './api';
 import type {
+    AgentConversationAnswerClaimCitation,
     AgentConversationAssistantBlock,
     AgentConversationInvocationRecord,
     AgentConversationKnowledgePoint,
@@ -69,6 +70,7 @@ import type {
     RagContextPack,
     RagEvidenceRecoveryTrace,
     RagEvidenceRole,
+    RagFailureClassification,
     RagSourceDecision,
     RagSufficiencyReview,
     RelationRecomputeMode,
@@ -6512,6 +6514,266 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    private buildRagFailureClassifications(params: {
+        pack: RagContextPack;
+        review: RagSufficiencyReview;
+        recovery?: RagEvidenceRecoveryTrace;
+        graphContext: AgentConversationResponse['trace']['graphContext'] | null;
+        answerReleaseReview?: AgentConversationResponse['answerReleaseReview'];
+    }): RagFailureClassification[] {
+        const classifications = new Map<string, RagFailureClassification>();
+        const addClassification = (classification: RagFailureClassification): void => {
+            const key = `${classification.stage}:${classification.code}`;
+            const current = classifications.get(key);
+            if (!current) {
+                classifications.set(key, {
+                    ...classification,
+                    evidence: Array.from(new Set(classification.evidence.map((item) => String(item || '').trim()).filter(Boolean))),
+                });
+                return;
+            }
+            current.evidence = Array.from(new Set([
+                ...current.evidence,
+                ...classification.evidence.map((item) => String(item || '').trim()).filter(Boolean),
+            ]));
+            if (classification.severity === 'error' || current.severity === 'error') {
+                current.severity = 'error';
+            } else if (classification.severity === 'warning' || current.severity === 'warning') {
+                current.severity = 'warning';
+            }
+        };
+        const sourceDecisions = Array.isArray(params.pack.sourceDecisions) ? params.pack.sourceDecisions : [];
+        const hasSourceDecisionStatus = (status: RagSourceDecision['status']): boolean => (
+            sourceDecisions.some((decision) => decision.status === status)
+            || Number(params.recovery?.beforeSourceDecisionStatusCounts?.[status] || 0) > 0
+            || Number(params.recovery?.afterSourceDecisionStatusCounts?.[status] || 0) > 0
+        );
+        const reviewReasons = Array.isArray(params.review.reasons)
+            ? params.review.reasons.map((reason) => String(reason || '').trim()).filter(Boolean)
+            : [];
+        const recoveryReasons = [
+            ...(Array.isArray(params.recovery?.beforeReasons) ? params.recovery.beforeReasons : []),
+            ...(Array.isArray(params.recovery?.afterReasons) ? params.recovery.afterReasons : []),
+        ].map((reason) => String(reason || '').trim()).filter(Boolean);
+        const allReviewReasons = Array.from(new Set([...reviewReasons, ...recoveryReasons]));
+
+        if (hasSourceDecisionStatus('source_window_unavailable')) {
+            addClassification({
+                stage: 'parsing_source',
+                code: 'source_window_unavailable',
+                severity: 'warning',
+                message: 'One or more selected source windows could not be recovered from the source document.',
+                evidence: ['source_window_unavailable'],
+            });
+        }
+        if (hasSourceDecisionStatus('fragment_truncated') || hasSourceDecisionStatus('fragment_dropped')) {
+            addClassification({
+                stage: 'context_assembly',
+                code: 'context_budget_limited',
+                severity: 'warning',
+                message: 'The model-visible RAG context pack was limited by fragment or character budget.',
+                evidence: [
+                    hasSourceDecisionStatus('fragment_truncated') ? 'fragment_truncated' : '',
+                    hasSourceDecisionStatus('fragment_dropped') ? 'fragment_dropped' : '',
+                ],
+            });
+        }
+        if (reviewReasons.includes('missing_direct_support')) {
+            addClassification({
+                stage: 'retrieval',
+                code: 'missing_direct_support',
+                severity: 'error',
+                message: 'Retrieval did not produce enough direct cited support for the user request.',
+                evidence: ['missing_direct_support'],
+            });
+        }
+        if (
+            reviewReasons.includes('graph_neighbor_evidence_missing')
+            || (
+                params.graphContext
+                && (params.graphContext.predecessorWindow?.length || 0) + (params.graphContext.successorWindow?.length || 0) > 0
+                && !params.pack.fragments.some((fragment) => fragment.role === 'graph_neighbor_support')
+            )
+        ) {
+            addClassification({
+                stage: 'graph_evidence',
+                code: 'graph_neighbor_evidence_missing',
+                severity: 'warning',
+                message: 'Graph context existed but did not produce enough grounded neighbor evidence.',
+                evidence: ['graph_neighbor_evidence_missing'],
+            });
+        }
+        allReviewReasons
+            .filter((reason) => reason.startsWith('llm_judge_failed'))
+            .forEach((reason) => {
+                addClassification({
+                    stage: 'generation',
+                    code: 'llm_judge_failed',
+                    severity: 'warning',
+                    message: 'The optional LLM sufficiency judge failed and the deterministic review path was used.',
+                    evidence: [reason],
+                });
+            });
+        if (params.review.status === 'insufficient' || params.review.degradationState === 'insufficient_evidence') {
+            addClassification({
+                stage: 'retrieval',
+                code: 'insufficient_evidence',
+                severity: 'error',
+                message: 'The available retrieved and augmented evidence was insufficient for a complete grounded answer.',
+                evidence: [
+                    params.review.status,
+                    params.review.degradationState || '',
+                ],
+            });
+        }
+        const failedGateIds = Array.isArray(params.answerReleaseReview?.failedGateIds)
+            ? params.answerReleaseReview.failedGateIds.map((gateId) => String(gateId || '').trim()).filter(Boolean)
+            : [];
+        if (failedGateIds.some((gateId) => (
+            gateId === 'claim_grounding_alignment'
+            || gateId === 'claim_structured_consistency'
+            || gateId === 'rag_answer_completeness'
+        ))) {
+            addClassification({
+                stage: 'citation_verification',
+                code: 'release_grounding_gate_failed',
+                severity: 'warning',
+                message: 'The release review found a grounding or RAG completeness gate issue.',
+                evidence: failedGateIds,
+            });
+        }
+        if (failedGateIds.some((gateId) => (
+            gateId === 'public_surface_contraction'
+            || gateId === 'internal_diagnostic_leakage'
+            || gateId === 'abstention_hygiene'
+            || gateId === 'query_intent_alignment'
+        ))) {
+            addClassification({
+                stage: 'generation',
+                code: 'release_generation_gate_failed',
+                severity: 'warning',
+                message: 'The release review revised or constrained generated answer text.',
+                evidence: failedGateIds,
+            });
+        }
+        return Array.from(classifications.values());
+    }
+
+    private tokenizeAnswerClaimText(value: string): string[] {
+        const stopwords = new Set([
+            'about',
+            'after',
+            'also',
+            'and',
+            'are',
+            'because',
+            'been',
+            'before',
+            'being',
+            'between',
+            'from',
+            'have',
+            'into',
+            'only',
+            'that',
+            'the',
+            'their',
+            'then',
+            'there',
+            'this',
+            'through',
+            'under',
+            'when',
+            'with',
+        ]);
+        return Array.from(new Set(
+            String(value || '')
+                .toLowerCase()
+                .match(/[a-z0-9_]{3,}|[\u4e00-\u9fff]{2,}/g) || []
+        )).filter((token) => !stopwords.has(token));
+    }
+
+    private splitPublicAnswerClaims(answer: string): string[] {
+        const normalizedAnswer = normalizeWhitespace(answer);
+        if (!normalizedAnswer) {
+            return [];
+        }
+        return (normalizedAnswer.match(/[^.!?。！？]+[.!?。！？]?/g) || [normalizedAnswer])
+            .map((claim) => normalizeWhitespace(claim))
+            .filter((claim) => claim.length >= 16)
+            .slice(0, 12);
+    }
+
+    private buildAnswerClaimCitations(params: {
+        answer: string;
+        pack?: RagContextPack;
+        invocationId: string;
+    }): AgentConversationAnswerClaimCitation[] {
+        const fragments = Array.isArray(params.pack?.fragments) ? params.pack.fragments : [];
+        const indexedFragments = fragments.map((fragment, index) => ({
+            fragment,
+            index,
+            tokens: new Set(this.tokenizeAnswerClaimText([
+                fragment.title || '',
+                fragment.text || '',
+            ].join(' '))),
+        }));
+        return this.splitPublicAnswerClaims(params.answer).map((claim, index) => {
+            const claimTokens = this.tokenizeAnswerClaimText(claim);
+            const rankedFragments = indexedFragments
+                .map((entry) => {
+                    const overlapCount = claimTokens.filter((token) => entry.tokens.has(token)).length;
+                    const roleBoost = entry.fragment.role === 'direct_support'
+                        ? 0.6
+                        : entry.fragment.role === 'parent_context'
+                            ? 0.35
+                            : entry.fragment.role === 'graph_neighbor_support'
+                                ? 0.2
+                                : 0;
+                    const citationBoost = entry.fragment.citationIds.length > 0 ? 0.25 : 0;
+                    return {
+                        ...entry,
+                        score: overlapCount + roleBoost + citationBoost,
+                    };
+                })
+                .filter((entry) => entry.score > 0)
+                .sort((left, right) => {
+                    const scoreDelta = right.score - left.score;
+                    if (Math.abs(scoreDelta) > 0.0001) {
+                        return scoreDelta;
+                    }
+                    return left.index - right.index;
+                })
+                .slice(0, 3);
+            const citationIds = Array.from(new Set(
+                rankedFragments.flatMap((entry) => entry.fragment.citationIds)
+                    .map((citationId) => String(citationId || '').trim())
+                    .filter(Boolean)
+            ));
+            const fragmentIds = Array.from(new Set(
+                rankedFragments
+                    .map((entry) => String(entry.fragment.fragmentId || '').trim())
+                    .filter(Boolean)
+            ));
+            const sourcePaths = Array.from(new Set(
+                rankedFragments
+                    .map((entry) => String(entry.fragment.sourcePath || '').trim())
+                    .filter(Boolean)
+            ));
+            const supportStatus: AgentConversationAnswerClaimCitation['supportStatus'] = citationIds.length > 0
+                ? (rankedFragments.some((entry) => entry.score >= 2) ? 'supported' : 'weak')
+                : 'unsupported';
+            return {
+                claimId: `${params.invocationId}_answer_claim_${index + 1}`,
+                text: claim,
+                citationIds,
+                fragmentIds,
+                sourcePaths,
+                supportStatus,
+            };
+        });
+    }
+
     private buildRagGraphNeighborQueryItems(
         graphContext: AgentConversationResponse['trace']['graphContext'] | null,
         knowledgePoints: AgentConversationKnowledgePoint[],
@@ -9610,6 +9872,18 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             ragContextPack,
             ragSufficiencyReview,
         });
+        const ragFailureClassifications = this.buildRagFailureClassifications({
+            pack: ragContextPack,
+            review: ragSufficiencyReview,
+            recovery: ragRecovery,
+            graphContext,
+            answerReleaseReview: reply.answerReleaseReview,
+        });
+        const answerClaimCitations = this.buildAnswerClaimCitations({
+            answer: reply.answer,
+            pack: ragContextPack,
+            invocationId,
+        });
         const response: AgentConversationResponse = {
             userId,
             sessionId,
@@ -9651,6 +9925,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ragContextPack,
                 ragSufficiencyReview,
                 ragRecovery,
+                ragFailureClassifications,
+                answerClaimCitations,
                 answerReleaseReview: reply.answerReleaseReview,
             },
         };
@@ -9669,6 +9945,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ragContextPack,
                 ragSufficiencyReview,
                 ragRecovery,
+                ragFailureClassifications,
+                answerClaimCitations,
                 answerReleaseReview: reply.answerReleaseReview,
                 citations,
                 recalledMemories,

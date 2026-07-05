@@ -515,7 +515,8 @@
       "ragDegradationLabel": "降级状态",
       "ragReplayIdLabel": "复放 ID",
       "ragRecoveryLabel": "恢复",
-      "ragReasonsLabel": "原因"
+      "ragReasonsLabel": "原因",
+      "ragFailureStagesLabel": "失败阶段"
     },
     "learningPath": {
       "title": "引导式学习",

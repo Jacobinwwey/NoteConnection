@@ -488,6 +488,25 @@ describe('WorkspaceExportBundle', () => {
                 fragment_included: 15,
             },
         };
+        const ragFailureClassifications = [
+            {
+                stage: 'context_assembly' as const,
+                code: 'context_budget_limited',
+                severity: 'warning' as const,
+                message: 'RAG context was budget-limited before release.',
+                evidence: ['fragment_dropped'],
+            },
+        ];
+        const answerClaimCitations = [
+            {
+                claimId: 'answer_claim_1',
+                text: 'A water glass is a transparent drinking vessel.',
+                citationIds: ['evidence_water_glass'],
+                fragmentIds: ['fragment_water_glass_direct'],
+                sourcePaths: ['Knowledge_Base/waterglass/water-glass.md'],
+                supportStatus: 'supported' as const,
+            },
+        ];
 
         const bundle = buildWorkspaceExportBundle({
             request: {
@@ -591,6 +610,8 @@ describe('WorkspaceExportBundle', () => {
                             ragContextPack,
                             ragSufficiencyReview,
                             ragRecovery,
+                            ragFailureClassifications,
+                            answerClaimCitations,
                         },
                     },
                 },
@@ -610,6 +631,10 @@ describe('WorkspaceExportBundle', () => {
         ragRecovery.afterReasons.push('mutated_after_export');
         ragRecovery.beforeSourceDecisionStatusCounts.fragment_dropped = 999;
         ragRecovery.afterSourceDecisionStatusCounts.fragment_included = 999;
+        ragFailureClassifications[0].evidence.push('mutated_after_export');
+        answerClaimCitations[0].citationIds.push('mutated_after_export');
+        answerClaimCitations[0].fragmentIds.push('mutated_after_export');
+        answerClaimCitations[0].sourcePaths.push('mutated_after_export');
 
         const exportedTrace = (bundle.runtime.conversationTurns[0] as any).response.trace;
         expect(exportedTrace.ragContextPack.replayId).toBe('ragctx_0123456789abcdef');
@@ -623,6 +648,22 @@ describe('WorkspaceExportBundle', () => {
         expect(exportedTrace.ragRecovery.afterReasons).toEqual(['answerable_from_context']);
         expect(exportedTrace.ragRecovery.beforeSourceDecisionStatusCounts.fragment_dropped).toBe(3);
         expect(exportedTrace.ragRecovery.afterSourceDecisionStatusCounts.fragment_included).toBe(15);
+        expect(exportedTrace.ragFailureClassifications).toEqual([
+            expect.objectContaining({
+                stage: 'context_assembly',
+                code: 'context_budget_limited',
+                evidence: ['fragment_dropped'],
+            }),
+        ]);
+        expect(exportedTrace.answerClaimCitations).toEqual([
+            expect.objectContaining({
+                claimId: 'answer_claim_1',
+                citationIds: ['evidence_water_glass'],
+                fragmentIds: ['fragment_water_glass_direct'],
+                sourcePaths: ['Knowledge_Base/waterglass/water-glass.md'],
+                supportStatus: 'supported',
+            }),
+        ]);
     });
 
     test('adds durable knowledge-run graph reports to the exported runtime surface', () => {

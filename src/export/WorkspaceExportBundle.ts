@@ -18,6 +18,7 @@ import type {
     WorkspaceScopedMemoryExportRecord,
 } from './types';
 import type {
+    AgentConversationAnswerClaimCitation,
     AgentConversationInvocationRecord,
     AgentConversationSessionRecord,
     AgentConversationTurnRecord,
@@ -25,6 +26,7 @@ import type {
     KnowledgeAtom,
     RagContextPack,
     RagEvidenceRecoveryTrace,
+    RagFailureClassification,
     RagSufficiencyReview,
     RelationEdge,
     TemporalEdge,
@@ -97,6 +99,34 @@ function cloneRagEvidenceRecoveryTrace(
             ? { ...recovery.afterSourceDecisionStatusCounts }
             : recovery.afterSourceDecisionStatusCounts,
     };
+}
+
+function cloneRagFailureClassifications(
+    classifications: RagFailureClassification[] | undefined
+): RagFailureClassification[] | undefined {
+    if (!Array.isArray(classifications)) {
+        return undefined;
+    }
+    return classifications.map((classification) => ({
+        ...classification,
+        evidence: Array.isArray(classification.evidence)
+            ? classification.evidence.slice()
+            : [],
+    }));
+}
+
+function cloneAnswerClaimCitations(
+    claims: AgentConversationAnswerClaimCitation[] | undefined
+): AgentConversationAnswerClaimCitation[] | undefined {
+    if (!Array.isArray(claims)) {
+        return undefined;
+    }
+    return claims.map((claim) => ({
+        ...claim,
+        citationIds: Array.isArray(claim.citationIds) ? claim.citationIds.slice() : [],
+        fragmentIds: Array.isArray(claim.fragmentIds) ? claim.fragmentIds.slice() : [],
+        sourcePaths: Array.isArray(claim.sourcePaths) ? claim.sourcePaths.slice() : [],
+    }));
 }
 
 function sortAndCloneBindings(bindings: WorkspaceBindingRecord[]): WorkspaceBindingRecord[] {
@@ -397,6 +427,8 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                     ragContextPack: cloneRagContextPack(record.response.trace.ragContextPack),
                     ragSufficiencyReview: cloneRagSufficiencyReview(record.response.trace.ragSufficiencyReview),
                     ragRecovery: cloneRagEvidenceRecoveryTrace(record.response.trace.ragRecovery),
+                    ragFailureClassifications: cloneRagFailureClassifications(record.response.trace.ragFailureClassifications),
+                    answerClaimCitations: cloneAnswerClaimCitations(record.response.trace.answerClaimCitations),
                 },
             },
         }));

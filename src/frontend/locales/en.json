@@ -515,7 +515,8 @@
       "ragDegradationLabel": "Degradation",
       "ragReplayIdLabel": "Replay id",
       "ragRecoveryLabel": "Recovery",
-      "ragReasonsLabel": "Reasons"
+      "ragReasonsLabel": "Reasons",
+      "ragFailureStagesLabel": "Failure stages"
     },
     "learningPath": {
       "title": "Guided Learning",

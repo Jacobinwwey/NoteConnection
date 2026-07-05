@@ -5135,7 +5135,10 @@
         const ragRecovery = payload && payload.ragRecovery && typeof payload.ragRecovery === 'object'
             ? payload.ragRecovery
             : null;
-        if (!ragContextPack && !ragSufficiencyReview && !ragRecovery) {
+        const ragFailureClassifications = Array.isArray(payload && payload.ragFailureClassifications)
+            ? payload.ragFailureClassifications.filter((classification) => classification && typeof classification === 'object')
+            : [];
+        if (!ragContextPack && !ragSufficiencyReview && !ragRecovery && ragFailureClassifications.length <= 0) {
             return '';
         }
 
@@ -5158,6 +5161,11 @@
             ].filter(Boolean).join(' ')
             : noneLabel;
         const replayId = String(ragContextPack && ragContextPack.replayId || '').trim();
+        const failureStages = Array.from(new Set(
+            ragFailureClassifications
+                .map((classification) => humanizeEvidenceRelationKind(classification && classification.stage))
+                .filter(Boolean)
+        ));
         const totalCharCount = Number.isFinite(Number(ragContextPack && ragContextPack.totalCharCount))
             ? Number(ragContextPack.totalCharCount)
             : 0;
@@ -5228,6 +5236,10 @@
             {
                 title: translate('agentWorkspace.evidence.ragReasonsLabel', 'Reasons'),
                 value: formatRagWordList(ragSufficiencyReview && ragSufficiencyReview.reasons, noneLabel),
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragFailureStagesLabel', 'Failure stages'),
+                value: formatRagWordList(failureStages, noneLabel),
             },
         ];
         if (replayId) {

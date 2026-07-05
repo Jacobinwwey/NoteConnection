@@ -6,7 +6,7 @@ import {
     type KnowledgeWorkspaceConversationRegressionCase,
 } from './KnowledgeWorkspaceConversationRegression';
 import { createKnowledgeGraphStore } from './store';
-import type { RagEvidenceRole, RagSourceDecision } from './types';
+import type { RagEvidenceRole, RagFailureStage, RagSourceDecision } from './types';
 
 function deriveScopedConversationRequest(caseEntry: KnowledgeWorkspaceConversationRegressionCase) {
     const activeTarget = String(caseEntry.activeTarget || '').trim();
@@ -199,6 +199,14 @@ function countFullDocumentRagFragmentsByRole(
         },
         {}
     );
+}
+
+function collectRagFailureStages(
+    response: Awaited<ReturnType<KnowledgeLearningPlatform['agentConversation']>>
+): RagFailureStage[] {
+    return (response.trace.ragFailureClassifications || [])
+        .map((classification) => classification.stage)
+        .filter((stage): stage is RagFailureStage => Boolean(stage));
 }
 
 function expectReasonFragments(
@@ -394,6 +402,11 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
             }
             if (expected.acceptedRagSufficiencyStatuses && expected.acceptedRagSufficiencyStatuses.length > 0) {
                 expect(expected.acceptedRagSufficiencyStatuses).toContain(response.trace.ragSufficiencyReview?.status);
+            }
+            if (expected.requiredRagFailureStages && expected.requiredRagFailureStages.length > 0) {
+                expect(collectRagFailureStages(response)).toEqual(
+                    expect.arrayContaining(expected.requiredRagFailureStages)
+                );
             }
             if (expected.requiredFirstGraphSuccessorTitle) {
                 expect(graphSuccessorTitles(response)[0]).toBe(expected.requiredFirstGraphSuccessorTitle);

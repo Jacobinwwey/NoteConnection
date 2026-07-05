@@ -941,6 +941,9 @@
         const ragRecovery = trace && trace.ragRecovery && typeof trace.ragRecovery === 'object'
             ? trace.ragRecovery
             : null;
+        const ragFailureClassifications = Array.isArray(trace && trace.ragFailureClassifications)
+            ? trace.ragFailureClassifications.filter((classification) => classification && typeof classification === 'object')
+            : [];
         if (
             citationCount <= 0
             && memoryCount <= 0
@@ -951,6 +954,7 @@
             && !ragContextPack
             && !ragSufficiencyReview
             && !ragRecovery
+            && ragFailureClassifications.length <= 0
         ) {
             return null;
         }
@@ -977,6 +981,7 @@
             ragContextPack,
             ragSufficiencyReview,
             ragRecovery,
+            ragFailureClassifications,
         };
     }
 

@@ -2256,6 +2256,20 @@ describe('KnowledgeLearningPlatform', () => {
         expect(response.trace.ragSufficiencyReview).toEqual(expect.objectContaining({
             status: 'sufficient',
         }));
+        expect(response.trace.answerClaimCitations).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                supportStatus: 'supported',
+                citationIds: expect.arrayContaining([
+                    expect.stringMatching(/^evidence_/),
+                ]),
+                fragmentIds: expect.arrayContaining([
+                    expect.stringContaining('rag_direct_'),
+                ]),
+                sourcePaths: expect.arrayContaining([
+                    'Knowledge_Base/waterglass/water-glass.md',
+                ]),
+            }),
+        ]));
         expect(response.answer).toContain('transparent drinking vessel');
         expect(response.answer).toContain('vessel boundary');
         expect(response.answer).toContain('observed optical behavior');
@@ -2332,6 +2346,13 @@ describe('KnowledgeLearningPlatform', () => {
             expect.objectContaining({
                 role: 'parent_context',
                 sourceBoundary: 'full_document',
+            }),
+        ]));
+        expect(response.trace.ragFailureClassifications).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                stage: 'context_assembly',
+                code: 'context_budget_limited',
+                severity: 'warning',
             }),
         ]));
         expect(response.answer).toContain('transparent drinking vessel');
@@ -2470,6 +2491,14 @@ describe('KnowledgeLearningPlatform', () => {
             llmJudgeUsed: true,
             degradationState: 'none',
         }));
+        expect(response.trace.ragFailureClassifications).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                stage: 'parsing_source',
+                code: 'source_window_unavailable',
+                severity: 'warning',
+                evidence: expect.arrayContaining(['source_window_unavailable']),
+            }),
+        ]));
     });
 
     test('agent conversation exposes readiness and miss diagnostics when scoped retrieval is empty', async () => {
