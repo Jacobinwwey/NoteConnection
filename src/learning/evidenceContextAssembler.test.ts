@@ -312,4 +312,184 @@ describe('assembleRagEvidenceContext', () => {
             }),
         ]));
     });
+
+    test('uses the full neighbor source document to expand graph support beyond the matched span', async () => {
+        const anchorDefinition = 'A brittle glass vessel is stiff and transparent but has low impact tolerance.';
+        const neighborHit = 'A ductile polymer cup flexes under impact and resists fracture.';
+        const neighborQualifier = 'Full-document qualifier: the polymer comparison also includes rebound behavior after deformation.';
+        const anchorItem = makeQueryItem({
+            atom: {
+                id: 'atom_brittle_glass',
+                documentId: 'doc_brittle_glass',
+                title: 'Brittle Glass Vessel',
+                content: anchorDefinition,
+            },
+            evidence: {
+                id: 'evidence_brittle_glass',
+                snippet: anchorDefinition,
+            },
+        });
+        const neighborItem = makeQueryItem({
+            atom: {
+                id: 'atom_polymer_cup',
+                documentId: 'doc_polymer_cup',
+                sourcePath: 'Knowledge_Base/test/ductile-polymer-cup.md',
+                title: 'Ductile Polymer Cup Analogy',
+                content: neighborHit,
+            },
+            evidence: {
+                id: 'evidence_polymer_cup',
+                documentId: 'doc_polymer_cup',
+                sourcePath: 'Knowledge_Base/test/ductile-polymer-cup.md',
+                snippet: neighborHit,
+            },
+            relationPath: [
+                {
+                    id: 'edge_polymer_analogy',
+                    sourceAtomId: 'atom_brittle_glass',
+                    targetAtomId: 'atom_polymer_cup',
+                    relationKind: 'analogy',
+                    evidenceSpanIds: ['evidence_polymer_cup'],
+                },
+            ],
+        });
+        const neighborDocument = [
+            '# Ductile Polymer Cup Analogy',
+            '',
+            neighborHit,
+            '',
+            neighborQualifier,
+        ].join('\n');
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare brittle glass vessel with polymer cup material behavior',
+            items: [anchorItem],
+            graphNeighborItems: [neighborItem],
+            sourceResolver: async (lookup) => ({
+                documentId: lookup.documentId,
+                sourcePath: lookup.sourcePath,
+                content: lookup.documentId === 'doc_polymer_cup'
+                    ? neighborDocument
+                    : ['# Brittle Glass Vessel', '', anchorDefinition].join('\n'),
+            }),
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1600,
+            },
+        });
+
+        const graphNeighborFragments = assembly.fragments.filter((fragment) => (
+            fragment.role === 'graph_neighbor_support'
+            && fragment.documentId === 'doc_polymer_cup'
+        ));
+        expect(graphNeighborFragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(neighborQualifier),
+            }),
+        ]));
+        expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: 'doc_polymer_cup',
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: neighborDocument.length,
+            }),
+        ]));
+    });
+
+    test('keeps full-document graph neighbor context bounded so document augmentation can survive recovery budgets', async () => {
+        const anchorDefinition = 'A water glass is a transparent drinking vessel that contains water.';
+        const anchorItem = makeQueryItem({
+            atom: {
+                id: 'atom_water_glass_anchor',
+                documentId: 'doc_water_glass_anchor',
+                title: 'Water Glass',
+                content: anchorDefinition,
+            },
+            evidence: {
+                id: 'evidence_water_glass_anchor',
+                snippet: anchorDefinition,
+            },
+            score: 0.98,
+        });
+        const graphNeighborItems = Array.from({ length: 4 }, (_entry, index) => {
+            const ordinal = index + 1;
+            return makeQueryItem({
+                atom: {
+                    id: `atom_neighbor_${ordinal}`,
+                    documentId: `doc_neighbor_${ordinal}`,
+                    sourcePath: `Knowledge_Base/test/neighbor-${ordinal}.md`,
+                    title: `Graph Neighbor ${ordinal}`,
+                    content: `Graph neighbor ${ordinal} direct evidence.`,
+                },
+                evidence: {
+                    id: `evidence_neighbor_${ordinal}`,
+                    documentId: `doc_neighbor_${ordinal}`,
+                    sourcePath: `Knowledge_Base/test/neighbor-${ordinal}.md`,
+                    snippet: `Graph neighbor ${ordinal} direct evidence.`,
+                },
+                score: 0.9 - index * 0.01,
+                relationPath: [
+                    {
+                        id: `edge_neighbor_${ordinal}`,
+                        sourceAtomId: 'atom_water_glass_anchor',
+                        targetAtomId: `atom_neighbor_${ordinal}`,
+                        relationKind: 'analogy',
+                        evidenceSpanIds: [`evidence_neighbor_${ordinal}`],
+                    },
+                ],
+            });
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is water glass?',
+            items: [anchorItem],
+            graphNeighborItems,
+            sourceResolver: async (lookup) => {
+                if (lookup.documentId === 'doc_water_glass_anchor') {
+                    return {
+                        documentId: lookup.documentId,
+                        sourcePath: lookup.sourcePath,
+                        content: ['# Water Glass', '', anchorDefinition].join('\n'),
+                    };
+                }
+                const neighborNumber = String(lookup.documentId).replace('doc_neighbor_', '');
+                return {
+                    documentId: lookup.documentId,
+                    sourcePath: lookup.sourcePath,
+                    content: [
+                        `# Graph Neighbor ${neighborNumber}`,
+                        '',
+                        `Graph neighbor ${neighborNumber} direct evidence.`,
+                        '',
+                        `Graph neighbor ${neighborNumber} full-document qualifier.`,
+                    ].join('\n'),
+                };
+            },
+            budget: {
+                maxFragments: 12,
+                maxCharsPerFragment: 500,
+                maxTotalChars: 3000,
+            },
+        });
+
+        const fullDocumentGraphNeighborFragments = assembly.fragments.filter((fragment) => (
+            fragment.role === 'graph_neighbor_support'
+            && fragment.sourceBoundary === 'full_document'
+        ));
+        expect(fullDocumentGraphNeighborFragments).toHaveLength(2);
+        expect(fullDocumentGraphNeighborFragments.map((fragment) => fragment.title)).toEqual([
+            'Graph Neighbor 1',
+            'Graph Neighbor 2',
+        ]);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                sourceBoundary: 'full_document',
+                title: 'Water Glass',
+            }),
+        ]));
+    });
 });

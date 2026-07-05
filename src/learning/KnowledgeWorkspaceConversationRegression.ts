@@ -24,6 +24,7 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     answerMustNotContain?: string[];
     ragSourceBoundary?: RagSourceBoundary;
     requiredRagRoles?: RagEvidenceRole[];
+    minimumRagFullDocumentFragmentCounts?: Partial<Record<RagEvidenceRole, number>>;
     acceptedRagSufficiencyStatuses?: Array<RagSufficiencyReview['status']>;
     minimumRagSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
     inMemoryMinimumRagSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
@@ -176,6 +177,9 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             ],
             ragSourceBoundary: 'full_document',
             requiredRagRoles: ['direct_support', 'parent_context', 'graph_neighbor_support'],
+            minimumRagFullDocumentFragmentCounts: {
+                graph_neighbor_support: 1,
+            },
             acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
             requiredGraphSuccessorTitles: [
                 'Ductile Polymer Cup Analogy',

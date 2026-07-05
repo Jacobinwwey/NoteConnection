@@ -6,7 +6,7 @@ import {
     type KnowledgeWorkspaceConversationRegressionCase,
 } from './KnowledgeWorkspaceConversationRegression';
 import { createKnowledgeGraphStore } from './store';
-import type { RagSourceDecision } from './types';
+import type { RagEvidenceRole, RagSourceDecision } from './types';
 
 function deriveScopedConversationRequest(caseEntry: KnowledgeWorkspaceConversationRegressionCase) {
     const activeTarget = String(caseEntry.activeTarget || '').trim();
@@ -186,6 +186,21 @@ function countRagSourceDecisionStatuses(
     }, {});
 }
 
+function countFullDocumentRagFragmentsByRole(
+    response: Awaited<ReturnType<KnowledgeLearningPlatform['agentConversation']>>
+): Partial<Record<RagEvidenceRole, number>> {
+    return (response.trace.ragContextPack?.fragments || []).reduce<Partial<Record<RagEvidenceRole, number>>>(
+        (counts, fragment) => {
+            if (fragment.sourceBoundary !== 'full_document') {
+                return counts;
+            }
+            counts[fragment.role] = (counts[fragment.role] || 0) + 1;
+            return counts;
+        },
+        {}
+    );
+}
+
 function expectReasonFragments(
     observedReasons: readonly string[] | undefined,
     requiredFragments: readonly string[] | undefined
@@ -295,6 +310,9 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                             'Ductile Polymer Cup Analogy',
                             'Reusable Polymer Vessel Analogy',
                         ],
+                        minimumRagFullDocumentFragmentCounts: {
+                            graph_neighbor_support: 1,
+                        },
                         forbiddenGraphSuccessorTitles: ['Procedural Calibration Sequence'],
                         requiredGraphSuccessorRelationKinds: ['analogy'],
                         forbiddenGraphNeighborFragmentTitles: ['Procedural Calibration Sequence'],
@@ -366,6 +384,13 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                 const observedRagRoles = (response.trace.ragContextPack?.fragments || [])
                     .map((fragment) => fragment.role);
                 expect(observedRagRoles).toEqual(expect.arrayContaining(expected.requiredRagRoles));
+            }
+            if (expected.minimumRagFullDocumentFragmentCounts) {
+                const observedFullDocumentFragmentCounts = countFullDocumentRagFragmentsByRole(response);
+                Object.entries(expected.minimumRagFullDocumentFragmentCounts).forEach(([role, minimumCount]) => {
+                    expect(observedFullDocumentFragmentCounts[role as RagEvidenceRole] || 0)
+                        .toBeGreaterThanOrEqual(minimumCount || 0);
+                });
             }
             if (expected.acceptedRagSufficiencyStatuses && expected.acceptedRagSufficiencyStatuses.length > 0) {
                 expect(expected.acceptedRagSufficiencyStatuses).toContain(response.trace.ragSufficiencyReview?.status);

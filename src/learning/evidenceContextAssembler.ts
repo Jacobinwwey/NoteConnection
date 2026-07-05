@@ -4,6 +4,7 @@ import type {
     RagContextBudget,
     RagContextPack,
     RagEvidenceFragment,
+    RagEvidenceRole,
     RagSourceDecision,
 } from './types';
 import { buildRagContextPack, estimateRagTokenCount } from './ragContextPack';
@@ -70,6 +71,7 @@ interface DocumentEvidenceEntry {
 
 interface ParentFragmentDraft {
     key: string;
+    role: Extract<RagEvidenceRole, 'parent_context' | 'graph_neighbor_support'>;
     item: KnowledgeQueryItem;
     documentId: string;
     sourcePath: string;
@@ -81,6 +83,7 @@ interface ParentFragmentDraft {
 }
 
 const DEFAULT_PARAGRAPH_WINDOW = 5;
+const MAX_GRAPH_NEIGHBOR_DOCUMENT_CONTEXT_FRAGMENTS = 2;
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -301,6 +304,32 @@ function fragmentTextFromBlocks(blocks: SourceBlock[]): string {
         .trim();
 }
 
+function limitGraphNeighborDocumentContextFragments(fragments: RagEvidenceFragment[]): RagEvidenceFragment[] {
+    const graphNeighborContextFragments = fragments
+        .map((fragment, index) => ({ fragment, index }))
+        .filter((entry) => (
+            entry.fragment.role === 'graph_neighbor_support'
+            && entry.fragment.sourceBoundary === 'full_document'
+        ))
+        .sort((left, right) => {
+            const scoreDelta = Number(right.fragment.score || 0) - Number(left.fragment.score || 0);
+            if (Math.abs(scoreDelta) > 0.0001) {
+                return scoreDelta;
+            }
+            return left.index - right.index;
+        });
+    const selectedContextFragmentIds = new Set(
+        graphNeighborContextFragments
+            .slice(0, MAX_GRAPH_NEIGHBOR_DOCUMENT_CONTEXT_FRAGMENTS)
+            .map((entry) => entry.fragment.fragmentId)
+    );
+    return fragments.filter((fragment) => (
+        fragment.role !== 'graph_neighbor_support'
+        || fragment.sourceBoundary !== 'full_document'
+        || selectedContextFragmentIds.has(fragment.fragmentId)
+    ));
+}
+
 function buildDirectFragment(
     item: KnowledgeQueryItem,
     span: EvidenceSpan,
@@ -361,7 +390,7 @@ function groupItemsByDocument(
         });
     };
     items.forEach((item, index) => appendItem(item, index, 'direct_support', true));
-    graphNeighborItems.forEach((item, index) => appendItem(item, index, 'graph_neighbor_support', false));
+    graphNeighborItems.forEach((item, index) => appendItem(item, index, 'graph_neighbor_support', true));
     return Array.from(groups.values());
 }
 
@@ -405,50 +434,55 @@ function buildParentFragments(
 
     group.entries
         .filter((entry) => entry.expandDocumentContext)
-        .forEach(({ item }) => {
-        itemEvidenceSpans(item).forEach((span) => {
-            const evidenceBlocks = blocksForEvidence(blocks, span, source.content);
-            if (evidenceBlocks.length <= 0) {
-                return;
-            }
-            const sectionBlocks = buildSectionBlocks(blocks, evidenceBlocks, paragraphWindow);
-            if (sectionBlocks.length <= 0) {
-                return;
-            }
-            const headingPath = evidenceBlocks[0].headingPath.length > 0
-                ? evidenceBlocks[0].headingPath
-                : (Array.isArray(item.atom.metadata?.sectionPath) ? item.atom.metadata.sectionPath : []);
-            const parentKey = `${group.documentId}\n${group.sourcePath}\n${headingPath.join('/') || 'local_window'}`;
-            let draft = parentDrafts.get(parentKey);
-            if (!draft) {
-                draft = {
-                    key: parentKey,
-                    item,
-                    documentId: group.documentId,
-                    sourcePath: group.sourcePath,
-                    headingPath: [...headingPath],
-                    blocks: [],
-                    citationIds: new Set<string>(),
-                    relationEdgeIds: new Set<string>(),
-                    score: 0,
-                };
-                parentDrafts.set(parentKey, draft);
-            }
-            draft.blocks.push(...sectionBlocks);
-            draft.citationIds.add(span.id);
-            item.relationPath.forEach((edge) => draft?.relationEdgeIds.add(edge.id));
-            draft.score = Math.max(draft.score, Number(item.score || 0));
+        .forEach(({ item, directRole }) => {
+            const fragmentRole = directRole === 'graph_neighbor_support' ? 'graph_neighbor_support' : 'parent_context';
+            itemEvidenceSpans(item).forEach((span) => {
+                const evidenceBlocks = blocksForEvidence(blocks, span, source.content);
+                if (evidenceBlocks.length <= 0) {
+                    return;
+                }
+                const sectionBlocks = buildSectionBlocks(blocks, evidenceBlocks, paragraphWindow);
+                if (sectionBlocks.length <= 0) {
+                    return;
+                }
+                const headingPath = evidenceBlocks[0].headingPath.length > 0
+                    ? evidenceBlocks[0].headingPath
+                    : (Array.isArray(item.atom.metadata?.sectionPath) ? item.atom.metadata.sectionPath : []);
+                const parentKey = `${fragmentRole}\n${group.documentId}\n${group.sourcePath}\n${headingPath.join('/') || 'local_window'}`;
+                let draft = parentDrafts.get(parentKey);
+                if (!draft) {
+                    draft = {
+                        key: parentKey,
+                        role: fragmentRole,
+                        item,
+                        documentId: group.documentId,
+                        sourcePath: group.sourcePath,
+                        headingPath: [...headingPath],
+                        blocks: [],
+                        citationIds: new Set<string>(),
+                        relationEdgeIds: new Set<string>(),
+                        score: 0,
+                    };
+                    parentDrafts.set(parentKey, draft);
+                }
+                draft.blocks.push(...sectionBlocks);
+                draft.citationIds.add(span.id);
+                item.relationPath.forEach((edge) => draft?.relationEdgeIds.add(edge.id));
+                draft.score = Math.max(draft.score, Number(item.score || 0));
+            });
         });
-    });
 
     return Array.from(parentDrafts.values()).map((draft, index): RagEvidenceFragment => {
         const blocksForFragment = mergeBlocks(draft.blocks);
         const text = fragmentTextFromBlocks(blocksForFragment);
         const first = blocksForFragment[0];
         const last = blocksForFragment[blocksForFragment.length - 1];
+        const fragmentPrefix = draft.role === 'graph_neighbor_support'
+            ? 'rag_graph_neighbor_context'
+            : 'rag_parent';
         return {
-            fragmentId: `rag_parent_${sanitizeFragmentPart(draft.documentId)}_${index + 1}`,
-            role: 'parent_context',
+            fragmentId: `${fragmentPrefix}_${sanitizeFragmentPart(draft.documentId)}_${index + 1}`,
+            role: draft.role,
             text,
             atomId: draft.item.atom.id,
             documentId: draft.documentId,
@@ -514,7 +548,7 @@ export async function assembleRagEvidenceContext(params: AssembleRagEvidenceCont
         query: params.query,
         generatedAt: params.generatedAt,
         sourceBoundary: readFullDocument ? 'full_document' : 'direct_span_only',
-        fragments: rawFragments,
+        fragments: limitGraphNeighborDocumentContextFragments(rawFragments),
         sourceDecisions: decisions,
         budget: params.budget,
     });

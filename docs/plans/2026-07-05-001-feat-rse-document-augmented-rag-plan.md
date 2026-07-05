@@ -170,7 +170,7 @@ flowchart TB
 
 **Goal:** Build the small-to-big document context layer around retrieved spans.
 
-**Implementation status (2026-07-05):** Implemented for the deterministic path. `src/learning/evidenceContextAssembler.ts` starts from evidence spans, reads the full source document through a platform-owned resolver, preserves direct support, adds parent/adjacent context, dedupes overlapping windows, and degrades to `source_window_unavailable` when source text is unavailable.
+**Implementation status (2026-07-05):** Implemented for the deterministic path. `src/learning/evidenceContextAssembler.ts` starts from evidence spans, reads the full source document through a platform-owned resolver, preserves direct support, adds parent/adjacent context, dedupes overlapping windows, and degrades to `source_window_unavailable` when source text is unavailable. Graph-neighbor entries now use the same full-document source view, so selected neighbor documents can emit budgeted `full_document` `graph_neighbor_support` fragments instead of being limited to the matched snippet.
 
 **Requirements:** R1, R2, R7.
 
@@ -204,6 +204,7 @@ flowchart TB
 - Edge case: repeated identical snippets use source offset/line range to choose the correct local window.
 - Edge case: Mermaid/code fences are not injected wholesale into public answer context.
 - Edge case: multiple spans in one document dedupe overlapping windows.
+- Edge case: a graph-neighbor evidence span can recover same-document neighbor qualifiers beyond the matched span while remaining inside `RagContextPack` budgets.
 - Failure path: missing source provenance degrades to direct snippet only and marks `source_window_unavailable`.
 
 **Verification:**
@@ -214,7 +215,7 @@ flowchart TB
 
 **Goal:** Attach ranked evidence from graph in-degree/out-degree neighborhoods to the answer basis.
 
-**Implementation status (2026-07-05):** Implemented for the deterministic path. `KnowledgeLearningPlatform.agentConversation()` materializes graph-neighbor query items from graph context windows/supporting ids and sends them through the evidence assembler as `graph_neighbor_support` fragments. `graphContextAssembler.ts` now owns intent-specific predecessor/successor window ranking before evidence assembly, combining relation-kind priority, confidence, fact provenance, anchor-equivalent filtering, and bibliography exclusion. It also ranks graph connection paths by the same intent policy, so compare answers do not promote a procedural/application path over an available analogy/contrast path. A regression test now locks the compare-intent behavior where contrast evidence beats a higher-confidence procedural sequence edge, and the runtime conversation probe `graphintent_compare_neighbor_selection_en` locks the end-to-end analogy-vs-procedural selection path.
+**Implementation status (2026-07-05):** Implemented for the deterministic path. `KnowledgeLearningPlatform.agentConversation()` materializes graph-neighbor query items from graph context windows/supporting ids and sends them through the evidence assembler as `graph_neighbor_support` fragments. `graphContextAssembler.ts` now owns intent-specific predecessor/successor window ranking before evidence assembly, combining relation-kind priority, confidence, fact provenance, anchor-equivalent filtering, and bibliography exclusion. It also ranks graph connection paths by the same intent policy, so compare answers do not promote a procedural/application path over an available analogy/contrast path. Graph-neighbor evidence now has snippet-level direct support plus full-document-aware neighbor-context fragments, which makes the "complete document is the maximum source boundary" rule apply symmetrically to direct and graph evidence. A regression test now locks the compare-intent behavior where contrast evidence beats a higher-confidence procedural sequence edge, and the runtime conversation probe `graphintent_compare_neighbor_selection_en` locks the end-to-end analogy-vs-procedural selection path.
 
 **Requirements:** R3, R7.
 
@@ -232,7 +233,7 @@ flowchart TB
   - default: up to three predecessors and three successors;
   - allow up to five only for explicit deep/explain requests or high-confidence graph paths;
   - rank by relation kind, confidence, provenance, query intent, source evidence availability, and non-bibliography filters.
-- For each selected neighbor, request a small evidence expansion from Unit 2.
+- For each selected neighbor, request Unit 2 source expansion from the complete neighbor document, then admit only budgeted graph-neighbor fragments into the model-visible pack.
 - Distinguish relation explanation from neighbor content:
   - "why this predecessor matters" comes from relation kind/path;
   - "what the predecessor says" comes from neighbor evidence fragments.
@@ -426,7 +427,7 @@ flowchart TB
 
 **Goal:** Prevent "better answer" work from regressing retrieval, graph correctness, latency, or UI compatibility.
 
-**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, stable RAG context replay ids, sufficiency judging, provider-backed judge timeout/schema handling, bounded one-step recovery, RAG-aware answer release review, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations, including the compare-runtime case `waterglass_compare_materials_en`. The runtime verifier now supports per-case scoped document-id requirements: strict scoped ids remain the default, while the compare case can opt out only when source path, workspace, or corpus boundaries still prove it stayed inside the intended scope. It can also assert graph successor-window titles and relation kinds, including required and forbidden successor titles, so runtime probes can verify graph-neighbor selection instead of only answer text. Answer-term assertions are now case-insensitive to avoid false misses for casing-only differences. The regression corpus now also includes `contextbudget_source_window_truncation_en`, backed by `Knowledge_Base/contextbudget/context budget probe.md`, to verify that full-document source reading and model-visible context truncation remain separate observable states. It also includes `contextoverflow_no_provider_budget_drop_en`, backed by `Knowledge_Base/contextoverflow/overflow budget probe.md`, to verify deterministic no-provider answering and final `fragment_dropped` source-decision visibility under dense same-document evidence. The runtime case `contextoverflow_malformed_provider_judge_fallback_en` configures an isolated local OpenAI-compatible fixture that returns malformed judge JSON, passes per-case `topK`, and verifies that the answer path remains deterministic, performs one bounded recovery pass, and records `llm_judge_failed` in `ragRecovery.beforeReasons`. The runtime case `contextoverflow_timeout_provider_judge_fallback_en` uses the same scoped dense-evidence corpus with a delayed local fixture to verify provider timeout fallback, one bounded recovery pass, deterministic final review, and `llm_judge_failed:RAG sufficiency judge timed out.` recovery trace. The runtime case `graphintent_compare_neighbor_selection_en`, backed by `Knowledge_Base/graphintent`, verifies that compare intent selects analogy successors for material comparison, excludes the high-overlap procedural successor from the graph window, keeps `graph_neighbor_support` in the pack, and avoids leaking the procedural path into the public answer. The verifier now isolates NoteMD settings through a temporary config directory, can assert valid `ragctx_*` replay ids for RAG cases, minimum RAG source-decision counts, recovery-before source-decision counts, recovery-before reason fragments, deterministic/no-provider judge flags, recovery flags, degradation states, and graph successor-window expectations. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
+**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, stable RAG context replay ids, sufficiency judging, provider-backed judge timeout/schema handling, bounded one-step recovery, RAG-aware answer release review, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations, including the compare-runtime case `waterglass_compare_materials_en`. The runtime verifier now supports per-case scoped document-id requirements: strict scoped ids remain the default, while the compare case can opt out only when source path, workspace, or corpus boundaries still prove it stayed inside the intended scope. It can also assert graph successor-window titles and relation kinds, including required and forbidden successor titles, so runtime probes can verify graph-neighbor selection instead of only answer text. Answer-term assertions are now case-insensitive to avoid false misses for casing-only differences. The regression corpus now also includes `contextbudget_source_window_truncation_en`, backed by `Knowledge_Base/contextbudget/context budget probe.md`, to verify that full-document source reading and model-visible context truncation remain separate observable states. It also includes `contextoverflow_no_provider_budget_drop_en`, backed by `Knowledge_Base/contextoverflow/overflow budget probe.md`, to verify deterministic no-provider answering and final `fragment_dropped` source-decision visibility under dense same-document evidence. The runtime case `contextoverflow_malformed_provider_judge_fallback_en` configures an isolated local OpenAI-compatible fixture that returns malformed judge JSON, passes per-case `topK`, and verifies that the answer path remains deterministic, performs one bounded recovery pass, and records `llm_judge_failed` in `ragRecovery.beforeReasons`. The runtime case `contextoverflow_timeout_provider_judge_fallback_en` uses the same scoped dense-evidence corpus with a delayed local fixture to verify provider timeout fallback, one bounded recovery pass, deterministic final review, and `llm_judge_failed:RAG sufficiency judge timed out.` recovery trace. The runtime case `graphintent_compare_neighbor_selection_en`, backed by `Knowledge_Base/graphintent`, verifies that compare intent selects analogy successors for material comparison, excludes the high-overlap procedural successor from the graph window, keeps `graph_neighbor_support` in the pack, includes at least one `full_document` graph-neighbor support fragment, and avoids leaking the procedural path into the public answer. The verifier now isolates NoteMD settings through a temporary config directory, can assert valid `ragctx_*` replay ids for RAG cases, minimum RAG source-decision counts, minimum full-document fragment counts by role, recovery-before source-decision counts, recovery-before reason fragments, deterministic/no-provider judge flags, recovery flags, degradation states, and graph successor-window expectations. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
 
 **Requirements:** R8.
 
@@ -454,6 +455,7 @@ flowchart TB
   - provider timeout fallback through `contextoverflow_timeout_provider_judge_fallback_en`;
   - malformed provider judge fallback through `contextoverflow_malformed_provider_judge_fallback_en`;
   - intent-specific graph-neighbor selection through `graphintent_compare_neighbor_selection_en`;
+  - full-document graph-neighbor augmentation through minimum role/boundary fragment-count assertions;
   - graph self-neighbor filtering;
   - answer release with richer public answer.
 - Add latency budget assertions for the no-LLM path and bounded timeout assertions for the LLM-judge path.
@@ -471,7 +473,7 @@ flowchart TB
 - Runtime: malformed provider judge JSON does not block the answer path; the fake OpenAI-compatible fixture is called once, recovery remains bounded, and `ragRecovery.beforeReasons` records `llm_judge_failed`.
 - Runtime: no LLM provider still produces deterministic grounded answer.
 - Runtime: provider judge timeout does not block the answer path; the fake OpenAI-compatible fixture is called once, recovery stays bounded, and `ragRecovery.beforeReasons` records `llm_judge_failed`.
-- Runtime: `compare brittle glass vessel with polymer cup material behavior` selects analogy graph successors from `Knowledge_Base/graphintent`, excludes the high-overlap procedural successor from `successorWindow`, and keeps the public answer focused on material comparison rather than procedural path narration.
+- Runtime: `compare brittle glass vessel with polymer cup material behavior` selects analogy graph successors from `Knowledge_Base/graphintent`, excludes the high-overlap procedural successor from `successorWindow`, produces at least one `full_document` `graph_neighbor_support` fragment, and keeps the public answer focused on material comparison rather than procedural path narration.
 
 **Verification:**
 - Regression suite proves richer answers without losing current forward compatibility.
@@ -683,7 +685,7 @@ flowchart TB
 
 **目标：** 围绕命中 span 构建 small-to-big 文档上下文。
 
-**实现状态（2026-07-05）：** 确定性路径已实现。`src/learning/evidenceContextAssembler.ts` 从 evidence span 出发，通过平台注入的 source resolver 读取完整源文档，保留 direct support，补入 parent / adjacent context，去重重叠窗口，并在源文本缺失时降级为 `source_window_unavailable`。
+**实现状态（2026-07-05）：** 确定性路径已实现。`src/learning/evidenceContextAssembler.ts` 从 evidence span 出发，通过平台注入的 source resolver 读取完整源文档，保留 direct support，补入 parent / adjacent context，去重重叠窗口，并在源文本缺失时降级为 `source_window_unavailable`。图邻居条目现在也使用同一套完整文档 source view，因此被选中的邻居文档可以产出有预算约束的 `full_document` `graph_neighbor_support` fragment，而不是被限制在命中 snippet。
 
 **文件：**
 - 新增：`src/learning/evidenceContextAssembler.ts`
@@ -707,13 +709,14 @@ flowchart TB
 - 重复 snippet 通过 source offset / line range 定位正确窗口。
 - Mermaid/code fence 不会整块注入 public answer context。
 - 同文档多 span 去重 overlapping window。
+- 图邻居 evidence span 可以恢复同一邻居文档中超出命中 span 的限定句，但仍受 `RagContextPack` 预算约束。
 - provenance 缺失时降级为 direct snippet only。
 
 - [x] **单元 3：图条件化邻居证据**
 
 **目标：** 把入度/出度邻域中的高价值节点内容接入回答基础。
 
-**实现状态（2026-07-05）：** 确定性路径已实现。`KnowledgeLearningPlatform.agentConversation()` 已从 graph context 的窗口与 supporting ids 中物化图邻居 query items，并通过 evidence assembler 转成 `graph_neighbor_support` fragment。`graphContextAssembler.ts` 现在在 evidence assembly 之前负责 intent-specific predecessor / successor window ranking，将 relation kind priority、confidence、fact provenance、anchor-equivalent 过滤与 bibliography 排除组合在同一排序策略中。同一 intent policy 现在也用于 graph connection path 排序，因此 compare 回答不会在存在 analogy / contrast 路径时把 procedural / application 路径推到公开回答里。新增回归测试锁定 compare intent：contrast 证据会优先于置信度更高但语义不匹配的 procedural sequence 边；runtime conversation probe `graphintent_compare_neighbor_selection_en` 锁定了端到端 analogy-vs-procedural 选择路径。
+**实现状态（2026-07-05）：** 确定性路径已实现。`KnowledgeLearningPlatform.agentConversation()` 已从 graph context 的窗口与 supporting ids 中物化图邻居 query items，并通过 evidence assembler 转成 `graph_neighbor_support` fragment。`graphContextAssembler.ts` 现在在 evidence assembly 之前负责 intent-specific predecessor / successor window ranking，将 relation kind priority、confidence、fact provenance、anchor-equivalent 过滤与 bibliography 排除组合在同一排序策略中。同一 intent policy 现在也用于 graph connection path 排序，因此 compare 回答不会在存在 analogy / contrast 路径时把 procedural / application 路径推到公开回答里。图邻居证据现在同时具备 snippet 级 direct support 和完整文档感知的 neighbor-context fragment，让“完整文档是最大 source 边界”这条规则对直接证据和图证据保持对称。新增回归测试锁定 compare intent：contrast 证据会优先于置信度更高但语义不匹配的 procedural sequence 边；runtime conversation probe `graphintent_compare_neighbor_selection_en` 锁定了端到端 analogy-vs-procedural 选择路径。
 
 **文件：**
 - 修改：`src/learning/graphContextAssembler.ts`
@@ -727,7 +730,7 @@ flowchart TB
   - 默认最多 3 个 predecessor + 3 个 successor；
   - 显式 deep/explain 或高置信路径时最多 5 个；
   - 排序依据 relation kind、confidence、provenance、query intent、source evidence availability、非参考文献过滤。
-- 邻居内容必须来自 Unit 2 的证据扩展，不只展示标题。
+- 邻居内容必须来自 Unit 2 对完整邻居文档的证据扩展，不只展示标题；进入模型可见层的仍只是有预算的图邻居 fragment。
 - 保留自邻居和 anchor-equivalent title 过滤。
 
 **测试：**
@@ -860,7 +863,7 @@ flowchart TB
 
 **目标：** 防止“答案更充分”引入召回、图谱、延迟或 UI 兼容性回退。
 
-**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、稳定 RAG context replay id、sufficiency judge、接入 provider 的 judge timeout / schema handling、有界一次性 recovery、RAG-aware answer release review、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期，包括 compare runtime 用例 `waterglass_compare_materials_en`。runtime verifier 现在支持按用例配置 scoped document-id 要求：默认仍严格要求 scoped document id；compare 用例只有在 source path、workspace 或 corpus 边界仍能证明没有越过目标 scope 时才允许放宽。verifier 现在也能断言 graph successor-window 的标题与 relation kind，包括必选/禁选 successor title，因此运行时探针可以验证图邻居选择本身，而不只依赖公开答案文本。answer-term 断言也改为大小写不敏感，避免 `Water Glass` / `glass` 这类大小写差异造成误报。回归语料现在新增 `contextbudget_source_window_truncation_en`，由 `Knowledge_Base/contextbudget/context budget probe.md` 支撑，用于验证完整 source document 读取与 model-visible context truncation 是两个可观察状态；同时新增 `contextoverflow_no_provider_budget_drop_en`，由 `Knowledge_Base/contextoverflow/overflow budget probe.md` 支撑，用于验证密集同文档证据下的 deterministic no-provider answer，以及最终 `fragment_dropped` source-decision 的可观测性。runtime 用例 `contextoverflow_malformed_provider_judge_fallback_en` 会配置隔离的本地 OpenAI-compatible fixture 返回 malformed judge JSON，按用例传递 `topK`，并验证主回答链路保持 deterministic、只执行一次有界 recovery，且在 `ragRecovery.beforeReasons` 中记录 `llm_judge_failed`。runtime 用例 `contextoverflow_timeout_provider_judge_fallback_en` 复用同一个 scoped 密集证据语料，并通过延迟响应的本地 fixture 验证 provider timeout fallback、一次有界 recovery、最终 deterministic review，以及 `ragRecovery.beforeReasons` 中的 `llm_judge_failed:RAG sufficiency judge timed out.` trace。runtime 用例 `graphintent_compare_neighbor_selection_en` 由 `Knowledge_Base/graphintent` 支撑，用于验证 compare intent 会为材料对比选择 analogy successors、从 graph window 排除高重叠 procedural successor、保留 `graph_neighbor_support`，并避免把 procedural path 泄漏进公开回答。verifier 现在通过临时 config 目录隔离 NoteMD settings，也可以断言 RAG 用例存在有效 `ragctx_*` replay id、RAG source-decision 最小计数、recovery 前 source-decision 最小计数、recovery 前 reason fragment、deterministic/no-provider judge 标志、recovery 标志、degradation state 和 graph successor-window 预期。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
+**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、稳定 RAG context replay id、sufficiency judge、接入 provider 的 judge timeout / schema handling、有界一次性 recovery、RAG-aware answer release review、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期，包括 compare runtime 用例 `waterglass_compare_materials_en`。runtime verifier 现在支持按用例配置 scoped document-id 要求：默认仍严格要求 scoped document id；compare 用例只有在 source path、workspace 或 corpus 边界仍能证明没有越过目标 scope 时才允许放宽。verifier 现在也能断言 graph successor-window 的标题与 relation kind，包括必选/禁选 successor title，因此运行时探针可以验证图邻居选择本身，而不只依赖公开答案文本。answer-term 断言也改为大小写不敏感，避免 `Water Glass` / `glass` 这类大小写差异造成误报。回归语料现在新增 `contextbudget_source_window_truncation_en`，由 `Knowledge_Base/contextbudget/context budget probe.md` 支撑，用于验证完整 source document 读取与 model-visible context truncation 是两个可观察状态；同时新增 `contextoverflow_no_provider_budget_drop_en`，由 `Knowledge_Base/contextoverflow/overflow budget probe.md` 支撑，用于验证密集同文档证据下的 deterministic no-provider answer，以及最终 `fragment_dropped` source-decision 的可观测性。runtime 用例 `contextoverflow_malformed_provider_judge_fallback_en` 会配置隔离的本地 OpenAI-compatible fixture 返回 malformed judge JSON，按用例传递 `topK`，并验证主回答链路保持 deterministic、只执行一次有界 recovery，且在 `ragRecovery.beforeReasons` 中记录 `llm_judge_failed`。runtime 用例 `contextoverflow_timeout_provider_judge_fallback_en` 复用同一个 scoped 密集证据语料，并通过延迟响应的本地 fixture 验证 provider timeout fallback、一次有界 recovery、最终 deterministic review，以及 `ragRecovery.beforeReasons` 中的 `llm_judge_failed:RAG sufficiency judge timed out.` trace。runtime 用例 `graphintent_compare_neighbor_selection_en` 由 `Knowledge_Base/graphintent` 支撑，用于验证 compare intent 会为材料对比选择 analogy successors、从 graph window 排除高重叠 procedural successor、保留 `graph_neighbor_support`，至少产出一个 `full_document` 图邻居支撑 fragment，并避免把 procedural path 泄漏进公开回答。verifier 现在通过临时 config 目录隔离 NoteMD settings，也可以断言 RAG 用例存在有效 `ragctx_*` replay id、RAG source-decision 最小计数、按 role 统计的 full-document fragment 最小计数、recovery 前 source-decision 最小计数、recovery 前 reason fragment、deterministic/no-provider judge 标志、recovery 标志、degradation state 和 graph successor-window 预期。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
 
 **文件：**
 - 修改：`src/learning/KnowledgeWorkspaceConversationRegression.ts`
@@ -873,7 +876,7 @@ flowchart TB
 **做法：**
 - 保留 `waterglass` compact/spaced queries 作为验收探针。
 - scoped document id 默认强制；只有显式 compare 用例能在另一个 scoped boundary 已被验证时放宽该要求。
-- 增加 evidence-rich definition、missing neighbor evidence、same-document span dedupe、conflicting adjacent evidence、通过 `contextbudget_source_window_truncation_en` 覆盖 context budget truncation、通过 `contextoverflow_no_provider_budget_drop_en` 覆盖 deterministic no-provider budget drop、通过 `contextoverflow_malformed_provider_judge_fallback_en` 覆盖 malformed provider judge fallback、通过 `contextoverflow_timeout_provider_judge_fallback_en` 覆盖 provider timeout fallback、通过 `graphintent_compare_neighbor_selection_en` 覆盖 intent-specific graph-neighbor selection、自邻居过滤、rich public answer release 等用例。
+- 增加 evidence-rich definition、missing neighbor evidence、same-document span dedupe、conflicting adjacent evidence、通过 `contextbudget_source_window_truncation_en` 覆盖 context budget truncation、通过 `contextoverflow_no_provider_budget_drop_en` 覆盖 deterministic no-provider budget drop、通过 `contextoverflow_malformed_provider_judge_fallback_en` 覆盖 malformed provider judge fallback、通过 `contextoverflow_timeout_provider_judge_fallback_en` 覆盖 provider timeout fallback、通过 `graphintent_compare_neighbor_selection_en` 覆盖 intent-specific graph-neighbor selection、通过按 role / boundary 的 fragment 计数覆盖完整文档图邻居 augmentation、自邻居过滤、rich public answer release 等用例。
 - 增加 compare material answer 用例，确认 direct / document / Mermaid evidence 能同时保留两个 operand。
 - no-LLM path 加延迟预算；LLM judge path 加 timeout/fallback 预算。
 
@@ -886,7 +889,7 @@ flowchart TB
 - malformed provider judge JSON 不阻塞主回答链路；fake OpenAI-compatible fixture 会被调用一次，recovery 保持有界，且 `ragRecovery.beforeReasons` 会记录 `llm_judge_failed`。
 - 未配置 LLM provider 仍有确定性 grounded answer。
 - provider judge timeout 不阻塞主回答链路；fake OpenAI-compatible fixture 会被调用一次，recovery 保持有界，且 `ragRecovery.beforeReasons` 会记录 `llm_judge_failed`。
-- `compare brittle glass vessel with polymer cup material behavior` 会从 `Knowledge_Base/graphintent` 选择 analogy graph successors，从 `successorWindow` 排除高重叠 procedural successor，并让公开回答聚焦材料对比而不是 procedural path narration。
+- `compare brittle glass vessel with polymer cup material behavior` 会从 `Knowledge_Base/graphintent` 选择 analogy graph successors，从 `successorWindow` 排除高重叠 procedural successor，产出至少一个 `full_document` `graph_neighbor_support` fragment，并让公开回答聚焦材料对比而不是 procedural path narration。
 
 ## 系统影响
 

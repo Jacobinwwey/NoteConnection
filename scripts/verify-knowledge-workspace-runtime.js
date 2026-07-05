@@ -261,6 +261,23 @@ function countRagSourceDecisionStatuses(ragContextPack) {
   }, {});
 }
 
+function countFullDocumentRagFragmentsByRole(ragContextPack) {
+  const fragments = Array.isArray(ragContextPack && ragContextPack.fragments)
+    ? ragContextPack.fragments
+    : [];
+  return fragments.reduce((counts, fragment) => {
+    if (String(fragment && fragment.sourceBoundary || '') !== 'full_document') {
+      return counts;
+    }
+    const role = String(fragment && fragment.role || '').trim();
+    if (!role) {
+      return counts;
+    }
+    counts[role] = (counts[role] || 0) + 1;
+    return counts;
+  }, {});
+}
+
 function assertReasonFragments(query, label, observedReasons, requiredFragments) {
   if (!Array.isArray(requiredFragments) || requiredFragments.length <= 0) {
     return;
@@ -366,6 +383,7 @@ function validatePositiveConversationResult(summary, options) {
     answerMustNotContain,
     expectedRagSourceBoundary,
     requiredRagRoles,
+    minimumRagFullDocumentFragmentCounts,
     acceptedRagSufficiencyStatuses,
     minimumRagSourceDecisionStatusCounts,
     expectedRagDeterministic,
@@ -484,6 +502,21 @@ function validatePositiveConversationResult(summary, options) {
     requiredRagRoles.forEach((role) => {
       if (!observedRoles.includes(role)) {
         throw new Error(`RAG fragment role missing "${role}" for query=${query}: observed=${JSON.stringify(observedRoles)}`);
+      }
+    });
+  }
+  if (
+    minimumRagFullDocumentFragmentCounts
+    && typeof minimumRagFullDocumentFragmentCounts === 'object'
+  ) {
+    const observedFullDocumentFragmentCounts = countFullDocumentRagFragmentsByRole(summary.ragContextPack);
+    Object.entries(minimumRagFullDocumentFragmentCounts).forEach(([role, minimumCount]) => {
+      const expectedMinimum = Number(minimumCount || 0);
+      const observedCount = Number(observedFullDocumentFragmentCounts[role] || 0);
+      if (observedCount < expectedMinimum) {
+        throw new Error(
+          `RAG full-document fragment count below minimum for query=${query}: role=${role} expected>=${expectedMinimum} observed=${observedCount} pack=${JSON.stringify(summary.ragContextPack)}`
+        );
       }
     });
   }
@@ -909,6 +942,7 @@ async function main() {
           forbiddenGraphSuccessorTitles: regressionCase.expected.forbiddenGraphSuccessorTitles,
           requiredGraphSuccessorRelationKinds: regressionCase.expected.requiredGraphSuccessorRelationKinds,
           forbiddenGraphNeighborFragmentTitles: regressionCase.expected.forbiddenGraphNeighborFragmentTitles,
+          minimumRagFullDocumentFragmentCounts: regressionCase.expected.minimumRagFullDocumentFragmentCounts,
           requireScopedDocumentIds: regressionCase.expected.requireScopedDocumentIds,
         });
         caseResults.push(summary);
