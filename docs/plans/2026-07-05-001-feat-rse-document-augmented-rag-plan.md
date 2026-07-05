@@ -210,11 +210,11 @@ flowchart TB
 - The assembler produces a bounded context pack for `waterglass` without duplicating the same knowledge point.
 - Direct support remains identifiable after augmentation.
 
-- [ ] **Unit 3: Graph-Conditioned Neighbor Evidence**
+- [x] **Unit 3: Graph-Conditioned Neighbor Evidence**
 
 **Goal:** Attach ranked evidence from graph in-degree/out-degree neighborhoods to the answer basis.
 
-**Implementation status (2026-07-05):** Partially implemented. `KnowledgeLearningPlatform.agentConversation()` now materializes graph-neighbor query items from graph context windows/supporting ids and sends them through the evidence assembler as `graph_neighbor_support` fragments. The remaining gap is a deeper graph-ranker change inside `graphContextAssembler.ts` for relation-kind, confidence, bibliography filtering, and query-intent weighted neighbor selection before evidence assembly.
+**Implementation status (2026-07-05):** Implemented for the deterministic path. `KnowledgeLearningPlatform.agentConversation()` materializes graph-neighbor query items from graph context windows/supporting ids and sends them through the evidence assembler as `graph_neighbor_support` fragments. `graphContextAssembler.ts` now owns intent-specific predecessor/successor window ranking before evidence assembly, combining relation-kind priority, confidence, fact provenance, anchor-equivalent filtering, and bibliography exclusion. A regression test now locks the compare-intent behavior where contrast evidence beats a higher-confidence procedural sequence edge.
 
 **Requirements:** R3, R7.
 
@@ -696,11 +696,11 @@ flowchart TB
 - 同文档多 span 去重 overlapping window。
 - provenance 缺失时降级为 direct snippet only。
 
-- [ ] **单元 3：图条件化邻居证据**
+- [x] **单元 3：图条件化邻居证据**
 
 **目标：** 把入度/出度邻域中的高价值节点内容接入回答基础。
 
-**实现状态（2026-07-05）：** 部分实现。`KnowledgeLearningPlatform.agentConversation()` 已从 graph context 的窗口与 supporting ids 中物化图邻居 query items，并通过 evidence assembler 转成 `graph_neighbor_support` fragment。剩余缺口是继续下沉到 `graphContextAssembler.ts`，基于 relation kind、confidence、bibliography 过滤和 query intent 权重做更精细的邻居排序。
+**实现状态（2026-07-05）：** 确定性路径已实现。`KnowledgeLearningPlatform.agentConversation()` 已从 graph context 的窗口与 supporting ids 中物化图邻居 query items，并通过 evidence assembler 转成 `graph_neighbor_support` fragment。`graphContextAssembler.ts` 现在在 evidence assembly 之前负责 intent-specific predecessor / successor window ranking，将 relation kind priority、confidence、fact provenance、anchor-equivalent 过滤与 bibliography 排除组合在同一排序策略中。新增回归测试锁定 compare intent：contrast 证据会优先于置信度更高但语义不匹配的 procedural sequence 边。
 
 **文件：**
 - 修改：`src/learning/graphContextAssembler.ts`

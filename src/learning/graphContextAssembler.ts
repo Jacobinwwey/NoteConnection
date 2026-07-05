@@ -54,6 +54,14 @@ type CachedGraphNodeMetrics = {
     centrality?: number;
 };
 
+type GraphWindowScoringPolicy = {
+    relationPriorities: Partial<Record<RelationKind, number>>;
+    defaultRelationPriority: number;
+    confidenceWeight: number;
+    factProvenanceBonus: number;
+    bibliographyPenalty: number;
+};
+
 type AnchorNodeExclusion = {
     atomIds: Set<string>;
     titles: Set<string>;
@@ -653,25 +661,74 @@ function rankRelationEdges(edges: RelationEdge[]): RelationEdge[] {
         ));
 }
 
-function graphWindowRelationPriority(relationKind: RelationKind | undefined): number {
-    switch (relationKind) {
-        case 'prerequisite':
-            return 90;
-        case 'sequence':
-            return 82;
-        case 'application':
-            return 74;
-        case 'causal':
-            return 68;
-        case 'contrast':
-            return 58;
-        case 'analogy':
-            return 52;
-        case 'reference':
-            return 18;
-        default:
-            return 0;
+function resolveGraphWindowScoringPolicy(intent: GraphContextAssemblyIntent): GraphWindowScoringPolicy {
+    const structuralPriorities: Record<RelationKind, number> = {
+        prerequisite: 90,
+        sequence: 82,
+        application: 74,
+        causal: 68,
+        contrast: 58,
+        analogy: 52,
+        reference: 18,
+    };
+    if (intent === 'compare') {
+        return {
+            relationPriorities: {
+                contrast: 104,
+                analogy: 92,
+                causal: 70,
+                application: 64,
+                sequence: 54,
+                prerequisite: 48,
+                reference: 18,
+            },
+            defaultRelationPriority: 0,
+            confidenceWeight: 10,
+            factProvenanceBonus: 2,
+            bibliographyPenalty: 1000,
+        };
     }
+    if (intent === 'how_to') {
+        return {
+            relationPriorities: {
+                prerequisite: 104,
+                sequence: 96,
+                application: 82,
+                causal: 70,
+                contrast: 44,
+                analogy: 38,
+                reference: 18,
+            },
+            defaultRelationPriority: 0,
+            confidenceWeight: 10,
+            factProvenanceBonus: 2,
+            bibliographyPenalty: 1000,
+        };
+    }
+    if (intent === 'explain') {
+        return {
+            relationPriorities: {
+                prerequisite: 94,
+                causal: 88,
+                sequence: 76,
+                application: 70,
+                analogy: 58,
+                contrast: 54,
+                reference: 18,
+            },
+            defaultRelationPriority: 0,
+            confidenceWeight: 10,
+            factProvenanceBonus: 2,
+            bibliographyPenalty: 1000,
+        };
+    }
+    return {
+        relationPriorities: structuralPriorities,
+        defaultRelationPriority: 0,
+        confidenceWeight: 10,
+        factProvenanceBonus: 2,
+        bibliographyPenalty: 1000,
+    };
 }
 
 function isBibliographyLikeGraphWindowTitle(title: string): boolean {
@@ -690,11 +747,18 @@ function isBibliographyLikeGraphWindowTitle(title: string): boolean {
         || normalized.includes('文献引用');
 }
 
-function scoreGraphWindowCandidate(edge: RelationEdge, title: string): number {
-    const confidenceScore = Math.max(0, Math.min(1, Number(edge.confidence || 0))) * 10;
-    const provenanceScore = edge.provenance === 'fact' ? 2 : 0;
-    const bibliographyPenalty = isBibliographyLikeGraphWindowTitle(title) ? 1000 : 0;
-    return graphWindowRelationPriority(edge.relationKind) + confidenceScore + provenanceScore - bibliographyPenalty;
+function scoreGraphWindowCandidate(
+    edge: RelationEdge,
+    title: string,
+    scoringPolicy: GraphWindowScoringPolicy
+): number {
+    const confidenceScore = Math.max(0, Math.min(1, Number(edge.confidence || 0))) * scoringPolicy.confidenceWeight;
+    const provenanceScore = edge.provenance === 'fact' ? scoringPolicy.factProvenanceBonus : 0;
+    const bibliographyPenalty = isBibliographyLikeGraphWindowTitle(title) ? scoringPolicy.bibliographyPenalty : 0;
+    const relationPriority = edge.relationKind
+        ? scoringPolicy.relationPriorities[edge.relationKind] ?? scoringPolicy.defaultRelationPriority
+        : scoringPolicy.defaultRelationPriority;
+    return relationPriority + confidenceScore + provenanceScore - bibliographyPenalty;
 }
 
 async function buildWindowNodes(
@@ -705,7 +769,8 @@ async function buildWindowNodes(
     metricsCache: Map<string, CachedGraphNodeMetrics | null>,
     exclusion: AnchorNodeExclusion,
     limit: number,
-    missingIds: Set<string>
+    missingIds: Set<string>,
+    scoringPolicy: GraphWindowScoringPolicy
 ): Promise<AgentConversationGraphWindowNode[]> {
     const rankedEdges = rankRelationEdges(edges);
     const candidates: Array<{
@@ -740,7 +805,7 @@ async function buildWindowNodes(
         const metrics = await resolveNodeMetrics(opsStore, relatedAtomId, metricsCache);
         const confidence = Number(Number(edge.confidence || 0).toFixed(4));
         candidates.push({
-            score: scoreGraphWindowCandidate(edge, title),
+            score: scoreGraphWindowCandidate(edge, title, scoringPolicy),
             confidence,
             node: {
                 atomId: relatedAtomId,
@@ -889,6 +954,7 @@ export async function assembleAgentConversationGraphContext(
 
     const intent = classifyConversationIntent(params.message);
     const budget = resolveBudget(intent, params.budget);
+    const graphWindowScoringPolicy = resolveGraphWindowScoringPolicy(intent);
     const anchorSelection = selectAnchorPoint(params.message, knowledgePoints);
     const anchorPoint = anchorSelection.point;
     const supportPoints = rankSupportPoints(params.message, intent, anchorPoint, knowledgePoints, budget);
@@ -979,7 +1045,8 @@ export async function assembleAgentConversationGraphContext(
             metricsCache,
             anchorExclusion,
             budget.maxPredecessors,
-            missingPredecessorAtomIds
+            missingPredecessorAtomIds,
+            graphWindowScoringPolicy
         )
         : [];
     const successorWindow = budget.maxSuccessors > 0
@@ -991,7 +1058,8 @@ export async function assembleAgentConversationGraphContext(
             metricsCache,
             anchorExclusion,
             budget.maxSuccessors,
-            missingSuccessorAtomIds
+            missingSuccessorAtomIds,
+            graphWindowScoringPolicy
         )
         : [];
     const anchorGraphProfile = await buildAnchorGraphProfile(

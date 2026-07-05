@@ -761,6 +761,87 @@ describe('assembleAgentConversationGraphContext', () => {
         }));
     });
 
+    test('prioritizes contrast successors over procedural sequence nodes for compare intent', async () => {
+        const atoms: KnowledgeAtom[] = [
+            createAtom({
+                id: 'atom_water_glass',
+                stableKey: 'water_glass',
+                title: 'Water Glass',
+            }),
+            createAtom({
+                id: 'atom_usage_sequence',
+                stableKey: 'usage_sequence',
+                title: 'Usage Sequence',
+            }),
+            createAtom({
+                id: 'atom_plastic_cup_contrast',
+                stableKey: 'plastic_cup_contrast',
+                title: 'Plastic Cup Contrast',
+            }),
+        ];
+        const edges: RelationEdge[] = [
+            {
+                id: 'edge_water_glass_usage_sequence',
+                sourceAtomId: 'atom_water_glass',
+                targetAtomId: 'atom_usage_sequence',
+                relationKind: 'sequence',
+                provenance: 'fact',
+                confidence: 0.96,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-07-05T00:00:00.000Z',
+                },
+            },
+            {
+                id: 'edge_water_glass_plastic_contrast',
+                sourceAtomId: 'atom_water_glass',
+                targetAtomId: 'atom_plastic_cup_contrast',
+                relationKind: 'contrast',
+                provenance: 'fact',
+                confidence: 0.62,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-07-05T00:00:00.000Z',
+                },
+            },
+        ];
+        const knowledgePoints: AgentConversationKnowledgePoint[] = [
+            createKnowledgePoint({
+                atomId: 'atom_water_glass',
+                atomIds: ['atom_water_glass'],
+                documentId: 'doc_water_glass',
+                sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                title: 'Water Glass',
+                summary: 'A water glass is a transparent vessel for water.',
+                evidenceSnippet: 'A water glass is a transparent vessel for water.',
+                score: 0.96,
+            }),
+        ];
+
+        const result = await assembleAgentConversationGraphContext({
+            message: 'compare water glass and plastic cup',
+            usedScope: globalScope,
+            knowledgePoints,
+            store: new InMemoryOpsStore(atoms, edges),
+            budget: {
+                maxSuccessors: 1,
+            },
+        });
+
+        expect((result.graphContext as any)?.successorWindow).toEqual([
+            expect.objectContaining({
+                atomId: 'atom_plastic_cup_contrast',
+                title: 'Plastic Cup Contrast',
+                relationKind: 'contrast',
+            }),
+        ]);
+        expect((result.graphContext as any)?.successorWindow).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                atomId: 'atom_usage_sequence',
+            }),
+        ]));
+    });
+
     test('fails open to retrieval-shaped graph context when graph ops are unavailable', async () => {
         const knowledgePoints: AgentConversationKnowledgePoint[] = [
             createKnowledgePoint({
