@@ -6516,6 +6516,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         graphContext: AgentConversationResponse['trace']['graphContext'] | null,
         knowledgePoints: AgentConversationKnowledgePoint[],
         checkedAt: string,
+        message = '',
         maxNeighbors = AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT
     ): KnowledgeQueryItem[] {
         if (!graphContext) {
@@ -6530,16 +6531,37 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             const score = Number.isFinite(Number(confidence)) ? Number(confidence) : 0.7;
             neighborScores.set(normalizedAtomId, Math.max(neighborScores.get(normalizedAtomId) || 0, score));
         };
-        (graphContext.predecessorWindow || []).forEach((node) => addNeighbor(node.atomId, node.confidence));
-        (graphContext.successorWindow || []).forEach((node) => addNeighbor(node.atomId, node.confidence));
-        (graphContext.supportingAtomIds || []).forEach((atomId) => addNeighbor(atomId, 0.72));
-        (graphContext.knowledgePointRelations || []).forEach((relation) => {
-            addNeighbor(relation.sourceAtomId, relation.confidence);
-            addNeighbor(relation.targetAtomId, relation.confidence);
-        });
-        knowledgePoints.forEach((point) => {
-            (point.relationPathAtomIds || []).forEach((atomId) => addNeighbor(atomId, point.score));
-        });
+        const graphWindowNodes = [
+            ...(graphContext.predecessorWindow || []),
+            ...(graphContext.successorWindow || []),
+        ];
+        const compareIntentHasComparativeWindow = this.isComparisonPlanningQuery(message)
+            && graphWindowNodes.some((node) => node.relationKind === 'contrast' || node.relationKind === 'analogy');
+        const shouldUseGraphWindowNode = (node: typeof graphWindowNodes[number]): boolean => {
+            if (!compareIntentHasComparativeWindow) {
+                return true;
+            }
+            return node.relationKind !== 'application'
+                && node.relationKind !== 'sequence'
+                && node.relationKind !== 'prerequisite';
+        };
+        graphWindowNodes
+            .filter((node) => shouldUseGraphWindowNode(node))
+            .forEach((node) => addNeighbor(node.atomId, node.confidence));
+        const hasIntentRankedGraphWindow = Boolean(
+            graphContext.diagnostics?.graphOpsAvailable === true
+            && ((graphContext.predecessorWindow?.length || 0) + (graphContext.successorWindow?.length || 0)) > 0
+        );
+        if (!hasIntentRankedGraphWindow) {
+            (graphContext.supportingAtomIds || []).forEach((atomId) => addNeighbor(atomId, 0.72));
+            (graphContext.knowledgePointRelations || []).forEach((relation) => {
+                addNeighbor(relation.sourceAtomId, relation.confidence);
+                addNeighbor(relation.targetAtomId, relation.confidence);
+            });
+            knowledgePoints.forEach((point) => {
+                (point.relationPathAtomIds || []).forEach((atomId) => addNeighbor(atomId, point.score));
+            });
+        }
         const activeRelations = this.collectActiveRelationEdges(checkedAt);
         const neighborItems: KnowledgeQueryItem[] = [];
         const limit = Math.max(0, Math.min(24, Math.floor(Number(maxNeighbors) || 0)));
@@ -9514,6 +9536,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             graphContext,
             conversationKnowledgePoints,
             generatedAt,
+            message,
             AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT
         );
         const firstReviewedRag = await this.assembleReviewedRagEvidenceContext({
@@ -9532,6 +9555,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 graphContext,
                 conversationKnowledgePoints,
                 generatedAt,
+                message,
                 AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT
             );
             const recoveredReviewedRag = await this.assembleReviewedRagEvidenceContext({

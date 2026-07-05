@@ -281,6 +281,34 @@ function assertReasonFragments(query, label, observedReasons, requiredFragments)
   });
 }
 
+function collectGraphSuccessorWindowTitles(graphContext) {
+  const successorWindow = Array.isArray(graphContext && graphContext.successorWindow)
+    ? graphContext.successorWindow
+    : [];
+  return successorWindow
+    .map((node) => String(node && node.title || '').trim())
+    .filter(Boolean);
+}
+
+function collectGraphSuccessorWindowRelationKinds(graphContext) {
+  const successorWindow = Array.isArray(graphContext && graphContext.successorWindow)
+    ? graphContext.successorWindow
+    : [];
+  return successorWindow
+    .map((node) => String(node && node.relationKind || '').trim())
+    .filter(Boolean);
+}
+
+function collectGraphNeighborFragmentTitles(ragContextPack) {
+  const fragments = Array.isArray(ragContextPack && ragContextPack.fragments)
+    ? ragContextPack.fragments
+    : [];
+  return fragments
+    .filter((fragment) => String(fragment && fragment.role || '') === 'graph_neighbor_support')
+    .map((fragment) => String(fragment && fragment.title || '').trim())
+    .filter(Boolean);
+}
+
 function loadConversationRegressionCases(caseIds) {
   const modulePath = path.join(
     process.cwd(),
@@ -346,6 +374,11 @@ function validatePositiveConversationResult(summary, options) {
     acceptedRagDegradationStates,
     minimumRagRecoveryBeforeSourceDecisionStatusCounts,
     requiredRagRecoveryBeforeReasonFragments,
+    requiredFirstGraphSuccessorTitle,
+    requiredGraphSuccessorTitles,
+    forbiddenGraphSuccessorTitles,
+    requiredGraphSuccessorRelationKinds,
+    forbiddenGraphNeighborFragmentTitles,
     requireScopedDocumentIds,
   } = options;
   const forbiddenFragments = Array.isArray(answerMustNotContain) && answerMustNotContain.length > 0
@@ -532,6 +565,53 @@ function validatePositiveConversationResult(summary, options) {
     summary.ragRecovery && summary.ragRecovery.beforeReasons,
     requiredRagRecoveryBeforeReasonFragments
   );
+  const graphSuccessorTitles = collectGraphSuccessorWindowTitles(summary.graphContext);
+  const graphSuccessorRelationKinds = collectGraphSuccessorWindowRelationKinds(summary.graphContext);
+  if (requiredFirstGraphSuccessorTitle) {
+    const firstTitle = graphSuccessorTitles[0] || '';
+    if (firstTitle !== requiredFirstGraphSuccessorTitle) {
+      throw new Error(
+        `graph successor first title mismatch for query=${query}: expected=${requiredFirstGraphSuccessorTitle} actual=${JSON.stringify(graphSuccessorTitles)} graphContext=${JSON.stringify(summary.graphContext)}`
+      );
+    }
+  }
+  if (Array.isArray(requiredGraphSuccessorTitles) && requiredGraphSuccessorTitles.length > 0) {
+    requiredGraphSuccessorTitles.forEach((title) => {
+      if (!graphSuccessorTitles.includes(title)) {
+        throw new Error(
+          `graph successor title missing "${title}" for query=${query}: actual=${JSON.stringify(graphSuccessorTitles)} graphContext=${JSON.stringify(summary.graphContext)}`
+        );
+      }
+    });
+  }
+  if (Array.isArray(forbiddenGraphSuccessorTitles) && forbiddenGraphSuccessorTitles.length > 0) {
+    forbiddenGraphSuccessorTitles.forEach((title) => {
+      if (graphSuccessorTitles.includes(title)) {
+        throw new Error(
+          `graph successor title should not be selected "${title}" for query=${query}: actual=${JSON.stringify(graphSuccessorTitles)} graphContext=${JSON.stringify(summary.graphContext)}`
+        );
+      }
+    });
+  }
+  if (Array.isArray(requiredGraphSuccessorRelationKinds) && requiredGraphSuccessorRelationKinds.length > 0) {
+    requiredGraphSuccessorRelationKinds.forEach((relationKind) => {
+      if (!graphSuccessorRelationKinds.includes(relationKind)) {
+        throw new Error(
+          `graph successor relation kind missing "${relationKind}" for query=${query}: actual=${JSON.stringify(graphSuccessorRelationKinds)} graphContext=${JSON.stringify(summary.graphContext)}`
+        );
+      }
+    });
+  }
+  if (Array.isArray(forbiddenGraphNeighborFragmentTitles) && forbiddenGraphNeighborFragmentTitles.length > 0) {
+    const graphNeighborFragmentTitles = collectGraphNeighborFragmentTitles(summary.ragContextPack);
+    forbiddenGraphNeighborFragmentTitles.forEach((title) => {
+      if (graphNeighborFragmentTitles.includes(title)) {
+        throw new Error(
+          `RAG graph-neighbor fragment title should not be selected "${title}" for query=${query}: actual=${JSON.stringify(graphNeighborFragmentTitles)} pack=${JSON.stringify(summary.ragContextPack)}`
+        );
+      }
+    });
+  }
   if (
     Array.isArray(expectedPlannerTitleLikeQueries)
     && expectedPlannerTitleLikeQueries.length > 0
@@ -666,6 +746,7 @@ async function main() {
         const ragContextPack = result.trace && result.trace.ragContextPack ? result.trace.ragContextPack : null;
         const ragSufficiencyReview = result.trace && result.trace.ragSufficiencyReview ? result.trace.ragSufficiencyReview : null;
         const ragRecovery = result.trace && result.trace.ragRecovery ? result.trace.ragRecovery : null;
+        const graphContext = result.trace && result.trace.graphContext ? result.trace.graphContext : null;
 
         const summary = {
           query,
@@ -682,6 +763,7 @@ async function main() {
           scopeRecovery: retrievalTrace && retrievalTrace.scopeRecovery ? retrievalTrace.scopeRecovery : null,
           missDiagnostics,
           answerReleaseReview,
+          graphContext,
           ragContextPack,
           ragSufficiencyReview,
           ragRecovery,
@@ -768,6 +850,7 @@ async function main() {
         const ragContextPack = result.trace && result.trace.ragContextPack ? result.trace.ragContextPack : null;
         const ragSufficiencyReview = result.trace && result.trace.ragSufficiencyReview ? result.trace.ragSufficiencyReview : null;
         const ragRecovery = result.trace && result.trace.ragRecovery ? result.trace.ragRecovery : null;
+        const graphContext = result.trace && result.trace.graphContext ? result.trace.graphContext : null;
 
         const summary = {
           id: regressionCase.id,
@@ -788,6 +871,7 @@ async function main() {
           scopeRecovery: retrievalTrace && retrievalTrace.scopeRecovery ? retrievalTrace.scopeRecovery : null,
           missDiagnostics,
           answerReleaseReview,
+          graphContext,
           ragContextPack,
           ragSufficiencyReview,
           ragRecovery,
@@ -820,6 +904,11 @@ async function main() {
           minimumRagRecoveryBeforeSourceDecisionStatusCounts: regressionCase.expected.minimumRagRecoveryBeforeSourceDecisionStatusCounts,
           requiredRagRecoveryBeforeReasonFragments: regressionCase.expected.runtimeRequiredRagRecoveryBeforeReasonFragments
             || regressionCase.expected.requiredRagRecoveryBeforeReasonFragments,
+          requiredFirstGraphSuccessorTitle: regressionCase.expected.requiredFirstGraphSuccessorTitle,
+          requiredGraphSuccessorTitles: regressionCase.expected.requiredGraphSuccessorTitles,
+          forbiddenGraphSuccessorTitles: regressionCase.expected.forbiddenGraphSuccessorTitles,
+          requiredGraphSuccessorRelationKinds: regressionCase.expected.requiredGraphSuccessorRelationKinds,
+          forbiddenGraphNeighborFragmentTitles: regressionCase.expected.forbiddenGraphNeighborFragmentTitles,
           requireScopedDocumentIds: regressionCase.expected.requireScopedDocumentIds,
         });
         caseResults.push(summary);

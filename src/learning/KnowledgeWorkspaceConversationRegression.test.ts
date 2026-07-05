@@ -1,8 +1,11 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { KnowledgeLearningPlatform } from './KnowledgeLearningPlatform';
 import {
     KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES,
     type KnowledgeWorkspaceConversationRegressionCase,
 } from './KnowledgeWorkspaceConversationRegression';
+import { createKnowledgeGraphStore } from './store';
 import type { RagSourceDecision } from './types';
 
 function deriveScopedConversationRequest(caseEntry: KnowledgeWorkspaceConversationRegressionCase) {
@@ -108,6 +111,50 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_graphintent_brittle_glass_vessel',
+            sourcePath: 'Knowledge_Base/graphintent/brittle glass vessel.md',
+            language: 'en',
+            workspaceId: 'graphintent',
+            corpusId: 'graphintent',
+            content: [
+                '# Brittle Glass Vessel',
+                'Brittle glass vessel water container material wall stiffness clarity fracture comparison impact tolerance.',
+            ].join('\n'),
+        },
+        {
+            documentId: 'doc_graphintent_procedural_calibration_sequence',
+            sourcePath: 'Knowledge_Base/graphintent/procedural calibration sequence.md',
+            language: 'en',
+            workspaceId: 'graphintent',
+            corpusId: 'graphintent',
+            content: [
+                '# Procedural Calibration Sequence',
+                'Procedural calibration sequence brittle glass vessel water container material wall stiffness clarity fracture comparison impact tolerance rinse align fill record.',
+            ].join('\n'),
+        },
+        {
+            documentId: 'doc_graphintent_ductile_polymer_cup',
+            sourcePath: 'Knowledge_Base/graphintent/ductile polymer cup analogy.md',
+            language: 'en',
+            workspaceId: 'graphintent',
+            corpusId: 'graphintent',
+            content: [
+                '# Ductile Polymer Cup Analogy',
+                'Ductile polymer cup water container material wall comparison impact tolerance flexible fracture resistance.',
+            ].join('\n'),
+        },
+        {
+            documentId: 'doc_graphintent_reusable_polymer_vessel',
+            sourcePath: 'Knowledge_Base/graphintent/reusable polymer vessel analogy.md',
+            language: 'en',
+            workspaceId: 'graphintent',
+            corpusId: 'graphintent',
+            content: [
+                '# Reusable Polymer Vessel Analogy',
+                'Reusable polymer vessel water container material wall comparison impact tolerance flexible ductility stiffness tradeoff.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_context_budget_probe',
             sourcePath: 'Knowledge_Base/contextbudget/context budget probe.md',
             language: 'en',
@@ -154,6 +201,67 @@ function expectReasonFragments(
     });
 }
 
+function graphSuccessorWindow(response: Awaited<ReturnType<KnowledgeLearningPlatform['agentConversation']>>) {
+    const graphContext = response.trace.graphContext as any;
+    return Array.isArray(graphContext?.successorWindow) ? graphContext.successorWindow : [];
+}
+
+function graphSuccessorTitles(response: Awaited<ReturnType<KnowledgeLearningPlatform['agentConversation']>>): string[] {
+    return graphSuccessorWindow(response)
+        .map((node: any) => String(node?.title || '').trim())
+        .filter(Boolean);
+}
+
+function graphSuccessorRelationKinds(response: Awaited<ReturnType<KnowledgeLearningPlatform['agentConversation']>>): string[] {
+    return graphSuccessorWindow(response)
+        .map((node: any) => String(node?.relationKind || '').trim())
+        .filter(Boolean);
+}
+
+function graphNeighborFragmentTitles(response: Awaited<ReturnType<KnowledgeLearningPlatform['agentConversation']>>): string[] {
+    return (response.trace.ragContextPack?.fragments || [])
+        .filter((fragment) => fragment.role === 'graph_neighbor_support')
+        .map((fragment) => String(fragment.title || '').trim())
+        .filter(Boolean);
+}
+
+function caseNeedsGraphOpsStore(caseEntry: KnowledgeWorkspaceConversationRegressionCase): boolean {
+    const expected = caseEntry.expected;
+    return Boolean(
+        expected.requiredFirstGraphSuccessorTitle
+        || (expected.requiredGraphSuccessorTitles && expected.requiredGraphSuccessorTitles.length > 0)
+        || (expected.forbiddenGraphSuccessorTitles && expected.forbiddenGraphSuccessorTitles.length > 0)
+        || (expected.requiredGraphSuccessorRelationKinds && expected.requiredGraphSuccessorRelationKinds.length > 0)
+    );
+}
+
+function createRegressionPlatform(caseEntry: KnowledgeWorkspaceConversationRegressionCase): {
+    platform: KnowledgeLearningPlatform;
+    cleanup: () => void;
+} {
+    if (!caseNeedsGraphOpsStore(caseEntry)) {
+        return {
+            platform: new KnowledgeLearningPlatform(() => new Date('2026-06-18T00:00:00.000Z')),
+            cleanup: () => {},
+        };
+    }
+    const tempDir = fs.mkdtempSync(path.join(process.cwd(), 'tmp-knowledge-conversation-regression-'));
+    const store = createKnowledgeGraphStore({
+        backend: 'file',
+        filePath: path.join(tempDir, 'knowledge_graph.snapshot.json'),
+    });
+    return {
+        platform: new KnowledgeLearningPlatform({
+            nowProvider: () => new Date('2026-06-18T00:00:00.000Z'),
+            store,
+            autoPersist: true,
+        }),
+        cleanup: () => {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        },
+    };
+}
+
 describe('KnowledgeWorkspaceConversationRegression', () => {
     test('case ids stay unique', () => {
         const caseIds = KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES.map((entry) => entry.id);
@@ -177,18 +285,38 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
         );
     });
 
+    test('registers a compare-intent graph neighbor selection probe', () => {
+        expect(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    id: 'graphintent_compare_neighbor_selection_en',
+                    expected: expect.objectContaining({
+                        requiredGraphSuccessorTitles: [
+                            'Ductile Polymer Cup Analogy',
+                            'Reusable Polymer Vessel Analogy',
+                        ],
+                        forbiddenGraphSuccessorTitles: ['Procedural Calibration Sequence'],
+                        requiredGraphSuccessorRelationKinds: ['analogy'],
+                        forbiddenGraphNeighborFragmentTitles: ['Procedural Calibration Sequence'],
+                    }),
+                }),
+            ])
+        );
+    });
+
     test.each(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES)(
         'conversation regression case: $id',
         async (caseEntry) => {
-            const platform = new KnowledgeLearningPlatform(() => new Date('2026-06-18T00:00:00.000Z'));
-            await platform.ingestKnowledge({
-                incremental: true,
-                documents: buildRegressionDocuments(),
-            });
+            const regressionPlatform = createRegressionPlatform(caseEntry);
+            try {
+                await regressionPlatform.platform.ingestKnowledge({
+                    incremental: true,
+                    documents: buildRegressionDocuments(),
+                });
 
-            const response = await platform.agentConversation(
-                deriveScopedConversationRequest(caseEntry)
-            );
+                const response = await regressionPlatform.platform.agentConversation(
+                    deriveScopedConversationRequest(caseEntry)
+                );
             const expected = caseEntry.expected;
             const minimumRagSourceDecisionStatusCounts = expected.inMemoryMinimumRagSourceDecisionStatusCounts
                 || expected.minimumRagSourceDecisionStatusCounts;
@@ -242,6 +370,29 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
             if (expected.acceptedRagSufficiencyStatuses && expected.acceptedRagSufficiencyStatuses.length > 0) {
                 expect(expected.acceptedRagSufficiencyStatuses).toContain(response.trace.ragSufficiencyReview?.status);
             }
+            if (expected.requiredFirstGraphSuccessorTitle) {
+                expect(graphSuccessorTitles(response)[0]).toBe(expected.requiredFirstGraphSuccessorTitle);
+            }
+            if (expected.requiredGraphSuccessorTitles && expected.requiredGraphSuccessorTitles.length > 0) {
+                expect(graphSuccessorTitles(response)).toEqual(
+                    expect.arrayContaining(expected.requiredGraphSuccessorTitles)
+                );
+            }
+            if (expected.forbiddenGraphSuccessorTitles && expected.forbiddenGraphSuccessorTitles.length > 0) {
+                expected.forbiddenGraphSuccessorTitles.forEach((title) => {
+                    expect(graphSuccessorTitles(response)).not.toContain(title);
+                });
+            }
+            if (expected.requiredGraphSuccessorRelationKinds && expected.requiredGraphSuccessorRelationKinds.length > 0) {
+                expect(graphSuccessorRelationKinds(response)).toEqual(
+                    expect.arrayContaining(expected.requiredGraphSuccessorRelationKinds)
+                );
+            }
+            if (expected.forbiddenGraphNeighborFragmentTitles && expected.forbiddenGraphNeighborFragmentTitles.length > 0) {
+                expected.forbiddenGraphNeighborFragmentTitles.forEach((title) => {
+                    expect(graphNeighborFragmentTitles(response)).not.toContain(title);
+                });
+            }
             if (typeof expected.expectedRagDeterministic === 'boolean') {
                 expect(response.trace.ragSufficiencyReview?.deterministic).toBe(expected.expectedRagDeterministic);
             }
@@ -282,6 +433,9 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                 expect(retrieval.scopeRecovery?.recoveredSourcePaths || []).toEqual(
                     expect.arrayContaining(expected.recoveredSourcePaths)
                 );
+            }
+            } finally {
+                regressionPlatform.cleanup();
             }
         }
     );

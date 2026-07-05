@@ -6,6 +6,7 @@ import type {
     RagSourceDecision,
     RagSourceBoundary,
     RagSufficiencyReview,
+    RelationKind,
 } from './types';
 
 export interface KnowledgeWorkspaceConversationRegressionExpectation {
@@ -35,6 +36,11 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     inMemoryMinimumRagRecoveryBeforeSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
     requiredRagRecoveryBeforeReasonFragments?: string[];
     runtimeRequiredRagRecoveryBeforeReasonFragments?: string[];
+    requiredFirstGraphSuccessorTitle?: string;
+    requiredGraphSuccessorTitles?: string[];
+    forbiddenGraphSuccessorTitles?: string[];
+    requiredGraphSuccessorRelationKinds?: RelationKind[];
+    forbiddenGraphNeighborFragmentTitles?: string[];
     requireScopedDocumentIds?: boolean;
 }
 
@@ -147,6 +153,37 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             ragSourceBoundary: 'full_document',
             requiredRagRoles: ['direct_support', 'parent_context', 'graph_neighbor_support'],
             acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            requireScopedDocumentIds: false,
+        },
+    },
+    {
+        id: 'graphintent_compare_neighbor_selection_en',
+        description: 'Compare-intent graph assembly should prefer material analogy neighbors over a higher-confidence procedural sequence edge.',
+        preloadTargets: ['graphintent'],
+        activeTarget: 'graphintent',
+        query: 'compare brittle glass vessel with polymer cup material behavior',
+        expected: {
+            minCitations: 1,
+            scopeSource: 'explicit_request',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
+            plannerTitleLikeQueries: ['brittle glass vessel', 'polymer cup material behavior'],
+            primarySourcePath: 'Knowledge_Base/graphintent/brittle glass vessel.md',
+            answerMustContain: ['Brittle', 'Ductile', 'Polymer'],
+            answerMustNotContain: [
+                'No scoped knowledge points matched',
+                'retrieval_candidates_below_threshold',
+                'Procedural Calibration Sequence',
+            ],
+            ragSourceBoundary: 'full_document',
+            requiredRagRoles: ['direct_support', 'parent_context', 'graph_neighbor_support'],
+            acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            requiredGraphSuccessorTitles: [
+                'Ductile Polymer Cup Analogy',
+                'Reusable Polymer Vessel Analogy',
+            ],
+            forbiddenGraphSuccessorTitles: ['Procedural Calibration Sequence'],
+            requiredGraphSuccessorRelationKinds: ['analogy'],
+            forbiddenGraphNeighborFragmentTitles: ['Procedural Calibration Sequence'],
             requireScopedDocumentIds: false,
         },
     },

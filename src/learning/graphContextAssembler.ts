@@ -832,6 +832,7 @@ async function buildConnectionPaths(
     opsStore: KnowledgeGraphOpsAdapter,
     anchorPoint: AgentConversationKnowledgePoint,
     supportPoints: AgentConversationKnowledgePoint[],
+    intent: GraphContextAssemblyIntent,
     budget: ResolvedAssemblyBudget,
     titleCache: Map<string, string>,
     missingSourceAtomIds: Set<string>
@@ -883,7 +884,44 @@ async function buildConnectionPaths(
             length: Math.max(0, Math.floor(Number(pathResult.length || 0))),
         });
     }
-    return connectionPaths;
+    return rankConnectionPathsForIntent(connectionPaths, intent);
+}
+
+function scoreConnectionPathForIntent(
+    path: AgentConversationGraphConnectionPath,
+    intent: GraphContextAssemblyIntent
+): number {
+    const scoringPolicy = resolveGraphWindowScoringPolicy(intent);
+    const relationScores = (Array.isArray(path.pathEdges) ? path.pathEdges : [])
+        .map((edge) => (
+            edge.relationKind
+                ? scoringPolicy.relationPriorities[edge.relationKind] ?? scoringPolicy.defaultRelationPriority
+                : scoringPolicy.defaultRelationPriority
+        ));
+    const bestRelationScore = relationScores.length > 0 ? Math.max(...relationScores) : 0;
+    const averageRelationScore = relationScores.length > 0
+        ? relationScores.reduce((sum, score) => sum + score, 0) / relationScores.length
+        : 0;
+    const shorterPathScore = Math.max(0, 8 - Math.max(0, Number(path.length || 0))) * 0.01;
+    return Number((bestRelationScore + averageRelationScore * 0.001 + shorterPathScore).toFixed(6));
+}
+
+function rankConnectionPathsForIntent(
+    connectionPaths: AgentConversationGraphConnectionPath[],
+    intent: GraphContextAssemblyIntent
+): AgentConversationGraphConnectionPath[] {
+    return connectionPaths
+        .map((path, index) => ({
+            path,
+            index,
+            score: scoreConnectionPathForIntent(path, intent),
+        }))
+        .sort((left, right) => (
+            right.score - left.score
+            || left.path.length - right.path.length
+            || left.index - right.index
+        ))
+        .map((entry) => entry.path);
 }
 
 function buildEvidenceSourceRefs(points: AgentConversationKnowledgePoint[]): string[] {
@@ -1010,6 +1048,7 @@ export async function assembleAgentConversationGraphContext(
         opsStore,
         anchorPoint,
         supportPoints,
+        intent,
         budget,
         titleCache,
         missingConnectionPathSourceAtomIds
