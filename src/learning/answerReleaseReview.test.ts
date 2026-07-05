@@ -689,6 +689,178 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).not.toContain('Grounded by RAG context');
     });
 
+    test('revises RAG answers when a public claim lacks citation-backed fragment support', () => {
+        const baseCitation = {
+            ...(makeKnowledgePoint().citation as KnowledgeCitation),
+            title: 'Water Glass',
+            snippet: 'Water glass is a transparent drinking vessel containing water.',
+        };
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: baseCitation.snippet,
+            evidenceSnippet: baseCitation.snippet,
+            citation: baseCitation,
+            citations: [baseCitation],
+        });
+        const ragContextPack: RagContextPack = {
+            query: 'what is water glass?',
+            generatedAt: '2026-07-05T09:10:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 4,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1600,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_water_glass',
+                    role: 'direct_support',
+                    text: 'Water glass is a transparent drinking vessel containing water.',
+                    atomId: 'atom_water_glass',
+                    documentId: 'doc_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                    title: 'Water Glass',
+                    headingPath: ['Water Glass', 'Definition'],
+                    startLine: 3,
+                    endLine: 3,
+                    charCount: 61,
+                    tokenEstimate: 16,
+                    truncated: false,
+                    citationIds: ['citation_water_glass'],
+                    sourceBoundary: 'direct_span_only',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 61,
+            tokenEstimate: 16,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-05T09:10:00.000Z',
+            status: 'sufficient',
+            score: 0.89,
+            reasons: [],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'none',
+        };
+
+        const review = reviewAnswerRelease({
+            message: 'what is water glass?',
+            draftAnswer: 'Water glass is a transparent drinking vessel containing water. It is dishwasher safe and made in Italy.',
+            knowledgePoints: [point],
+            citations: [baseCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            ragContextPack,
+            ragSufficiencyReview,
+            reviewedAt: '2026-07-05T09:11:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('rag_claim_citation_support');
+        expect(review.publicAnswer).toContain('transparent drinking vessel');
+        expect(review.publicAnswer).not.toContain('dishwasher');
+        expect(review.publicAnswer).not.toContain('Italy');
+    });
+
+    test('filters prompt-style preamble clauses from RAG-grounded revisions', () => {
+        const baseCitation = {
+            ...(makeKnowledgePoint().citation as KnowledgeCitation),
+            title: '水杯 (water glass)',
+            snippet: '此处的“水杯”被定义为一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。',
+        };
+        const point = makeKnowledgePoint({
+            title: '水杯 (water glass)',
+            summary: baseCitation.snippet,
+            evidenceSnippet: baseCitation.snippet,
+            citation: baseCitation,
+            citations: [baseCitation],
+        });
+        const ragContextPack: RagContextPack = {
+            query: '什么是water glass',
+            generatedAt: '2026-07-05T09:20:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 4,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1600,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_water_glass_zh',
+                    role: 'direct_support',
+                    text: '此处的“水杯”被定义为一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。',
+                    atomId: 'atom_water_glass',
+                    documentId: 'doc_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                    title: '水杯 (water glass)',
+                    headingPath: ['水杯 (water glass)'],
+                    startLine: 3,
+                    endLine: 3,
+                    charCount: 48,
+                    tokenEstimate: 24,
+                    truncated: false,
+                    citationIds: ['citation_water_glass'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_parent_water_glass_preamble',
+                    role: 'parent_context',
+                    text: [
+                        '好的，遵从您的指示，我将仅基于标题“water glass”创建一份具有科学和数学严谨性的综合技术文档。',
+                        '所有推理过程以英文进行，最终输出为简体中文。',
+                        '核心概念及其数学基础 “水杯”系统是多个物理学分支交叉的绝佳范例。',
+                    ].join('\n\n'),
+                    atomId: 'atom_water_glass',
+                    documentId: 'doc_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                    title: 'water glass.md preamble',
+                    headingPath: ['preamble'],
+                    startLine: 1,
+                    endLine: 8,
+                    charCount: 97,
+                    tokenEstimate: 48,
+                    truncated: false,
+                    citationIds: ['citation_preamble'],
+                    sourceBoundary: 'full_document',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 145,
+            tokenEstimate: 72,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-05T09:20:00.000Z',
+            status: 'sufficient',
+            score: 0.9,
+            reasons: [],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'none',
+        };
+
+        const review = reviewAnswerRelease({
+            message: '什么是water glass',
+            draftAnswer: 'Grounded by RAG context. 此处的“水杯”被定义为一个由特定流体（水）和透明非晶态固体容器（玻璃杯）组成的物理系统。',
+            knowledgePoints: [point],
+            citations: [baseCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            ragContextPack,
+            ragSufficiencyReview,
+            reviewedAt: '2026-07-05T09:21:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.publicAnswer).toContain('透明非晶态固体容器');
+        expect(review.publicAnswer).toContain('多个物理学分支');
+        expect(review.publicAnswer).not.toContain('遵从您的指示');
+        expect(review.publicAnswer).not.toContain('所有推理过程');
+        expect(review.publicAnswer).not.toContain('最终输出');
+    });
+
     test('revises grounded answers when structured numeric facts conflict with support', () => {
         const densityPoint = makeKnowledgePoint({
             title: 'Water Density',

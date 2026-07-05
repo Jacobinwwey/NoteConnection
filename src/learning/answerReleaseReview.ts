@@ -38,6 +38,15 @@ type RagAnswerCompleteness = {
     missingRoles: RagEvidenceRole[];
 };
 
+type RagClaimCitationSupport = {
+    passed: boolean;
+    applicable: boolean;
+    supportedClaimCount: number;
+    weakClaims: string[];
+    unsupportedClaims: string[];
+    citationBackedFragmentCount: number;
+};
+
 type StructuredFactKind = 'number_with_unit' | 'year';
 
 type StructuredFact = {
@@ -329,12 +338,18 @@ const STRUCTURED_FACT_PATTERN = /(-?\d{1,4}(?:,\d{3})*(?:\.\d+)?)(?:\s*(kg\/m(?:
 const ANSWER_RELEASE_PUBLIC_CHAR_LIMIT = 900;
 const ANSWER_RELEASE_SENTENCE_BUDGET = 6;
 const DEFINITION_EVIDENCE_HIGHLIGHT_LIMIT = 2;
+const RAG_CLAIM_CITATION_SUPPORT_MIN_FEATURES = 2;
+const RAG_CLAIM_CITATION_SUPPORT_MIN_COVERAGE = 0.78;
+const RAG_CLAIM_CITATION_SUPPORT_WEAK_COVERAGE = 0.45;
+const RAG_CLAIM_CITATION_SUPPORT_MAX_MISSING_FEATURES = 1;
 
 const YEAR_CONTEXT_PATTERN = /\b(?:year|years|dated|since|until|from|during|after|before|in|on)\b|年/iu;
 const ENGLISH_DEFINITION_QUERY_PATTERN = /\b(?:what\s+is|what'?s|what\s+are|who\s+is|define|definition\s+of|meaning\s+of)\b/iu;
 const CHINESE_DEFINITION_QUERY_PATTERN = /什么是|指的是什么|定义|是什么意思/u;
 const ENGLISH_META_DOCUMENTARY_PATTERN = /\b(?:this|the)\s+(?:technical\s+)?document\b[^.!?\n\r]{0,120}\b(?:aims?|describes?|analy[sz]es?|provides?|outlines?)\b|\bthis\s+(?:section|chapter)\b|\bwe\s+will\b/iu;
 const CHINESE_META_DOCUMENTARY_PATTERN = /(?:本|该)?技术文档|本文档|本节|本章|我们将|旨在(?:对|从|说明|分析)|用于阐述/u;
+const ENGLISH_PROMPT_ARTIFACT_PATTERN = /\b(?:follow(?:ing)? your instructions|based only on the title|all reasoning|final output|output in simplified chinese)\b/iu;
+const CHINESE_PROMPT_ARTIFACT_PATTERN = /遵从.{0,20}(?:指示|要求)|仅基于标题|所有推理过程|推理过程以英文|最终输出|输出为简体中文/u;
 const ENGLISH_TEMPORAL_QUALIFICATION_PATTERN = /\b(?:as of|historically|historical|previously|formerly|earlier|prior|at the time|during|until|before|after|superseded|expired|outdated|older revision|prior version|previous version|legacy version|no longer current)\b/iu;
 const CHINESE_TEMPORAL_QUALIFICATION_PATTERN = /截至|历史上|历史版本|曾经|先前|此前|之前|之后|期间|当时|已过期|已失效|旧版|早期|已被[^。；.!?\n\r]{0,20}(?:取代|替代)/u;
 
@@ -636,6 +651,15 @@ function stripMarkdownScaffolding(value: string): string {
     );
 }
 
+function isPromptArtifactClause(value: string): boolean {
+    const normalized = normalizeWhitespace(value);
+    if (!normalized) {
+        return false;
+    }
+    return ENGLISH_PROMPT_ARTIFACT_PATTERN.test(normalized)
+        || CHINESE_PROMPT_ARTIFACT_PATTERN.test(normalized);
+}
+
 function removeLeadingEvidenceTitle(value: string, title: string): string {
     const normalized = normalizeWhitespace(value);
     const normalizedTitle = normalizeWhitespace(title);
@@ -663,6 +687,7 @@ function selectPublicEvidenceClause(snippet: string, title: string): string {
             clause.length >= 8
             && !ENGLISH_META_DOCUMENTARY_PATTERN.test(clause)
             && !CHINESE_META_DOCUMENTARY_PATTERN.test(clause)
+            && !isPromptArtifactClause(clause)
             && !/^[:：\-–—]+$/u.test(clause)
         ));
     const selected = clauses[0] || cleaned;
@@ -941,6 +966,7 @@ function splitRagPublicEvidenceClauses(fragment: RagEvidenceFragment): string[] 
             clause.length >= 8
             && !ENGLISH_META_DOCUMENTARY_PATTERN.test(clause)
             && !CHINESE_META_DOCUMENTARY_PATTERN.test(clause)
+            && !isPromptArtifactClause(clause)
             && !/^[:：\-–—]+$/u.test(clause)
         ));
     return clauses.length > 0 ? clauses : [cleaned];
@@ -3300,6 +3326,203 @@ function buildRagAnswerCompletenessMessage(result: RagAnswerCompleteness): strin
     return `Draft answer missed required RAG evidence roles: ${result.missingRoles.join(', ')}.`;
 }
 
+function collectCitationBackedRagFragments(context: AnswerReleaseReviewContext): RagEvidenceFragment[] {
+    if (!hasUsableRagEvidenceContext(context)) {
+        return [];
+    }
+    return (context.ragContextPack?.fragments || []).filter((fragment) => (
+        normalizeWhitespace(String(fragment.text || '')).length > 0
+        && Array.isArray(fragment.citationIds)
+        && fragment.citationIds.some((citationId) => normalizeWhitespace(String(citationId || '')).length > 0)
+    ));
+}
+
+function claimLooksLikeReleaseScaffolding(claim: string): boolean {
+    const normalizedClaim = normalizeWhitespace(claim);
+    if (!normalizedClaim) {
+        return true;
+    }
+    return (
+        /\b(?:grounded by|key evidence|citations?|rag context|retrieval|planner)\b/iu.test(normalizedClaim)
+        || INTERNAL_DIAGNOSTIC_FRAGMENTS.some((fragment) => normalizedClaim.includes(fragment))
+    );
+}
+
+function splitDraftAnswerClaims(answer: string): string[] {
+    return stripMarkdownScaffolding(answer)
+        .split(POLARITY_SENTENCE_SPLIT_PATTERN)
+        .map((claim) => normalizeWhitespace(claim))
+        .filter((claim) => (
+            claim.length >= 8
+            && !claimLooksLikeReleaseScaffolding(claim)
+            && !ENGLISH_META_DOCUMENTARY_PATTERN.test(claim)
+            && !CHINESE_META_DOCUMENTARY_PATTERN.test(claim)
+            && !isPromptArtifactClause(claim)
+        ));
+}
+
+function collectClaimSupportFeatures(value: string): string[] {
+    return collectLexicalFeatures(value).filter((feature) => {
+        const normalizedFeature = normalizeWhitespace(feature).toLowerCase();
+        if (!normalizedFeature || STRUCTURED_ANCHOR_STOPWORDS.has(normalizedFeature)) {
+            return false;
+        }
+        const asciiOnly = /^[a-z0-9]+$/u.test(normalizedFeature);
+        if (asciiOnly && normalizedFeature.length < 3) {
+            return false;
+        }
+        return true;
+    });
+}
+
+function scoreClaimAgainstCitationBackedRagSupport(
+    claim: string,
+    supportText: string,
+    supportFeatures: Set<string>
+): {
+    status: 'supported' | 'weak' | 'unsupported' | 'ignored';
+    overlapCount: number;
+    coverage: number;
+} {
+    const claimFeatures = collectClaimSupportFeatures(claim);
+    if (claimFeatures.length < RAG_CLAIM_CITATION_SUPPORT_MIN_FEATURES) {
+        return {
+            status: 'ignored',
+            overlapCount: 0,
+            coverage: 1,
+        };
+    }
+    const normalizedClaim = stripTerminalSentencePunctuation(stripMarkdownScaffolding(claim)).toLowerCase();
+    const normalizedSupport = stripTerminalSentencePunctuation(stripMarkdownScaffolding(supportText)).toLowerCase();
+    if (normalizedClaim && normalizedSupport.includes(normalizedClaim)) {
+        return {
+            status: 'supported',
+            overlapCount: claimFeatures.length,
+            coverage: 1,
+        };
+    }
+    const overlapCount = claimFeatures.filter((feature) => supportFeatures.has(feature)).length;
+    const missingFeatureCount = claimFeatures.length - overlapCount;
+    const coverage = claimFeatures.length > 0 ? overlapCount / claimFeatures.length : 0;
+    if (
+        overlapCount >= RAG_CLAIM_CITATION_SUPPORT_MIN_FEATURES
+        && coverage >= RAG_CLAIM_CITATION_SUPPORT_MIN_COVERAGE
+        && missingFeatureCount <= RAG_CLAIM_CITATION_SUPPORT_MAX_MISSING_FEATURES
+    ) {
+        return {
+            status: 'supported',
+            overlapCount,
+            coverage,
+        };
+    }
+    if (
+        overlapCount >= RAG_CLAIM_CITATION_SUPPORT_MIN_FEATURES
+        && coverage >= RAG_CLAIM_CITATION_SUPPORT_WEAK_COVERAGE
+    ) {
+        return {
+            status: 'weak',
+            overlapCount,
+            coverage,
+        };
+    }
+    return {
+        status: 'unsupported',
+        overlapCount,
+        coverage,
+    };
+}
+
+function evaluateRagClaimCitationSupport(context: AnswerReleaseReviewContext): RagClaimCitationSupport {
+    if (!hasUsableRagEvidenceContext(context)) {
+        return {
+            passed: true,
+            applicable: false,
+            supportedClaimCount: 0,
+            weakClaims: [],
+            unsupportedClaims: [],
+            citationBackedFragmentCount: 0,
+        };
+    }
+    const claims = splitDraftAnswerClaims(context.draftAnswer).filter((claim) => (
+        collectClaimSupportFeatures(claim).length >= RAG_CLAIM_CITATION_SUPPORT_MIN_FEATURES
+    ));
+    const citationBackedFragments = collectCitationBackedRagFragments(context);
+    if (claims.length <= 0) {
+        return {
+            passed: true,
+            applicable: true,
+            supportedClaimCount: 0,
+            weakClaims: [],
+            unsupportedClaims: [],
+            citationBackedFragmentCount: citationBackedFragments.length,
+        };
+    }
+    if (citationBackedFragments.length <= 0) {
+        return {
+            passed: false,
+            applicable: true,
+            supportedClaimCount: 0,
+            weakClaims: [],
+            unsupportedClaims: claims,
+            citationBackedFragmentCount: 0,
+        };
+    }
+    const supportText = citationBackedFragments
+        .map((fragment) => [
+            normalizeWhitespace(String(fragment.title || '').trim()),
+            normalizeWhitespace(String(fragment.text || '').trim()),
+        ].filter(Boolean).join(' '))
+        .filter(Boolean)
+        .join(' ');
+    const supportFeatures = new Set(collectClaimSupportFeatures(supportText));
+    const weakClaims: string[] = [];
+    const unsupportedClaims: string[] = [];
+    let supportedClaimCount = 0;
+    claims.forEach((claim) => {
+        const score = scoreClaimAgainstCitationBackedRagSupport(claim, supportText, supportFeatures);
+        if (score.status === 'supported' || score.status === 'ignored') {
+            supportedClaimCount += score.status === 'supported' ? 1 : 0;
+            return;
+        }
+        if (score.status === 'weak') {
+            weakClaims.push(claim);
+            return;
+        }
+        unsupportedClaims.push(claim);
+    });
+    return {
+        passed: weakClaims.length <= 0 && unsupportedClaims.length <= 0,
+        applicable: true,
+        supportedClaimCount,
+        weakClaims,
+        unsupportedClaims,
+        citationBackedFragmentCount: citationBackedFragments.length,
+    };
+}
+
+function buildRagClaimCitationSupportMessage(result: RagClaimCitationSupport): string {
+    if (!result.applicable) {
+        return 'No usable RAG context pack was available, so claim-level citation support was not evaluated.';
+    }
+    if (result.passed) {
+        return `Citation-backed RAG fragments supported ${result.supportedClaimCount} public claim(s).`;
+    }
+    if (result.citationBackedFragmentCount <= 0) {
+        return 'No citation-backed RAG fragments were available for the public claims in the draft answer.';
+    }
+    const claimSamples = [...result.unsupportedClaims, ...result.weakClaims]
+        .slice(0, 2)
+        .map((claim) => `"${claim}"`);
+    const unsupportedSummary = result.unsupportedClaims.length > 0
+        ? `${result.unsupportedClaims.length} unsupported`
+        : '';
+    const weakSummary = result.weakClaims.length > 0
+        ? `${result.weakClaims.length} weak`
+        : '';
+    const summary = [unsupportedSummary, weakSummary].filter(Boolean).join(' and ');
+    return `Draft answer had ${summary || 'insufficiently supported'} public RAG claim(s): ${claimSamples.join('; ')}.`;
+}
+
 function isDefinitionIntentQuery(message: string): boolean {
     const normalizedMessage = normalizeWhitespace(message);
     if (!normalizedMessage) {
@@ -4460,6 +4683,7 @@ function buildDecision(
     graphComparisonConsistencyPassed: boolean,
     temporalValidityConsistencyPassed: boolean,
     ragAnswerCompletenessPassed: boolean,
+    ragClaimCitationSupportPassed: boolean,
     leakedInternalFragments: string[],
     publicSurfaceContracted: boolean
 ): AnswerReleaseDecision {
@@ -4485,6 +4709,7 @@ function buildDecision(
         || !graphComparisonConsistencyPassed
         || !temporalValidityConsistencyPassed
         || !ragAnswerCompletenessPassed
+        || !ragClaimCitationSupportPassed
         || leakedInternalFragments.length > 0
         || !publicSurfaceContracted
     ) {
@@ -4697,6 +4922,19 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             requiredRoles: [],
             missingRoles: [],
         };
+    const ragClaimCitationSupport = groundedEvidenceAvailable
+        ? evaluateRagClaimCitationSupport({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            applicable: false,
+            supportedClaimCount: 0,
+            weakClaims: [],
+            unsupportedClaims: [],
+            citationBackedFragmentCount: 0,
+        };
     const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer);
     const graphSupportCount = context.graphContext
         ? (
@@ -4726,6 +4964,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         graphComparisonConsistency.passed,
         temporalValidityConsistency.passed,
         ragAnswerCompleteness.passed,
+        ragClaimCitationSupport.passed,
         leakedInternalFragments,
         publicSurfaceContracted
     );
@@ -4969,6 +5208,11 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             gateId: 'rag_answer_completeness',
             passed: ragAnswerCompleteness.passed,
             message: buildRagAnswerCompletenessMessage(ragAnswerCompleteness),
+        },
+        {
+            gateId: 'rag_claim_citation_support',
+            passed: ragClaimCitationSupport.passed,
+            message: buildRagClaimCitationSupportMessage(ragClaimCitationSupport),
         },
         {
             gateId: 'public_surface_contraction',

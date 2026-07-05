@@ -1429,6 +1429,7 @@ export type AnswerReleaseGateId =
     | 'claim_graph_comparison_consistency'
     | 'claim_temporal_validity_consistency'
     | 'rag_answer_completeness'
+    | 'rag_claim_citation_support'
     | 'public_surface_contraction'
     | 'internal_diagnostic_leakage'
     | 'abstention_hygiene';
