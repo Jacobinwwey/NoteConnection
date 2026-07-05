@@ -3,6 +3,38 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-07-05 RSE Document-Augmented Graph RAG Implementation Plan
+
+This slice records the follow-up planning work for richer Knowledge Workspace answers. It does not claim the richer RAG pipeline is implemented yet. The concrete plan is now written at [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md).
+
+Current code-vs-plan reading:
+
+| Requirement / prior expectation | Current `main` evidence | Progress call |
+|---|---|---|
+| RSE should start from precise hit spans rather than broad documents | `src/learning/queryBackend.ts` and `src/learning/KnowledgeLearningPlatform.ts` already return evidence spans, citations, relation paths, query variants, and scoped recovery trace data. `conversationComposer.ts` already groups repeated hits by document/knowledge point. | Operational baseline exists |
+| Document augmentation should recover enough surrounding source context to answer fully | Current public answers can include same-knowledge-point augmentation titles and bounded evidence highlights through `answerReleaseReview.ts`, but there is no dedicated source-window assembler that preserves parent heading, local paragraphs, table/code boundaries, or per-fragment budget decisions. | Planned next owner |
+| Graph context should use in-degree/out-degree and neighbor content, not only neighbor titles | `graphContextAssembler.ts` already emits anchor profile, predecessor/successor windows, self-neighbor filtering, and relation diagnostics. It still needs neighbor evidence fragments before the public answer can safely explain what each graph neighbor contributes. | Baseline implemented; evidence-conditioned graph answer planned |
+| The answer should be one visible message while orchestration stays in backend | `agent_workspace.js`, `conversationComposer.ts`, and `answerReleaseReview.ts` already preserve the one-message public surface and keep structured context in trace/assistant blocks. The next plan keeps this invariant while making the single answer more complete. | Preserved |
+| LLM judging should improve answer completeness | No mandatory LLM judge exists in the Knowledge Workspace answer path. `src/notemd/LlmProvider.ts` is the correct provider abstraction to reuse if the RAG path adds optional judging. The plan rejects unconditional multi-round judging because it would make latency, cost, and failure modes part of the hot path. | Planned, optional and bounded |
+| Weak evidence should degrade explicitly | Current release review can abstain or revise, and `knowledgeRun.quality.gates` records several graph/evidence conditions. The plan adds explicit RAG states such as partial coverage, conflict, stale evidence, and insufficient evidence so a fluent answer cannot mask a thin evidence pack. | Planned |
+
+Architecture direction now has a sharper owner split:
+
+- `queryBackend.ts` should keep precise RSE retrieval and hybrid ranking.
+- A new `evidenceContextAssembler.ts` should own source-window / parent-section / adjacent-context document augmentation.
+- `graphContextAssembler.ts` should continue owning graph anchor and neighborhood selection, but selected neighbors need evidence handles, not only titles.
+- A new `ragContextPack.ts` should enforce per-fragment and total model-visible context budgets, following the `ref/codex` hard-cap guidance.
+- A new `ragSufficiencyJudge.ts` should run deterministic gates first and call an optional LLM judge only for borderline evidence packs.
+- `conversationComposer.ts` should organize richer single-message answers by answer profile, while `answerReleaseReview.ts` remains the final release gate and gains completeness/budget checks.
+
+The key correction to the user's proposed shape is that "five paragraphs before and after the hit" is not the default algorithm. It is a maximum expansion budget. The safer implementation is small-to-big retrieval: direct span first, then adaptive parent/adjacent context, then graph-neighbor evidence when relation and source support justify it.
+
+Next movement:
+
+- Implement the plan in dependency order: evidence contracts, source-window assembler, graph-neighbor evidence, context pack budgeter, sufficiency judge, richer composer/release review, trace/status/export, runtime probes.
+- Keep `waterglass` as an acceptance probe, but add larger regression samples covering repeated snippets, conflicting adjacent evidence, missing graph-neighbor evidence, context truncation, and no-provider LLM fallback.
+- Do not treat answer length as the success metric. The success metric is claim coverage by direct evidence, traceable graph relation use, bounded context, and explicit degraded states when evidence is weak.
+
 ## 2026-07-04 Knowledge Workspace Scope Visibility, Grouped RAG Answers, and File-First Hit Interaction
 
 This slice addresses the current Knowledge Workspace usability and retrieval-quality gap: scope was technically present but visually separated from the actual task flow, retrieval hits could make the prompt/answer area feel unreachable, hit cards either exposed secondary actions too early or hid them behind undiscoverable gestures, and definition-style questions such as `what is water glass?` still underused grouped evidence, graph neighborhoods, and document augmentation.
