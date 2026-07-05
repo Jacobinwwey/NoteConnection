@@ -429,7 +429,8 @@
       "ok": "可用",
       "error": "失败",
       "scope": "范围：{scope}",
-      "recovered": "已扩展：{sources}"
+      "recovered": "已扩展：{sources}",
+      "rag": "RAG：{status}，{fragments}"
     },
     "graphFocus": {
       "title": "知识聚焦",
@@ -499,7 +500,21 @@
       "graphDiagnosticsBudgetLabel": "路径深度预算",
       "graphDiagnosticsMissingLookupsLabel": "缺失图查询",
       "graphTemporalValid": "有效",
-      "graphTemporalWarning": "告警"
+      "graphTemporalWarning": "告警",
+      "ragContextLabel": "RAG 上下文",
+      "ragSufficiencyLabel": "充分性",
+      "ragSourceBoundaryLabel": "来源边界",
+      "ragFragmentsLabel": "片段数",
+      "ragBudgetLabel": "上下文预算",
+      "ragDirectSupportLabel": "直接支撑",
+      "ragDocumentAugmentationLabel": "文档增强",
+      "ragGraphNeighborSupportLabel": "图邻居支撑",
+      "ragTruncatedFragmentsLabel": "被截断片段",
+      "ragDroppedFragmentsLabel": "被丢弃片段",
+      "ragUnavailableSourcesLabel": "不可用源窗口",
+      "ragDegradationLabel": "降级状态",
+      "ragRecoveryLabel": "恢复",
+      "ragReasonsLabel": "原因"
     },
     "learningPath": {
       "title": "引导式学习",

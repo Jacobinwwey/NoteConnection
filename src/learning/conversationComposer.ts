@@ -523,6 +523,14 @@ function resolveRagAnswerProfile(message: string): RagAnswerProfile {
             publicSentenceCount: 6,
         };
     }
+    if (intent === 'how_to') {
+        return {
+            directSupportSentenceCount: 3,
+            documentContextSentenceCount: 1,
+            graphNeighborSentenceCount: 2,
+            publicSentenceCount: 6,
+        };
+    }
     return {
         directSupportSentenceCount: 1,
         documentContextSentenceCount: 2,
@@ -683,7 +691,7 @@ function buildGraphProfileAnswerSentence(
 const RAG_ANSWER_QUERY_STOPWORDS = new Set([
     'a', 'an', 'and', 'are', 'as', 'at', 'be', 'between', 'by', 'compare',
     'contrast', 'difference', 'differences', 'do', 'does', 'from', 'how',
-    'in', 'is', 'it', 'of', 'on', 'or', 'the', 'to', 'versus', 'vs', 'what',
+    'in', 'is', 'it', 'of', 'on', 'or', 'plan', 'step', 'steps', 'the', 'to', 'versus', 'vs', 'what',
     'which', 'with',
 ]);
 
@@ -882,7 +890,7 @@ function buildRagAugmentedConversationAnswer(
     }
     const profile = resolveRagAnswerProfile(params.message);
     const intent = classifyScopedConversationIntent(params.message);
-    const answerQueryTerms = intent === 'compare'
+    const answerQueryTerms = intent === 'compare' || intent === 'how_to'
         ? extractRagAnswerQueryTerms(params.message)
         : [];
     const answerSentences: string[] = [];

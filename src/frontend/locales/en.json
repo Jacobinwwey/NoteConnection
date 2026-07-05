@@ -429,7 +429,8 @@
       "ok": "Available",
       "error": "Failed",
       "scope": "Scope: {scope}",
-      "recovered": "Recovered: {sources}"
+      "recovered": "Recovered: {sources}",
+      "rag": "RAG: {status}, {fragments}"
     },
     "graphFocus": {
       "title": "Knowledge Focus",
@@ -499,7 +500,21 @@
       "graphDiagnosticsBudgetLabel": "Path depth budget",
       "graphDiagnosticsMissingLookupsLabel": "Missing graph lookups",
       "graphTemporalValid": "valid",
-      "graphTemporalWarning": "warning"
+      "graphTemporalWarning": "warning",
+      "ragContextLabel": "RAG context",
+      "ragSufficiencyLabel": "Sufficiency",
+      "ragSourceBoundaryLabel": "Source boundary",
+      "ragFragmentsLabel": "Fragments",
+      "ragBudgetLabel": "Context budget",
+      "ragDirectSupportLabel": "Direct support",
+      "ragDocumentAugmentationLabel": "Document augmentation",
+      "ragGraphNeighborSupportLabel": "Graph neighbor support",
+      "ragTruncatedFragmentsLabel": "Truncated fragments",
+      "ragDroppedFragmentsLabel": "Dropped fragments",
+      "ragUnavailableSourcesLabel": "Unavailable source windows",
+      "ragDegradationLabel": "Degradation",
+      "ragRecoveryLabel": "Recovery",
+      "ragReasonsLabel": "Reasons"
     },
     "learningPath": {
       "title": "Guided Learning",

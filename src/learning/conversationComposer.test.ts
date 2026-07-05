@@ -1308,6 +1308,137 @@ describe('conversationComposer', () => {
         expect(reply.answer).not.toContain('```');
     });
 
+    test('uses how-to RAG profile to preserve steps prerequisites downstream checks and failure handling', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_howto_prism_alignment',
+                documentId: 'doc_howto_prism_alignment',
+                sourcePath: 'Knowledge_Base/test/prism-alignment.md',
+                title: 'Prism Alignment',
+                content: 'Prism alignment describes how to calibrate an optical bench without drifting the beam.',
+            },
+            evidence: {
+                id: 'evidence_howto_prism_alignment',
+                snippet: 'Step 1: clean the lens mount before calibration.',
+                startLine: 8,
+                endLine: 14,
+            },
+            score: 0.94,
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const citations = knowledgePoints.flatMap((point) => point.citations || []);
+        const ragContextPack: RagContextPack = {
+            query: 'how to calibrate prism alignment?',
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 4,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 2600,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_prism_overview',
+                    role: 'direct_support',
+                    text: [
+                        'Prism alignment is a maintenance procedure for optical benches.',
+                        'Step 1: clean the lens mount before calibration.',
+                        'Step 2: lock the clamp before measuring beam position.',
+                    ].join(' '),
+                    atomId: 'atom_howto_prism_alignment',
+                    documentId: 'doc_howto_prism_alignment',
+                    sourcePath: 'Knowledge_Base/test/prism-alignment.md',
+                    title: 'Prism Alignment',
+                    headingPath: ['Prism Alignment', 'Procedure'],
+                    startLine: 8,
+                    endLine: 10,
+                    charCount: 155,
+                    tokenEstimate: 36,
+                    truncated: false,
+                    citationIds: ['evidence_howto_prism_alignment'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_parent_prism_prerequisite',
+                    role: 'parent_context',
+                    text: [
+                        'Prerequisite: use a stable bench and confirm the laser is off before touching the mount.',
+                        'Background: this section explains why repeated calibration records matter for lab notebooks.',
+                    ].join(' '),
+                    atomId: 'atom_howto_prism_alignment',
+                    documentId: 'doc_howto_prism_alignment',
+                    sourcePath: 'Knowledge_Base/test/prism-alignment.md',
+                    title: 'Prism Alignment',
+                    headingPath: ['Prism Alignment', 'Prerequisites'],
+                    startLine: 4,
+                    endLine: 7,
+                    charCount: 177,
+                    tokenEstimate: 40,
+                    truncated: false,
+                    citationIds: ['evidence_howto_prism_alignment'],
+                    sourceBoundary: 'full_document',
+                },
+                {
+                    fragmentId: 'rag_graph_prism_downstream',
+                    role: 'graph_neighbor_support',
+                    text: [
+                        'Downstream check: verify beam drift after the clamp is locked.',
+                        'Failure mode: if the beam drifts, repeat clamp inspection before measuring.',
+                    ].join(' '),
+                    atomId: 'atom_howto_prism_alignment',
+                    documentId: 'doc_howto_prism_alignment',
+                    sourcePath: 'Knowledge_Base/test/prism-alignment.md',
+                    title: 'Beam Drift Check',
+                    headingPath: ['Prism Alignment', 'Verification'],
+                    startLine: 15,
+                    endLine: 18,
+                    charCount: 139,
+                    tokenEstimate: 31,
+                    truncated: false,
+                    citationIds: ['evidence_howto_prism_alignment'],
+                    relationEdgeIds: ['edge_prism_alignment_beam_drift'],
+                    sourceBoundary: 'full_document',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 471,
+            tokenEstimate: 107,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-05T00:00:00.000Z',
+            status: 'sufficient',
+            score: 0.9,
+            reasons: [],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'none',
+        };
+        let blockCounter = 0;
+
+        const reply = buildScopedConversationReply({
+            message: 'how to calibrate prism alignment?',
+            knowledgePoints,
+            citations,
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            ragContextPack,
+            ragSufficiencyReview,
+        });
+
+        expect(reply.answer).toContain('Step 1: clean the lens mount');
+        expect(reply.answer).toContain('Step 2: lock the clamp');
+        expect(reply.answer).toContain('Prerequisite: use a stable bench');
+        expect(reply.answer).toContain('Downstream check: verify beam drift');
+        expect(reply.answer).toContain('Failure mode: if the beam drifts');
+        expect(reply.assistantBlocks.filter((block) => block.type === 'structured_answer')).toHaveLength(1);
+        const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
+        expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toBe(reply.answer);
+    });
+
     test('fails graph comparison gate when compare intent only has reference context and no real branch signal', () => {
         const knowledgePoints: AgentConversationKnowledgePoint[] = [
             {
