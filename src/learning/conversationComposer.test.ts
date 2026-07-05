@@ -1056,6 +1056,151 @@ describe('conversationComposer', () => {
         expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toBe(reply.answer);
     });
 
+    test('uses compare RAG profile to include direct evidence for both compared sides', () => {
+        const waterGlassItem = makeQueryItem({
+            atom: {
+                id: 'atom_compare_water_glass',
+                documentId: 'doc_compare_water_glass',
+                sourcePath: 'Knowledge_Base/test/water-glass.md',
+                title: 'Water Glass',
+                content: 'A water glass is a transparent drinking vessel with a rigid rim.',
+            },
+            evidence: {
+                id: 'evidence_compare_water_glass',
+                snippet: 'A water glass is a transparent drinking vessel with a rigid rim.',
+                startLine: 7,
+                endLine: 7,
+            },
+            score: 0.94,
+        });
+        const plasticCupItem = makeQueryItem({
+            atom: {
+                id: 'atom_compare_plastic_cup',
+                documentId: 'doc_compare_plastic_cup',
+                sourcePath: 'Knowledge_Base/test/plastic-cup.md',
+                title: 'Plastic Cup',
+                content: 'A plastic cup is an opaque polymer vessel that can deform under pressure.',
+            },
+            evidence: {
+                id: 'evidence_compare_plastic_cup',
+                snippet: 'A plastic cup is an opaque polymer vessel that can deform under pressure.',
+                startLine: 9,
+                endLine: 9,
+            },
+            score: 0.92,
+            relationPath: [
+                {
+                    id: 'edge_water_glass_plastic_cup',
+                    sourceAtomId: 'atom_compare_water_glass',
+                    targetAtomId: 'atom_compare_plastic_cup',
+                    relationKind: 'contrast',
+                    confidence: 0.87,
+                    provenance: 'fact',
+                },
+            ],
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([waterGlassItem, plasticCupItem], () => []);
+        const citations = knowledgePoints.flatMap((point) => point.citations || []);
+        const ragContextPack: RagContextPack = {
+            query: 'compare water glass and plastic cup',
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 4,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1600,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_water_glass_compare',
+                    role: 'direct_support',
+                    text: 'A water glass is a transparent drinking vessel with a rigid rim.',
+                    atomId: 'atom_compare_water_glass',
+                    documentId: 'doc_compare_water_glass',
+                    sourcePath: 'Knowledge_Base/test/water-glass.md',
+                    title: 'Water Glass',
+                    headingPath: ['Water Glass', 'Definition'],
+                    startLine: 7,
+                    endLine: 7,
+                    charCount: 65,
+                    tokenEstimate: 16,
+                    truncated: false,
+                    citationIds: ['evidence_compare_water_glass'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_direct_plastic_cup_compare',
+                    role: 'direct_support',
+                    text: 'A plastic cup is an opaque polymer vessel that can deform under pressure.',
+                    atomId: 'atom_compare_plastic_cup',
+                    documentId: 'doc_compare_plastic_cup',
+                    sourcePath: 'Knowledge_Base/test/plastic-cup.md',
+                    title: 'Plastic Cup',
+                    headingPath: ['Plastic Cup', 'Definition'],
+                    startLine: 9,
+                    endLine: 9,
+                    charCount: 71,
+                    tokenEstimate: 17,
+                    truncated: false,
+                    citationIds: ['evidence_compare_plastic_cup'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_graph_water_glass_plastic_cup_compare',
+                    role: 'graph_neighbor_support',
+                    text: 'The graph marks the two nodes with a contrast relation, so the comparison should preserve their material and rigidity differences.',
+                    atomId: 'atom_compare_plastic_cup',
+                    documentId: 'doc_compare_plastic_cup',
+                    sourcePath: 'Knowledge_Base/test/plastic-cup.md',
+                    title: 'Plastic Cup',
+                    headingPath: ['Plastic Cup', 'Graph Links'],
+                    startLine: 14,
+                    endLine: 14,
+                    charCount: 124,
+                    tokenEstimate: 29,
+                    truncated: false,
+                    citationIds: ['evidence_compare_plastic_cup'],
+                    relationEdgeIds: ['edge_water_glass_plastic_cup'],
+                    sourceBoundary: 'full_document',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 260,
+            tokenEstimate: 62,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-05T00:00:00.000Z',
+            status: 'sufficient',
+            score: 0.9,
+            reasons: [],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'none',
+        };
+        let blockCounter = 0;
+
+        const reply = buildScopedConversationReply({
+            message: 'compare water glass and plastic cup',
+            knowledgePoints,
+            citations,
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            ragContextPack,
+            ragSufficiencyReview,
+        });
+
+        expect(reply.answer).toContain('transparent drinking vessel');
+        expect(reply.answer).toContain('opaque polymer vessel');
+        expect(reply.answer).toContain('contrast relation');
+        expect(reply.assistantBlocks.filter((block) => block.type === 'structured_answer')).toHaveLength(1);
+        const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
+        expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toBe(reply.answer);
+    });
+
     test('fails graph comparison gate when compare intent only has reference context and no real branch signal', () => {
         const knowledgePoints: AgentConversationKnowledgePoint[] = [
             {

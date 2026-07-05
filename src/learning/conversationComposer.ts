@@ -43,6 +43,13 @@ export type ScopedConversationReplyParams = {
     ragSufficiencyReview?: RagSufficiencyReview;
 };
 
+type RagAnswerProfile = {
+    directSupportSentenceCount: number;
+    documentContextSentenceCount: number;
+    graphNeighborSentenceCount: number;
+    publicSentenceCount: number;
+};
+
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
@@ -506,6 +513,24 @@ function classifyScopedConversationIntent(message: string): 'explain' | 'compare
     return 'generic';
 }
 
+function resolveRagAnswerProfile(message: string): RagAnswerProfile {
+    const intent = classifyScopedConversationIntent(message);
+    if (intent === 'compare') {
+        return {
+            directSupportSentenceCount: 2,
+            documentContextSentenceCount: 1,
+            graphNeighborSentenceCount: 2,
+            publicSentenceCount: 6,
+        };
+    }
+    return {
+        directSupportSentenceCount: 1,
+        documentContextSentenceCount: 2,
+        graphNeighborSentenceCount: 1,
+        publicSentenceCount: 6,
+    };
+}
+
 function containsCjk(value: string): boolean {
     return /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/u.test(String(value || ''));
 }
@@ -735,12 +760,13 @@ function buildRagAugmentedConversationAnswer(
     if (params.ragSufficiencyReview?.status === 'insufficient') {
         return '';
     }
+    const profile = resolveRagAnswerProfile(params.message);
     const answerSentences: string[] = [];
-    selectRagEvidenceSentences(pack.fragments, new Set(['direct_support']), 1)
+    selectRagEvidenceSentences(pack.fragments, new Set(['direct_support']), profile.directSupportSentenceCount)
         .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
-    selectRagEvidenceSentences(pack.fragments, new Set(['parent_context', 'adjacent_context']), 2)
+    selectRagEvidenceSentences(pack.fragments, new Set(['parent_context', 'adjacent_context']), profile.documentContextSentenceCount)
         .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
-    selectRagEvidenceSentences(pack.fragments, new Set(['graph_neighbor_support']), 1)
+    selectRagEvidenceSentences(pack.fragments, new Set(['graph_neighbor_support']), profile.graphNeighborSentenceCount)
         .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
     if (params.ragSufficiencyReview?.status === 'borderline') {
         appendRagEvidenceSentence(
@@ -761,7 +787,7 @@ function buildRagAugmentedConversationAnswer(
         buildGraphProfileAnswerSentence(graphContext, useChinese),
         useChinese
     );
-    return answerSentences.slice(0, 6).join(useChinese ? '' : ' ');
+    return answerSentences.slice(0, profile.publicSentenceCount).join(useChinese ? '' : ' ');
 }
 
 function buildScopedConversationAnswer(

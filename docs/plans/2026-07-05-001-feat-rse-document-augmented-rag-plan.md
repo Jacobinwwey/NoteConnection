@@ -344,7 +344,7 @@ flowchart TB
 
 **Goal:** Generate a more complete public answer from the RAG context pack while preserving one-message UX.
 
-**Implementation status (2026-07-05):** Partially implemented. `conversationComposer.ts` now uses `RagContextPack` and `RagSufficiencyReview` to build a richer deterministic one-message draft from direct support, document augmentation, and graph-neighbor evidence, then passes that pack/review into `answerReleaseReview.ts`. Release review now treats RAG fragments as grounding candidates, evaluates the additive `rag_answer_completeness` gate, and can revise contracted definition answers from direct/document/graph RAG clauses instead of falling back to citation-only summaries. The remaining gap is a broader answer-profile system beyond the current definition/RAG path plus calibrated profile-specific budgets.
+**Implementation status (2026-07-05):** Partially implemented. `conversationComposer.ts` now uses `RagContextPack` and `RagSufficiencyReview` to build a richer deterministic one-message draft from direct support, document augmentation, and graph-neighbor evidence, then passes that pack/review into `answerReleaseReview.ts`. Release review now treats RAG fragments as grounding candidates, evaluates the additive `rag_answer_completeness` gate, and can revise contracted definition answers from direct/document/graph RAG clauses instead of falling back to citation-only summaries. The composer now also applies a deterministic compare profile that reserves direct-support budget for both compared sides before adding graph contrast context. The remaining gap is broader how-to/generic answer profiles plus calibrated profile-specific release budgets.
 
 **Requirements:** R4, R6, R7.
 
@@ -363,7 +363,7 @@ flowchart TB
   - `compare`: shared anchor, branch differences, evidence-backed contrast;
   - `generic`: answer, support, graph/context caveat.
 - Use the context pack to structure the answer; do not ask the LLM to rediscover evidence from raw concatenated text.
-- Keep public answer bounded; profile-specific budget tuning remains pending beyond the current six-sentence / 900-character release cap.
+- Keep public answer bounded; compare now has deterministic per-role evidence budgets, while how-to/generic profile-specific tuning remains pending beyond the current six-sentence / 900-character release cap.
 - Add claim-to-citation mapping internally even if UI shows a compact citation list.
 - `answerReleaseReview.ts` validates completeness and support through the additive RAG role gate; broader profile-specific completeness gates remain pending.
 
@@ -373,6 +373,7 @@ flowchart TB
 
 **Test scenarios:**
 - Happy path: `what is waterglass?` returns definition, composition, key properties, graph predecessor/successor context, and citations without duplicate knowledge points.
+- Compare path: `compare water glass and plastic cup` preserves direct evidence for both compared sides before adding bounded graph-neighbor contrast context.
 - Edge case: graph context exists but neighbor evidence is weak; answer names graph limitation instead of overstating.
 - Edge case: sufficient direct evidence but no graph ops; answer remains grounded without graph claims.
 - Error path: release review catches unsupported graph-order or causal claims.
@@ -787,7 +788,7 @@ flowchart TB
 
 **目标：** 从 RAG context pack 组织更完整的 public answer。
 
-**实现状态（2026-07-05）：** 部分实现。`conversationComposer.ts` 已能基于 `RagContextPack` 与 `RagSufficiencyReview`，从 direct support、document augmentation 和 graph-neighbor evidence 组织更充分的确定性单消息 draft，并把 pack / review 继续传入 `answerReleaseReview.ts`。release review 现在会把 RAG fragment 作为 grounding candidate，评估增量 `rag_answer_completeness` gate，并能在公开回答被 contraction 修订时继续使用 direct / document / graph RAG clause，而不是退回 citation-only 摘要。剩余缺口是超出当前 definition / RAG 路径的完整 answer-profile 系统，以及按 profile 校准的预算。
+**实现状态（2026-07-05）：** 部分实现。`conversationComposer.ts` 已能基于 `RagContextPack` 与 `RagSufficiencyReview`，从 direct support、document augmentation 和 graph-neighbor evidence 组织更充分的确定性单消息 draft，并把 pack / review 继续传入 `answerReleaseReview.ts`。release review 现在会把 RAG fragment 作为 grounding candidate，评估增量 `rag_answer_completeness` gate，并能在公开回答被 contraction 修订时继续使用 direct / document / graph RAG clause，而不是退回 citation-only 摘要。composer 现在还会应用确定性的 compare profile，在加入 graph contrast context 之前为被对比双方保留 direct-support 预算。剩余缺口是更完整的 how-to / generic answer profile，以及按 profile 校准的 release budget。
 
 **文件：**
 - 修改：`src/learning/conversationComposer.ts`
@@ -802,12 +803,13 @@ flowchart TB
   - compare：共同 anchor、分支差异、证据支撑对比；
   - generic：回答、支撑、图/上下文 caveat。
 - 让 LLM 或 deterministic composer 基于结构化 context pack 组织答案，不让模型从原始拼接文本里重新发现证据。
-- public answer 继续保持有界；当前仍沿用六句 / 900 字符 release cap，profile-specific budget tuning 仍待推进。
+- public answer 继续保持有界；compare 已有确定性的按角色证据预算，how-to / generic 的 profile-specific tuning 仍需在当前六句 / 900 字符 release cap 之上继续推进。
 - 内部保留 claim-to-citation mapping。
 - `answerReleaseReview.ts` 已通过增量 RAG role gate 增加 completeness / support review；更广的 profile-specific completeness gate 仍待推进。
 
 **测试：**
 - `what is waterglass?` 返回定义、构成、关键属性、前后继图上下文和 citation。
+- `compare water glass and plastic cup` 在加入有界 graph-neighbor contrast context 前，会保留被对比双方的 direct evidence。
 - 图 context 有但邻居证据弱时，不强行生成邻居内容。
 - 无 graph ops 时仍可 grounded 回答。
 - release review 能拦截 unsupported graph-order / causal claim。
