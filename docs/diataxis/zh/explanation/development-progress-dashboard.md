@@ -42,6 +42,7 @@
 - `src/learning/KnowledgeLearningPlatform.ts` 现在会为最终公开回答的 claim 生成可选 `answerClaimCitations` 记录，`src/export/WorkspaceExportBundle.ts` 会 deep-clone 这些记录，因此 replay / export 消费者可以检查 citation、fragment 与 source-path grounding，而不把编排暴露进聊天正文。
 - `src/learning/answerReleaseReview.ts` 现在会执行 `rag_claim_citation_support`，因此句子级公开 RAG claim 必须先被带 citation 的 fragment 支撑才能 release；无支撑或弱支撑 claim 会触发现有 RAG-grounded revision 路径。
 - `src/learning/answerReleaseReview.ts` 现在会在 RAG-grounded 公开修订前过滤“所有推理过程”“最终输出语言”等 prompt / preamble artifact，避免非知识性前言进入用户答案。
+- `waterglass` compact / spaced 两个运行时探针现在要求 failed release gates 同时包含 `query_intent_alignment` 与 `rag_claim_citation_support`，并拒绝公开答案中出现 `所有推理过程`、`最终输出`、`遵从您的指示`、`all reasoning`、`final output` 等 prompt / preamble artifact。
 - `src/learning/graphContextAssembler.ts` 现在应用 intent-specific graph-window 和 connection-path scoring：compare query 可以让 contrast / analogy 邻居优先于 procedural sequence / application 路径，即使 procedural 边置信度更高；definition 与 how-to query 则保留各自的结构优先级。
 - `src/learning/KnowledgeLearningPlatform.ts` 现在可以识别 `compare X and/with/to Y`、`X vs Y`、`difference between X and Y`、`X differs from Y` 等 compare operand，并且不会把显式 scope 只收窄到 title-hit document id。
 - `src/learning/conversationComposer.ts` 现在应用 compare RAG answer profile：当 context pack 同时包含被对比双方的 direct support 时，公开回答会保留 4 个 direct-support clause，按 operand 与 query term 覆盖度排序 compare evidence，把 Mermaid label evidence 转为可读 clause，再加入有界 graph-neighbor contrast context，同时不额外产生聊天消息。

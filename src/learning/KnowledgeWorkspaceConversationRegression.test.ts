@@ -330,6 +330,34 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
         );
     });
 
+    test('registers waterglass RAG claim-gate and preamble-leak runtime acceptance', () => {
+        const expectedWaterglassReleaseAcceptance = expect.objectContaining({
+            runtimeAnswerReleaseDecision: 'revise',
+            runtimeRequiredFailedGateIds: expect.arrayContaining([
+                'query_intent_alignment',
+                'rag_claim_citation_support',
+            ]),
+            answerMustNotContain: expect.arrayContaining([
+                '所有推理过程',
+                '最终输出',
+                '遵从您的指示',
+            ]),
+        });
+
+        expect(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    id: 'waterglass_explicit_scope_compact_zh',
+                    expected: expectedWaterglassReleaseAcceptance,
+                }),
+                expect.objectContaining({
+                    id: 'waterglass_explicit_scope_spaced_zh',
+                    expected: expectedWaterglassReleaseAcceptance,
+                }),
+            ])
+        );
+    });
+
     test.each(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES)(
         'conversation regression case: $id',
         async (caseEntry) => {
