@@ -389,7 +389,7 @@ flowchart TB
 
 **Goal:** Make the pipeline debuggable and replayable without exposing backend clutter in the chat answer.
 
-**Implementation status (2026-07-05):** Partially implemented. Backend trace and knowledge-run artifact payloads now include `ragContextPack`, `ragSufficiencyReview`, and `ragRecovery`; `scripts/verify-knowledge-workspace-runtime.js` summarizes and validates the core RAG fields; `src/frontend/agent_workspace.js` and `src/frontend/workspace_panes.js` surface compact RAG status, source boundary, role counts, budget/degradation/recovery state, and sufficiency without rendering raw fragment text. `WorkspaceExportBundle` now deep-clones RAG context/review/recovery trace fields so export replay material is preserved without sharing mutable runtime references. Broader replay ids remain follow-up work.
+**Implementation status (2026-07-05):** Partially implemented. Backend trace and knowledge-run artifact payloads now include `ragContextPack`, `ragSufficiencyReview`, and `ragRecovery`; `ragRecovery` now also records before/after source-decision status counts so engineers can see whether recovery was triggered by dropped/truncated fragments even when the final recovered pack no longer contains those decisions. `scripts/verify-knowledge-workspace-runtime.js` summarizes and validates the core RAG fields; `src/frontend/agent_workspace.js` and `src/frontend/workspace_panes.js` surface compact RAG status, source boundary, role counts, budget/degradation/recovery state, and sufficiency without rendering raw fragment text. `WorkspaceExportBundle` now deep-clones RAG context/review/recovery trace fields, including recovery source-decision counts, so export replay material is preserved without sharing mutable runtime references. Broader replay ids remain follow-up work.
 
 **Requirements:** R4, R7, R8.
 
@@ -426,7 +426,7 @@ flowchart TB
 
 **Goal:** Prevent "better answer" work from regressing retrieval, graph correctness, latency, or UI compatibility.
 
-**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, sufficiency judging, provider-backed judge timeout/schema handling, bounded one-step recovery, RAG-aware answer release review, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations, including the compare-runtime case `waterglass_compare_materials_en`. The runtime verifier now supports per-case scoped document-id requirements: strict scoped ids remain the default, while the compare case can opt out only when source path, workspace, or corpus boundaries still prove it stayed inside the intended scope. Answer-term assertions are now case-insensitive to avoid false misses for casing-only differences. The regression corpus now also includes `contextbudget_source_window_truncation_en`, backed by `Knowledge_Base/contextbudget/context budget probe.md`, to verify that full-document source reading and model-visible context truncation remain separate observable states. The verifier can assert minimum RAG source-decision counts such as `read` and `fragment_truncated`. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
+**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, sufficiency judging, provider-backed judge timeout/schema handling, bounded one-step recovery, RAG-aware answer release review, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations, including the compare-runtime case `waterglass_compare_materials_en`. The runtime verifier now supports per-case scoped document-id requirements: strict scoped ids remain the default, while the compare case can opt out only when source path, workspace, or corpus boundaries still prove it stayed inside the intended scope. Answer-term assertions are now case-insensitive to avoid false misses for casing-only differences. The regression corpus now also includes `contextbudget_source_window_truncation_en`, backed by `Knowledge_Base/contextbudget/context budget probe.md`, to verify that full-document source reading and model-visible context truncation remain separate observable states. It also includes `contextoverflow_no_provider_budget_drop_en`, backed by `Knowledge_Base/contextoverflow/overflow budget probe.md`, to verify deterministic no-provider answering and final `fragment_dropped` source-decision visibility under dense same-document evidence. The verifier can assert minimum RAG source-decision counts, recovery-before source-decision counts when recovery occurs, deterministic/no-provider judge flags, recovery flags, and degradation states. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
 
 **Requirements:** R8.
 
@@ -450,6 +450,7 @@ flowchart TB
   - duplicated same-document spans;
   - conflicting adjacent evidence;
   - context budget truncation through `contextbudget_source_window_truncation_en`;
+  - deterministic no-provider budget drop through `contextoverflow_no_provider_budget_drop_en`;
   - optional LLM judge timeout/fallback;
   - graph self-neighbor filtering;
   - answer release with richer public answer.
@@ -464,6 +465,7 @@ flowchart TB
 - Runtime: compact Chinese/English alias queries do not fall back to scoped miss.
 - Runtime: `compare water glass and plastic cup` returns one grounded answer containing both glass and plastic evidence with `direct_support`, `parent_context`, and `graph_neighbor_support` roles.
 - Runtime: `what is context budget probe?` reads the scoped full source document and records at least one `fragment_truncated` source decision in the RAG context pack.
+- Runtime: `what is overflow budget probe?` stays deterministic without an LLM judge and records at least one final `fragment_dropped` source decision in the bounded `RagContextPack`; recovery source-decision counts remain replayable when a recovery pass occurs.
 - Runtime: no LLM provider still produces deterministic grounded answer.
 - Runtime: LLM judge failure does not block the answer path.
 
@@ -828,7 +830,7 @@ flowchart TB
 
 **目标：** 不把后台细节塞进聊天答案，同时让工程侧可诊断、可回放。
 
-**实现状态（2026-07-05）：** 部分实现。后端 trace 与 knowledge-run artifact payload 已包含 `ragContextPack`、`ragSufficiencyReview` 和 `ragRecovery`；`scripts/verify-knowledge-workspace-runtime.js` 已摘要和校验核心 RAG 字段；`src/frontend/agent_workspace.js` 与 `src/frontend/workspace_panes.js` 已显示 compact RAG status、source boundary、role count、budget / degradation / recovery state 与 sufficiency，且不渲染 raw fragment text。`WorkspaceExportBundle` 现在会 deep-clone RAG context / review / recovery trace 字段，保证导出回放材料不会共享可变运行时引用。更完整 replay id 仍是后续项。
+**实现状态（2026-07-05）：** 部分实现。后端 trace 与 knowledge-run artifact payload 已包含 `ragContextPack`、`ragSufficiencyReview` 和 `ragRecovery`；`ragRecovery` 现在还会记录 recovery 前后的 source-decision status 计数，因此即使最终 recovered pack 已不再包含 dropped / truncated decision，工程侧仍能看出 recovery 是否由预算丢弃或截断触发。`scripts/verify-knowledge-workspace-runtime.js` 已摘要和校验核心 RAG 字段；`src/frontend/agent_workspace.js` 与 `src/frontend/workspace_panes.js` 已显示 compact RAG status、source boundary、role count、budget / degradation / recovery state 与 sufficiency，且不渲染 raw fragment text。`WorkspaceExportBundle` 现在会 deep-clone RAG context / review / recovery trace 字段，包括 recovery source-decision counts，保证导出回放材料不会共享可变运行时引用。更完整 replay id 仍是后续项。
 
 **文件：**
 - 修改：`src/learning/types.ts`
@@ -854,7 +856,7 @@ flowchart TB
 
 **目标：** 防止“答案更充分”引入召回、图谱、延迟或 UI 兼容性回退。
 
-**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、sufficiency judge、接入 provider 的 judge timeout / schema handling、有界一次性 recovery、RAG-aware answer release review、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期，包括 compare runtime 用例 `waterglass_compare_materials_en`。runtime verifier 现在支持按用例配置 scoped document-id 要求：默认仍严格要求 scoped document id；compare 用例只有在 source path、workspace 或 corpus 边界仍能证明没有越过目标 scope 时才允许放宽。answer-term 断言也改为大小写不敏感，避免 `Water Glass` / `glass` 这类大小写差异造成误报。回归语料现在新增 `contextbudget_source_window_truncation_en`，由 `Knowledge_Base/contextbudget/context budget probe.md` 支撑，用于验证完整 source document 读取与 model-visible context truncation 是两个可观察状态；verifier 也可以断言 `read`、`fragment_truncated` 等 RAG source-decision 最小计数。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
+**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、sufficiency judge、接入 provider 的 judge timeout / schema handling、有界一次性 recovery、RAG-aware answer release review、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期，包括 compare runtime 用例 `waterglass_compare_materials_en`。runtime verifier 现在支持按用例配置 scoped document-id 要求：默认仍严格要求 scoped document id；compare 用例只有在 source path、workspace 或 corpus 边界仍能证明没有越过目标 scope 时才允许放宽。answer-term 断言也改为大小写不敏感，避免 `Water Glass` / `glass` 这类大小写差异造成误报。回归语料现在新增 `contextbudget_source_window_truncation_en`，由 `Knowledge_Base/contextbudget/context budget probe.md` 支撑，用于验证完整 source document 读取与 model-visible context truncation 是两个可观察状态；同时新增 `contextoverflow_no_provider_budget_drop_en`，由 `Knowledge_Base/contextoverflow/overflow budget probe.md` 支撑，用于验证密集同文档证据下的 deterministic no-provider answer，以及最终 `fragment_dropped` source-decision 的可观测性。verifier 也可以断言 RAG source-decision 最小计数、recovery 实际发生时的 recovery 前 source-decision 最小计数、deterministic/no-provider judge 标志、recovery 标志和 degradation state。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
 
 **文件：**
 - 修改：`src/learning/KnowledgeWorkspaceConversationRegression.ts`
@@ -867,7 +869,7 @@ flowchart TB
 **做法：**
 - 保留 `waterglass` compact/spaced queries 作为验收探针。
 - scoped document id 默认强制；只有显式 compare 用例能在另一个 scoped boundary 已被验证时放宽该要求。
-- 增加 evidence-rich definition、missing neighbor evidence、same-document span dedupe、conflicting adjacent evidence、通过 `contextbudget_source_window_truncation_en` 覆盖 context budget truncation、LLM judge timeout/fallback、自邻居过滤、rich public answer release 等用例。
+- 增加 evidence-rich definition、missing neighbor evidence、same-document span dedupe、conflicting adjacent evidence、通过 `contextbudget_source_window_truncation_en` 覆盖 context budget truncation、通过 `contextoverflow_no_provider_budget_drop_en` 覆盖 deterministic no-provider budget drop、LLM judge timeout/fallback、自邻居过滤、rich public answer release 等用例。
 - 增加 compare material answer 用例，确认 direct / document / Mermaid evidence 能同时保留两个 operand。
 - no-LLM path 加延迟预算；LLM judge path 加 timeout/fallback 预算。
 
@@ -876,6 +878,7 @@ flowchart TB
 - 中英混合 alias 不退回 scoped miss。
 - `compare water glass and plastic cup` 输出一条 grounded answer，包含 glass 与 plastic 两侧证据，并覆盖 `direct_support`、`parent_context`、`graph_neighbor_support` 角色。
 - `what is context budget probe?` 会读取 scoped 完整源文档，并在 RAG context pack 中记录至少一个 `fragment_truncated` source decision。
+- `what is overflow budget probe?` 在未使用 LLM judge 时仍保持 deterministic，并在有界 `RagContextPack` 中记录至少一个最终 `fragment_dropped` source decision；当 recovery pass 发生时，recovery source-decision 计数仍可回放。
 - 未配置 LLM provider 仍有确定性 grounded answer。
 - LLM judge 失败不阻塞主回答链路。
 

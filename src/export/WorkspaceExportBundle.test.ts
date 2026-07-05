@@ -477,6 +477,13 @@ describe('WorkspaceExportBundle', () => {
             addedRoleCounts: {
                 parent_context: 2,
             },
+            beforeSourceDecisionStatusCounts: {
+                fragment_dropped: 3,
+            },
+            afterSourceDecisionStatusCounts: {
+                fragment_dropped: 1,
+                fragment_included: 15,
+            },
         };
 
         const bundle = buildWorkspaceExportBundle({
@@ -596,6 +603,8 @@ describe('WorkspaceExportBundle', () => {
         (ragContextPack.sourceDecisions[0] as any).reason = 'mutated_after_export';
         ragSufficiencyReview.reasons.push('mutated_after_export');
         ragRecovery.addedRoleCounts.parent_context = 999;
+        ragRecovery.beforeSourceDecisionStatusCounts.fragment_dropped = 999;
+        ragRecovery.afterSourceDecisionStatusCounts.fragment_included = 999;
 
         const exportedTrace = (bundle.runtime.conversationTurns[0] as any).response.trace;
         expect(exportedTrace.ragContextPack.fragments[0].text).toBe(
@@ -604,6 +613,8 @@ describe('WorkspaceExportBundle', () => {
         expect(exportedTrace.ragContextPack.sourceDecisions[0].reason).toBeUndefined();
         expect(exportedTrace.ragSufficiencyReview.reasons).toEqual(['answerable_from_context']);
         expect(exportedTrace.ragRecovery.addedRoleCounts.parent_context).toBe(2);
+        expect(exportedTrace.ragRecovery.beforeSourceDecisionStatusCounts.fragment_dropped).toBe(3);
+        expect(exportedTrace.ragRecovery.afterSourceDecisionStatusCounts.fragment_included).toBe(15);
     });
 
     test('adds durable knowledge-run graph reports to the exported runtime surface', () => {

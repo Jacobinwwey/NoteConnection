@@ -39,6 +39,27 @@ function buildContextBudgetProbeContent(): string {
     ].join('\n');
 }
 
+function buildOverflowBudgetProbeContent(): string {
+    const sections = Array.from({ length: 18 }, (_entry, index) => {
+        const segmentNumber = String(index + 1).padStart(2, '0');
+        return [
+            `## Overflow Budget Probe Segment ${segmentNumber}`,
+            [
+                `Overflow budget probe segment ${segmentNumber} records a distinct scoped evidence fragment for testing max-fragment pressure.`,
+                'Overflow budget probe answers must remain deterministic when no LLM provider is configured.',
+                'The RAG context pack should keep direct support first, then include only as much parent context as the budget allows.',
+                `Segment ${segmentNumber} is intentionally concise so the probe stresses fragment count rather than per-fragment truncation.`,
+            ].join(' '),
+        ].join('\n');
+    });
+    return [
+        '# Overflow Budget Probe',
+        'Overflow budget probe validates deterministic no-provider RAG fallback under dense same-document evidence.',
+        '',
+        ...sections,
+    ].join('\n\n');
+}
+
 function buildRegressionDocuments() {
     return [
         {
@@ -92,6 +113,14 @@ function buildRegressionDocuments() {
             corpusId: 'contextbudget',
             content: buildContextBudgetProbeContent(),
         },
+        {
+            documentId: 'doc_overflow_budget_probe',
+            sourcePath: 'Knowledge_Base/contextoverflow/overflow budget probe.md',
+            language: 'en',
+            workspaceId: 'contextoverflow',
+            corpusId: 'contextoverflow',
+            content: buildOverflowBudgetProbeContent(),
+        },
     ];
 }
 
@@ -127,6 +156,13 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                 deriveScopedConversationRequest(caseEntry)
             );
             const expected = caseEntry.expected;
+            const minimumRagSourceDecisionStatusCounts = expected.inMemoryMinimumRagSourceDecisionStatusCounts
+                || expected.minimumRagSourceDecisionStatusCounts;
+            const expectedRagRecoveryAttempted = typeof expected.inMemoryExpectedRagRecoveryAttempted === 'boolean'
+                ? expected.inMemoryExpectedRagRecoveryAttempted
+                : expected.expectedRagRecoveryAttempted;
+            const minimumRagRecoveryBeforeSourceDecisionStatusCounts = expected.inMemoryMinimumRagRecoveryBeforeSourceDecisionStatusCounts
+                || expected.minimumRagRecoveryBeforeSourceDecisionStatusCounts;
             const citations = Array.isArray(response.citations) ? response.citations : [];
             const planner = response.trace.planner || {
                 plannerQuery: null,
@@ -172,12 +208,31 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
             if (expected.acceptedRagSufficiencyStatuses && expected.acceptedRagSufficiencyStatuses.length > 0) {
                 expect(expected.acceptedRagSufficiencyStatuses).toContain(response.trace.ragSufficiencyReview?.status);
             }
-            if (expected.minimumRagSourceDecisionStatusCounts) {
+            if (typeof expected.expectedRagDeterministic === 'boolean') {
+                expect(response.trace.ragSufficiencyReview?.deterministic).toBe(expected.expectedRagDeterministic);
+            }
+            if (typeof expected.expectedRagLlmJudgeUsed === 'boolean') {
+                expect(response.trace.ragSufficiencyReview?.llmJudgeUsed).toBe(expected.expectedRagLlmJudgeUsed);
+            }
+            if (typeof expectedRagRecoveryAttempted === 'boolean') {
+                expect(response.trace.ragSufficiencyReview?.recoveryAttempted).toBe(expectedRagRecoveryAttempted);
+            }
+            if (expected.acceptedRagDegradationStates && expected.acceptedRagDegradationStates.length > 0) {
+                expect(expected.acceptedRagDegradationStates).toContain(response.trace.ragSufficiencyReview?.degradationState);
+            }
+            if (minimumRagSourceDecisionStatusCounts) {
                 const observedDecisionCounts = countRagSourceDecisionStatuses(
                     response.trace.ragContextPack?.sourceDecisions
                 );
-                Object.entries(expected.minimumRagSourceDecisionStatusCounts).forEach(([status, minimumCount]) => {
+                Object.entries(minimumRagSourceDecisionStatusCounts).forEach(([status, minimumCount]) => {
                     expect(observedDecisionCounts[status] || 0).toBeGreaterThanOrEqual(minimumCount || 0);
+                });
+            }
+            if (minimumRagRecoveryBeforeSourceDecisionStatusCounts) {
+                const observedRecoveryDecisionCounts = response.trace.ragRecovery?.beforeSourceDecisionStatusCounts || {};
+                Object.entries(minimumRagRecoveryBeforeSourceDecisionStatusCounts).forEach(([status, minimumCount]) => {
+                    expect(observedRecoveryDecisionCounts[status as keyof typeof observedRecoveryDecisionCounts] || 0)
+                        .toBeGreaterThanOrEqual(minimumCount || 0);
                 });
             }
             if (expected.retrievalModes && expected.retrievalModes.length > 0) {

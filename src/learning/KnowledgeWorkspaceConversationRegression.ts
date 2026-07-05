@@ -25,6 +25,14 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     requiredRagRoles?: RagEvidenceRole[];
     acceptedRagSufficiencyStatuses?: Array<RagSufficiencyReview['status']>;
     minimumRagSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
+    inMemoryMinimumRagSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
+    expectedRagDeterministic?: boolean;
+    expectedRagLlmJudgeUsed?: boolean;
+    expectedRagRecoveryAttempted?: boolean;
+    inMemoryExpectedRagRecoveryAttempted?: boolean;
+    acceptedRagDegradationStates?: Array<NonNullable<RagSufficiencyReview['degradationState']>>;
+    minimumRagRecoveryBeforeSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
+    inMemoryMinimumRagRecoveryBeforeSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
     requireScopedDocumentIds?: boolean;
 }
 
@@ -200,6 +208,47 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             minimumRagSourceDecisionStatusCounts: {
                 read: 1,
                 fragment_truncated: 1,
+            },
+            expectedRagDeterministic: true,
+            expectedRagLlmJudgeUsed: false,
+            expectedRagRecoveryAttempted: false,
+            acceptedRagDegradationStates: ['none'],
+        },
+    },
+    {
+        id: 'contextoverflow_no_provider_budget_drop_en',
+        description: 'A dense scoped note should stay deterministic without an LLM provider and expose fragment-drop budget pressure.',
+        preloadTargets: ['contextoverflow'],
+        activeTarget: 'contextoverflow',
+        query: 'what is overflow budget probe?',
+        expected: {
+            minCitations: 1,
+            scopeSource: 'explicit_request',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
+            plannerTitleLikeQueries: ['overflow budget probe'],
+            primarySourcePath: 'Knowledge_Base/contextoverflow/overflow budget probe.md',
+            answerMustNotContain: [
+                'No scoped knowledge points matched',
+                'retrieval_candidates_below_threshold',
+                'llm_judge_failed',
+            ],
+            ragSourceBoundary: 'full_document',
+            requiredRagRoles: ['direct_support', 'parent_context'],
+            acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            minimumRagSourceDecisionStatusCounts: {
+                read: 1,
+                fragment_dropped: 1,
+            },
+            expectedRagDeterministic: true,
+            expectedRagLlmJudgeUsed: false,
+            expectedRagRecoveryAttempted: false,
+            inMemoryExpectedRagRecoveryAttempted: true,
+            acceptedRagDegradationStates: ['none', 'partial_coverage'],
+            inMemoryMinimumRagSourceDecisionStatusCounts: {
+                read: 1,
+            },
+            inMemoryMinimumRagRecoveryBeforeSourceDecisionStatusCounts: {
+                fragment_dropped: 1,
             },
         },
     },

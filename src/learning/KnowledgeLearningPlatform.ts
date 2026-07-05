@@ -69,6 +69,7 @@ import type {
     RagContextPack,
     RagEvidenceRecoveryTrace,
     RagEvidenceRole,
+    RagSourceDecision,
     RagSufficiencyReview,
     RelationRecomputeMode,
     RelationEdge,
@@ -6444,6 +6445,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         afterPack: RagContextPack;
         afterReview: RagSufficiencyReview;
     }): RagEvidenceRecoveryTrace {
+        const countSourceDecisionStatuses = (
+            decisions: RagSourceDecision[]
+        ): Partial<Record<RagSourceDecision['status'], number>> => (
+            (Array.isArray(decisions) ? decisions : []).reduce<Partial<Record<RagSourceDecision['status'], number>>>(
+                (counts, decision) => {
+                    counts[decision.status] = (counts[decision.status] || 0) + 1;
+                    return counts;
+                },
+                {}
+            )
+        );
         const beforeFragmentIds = new Set(
             params.beforePack.fragments.map((fragment) => String(fragment.fragmentId || '').trim()).filter(Boolean)
         );
@@ -6469,6 +6481,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             afterFragmentCount: params.afterPack.fragments.length,
             addedFragmentCount,
             addedRoleCounts,
+            beforeSourceDecisionStatusCounts: countSourceDecisionStatuses(params.beforePack.sourceDecisions),
+            afterSourceDecisionStatusCounts: countSourceDecisionStatuses(params.afterPack.sourceDecisions),
         };
     }
 

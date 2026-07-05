@@ -433,6 +433,8 @@ export interface RagEvidenceRecoveryTrace {
     afterFragmentCount: number;
     addedFragmentCount: number;
     addedRoleCounts: Partial<Record<RagEvidenceRole, number>>;
+    beforeSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
+    afterSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
 }
 
 export interface KnowledgeQueryResponse {

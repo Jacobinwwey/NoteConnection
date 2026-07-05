@@ -173,6 +173,11 @@ function validatePositiveConversationResult(summary, options) {
     requiredRagRoles,
     acceptedRagSufficiencyStatuses,
     minimumRagSourceDecisionStatusCounts,
+    expectedRagDeterministic,
+    expectedRagLlmJudgeUsed,
+    expectedRagRecoveryAttempted,
+    acceptedRagDegradationStates,
+    minimumRagRecoveryBeforeSourceDecisionStatusCounts,
     requireScopedDocumentIds,
   } = options;
   const forbiddenFragments = Array.isArray(answerMustNotContain) && answerMustNotContain.length > 0
@@ -286,6 +291,38 @@ function validatePositiveConversationResult(summary, options) {
       );
     }
   }
+  if (typeof expectedRagDeterministic === 'boolean') {
+    const observed = Boolean(summary.ragSufficiencyReview && summary.ragSufficiencyReview.deterministic);
+    if (observed !== expectedRagDeterministic) {
+      throw new Error(
+        `RAG deterministic flag mismatch for query=${query}: expected=${expectedRagDeterministic} actual=${JSON.stringify(summary.ragSufficiencyReview)}`
+      );
+    }
+  }
+  if (typeof expectedRagLlmJudgeUsed === 'boolean') {
+    const observed = Boolean(summary.ragSufficiencyReview && summary.ragSufficiencyReview.llmJudgeUsed);
+    if (observed !== expectedRagLlmJudgeUsed) {
+      throw new Error(
+        `RAG llmJudgeUsed flag mismatch for query=${query}: expected=${expectedRagLlmJudgeUsed} actual=${JSON.stringify(summary.ragSufficiencyReview)}`
+      );
+    }
+  }
+  if (typeof expectedRagRecoveryAttempted === 'boolean') {
+    const observed = Boolean(summary.ragSufficiencyReview && summary.ragSufficiencyReview.recoveryAttempted);
+    if (observed !== expectedRagRecoveryAttempted) {
+      throw new Error(
+        `RAG recoveryAttempted flag mismatch for query=${query}: expected=${expectedRagRecoveryAttempted} actual=${JSON.stringify(summary.ragSufficiencyReview)}`
+      );
+    }
+  }
+  if (Array.isArray(acceptedRagDegradationStates) && acceptedRagDegradationStates.length > 0) {
+    const observed = String(summary.ragSufficiencyReview && summary.ragSufficiencyReview.degradationState || '');
+    if (!acceptedRagDegradationStates.includes(observed)) {
+      throw new Error(
+        `RAG degradation state outside accepted set for query=${query}: accepted=${JSON.stringify(acceptedRagDegradationStates)} actual=${JSON.stringify(summary.ragSufficiencyReview)}`
+      );
+    }
+  }
   if (
     minimumRagSourceDecisionStatusCounts
     && typeof minimumRagSourceDecisionStatusCounts === 'object'
@@ -297,6 +334,23 @@ function validatePositiveConversationResult(summary, options) {
       if (observedCount < expectedMinimum) {
         throw new Error(
           `RAG source decision status count below minimum for query=${query}: status=${status} expected>=${expectedMinimum} observed=${observedCount} pack=${JSON.stringify(summary.ragContextPack)}`
+        );
+      }
+    });
+  }
+  if (
+    minimumRagRecoveryBeforeSourceDecisionStatusCounts
+    && typeof minimumRagRecoveryBeforeSourceDecisionStatusCounts === 'object'
+  ) {
+    const observedDecisionCounts = summary.ragRecovery && typeof summary.ragRecovery === 'object'
+      ? (summary.ragRecovery.beforeSourceDecisionStatusCounts || {})
+      : {};
+    Object.entries(minimumRagRecoveryBeforeSourceDecisionStatusCounts).forEach(([status, minimumCount]) => {
+      const expectedMinimum = Number(minimumCount || 0);
+      const observedCount = Number(observedDecisionCounts[status] || 0);
+      if (observedCount < expectedMinimum) {
+        throw new Error(
+          `RAG recovery-before source decision status count below minimum for query=${query}: status=${status} expected>=${expectedMinimum} observed=${observedCount} recovery=${JSON.stringify(summary.ragRecovery)}`
         );
       }
     });
@@ -432,6 +486,7 @@ async function main() {
         const answerReleaseReview = result.answerReleaseReview || (result.trace && result.trace.answerReleaseReview) || null;
         const ragContextPack = result.trace && result.trace.ragContextPack ? result.trace.ragContextPack : null;
         const ragSufficiencyReview = result.trace && result.trace.ragSufficiencyReview ? result.trace.ragSufficiencyReview : null;
+        const ragRecovery = result.trace && result.trace.ragRecovery ? result.trace.ragRecovery : null;
 
         const summary = {
           query,
@@ -450,6 +505,7 @@ async function main() {
           answerReleaseReview,
           ragContextPack,
           ragSufficiencyReview,
+          ragRecovery,
           answer: result.answer,
         };
         validatePositiveConversationResult(summary, {
@@ -522,6 +578,7 @@ async function main() {
       const answerReleaseReview = result.answerReleaseReview || (result.trace && result.trace.answerReleaseReview) || null;
       const ragContextPack = result.trace && result.trace.ragContextPack ? result.trace.ragContextPack : null;
       const ragSufficiencyReview = result.trace && result.trace.ragSufficiencyReview ? result.trace.ragSufficiencyReview : null;
+      const ragRecovery = result.trace && result.trace.ragRecovery ? result.trace.ragRecovery : null;
 
       const summary = {
         id: regressionCase.id,
@@ -544,6 +601,7 @@ async function main() {
         answerReleaseReview,
         ragContextPack,
         ragSufficiencyReview,
+        ragRecovery,
         answer: result.answer,
       };
       validatePositiveConversationResult(summary, {
@@ -565,6 +623,11 @@ async function main() {
         requiredRagRoles: regressionCase.expected.requiredRagRoles,
         acceptedRagSufficiencyStatuses: regressionCase.expected.acceptedRagSufficiencyStatuses,
         minimumRagSourceDecisionStatusCounts: regressionCase.expected.minimumRagSourceDecisionStatusCounts,
+        expectedRagDeterministic: regressionCase.expected.expectedRagDeterministic,
+        expectedRagLlmJudgeUsed: regressionCase.expected.expectedRagLlmJudgeUsed,
+        expectedRagRecoveryAttempted: regressionCase.expected.expectedRagRecoveryAttempted,
+        acceptedRagDegradationStates: regressionCase.expected.acceptedRagDegradationStates,
+        minimumRagRecoveryBeforeSourceDecisionStatusCounts: regressionCase.expected.minimumRagRecoveryBeforeSourceDecisionStatusCounts,
         requireScopedDocumentIds: regressionCase.expected.requireScopedDocumentIds,
       });
       caseResults.push(summary);

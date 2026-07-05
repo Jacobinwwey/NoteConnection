@@ -84,6 +84,12 @@ function cloneRagEvidenceRecoveryTrace(
     return {
         ...recovery,
         addedRoleCounts: { ...recovery.addedRoleCounts },
+        beforeSourceDecisionStatusCounts: recovery.beforeSourceDecisionStatusCounts
+            ? { ...recovery.beforeSourceDecisionStatusCounts }
+            : recovery.beforeSourceDecisionStatusCounts,
+        afterSourceDecisionStatusCounts: recovery.afterSourceDecisionStatusCounts
+            ? { ...recovery.afterSourceDecisionStatusCounts }
+            : recovery.afterSourceDecisionStatusCounts,
     };
 }
 
