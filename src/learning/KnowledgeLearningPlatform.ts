@@ -6477,6 +6477,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             afterStatus: params.afterReview.status,
             beforeScore: Number(Number(params.beforeReview.score || 0).toFixed(4)),
             afterScore: Number(Number(params.afterReview.score || 0).toFixed(4)),
+            beforeReasons: Array.isArray(params.beforeReview.reasons)
+                ? params.beforeReview.reasons.slice()
+                : [],
+            afterReasons: Array.isArray(params.afterReview.reasons)
+                ? params.afterReview.reasons.slice()
+                : [],
             beforeFragmentCount: params.beforePack.fragments.length,
             afterFragmentCount: params.afterPack.fragments.length,
             addedFragmentCount,

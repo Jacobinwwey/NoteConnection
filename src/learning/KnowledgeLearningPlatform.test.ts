@@ -2311,6 +2311,8 @@ describe('KnowledgeLearningPlatform', () => {
             strategy: 'expanded_context_pack',
             beforeStatus: 'borderline',
             afterStatus: 'sufficient',
+            beforeReasons: expect.arrayContaining(['document_augmentation_missing']),
+            afterReasons: expect.any(Array),
         }));
         expect(response.trace.ragRecovery?.addedRoleCounts).toEqual(expect.objectContaining({
             parent_context: expect.any(Number),

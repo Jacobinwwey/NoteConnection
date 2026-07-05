@@ -5,7 +5,7 @@
 
 ## 2026-07-05 RSE + document augmentation 图谱 RAG 实践计划
 
-本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、query-intent 图邻居排序、有界 context pack、接入 provider 的充分性 trace、有界一次性 recovery、RAG-aware 单消息 release review、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、context-budget truncation/drop 探针覆盖、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、更丰富 replay id、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
+本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、query-intent 图邻居排序、有界 context pack、接入 provider 的充分性 trace、有界一次性 recovery、RAG-aware 单消息 release review、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、context-budget truncation/drop/malformed-provider 探针覆盖、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、更丰富 replay id、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
 
 当前代码 / 方案对齐判断：
 
@@ -15,7 +15,7 @@
 | document augmentation 应恢复足够的源文档上下文来支撑完整回答 | `evidenceContextAssembler.ts` 现在通过平台边界读取被选中源文档的完整内容，保留 direct support，补入 parent / adjacent context，去重重叠窗口，并在无法恢复源文本时标记 `source_window_unavailable`。 | 确定性路径已实现 |
 | 图上下文应使用入度/出度与邻居内容，而不是只显示邻居标题 | `KnowledgeLearningPlatform.agentConversation()` 现在会物化选中的图邻居 item，并让 evidence assembler 生成 `graph_neighbor_support` fragment。`graphContextAssembler.ts` 现在会在 evidence assembly 之前，基于 query intent scoring policy、relation kind priority、confidence / provenance scoring、anchor-equivalent 过滤与 bibliography 排除来排序 predecessor / successor window。 | 确定性路径已实现，仍需大语料校准 |
 | 用户只应看到一条回答，编排留在后端 | `conversationComposer.ts` 现在会把 `ragContextPack` 与 `ragSufficiencyReview` 传入 `answerReleaseReview.ts`；release review 可以基于 direct、document、graph fragment 修订或增强公开回答，同时把编排细节留在 trace / status surface。compare-intent RAG 回答现在会抽取 operand，避免把显式 scope 硬收窄到仅 title-hit document id，为双方预留 4 个 direct-support clause，按 operand / fragment 覆盖度排序证据，并在加入 graph contrast context 前把 Mermaid 对比 label 转为可读证据。how-to 回答现在会为 ordered steps、prerequisites、downstream checks 与 failure handling 预留 direct / document / graph 预算，而不是压缩成泛化概览。generic 回答现在会按 query-term 覆盖度排序，并使用 2 个 direct-support slot，让宽泛问题优先保留真正相关的 grounded clause，而不是泛化 preamble。`agent_workspace.js` / `workspace_panes.js` 显示 compact 状态，而不是追加聊天消息。 | 已保持并增强 |
-| LLM judging 应提升回答完整性 | `ragSufficiencyJudge.ts` 已有确定性 gate 与可注入的可选 LLM judge hook；`ragSufficiencyProviderJudge.ts` 现在通过现有 `LlmProviderClient` / NoteMD settings 边界完成 adapter 接入，包含严格 JSON 解析、timeout、无重试和 reviewer catch path 的确定性 fallback。`KnowledgeLearningPlatform.agentConversation()` 现在会在首轮 pack 可恢复地 borderline / insufficient 时，最多执行一次有界 recovery assembly / review。 | Unit 5 已实现 |
+| LLM judging 应提升回答完整性 | `ragSufficiencyJudge.ts` 已有确定性 gate 与可注入的可选 LLM judge hook；`ragSufficiencyProviderJudge.ts` 现在通过现有 `LlmProviderClient` / NoteMD settings 边界完成 adapter 接入，包含严格 JSON 解析、timeout、无重试和 reviewer catch path 的确定性 fallback；malformed completion text 现在会在 adapter 边界 reject，因此 `llm_judge_failed:*` 可回放。`KnowledgeLearningPlatform.agentConversation()` 现在会在首轮 pack 可恢复地 borderline / insufficient 时，最多执行一次有界 recovery assembly / review。 | Unit 5 已实现 |
 | 弱证据应显式降级 | `RagSufficiencyReview` 现在记录 `sufficient`、`borderline` 或 `insufficient`，并带有 `partial_coverage`、`conflict`、`insufficient_evidence` 等降级状态；前端 evidence pane 会显示 compact 状态。 | 确定性 review 已实现 |
 
 现在的架构 owner 更清晰：
@@ -36,7 +36,7 @@
 
 - 新增模块：`src/learning/evidenceContextAssembler.ts`、`src/learning/ragContextPack.ts`、`src/learning/ragSufficiencyJudge.ts`、`src/learning/ragSufficiencyProviderJudge.ts`。
 - 新增 / 更新测试：evidence assembler、context pack budgeter、sufficiency judge、接入 provider 的 sufficiency judge adapter、有界 recovery、RAG-aware release review、持久化兼容、composer、平台集成、导出 RAG trace 保留、Knowledge Workspace conversation regression、runtime verifier 校验，以及前端 RAG grounding 展示。
-- `scripts/verify-knowledge-workspace-runtime.js` 现在能校验期望 RAG source boundary、roles、answer terms、sufficiency statuses、deterministic/no-provider judge 标志、recovery 标志、degradation state、RAG source-decision status 最小计数，以及 recovery 前 source-decision status 最小计数；同时支持按用例配置 scoped document-id 预期，默认严格要求 scoped id，并对 answer term 做大小写不敏感匹配。
+- `scripts/verify-knowledge-workspace-runtime.js` 现在能校验期望 RAG source boundary、roles、answer terms、sufficiency statuses、deterministic/no-provider judge 标志、recovery 标志、degradation state、RAG source-decision status 最小计数、recovery 前 source-decision status 最小计数，以及 recovery 前 reason fragment；同时支持按用例配置 scoped document-id 预期、按用例传递 `topK`、隔离临时 NoteMD config、本地 malformed-provider fixture，默认严格要求 scoped id，并对 answer term 做大小写不敏感匹配。
 - `src/frontend/agent_workspace.js` 会把仅含 RAG trace 的 payload 标记为可 inspect；API 状态行显示 `RAG: <status>, <N> fragments`，并在本回合使用 recovery pass 时追加 `+recovered`。
 - `src/frontend/workspace_panes.js` 显示 compact RAG context metrics：sufficiency、source boundary、fragment budget、direct/document/graph roles、truncated/dropped/unavailable source counts、degradation、recovery 与 reasons。
 - `src/learning/graphContextAssembler.ts` 现在应用 intent-specific graph-window scoring：compare query 可以让 contrast / analogy 邻居优先于 procedural sequence 节点，即使 sequence 边置信度更高；definition 与 how-to query 则保留各自的结构优先级。
@@ -47,11 +47,12 @@
 - runtime probe `waterglass_compare_materials_en` 现在验证 `compare water glass and plastic cup` 会从 `Knowledge_Base/waterglass/water glass.md` 返回 glass 与 plastic 两侧证据，并覆盖 `full_document` source boundary 以及 direct / document / graph 角色。
 - runtime probe `contextbudget_source_window_truncation_en` 现在验证 `what is context budget probe?` 会从 `Knowledge_Base/contextbudget/context budget probe.md` 读取 scoped 完整源文档，同时在 model-visible `RagContextPack` 中记录 `fragment_truncated` source decision。
 - runtime probe `contextoverflow_no_provider_budget_drop_en` 现在验证 `what is overflow budget probe?` 在未使用 LLM judge 时仍保持 deterministic，并在最终有界 `RagContextPack` 中记录 `fragment_dropped`；当 recovery 实际发生时，recovery source-decision 计数会继续保留在 `ragRecovery` 中。
+- runtime probe `contextoverflow_malformed_provider_judge_fallback_en` 现在验证本地 malformed OpenAI-compatible judge response 不会阻塞主回答链路：fixture 会被调用一次，首轮 review 会在 `ragRecovery.beforeReasons` 中记录 `llm_judge_failed`，最终 recovered answer 仍保持 deterministic 与有界。
 
 后续推进：
 
 - 基于代表性 hard negative 校准图关系权重与低置信排除阈值，不把当前 scoring 常量当作最终形态。
-- 扩展 provider timeout/fallback、malformed judge JSON、intent-specific 图邻居选择与大语料 hard negative 的 runtime probes。
+- 扩展 provider timeout fallback、intent-specific 图邻居选择与大语料 hard negative 的 runtime probes。
 - 在当前 deterministic definition / compare / how-to / generic 基线之上继续校准 profile-specific release budget，同时保留公开回答硬上限。
 - 补齐 export replay 覆盖，以及 repeated snippet、conflicting adjacent evidence、missing graph-neighbor evidence、更严格的 total-character budget drop、provider fallback 的更大 runtime probes。
 

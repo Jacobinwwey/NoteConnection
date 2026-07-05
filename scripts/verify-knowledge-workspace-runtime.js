@@ -75,6 +75,124 @@ function requestJson(port, method, requestPath, body, timeoutMs = 90000) {
   });
 }
 
+function startRuntimeProviderFixture(fixtureKind) {
+  if (fixtureKind !== 'malformed_json') {
+    throw new Error(`Unsupported runtime provider fixture: ${fixtureKind}`);
+  }
+  const state = {
+    kind: fixtureKind,
+    requestCount: 0,
+    completionCount: 0,
+    modelProbeCount: 0,
+  };
+  const server = http.createServer((req, res) => {
+    state.requestCount += 1;
+    const requestPath = String(req.url || '');
+    req.setEncoding('utf8');
+    req.on('data', () => {});
+    req.on('end', () => {
+      if (req.method === 'GET' && requestPath.endsWith('/models')) {
+        state.modelProbeCount += 1;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ data: [{ id: 'rag-fixture-model' }] }));
+        return;
+      }
+      if (req.method === 'POST' && requestPath.endsWith('/chat/completions')) {
+        state.completionCount += 1;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: 'not json',
+              },
+            },
+          ],
+        }));
+        return;
+      }
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: `fixture route not found: ${req.method} ${requestPath}` }));
+    });
+  });
+
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (!address || typeof address !== 'object') {
+        reject(new Error('Failed to start runtime provider fixture.'));
+        return;
+      }
+      resolve({
+        kind: fixtureKind,
+        port: address.port,
+        baseUrl: `http://127.0.0.1:${address.port}/v1`,
+        summary: () => ({ ...state }),
+        close: () => new Promise((closeResolve, closeReject) => {
+          server.close((error) => {
+            if (error) {
+              closeReject(error);
+              return;
+            }
+            closeResolve();
+          });
+        }),
+      });
+    });
+  });
+}
+
+async function readNotemdSettings(port) {
+  const response = await requestJson(port, 'GET', '/api/notemd/settings', undefined, 90000);
+  if (response.status !== 200 || !response.body || response.body.success !== true || !response.body.settings) {
+    throw new Error(`failed to read NoteMD settings: status=${response.status} body=${JSON.stringify(response.body)}`);
+  }
+  return response.body.settings;
+}
+
+async function writeNotemdSettings(port, settings) {
+  const response = await requestJson(port, 'POST', '/api/notemd/settings', { settings }, 90000);
+  if (response.status !== 200 || !response.body || response.body.success !== true || !response.body.settings) {
+    throw new Error(`failed to write NoteMD settings: status=${response.status} body=${JSON.stringify(response.body)}`);
+  }
+  return response.body.settings;
+}
+
+async function applyRuntimeProviderFixture(port, fixture) {
+  const previousSettings = await readNotemdSettings(port);
+  const providerName = 'OpenAI Compatible';
+  const providers = Array.isArray(previousSettings.providers)
+    ? previousSettings.providers.map((provider) => ({ ...provider }))
+    : [];
+  const fixtureProvider = {
+    name: providerName,
+    apiKey: 'runtime-fixture-key',
+    baseUrl: fixture.baseUrl,
+    model: 'rag-fixture-model',
+    temperature: 0,
+    enabled: true,
+  };
+  const providerIndex = providers.findIndex((provider) => provider && provider.name === providerName);
+  if (providerIndex >= 0) {
+    providers[providerIndex] = {
+      ...providers[providerIndex],
+      ...fixtureProvider,
+    };
+  } else {
+    providers.push(fixtureProvider);
+  }
+  await writeNotemdSettings(port, {
+    ...previousSettings,
+    activeProvider: providerName,
+    useMultiModelSettings: false,
+    enableGlobalCustomPrompts: false,
+    providers,
+  });
+  return previousSettings;
+}
+
 function collectFlagValues(args, flag) {
   const values = [];
   for (let index = 0; index < args.length; index += 1) {
@@ -90,14 +208,19 @@ function buildConversationSessionId(prefix, value) {
   return `${prefix}_${Buffer.from(String(value || '')).toString('hex').slice(0, 24)}`;
 }
 
-function buildConversationRequest(activeTarget, query) {
-  return {
+function buildConversationRequest(activeTarget, query, options = {}) {
+  const request = {
     userId: 'runtime_verify_user',
     sessionId: buildConversationSessionId('runtime_verify_session', `${activeTarget}:${query}`),
     activeTarget,
     message: query,
     persistMemory: false,
   };
+  const topK = Number(options.topK);
+  if (Number.isInteger(topK) && topK > 0) {
+    request.topK = topK;
+  }
+  return request;
 }
 
 function countRagSourceDecisionStatuses(ragContextPack) {
@@ -112,6 +235,26 @@ function countRagSourceDecisionStatuses(ragContextPack) {
     counts[status] = (counts[status] || 0) + 1;
     return counts;
   }, {});
+}
+
+function assertReasonFragments(query, label, observedReasons, requiredFragments) {
+  if (!Array.isArray(requiredFragments) || requiredFragments.length <= 0) {
+    return;
+  }
+  const reasons = Array.isArray(observedReasons)
+    ? observedReasons.map((reason) => String(reason || ''))
+    : [];
+  requiredFragments.forEach((fragment) => {
+    const expectedFragment = String(fragment || '').trim();
+    if (!expectedFragment) {
+      return;
+    }
+    if (!reasons.some((reason) => reason.includes(expectedFragment))) {
+      throw new Error(
+        `${label} missing reason fragment "${expectedFragment}" for query=${query}: reasons=${JSON.stringify(reasons)}`
+      );
+    }
+  });
 }
 
 function loadConversationRegressionCases(caseIds) {
@@ -178,6 +321,7 @@ function validatePositiveConversationResult(summary, options) {
     expectedRagRecoveryAttempted,
     acceptedRagDegradationStates,
     minimumRagRecoveryBeforeSourceDecisionStatusCounts,
+    requiredRagRecoveryBeforeReasonFragments,
     requireScopedDocumentIds,
   } = options;
   const forbiddenFragments = Array.isArray(answerMustNotContain) && answerMustNotContain.length > 0
@@ -355,6 +499,12 @@ function validatePositiveConversationResult(summary, options) {
       }
     });
   }
+  assertReasonFragments(
+    query,
+    'RAG recovery-before review',
+    summary.ragRecovery && summary.ragRecovery.beforeReasons,
+    requiredRagRecoveryBeforeReasonFragments
+  );
   if (
     Array.isArray(expectedPlannerTitleLikeQueries)
     && expectedPlannerTitleLikeQueries.length > 0
@@ -424,6 +574,7 @@ async function main() {
   const frontendDir = path.join(projectRoot, 'dist', 'src', 'frontend');
   const kbRoot = path.join(projectRoot, 'Knowledge_Base');
   const runtimeDataDir = makeTempDir('noteconnection-knowledge-workspace-runtime');
+  const runtimeConfigDir = path.join(runtimeDataDir, 'config');
   const port = await getFreePort();
   const bridgePort = await getFreePort();
 
@@ -431,6 +582,7 @@ async function main() {
   process.env.NOTE_CONNECTION_FRONTEND_DIR = frontendDir;
   process.env.NOTE_CONNECTION_KB_ROOT = kbRoot;
   process.env.NOTE_CONNECTION_RUNTIME_DATA_DIR = runtimeDataDir;
+  process.env.NOTE_CONNECTION_CONFIG_DIR = runtimeConfigDir;
   process.env.NOTE_CONNECTION_PORT = String(port);
   process.env.NOTE_CONNECTION_BRIDGE_PORT = String(bridgePort);
 
@@ -555,82 +707,106 @@ async function main() {
         console.log(`[verify-knowledge-workspace-runtime] step=restore-cache target=${regressionCase.activeTarget}`);
         restoreResults[regressionCase.id] = await restoreTarget(port, regressionCase.activeTarget);
       }
-      console.log(`[verify-knowledge-workspace-runtime] step=conversation case=${regressionCase.id} query=${regressionCase.query}`);
-      const conversationResponse = await requestJson(
-        port,
-        'POST',
-        '/api/knowledge/conversation',
-        buildConversationRequest(regressionCase.activeTarget, regressionCase.query),
-        90000
-      );
-      if (conversationResponse.status !== 200 || !conversationResponse.body || !conversationResponse.body.success) {
-        throw new Error(`conversation failed for case=${regressionCase.id}: status=${conversationResponse.status} body=${JSON.stringify(conversationResponse.body)}`);
+      let runtimeProviderFixture = null;
+      let previousNotemdSettings = null;
+      try {
+        if (regressionCase.runtimeProviderFixture) {
+          runtimeProviderFixture = await startRuntimeProviderFixture(regressionCase.runtimeProviderFixture);
+          previousNotemdSettings = await applyRuntimeProviderFixture(port, runtimeProviderFixture);
+          console.log(`[verify-knowledge-workspace-runtime] step=provider-fixture case=${regressionCase.id} kind=${runtimeProviderFixture.kind} port=${runtimeProviderFixture.port}`);
+        }
+        console.log(`[verify-knowledge-workspace-runtime] step=conversation case=${regressionCase.id} query=${regressionCase.query}`);
+        const conversationResponse = await requestJson(
+          port,
+          'POST',
+          '/api/knowledge/conversation',
+          buildConversationRequest(regressionCase.activeTarget, regressionCase.query, {
+            topK: regressionCase.topK,
+          }),
+          90000
+        );
+        if (conversationResponse.status !== 200 || !conversationResponse.body || !conversationResponse.body.success) {
+          throw new Error(`conversation failed for case=${regressionCase.id}: status=${conversationResponse.status} body=${JSON.stringify(conversationResponse.body)}`);
+        }
+
+        const result = conversationResponse.body.result || {};
+        const citations = Array.isArray(result.citations) ? result.citations : [];
+        const knowledgePoints = Array.isArray(result.knowledgePoints) ? result.knowledgePoints : [];
+        const workspaceReadiness = result.trace && result.trace.workspaceReadiness ? result.trace.workspaceReadiness : null;
+        const usedScope = result.trace && result.trace.usedScope ? result.trace.usedScope : null;
+        const planner = result.trace && result.trace.planner ? result.trace.planner : null;
+        const retrievalTrace = result.trace && result.trace.retrieval ? result.trace.retrieval : null;
+        const missDiagnostics = result.trace && result.trace.missDiagnostics ? result.trace.missDiagnostics : null;
+        const answerReleaseReview = result.answerReleaseReview || (result.trace && result.trace.answerReleaseReview) || null;
+        const ragContextPack = result.trace && result.trace.ragContextPack ? result.trace.ragContextPack : null;
+        const ragSufficiencyReview = result.trace && result.trace.ragSufficiencyReview ? result.trace.ragSufficiencyReview : null;
+        const ragRecovery = result.trace && result.trace.ragRecovery ? result.trace.ragRecovery : null;
+
+        const summary = {
+          id: regressionCase.id,
+          description: regressionCase.description,
+          activeTarget: regressionCase.activeTarget,
+          preloadTargets: regressionCase.preloadTargets,
+          query: regressionCase.query,
+          citationCount: citations.length,
+          citations,
+          knowledgePoints,
+          topCitation: citations[0],
+          workspaceReadiness,
+          usedScope,
+          planner,
+          retrievalModes: Array.isArray(retrievalTrace && retrievalTrace.retrievalModes)
+            ? retrievalTrace.retrievalModes
+            : [],
+          scopeRecovery: retrievalTrace && retrievalTrace.scopeRecovery ? retrievalTrace.scopeRecovery : null,
+          missDiagnostics,
+          answerReleaseReview,
+          ragContextPack,
+          ragSufficiencyReview,
+          ragRecovery,
+          runtimeProviderFixture: runtimeProviderFixture ? runtimeProviderFixture.summary() : null,
+          answer: result.answer,
+        };
+        validatePositiveConversationResult(summary, {
+          query: regressionCase.query,
+          target: regressionCase.activeTarget,
+          expectedScopeSource: regressionCase.expected.scopeSource,
+          expectedMinCitations: regressionCase.expected.minCitations,
+          expectedPlannerTitleLikeQueries: regressionCase.expected.plannerTitleLikeQueries,
+          expectedRetrievalModes: regressionCase.expected.retrievalModes,
+          expectedPrimarySourcePath: regressionCase.expected.primarySourcePath,
+          expectedRecoveredSourcePaths: regressionCase.expected.recoveredSourcePaths,
+          expectedAnswerReleaseDecision: regressionCase.expected.runtimeAnswerReleaseDecision
+            || regressionCase.expected.answerReleaseDecision,
+          acceptedAnswerReleaseDecisions: regressionCase.expected.acceptedAnswerReleaseDecisions,
+          requiredFailedGateIds: regressionCase.expected.runtimeRequiredFailedGateIds,
+          answerMustContain: regressionCase.expected.answerMustContain,
+          answerMustNotContain: regressionCase.expected.answerMustNotContain,
+          expectedRagSourceBoundary: regressionCase.expected.ragSourceBoundary,
+          requiredRagRoles: regressionCase.expected.requiredRagRoles,
+          acceptedRagSufficiencyStatuses: regressionCase.expected.acceptedRagSufficiencyStatuses,
+          minimumRagSourceDecisionStatusCounts: regressionCase.expected.minimumRagSourceDecisionStatusCounts,
+          expectedRagDeterministic: regressionCase.expected.expectedRagDeterministic,
+          expectedRagLlmJudgeUsed: regressionCase.expected.expectedRagLlmJudgeUsed,
+          expectedRagRecoveryAttempted: regressionCase.expected.expectedRagRecoveryAttempted,
+          acceptedRagDegradationStates: regressionCase.expected.acceptedRagDegradationStates,
+          minimumRagRecoveryBeforeSourceDecisionStatusCounts: regressionCase.expected.minimumRagRecoveryBeforeSourceDecisionStatusCounts,
+          requiredRagRecoveryBeforeReasonFragments: regressionCase.expected.runtimeRequiredRagRecoveryBeforeReasonFragments
+            || regressionCase.expected.requiredRagRecoveryBeforeReasonFragments,
+          requireScopedDocumentIds: regressionCase.expected.requireScopedDocumentIds,
+        });
+        caseResults.push(summary);
+      } finally {
+        try {
+          if (previousNotemdSettings) {
+            await writeNotemdSettings(port, previousNotemdSettings);
+          }
+        } finally {
+          if (runtimeProviderFixture) {
+            await runtimeProviderFixture.close();
+          }
+        }
       }
-
-      const result = conversationResponse.body.result || {};
-      const citations = Array.isArray(result.citations) ? result.citations : [];
-      const knowledgePoints = Array.isArray(result.knowledgePoints) ? result.knowledgePoints : [];
-      const workspaceReadiness = result.trace && result.trace.workspaceReadiness ? result.trace.workspaceReadiness : null;
-      const usedScope = result.trace && result.trace.usedScope ? result.trace.usedScope : null;
-      const planner = result.trace && result.trace.planner ? result.trace.planner : null;
-      const retrievalTrace = result.trace && result.trace.retrieval ? result.trace.retrieval : null;
-      const missDiagnostics = result.trace && result.trace.missDiagnostics ? result.trace.missDiagnostics : null;
-      const answerReleaseReview = result.answerReleaseReview || (result.trace && result.trace.answerReleaseReview) || null;
-      const ragContextPack = result.trace && result.trace.ragContextPack ? result.trace.ragContextPack : null;
-      const ragSufficiencyReview = result.trace && result.trace.ragSufficiencyReview ? result.trace.ragSufficiencyReview : null;
-      const ragRecovery = result.trace && result.trace.ragRecovery ? result.trace.ragRecovery : null;
-
-      const summary = {
-        id: regressionCase.id,
-        description: regressionCase.description,
-        activeTarget: regressionCase.activeTarget,
-        preloadTargets: regressionCase.preloadTargets,
-        query: regressionCase.query,
-        citationCount: citations.length,
-        citations,
-        knowledgePoints,
-        topCitation: citations[0],
-        workspaceReadiness,
-        usedScope,
-        planner,
-        retrievalModes: Array.isArray(retrievalTrace && retrievalTrace.retrievalModes)
-          ? retrievalTrace.retrievalModes
-          : [],
-        scopeRecovery: retrievalTrace && retrievalTrace.scopeRecovery ? retrievalTrace.scopeRecovery : null,
-        missDiagnostics,
-        answerReleaseReview,
-        ragContextPack,
-        ragSufficiencyReview,
-        ragRecovery,
-        answer: result.answer,
-      };
-      validatePositiveConversationResult(summary, {
-        query: regressionCase.query,
-        target: regressionCase.activeTarget,
-        expectedScopeSource: regressionCase.expected.scopeSource,
-        expectedMinCitations: regressionCase.expected.minCitations,
-        expectedPlannerTitleLikeQueries: regressionCase.expected.plannerTitleLikeQueries,
-        expectedRetrievalModes: regressionCase.expected.retrievalModes,
-        expectedPrimarySourcePath: regressionCase.expected.primarySourcePath,
-        expectedRecoveredSourcePaths: regressionCase.expected.recoveredSourcePaths,
-        expectedAnswerReleaseDecision: regressionCase.expected.runtimeAnswerReleaseDecision
-          || regressionCase.expected.answerReleaseDecision,
-        acceptedAnswerReleaseDecisions: regressionCase.expected.acceptedAnswerReleaseDecisions,
-        requiredFailedGateIds: regressionCase.expected.runtimeRequiredFailedGateIds,
-        answerMustContain: regressionCase.expected.answerMustContain,
-        answerMustNotContain: regressionCase.expected.answerMustNotContain,
-        expectedRagSourceBoundary: regressionCase.expected.ragSourceBoundary,
-        requiredRagRoles: regressionCase.expected.requiredRagRoles,
-        acceptedRagSufficiencyStatuses: regressionCase.expected.acceptedRagSufficiencyStatuses,
-        minimumRagSourceDecisionStatusCounts: regressionCase.expected.minimumRagSourceDecisionStatusCounts,
-        expectedRagDeterministic: regressionCase.expected.expectedRagDeterministic,
-        expectedRagLlmJudgeUsed: regressionCase.expected.expectedRagLlmJudgeUsed,
-        expectedRagRecoveryAttempted: regressionCase.expected.expectedRagRecoveryAttempted,
-        acceptedRagDegradationStates: regressionCase.expected.acceptedRagDegradationStates,
-        minimumRagRecoveryBeforeSourceDecisionStatusCounts: regressionCase.expected.minimumRagRecoveryBeforeSourceDecisionStatusCounts,
-        requireScopedDocumentIds: regressionCase.expected.requireScopedDocumentIds,
-      });
-      caseResults.push(summary);
     }
 
     console.log(JSON.stringify({

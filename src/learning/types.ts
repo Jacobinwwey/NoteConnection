@@ -429,6 +429,8 @@ export interface RagEvidenceRecoveryTrace {
     afterStatus: RagSufficiencyReview['status'];
     beforeScore: number;
     afterScore: number;
+    beforeReasons?: string[];
+    afterReasons?: string[];
     beforeFragmentCount: number;
     afterFragmentCount: number;
     addedFragmentCount: number;

@@ -131,6 +131,26 @@ describe('createRagSufficiencyProviderJudge', () => {
             graphContext: null,
         })).rejects.toThrow(/cancelled|timed out/i);
     });
+
+    test('rejects malformed completion text so the deterministic reviewer can record a fallback reason', async () => {
+        const complete = jest.fn().mockResolvedValue({
+            text: 'not json',
+            provider: 'OpenAI',
+            model: 'gpt-test',
+        });
+        const judge = createRagSufficiencyProviderJudge({
+            settingsProvider: makeSettings,
+            llmClient: { complete },
+            timeoutMs: 250,
+            maxTokens: 96,
+        });
+
+        await expect(judge({
+            query: 'what is water glass?',
+            contextPack: makePack(),
+            graphContext: null,
+        })).rejects.toThrow(/invalid json/i);
+    });
 });
 
 describe('parseRagSufficiencyProviderJudgeReview', () => {

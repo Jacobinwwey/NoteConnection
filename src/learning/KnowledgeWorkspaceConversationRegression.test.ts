@@ -12,7 +12,9 @@ function deriveScopedConversationRequest(caseEntry: KnowledgeWorkspaceConversati
         sessionId: `regression_session_${caseEntry.id}`,
         message: caseEntry.query,
         persistMemory: false,
-        topK: 8,
+        topK: Number.isInteger(caseEntry.topK) && Number(caseEntry.topK) > 0
+            ? Number(caseEntry.topK)
+            : 8,
         scope: {
             workspaceId: activeTarget.toLowerCase(),
             corpusId: activeTarget.toLowerCase(),
@@ -137,6 +139,21 @@ function countRagSourceDecisionStatuses(
     }, {});
 }
 
+function expectReasonFragments(
+    observedReasons: readonly string[] | undefined,
+    requiredFragments: readonly string[] | undefined
+): void {
+    if (!requiredFragments || requiredFragments.length <= 0) {
+        return;
+    }
+    const reasons = Array.isArray(observedReasons)
+        ? observedReasons.map((reason) => String(reason || ''))
+        : [];
+    requiredFragments.forEach((fragment) => {
+        expect(reasons.some((reason) => reason.includes(fragment))).toBe(true);
+    });
+}
+
 describe('KnowledgeWorkspaceConversationRegression', () => {
     test('case ids stay unique', () => {
         const caseIds = KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES.map((entry) => entry.id);
@@ -235,6 +252,10 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         .toBeGreaterThanOrEqual(minimumCount || 0);
                 });
             }
+            expectReasonFragments(
+                response.trace.ragRecovery?.beforeReasons,
+                expected.requiredRagRecoveryBeforeReasonFragments
+            );
             if (expected.retrievalModes && expected.retrievalModes.length > 0) {
                 expect(retrieval.retrievalModes).toEqual(
                     expect.arrayContaining(expected.retrievalModes)

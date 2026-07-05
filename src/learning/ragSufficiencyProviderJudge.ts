@@ -264,6 +264,10 @@ export function createRagSufficiencyProviderJudge(
                 retryDelayMs: 0,
             },
         });
-        return parseRagSufficiencyProviderJudgeReview(result.text);
+        const review = parseRagSufficiencyProviderJudgeReview(result.text);
+        if (!review) {
+            throw new Error('RAG sufficiency judge returned invalid JSON.');
+        }
+        return review;
     };
 }

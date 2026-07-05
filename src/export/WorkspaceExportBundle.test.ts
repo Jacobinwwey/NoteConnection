@@ -471,6 +471,8 @@ describe('WorkspaceExportBundle', () => {
             afterStatus: 'sufficient' as const,
             beforeScore: 0.58,
             afterScore: 0.86,
+            beforeReasons: ['document_augmentation_missing'],
+            afterReasons: ['answerable_from_context'],
             beforeFragmentCount: 14,
             afterFragmentCount: 16,
             addedFragmentCount: 2,
@@ -603,6 +605,8 @@ describe('WorkspaceExportBundle', () => {
         (ragContextPack.sourceDecisions[0] as any).reason = 'mutated_after_export';
         ragSufficiencyReview.reasons.push('mutated_after_export');
         ragRecovery.addedRoleCounts.parent_context = 999;
+        ragRecovery.beforeReasons.push('mutated_after_export');
+        ragRecovery.afterReasons.push('mutated_after_export');
         ragRecovery.beforeSourceDecisionStatusCounts.fragment_dropped = 999;
         ragRecovery.afterSourceDecisionStatusCounts.fragment_included = 999;
 
@@ -613,6 +617,8 @@ describe('WorkspaceExportBundle', () => {
         expect(exportedTrace.ragContextPack.sourceDecisions[0].reason).toBeUndefined();
         expect(exportedTrace.ragSufficiencyReview.reasons).toEqual(['answerable_from_context']);
         expect(exportedTrace.ragRecovery.addedRoleCounts.parent_context).toBe(2);
+        expect(exportedTrace.ragRecovery.beforeReasons).toEqual(['document_augmentation_missing']);
+        expect(exportedTrace.ragRecovery.afterReasons).toEqual(['answerable_from_context']);
         expect(exportedTrace.ragRecovery.beforeSourceDecisionStatusCounts.fragment_dropped).toBe(3);
         expect(exportedTrace.ragRecovery.afterSourceDecisionStatusCounts.fragment_included).toBe(15);
     });

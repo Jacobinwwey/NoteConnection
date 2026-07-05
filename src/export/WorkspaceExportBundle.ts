@@ -84,6 +84,12 @@ function cloneRagEvidenceRecoveryTrace(
     return {
         ...recovery,
         addedRoleCounts: { ...recovery.addedRoleCounts },
+        beforeReasons: Array.isArray(recovery.beforeReasons)
+            ? recovery.beforeReasons.slice()
+            : recovery.beforeReasons,
+        afterReasons: Array.isArray(recovery.afterReasons)
+            ? recovery.afterReasons.slice()
+            : recovery.afterReasons,
         beforeSourceDecisionStatusCounts: recovery.beforeSourceDecisionStatusCounts
             ? { ...recovery.beforeSourceDecisionStatusCounts }
             : recovery.beforeSourceDecisionStatusCounts,

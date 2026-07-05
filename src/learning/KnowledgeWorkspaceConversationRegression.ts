@@ -33,6 +33,8 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     acceptedRagDegradationStates?: Array<NonNullable<RagSufficiencyReview['degradationState']>>;
     minimumRagRecoveryBeforeSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
     inMemoryMinimumRagRecoveryBeforeSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
+    requiredRagRecoveryBeforeReasonFragments?: string[];
+    runtimeRequiredRagRecoveryBeforeReasonFragments?: string[];
     requireScopedDocumentIds?: boolean;
 }
 
@@ -42,6 +44,8 @@ export interface KnowledgeWorkspaceConversationRegressionCase {
     preloadTargets: string[];
     activeTarget: string;
     query: string;
+    topK?: number;
+    runtimeProviderFixture?: 'malformed_json';
     expected: KnowledgeWorkspaceConversationRegressionExpectation;
 }
 
@@ -250,6 +254,40 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             inMemoryMinimumRagRecoveryBeforeSourceDecisionStatusCounts: {
                 fragment_dropped: 1,
             },
+        },
+    },
+    {
+        id: 'contextoverflow_malformed_provider_judge_fallback_en',
+        description: 'A dense scoped note should keep answering when a configured RAG sufficiency provider returns malformed judge JSON.',
+        preloadTargets: ['contextoverflow'],
+        activeTarget: 'contextoverflow',
+        query: 'what is overflow budget probe?',
+        topK: 12,
+        runtimeProviderFixture: 'malformed_json',
+        expected: {
+            minCitations: 1,
+            scopeSource: 'explicit_request',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
+            plannerTitleLikeQueries: ['overflow budget probe'],
+            primarySourcePath: 'Knowledge_Base/contextoverflow/overflow budget probe.md',
+            answerMustNotContain: [
+                'No scoped knowledge points matched',
+                'retrieval_candidates_below_threshold',
+            ],
+            ragSourceBoundary: 'full_document',
+            requiredRagRoles: ['direct_support', 'parent_context'],
+            acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            minimumRagSourceDecisionStatusCounts: {
+                read: 1,
+            },
+            expectedRagDeterministic: true,
+            expectedRagLlmJudgeUsed: false,
+            expectedRagRecoveryAttempted: true,
+            acceptedRagDegradationStates: ['none', 'partial_coverage'],
+            minimumRagRecoveryBeforeSourceDecisionStatusCounts: {
+                fragment_dropped: 1,
+            },
+            runtimeRequiredRagRecoveryBeforeReasonFragments: ['llm_judge_failed'],
         },
     },
 ]);
