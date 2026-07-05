@@ -6,6 +6,7 @@ import {
     createGraphDbSnapshotAdapter,
     createKnowledgeGraphStore,
 } from './store';
+import type { KnowledgeGraphSnapshot, KnowledgeGraphStore } from './store';
 
 describe('KnowledgeLearningPlatform', () => {
     let nowIso: string;
@@ -2258,6 +2259,141 @@ describe('KnowledgeLearningPlatform', () => {
         expect(response.answer).toContain('transparent drinking vessel');
         expect(response.answer).toContain('vessel boundary');
         expect(response.answer).toContain('observed optical behavior');
+    });
+
+    test('agent conversation uses optional LLM sufficiency judge for borderline legacy source windows', async () => {
+        const savedAt = '2026-07-05T00:00:00.000Z';
+        const sourcePath = 'tmp/missing-rag-legacy-source/water-glass.md';
+        const atomContent = 'A water glass is a transparent drinking vessel that contains water.';
+        const snapshot: KnowledgeGraphSnapshot = {
+            schemaVersion: 2,
+            savedAt,
+            idCounter: 1,
+            atoms: [
+                {
+                    id: 'atom_legacy_water_glass',
+                    stableKey: 'legacy-water-glass-definition',
+                    documentId: 'doc_legacy_water_glass',
+                    sourcePath,
+                    title: 'Water Glass',
+                    content: atomContent,
+                    representationType: 'text',
+                    keywords: ['water', 'glass', 'transparent', 'vessel'],
+                    evidenceSpanIds: ['evidence_legacy_water_glass'],
+                    createdAt: savedAt,
+                    updatedAt: savedAt,
+                    metadata: {
+                        sectionPath: ['Water Glass', 'Definition'],
+                        version: 1,
+                        sourceHash: 'hash_legacy_water_glass',
+                        language: 'en',
+                    },
+                },
+            ],
+            evidenceSpans: [
+                {
+                    id: 'evidence_legacy_water_glass',
+                    documentId: 'doc_legacy_water_glass',
+                    sourcePath,
+                    language: 'en',
+                    startOffset: 0,
+                    endOffset: atomContent.length,
+                    startLine: 1,
+                    endLine: 1,
+                    snippet: atomContent,
+                    sourceHash: 'hash_legacy_water_glass',
+                    createdAt: savedAt,
+                },
+            ],
+            relationEdges: [],
+            temporalEdges: [],
+            documents: [
+                {
+                    documentId: 'doc_legacy_water_glass',
+                    sourcePath,
+                    sourceHash: 'hash_legacy_water_glass',
+                    version: 1,
+                    updatedAt: savedAt,
+                    atomStableKeyToId: [['legacy-water-glass-definition', 'atom_legacy_water_glass']],
+                    atomIds: ['atom_legacy_water_glass'],
+                    evidenceSpanIds: ['evidence_legacy_water_glass'],
+                    relationEdgeIds: [],
+                    temporalEdgeIds: [],
+                },
+            ],
+            activeStableKeyToAtomId: [['legacy-water-glass-definition', 'atom_legacy_water_glass']],
+            activeAtomIds: ['atom_legacy_water_glass'],
+            learnerStates: [],
+            tutorTraces: [],
+            ingestLatencyHistoryMs: [],
+            recomputeLatencyHistoryMs: [],
+            queryLatencyHistoryMs: [],
+            latestIngestSummary: {
+                ingestedDocuments: 1,
+                changedDocuments: 1,
+                deletedDocuments: 0,
+                activeAtoms: 1,
+                activeRelationEdges: 0,
+                recomputedDynamicRelations: false,
+                invalidatedRelationEdges: 0,
+                regeneratedRelationEdges: 0,
+                resolvedRelationRecomputeMode: 'none',
+                relationRecomputeLatencyMs: 0,
+            },
+            conversationSessions: [],
+            conversationTurns: [],
+            conversationInvocations: [],
+            userMemory: {},
+            relationEdgeSignatures: [],
+        };
+        const store: KnowledgeGraphStore = {
+            async loadSnapshot() {
+                return snapshot;
+            },
+            async saveSnapshot() {
+                return undefined;
+            },
+            getDiagnostics() {
+                return {
+                    storeType: 'memory',
+                    exists: true,
+                    loaded: true,
+                };
+            },
+        };
+        const ragSufficiencyLlmJudge = jest.fn().mockResolvedValue({
+            status: 'sufficient',
+            score: 0.81,
+            reasons: ['legacy_source_span_answerable'],
+            degradationState: 'none',
+        });
+        const legacyPlatform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(savedAt),
+            store,
+            autoPersist: false,
+            ragSufficiencyLlmJudge,
+        });
+
+        const response = await legacyPlatform.agentConversation({
+            userId: 'agent_rag_llm_user',
+            sessionId: 'session_rag_llm_scope',
+            message: 'what is water glass?',
+            persistMemory: false,
+        });
+
+        expect(response.trace.ragContextPack?.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                status: 'source_window_unavailable',
+            }),
+        ]));
+        expect(ragSufficiencyLlmJudge).toHaveBeenCalledTimes(1);
+        expect(response.trace.ragSufficiencyReview).toEqual(expect.objectContaining({
+            status: 'sufficient',
+            score: 0.81,
+            deterministic: false,
+            llmJudgeUsed: true,
+            degradationState: 'none',
+        }));
     });
 
     test('agent conversation exposes readiness and miss diagnostics when scoped retrieval is empty', async () => {

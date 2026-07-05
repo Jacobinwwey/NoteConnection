@@ -136,7 +136,7 @@ import {
     type RagEvidenceSourceDocument,
     type RagEvidenceSourceLookup,
 } from './evidenceContextAssembler';
-import { reviewRagContextSufficiency } from './ragSufficiencyJudge';
+import { reviewRagContextSufficiency, type RagSufficiencyLlmJudge } from './ragSufficiencyJudge';
 
 type ParsedAtomDraft = {
     stableKey: string;
@@ -380,6 +380,7 @@ export type KnowledgeLearningPlatformOptions = {
     studySessionOrchestrationTrendRuntimeConfig?: Record<string, unknown>;
     studySessionOrchestrationMemorySignalConfig?: Record<string, number>;
     studySessionOrchestrationTutorRoutingConfig?: Record<string, unknown>;
+    ragSufficiencyLlmJudge?: RagSufficiencyLlmJudge;
 }
 
 const STOPWORDS = new Set<string>([
@@ -624,6 +625,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private readonly studySessionOrchestrationTutorRoutingConfig: Record<string, unknown>;
 
+    private readonly ragSufficiencyLlmJudge: RagSufficiencyLlmJudge | null;
+
     private currentGraphQueryBackendType: GraphQueryBackendType;
 
     private graphQueryBackend: GraphQueryBackend;
@@ -665,6 +668,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             this.studySessionOrchestrationTrendRuntimeConfig = {};
             this.studySessionOrchestrationMemorySignalConfig = {};
             this.studySessionOrchestrationTutorRoutingConfig = {};
+            this.ragSufficiencyLlmJudge = null;
             this.currentGraphQueryBackendType = 'local_hybrid';
             this.graphQueryBackendFactoryOptions = {
                 backend: this.currentGraphQueryBackendType,
@@ -702,6 +706,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         this.studySessionOrchestrationTutorRoutingConfig = {
             ...(nowProviderOrOptions.studySessionOrchestrationTutorRoutingConfig || {}),
         };
+        this.ragSufficiencyLlmJudge = typeof nowProviderOrOptions.ragSufficiencyLlmJudge === 'function'
+            ? nowProviderOrOptions.ragSufficiencyLlmJudge
+            : null;
         const inferredBackendType = normalizeGraphQueryBackendType(
             nowProviderOrOptions.graphQueryBackendFactoryOptions?.backend
             || this.inferGraphQueryBackendTypeFromId(nowProviderOrOptions.graphQueryBackend?.id)
@@ -9276,6 +9283,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             contextPack: ragContextPack,
             graphContext,
             reviewedAt: generatedAt,
+            allowLlmJudge: Boolean(this.ragSufficiencyLlmJudge),
+            llmJudge: this.ragSufficiencyLlmJudge || undefined,
         });
         const activeConversationAtomIds = collectAgentConversationAtomIds(conversationKnowledgePoints);
         const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(activeConversationAtomIds);

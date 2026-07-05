@@ -57,6 +57,7 @@ import {
     createVectorAccelerationAdapter,
     createKnowledgeLearningPlatform,
     createKnowledgeGraphStore,
+    createRagSufficiencyProviderJudge,
     normalizeGraphQueryBackendType,
     normalizeGraphDbSnapshotAdapterProvider,
     normalizeGraphDbStoreOperationMode,
@@ -7130,6 +7131,16 @@ const RUNTIME_STUDY_SESSION_ORCHESTRATION_STRATEGY_MIN_CONFIDENCE =
     parseFiniteNumberOrUndefined(process.env.NOTE_CONNECTION_RUNTIME_SESSION_ORCHESTRATION_STRATEGY_MIN_CONFIDENCE);
 const RUNTIME_API_REQUEST_TRACE_TELEMETRY_CONFIG =
     resolveRuntimeApiRequestTraceTelemetryConfigFromEnv(process.env);
+const RUNTIME_RAG_SUFFICIENCY_JUDGE_TIMEOUT_MS =
+    parseBoundedIntegerValue(process.env.NOTE_CONNECTION_RAG_SUFFICIENCY_JUDGE_TIMEOUT_MS, {
+        min: 250,
+        max: 20000,
+    }) ?? 4000;
+const RUNTIME_RAG_SUFFICIENCY_JUDGE_MAX_TOKENS =
+    parseBoundedIntegerValue(process.env.NOTE_CONNECTION_RAG_SUFFICIENCY_JUDGE_MAX_TOKENS, {
+        min: 32,
+        max: 1200,
+    }) ?? 320;
 const knowledgeGraphStore = createKnowledgeGraphStore({
     backend: KNOWLEDGE_GRAPH_STORE_BACKEND,
     filePath: KNOWLEDGE_GRAPH_STORE_PATH,
@@ -7195,6 +7206,12 @@ const knowledgeLearningPlatform = createKnowledgeLearningPlatform({
         defaultLocalTutorAdapter,
         defaultCloudTutorAdapter,
     ],
+    ragSufficiencyLlmJudge: createRagSufficiencyProviderJudge({
+        settingsProvider: () => loadNotemdSettings(),
+        llmClient: notemdLlmClient,
+        timeoutMs: RUNTIME_RAG_SUFFICIENCY_JUDGE_TIMEOUT_MS,
+        maxTokens: RUNTIME_RAG_SUFFICIENCY_JUDGE_MAX_TOKENS,
+    }),
 });
 
 let knowledgeLearningPlatformWarmupPromise: Promise<void> | null = null;

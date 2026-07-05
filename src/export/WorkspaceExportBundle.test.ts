@@ -409,6 +409,185 @@ describe('WorkspaceExportBundle', () => {
         );
     });
 
+    test('deep clones RAG context and sufficiency review in exported runtime turns', () => {
+        const ragContextPack = {
+            query: 'what is water glass?',
+            generatedAt: '2026-05-26T00:00:00.000Z',
+            sourceBoundary: 'full_document' as const,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 800,
+                maxTotalChars: 2400,
+            },
+            fragments: [
+                {
+                    fragmentId: 'fragment_water_glass_direct',
+                    role: 'direct_support' as const,
+                    text: 'A water glass is a transparent drinking vessel that contains water.',
+                    atomId: 'atom_water_glass',
+                    documentId: 'doc_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                    title: 'Water Glass',
+                    headingPath: ['Water Glass', 'Definition'],
+                    startLine: 3,
+                    endLine: 3,
+                    charCount: 64,
+                    tokenEstimate: 16,
+                    truncated: false,
+                    citationIds: ['evidence_water_glass'],
+                    relationEdgeIds: [],
+                    score: 0.92,
+                    sourceBoundary: 'direct_span_only' as const,
+                },
+            ],
+            sourceDecisions: [
+                {
+                    documentId: 'doc_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                    sourceBoundary: 'full_document' as const,
+                    status: 'read' as const,
+                    charsRead: 240,
+                    fragmentsSelected: 1,
+                },
+            ],
+            totalCharCount: 64,
+            tokenEstimate: 16,
+        };
+        const ragSufficiencyReview = {
+            reviewedAt: '2026-05-26T00:00:00.000Z',
+            status: 'sufficient' as const,
+            score: 0.86,
+            reasons: ['answerable_from_context'],
+            deterministic: false,
+            recoveryAttempted: false,
+            llmJudgeUsed: true,
+            degradationState: 'none' as const,
+        };
+
+        const bundle = buildWorkspaceExportBundle({
+            request: {
+                workspaceId: 'waterglass',
+                exportProfileId: 'mobile-slim',
+            },
+            workspace: {
+                workspaceId: 'waterglass',
+                corpusId: 'waterglass',
+                name: 'waterglass',
+                sourcePathPrefix: 'Knowledge_Base/waterglass',
+                languages: ['en'],
+                exportProfileId: 'mobile-slim',
+                status: 'active',
+                createdAt: '2026-05-26T00:00:00.000Z',
+                updatedAt: '2026-05-26T00:00:00.000Z',
+            },
+            bindings: [],
+            resources: [],
+            projections: [],
+            indexSummary: {
+                totalUnits: 0,
+                totalSegments: 0,
+                states: {
+                    pending: 0,
+                    indexing: 0,
+                    indexed: 0,
+                    failed: 0,
+                    disabled: 0,
+                },
+                activeDocuments: 0,
+                activeAtomUnits: 0,
+            },
+            units: [],
+            segments: [],
+            atoms: [],
+            evidenceSpans: [],
+            relationEdges: [],
+            temporalEdges: [],
+            sessionStates: [],
+            conversationSessions: [],
+            conversationTurns: [
+                {
+                    turnId: 'turn_rag_context_1',
+                    invocationId: 'invocation_rag_context_1',
+                    sessionId: 'session_rag_context',
+                    userId: 'user_rag_context',
+                    createdAt: '2026-05-26T00:00:00.000Z',
+                    updatedAt: '2026-05-26T00:00:00.000Z',
+                    request: {
+                        userId: 'user_rag_context',
+                        sessionId: 'session_rag_context',
+                        message: 'what is water glass?',
+                    },
+                    response: {
+                        userId: 'user_rag_context',
+                        sessionId: 'session_rag_context',
+                        assistantMessage: 'A water glass is a transparent drinking vessel.',
+                        answer: 'A water glass is a transparent drinking vessel.',
+                        assistantBlocks: [],
+                        knowledgePoints: [],
+                        citations: [],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        summary: {
+                            generatedAt: '2026-05-26T00:00:00.000Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 0,
+                            returnedCitations: 0,
+                            recalledMemoryCount: 0,
+                            appliedMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 0,
+                        },
+                        trace: {
+                            sessionId: 'session_rag_context',
+                            invocationId: 'invocation_rag_context_1',
+                            retrieval: {
+                                retrievalModes: ['keyword'],
+                                asOf: '2026-05-26T00:00:00.000Z',
+                                totalActiveAtoms: 1,
+                                modeWeights: {
+                                    keyword: 1,
+                                    graph: 0,
+                                    temporal: 0,
+                                },
+                                latencyMs: 2,
+                                evidenceCoverageRatio: 1,
+                            },
+                            recalledMemoryCount: 0,
+                            appliedMemoryCount: 0,
+                            usedScope: {
+                                source: 'scoped',
+                                workspaceId: 'waterglass',
+                                corpusId: 'waterglass',
+                                documentIds: ['doc_water_glass'],
+                                atomIds: ['atom_water_glass'],
+                                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                                languages: ['en'],
+                                matchedAtomCount: 1,
+                            },
+                            ragContextPack,
+                            ragSufficiencyReview,
+                        },
+                    },
+                },
+            ],
+            conversationInvocations: [],
+            workflowArtifacts: [],
+            memoryEntries: [],
+            memoryAuditRecords: [],
+            generatedAt: '2026-05-26T00:00:00.000Z',
+        });
+
+        ragContextPack.fragments[0].text = 'mutated after export';
+        (ragContextPack.sourceDecisions[0] as any).reason = 'mutated_after_export';
+        ragSufficiencyReview.reasons.push('mutated_after_export');
+
+        const exportedTrace = (bundle.runtime.conversationTurns[0] as any).response.trace;
+        expect(exportedTrace.ragContextPack.fragments[0].text).toBe(
+            'A water glass is a transparent drinking vessel that contains water.'
+        );
+        expect(exportedTrace.ragContextPack.sourceDecisions[0].reason).toBeUndefined();
+        expect(exportedTrace.ragSufficiencyReview.reasons).toEqual(['answerable_from_context']);
+    });
+
     test('adds durable knowledge-run graph reports to the exported runtime surface', () => {
         const bundle = buildWorkspaceExportBundle({
             request: {

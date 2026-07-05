@@ -42,6 +42,11 @@ const DEFAULT_PROMPTS: Record<TaskKey, string> = {
         'Summarize findings in structured markdown with citations.',
         'Include key facts, different perspectives, and references.',
     ].join('\n'),
+    ragSufficiencyJudge: [
+        'Review whether the supplied RAG context is sufficient to answer the user query.',
+        'Use only the supplied context and do not write the final answer.',
+        'Return exactly one JSON object with status, score, reasons, and degradationState.',
+    ].join('\n'),
 };
 
 function safeReplace(template: string, replacements: Record<string, string>): string {

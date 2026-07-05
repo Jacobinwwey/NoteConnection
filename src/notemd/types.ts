@@ -28,7 +28,8 @@ export type TaskKey =
     | 'summarizeToMermaid'
     | 'extractOriginalText'
     | 'extractOriginalTextMerged'
-    | 'searchResearch';
+    | 'searchResearch'
+    | 'ragSufficiencyJudge';
 
 export interface LlmProviderConfig {
     name: LlmProviderName;

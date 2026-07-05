@@ -17,7 +17,17 @@ import type {
     WorkspaceExportBundleRequest,
     WorkspaceScopedMemoryExportRecord,
 } from './types';
-import type { AgentConversationInvocationRecord, AgentConversationSessionRecord, AgentConversationTurnRecord, EvidenceSpan, KnowledgeAtom, RelationEdge, TemporalEdge } from '../learning/types';
+import type {
+    AgentConversationInvocationRecord,
+    AgentConversationSessionRecord,
+    AgentConversationTurnRecord,
+    EvidenceSpan,
+    KnowledgeAtom,
+    RagContextPack,
+    RagSufficiencyReview,
+    RelationEdge,
+    TemporalEdge,
+} from '../learning/types';
 import type { IndexLifecycleSummary, IndexSegmentRecord, IndexUnitRecord } from '../indexing/types';
 import type { MemoryAuditRecord } from '../memory/types';
 import type { CanonicalResourceRecord, ResourceProjectionRecord } from '../resources/types';
@@ -31,6 +41,37 @@ function compareStrings(left: string, right: string): number {
 
 function cloneJsonRecord<T extends Record<string, unknown>>(value: T): T {
     return { ...value };
+}
+
+function cloneRagContextPack(pack: RagContextPack | undefined): RagContextPack | undefined {
+    if (!pack) {
+        return undefined;
+    }
+    return {
+        ...pack,
+        budget: { ...pack.budget },
+        fragments: pack.fragments.map((fragment) => ({
+            ...fragment,
+            headingPath: [...fragment.headingPath],
+            citationIds: [...fragment.citationIds],
+            relationEdgeIds: Array.isArray(fragment.relationEdgeIds)
+                ? [...fragment.relationEdgeIds]
+                : fragment.relationEdgeIds,
+        })),
+        sourceDecisions: pack.sourceDecisions.map((decision) => ({ ...decision })),
+    };
+}
+
+function cloneRagSufficiencyReview(
+    review: RagSufficiencyReview | undefined
+): RagSufficiencyReview | undefined {
+    if (!review) {
+        return undefined;
+    }
+    return {
+        ...review,
+        reasons: [...review.reasons],
+    };
 }
 
 function sortAndCloneBindings(bindings: WorkspaceBindingRecord[]): WorkspaceBindingRecord[] {
@@ -328,6 +369,8 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                                 : undefined,
                         }
                         : undefined,
+                    ragContextPack: cloneRagContextPack(record.response.trace.ragContextPack),
+                    ragSufficiencyReview: cloneRagSufficiencyReview(record.response.trace.ragSufficiencyReview),
                 },
             },
         }));
