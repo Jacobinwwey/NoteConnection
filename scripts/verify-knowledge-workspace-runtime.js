@@ -100,6 +100,20 @@ function buildConversationRequest(activeTarget, query) {
   };
 }
 
+function countRagSourceDecisionStatuses(ragContextPack) {
+  const decisions = Array.isArray(ragContextPack && ragContextPack.sourceDecisions)
+    ? ragContextPack.sourceDecisions
+    : [];
+  return decisions.reduce((counts, decision) => {
+    const status = String(decision && decision.status || '').trim();
+    if (!status) {
+      return counts;
+    }
+    counts[status] = (counts[status] || 0) + 1;
+    return counts;
+  }, {});
+}
+
 function loadConversationRegressionCases(caseIds) {
   const modulePath = path.join(
     process.cwd(),
@@ -158,6 +172,7 @@ function validatePositiveConversationResult(summary, options) {
     expectedRagSourceBoundary,
     requiredRagRoles,
     acceptedRagSufficiencyStatuses,
+    minimumRagSourceDecisionStatusCounts,
     requireScopedDocumentIds,
   } = options;
   const forbiddenFragments = Array.isArray(answerMustNotContain) && answerMustNotContain.length > 0
@@ -270,6 +285,21 @@ function validatePositiveConversationResult(summary, options) {
         `RAG sufficiency status outside accepted set for query=${query}: accepted=${JSON.stringify(acceptedRagSufficiencyStatuses)} actual=${JSON.stringify(summary.ragSufficiencyReview)}`
       );
     }
+  }
+  if (
+    minimumRagSourceDecisionStatusCounts
+    && typeof minimumRagSourceDecisionStatusCounts === 'object'
+  ) {
+    const observedDecisionCounts = countRagSourceDecisionStatuses(summary.ragContextPack);
+    Object.entries(minimumRagSourceDecisionStatusCounts).forEach(([status, minimumCount]) => {
+      const expectedMinimum = Number(minimumCount || 0);
+      const observedCount = Number(observedDecisionCounts[status] || 0);
+      if (observedCount < expectedMinimum) {
+        throw new Error(
+          `RAG source decision status count below minimum for query=${query}: status=${status} expected>=${expectedMinimum} observed=${observedCount} pack=${JSON.stringify(summary.ragContextPack)}`
+        );
+      }
+    });
   }
   if (
     Array.isArray(expectedPlannerTitleLikeQueries)
@@ -534,6 +564,7 @@ async function main() {
         expectedRagSourceBoundary: regressionCase.expected.ragSourceBoundary,
         requiredRagRoles: regressionCase.expected.requiredRagRoles,
         acceptedRagSufficiencyStatuses: regressionCase.expected.acceptedRagSufficiencyStatuses,
+        minimumRagSourceDecisionStatusCounts: regressionCase.expected.minimumRagSourceDecisionStatusCounts,
         requireScopedDocumentIds: regressionCase.expected.requireScopedDocumentIds,
       });
       caseResults.push(summary);

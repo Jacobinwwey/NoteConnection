@@ -5,7 +5,7 @@
 
 ## 2026-07-05 RSE + document augmentation 图谱 RAG 实践计划
 
-本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、query-intent 图邻居排序、有界 context pack、接入 provider 的充分性 trace、有界一次性 recovery、RAG-aware 单消息 release review、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、更丰富 replay id、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
+本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、query-intent 图邻居排序、有界 context pack、接入 provider 的充分性 trace、有界一次性 recovery、RAG-aware 单消息 release review、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、context-budget truncation 探针覆盖、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、更丰富 replay id、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
 
 当前代码 / 方案对齐判断：
 
@@ -36,7 +36,7 @@
 
 - 新增模块：`src/learning/evidenceContextAssembler.ts`、`src/learning/ragContextPack.ts`、`src/learning/ragSufficiencyJudge.ts`、`src/learning/ragSufficiencyProviderJudge.ts`。
 - 新增 / 更新测试：evidence assembler、context pack budgeter、sufficiency judge、接入 provider 的 sufficiency judge adapter、有界 recovery、RAG-aware release review、持久化兼容、composer、平台集成、导出 RAG trace 保留、Knowledge Workspace conversation regression、runtime verifier 校验，以及前端 RAG grounding 展示。
-- `scripts/verify-knowledge-workspace-runtime.js` 现在能校验期望 RAG source boundary、roles、answer terms 和 sufficiency statuses；同时支持按用例配置 scoped document-id 预期，默认严格要求 scoped id，并对 answer term 做大小写不敏感匹配。
+- `scripts/verify-knowledge-workspace-runtime.js` 现在能校验期望 RAG source boundary、roles、answer terms、sufficiency statuses，以及 RAG source-decision status 的最小计数；同时支持按用例配置 scoped document-id 预期，默认严格要求 scoped id，并对 answer term 做大小写不敏感匹配。
 - `src/frontend/agent_workspace.js` 会把仅含 RAG trace 的 payload 标记为可 inspect；API 状态行显示 `RAG: <status>, <N> fragments`，并在本回合使用 recovery pass 时追加 `+recovered`。
 - `src/frontend/workspace_panes.js` 显示 compact RAG context metrics：sufficiency、source boundary、fragment budget、direct/document/graph roles、truncated/dropped/unavailable source counts、degradation、recovery 与 reasons。
 - `src/learning/graphContextAssembler.ts` 现在应用 intent-specific graph-window scoring：compare query 可以让 contrast / analogy 邻居优先于 procedural sequence 节点，即使 sequence 边置信度更高；definition 与 how-to query 则保留各自的结构优先级。
@@ -45,13 +45,14 @@
 - `src/learning/conversationComposer.ts` 现在应用 how-to RAG answer profile：公开回答会保留 3 个 direct-support sentence、1 个 document-context sentence 与 2 个 graph-neighbor sentence，因此过程型问题可以在一条有界公开回答中保留步骤、前置条件、下游验证与失败处理。
 - `src/learning/conversationComposer.ts` 现在应用 generic RAG answer profile：直接证据会按 query-term 覆盖度排序，避免同一 fragment 中没有 query 信号的 preamble 因为共享 fragment 而压过真正证据。
 - runtime probe `waterglass_compare_materials_en` 现在验证 `compare water glass and plastic cup` 会从 `Knowledge_Base/waterglass/water glass.md` 返回 glass 与 plastic 两侧证据，并覆盖 `full_document` source boundary 以及 direct / document / graph 角色。
+- runtime probe `contextbudget_source_window_truncation_en` 现在验证 `what is context budget probe?` 会从 `Knowledge_Base/contextbudget/context budget probe.md` 读取 scoped 完整源文档，同时在 model-visible `RagContextPack` 中记录 `fragment_truncated` source decision。
 
 后续推进：
 
 - 基于代表性 hard negative 校准图关系权重与低置信排除阈值，不把当前 scoring 常量当作最终形态。
 - 扩展 provider timeout/fallback、malformed judge JSON、no-provider fallback、intent-specific 图邻居选择与大语料 hard negative 的 runtime probes。
 - 在当前 deterministic definition / compare / how-to / generic 基线之上继续校准 profile-specific release budget，同时保留公开回答硬上限。
-- 补齐 export replay 覆盖，以及 repeated snippet、conflicting adjacent evidence、missing graph-neighbor evidence、context truncation、no-provider fallback 的更大 runtime probes。
+- 补齐 export replay 覆盖，以及 repeated snippet、conflicting adjacent evidence、missing graph-neighbor evidence、更严格的 total-budget drop、no-provider fallback 的更大 runtime probes。
 
 ## 2026-07-04 知识工作区 scope 可见性、聚合 RAG 回答与命中文件交互收口
 

@@ -5,7 +5,7 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
 
 ## 2026-07-05 RSE Document-Augmented Graph RAG Implementation Plan
 
-This slice now tracks implementation progress for richer Knowledge Workspace answers. The concrete plan remains at [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md), but the branch has moved beyond planning: the deterministic RSE/document-augmentation path, query-intent graph-neighbor ranking, budgeted context pack, provider-backed sufficiency trace, bounded one-step recovery, RAG-aware one-message release review, operand-aware compare answer-profile budgeting, how-to answer-profile budgeting, generic answer-profile ranking, Mermaid-label evidence extraction, runtime verifier fields, compact frontend RAG status, and export RAG trace preservation are implemented. Calibrated graph-confidence thresholds, richer replay ids, more natural synthesis over label-heavy evidence, broader release-budget calibration, and larger runtime probes remain follow-up work.
+This slice now tracks implementation progress for richer Knowledge Workspace answers. The concrete plan remains at [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md), but the branch has moved beyond planning: the deterministic RSE/document-augmentation path, query-intent graph-neighbor ranking, budgeted context pack, provider-backed sufficiency trace, bounded one-step recovery, RAG-aware one-message release review, operand-aware compare answer-profile budgeting, how-to answer-profile budgeting, generic answer-profile ranking, Mermaid-label evidence extraction, runtime verifier fields, context-budget truncation probe coverage, compact frontend RAG status, and export RAG trace preservation are implemented. Calibrated graph-confidence thresholds, richer replay ids, more natural synthesis over label-heavy evidence, broader release-budget calibration, and larger runtime probes remain follow-up work.
 
 Current code-vs-plan reading:
 
@@ -36,7 +36,7 @@ Fresh implementation evidence in this slice:
 
 - New modules: `src/learning/evidenceContextAssembler.ts`, `src/learning/ragContextPack.ts`, `src/learning/ragSufficiencyJudge.ts`, `src/learning/ragSufficiencyProviderJudge.ts`.
 - New/updated tests: evidence assembler, context pack budgeter, sufficiency judge, provider-backed sufficiency judge adapter, bounded recovery, RAG-aware release review, persistence compatibility, composer, platform integration, export RAG trace preservation, Knowledge Workspace conversation regression, runtime verifier validation, and frontend RAG grounding display.
-- `scripts/verify-knowledge-workspace-runtime.js` can now validate expected RAG source boundary, roles, answer terms, and sufficiency statuses; it also supports per-case scoped document-id expectations with strict-by-default behavior and case-insensitive answer-term matching.
+- `scripts/verify-knowledge-workspace-runtime.js` can now validate expected RAG source boundary, roles, answer terms, sufficiency statuses, and minimum RAG source-decision status counts; it also supports per-case scoped document-id expectations with strict-by-default behavior and case-insensitive answer-term matching.
 - `src/frontend/agent_workspace.js` marks RAG-only trace payloads inspectable; the API status line reports `RAG: <status>, <N> fragments` and appends `+recovered` when the turn used the recovery pass.
 - `src/frontend/workspace_panes.js` shows compact RAG context metrics: sufficiency, source boundary, fragment budget, direct/document/graph roles, truncated/dropped/unavailable source counts, degradation, recovery, and reasons.
 - `src/learning/graphContextAssembler.ts` now applies intent-specific graph-window scoring: compare queries can prefer contrast/analogy neighbors over procedural sequence nodes even when the sequence edge has higher confidence, while definition and how-to queries keep their own structural priorities.
@@ -45,13 +45,14 @@ Fresh implementation evidence in this slice:
 - `src/learning/conversationComposer.ts` now applies a how-to RAG answer profile that keeps three direct-support sentences, one document-context sentence, and two graph-neighbor sentences so procedure answers can retain steps, prerequisites, downstream verification, and failure handling in one bounded public answer.
 - `src/learning/conversationComposer.ts` now applies a generic RAG answer profile that ranks direct evidence by query-term coverage and avoids selecting zero-signal preamble sentences solely because they share a fragment with better evidence.
 - The runtime probe `waterglass_compare_materials_en` now verifies that `compare water glass and plastic cup` returns both glass and plastic evidence from `Knowledge_Base/waterglass/water glass.md` with `full_document` source boundary and direct/document/graph roles.
+- The runtime probe `contextbudget_source_window_truncation_en` now verifies that `what is context budget probe?` reads the scoped full source document from `Knowledge_Base/contextbudget/context budget probe.md` while recording a `fragment_truncated` source decision in the model-visible `RagContextPack`.
 
 Next movement:
 
 - Calibrate graph relation weights and low-confidence exclusion thresholds against representative hard negatives instead of treating the current scoring constants as final.
 - Expand runtime probes for provider timeout/fallback, malformed judge JSON, no-provider fallback, intent-specific graph-neighbor selection, and large-corpus hard negatives.
 - Calibrate profile-specific release budgets beyond the current deterministic definition, compare, how-to, and generic baselines while preserving hard public-answer caps.
-- Add export replay coverage and larger runtime probes for repeated snippets, conflicting adjacent evidence, missing graph-neighbor evidence, context truncation, and no-provider fallback.
+- Add export replay coverage and larger runtime probes for repeated snippets, conflicting adjacent evidence, missing graph-neighbor evidence, stricter total-budget drop cases, and no-provider fallback.
 
 ## 2026-07-04 Knowledge Workspace Scope Visibility, Grouped RAG Answers, and File-First Hit Interaction
 

@@ -3,6 +3,7 @@ import {
     KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES,
     type KnowledgeWorkspaceConversationRegressionCase,
 } from './KnowledgeWorkspaceConversationRegression';
+import type { RagSourceDecision } from './types';
 
 function deriveScopedConversationRequest(caseEntry: KnowledgeWorkspaceConversationRegressionCase) {
     const activeTarget = String(caseEntry.activeTarget || '').trim();
@@ -18,6 +19,24 @@ function deriveScopedConversationRequest(caseEntry: KnowledgeWorkspaceConversati
             sourcePathPrefixes: [`Knowledge_Base/${activeTarget}`],
         },
     };
+}
+
+function buildContextBudgetProbeContent(): string {
+    const longBudgetParagraph = [
+        'Context budget probe evidence defines bounded context assembly as a RAG practice that reads the full source document for provenance and section routing, while only selected fragments enter the model-visible context pack.',
+        'The source-reading boundary is intentionally wider than the answer prompt boundary, because source inspection may need headings, local paragraphs, terminal qualifiers, and graph-linked evidence before the pack budget chooses what the model can see.',
+        'The context pack must record budget decisions such as fragment_included, fragment_truncated, and fragment_dropped so runtime probes can distinguish complete source access from unbounded prompt growth.',
+        'A robust answer should use the direct hit, parent section context, and available graph-neighbor evidence, but it should not paste the entire source note into the user-facing response.',
+    ].join(' ');
+    return [
+        '# Context Budget Probe',
+        'Context budget probe is a runtime fixture for validating full-document source reading with a bounded model-visible RAG context pack.',
+        '',
+        '## Bounded Context Assembly',
+        longBudgetParagraph.repeat(5),
+        '',
+        'Terminal qualifier: this fixture is scoped to budget verification and should not be treated as a general product explanation.',
+    ].join('\n');
 }
 
 function buildRegressionDocuments() {
@@ -65,7 +84,28 @@ function buildRegressionDocuments() {
                 'Compared with a plastic cup, a water glass gives better optical transparency and rigidity, while the plastic cup reduces fracture risk.',
             ].join('\n'),
         },
+        {
+            documentId: 'doc_context_budget_probe',
+            sourcePath: 'Knowledge_Base/contextbudget/context budget probe.md',
+            language: 'en',
+            workspaceId: 'contextbudget',
+            corpusId: 'contextbudget',
+            content: buildContextBudgetProbeContent(),
+        },
     ];
+}
+
+function countRagSourceDecisionStatuses(
+    decisions: RagSourceDecision[] | undefined
+): Record<string, number> {
+    return (Array.isArray(decisions) ? decisions : []).reduce<Record<string, number>>((counts, decision) => {
+        const status = String(decision?.status || '').trim();
+        if (!status) {
+            return counts;
+        }
+        counts[status] = (counts[status] || 0) + 1;
+        return counts;
+    }, {});
 }
 
 describe('KnowledgeWorkspaceConversationRegression', () => {
@@ -131,6 +171,14 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
             }
             if (expected.acceptedRagSufficiencyStatuses && expected.acceptedRagSufficiencyStatuses.length > 0) {
                 expect(expected.acceptedRagSufficiencyStatuses).toContain(response.trace.ragSufficiencyReview?.status);
+            }
+            if (expected.minimumRagSourceDecisionStatusCounts) {
+                const observedDecisionCounts = countRagSourceDecisionStatuses(
+                    response.trace.ragContextPack?.sourceDecisions
+                );
+                Object.entries(expected.minimumRagSourceDecisionStatusCounts).forEach(([status, minimumCount]) => {
+                    expect(observedDecisionCounts[status] || 0).toBeGreaterThanOrEqual(minimumCount || 0);
+                });
             }
             if (expected.retrievalModes && expected.retrievalModes.length > 0) {
                 expect(retrieval.retrievalModes).toEqual(

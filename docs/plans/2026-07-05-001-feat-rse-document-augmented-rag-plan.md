@@ -426,7 +426,7 @@ flowchart TB
 
 **Goal:** Prevent "better answer" work from regressing retrieval, graph correctness, latency, or UI compatibility.
 
-**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, sufficiency judging, provider-backed judge timeout/schema handling, bounded one-step recovery, RAG-aware answer release review, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations, including the compare-runtime case `waterglass_compare_materials_en`. The runtime verifier now supports per-case scoped document-id requirements: strict scoped ids remain the default, while the compare case can opt out only when source path, workspace, or corpus boundaries still prove it stayed inside the intended scope. Answer-term assertions are now case-insensitive to avoid false misses for casing-only differences. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
+**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, sufficiency judging, provider-backed judge timeout/schema handling, bounded one-step recovery, RAG-aware answer release review, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations, including the compare-runtime case `waterglass_compare_materials_en`. The runtime verifier now supports per-case scoped document-id requirements: strict scoped ids remain the default, while the compare case can opt out only when source path, workspace, or corpus boundaries still prove it stayed inside the intended scope. Answer-term assertions are now case-insensitive to avoid false misses for casing-only differences. The regression corpus now also includes `contextbudget_source_window_truncation_en`, backed by `Knowledge_Base/contextbudget/context budget probe.md`, to verify that full-document source reading and model-visible context truncation remain separate observable states. The verifier can assert minimum RAG source-decision counts such as `read` and `fragment_truncated`. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
 
 **Requirements:** R8.
 
@@ -449,7 +449,7 @@ flowchart TB
   - missing neighbor evidence;
   - duplicated same-document spans;
   - conflicting adjacent evidence;
-  - context budget truncation;
+  - context budget truncation through `contextbudget_source_window_truncation_en`;
   - optional LLM judge timeout/fallback;
   - graph self-neighbor filtering;
   - answer release with richer public answer.
@@ -463,6 +463,7 @@ flowchart TB
 - Runtime: `what is waterglass?` returns a complete answer using direct evidence, document augmentation, and graph context.
 - Runtime: compact Chinese/English alias queries do not fall back to scoped miss.
 - Runtime: `compare water glass and plastic cup` returns one grounded answer containing both glass and plastic evidence with `direct_support`, `parent_context`, and `graph_neighbor_support` roles.
+- Runtime: `what is context budget probe?` reads the scoped full source document and records at least one `fragment_truncated` source decision in the RAG context pack.
 - Runtime: no LLM provider still produces deterministic grounded answer.
 - Runtime: LLM judge failure does not block the answer path.
 
@@ -853,7 +854,7 @@ flowchart TB
 
 **目标：** 防止“答案更充分”引入召回、图谱、延迟或 UI 兼容性回退。
 
-**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、sufficiency judge、接入 provider 的 judge timeout / schema handling、有界一次性 recovery、RAG-aware answer release review、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期，包括 compare runtime 用例 `waterglass_compare_materials_en`。runtime verifier 现在支持按用例配置 scoped document-id 要求：默认仍严格要求 scoped document id；compare 用例只有在 source path、workspace 或 corpus 边界仍能证明没有越过目标 scope 时才允许放宽。answer-term 断言也改为大小写不敏感，避免 `Water Glass` / `glass` 这类大小写差异造成误报。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
+**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、sufficiency judge、接入 provider 的 judge timeout / schema handling、有界一次性 recovery、RAG-aware answer release review、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期，包括 compare runtime 用例 `waterglass_compare_materials_en`。runtime verifier 现在支持按用例配置 scoped document-id 要求：默认仍严格要求 scoped document id；compare 用例只有在 source path、workspace 或 corpus 边界仍能证明没有越过目标 scope 时才允许放宽。answer-term 断言也改为大小写不敏感，避免 `Water Glass` / `glass` 这类大小写差异造成误报。回归语料现在新增 `contextbudget_source_window_truncation_en`，由 `Knowledge_Base/contextbudget/context budget probe.md` 支撑，用于验证完整 source document 读取与 model-visible context truncation 是两个可观察状态；verifier 也可以断言 `read`、`fragment_truncated` 等 RAG source-decision 最小计数。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
 
 **文件：**
 - 修改：`src/learning/KnowledgeWorkspaceConversationRegression.ts`
@@ -866,7 +867,7 @@ flowchart TB
 **做法：**
 - 保留 `waterglass` compact/spaced queries 作为验收探针。
 - scoped document id 默认强制；只有显式 compare 用例能在另一个 scoped boundary 已被验证时放宽该要求。
-- 增加 evidence-rich definition、missing neighbor evidence、same-document span dedupe、conflicting adjacent evidence、context budget truncation、LLM judge timeout/fallback、自邻居过滤、rich public answer release 等用例。
+- 增加 evidence-rich definition、missing neighbor evidence、same-document span dedupe、conflicting adjacent evidence、通过 `contextbudget_source_window_truncation_en` 覆盖 context budget truncation、LLM judge timeout/fallback、自邻居过滤、rich public answer release 等用例。
 - 增加 compare material answer 用例，确认 direct / document / Mermaid evidence 能同时保留两个 operand。
 - no-LLM path 加延迟预算；LLM judge path 加 timeout/fallback 预算。
 
@@ -874,6 +875,7 @@ flowchart TB
 - `what is waterglass?` 能使用直接证据、document augmentation 和 graph context 输出完整回答。
 - 中英混合 alias 不退回 scoped miss。
 - `compare water glass and plastic cup` 输出一条 grounded answer，包含 glass 与 plastic 两侧证据，并覆盖 `direct_support`、`parent_context`、`graph_neighbor_support` 角色。
+- `what is context budget probe?` 会读取 scoped 完整源文档，并在 RAG context pack 中记录至少一个 `fragment_truncated` source decision。
 - 未配置 LLM provider 仍有确定性 grounded answer。
 - LLM judge 失败不阻塞主回答链路。
 

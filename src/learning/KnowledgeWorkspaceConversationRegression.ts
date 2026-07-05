@@ -3,6 +3,7 @@ import type {
     AnswerReleaseGateId,
     KnowledgeQueryResolvedScope,
     RagEvidenceRole,
+    RagSourceDecision,
     RagSourceBoundary,
     RagSufficiencyReview,
 } from './types';
@@ -23,6 +24,7 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     ragSourceBoundary?: RagSourceBoundary;
     requiredRagRoles?: RagEvidenceRole[];
     acceptedRagSufficiencyStatuses?: Array<RagSufficiencyReview['status']>;
+    minimumRagSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
     requireScopedDocumentIds?: boolean;
 }
 
@@ -174,6 +176,31 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
                 'No scoped knowledge points matched',
                 'retrieval_candidates_below_threshold',
             ],
+        },
+    },
+    {
+        id: 'contextbudget_source_window_truncation_en',
+        description: 'A long scoped note should read the full source document while keeping the model-visible RAG pack budgeted.',
+        preloadTargets: ['contextbudget'],
+        activeTarget: 'contextbudget',
+        query: 'what is context budget probe?',
+        expected: {
+            minCitations: 1,
+            scopeSource: 'explicit_request',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
+            plannerTitleLikeQueries: ['context budget probe'],
+            primarySourcePath: 'Knowledge_Base/contextbudget/context budget probe.md',
+            answerMustNotContain: [
+                'No scoped knowledge points matched',
+                'retrieval_candidates_below_threshold',
+            ],
+            ragSourceBoundary: 'full_document',
+            requiredRagRoles: ['direct_support', 'parent_context'],
+            acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            minimumRagSourceDecisionStatusCounts: {
+                read: 1,
+                fragment_truncated: 1,
+            },
         },
     },
 ]);
