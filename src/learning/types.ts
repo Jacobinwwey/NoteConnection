@@ -400,6 +400,7 @@ export interface RagSourceDecision {
 }
 
 export interface RagContextPack {
+    replayId?: string;
     query: string;
     generatedAt: string;
     sourceBoundary: RagSourceBoundary;

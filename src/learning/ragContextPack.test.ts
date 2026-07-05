@@ -34,6 +34,64 @@ function makeFragment(overrides: Partial<RagEvidenceFragment> & {
 }
 
 describe('buildRagContextPack', () => {
+    test('generates a stable replay id from the selected evidence payload', () => {
+        const direct = makeFragment({
+            fragmentId: 'direct_water_glass',
+            role: 'direct_support',
+            text: 'Direct definition of water glass.',
+            score: 0.72,
+        });
+        const parent = makeFragment({
+            fragmentId: 'parent_water_glass',
+            role: 'parent_context',
+            text: 'Parent section explains the vessel boundary and optical qualifier.',
+            sourceBoundary: 'full_document',
+            score: 0.61,
+        });
+        const baseParams = {
+            query: 'what is water glass?',
+            sourceDecisions: [
+                {
+                    documentId: 'doc_water_glass',
+                    sourcePath: 'Knowledge_Base/test/water-glass.md',
+                    sourceBoundary: 'full_document' as const,
+                    status: 'read' as const,
+                    charsRead: 4096,
+                },
+            ],
+            budget: {
+                maxFragments: 4,
+                maxCharsPerFragment: 400,
+                maxTotalChars: 900,
+            },
+            generatedAt: '2026-07-05T00:00:00.000Z',
+        };
+
+        const firstPack = buildRagContextPack({
+            ...baseParams,
+            fragments: [parent, direct],
+        });
+        const secondPack = buildRagContextPack({
+            ...baseParams,
+            fragments: [direct, parent],
+        });
+        const changedPack = buildRagContextPack({
+            ...baseParams,
+            fragments: [
+                direct,
+                {
+                    ...parent,
+                    text: 'Parent section now carries a different qualifier.',
+                    charCount: 'Parent section now carries a different qualifier.'.length,
+                },
+            ],
+        });
+
+        expect(firstPack.replayId).toMatch(/^ragctx_[a-f0-9]{16}$/);
+        expect(secondPack.replayId).toBe(firstPack.replayId);
+        expect(changedPack.replayId).not.toBe(firstPack.replayId);
+    });
+
     test('middle-truncates oversized fragments while preserving the opening and terminal qualifier', () => {
         const longText = [
             'Opening definition: a water glass is a transparent vessel.',

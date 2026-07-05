@@ -513,6 +513,7 @@
       "ragDroppedFragmentsLabel": "Dropped fragments",
       "ragUnavailableSourcesLabel": "Unavailable source windows",
       "ragDegradationLabel": "Degradation",
+      "ragReplayIdLabel": "Replay id",
       "ragRecoveryLabel": "Recovery",
       "ragReasonsLabel": "Reasons"
     },

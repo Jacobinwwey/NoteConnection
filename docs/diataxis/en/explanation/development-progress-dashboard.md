@@ -5,7 +5,7 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
 
 ## 2026-07-05 RSE Document-Augmented Graph RAG Implementation Plan
 
-This slice now tracks implementation progress for richer Knowledge Workspace answers. The concrete plan remains at [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md), but the branch has moved beyond planning: the deterministic RSE/document-augmentation path, query-intent graph-neighbor ranking, budgeted context pack, provider-backed sufficiency trace, bounded one-step recovery, RAG-aware one-message release review, operand-aware compare answer-profile budgeting, how-to answer-profile budgeting, generic answer-profile ranking, Mermaid-label evidence extraction, runtime verifier fields, context-budget truncation/drop/malformed-provider probe coverage, compact frontend RAG status, and export RAG trace preservation are implemented. Calibrated graph-confidence thresholds, richer replay ids, more natural synthesis over label-heavy evidence, broader release-budget calibration, and larger runtime probes remain follow-up work.
+This slice now tracks implementation progress for richer Knowledge Workspace answers. The concrete plan remains at [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md), but the branch has moved beyond planning: the deterministic RSE/document-augmentation path, query-intent graph-neighbor ranking, budgeted context pack, stable RAG context replay ids, provider-backed sufficiency trace, bounded one-step recovery, RAG-aware one-message release review, operand-aware compare answer-profile budgeting, how-to answer-profile budgeting, generic answer-profile ranking, Mermaid-label evidence extraction, runtime verifier fields, context-budget truncation/drop/malformed-provider probe coverage, compact frontend RAG status, and export RAG trace preservation are implemented. Calibrated graph-confidence thresholds, broader replay tooling over larger corpora, more natural synthesis over label-heavy evidence, broader release-budget calibration, and larger runtime probes remain follow-up work.
 
 Current code-vs-plan reading:
 
@@ -22,7 +22,7 @@ Architecture ownership now has a sharper split:
 
 - `queryBackend.ts` remains the precise RSE and hybrid-ranking owner.
 - `evidenceContextAssembler.ts` owns source-window, parent-section, adjacent-context, full-document source-boundary reading, and missing-source degradation.
-- `ragContextPack.ts` owns model-visible hard caps, role priority, middle truncation, and budget decisions.
+- `ragContextPack.ts` owns model-visible hard caps, role priority, middle truncation, budget decisions, and stable replay ids for selected evidence packs.
 - `ragSufficiencyJudge.ts` owns deterministic sufficiency and optional judge integration points.
 - `ragSufficiencyProviderJudge.ts` owns the NoteMD provider adapter for bounded JSON-only sufficiency review.
 - `KnowledgeLearningPlatform.ts` wires source resolution, graph-neighbor materialization, one-step RAG recovery, trace/artifact persistence, and conversation response assembly.
@@ -35,10 +35,10 @@ The key correction remains unchanged: "five paragraphs before and after the hit"
 Fresh implementation evidence in this slice:
 
 - New modules: `src/learning/evidenceContextAssembler.ts`, `src/learning/ragContextPack.ts`, `src/learning/ragSufficiencyJudge.ts`, `src/learning/ragSufficiencyProviderJudge.ts`.
-- New/updated tests: evidence assembler, context pack budgeter, sufficiency judge, provider-backed sufficiency judge adapter, bounded recovery, RAG-aware release review, persistence compatibility, composer, platform integration, export RAG trace preservation, Knowledge Workspace conversation regression, runtime verifier validation, and frontend RAG grounding display.
-- `scripts/verify-knowledge-workspace-runtime.js` can now validate expected RAG source boundary, roles, answer terms, sufficiency statuses, deterministic/no-provider judge flags, recovery flags, degradation states, minimum RAG source-decision status counts, recovery-before source-decision status counts, and recovery-before reason fragments; it also supports per-case scoped document-id expectations, per-case `topK`, isolated temporary NoteMD config, local malformed-provider fixtures, strict-by-default behavior, and case-insensitive answer-term matching.
+- New/updated tests: evidence assembler, context pack budgeter, stable context replay ids, sufficiency judge, provider-backed sufficiency judge adapter, bounded recovery, RAG-aware release review, persistence compatibility, composer, platform integration, export RAG trace preservation, Knowledge Workspace conversation regression, runtime verifier validation, and frontend RAG grounding display.
+- `scripts/verify-knowledge-workspace-runtime.js` can now validate expected RAG source boundary, valid `ragctx_*` replay ids, roles, answer terms, sufficiency statuses, deterministic/no-provider judge flags, recovery flags, degradation states, minimum RAG source-decision status counts, recovery-before source-decision status counts, and recovery-before reason fragments; it also supports per-case scoped document-id expectations, per-case `topK`, isolated temporary NoteMD config, local malformed-provider fixtures, strict-by-default behavior, and case-insensitive answer-term matching.
 - `src/frontend/agent_workspace.js` marks RAG-only trace payloads inspectable; the API status line reports `RAG: <status>, <N> fragments` and appends `+recovered` when the turn used the recovery pass.
-- `src/frontend/workspace_panes.js` shows compact RAG context metrics: sufficiency, source boundary, fragment budget, direct/document/graph roles, truncated/dropped/unavailable source counts, degradation, recovery, and reasons.
+- `src/frontend/workspace_panes.js` shows compact RAG context metrics: replay id, sufficiency, source boundary, fragment budget, direct/document/graph roles, truncated/dropped/unavailable source counts, degradation, recovery, and reasons.
 - `src/learning/graphContextAssembler.ts` now applies intent-specific graph-window scoring: compare queries can prefer contrast/analogy neighbors over procedural sequence nodes even when the sequence edge has higher confidence, while definition and how-to queries keep their own structural priorities.
 - `src/learning/KnowledgeLearningPlatform.ts` now recognizes compare operands across `compare X and/with/to Y`, `X vs Y`, `difference between X and Y`, and `X differs from Y` patterns without constraining an explicit scope to title-hit document ids only.
 - `src/learning/conversationComposer.ts` now applies a compare RAG answer profile that keeps four direct-support clauses when the pack contains evidence for both compared sides, ranks compare evidence by operand and query-term coverage, converts Mermaid label evidence into readable clauses, and then adds bounded graph-neighbor contrast context without emitting extra chat messages.
@@ -54,7 +54,7 @@ Next movement:
 - Calibrate graph relation weights and low-confidence exclusion thresholds against representative hard negatives instead of treating the current scoring constants as final.
 - Expand runtime probes for provider timeout fallback, intent-specific graph-neighbor selection, and large-corpus hard negatives.
 - Calibrate profile-specific release budgets beyond the current deterministic definition, compare, how-to, and generic baselines while preserving hard public-answer caps.
-- Add export replay coverage and larger runtime probes for repeated snippets, conflicting adjacent evidence, missing graph-neighbor evidence, stricter total-character budget drop cases, and provider fallback.
+- Extend replay tooling beyond stable context ids, and add larger runtime probes for repeated snippets, conflicting adjacent evidence, missing graph-neighbor evidence, stricter total-character budget drop cases, and provider fallback.
 
 ## 2026-07-04 Knowledge Workspace Scope Visibility, Grouped RAG Answers, and File-First Hit Interaction
 

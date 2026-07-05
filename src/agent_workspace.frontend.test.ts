@@ -116,6 +116,7 @@ function createI18nStub() {
             'agentWorkspace.evidence.ragDroppedFragmentsLabel': 'Dropped fragments',
             'agentWorkspace.evidence.ragUnavailableSourcesLabel': 'Unavailable source windows',
             'agentWorkspace.evidence.ragDegradationLabel': 'Degradation',
+            'agentWorkspace.evidence.ragReplayIdLabel': 'Replay id',
             'agentWorkspace.evidence.ragReasonsLabel': 'Reasons',
             'agentWorkspace.graphFocus.relationMapTitle': 'Relation focus',
             'agentWorkspace.graphFocus.relationAnchorNode': 'Anchor',
@@ -6626,6 +6627,7 @@ describe('agent workspace learning-path integration', () => {
                         },
                         trace: {
                             ragContextPack: {
+                                replayId: 'ragctx_0123456789abcdef',
                                 query: 'what is water glass?',
                                 generatedAt: '2026-07-05T09:00:00.000Z',
                                 sourceBoundary: 'full_document',
@@ -6765,6 +6767,8 @@ describe('agent workspace learning-path integration', () => {
 
         const evidenceBody = document.getElementById('agent-evidence-body');
         expect(String(evidenceBody?.textContent || '')).toContain('RAG context');
+        expect(String(evidenceBody?.textContent || '')).toContain('Replay id');
+        expect(String(evidenceBody?.textContent || '')).toContain('ragctx_0123456789abcdef');
         expect(String(evidenceBody?.textContent || '')).toContain('Sufficiency');
         expect(String(evidenceBody?.textContent || '')).toContain('sufficient');
         expect(String(evidenceBody?.textContent || '')).toContain('Recovery');

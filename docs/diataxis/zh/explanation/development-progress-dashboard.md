@@ -5,7 +5,7 @@
 
 ## 2026-07-05 RSE + document augmentation 图谱 RAG 实践计划
 
-本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、query-intent 图邻居排序、有界 context pack、接入 provider 的充分性 trace、有界一次性 recovery、RAG-aware 单消息 release review、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、context-budget truncation/drop/malformed-provider 探针覆盖、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、更丰富 replay id、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
+本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、query-intent 图邻居排序、有界 context pack、稳定 RAG context replay id、接入 provider 的充分性 trace、有界一次性 recovery、RAG-aware 单消息 release review、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、context-budget truncation/drop/malformed-provider 探针覆盖、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、大语料上的更完整 replay tooling、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
 
 当前代码 / 方案对齐判断：
 
@@ -22,7 +22,7 @@
 
 - `queryBackend.ts` 继续作为精确 RSE 与 hybrid ranking owner。
 - `evidenceContextAssembler.ts` 持有 source-window、parent-section、adjacent-context、完整文档 source-boundary 读取和 missing-source 降级。
-- `ragContextPack.ts` 持有 model-visible 硬上限、role priority、middle truncation 与 budget decision。
+- `ragContextPack.ts` 持有 model-visible 硬上限、role priority、middle truncation、budget decision，以及已选证据包的稳定 replay id。
 - `ragSufficiencyJudge.ts` 持有确定性充分性判断与可选 judge 接入点。
 - `ragSufficiencyProviderJudge.ts` 持有 NoteMD provider adapter，用于有界 JSON-only 充分性评审。
 - `KnowledgeLearningPlatform.ts` 负责 source resolution、图邻居物化、一次性 RAG recovery、trace/artifact 持久化和 conversation response 装配。
@@ -35,10 +35,10 @@
 本切片新增实现证据：
 
 - 新增模块：`src/learning/evidenceContextAssembler.ts`、`src/learning/ragContextPack.ts`、`src/learning/ragSufficiencyJudge.ts`、`src/learning/ragSufficiencyProviderJudge.ts`。
-- 新增 / 更新测试：evidence assembler、context pack budgeter、sufficiency judge、接入 provider 的 sufficiency judge adapter、有界 recovery、RAG-aware release review、持久化兼容、composer、平台集成、导出 RAG trace 保留、Knowledge Workspace conversation regression、runtime verifier 校验，以及前端 RAG grounding 展示。
-- `scripts/verify-knowledge-workspace-runtime.js` 现在能校验期望 RAG source boundary、roles、answer terms、sufficiency statuses、deterministic/no-provider judge 标志、recovery 标志、degradation state、RAG source-decision status 最小计数、recovery 前 source-decision status 最小计数，以及 recovery 前 reason fragment；同时支持按用例配置 scoped document-id 预期、按用例传递 `topK`、隔离临时 NoteMD config、本地 malformed-provider fixture，默认严格要求 scoped id，并对 answer term 做大小写不敏感匹配。
+- 新增 / 更新测试：evidence assembler、context pack budgeter、稳定 context replay id、sufficiency judge、接入 provider 的 sufficiency judge adapter、有界 recovery、RAG-aware release review、持久化兼容、composer、平台集成、导出 RAG trace 保留、Knowledge Workspace conversation regression、runtime verifier 校验，以及前端 RAG grounding 展示。
+- `scripts/verify-knowledge-workspace-runtime.js` 现在能校验期望 RAG source boundary、有效 `ragctx_*` replay id、roles、answer terms、sufficiency statuses、deterministic/no-provider judge 标志、recovery 标志、degradation state、RAG source-decision status 最小计数、recovery 前 source-decision status 最小计数，以及 recovery 前 reason fragment；同时支持按用例配置 scoped document-id 预期、按用例传递 `topK`、隔离临时 NoteMD config、本地 malformed-provider fixture，默认严格要求 scoped id，并对 answer term 做大小写不敏感匹配。
 - `src/frontend/agent_workspace.js` 会把仅含 RAG trace 的 payload 标记为可 inspect；API 状态行显示 `RAG: <status>, <N> fragments`，并在本回合使用 recovery pass 时追加 `+recovered`。
-- `src/frontend/workspace_panes.js` 显示 compact RAG context metrics：sufficiency、source boundary、fragment budget、direct/document/graph roles、truncated/dropped/unavailable source counts、degradation、recovery 与 reasons。
+- `src/frontend/workspace_panes.js` 显示 compact RAG context metrics：replay id、sufficiency、source boundary、fragment budget、direct/document/graph roles、truncated/dropped/unavailable source counts、degradation、recovery 与 reasons。
 - `src/learning/graphContextAssembler.ts` 现在应用 intent-specific graph-window scoring：compare query 可以让 contrast / analogy 邻居优先于 procedural sequence 节点，即使 sequence 边置信度更高；definition 与 how-to query 则保留各自的结构优先级。
 - `src/learning/KnowledgeLearningPlatform.ts` 现在可以识别 `compare X and/with/to Y`、`X vs Y`、`difference between X and Y`、`X differs from Y` 等 compare operand，并且不会把显式 scope 只收窄到 title-hit document id。
 - `src/learning/conversationComposer.ts` 现在应用 compare RAG answer profile：当 context pack 同时包含被对比双方的 direct support 时，公开回答会保留 4 个 direct-support clause，按 operand 与 query term 覆盖度排序 compare evidence，把 Mermaid label evidence 转为可读 clause，再加入有界 graph-neighbor contrast context，同时不额外产生聊天消息。
@@ -54,7 +54,7 @@
 - 基于代表性 hard negative 校准图关系权重与低置信排除阈值，不把当前 scoring 常量当作最终形态。
 - 扩展 provider timeout fallback、intent-specific 图邻居选择与大语料 hard negative 的 runtime probes。
 - 在当前 deterministic definition / compare / how-to / generic 基线之上继续校准 profile-specific release budget，同时保留公开回答硬上限。
-- 补齐 export replay 覆盖，以及 repeated snippet、conflicting adjacent evidence、missing graph-neighbor evidence、更严格的 total-character budget drop、provider fallback 的更大 runtime probes。
+- 在稳定 context id 之上扩展 replay tooling，并补齐 repeated snippet、conflicting adjacent evidence、missing graph-neighbor evidence、更严格的 total-character budget drop、provider fallback 的更大 runtime probes。
 
 ## 2026-07-04 知识工作区 scope 可见性、聚合 RAG 回答与命中文件交互收口
 

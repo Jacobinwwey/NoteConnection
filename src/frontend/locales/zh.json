@@ -513,6 +513,7 @@
       "ragDroppedFragmentsLabel": "被丢弃片段",
       "ragUnavailableSourcesLabel": "不可用源窗口",
       "ragDegradationLabel": "降级状态",
+      "ragReplayIdLabel": "复放 ID",
       "ragRecoveryLabel": "恢复",
       "ragReasonsLabel": "原因"
     },

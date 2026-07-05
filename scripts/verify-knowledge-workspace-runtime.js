@@ -416,6 +416,9 @@ function validatePositiveConversationResult(summary, options) {
     if (!summary.ragContextPack || String(summary.ragContextPack.sourceBoundary || '') !== String(expectedRagSourceBoundary)) {
       throw new Error(`RAG source boundary mismatch for query=${query}: expected=${expectedRagSourceBoundary} actual=${JSON.stringify(summary.ragContextPack)}`);
     }
+    if (!/^ragctx_[a-f0-9]{16}$/.test(String(summary.ragContextPack.replayId || ''))) {
+      throw new Error(`RAG replay id missing or invalid for query=${query}: actual=${JSON.stringify(summary.ragContextPack)}`);
+    }
   }
   if (Array.isArray(requiredRagRoles) && requiredRagRoles.length > 0) {
     const observedRoles = Array.isArray(summary.ragContextPack && summary.ragContextPack.fragments)

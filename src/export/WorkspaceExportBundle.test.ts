@@ -411,6 +411,7 @@ describe('WorkspaceExportBundle', () => {
 
     test('deep clones RAG context and sufficiency review in exported runtime turns', () => {
         const ragContextPack = {
+            replayId: 'ragctx_0123456789abcdef',
             query: 'what is water glass?',
             generatedAt: '2026-05-26T00:00:00.000Z',
             sourceBoundary: 'full_document' as const,
@@ -611,6 +612,7 @@ describe('WorkspaceExportBundle', () => {
         ragRecovery.afterSourceDecisionStatusCounts.fragment_included = 999;
 
         const exportedTrace = (bundle.runtime.conversationTurns[0] as any).response.trace;
+        expect(exportedTrace.ragContextPack.replayId).toBe('ragctx_0123456789abcdef');
         expect(exportedTrace.ragContextPack.fragments[0].text).toBe(
             'A water glass is a transparent drinking vessel that contains water.'
         );

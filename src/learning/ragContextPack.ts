@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import type {
     RagContextBudget,
     RagContextPack,
@@ -196,6 +197,82 @@ function annotateReadDecisions(decisions: RagSourceDecision[], fragments: RagEvi
     });
 }
 
+function sortedStrings(values: string[] | undefined): string[] {
+    return normalizedStrings(values).sort();
+}
+
+function normalizedStrings(values: string[] | undefined): string[] {
+    return (Array.isArray(values) ? values : [])
+        .map((value) => String(value || '').trim())
+        .filter(Boolean);
+}
+
+function buildRagContextReplayId(params: {
+    query: string;
+    sourceBoundary: RagSourceBoundary;
+    budget: RagContextBudget;
+    fragments: RagEvidenceFragment[];
+    sourceDecisions: RagSourceDecision[];
+    totalCharCount: number;
+    tokenEstimate: number;
+}): string {
+    const payload = {
+        query: params.query,
+        sourceBoundary: params.sourceBoundary,
+        budget: params.budget,
+        totalCharCount: params.totalCharCount,
+        tokenEstimate: params.tokenEstimate,
+        fragments: params.fragments
+            .map((fragment) => ({
+                fragmentId: fragment.fragmentId,
+                role: fragment.role,
+                documentId: fragment.documentId,
+                sourcePath: fragment.sourcePath,
+                atomId: fragment.atomId || '',
+                title: fragment.title || '',
+                headingPath: normalizedStrings(fragment.headingPath),
+                citationIds: sortedStrings(fragment.citationIds),
+                relationEdgeIds: sortedStrings(fragment.relationEdgeIds),
+                sourceBoundary: fragment.sourceBoundary,
+                startOffset: fragment.startOffset ?? null,
+                endOffset: fragment.endOffset ?? null,
+                startLine: fragment.startLine ?? null,
+                endLine: fragment.endLine ?? null,
+                truncated: fragment.truncated,
+                truncationReason: fragment.truncationReason || '',
+                text: fragment.text,
+            }))
+            .sort((left, right) => [
+                left.role.localeCompare(right.role),
+                left.documentId.localeCompare(right.documentId),
+                left.fragmentId.localeCompare(right.fragmentId),
+                left.text.localeCompare(right.text),
+            ].find((delta) => delta !== 0) || 0),
+        sourceDecisions: params.sourceDecisions
+            .map((decision) => ({
+                documentId: decision.documentId,
+                sourcePath: decision.sourcePath,
+                sourceBoundary: decision.sourceBoundary,
+                status: decision.status,
+                reason: decision.reason || '',
+                charsRead: decision.charsRead ?? null,
+                fragmentsSelected: decision.fragmentsSelected ?? null,
+            }))
+            .sort((left, right) => [
+                left.documentId.localeCompare(right.documentId),
+                left.sourcePath.localeCompare(right.sourcePath),
+                left.sourceBoundary.localeCompare(right.sourceBoundary),
+                left.status.localeCompare(right.status),
+                left.reason.localeCompare(right.reason),
+            ].find((delta) => delta !== 0) || 0),
+    };
+    const digest = createHash('sha256')
+        .update(JSON.stringify(payload))
+        .digest('hex')
+        .slice(0, 16);
+    return `ragctx_${digest}`;
+}
+
 export function buildRagContextPack(params: BuildRagContextPackParams): RagContextPack {
     const budget = normalizeRagContextBudget(params.budget);
     const decisions = Array.isArray(params.sourceDecisions)
@@ -206,11 +283,22 @@ export function buildRagContextPack(params: BuildRagContextPackParams): RagConte
     annotateReadDecisions(decisions, selectedFragments);
     const totalCharCount = selectedFragments.reduce((sum, fragment) => sum + fragment.charCount, 0);
     const tokenEstimate = selectedFragments.reduce((sum, fragment) => sum + fragment.tokenEstimate, 0);
+    const query = String(params.query || '');
+    const sourceBoundary = resolveSourceBoundary(params.sourceBoundary, selectedFragments);
 
     return {
-        query: String(params.query || ''),
+        replayId: buildRagContextReplayId({
+            query,
+            sourceBoundary,
+            budget,
+            fragments: selectedFragments,
+            sourceDecisions: decisions,
+            totalCharCount,
+            tokenEstimate,
+        }),
+        query,
         generatedAt: String(params.generatedAt || new Date().toISOString()),
-        sourceBoundary: resolveSourceBoundary(params.sourceBoundary, selectedFragments),
+        sourceBoundary,
         budget,
         fragments: selectedFragments,
         sourceDecisions: decisions,

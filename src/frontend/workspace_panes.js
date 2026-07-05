@@ -5157,6 +5157,7 @@
                 Number.isFinite(reviewScore) ? `(${formatEvidenceConfidence(reviewScore)})` : '',
             ].filter(Boolean).join(' ')
             : noneLabel;
+        const replayId = String(ragContextPack && ragContextPack.replayId || '').trim();
         const totalCharCount = Number.isFinite(Number(ragContextPack && ragContextPack.totalCharCount))
             ? Number(ragContextPack.totalCharCount)
             : 0;
@@ -5229,6 +5230,12 @@
                 value: formatRagWordList(ragSufficiencyReview && ragSufficiencyReview.reasons, noneLabel),
             },
         ];
+        if (replayId) {
+            metrics.unshift({
+                title: translate('agentWorkspace.evidence.ragReplayIdLabel', 'Replay id'),
+                value: replayId,
+            });
+        }
 
         return `
             <div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.ragContextLabel', 'RAG context'))}</div>
