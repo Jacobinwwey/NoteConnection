@@ -158,6 +158,7 @@ function validatePositiveConversationResult(summary, options) {
     expectedRagSourceBoundary,
     requiredRagRoles,
     acceptedRagSufficiencyStatuses,
+    requireScopedDocumentIds,
   } = options;
   const forbiddenFragments = Array.isArray(answerMustNotContain) && answerMustNotContain.length > 0
     ? answerMustNotContain
@@ -169,16 +170,33 @@ function validatePositiveConversationResult(summary, options) {
   if (!summary.workspaceReadiness || summary.workspaceReadiness.status !== 'ready') {
     throw new Error(`workspace readiness not ready for query=${query}: ${JSON.stringify(summary.workspaceReadiness)}`);
   }
-  if (!summary.usedScope || !Array.isArray(summary.usedScope.documentIds) || summary.usedScope.documentIds.length <= 0) {
+  const usedScopeDocumentIds = summary.usedScope && Array.isArray(summary.usedScope.documentIds)
+    ? summary.usedScope.documentIds
+    : [];
+  const usedScopePathPrefixes = summary.usedScope && Array.isArray(summary.usedScope.sourcePathPrefixes)
+    ? summary.usedScope.sourcePathPrefixes
+    : [];
+  if (requireScopedDocumentIds !== false && usedScopeDocumentIds.length <= 0) {
     throw new Error(`used scope is missing scoped documentIds for query=${query}: ${JSON.stringify(summary.usedScope)}`);
+  }
+  if (
+    requireScopedDocumentIds === false
+    && usedScopeDocumentIds.length <= 0
+    && usedScopePathPrefixes.length <= 0
+    && !summary.usedScope.workspaceId
+    && !summary.usedScope.corpusId
+  ) {
+    throw new Error(`used scope is missing a scoped boundary for query=${query}: ${JSON.stringify(summary.usedScope)}`);
   }
   if (expectedScopeSource && String(summary.usedScope.scopeSource || '') !== String(expectedScopeSource)) {
     throw new Error(`used scope source mismatch for query=${query}: expected=${expectedScopeSource} actual=${JSON.stringify(summary.usedScope)}`);
   }
   const answer = String(summary.answer || '');
   if (Array.isArray(answerMustContain) && answerMustContain.length > 0) {
+    const normalizedAnswer = answer.toLowerCase();
     answerMustContain.forEach((fragment) => {
-      if (!answer.includes(fragment)) {
+      const expectedFragment = String(fragment || '');
+      if (!answer.includes(expectedFragment) && !normalizedAnswer.includes(expectedFragment.toLowerCase())) {
         throw new Error(`conversation answer missing "${fragment}" for query=${query}: ${answer}`);
       }
     });
@@ -516,6 +534,7 @@ async function main() {
         expectedRagSourceBoundary: regressionCase.expected.ragSourceBoundary,
         requiredRagRoles: regressionCase.expected.requiredRagRoles,
         acceptedRagSufficiencyStatuses: regressionCase.expected.acceptedRagSufficiencyStatuses,
+        requireScopedDocumentIds: regressionCase.expected.requireScopedDocumentIds,
       });
       caseResults.push(summary);
     }

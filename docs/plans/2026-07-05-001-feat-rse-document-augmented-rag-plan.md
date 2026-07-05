@@ -344,7 +344,7 @@ flowchart TB
 
 **Goal:** Generate a more complete public answer from the RAG context pack while preserving one-message UX.
 
-**Implementation status (2026-07-05):** Partially implemented. `conversationComposer.ts` now uses `RagContextPack` and `RagSufficiencyReview` to build a richer deterministic one-message draft from direct support, document augmentation, and graph-neighbor evidence, then passes that pack/review into `answerReleaseReview.ts`. Release review now treats RAG fragments as grounding candidates, evaluates the additive `rag_answer_completeness` gate, and can revise contracted definition answers from direct/document/graph RAG clauses instead of falling back to citation-only summaries. The composer now also applies a deterministic compare profile that reserves direct-support budget for both compared sides before adding graph contrast context. The remaining gap is broader how-to/generic answer profiles plus calibrated profile-specific release budgets.
+**Implementation status (2026-07-05):** Partially implemented. `conversationComposer.ts` now uses `RagContextPack` and `RagSufficiencyReview` to build a richer deterministic one-message draft from direct support, document augmentation, and graph-neighbor evidence, then passes that pack/review into `answerReleaseReview.ts`. Release review now treats RAG fragments as grounding candidates, evaluates the additive `rag_answer_completeness` gate, and can revise contracted definition answers from direct/document/graph RAG clauses instead of falling back to citation-only summaries. The platform/composer path now also applies an operand-aware compare profile: compare-style planner queries extract both operands for boosting and traceability, explicit scope is not hard-narrowed to only title-hit document ids, four direct-support clauses are reserved for the compared sides, compare evidence is ranked by operand and fragment coverage, and Mermaid comparison labels are converted into readable evidence instead of being discarded. This preserves both sides of `compare water glass and plastic cup` in one public answer without surfacing backend orchestration. The remaining gap is broader how-to/generic answer profiles, more natural synthesis over label-heavy evidence, and calibrated profile-specific release budgets.
 
 **Requirements:** R4, R6, R7.
 
@@ -363,7 +363,7 @@ flowchart TB
   - `compare`: shared anchor, branch differences, evidence-backed contrast;
   - `generic`: answer, support, graph/context caveat.
 - Use the context pack to structure the answer; do not ask the LLM to rediscover evidence from raw concatenated text.
-- Keep public answer bounded; compare now has deterministic per-role evidence budgets, while how-to/generic profile-specific tuning remains pending beyond the current six-sentence / 900-character release cap.
+- Keep public answer bounded; compare now has deterministic operand-aware per-role evidence budgets, including four direct-support slots before graph contrast clauses, while how-to/generic profile-specific tuning remains pending beyond the current six-sentence / 900-character release cap.
 - Add claim-to-citation mapping internally even if UI shows a compact citation list.
 - `answerReleaseReview.ts` validates completeness and support through the additive RAG role gate; broader profile-specific completeness gates remain pending.
 
@@ -373,7 +373,7 @@ flowchart TB
 
 **Test scenarios:**
 - Happy path: `what is waterglass?` returns definition, composition, key properties, graph predecessor/successor context, and citations without duplicate knowledge points.
-- Compare path: `compare water glass and plastic cup` preserves direct evidence for both compared sides before adding bounded graph-neighbor contrast context.
+- Compare path: `compare water glass and plastic cup` preserves direct evidence for both compared sides, keeps readable Mermaid-label evidence without leaking fenced blocks, and only then adds bounded graph-neighbor contrast context.
 - Edge case: graph context exists but neighbor evidence is weak; answer names graph limitation instead of overstating.
 - Edge case: sufficient direct evidence but no graph ops; answer remains grounded without graph claims.
 - Error path: release review catches unsupported graph-order or causal claims.
@@ -424,7 +424,7 @@ flowchart TB
 
 **Goal:** Prevent "better answer" work from regressing retrieval, graph correctness, latency, or UI compatibility.
 
-**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, sufficiency judging, provider-backed judge timeout/schema handling, bounded one-step recovery, RAG-aware answer release review, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
+**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, sufficiency judging, provider-backed judge timeout/schema handling, bounded one-step recovery, RAG-aware answer release review, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations, including the compare-runtime case `waterglass_compare_materials_en`. The runtime verifier now supports per-case scoped document-id requirements: strict scoped ids remain the default, while the compare case can opt out only when source path, workspace, or corpus boundaries still prove it stayed inside the intended scope. Answer-term assertions are now case-insensitive to avoid false misses for casing-only differences. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
 
 **Requirements:** R8.
 
@@ -440,8 +440,10 @@ flowchart TB
 
 **Approach:**
 - Keep `waterglass` compact/spaced queries as acceptance probes.
+- Keep scoped document ids mandatory by default; allow explicit compare cases to relax that requirement only when a separate scoped boundary is still verified.
 - Add tests for:
   - evidence-rich definition answer;
+  - compare material answer that preserves both operands from direct/document/Mermaid evidence;
   - missing neighbor evidence;
   - duplicated same-document spans;
   - conflicting adjacent evidence;
@@ -458,6 +460,7 @@ flowchart TB
 **Test scenarios:**
 - Runtime: `what is waterglass?` returns a complete answer using direct evidence, document augmentation, and graph context.
 - Runtime: compact Chinese/English alias queries do not fall back to scoped miss.
+- Runtime: `compare water glass and plastic cup` returns one grounded answer containing both glass and plastic evidence with `direct_support`, `parent_context`, and `graph_neighbor_support` roles.
 - Runtime: no LLM provider still produces deterministic grounded answer.
 - Runtime: LLM judge failure does not block the answer path.
 
@@ -788,7 +791,7 @@ flowchart TB
 
 **目标：** 从 RAG context pack 组织更完整的 public answer。
 
-**实现状态（2026-07-05）：** 部分实现。`conversationComposer.ts` 已能基于 `RagContextPack` 与 `RagSufficiencyReview`，从 direct support、document augmentation 和 graph-neighbor evidence 组织更充分的确定性单消息 draft，并把 pack / review 继续传入 `answerReleaseReview.ts`。release review 现在会把 RAG fragment 作为 grounding candidate，评估增量 `rag_answer_completeness` gate，并能在公开回答被 contraction 修订时继续使用 direct / document / graph RAG clause，而不是退回 citation-only 摘要。composer 现在还会应用确定性的 compare profile，在加入 graph contrast context 之前为被对比双方保留 direct-support 预算。剩余缺口是更完整的 how-to / generic answer profile，以及按 profile 校准的 release budget。
+**实现状态（2026-07-05）：** 部分实现。`conversationComposer.ts` 已能基于 `RagContextPack` 与 `RagSufficiencyReview`，从 direct support、document augmentation 和 graph-neighbor evidence 组织更充分的确定性单消息 draft，并把 pack / review 继续传入 `answerReleaseReview.ts`。release review 现在会把 RAG fragment 作为 grounding candidate，评估增量 `rag_answer_completeness` gate，并能在公开回答被 contraction 修订时继续使用 direct / document / graph RAG clause，而不是退回 citation-only 摘要。platform / composer 路径现在还会应用 operand-aware compare profile：compare-style planner query 会抽取被对比双方用于 boosting 与 trace，显式 scope 不会被硬收窄到仅 title-hit document id，compare 回答会为双方预留 4 个 direct-support clause，证据排序会同时看 operand 覆盖与 fragment 覆盖，并且 Mermaid 对比图里的 label 会转为可读证据而不是被整块丢弃。这让 `compare water glass and plastic cup` 能在一条公开回答中同时保留 glass 与 plastic 两侧证据，同时不把后端编排暴露给用户。剩余缺口是更完整的 how-to / generic answer profile、对 label-heavy evidence 的自然语言 synthesis，以及按 profile 校准的 release budget。
 
 **文件：**
 - 修改：`src/learning/conversationComposer.ts`
@@ -803,13 +806,13 @@ flowchart TB
   - compare：共同 anchor、分支差异、证据支撑对比；
   - generic：回答、支撑、图/上下文 caveat。
 - 让 LLM 或 deterministic composer 基于结构化 context pack 组织答案，不让模型从原始拼接文本里重新发现证据。
-- public answer 继续保持有界；compare 已有确定性的按角色证据预算，how-to / generic 的 profile-specific tuning 仍需在当前六句 / 900 字符 release cap 之上继续推进。
+- public answer 继续保持有界；compare 已有基于 operand 的确定性按角色证据预算，会先保留 4 个 direct-support slot，再加入 graph contrast clause；how-to / generic 的 profile-specific tuning 仍需在当前六句 / 900 字符 release cap 之上继续推进。
 - 内部保留 claim-to-citation mapping。
 - `answerReleaseReview.ts` 已通过增量 RAG role gate 增加 completeness / support review；更广的 profile-specific completeness gate 仍待推进。
 
 **测试：**
 - `what is waterglass?` 返回定义、构成、关键属性、前后继图上下文和 citation。
-- `compare water glass and plastic cup` 在加入有界 graph-neighbor contrast context 前，会保留被对比双方的 direct evidence。
+- `compare water glass and plastic cup` 在加入有界 graph-neighbor contrast context 前，会保留被对比双方的 direct evidence，并把 Mermaid label evidence 转成可读内容而不是泄漏 fenced block。
 - 图 context 有但邻居证据弱时，不强行生成邻居内容。
 - 无 graph ops 时仍可 grounded 回答。
 - release review 能拦截 unsupported graph-order / causal claim。
@@ -846,7 +849,7 @@ flowchart TB
 
 **目标：** 防止“答案更充分”引入召回、图谱、延迟或 UI 兼容性回退。
 
-**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、sufficiency judge、接入 provider 的 judge timeout / schema handling、有界一次性 recovery、RAG-aware answer release review、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
+**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、sufficiency judge、接入 provider 的 judge timeout / schema handling、有界一次性 recovery、RAG-aware answer release review、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期，包括 compare runtime 用例 `waterglass_compare_materials_en`。runtime verifier 现在支持按用例配置 scoped document-id 要求：默认仍严格要求 scoped document id；compare 用例只有在 source path、workspace 或 corpus 边界仍能证明没有越过目标 scope 时才允许放宽。answer-term 断言也改为大小写不敏感，避免 `Water Glass` / `glass` 这类大小写差异造成误报。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
 
 **文件：**
 - 修改：`src/learning/KnowledgeWorkspaceConversationRegression.ts`
@@ -858,12 +861,15 @@ flowchart TB
 
 **做法：**
 - 保留 `waterglass` compact/spaced queries 作为验收探针。
+- scoped document id 默认强制；只有显式 compare 用例能在另一个 scoped boundary 已被验证时放宽该要求。
 - 增加 evidence-rich definition、missing neighbor evidence、same-document span dedupe、conflicting adjacent evidence、context budget truncation、LLM judge timeout/fallback、自邻居过滤、rich public answer release 等用例。
+- 增加 compare material answer 用例，确认 direct / document / Mermaid evidence 能同时保留两个 operand。
 - no-LLM path 加延迟预算；LLM judge path 加 timeout/fallback 预算。
 
 **测试：**
 - `what is waterglass?` 能使用直接证据、document augmentation 和 graph context 输出完整回答。
 - 中英混合 alias 不退回 scoped miss。
+- `compare water glass and plastic cup` 输出一条 grounded answer，包含 glass 与 plastic 两侧证据，并覆盖 `direct_support`、`parent_context`、`graph_neighbor_support` 角色。
 - 未配置 LLM provider 仍有确定性 grounded answer。
 - LLM judge 失败不阻塞主回答链路。
 

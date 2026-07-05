@@ -58,6 +58,11 @@ function buildRegressionDocuments() {
                 '',
                 '## Material role',
                 'The water glass body provides a boundary between the liquid and the environment.',
+                '',
+                '## Container material comparison',
+                'A water glass uses soda-lime glass, so it is transparent, stiff, brittle, and chemically inert.',
+                'A plastic cup uses PET plastic, so it is lightweight, ductile, less stiff, and more insulating.',
+                'Compared with a plastic cup, a water glass gives better optical transparency and rigidity, while the plastic cup reduces fracture risk.',
             ].join('\n'),
         },
     ];

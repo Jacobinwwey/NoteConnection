@@ -1201,6 +1201,113 @@ describe('conversationComposer', () => {
         expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toBe(reply.answer);
     });
 
+    test('ranks compare RAG evidence by query operands and keeps Mermaid label evidence readable', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_compare_mermaid_water_glass',
+                documentId: 'doc_compare_mermaid_water_glass',
+                sourcePath: 'Knowledge_Base/test/water-glass.md',
+                title: 'Water Glass',
+                content: 'Water glass comparison evidence includes plastic cup material properties.',
+            },
+            evidence: {
+                id: 'evidence_compare_mermaid_water_glass',
+                snippet: 'Water glass comparison evidence includes Plastic Cup PET.',
+                startLine: 12,
+                endLine: 18,
+            },
+            score: 0.94,
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const citations = knowledgePoints.flatMap((point) => point.citations || []);
+        const ragContextPack: RagContextPack = {
+            query: 'compare water glass and plastic cup',
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 4,
+                maxCharsPerFragment: 800,
+                maxTotalChars: 2400,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_preamble_compare',
+                    role: 'direct_support',
+                    text: 'This document was generated from the title water glass and starts with a broad technical preamble.',
+                    atomId: 'atom_compare_mermaid_water_glass',
+                    documentId: 'doc_compare_mermaid_water_glass',
+                    sourcePath: 'Knowledge_Base/test/water-glass.md',
+                    title: 'Water Glass',
+                    headingPath: ['Water Glass'],
+                    startLine: 1,
+                    endLine: 2,
+                    charCount: 92,
+                    tokenEstimate: 20,
+                    truncated: false,
+                    citationIds: ['evidence_compare_mermaid_water_glass'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_direct_mermaid_compare',
+                    role: 'direct_support',
+                    text: [
+                        '### Container comparison',
+                        '```mermaid',
+                        'graph LR',
+                        'A[Water Glass Soda-Lime]',
+                        'B[Plastic Cup PET]',
+                        'A -- "high stiffness and brittleness" --> A1["rigid transparent vessel"]',
+                        'B -- "lower stiffness and ductility" --> B1["deformable polymer vessel"]',
+                        '```',
+                    ].join('\n'),
+                    atomId: 'atom_compare_mermaid_water_glass',
+                    documentId: 'doc_compare_mermaid_water_glass',
+                    sourcePath: 'Knowledge_Base/test/water-glass.md',
+                    title: 'Container comparison',
+                    headingPath: ['Water Glass', 'Container comparison'],
+                    startLine: 12,
+                    endLine: 18,
+                    charCount: 228,
+                    tokenEstimate: 52,
+                    truncated: false,
+                    citationIds: ['evidence_compare_mermaid_water_glass'],
+                    sourceBoundary: 'direct_span_only',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 320,
+            tokenEstimate: 72,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-05T00:00:00.000Z',
+            status: 'sufficient',
+            score: 0.9,
+            reasons: [],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'none',
+        };
+        let blockCounter = 0;
+
+        const reply = buildScopedConversationReply({
+            message: 'compare water glass and plastic cup',
+            knowledgePoints,
+            citations,
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            ragContextPack,
+            ragSufficiencyReview,
+        });
+
+        expect(reply.answer).toContain('Water Glass Soda-Lime');
+        expect(reply.answer).toContain('Plastic Cup PET');
+        expect(reply.answer).not.toContain('```');
+    });
+
     test('fails graph comparison gate when compare intent only has reference context and no real branch signal', () => {
         const knowledgePoints: AgentConversationKnowledgePoint[] = [
             {

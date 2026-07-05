@@ -23,6 +23,7 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     ragSourceBoundary?: RagSourceBoundary;
     requiredRagRoles?: RagEvidenceRole[];
     acceptedRagSufficiencyStatuses?: Array<RagSufficiencyReview['status']>;
+    requireScopedDocumentIds?: boolean;
 }
 
 export interface KnowledgeWorkspaceConversationRegressionCase {
@@ -110,6 +111,29 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             ragSourceBoundary: 'full_document',
             requiredRagRoles: ['direct_support', 'parent_context', 'graph_neighbor_support'],
             acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+        },
+    },
+    {
+        id: 'waterglass_compare_materials_en',
+        description: 'Compare-intent query in the explicit waterglass scope should keep evidence for both container materials.',
+        preloadTargets: ['waterglass'],
+        activeTarget: 'waterglass',
+        query: 'compare water glass and plastic cup',
+        expected: {
+            minCitations: 1,
+            scopeSource: 'explicit_request',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
+            plannerTitleLikeQueries: ['water glass', 'plastic cup'],
+            primarySourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            answerMustContain: ['glass', 'plastic'],
+            answerMustNotContain: [
+                'No scoped knowledge points matched',
+                'retrieval_candidates_below_threshold',
+            ],
+            ragSourceBoundary: 'full_document',
+            requiredRagRoles: ['direct_support', 'parent_context', 'graph_neighbor_support'],
+            acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            requireScopedDocumentIds: false,
         },
     },
     {

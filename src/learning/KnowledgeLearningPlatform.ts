@@ -3958,12 +3958,66 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             .toLowerCase();
     }
 
+    private normalizePlannerTitleCandidate(value: unknown): string {
+        return this.normalizeQueryForPlanning(value)
+            .replace(/^(?:the|a|an)\s+/i, '')
+            .replace(/\s+(?:please|pls)$/i, '')
+            .trim();
+    }
+
+    private deriveComparisonOperandTitleQueries(normalizedQuery: string): string[] {
+        const candidates = new Set<string>();
+        const addOperand = (value: string | undefined): void => {
+            const candidate = this.normalizePlannerTitleCandidate(value);
+            if (!candidate || tokenize(candidate).length <= 0) {
+                return;
+            }
+            candidates.add(candidate);
+        };
+        const prefixedComparison = normalizedQuery.match(/^(?:compare|contrast)\s+(.+?)\s+(?:and|with|to|vs|versus)\s+(.+)$/i);
+        if (prefixedComparison) {
+            addOperand(prefixedComparison[1]);
+            addOperand(prefixedComparison[2]);
+        }
+        const directVersus = /^(?:compare|contrast)\s+/i.test(normalizedQuery)
+            ? null
+            : normalizedQuery.match(/^(.+?)\s+(?:vs|versus)\s+(.+)$/i);
+        if (directVersus) {
+            addOperand(directVersus[1]);
+            addOperand(directVersus[2]);
+        }
+        const differenceBetween = normalizedQuery.match(/^(?:(?:what|which)\s+(?:is|are)\s+(?:the\s+)?|tell me\s+(?:the\s+)?|explain\s+(?:the\s+)?)?(?:difference|differences)\s+between\s+(.+?)\s+and\s+(.+)$/i);
+        if (differenceBetween) {
+            addOperand(differenceBetween[1]);
+            addOperand(differenceBetween[2]);
+        }
+        const differentFrom = normalizedQuery.match(/^(?:how\s+(?:does|do|is|are)\s+)?(.+?)\s+(?:differ|differs|different)\s+from\s+(.+)$/i);
+        if (differentFrom) {
+            addOperand(differentFrom[1]);
+            addOperand(differentFrom[2]);
+        }
+        return Array.from(candidates.values());
+    }
+
+    private isComparisonPlanningQuery(value: string): boolean {
+        const normalized = this.normalizeQueryForPlanning(value);
+        if (!normalized) {
+            return false;
+        }
+        return /(?:^|\s)(?:compare|contrast|vs|versus|difference|differences|differ|differs|different)(?:\s|$)/i.test(normalized)
+            || normalized.includes('区别')
+            || normalized.includes('对比');
+    }
+
     private derivePlannerTitleLikeQueries(query: string): string[] {
         const normalized = this.normalizeQueryForPlanning(query);
         if (!normalized) {
             return [];
         }
         const baseCandidates = new Set<string>([normalized]);
+        this.deriveComparisonOperandTitleQueries(normalized).forEach((candidate) => {
+            baseCandidates.add(candidate);
+        });
         const stripped = normalized
             .replace(/^(what is|what are|define|explain|tell me about|what's)\s+/i, '')
             .replace(/^(什么是|解释一下|介绍一下|请解释|请介绍)\s*/i, '')
@@ -4404,6 +4458,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             ? 'explicit_request'
             : 'global_default';
         let scopeRecovery: QueryScopeRecoveryPlan | undefined;
+        const shouldConstrainExplicitScopeToTitleHits = !this.isComparisonPlanningQuery(query);
         if (titleHitDocumentIds.length > 0) {
             if (request.scope) {
                 const titleHitDocumentIdSet = new Set(titleHitDocumentIds);
@@ -4413,7 +4468,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                         .filter((documentId) => titleHitDocumentIdSet.has(documentId))
                 ));
                 if (scopedTitleHitDocumentIds.length > 0) {
-                    effectiveScope = this.mergeKnowledgeScopeDocumentIds(request.scope, scopedTitleHitDocumentIds);
+                    if (shouldConstrainExplicitScopeToTitleHits) {
+                        effectiveScope = this.mergeKnowledgeScopeDocumentIds(request.scope, scopedTitleHitDocumentIds);
+                    }
                 } else {
                     const recoveryScope: KnowledgeQueryRequest['scope'] = {
                         documentIds: titleHitDocumentIds,
