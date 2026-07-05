@@ -131,6 +131,12 @@ import {
     mergeAgentConversationKnowledgePoints,
 } from './conversationComposer';
 import { assembleAgentConversationGraphContext } from './graphContextAssembler';
+import {
+    assembleRagEvidenceContext,
+    type RagEvidenceSourceDocument,
+    type RagEvidenceSourceLookup,
+} from './evidenceContextAssembler';
+import { reviewRagContextSufficiency } from './ragSufficiencyJudge';
 
 type ParsedAtomDraft = {
     stableKey: string;
@@ -154,6 +160,7 @@ type DocumentSnapshot = {
     documentId: string;
     sourcePath: string;
     sourceHash: string;
+    content?: string;
     version: number;
     updatedAt: string;
     atomStableKeyToId: Map<string, string>;
@@ -770,6 +777,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 documentId: normalizedInput.documentId,
                 sourcePath: normalizedInput.sourcePath,
                 sourceHash,
+                content: normalizedInput.content,
                 version: currentVersion,
                 updatedAt: ingestedAt,
                 atomStableKeyToId: new Map<string, string>(),
@@ -5211,6 +5219,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             documentId: snapshot.documentId,
             sourcePath: snapshot.sourcePath,
             sourceHash: snapshot.sourceHash,
+            content: snapshot.content,
             version: snapshot.version,
             updatedAt: snapshot.updatedAt,
             atomStableKeyToId: Array.from(snapshot.atomStableKeyToId.entries()),
@@ -5543,6 +5552,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 documentId: documentSnapshot.documentId,
                 sourcePath: documentSnapshot.sourcePath,
                 sourceHash: documentSnapshot.sourceHash,
+                content: typeof documentSnapshot.content === 'string' ? documentSnapshot.content : undefined,
                 version: documentSnapshot.version,
                 updatedAt: documentSnapshot.updatedAt,
                 atomStableKeyToId: new Map(documentSnapshot.atomStableKeyToId || []),
@@ -6197,6 +6207,120 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             return normalizeIdentifier(input.sourcePath.replace(/\\/g, '/'));
         }
         return null;
+    }
+
+    private async resolveRagEvidenceSourceDocument(
+        lookup: RagEvidenceSourceLookup
+    ): Promise<RagEvidenceSourceDocument | null> {
+        const requestedDocumentId = String(lookup.documentId || '').trim();
+        const requestedSourcePath = String(lookup.sourcePath || '').trim();
+        const requestedSourcePathKey = requestedSourcePath
+            ? normalizeIdentifier(requestedSourcePath.replace(/\\/g, '/'))
+            : '';
+        const snapshot = (
+            requestedDocumentId ? this.documents.get(requestedDocumentId) : undefined
+        ) || Array.from(this.documents.values()).find((candidate) => (
+            requestedSourcePathKey
+            && normalizeIdentifier(candidate.sourcePath.replace(/\\/g, '/')) === requestedSourcePathKey
+        ));
+        if (snapshot && typeof snapshot.content === 'string' && snapshot.content.trim()) {
+            return {
+                documentId: snapshot.documentId,
+                sourcePath: snapshot.sourcePath,
+                content: snapshot.content,
+                sourceHash: snapshot.sourceHash,
+                updatedAt: snapshot.updatedAt,
+            };
+        }
+        const sourcePath = snapshot?.sourcePath || requestedSourcePath;
+        if (!sourcePath) {
+            return null;
+        }
+        const absolutePath = path.isAbsolute(sourcePath) ? sourcePath : path.resolve(sourcePath);
+        try {
+            const stat = await fs.promises.stat(absolutePath);
+            if (!stat.isFile()) {
+                return null;
+            }
+            const content = await fs.promises.readFile(absolutePath, 'utf8');
+            if (!content.trim()) {
+                return null;
+            }
+            return {
+                documentId: snapshot?.documentId || requestedDocumentId || normalizeIdentifier(sourcePath),
+                sourcePath,
+                content,
+                sourceHash: snapshot?.sourceHash || this.computeHash(content),
+                updatedAt: snapshot?.updatedAt,
+            };
+        } catch (_error) {
+            return null;
+        }
+    }
+
+    private buildRagGraphNeighborQueryItems(
+        graphContext: AgentConversationResponse['trace']['graphContext'] | null,
+        knowledgePoints: AgentConversationKnowledgePoint[],
+        checkedAt: string
+    ): KnowledgeQueryItem[] {
+        if (!graphContext) {
+            return [];
+        }
+        const neighborScores = new Map<string, number>();
+        const addNeighbor = (atomId: unknown, confidence: unknown): void => {
+            const normalizedAtomId = String(atomId || '').trim();
+            if (!normalizedAtomId || normalizedAtomId === graphContext.anchorAtomId) {
+                return;
+            }
+            const score = Number.isFinite(Number(confidence)) ? Number(confidence) : 0.7;
+            neighborScores.set(normalizedAtomId, Math.max(neighborScores.get(normalizedAtomId) || 0, score));
+        };
+        (graphContext.predecessorWindow || []).forEach((node) => addNeighbor(node.atomId, node.confidence));
+        (graphContext.successorWindow || []).forEach((node) => addNeighbor(node.atomId, node.confidence));
+        (graphContext.supportingAtomIds || []).forEach((atomId) => addNeighbor(atomId, 0.72));
+        (graphContext.knowledgePointRelations || []).forEach((relation) => {
+            addNeighbor(relation.sourceAtomId, relation.confidence);
+            addNeighbor(relation.targetAtomId, relation.confidence);
+        });
+        knowledgePoints.forEach((point) => {
+            (point.relationPathAtomIds || []).forEach((atomId) => addNeighbor(atomId, point.score));
+        });
+        const activeRelations = this.collectActiveRelationEdges(checkedAt);
+        const neighborItems: KnowledgeQueryItem[] = [];
+        Array.from(neighborScores.entries())
+            .sort((left, right) => right[1] - left[1])
+            .slice(0, 6)
+            .forEach(([atomId, score]) => {
+                const atom = this.atoms.get(atomId);
+                if (!atom) {
+                    return;
+                }
+                const evidenceSpans = atom.evidenceSpanIds
+                    .map((evidenceSpanId) => this.evidenceSpans.get(evidenceSpanId))
+                    .filter((span): span is EvidenceSpan => Boolean(span));
+                if (evidenceSpans.length <= 0) {
+                    return;
+                }
+                const relationPath = activeRelations.filter((edge) => (
+                    edge.sourceAtomId === atomId
+                    || edge.targetAtomId === atomId
+                    || edge.sourceAtomId === graphContext.anchorAtomId
+                    || edge.targetAtomId === graphContext.anchorAtomId
+                )).slice(0, 6);
+                neighborItems.push({
+                    atom,
+                    score,
+                    evidenceSpans,
+                    relationPath,
+                    temporalValidity: {
+                        isValid: true,
+                        checkedAt,
+                        reasons: [],
+                        details: [],
+                    },
+                });
+            });
+        return neighborItems;
     }
 
     private deleteDocumentSnapshot(
@@ -9130,6 +9254,29 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         });
         const conversationKnowledgePoints = assembledConversation.knowledgePoints;
         const graphContext = assembledConversation.graphContext;
+        const graphNeighborItems = this.buildRagGraphNeighborQueryItems(
+            graphContext,
+            conversationKnowledgePoints,
+            generatedAt
+        );
+        const ragContextPack = await assembleRagEvidenceContext({
+            query: message || 'local knowledge',
+            items: queryResult.items,
+            graphNeighborItems,
+            generatedAt,
+            sourceResolver: (lookup) => this.resolveRagEvidenceSourceDocument(lookup),
+            budget: {
+                maxFragments: 14,
+                maxCharsPerFragment: 1400,
+                maxTotalChars: 5600,
+            },
+        });
+        const ragSufficiencyReview = await reviewRagContextSufficiency({
+            query: message || 'local knowledge',
+            contextPack: ragContextPack,
+            graphContext,
+            reviewedAt: generatedAt,
+        });
         const activeConversationAtomIds = collectAgentConversationAtomIds(conversationKnowledgePoints);
         const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(activeConversationAtomIds);
         const effectiveWorkspaceId = traceScope.workspaceId || scopedWorkspace.workspaceId;
@@ -9145,6 +9292,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             nextBlockId: () => this.nextId('assistant_block'),
             nextRunId: () => this.nextId('knowledge_run'),
             graphContext,
+            ragContextPack,
+            ragSufficiencyReview,
         });
         const response: AgentConversationResponse = {
             userId,
@@ -9184,6 +9333,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     titleHitDocumentIds: queryResult.trace.planner?.titleHitDocumentIds || [],
                 },
                 graphContext: graphContext || reply.graphContext || undefined,
+                ragContextPack,
+                ragSufficiencyReview,
                 answerReleaseReview: reply.answerReleaseReview,
             },
         };
@@ -9199,6 +9350,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             payload: {
                 knowledgeRun: reply.knowledgeRun,
                 graphContext: graphContext || reply.graphContext || undefined,
+                ragContextPack,
+                ragSufficiencyReview,
                 answerReleaseReview: reply.answerReleaseReview,
                 citations,
                 recalledMemories,

@@ -5,35 +5,46 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
 
 ## 2026-07-05 RSE Document-Augmented Graph RAG Implementation Plan
 
-This slice records the follow-up planning work for richer Knowledge Workspace answers. It does not claim the richer RAG pipeline is implemented yet. The concrete plan is now written at [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md).
+This slice now tracks implementation progress for richer Knowledge Workspace answers. The concrete plan remains at [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md), but the branch has moved beyond planning: the deterministic RSE/document-augmentation path, budgeted context pack, sufficiency trace, richer one-message composer path, runtime verifier fields, and compact frontend RAG status are implemented. Optional LLM-provider judging, one-step recovery, deeper graph-neighbor ranking, export replay coverage, and larger runtime probes remain follow-up work.
 
 Current code-vs-plan reading:
 
-| Requirement / prior expectation | Current `main` evidence | Progress call |
+| Requirement / prior expectation | Current branch evidence | Progress call |
 |---|---|---|
-| RSE should start from precise hit spans rather than broad documents | `src/learning/queryBackend.ts` and `src/learning/KnowledgeLearningPlatform.ts` already return evidence spans, citations, relation paths, query variants, and scoped recovery trace data. `conversationComposer.ts` already groups repeated hits by document/knowledge point. | Operational baseline exists |
-| Document augmentation should recover enough surrounding source context to answer fully | Current public answers can include same-knowledge-point augmentation titles and bounded evidence highlights through `answerReleaseReview.ts`, but there is no dedicated source-window assembler that preserves parent heading, local paragraphs, table/code boundaries, or per-fragment budget decisions. | Planned next owner |
-| Graph context should use in-degree/out-degree and neighbor content, not only neighbor titles | `graphContextAssembler.ts` already emits anchor profile, predecessor/successor windows, self-neighbor filtering, and relation diagnostics. It still needs neighbor evidence fragments before the public answer can safely explain what each graph neighbor contributes. | Baseline implemented; evidence-conditioned graph answer planned |
-| The answer should be one visible message while orchestration stays in backend | `agent_workspace.js`, `conversationComposer.ts`, and `answerReleaseReview.ts` already preserve the one-message public surface and keep structured context in trace/assistant blocks. The next plan keeps this invariant while making the single answer more complete. | Preserved |
-| LLM judging should improve answer completeness | No mandatory LLM judge exists in the Knowledge Workspace answer path. `src/notemd/LlmProvider.ts` is the correct provider abstraction to reuse if the RAG path adds optional judging. The plan rejects unconditional multi-round judging because it would make latency, cost, and failure modes part of the hot path. | Planned, optional and bounded |
-| Weak evidence should degrade explicitly | Current release review can abstain or revise, and `knowledgeRun.quality.gates` records several graph/evidence conditions. The plan adds explicit RAG states such as partial coverage, conflict, stale evidence, and insufficient evidence so a fluent answer cannot mask a thin evidence pack. | Planned |
+| RSE should start from precise hit spans rather than broad documents | `src/learning/queryBackend.ts` and `src/learning/KnowledgeLearningPlatform.ts` already return evidence spans, citations, relation paths, query variants, and scoped recovery trace data. `src/learning/evidenceContextAssembler.ts` now starts from those spans instead of whole-document dumping. | Implemented deterministic path |
+| Document augmentation should recover enough surrounding source context to answer fully | `evidenceContextAssembler.ts` now reads the full selected source document through a platform boundary, preserves direct support, adds parent/adjacent context, dedupes overlapping windows, and marks `source_window_unavailable` when it cannot recover source text. | Implemented deterministic path |
+| Graph context should use in-degree/out-degree and neighbor content, not only neighbor titles | `KnowledgeLearningPlatform.agentConversation()` now materializes selected graph-neighbor items and lets the evidence assembler produce `graph_neighbor_support` fragments. The deeper graph-ranker owner in `graphContextAssembler.ts` still needs relation/intent/confidence tuning. | Partially implemented |
+| The answer should be one visible message while orchestration stays in backend | `conversationComposer.ts` now accepts `ragContextPack` and `ragSufficiencyReview` and builds a richer single public answer from direct, document, and graph evidence. `agent_workspace.js` / `workspace_panes.js` show compact status rather than extra chat messages. | Preserved and strengthened |
+| LLM judging should improve answer completeness | `ragSufficiencyJudge.ts` has deterministic gates plus an injected optional LLM judge hook. The hook is not yet wired to `src/notemd/LlmProvider.ts`, and no mandatory provider dependency is introduced. | Partially implemented; provider wiring pending |
+| Weak evidence should degrade explicitly | `RagSufficiencyReview` now records `sufficient`, `borderline`, or `insufficient` plus degradation states such as `partial_coverage`, `conflict`, and `insufficient_evidence`; the frontend evidence pane displays the compact state. | Implemented for deterministic review |
 
-Architecture direction now has a sharper owner split:
+Architecture ownership now has a sharper split:
 
-- `queryBackend.ts` should keep precise RSE retrieval and hybrid ranking.
-- A new `evidenceContextAssembler.ts` should own source-window / parent-section / adjacent-context document augmentation.
-- `graphContextAssembler.ts` should continue owning graph anchor and neighborhood selection, but selected neighbors need evidence handles, not only titles.
-- A new `ragContextPack.ts` should enforce per-fragment and total model-visible context budgets, following the `ref/codex` hard-cap guidance.
-- A new `ragSufficiencyJudge.ts` should run deterministic gates first and call an optional LLM judge only for borderline evidence packs.
-- `conversationComposer.ts` should organize richer single-message answers by answer profile, while `answerReleaseReview.ts` remains the final release gate and gains completeness/budget checks.
+- `queryBackend.ts` remains the precise RSE and hybrid-ranking owner.
+- `evidenceContextAssembler.ts` owns source-window, parent-section, adjacent-context, full-document source-boundary reading, and missing-source degradation.
+- `ragContextPack.ts` owns model-visible hard caps, role priority, middle truncation, and budget decisions.
+- `ragSufficiencyJudge.ts` owns deterministic sufficiency and optional judge integration points.
+- `KnowledgeLearningPlatform.ts` wires source resolution, graph-neighbor materialization, trace/artifact persistence, and conversation response assembly.
+- `conversationComposer.ts` owns the one-message public answer from the structured pack.
+- `agent_workspace.js` and `workspace_panes.js` expose compact RAG health in the API status/evidence surfaces without rendering raw fragments in the chat.
 
-The key correction to the user's proposed shape is that "five paragraphs before and after the hit" is not the default algorithm. It is a maximum expansion budget. The safer implementation is small-to-big retrieval: direct span first, then adaptive parent/adjacent context, then graph-neighbor evidence when relation and source support justify it.
+The key correction remains unchanged: "five paragraphs before and after the hit" is a local expansion heuristic, not the source-reading maximum. The maximum source boundary is the complete scoped document for each selected knowledge point; the hard cap belongs to the model-visible `RagContextPack`. The implemented path follows that small-to-big shape: direct span first, full-document-aware parent/adjacent context selection, then graph-neighbor evidence when graph context provides usable ids.
+
+Fresh implementation evidence in this slice:
+
+- New modules: `src/learning/evidenceContextAssembler.ts`, `src/learning/ragContextPack.ts`, `src/learning/ragSufficiencyJudge.ts`.
+- New/updated tests: evidence assembler, context pack budgeter, sufficiency judge, persistence compatibility, composer, platform integration, Knowledge Workspace conversation regression, runtime verifier validation, and frontend RAG grounding display.
+- `scripts/verify-knowledge-workspace-runtime.js` can now validate expected RAG source boundary, roles, answer terms, and sufficiency statuses.
+- `src/frontend/agent_workspace.js` marks RAG-only trace payloads inspectable; the API status line reports `RAG: <status>, <N> fragments`.
+- `src/frontend/workspace_panes.js` shows compact RAG context metrics: sufficiency, source boundary, fragment budget, direct/document/graph roles, truncated/dropped/unavailable source counts, degradation, and reasons.
 
 Next movement:
 
-- Implement the plan in dependency order: evidence contracts, source-window assembler, graph-neighbor evidence, context pack budgeter, sufficiency judge, richer composer/release review, trace/status/export, runtime probes.
-- Keep `waterglass` as an acceptance probe, but add larger regression samples covering repeated snippets, conflicting adjacent evidence, missing graph-neighbor evidence, context truncation, and no-provider LLM fallback.
-- Do not treat answer length as the success metric. The success metric is claim coverage by direct evidence, traceable graph relation use, bounded context, and explicit degraded states when evidence is weak.
+- Wire the optional LLM judge through `src/notemd/LlmProvider.ts` with strict timeout/schema/fallback behavior; do not add a second provider client.
+- Implement a single recovery pass for borderline packs; keep it bounded to extra source sections and one additional graph neighbor per direction.
+- Move more graph-neighbor ranking responsibility into `graphContextAssembler.ts` so neighbor evidence selection is not only a platform-level materialization step.
+- Expand answer profiles and `answerReleaseReview.ts` completeness gates without removing hard public-answer budgets.
+- Add export replay coverage and larger runtime probes for repeated snippets, conflicting adjacent evidence, missing graph-neighbor evidence, context truncation, and no-provider fallback.
 
 ## 2026-07-04 Knowledge Workspace Scope Visibility, Grouped RAG Answers, and File-First Hit Interaction
 

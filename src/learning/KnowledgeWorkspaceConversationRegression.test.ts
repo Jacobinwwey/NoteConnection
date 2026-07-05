@@ -108,9 +108,25 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                 expect.arrayContaining(expected.plannerTitleLikeQueries)
             );
             expect(planner.titleHitDocumentIds.length).toBeGreaterThan(0);
+            expected.answerMustContain?.forEach((fragment) => {
+                expect(response.answer).toContain(fragment);
+            });
             expected.answerMustNotContain?.forEach((fragment) => {
                 expect(response.answer).not.toContain(fragment);
             });
+            if (expected.ragSourceBoundary) {
+                expect(response.trace.ragContextPack).toEqual(expect.objectContaining({
+                    sourceBoundary: expected.ragSourceBoundary,
+                }));
+            }
+            if (expected.requiredRagRoles && expected.requiredRagRoles.length > 0) {
+                const observedRagRoles = (response.trace.ragContextPack?.fragments || [])
+                    .map((fragment) => fragment.role);
+                expect(observedRagRoles).toEqual(expect.arrayContaining(expected.requiredRagRoles));
+            }
+            if (expected.acceptedRagSufficiencyStatuses && expected.acceptedRagSufficiencyStatuses.length > 0) {
+                expect(expected.acceptedRagSufficiencyStatuses).toContain(response.trace.ragSufficiencyReview?.status);
+            }
             if (expected.retrievalModes && expected.retrievalModes.length > 0) {
                 expect(retrieval.retrievalModes).toEqual(
                     expect.arrayContaining(expected.retrievalModes)

@@ -5100,6 +5100,128 @@
         `).join('');
     }
 
+    function countRagFragmentsByRole(fragments, role) {
+        return fragments.filter((fragment) => String(fragment && fragment.role || '').trim() === role).length;
+    }
+
+    function countRagSourceDecisionsByStatus(sourceDecisions, status) {
+        return sourceDecisions.filter((decision) => String(decision && decision.status || '').trim() === status).length;
+    }
+
+    function formatRagWordList(values, noneLabel) {
+        const normalizedValues = Array.isArray(values)
+            ? values
+                .map((value) => humanizeEvidenceRelationKind(value))
+                .filter(Boolean)
+            : [];
+        return normalizedValues.length > 0 ? normalizedValues.join(', ') : noneLabel;
+    }
+
+    function formatRagCountWithLimit(count, limit) {
+        const numericCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
+        const numericLimit = Number.isFinite(Number(limit)) ? Math.max(0, Number(limit)) : null;
+        return numericLimit && numericLimit > 0
+            ? `${String(numericCount)}/${String(numericLimit)}`
+            : String(numericCount);
+    }
+
+    function buildEvidenceRagContextHtml(payload) {
+        const ragContextPack = payload && payload.ragContextPack && typeof payload.ragContextPack === 'object'
+            ? payload.ragContextPack
+            : null;
+        const ragSufficiencyReview = payload && payload.ragSufficiencyReview && typeof payload.ragSufficiencyReview === 'object'
+            ? payload.ragSufficiencyReview
+            : null;
+        if (!ragContextPack && !ragSufficiencyReview) {
+            return '';
+        }
+
+        const noneLabel = translate('agentWorkspace.reply.knowledgeRunNone', 'none');
+        const fragments = Array.isArray(ragContextPack && ragContextPack.fragments)
+            ? ragContextPack.fragments.filter((fragment) => fragment && typeof fragment === 'object')
+            : [];
+        const sourceDecisions = Array.isArray(ragContextPack && ragContextPack.sourceDecisions)
+            ? ragContextPack.sourceDecisions.filter((decision) => decision && typeof decision === 'object')
+            : [];
+        const budget = ragContextPack && ragContextPack.budget && typeof ragContextPack.budget === 'object'
+            ? ragContextPack.budget
+            : {};
+        const reviewScore = Number(ragSufficiencyReview && ragSufficiencyReview.score);
+        const reviewStatus = String(ragSufficiencyReview && ragSufficiencyReview.status || '').trim();
+        const reviewStatusValue = reviewStatus
+            ? [
+                humanizeEvidenceRelationKind(reviewStatus),
+                Number.isFinite(reviewScore) ? `(${formatEvidenceConfidence(reviewScore)})` : '',
+            ].filter(Boolean).join(' ')
+            : noneLabel;
+        const totalCharCount = Number.isFinite(Number(ragContextPack && ragContextPack.totalCharCount))
+            ? Number(ragContextPack.totalCharCount)
+            : 0;
+        const maxTotalChars = Number.isFinite(Number(budget.maxTotalChars))
+            ? Number(budget.maxTotalChars)
+            : null;
+        const metrics = [
+            {
+                title: translate('agentWorkspace.evidence.ragSufficiencyLabel', 'Sufficiency'),
+                value: reviewStatusValue,
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragSourceBoundaryLabel', 'Source boundary'),
+                value: humanizeEvidenceRelationKind(ragContextPack && ragContextPack.sourceBoundary) || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragFragmentsLabel', 'Fragments'),
+                value: formatRagCountWithLimit(fragments.length, budget.maxFragments),
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragBudgetLabel', 'Context budget'),
+                value: maxTotalChars && maxTotalChars > 0
+                    ? `${String(totalCharCount)}/${String(maxTotalChars)} chars`
+                    : `${String(totalCharCount)} chars`,
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragDirectSupportLabel', 'Direct support'),
+                value: String(countRagFragmentsByRole(fragments, 'direct_support')),
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragDocumentAugmentationLabel', 'Document augmentation'),
+                value: String(
+                    countRagFragmentsByRole(fragments, 'parent_context')
+                    + countRagFragmentsByRole(fragments, 'adjacent_context')
+                ),
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragGraphNeighborSupportLabel', 'Graph neighbor support'),
+                value: String(countRagFragmentsByRole(fragments, 'graph_neighbor_support')),
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragTruncatedFragmentsLabel', 'Truncated fragments'),
+                value: String(countRagSourceDecisionsByStatus(sourceDecisions, 'fragment_truncated')),
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragDroppedFragmentsLabel', 'Dropped fragments'),
+                value: String(countRagSourceDecisionsByStatus(sourceDecisions, 'fragment_dropped')),
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragUnavailableSourcesLabel', 'Unavailable source windows'),
+                value: String(countRagSourceDecisionsByStatus(sourceDecisions, 'source_window_unavailable')),
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragDegradationLabel', 'Degradation'),
+                value: humanizeEvidenceRelationKind(ragSufficiencyReview && ragSufficiencyReview.degradationState) || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragReasonsLabel', 'Reasons'),
+                value: formatRagWordList(ragSufficiencyReview && ragSufficiencyReview.reasons, noneLabel),
+            },
+        ];
+
+        return `
+            <div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.ragContextLabel', 'RAG context'))}</div>
+            <ul class="agent-pane-list">${buildEvidenceMetricListHtml(metrics)}</ul>
+        `;
+    }
+
     function buildEvidenceGraphContextHtml(payload) {
         const graphContext = payload && typeof payload.graphContext === 'object'
             ? payload.graphContext
@@ -5431,6 +5553,7 @@
             },
         ];
         const metricsHtml = buildEvidenceMetricListHtml(metrics);
+        const ragContextHtml = buildEvidenceRagContextHtml(payload);
         const graphContextHtml = buildEvidenceGraphContextHtml(payload);
         body.innerHTML = `
             <div class="agent-pane-block">
@@ -5438,6 +5561,7 @@
                 <ul class="agent-pane-list">${metricsHtml}</ul>
                 ${readinessMessage ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.readinessLabel', 'Workspace readiness'))}</div><div class="agent-pane-summary">${escapeHtml(readinessMessage)}</div>` : ''}
                 ${missMessage ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.missLabel', 'Scope recovery'))}</div><div class="agent-pane-summary">${escapeHtml(missMessage)}</div>` : ''}
+                ${ragContextHtml}
                 ${graphContextHtml}
             </div>
         `;

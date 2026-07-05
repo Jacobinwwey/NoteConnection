@@ -927,11 +927,27 @@
         const citationCount = Array.isArray(result && result.citations) ? result.citations.length : 0;
         const memoryCount = Array.isArray(result && result.recalledMemories) ? result.recalledMemories.length : 0;
         const memoryActionCount = Array.isArray(result && result.memoryActions) ? result.memoryActions.length : 0;
-        const usedScope = result && result.trace && result.trace.usedScope ? result.trace.usedScope : null;
-        const readiness = result && result.trace ? result.trace.workspaceReadiness : null;
-        const missDiagnostics = result && result.trace ? result.trace.missDiagnostics : null;
-        const graphContext = result && result.trace && result.trace.graphContext ? result.trace.graphContext : null;
-        if (citationCount <= 0 && memoryCount <= 0 && memoryActionCount <= 0 && !readiness && !missDiagnostics && !graphContext) {
+        const trace = result && result.trace && typeof result.trace === 'object' ? result.trace : null;
+        const usedScope = trace && trace.usedScope ? trace.usedScope : null;
+        const readiness = trace ? trace.workspaceReadiness : null;
+        const missDiagnostics = trace ? trace.missDiagnostics : null;
+        const graphContext = trace && trace.graphContext ? trace.graphContext : null;
+        const ragContextPack = trace && trace.ragContextPack && typeof trace.ragContextPack === 'object'
+            ? trace.ragContextPack
+            : null;
+        const ragSufficiencyReview = trace && trace.ragSufficiencyReview && typeof trace.ragSufficiencyReview === 'object'
+            ? trace.ragSufficiencyReview
+            : null;
+        if (
+            citationCount <= 0
+            && memoryCount <= 0
+            && memoryActionCount <= 0
+            && !readiness
+            && !missDiagnostics
+            && !graphContext
+            && !ragContextPack
+            && !ragSufficiencyReview
+        ) {
             return null;
         }
         const requestContext = resolveKnowledgeWorkspaceRequestContext();
@@ -954,6 +970,8 @@
             graphContext: graphContext && typeof graphContext === 'object'
                 ? graphContext
                 : null,
+            ragContextPack,
+            ragSufficiencyReview,
         };
     }
 
@@ -974,6 +992,12 @@
         const groundingPayload = result ? buildConversationGroundingPayload(result) : null;
         const summary = result && typeof result.summary === 'object' ? result.summary : {};
         const trace = result && typeof result.trace === 'object' ? result.trace : {};
+        const ragContextPack = trace && typeof trace.ragContextPack === 'object' ? trace.ragContextPack : null;
+        const ragSufficiencyReview = trace && typeof trace.ragSufficiencyReview === 'object' ? trace.ragSufficiencyReview : null;
+        const ragFragmentCount = Array.isArray(ragContextPack && ragContextPack.fragments)
+            ? ragContextPack.fragments.length
+            : 0;
+        const ragSufficiencyStatus = String(ragSufficiencyReview && ragSufficiencyReview.status || '').trim();
         const retrievalTrace = trace && typeof trace.retrieval === 'object' ? trace.retrieval : {};
         const scopeRecovery = retrievalTrace && typeof retrievalTrace.scopeRecovery === 'object'
             ? retrievalTrace.scopeRecovery
@@ -1009,6 +1033,12 @@
             state === 'ok' ? pluralizeApiStatusCount(knowledgePointCount, 'knowledge point', 'knowledge points') : '',
             state === 'ok' ? pluralizeApiStatusCount(citationCount, 'citation', 'citations') : '',
             state === 'ok' ? pluralizeApiStatusCount(memoryCount, 'memory', 'memories') : '',
+            state === 'ok' && ragSufficiencyStatus
+                ? translate('agentWorkspace.apiStatus.rag', 'RAG: {status}, {fragments}', {
+                    status: ragSufficiencyStatus,
+                    fragments: pluralizeApiStatusCount(ragFragmentCount, 'fragment', 'fragments'),
+                })
+                : '',
             state === 'ok' && recoveredSourcePaths.length > 0
                 ? translate('agentWorkspace.apiStatus.recovered', 'Recovered: {sources}', {
                     sources: recoveredSourcePaths.slice(0, 2).join(', '),

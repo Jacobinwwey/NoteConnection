@@ -2199,6 +2199,67 @@ describe('KnowledgeLearningPlatform', () => {
         ).toContain('move from explanation into concrete guided-learning or focus-mode steps');
     });
 
+    test('agent conversation assembles document-augmented RAG context for richer scoped answers', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_agent_rag_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                    language: 'en',
+                    workspaceId: 'waterglass',
+                    corpusId: 'waterglass',
+                    content: [
+                        '# Water Glass',
+                        '',
+                        '## Definition',
+                        '',
+                        'A water glass is a transparent drinking vessel that contains water.',
+                        '',
+                        '## Boundary',
+                        '',
+                        'The vessel boundary and the water surface jointly determine the observed optical behavior.',
+                    ].join('\n'),
+                },
+            ],
+        });
+
+        const response = await platform.agentConversation({
+            userId: 'agent_rag_user',
+            sessionId: 'session_rag_scope',
+            message: 'what is water glass?',
+            scope: {
+                workspaceId: 'waterglass',
+                corpusId: 'waterglass',
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+            },
+            persistMemory: false,
+        });
+
+        expect(response.trace.ragContextPack).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+        }));
+        expect(response.trace.ragContextPack?.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'direct_support',
+            }),
+            expect.objectContaining({
+                role: 'parent_context',
+                sourceBoundary: 'full_document',
+            }),
+            expect.objectContaining({
+                role: 'graph_neighbor_support',
+                sourceBoundary: 'direct_span_only',
+            }),
+        ]));
+        expect(response.trace.ragSufficiencyReview).toEqual(expect.objectContaining({
+            status: 'sufficient',
+        }));
+        expect(response.answer).toContain('transparent drinking vessel');
+        expect(response.answer).toContain('vessel boundary');
+        expect(response.answer).toContain('observed optical behavior');
+    });
+
     test('agent conversation exposes readiness and miss diagnostics when scoped retrieval is empty', async () => {
         const response = await platform.agentConversation({
             userId: 'agent_miss_user',

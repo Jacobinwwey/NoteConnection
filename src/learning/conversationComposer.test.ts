@@ -12,6 +12,8 @@ import type {
     KnowledgeAtom,
     KnowledgeQueryItem,
     KnowledgeQueryResolvedScope,
+    RagContextPack,
+    RagSufficiencyReview,
     RelationEdge,
 } from './types';
 
@@ -951,6 +953,107 @@ describe('conversationComposer', () => {
             title: 'Knowledge Run',
             knowledgeRun: reply.knowledgeRun,
         }));
+    });
+
+    test('uses a document-augmented RAG context pack to produce one richer public answer', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_rag_water_glass',
+                documentId: 'doc_rag_water_glass',
+                sourcePath: 'Knowledge_Base/test/water-glass.md',
+                title: 'Water Glass',
+                content: 'A water glass is a transparent drinking vessel that contains water.',
+            },
+            evidence: {
+                id: 'evidence_rag_water_glass',
+                snippet: 'A water glass is a transparent drinking vessel that contains water.',
+                startLine: 7,
+                endLine: 7,
+            },
+            score: 0.94,
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const citations = knowledgePoints[0].citations || [];
+        const ragContextPack: RagContextPack = {
+            query: 'what is water glass?',
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 4,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1600,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_water_glass',
+                    role: 'direct_support',
+                    text: 'A water glass is a transparent drinking vessel that contains water.',
+                    atomId: 'atom_rag_water_glass',
+                    documentId: 'doc_rag_water_glass',
+                    sourcePath: 'Knowledge_Base/test/water-glass.md',
+                    title: 'Water Glass',
+                    headingPath: ['Water Glass', 'Definition'],
+                    startLine: 7,
+                    endLine: 7,
+                    charCount: 67,
+                    tokenEstimate: 17,
+                    truncated: false,
+                    citationIds: ['evidence_rag_water_glass'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_parent_water_glass',
+                    role: 'parent_context',
+                    text: '## Definition\n\nA water glass is a transparent drinking vessel that contains water.\n\nThe vessel boundary and the water surface jointly determine the observed optical behavior.',
+                    atomId: 'atom_rag_water_glass',
+                    documentId: 'doc_rag_water_glass',
+                    sourcePath: 'Knowledge_Base/test/water-glass.md',
+                    title: 'Water Glass',
+                    headingPath: ['Water Glass', 'Definition'],
+                    startLine: 5,
+                    endLine: 9,
+                    charCount: 158,
+                    tokenEstimate: 40,
+                    truncated: false,
+                    citationIds: ['evidence_rag_water_glass'],
+                    sourceBoundary: 'full_document',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 225,
+            tokenEstimate: 57,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-05T00:00:00.000Z',
+            status: 'sufficient',
+            score: 0.88,
+            reasons: [],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'none',
+        };
+        let blockCounter = 0;
+
+        const reply = buildScopedConversationReply({
+            message: 'what is water glass?',
+            knowledgePoints,
+            citations,
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            ragContextPack,
+            ragSufficiencyReview,
+        });
+
+        expect(reply.answer).toContain('transparent drinking vessel');
+        expect(reply.answer).toContain('vessel boundary');
+        expect(reply.answer).toContain('observed optical behavior');
+        expect(reply.assistantBlocks.filter((block) => block.type === 'structured_answer')).toHaveLength(1);
+        const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
+        expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toBe(reply.answer);
     });
 
     test('fails graph comparison gate when compare intent only has reference context and no real branch signal', () => {

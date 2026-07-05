@@ -153,7 +153,11 @@ function validatePositiveConversationResult(summary, options) {
     expectedAnswerReleaseDecision,
     acceptedAnswerReleaseDecisions,
     requiredFailedGateIds,
+    answerMustContain,
     answerMustNotContain,
+    expectedRagSourceBoundary,
+    requiredRagRoles,
+    acceptedRagSufficiencyStatuses,
   } = options;
   const forbiddenFragments = Array.isArray(answerMustNotContain) && answerMustNotContain.length > 0
     ? answerMustNotContain
@@ -172,6 +176,13 @@ function validatePositiveConversationResult(summary, options) {
     throw new Error(`used scope source mismatch for query=${query}: expected=${expectedScopeSource} actual=${JSON.stringify(summary.usedScope)}`);
   }
   const answer = String(summary.answer || '');
+  if (Array.isArray(answerMustContain) && answerMustContain.length > 0) {
+    answerMustContain.forEach((fragment) => {
+      if (!answer.includes(fragment)) {
+        throw new Error(`conversation answer missing "${fragment}" for query=${query}: ${answer}`);
+      }
+    });
+  }
   forbiddenFragments.forEach((fragment) => {
     if (answer.includes(fragment)) {
       throw new Error(`conversation leaked "${fragment}" into the public answer for query=${query}: ${answer}`);
@@ -218,6 +229,29 @@ function validatePositiveConversationResult(summary, options) {
   }
   if (summary.missDiagnostics && summary.missDiagnostics.reason === 'retrieval_candidates_below_threshold') {
     throw new Error(`conversation still fell below retrieval threshold for query=${query}: ${JSON.stringify(summary.missDiagnostics)}`);
+  }
+  if (expectedRagSourceBoundary) {
+    if (!summary.ragContextPack || String(summary.ragContextPack.sourceBoundary || '') !== String(expectedRagSourceBoundary)) {
+      throw new Error(`RAG source boundary mismatch for query=${query}: expected=${expectedRagSourceBoundary} actual=${JSON.stringify(summary.ragContextPack)}`);
+    }
+  }
+  if (Array.isArray(requiredRagRoles) && requiredRagRoles.length > 0) {
+    const observedRoles = Array.isArray(summary.ragContextPack && summary.ragContextPack.fragments)
+      ? summary.ragContextPack.fragments.map((fragment) => String(fragment && fragment.role || '')).filter(Boolean)
+      : [];
+    requiredRagRoles.forEach((role) => {
+      if (!observedRoles.includes(role)) {
+        throw new Error(`RAG fragment role missing "${role}" for query=${query}: observed=${JSON.stringify(observedRoles)}`);
+      }
+    });
+  }
+  if (Array.isArray(acceptedRagSufficiencyStatuses) && acceptedRagSufficiencyStatuses.length > 0) {
+    const observedStatus = String(summary.ragSufficiencyReview && summary.ragSufficiencyReview.status || '');
+    if (!acceptedRagSufficiencyStatuses.includes(observedStatus)) {
+      throw new Error(
+        `RAG sufficiency status outside accepted set for query=${query}: accepted=${JSON.stringify(acceptedRagSufficiencyStatuses)} actual=${JSON.stringify(summary.ragSufficiencyReview)}`
+      );
+    }
   }
   if (
     Array.isArray(expectedPlannerTitleLikeQueries)
@@ -348,6 +382,8 @@ async function main() {
         const retrievalTrace = result.trace && result.trace.retrieval ? result.trace.retrieval : null;
         const missDiagnostics = result.trace && result.trace.missDiagnostics ? result.trace.missDiagnostics : null;
         const answerReleaseReview = result.answerReleaseReview || (result.trace && result.trace.answerReleaseReview) || null;
+        const ragContextPack = result.trace && result.trace.ragContextPack ? result.trace.ragContextPack : null;
+        const ragSufficiencyReview = result.trace && result.trace.ragSufficiencyReview ? result.trace.ragSufficiencyReview : null;
 
         const summary = {
           query,
@@ -364,6 +400,8 @@ async function main() {
           scopeRecovery: retrievalTrace && retrievalTrace.scopeRecovery ? retrievalTrace.scopeRecovery : null,
           missDiagnostics,
           answerReleaseReview,
+          ragContextPack,
+          ragSufficiencyReview,
           answer: result.answer,
         };
         validatePositiveConversationResult(summary, {
@@ -434,6 +472,8 @@ async function main() {
       const retrievalTrace = result.trace && result.trace.retrieval ? result.trace.retrieval : null;
       const missDiagnostics = result.trace && result.trace.missDiagnostics ? result.trace.missDiagnostics : null;
       const answerReleaseReview = result.answerReleaseReview || (result.trace && result.trace.answerReleaseReview) || null;
+      const ragContextPack = result.trace && result.trace.ragContextPack ? result.trace.ragContextPack : null;
+      const ragSufficiencyReview = result.trace && result.trace.ragSufficiencyReview ? result.trace.ragSufficiencyReview : null;
 
       const summary = {
         id: regressionCase.id,
@@ -454,6 +494,8 @@ async function main() {
         scopeRecovery: retrievalTrace && retrievalTrace.scopeRecovery ? retrievalTrace.scopeRecovery : null,
         missDiagnostics,
         answerReleaseReview,
+        ragContextPack,
+        ragSufficiencyReview,
         answer: result.answer,
       };
       validatePositiveConversationResult(summary, {
@@ -469,7 +511,11 @@ async function main() {
           || regressionCase.expected.answerReleaseDecision,
         acceptedAnswerReleaseDecisions: regressionCase.expected.acceptedAnswerReleaseDecisions,
         requiredFailedGateIds: regressionCase.expected.runtimeRequiredFailedGateIds,
+        answerMustContain: regressionCase.expected.answerMustContain,
         answerMustNotContain: regressionCase.expected.answerMustNotContain,
+        expectedRagSourceBoundary: regressionCase.expected.ragSourceBoundary,
+        requiredRagRoles: regressionCase.expected.requiredRagRoles,
+        acceptedRagSufficiencyStatuses: regressionCase.expected.acceptedRagSufficiencyStatuses,
       });
       caseResults.push(summary);
     }

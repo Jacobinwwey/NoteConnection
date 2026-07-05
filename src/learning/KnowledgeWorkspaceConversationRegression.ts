@@ -2,6 +2,9 @@ import type {
     AnswerReleaseDecision,
     AnswerReleaseGateId,
     KnowledgeQueryResolvedScope,
+    RagEvidenceRole,
+    RagSourceBoundary,
+    RagSufficiencyReview,
 } from './types';
 
 export interface KnowledgeWorkspaceConversationRegressionExpectation {
@@ -15,7 +18,11 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     retrievalModes?: string[];
     primarySourcePath: string;
     recoveredSourcePaths?: string[];
+    answerMustContain?: string[];
     answerMustNotContain?: string[];
+    ragSourceBoundary?: RagSourceBoundary;
+    requiredRagRoles?: RagEvidenceRole[];
+    acceptedRagSufficiencyStatuses?: Array<RagSufficiencyReview['status']>;
 }
 
 export interface KnowledgeWorkspaceConversationRegressionCase {
@@ -71,11 +78,15 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             runtimeRequiredFailedGateIds: ['query_intent_alignment'],
             plannerTitleLikeQueries: ['waterglass', 'water glass'],
             primarySourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            answerMustContain: ['水杯', '透明', '容器'],
             answerMustNotContain: [
                 'No scoped knowledge points matched',
                 'retrieval_candidates_below_threshold',
                 '本技术文档旨在',
             ],
+            ragSourceBoundary: 'full_document',
+            requiredRagRoles: ['direct_support', 'parent_context', 'graph_neighbor_support'],
+            acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
         },
     },
     {
@@ -90,11 +101,15 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             acceptedAnswerReleaseDecisions: ['release', 'revise'],
             plannerTitleLikeQueries: ['water glass', 'waterglass'],
             primarySourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            answerMustContain: ['水杯', '透明', '容器'],
             answerMustNotContain: [
                 'No scoped knowledge points matched',
                 'retrieval_candidates_below_threshold',
                 '本技术文档旨在',
             ],
+            ragSourceBoundary: 'full_document',
+            requiredRagRoles: ['direct_support', 'parent_context', 'graph_neighbor_support'],
+            acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
         },
     },
     {

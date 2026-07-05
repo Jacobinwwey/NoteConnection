@@ -262,4 +262,60 @@ describe('KnowledgeLearningPlatform persistence', () => {
         const restored = await platformB.reloadFromStore();
         expect(restored).toBe(true);
     });
+
+    test('persists full source document content while tolerating older snapshots without it', async () => {
+        const documentContent = [
+            '# Water Glass',
+            '',
+            'A water glass is a transparent drinking vessel that contains water.',
+            '',
+            'A remote source paragraph remains available for document augmentation after restart.',
+        ].join('\n');
+        const store = createFileBackedKnowledgeGraphStore({ filePath: snapshotPath });
+        const platformA = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store,
+        });
+
+        await platformA.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_source_content',
+                    sourcePath: 'Knowledge_Base/source-content.md',
+                    language: 'en',
+                    content: documentContent,
+                },
+            ],
+        });
+
+        const persistedSnapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8')) as {
+            documents: Array<{ documentId: string; content?: string }>;
+        };
+        expect(persistedSnapshot.documents).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: 'doc_source_content',
+                content: documentContent,
+            }),
+        ]));
+
+        persistedSnapshot.documents = persistedSnapshot.documents.map((documentSnapshot) => {
+            const { content: _content, ...legacyDocumentSnapshot } = documentSnapshot;
+            return legacyDocumentSnapshot;
+        });
+        fs.writeFileSync(snapshotPath, JSON.stringify(persistedSnapshot, null, 2), 'utf8');
+
+        const platformB = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store: createFileBackedKnowledgeGraphStore({ filePath: snapshotPath }),
+        });
+        await platformB.ensureReady();
+
+        const restoredQuery = await platformB.queryKnowledge({
+            query: 'transparent drinking vessel water',
+            topK: 1,
+        });
+        expect(restoredQuery.items.length).toBeGreaterThan(0);
+        expect(platformB.getKnowledgeState().documents).toBe(1);
+    });
 });

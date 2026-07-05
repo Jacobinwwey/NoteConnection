@@ -345,6 +345,82 @@ export interface KnowledgeCitation {
     score: number;
 }
 
+export type RagEvidenceRole =
+    | 'direct_support'
+    | 'parent_context'
+    | 'adjacent_context'
+    | 'graph_neighbor_support'
+    | 'conflict'
+    | 'background';
+
+export type RagSourceBoundary = 'full_document' | 'direct_span_only';
+
+export interface RagContextBudget {
+    maxFragments: number;
+    maxCharsPerFragment: number;
+    maxTotalChars: number;
+}
+
+export interface RagEvidenceFragment {
+    fragmentId: string;
+    role: RagEvidenceRole;
+    text: string;
+    atomId?: string;
+    documentId: string;
+    sourcePath: string;
+    title?: string;
+    headingPath: string[];
+    startOffset?: number;
+    endOffset?: number;
+    startLine?: number;
+    endLine?: number;
+    charCount: number;
+    tokenEstimate: number;
+    truncated: boolean;
+    truncationReason?: string;
+    citationIds: string[];
+    relationEdgeIds?: string[];
+    score?: number;
+    sourceBoundary: RagSourceBoundary;
+}
+
+export interface RagSourceDecision {
+    documentId: string;
+    sourcePath: string;
+    sourceBoundary: RagSourceBoundary;
+    status:
+        | 'read'
+        | 'source_window_unavailable'
+        | 'fragment_included'
+        | 'fragment_truncated'
+        | 'fragment_dropped';
+    reason?: string;
+    charsRead?: number;
+    fragmentsSelected?: number;
+}
+
+export interface RagContextPack {
+    query: string;
+    generatedAt: string;
+    sourceBoundary: RagSourceBoundary;
+    budget: RagContextBudget;
+    fragments: RagEvidenceFragment[];
+    sourceDecisions: RagSourceDecision[];
+    totalCharCount: number;
+    tokenEstimate: number;
+}
+
+export interface RagSufficiencyReview {
+    reviewedAt: string;
+    status: 'sufficient' | 'borderline' | 'insufficient';
+    score: number;
+    reasons: string[];
+    deterministic: boolean;
+    recoveryAttempted?: boolean;
+    llmJudgeUsed?: boolean;
+    degradationState?: 'none' | 'partial_coverage' | 'conflict' | 'stale_evidence' | 'insufficient_evidence';
+}
+
 export interface KnowledgeQueryResponse {
     items: KnowledgeQueryItem[];
     trace: {
@@ -1211,6 +1287,8 @@ export interface AgentConversationTrace {
         titleHitDocumentIds: string[];
     };
     graphContext?: AgentConversationGraphContext;
+    ragContextPack?: RagContextPack;
+    ragSufficiencyReview?: RagSufficiencyReview;
     answerReleaseReview?: AnswerReleaseReview;
 }
 

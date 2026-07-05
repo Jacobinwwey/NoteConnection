@@ -19,6 +19,9 @@ import type {
     KnowledgeRunQualityStatus,
     KnowledgeRunReviewCard,
     KnowledgeRunReviewState,
+    RagContextPack,
+    RagEvidenceFragment,
+    RagSufficiencyReview,
 } from './types';
 import { reviewAnswerRelease } from './answerReleaseReview';
 import { buildAgentConversationGraphContextFromKnowledgePoints } from './graphContextAssembler';
@@ -36,6 +39,8 @@ export type ScopedConversationReplyParams = {
     nextBlockId: () => string;
     nextRunId?: () => string;
     graphContext?: AgentConversationGraphContext | null;
+    ragContextPack?: RagContextPack;
+    ragSufficiencyReview?: RagSufficiencyReview;
 };
 
 function normalizeWhitespace(value: string): string {
@@ -647,6 +652,118 @@ function buildGraphProfileAnswerSentence(
     return fragments.join('; ');
 }
 
+function cleanRagEvidenceText(value: string): string {
+    return normalizeWhitespace(
+        String(value || '')
+            .replace(/```[\s\S]*?(?:```|$)/gu, ' ')
+            .split(/\r?\n/u)
+            .filter((line) => !/^#{1,6}\s+/u.test(line.trim()))
+            .join(' ')
+            .replace(/\[[^\]]+\]\([^)]*\)/gu, ' ')
+            .replace(/!\[[^\]]*\]\([^)]*\)/gu, ' ')
+            .replace(/[*_~`>#|]/gu, ' ')
+            .replace(/\s{2,}/gu, ' ')
+    );
+}
+
+function splitRagEvidenceSentences(fragment: RagEvidenceFragment): string[] {
+    const cleaned = cleanRagEvidenceText(fragment.text);
+    if (!cleaned) {
+        return [];
+    }
+    return (cleaned.match(/[^.!?\u3002\uFF01\uFF1F]+[.!?\u3002\uFF01\uFF1F]?/gu) || [cleaned])
+        .map((sentence) => normalizeWhitespace(sentence))
+        .filter((sentence) => sentence.length >= 16);
+}
+
+function sentenceComparableKey(value: string): string {
+    return stripConversationAnswerTerminalPunctuation(value).toLowerCase();
+}
+
+function appendRagEvidenceSentence(
+    sentences: string[],
+    candidate: string,
+    useChinese: boolean
+): void {
+    const normalized = normalizeConversationAnswerSentence(candidate, useChinese);
+    if (!normalized) {
+        return;
+    }
+    const candidateKey = sentenceComparableKey(normalized);
+    const alreadyCovered = sentences.some((sentence) => {
+        const existingKey = sentenceComparableKey(sentence);
+        return existingKey === candidateKey
+            || (candidateKey.length >= 32 && existingKey.includes(candidateKey))
+            || (existingKey.length >= 32 && candidateKey.includes(existingKey));
+    });
+    if (!alreadyCovered) {
+        sentences.push(normalized);
+    }
+}
+
+function selectRagEvidenceSentences(
+    fragments: RagEvidenceFragment[],
+    roles: Set<RagEvidenceFragment['role']>,
+    limit: number
+): string[] {
+    const selected: string[] = [];
+    fragments
+        .filter((fragment) => roles.has(fragment.role))
+        .forEach((fragment) => {
+            splitRagEvidenceSentences(fragment).forEach((sentence) => {
+                if (selected.length >= limit) {
+                    return;
+                }
+                const comparable = sentenceComparableKey(sentence);
+                if (!selected.some((existing) => sentenceComparableKey(existing) === comparable)) {
+                    selected.push(sentence);
+                }
+            });
+        });
+    return selected;
+}
+
+function buildRagAugmentedConversationAnswer(
+    params: ScopedConversationReplyParams,
+    graphContext: AgentConversationGraphContext | null,
+    useChinese: boolean
+): string {
+    const pack = params.ragContextPack;
+    if (!pack || !Array.isArray(pack.fragments) || pack.fragments.length <= 0) {
+        return '';
+    }
+    if (params.ragSufficiencyReview?.status === 'insufficient') {
+        return '';
+    }
+    const answerSentences: string[] = [];
+    selectRagEvidenceSentences(pack.fragments, new Set(['direct_support']), 1)
+        .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
+    selectRagEvidenceSentences(pack.fragments, new Set(['parent_context', 'adjacent_context']), 2)
+        .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
+    selectRagEvidenceSentences(pack.fragments, new Set(['graph_neighbor_support']), 1)
+        .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
+    if (params.ragSufficiencyReview?.status === 'borderline') {
+        appendRagEvidenceSentence(
+            answerSentences,
+            useChinese
+                ? '当前证据覆盖仍然有限，因此这只能作为基于已命中材料的部分回答'
+                : 'The available evidence is still partial, so this answer stays within the matched material',
+            useChinese
+        );
+    }
+    appendConversationAnswerSentence(
+        answerSentences,
+        buildGraphConnectionPathAnswerSentence(graphContext, useChinese),
+        useChinese
+    );
+    appendConversationAnswerSentence(
+        answerSentences,
+        buildGraphProfileAnswerSentence(graphContext, useChinese),
+        useChinese
+    );
+    return answerSentences.slice(0, 6).join(useChinese ? '' : ' ');
+}
+
 function buildScopedConversationAnswer(
     params: ScopedConversationReplyParams,
     graphContext: AgentConversationGraphContext | null
@@ -668,6 +785,10 @@ function buildScopedConversationAnswer(
         graphContext && graphContext.anchorTitle,
     ].filter(Boolean).join(' '));
     const answerSentences: string[] = [];
+    const ragAnswer = buildRagAugmentedConversationAnswer(params, graphContext, useChinese);
+    if (ragAnswer) {
+        return ragAnswer;
+    }
     const directSentence = selectScopedConversationDirectSentence(params.message, leadingPoint);
     if (directSentence) {
         appendConversationAnswerSentence(answerSentences, directSentence, useChinese);

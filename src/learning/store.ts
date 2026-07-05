@@ -26,6 +26,7 @@ export interface SerializedDocumentSnapshot {
     documentId: string;
     sourcePath: string;
     sourceHash: string;
+    content?: string;
     version: number;
     updatedAt: string;
     atomStableKeyToId: Array<[string, string]>;

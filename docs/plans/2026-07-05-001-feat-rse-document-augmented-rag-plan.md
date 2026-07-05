@@ -17,18 +17,19 @@ The target is not "longer answers by default." The target is answers that are co
 
 ## Critical Assessment
 
-The proposed "take five paragraphs before and after the matched node" is directionally useful but too blunt as a primary rule.
+The proposed "take five paragraphs before and after the matched node" is directionally useful but too blunt as a primary rule. It is also not the maximum source-reading boundary. The source augmentation layer may read the full source document for each selected knowledge point when provenance and scope allow it; the strict cap applies later to the model-visible `RagContextPack`.
 
 - Fixed +/-5 paragraphs can inject irrelevant context when the document has dense sections, tables, Mermaid/code blocks, or repeated headings.
 - It scales poorly when multiple spans hit the same knowledge point or when neighbor nodes also need context.
 - It can lower faithfulness: more adjacent text increases the chance that generation uses background material as direct support.
 - It is still insufficient for tables, definitions, and heading-scoped clauses where the right context is the parent section, header, or structured block rather than five plain paragraphs.
 
-The better implementation is "small-to-big with hard caps":
+The better implementation is "small-to-big source reading with hard model-visible caps":
 
 - retrieval remains segment/span-level;
 - context expansion is adaptive around source spans, heading boundaries, table/code block boundaries, and graph relation intent;
-- +/-5 paragraphs is a configurable maximum, not an unconditional inclusion rule;
+- +/-5 paragraphs is a default local expansion window, not a maximum source-reading range;
+- full-document reading is allowed as the maximum augmentation boundary, but only selected fragments enter the context pack;
 - every expanded fragment carries provenance and a role: direct support, parent context, neighbor support, conflict, or background.
 
 The proposed multi-stage LLM grading is also risky if placed on the hot path for every turn. It should be a bounded adjudication layer:
@@ -95,8 +96,8 @@ flowchart TB
 
 ## Key Technical Decisions
 
-- Use adaptive source-window expansion, not unconditional +/-5 paragraph inclusion.
-  Rationale: it keeps context quality higher and avoids wasting token budget on unrelated neighboring text.
+- Use adaptive source-window expansion with full-document source availability, not unconditional +/-5 paragraph injection.
+  Rationale: full-document access lets the assembler recover distant definitions, caveats, tables, and section-level constraints, while the context pack still prevents unrelated text from becoming model-visible by default.
 - Add a new evidence context assembly layer instead of putting source expansion into `conversationComposer.ts`.
   Rationale: the owner of evidence completeness is the retrieval/context layer, not the text rendering layer.
 - Treat graph neighbors as evidence candidates, not as facts by title alone.
@@ -113,7 +114,7 @@ flowchart TB
 - No new vector database is required for this phase.
 - No mandatory cloud LLM dependency is introduced.
 - No frontend redesign is required beyond surfacing richer answer/status states already carried by backend payloads.
-- No unbounded prompt assembly or multi-turn hidden loop is allowed.
+- Full source documents may be read for scoped evidence assembly, but no unbounded prompt assembly or multi-turn hidden loop is allowed.
 - No breaking changes to existing Knowledge Workspace response fields are allowed.
 
 ## Implementation Units
@@ -130,9 +131,11 @@ flowchart TB
     U7 --> U8["Unit 8: Regression probes"]
 ```
 
-- [ ] **Unit 1: Evidence Context Contracts**
+- [x] **Unit 1: Evidence Context Contracts**
 
 **Goal:** Add stable types for document-augmented evidence without changing current response contracts.
+
+**Implementation status (2026-07-05):** Implemented. `src/learning/types.ts` now defines additive RAG fragment, context-pack, budget, source-decision, and sufficiency-review contracts, and `AgentConversationTrace` carries the new fields optionally for forward compatibility.
 
 **Requirements:** R1, R2, R4, R6.
 
@@ -163,9 +166,11 @@ flowchart TB
 - TypeScript strict mode accepts the new optional contracts.
 - Existing tests using older response shapes require no rewrites beyond intentional new assertions.
 
-- [ ] **Unit 2: Source-Window and Document Augmentation Assembler**
+- [x] **Unit 2: Source-Window and Document Augmentation Assembler**
 
 **Goal:** Build the small-to-big document context layer around retrieved spans.
+
+**Implementation status (2026-07-05):** Implemented for the deterministic path. `src/learning/evidenceContextAssembler.ts` starts from evidence spans, reads the full source document through a platform-owned resolver, preserves direct support, adds parent/adjacent context, dedupes overlapping windows, and degrades to `source_window_unavailable` when source text is unavailable.
 
 **Requirements:** R1, R2, R7.
 
@@ -179,9 +184,11 @@ flowchart TB
 **Approach:**
 - Start from `KnowledgeQueryItem.evidenceSpans`, not from whole documents.
 - Group fragments by knowledge point/document as `conversationComposer.ts` already does for UI hits.
-- Expand each hit to a bounded local window:
+- Expand each hit from a full-document source view into bounded evidence fragments:
   - default: parent heading plus nearest paragraphs around the span;
-  - maximum: five preceding and five following paragraphs;
+  - local window: five preceding and five following paragraphs unless evidence routing requires broader source inspection;
+  - maximum source boundary: the complete document for the selected knowledge point;
+  - model-visible maximum: the `RagContextPack` fragment and total budgets, not the raw source document length;
   - lower cap when the hit is in a table/code/Mermaid block or when multiple spans already cover the same section.
 - Preserve direct evidence as a separate fragment; expanded context must not replace the directly cited span.
 - Prefer indexed document/atom snapshots already held by `KnowledgeLearningPlatform`; avoid ad hoc filesystem reads unless the existing storage abstraction already provides source text.
@@ -206,6 +213,8 @@ flowchart TB
 - [ ] **Unit 3: Graph-Conditioned Neighbor Evidence**
 
 **Goal:** Attach ranked evidence from graph in-degree/out-degree neighborhoods to the answer basis.
+
+**Implementation status (2026-07-05):** Partially implemented. `KnowledgeLearningPlatform.agentConversation()` now materializes graph-neighbor query items from graph context windows/supporting ids and sends them through the evidence assembler as `graph_neighbor_support` fragments. The remaining gap is a deeper graph-ranker change inside `graphContextAssembler.ts` for relation-kind, confidence, bibliography filtering, and query-intent weighted neighbor selection before evidence assembly.
 
 **Requirements:** R3, R7.
 
@@ -242,9 +251,11 @@ flowchart TB
 **Verification:**
 - Graph-derived answer statements can be traced to both relation metadata and source evidence fragments.
 
-- [ ] **Unit 4: Budgeted RAG Context Pack**
+- [x] **Unit 4: Budgeted RAG Context Pack**
 
 **Goal:** Convert document and graph fragments into a model-visible context payload with strict budgets.
+
+**Implementation status (2026-07-05):** Implemented. `src/learning/ragContextPack.ts` enforces role priority, per-fragment limits, total limits, middle truncation that preserves head/tail context, and traceable include/truncate/drop source decisions.
 
 **Requirements:** R4, R5, R6.
 
@@ -279,6 +290,8 @@ flowchart TB
 
 **Goal:** Decide whether the assembled context can support a complete answer, and recover once when it cannot.
 
+**Implementation status (2026-07-05):** Partially implemented. `src/learning/ragSufficiencyJudge.ts` provides deterministic sufficiency gates, explicit degradation states, and an injected optional LLM judge hook. It is not yet wired to `src/notemd/LlmProvider.ts`, and the one-step recovery pass is not yet implemented as a second assembly cycle.
+
 **Requirements:** R5, R7.
 
 **Dependencies:** Unit 4.
@@ -304,7 +317,7 @@ flowchart TB
   - no hidden chain-of-thought storage;
   - failure falls back to deterministic decision.
 - Permit at most one recovery pass:
-  - expand source window within budget;
+  - inspect additional full-document sections and admit only budgeted fragments;
   - add one more graph neighbor per direction if evidence is thin;
   - increase parent-context priority if direct evidence lacks definitions.
 - If still insufficient, return a partial answer with explicit missing evidence state rather than fabricating completeness.
@@ -326,6 +339,8 @@ flowchart TB
 - [ ] **Unit 6: Rich Single-Message Answer Composer**
 
 **Goal:** Generate a more complete public answer from the RAG context pack while preserving one-message UX.
+
+**Implementation status (2026-07-05):** Partially implemented. `conversationComposer.ts` now uses `RagContextPack` and `RagSufficiencyReview` to build a richer deterministic one-message answer from direct support, document augmentation, and graph-neighbor evidence. The remaining gap is a broader answer-profile system plus `answerReleaseReview.ts` completeness/budget expansion beyond the existing release contraction.
 
 **Requirements:** R4, R6, R7.
 
@@ -366,6 +381,8 @@ flowchart TB
 
 **Goal:** Make the pipeline debuggable and replayable without exposing backend clutter in the chat answer.
 
+**Implementation status (2026-07-05):** Partially implemented. Backend trace and knowledge-run artifact payloads now include `ragContextPack` and `ragSufficiencyReview`; `scripts/verify-knowledge-workspace-runtime.js` summarizes and validates them; `src/frontend/agent_workspace.js` and `src/frontend/workspace_panes.js` surface compact RAG status, source boundary, role counts, budget/degradation state, and sufficiency without rendering raw fragment text. Export-bundle replay coverage remains a follow-up.
+
 **Requirements:** R4, R7, R8.
 
 **Dependencies:** Unit 6.
@@ -400,6 +417,8 @@ flowchart TB
 - [ ] **Unit 8: Regression Corpus and Runtime Probes**
 
 **Goal:** Prevent "better answer" work from regressing retrieval, graph correctness, latency, or UI compatibility.
+
+**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, sufficiency judging, persistence compatibility, richer composer behavior, platform integration, frontend RAG grounding display, and `waterglass` regression expectations. The broader runtime probe corpus, timeout/fallback LLM judge probes, and large-corpus hard-negative samples remain follow-up work.
 
 **Requirements:** R8.
 
@@ -465,7 +484,7 @@ flowchart TB
 ### Resolved During Planning
 
 - Should +/-5 paragraphs be unconditional?
-  No. Treat it as a maximum expansion budget. The default should be adaptive to source structure and evidence role.
+  No. Treat it as a default local expansion window. The maximum source-reading boundary is the complete scoped document, while the model-visible maximum is enforced by `RagContextPack` budgets.
 - Should LLM grading be mandatory?
   No. It must be optional and deterministic-fallback safe.
 - Should graph in/out nodes be included by title only?
@@ -518,18 +537,19 @@ flowchart TB
 
 ## 批判性判断
 
-“命中节点前后各五段”不是错误方向，但不能作为无条件主规则。
+“命中节点前后各五段”不是错误方向，但不能作为无条件主规则；它也不是最大 source 范围。source augmentation 在 provenance 与 scope 允许时可以读取每个被选知识点的完整源文档，硬上限放在后续 model-visible `RagContextPack`。
 
 - 固定前后五段会在密集文档、表格、代码块、Mermaid、重复标题场景中稳定引入噪声。
 - 当同一知识点命中多个 span，或还要读取入度/出度邻居时，成本会快速膨胀。
 - 上下文越多不一定越可信，模型更容易把背景材料当作直接支撑。
 - 对表格、定义、标题域条款来说，真正需要的往往是父级标题、表头、限定条件或结构块，而不是普通段落数量。
 
-更稳的方向是“small-to-big + hard cap”：
+更稳的方向是“small-to-big source reading + model-visible hard cap”：
 
 - 检索保持 span/segment 粒度；
 - 上下文扩展基于 source span、标题边界、表格/代码边界、图关系意图自适应；
-- 前后五段只是最大扩展预算，不是默认拼接规则；
+- 前后五段只是默认局部扩展窗口，不是最大 source 读取范围；
+- 完整文档读取是 augmentation 的最大 source 边界，但只有被选中的片段能进入 context pack；
 - 每个扩展片段都要有角色：直接支撑、父级上下文、邻段上下文、图邻居支撑、冲突证据或背景材料。
 
 多轮 LLM 打分也不能直接塞进每次热路径。更合理的是：
@@ -596,8 +616,8 @@ flowchart TB
 
 ## 关键技术决策
 
-- 用自适应 source-window expansion 替代无条件前后五段。
-  理由：上下文质量更高，且不会把 token budget 浪费在无关邻段。
+- 用具备完整文档 source 可用性的自适应 source-window expansion 替代无条件前后五段注入。
+  理由：完整文档读取可以恢复远处定义、限定条件、表格和 section 级约束，但 context pack 仍能阻止无关文本默认进入模型可见上下文。
 - 新增 evidence context assembly layer，而不是把扩展逻辑塞进 `conversationComposer.ts`。
   理由：证据完整性的 owner 应该在检索/上下文层，不在文本渲染层。
 - 图邻居先作为 evidence candidate，不按标题直接生成事实。
@@ -614,14 +634,16 @@ flowchart TB
 - 本阶段不引入新的向量数据库。
 - 不引入强制云端 LLM 依赖。
 - 不重做前端，只复用现有 answer/status/evidence pane 分层。
-- 不允许无界 prompt assembly 或隐藏多轮循环。
+- 允许对 scoped evidence assembly 读取完整源文档，但不允许无界 prompt assembly 或隐藏多轮循环。
 - 不破坏现有 Knowledge Workspace response 字段。
 
 ## 实施单元
 
-- [ ] **单元 1：证据上下文契约**
+- [x] **单元 1：证据上下文契约**
 
 **目标：** 增加 document-augmented evidence 的稳定类型，同时不破坏现有响应。
+
+**实现状态（2026-07-05）：** 已实现。`src/learning/types.ts` 已新增 RAG fragment、context pack、budget、source decision 与 sufficiency review 的增量契约，`AgentConversationTrace` 以可选字段承载这些信息，保持向前兼容。
 
 **文件：**
 - 修改：`src/learning/types.ts`
@@ -639,9 +661,11 @@ flowchart TB
 - 超大 fragment 会被截断并记录 metadata。
 - 老响应对象在新字段缺失时仍然合法。
 
-- [ ] **单元 2：source-window 与 document augmentation assembler**
+- [x] **单元 2：source-window 与 document augmentation assembler**
 
 **目标：** 围绕命中 span 构建 small-to-big 文档上下文。
+
+**实现状态（2026-07-05）：** 确定性路径已实现。`src/learning/evidenceContextAssembler.ts` 从 evidence span 出发，通过平台注入的 source resolver 读取完整源文档，保留 direct support，补入 parent / adjacent context，去重重叠窗口，并在源文本缺失时降级为 `source_window_unavailable`。
 
 **文件：**
 - 新增：`src/learning/evidenceContextAssembler.ts`
@@ -653,7 +677,9 @@ flowchart TB
 - 按 document / knowledge point 聚合，避免同一知识点重复卡片。
 - 扩展策略：
   - 默认包含 parent heading 和最近邻段；
-  - 最大前后五段；
+  - 局部窗口通常为前后五段，证据路由需要时可以检查更宽的源文档区域；
+  - 最大 source 边界是该知识点对应的完整文档；
+  - model-visible 最大范围由 `RagContextPack` fragment / total budget 决定，而不是原始文档长度；
   - 表格、代码块、Mermaid、多 span 命中时降低窗口；
   - direct evidence 独立保存，不被 expanded context 替代。
 - 优先使用 `KnowledgeLearningPlatform` 已有 document/atom/index snapshot，避免临时绕过存储抽象读文件。
@@ -668,6 +694,8 @@ flowchart TB
 - [ ] **单元 3：图条件化邻居证据**
 
 **目标：** 把入度/出度邻域中的高价值节点内容接入回答基础。
+
+**实现状态（2026-07-05）：** 部分实现。`KnowledgeLearningPlatform.agentConversation()` 已从 graph context 的窗口与 supporting ids 中物化图邻居 query items，并通过 evidence assembler 转成 `graph_neighbor_support` fragment。剩余缺口是继续下沉到 `graphContextAssembler.ts`，基于 relation kind、confidence、bibliography 过滤和 query intent 权重做更精细的邻居排序。
 
 **文件：**
 - 修改：`src/learning/graphContextAssembler.ts`
@@ -690,9 +718,11 @@ flowchart TB
 - bibliography-like / 低置信邻居不会进入回答基础。
 - graph ops 不可用时 document-only path 仍可工作。
 
-- [ ] **单元 4：有界 RAG Context Pack**
+- [x] **单元 4：有界 RAG Context Pack**
 
 **目标：** 将文档和图证据转成有硬预算的 model-visible payload。
+
+**实现状态（2026-07-05）：** 已实现。`src/learning/ragContextPack.ts` 已实现 role priority、单片段上限、总上限、保留头尾的 middle truncation，以及可追踪的 include / truncate / drop source decision。
 
 **文件：**
 - 新增：`src/learning/ragContextPack.ts`
@@ -715,6 +745,8 @@ flowchart TB
 
 **目标：** 判断当前 context 是否能支撑完整回答，不足时只恢复一次。
 
+**实现状态（2026-07-05）：** 部分实现。`src/learning/ragSufficiencyJudge.ts` 已提供确定性充分性 gate、显式 degradation state 和可注入的可选 LLM judge hook；尚未接入 `src/notemd/LlmProvider.ts`，一次性 recovery 也尚未作为第二轮 assembly cycle 落地。
+
 **文件：**
 - 新增：`src/learning/ragSufficiencyJudge.ts`
 - 测试：`src/learning/ragSufficiencyJudge.test.ts`
@@ -730,7 +762,7 @@ flowchart TB
   - 不保存 hidden chain-of-thought；
   - timeout / malformed JSON fallback 到确定性判断。
 - 最多一次 recovery：
-  - 扩大 source window；
+  - 检查完整文档中的额外 section，但只准纳入预算内片段；
   - 每个方向增加一个图邻居；
   - direct evidence 缺 definition 时提高 parent context 优先级。
 - 仍不足则输出 partial / insufficient evidence，不强行完整回答。
@@ -745,6 +777,8 @@ flowchart TB
 - [ ] **单元 6：更充分的单消息答案组织器**
 
 **目标：** 从 RAG context pack 组织更完整的 public answer。
+
+**实现状态（2026-07-05）：** 部分实现。`conversationComposer.ts` 已能基于 `RagContextPack` 与 `RagSufficiencyReview`，从 direct support、document augmentation 和 graph-neighbor evidence 组织更充分的确定性单消息回答。剩余缺口是完整 answer profile 系统，以及 `answerReleaseReview.ts` 对 completeness / budget 的进一步放宽与审查。
 
 **文件：**
 - 修改：`src/learning/conversationComposer.ts`
@@ -774,6 +808,8 @@ flowchart TB
 
 **目标：** 不把后台细节塞进聊天答案，同时让工程侧可诊断、可回放。
 
+**实现状态（2026-07-05）：** 部分实现。后端 trace 与 knowledge-run artifact payload 已包含 `ragContextPack` 和 `ragSufficiencyReview`；`scripts/verify-knowledge-workspace-runtime.js` 已摘要和校验这些字段；`src/frontend/agent_workspace.js` 与 `src/frontend/workspace_panes.js` 已显示 compact RAG status、source boundary、role count、budget / degradation state 与 sufficiency，且不渲染 raw fragment text。Export bundle replay 覆盖仍是后续项。
+
 **文件：**
 - 修改：`src/learning/types.ts`
 - 修改：`src/learning/KnowledgeLearningPlatform.ts`
@@ -797,6 +833,8 @@ flowchart TB
 - [ ] **单元 8：回归语料与运行时探针**
 
 **目标：** 防止“答案更充分”引入召回、图谱、延迟或 UI 兼容性回退。
+
+**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、sufficiency judge、持久化兼容、composer 增强、平台集成、前端 RAG grounding 展示，以及 `waterglass` 回归预期。更大的 runtime probe 语料、LLM judge timeout/fallback 探针和 hard-negative 大语料样本仍需继续补齐。
 
 **文件：**
 - 修改：`src/learning/KnowledgeWorkspaceConversationRegression.ts`
@@ -842,7 +880,7 @@ flowchart TB
 
 ### 规划阶段已决
 
-- 前后五段不是无条件规则，而是最大扩展预算。
+- 前后五段不是无条件规则，也不是最大 source 范围；完整文档读取才是 source augmentation 的最大边界，真正的硬上限在 `RagContextPack`。
 - LLM judge 不强制启用，必须 deterministic fallback。
 - 图邻居不能只用标题，必须有关系元数据和源证据片段。
 

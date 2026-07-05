@@ -104,6 +104,19 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphDiagnosticsMissingLookupsLabel': 'Missing graph lookups',
             'agentWorkspace.evidence.graphTemporalValid': 'valid',
             'agentWorkspace.evidence.graphTemporalWarning': 'warning',
+            'agentWorkspace.evidence.ragContextLabel': 'RAG context',
+            'agentWorkspace.evidence.ragSufficiencyLabel': 'Sufficiency',
+            'agentWorkspace.evidence.ragSourceBoundaryLabel': 'Source boundary',
+            'agentWorkspace.evidence.ragFragmentsLabel': 'Fragments',
+            'agentWorkspace.evidence.ragBudgetLabel': 'Context budget',
+            'agentWorkspace.evidence.ragDirectSupportLabel': 'Direct support',
+            'agentWorkspace.evidence.ragDocumentAugmentationLabel': 'Document augmentation',
+            'agentWorkspace.evidence.ragGraphNeighborSupportLabel': 'Graph neighbor support',
+            'agentWorkspace.evidence.ragTruncatedFragmentsLabel': 'Truncated fragments',
+            'agentWorkspace.evidence.ragDroppedFragmentsLabel': 'Dropped fragments',
+            'agentWorkspace.evidence.ragUnavailableSourcesLabel': 'Unavailable source windows',
+            'agentWorkspace.evidence.ragDegradationLabel': 'Degradation',
+            'agentWorkspace.evidence.ragReasonsLabel': 'Reasons',
             'agentWorkspace.graphFocus.relationMapTitle': 'Relation focus',
             'agentWorkspace.graphFocus.relationAnchorNode': 'Anchor',
             'agentWorkspace.graphFocus.relationEdgesUnavailable': 'No bounded relation edges were returned for this hit.',
@@ -925,6 +938,19 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphDiagnosticsMissingLookupsLabel': '缺失图查询',
             'agentWorkspace.evidence.graphTemporalValid': '有效',
             'agentWorkspace.evidence.graphTemporalWarning': '告警',
+            'agentWorkspace.evidence.ragContextLabel': 'RAG 上下文',
+            'agentWorkspace.evidence.ragSufficiencyLabel': '充分性',
+            'agentWorkspace.evidence.ragSourceBoundaryLabel': '源边界',
+            'agentWorkspace.evidence.ragFragmentsLabel': '片段',
+            'agentWorkspace.evidence.ragBudgetLabel': '上下文预算',
+            'agentWorkspace.evidence.ragDirectSupportLabel': '直接支撑',
+            'agentWorkspace.evidence.ragDocumentAugmentationLabel': '文档增强',
+            'agentWorkspace.evidence.ragGraphNeighborSupportLabel': '图邻居支撑',
+            'agentWorkspace.evidence.ragTruncatedFragmentsLabel': '截断片段',
+            'agentWorkspace.evidence.ragDroppedFragmentsLabel': '丢弃片段',
+            'agentWorkspace.evidence.ragUnavailableSourcesLabel': '不可用源窗口',
+            'agentWorkspace.evidence.ragDegradationLabel': '降级状态',
+            'agentWorkspace.evidence.ragReasonsLabel': '原因',
             'agentWorkspace.graphFocus.relationMapTitle': '关联聚焦',
             'agentWorkspace.graphFocus.relationAnchorNode': '锚点',
             'agentWorkspace.graphFocus.relationEdgesUnavailable': '当前命中未返回有界关系边。',
@@ -6565,6 +6591,172 @@ describe('agent workspace learning-path integration', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('Phase Matching');
         expect(String(evidenceBody?.textContent || '')).toContain('Foundation Note -> Phase Matching -> Reflection');
         expect(String(evidenceBody?.textContent || '')).toContain('Temporal validity');
+    });
+
+    test('surfaces compact RAG context status from conversation trace grounding', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+
+        fetchMock.mockImplementationOnce(async () => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId: 'turn_rag_context_trace',
+                    emittedAt: '2026-07-05T09:00:00.000Z',
+                    result: {
+                        assistantMessage: 'Water glass is sodium silicate solution grounded in the selected note.',
+                        citations: [],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        knowledgePoints: [],
+                        summary: {
+                            generatedAt: '2026-07-05T09:00:00.000Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 1,
+                            returnedCitations: 0,
+                            recalledMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 100,
+                        },
+                        trace: {
+                            ragContextPack: {
+                                query: 'what is water glass?',
+                                generatedAt: '2026-07-05T09:00:00.000Z',
+                                sourceBoundary: 'full_document',
+                                budget: {
+                                    maxFragments: 16,
+                                    maxCharsPerFragment: 1600,
+                                    maxTotalChars: 6400,
+                                },
+                                totalCharCount: 742,
+                                tokenEstimate: 186,
+                                fragments: [
+                                    {
+                                        fragmentId: 'rag_direct_waterglass',
+                                        role: 'direct_support',
+                                        text: 'Water glass is a transparent sodium silicate solution.',
+                                        atomId: 'atom_waterglass',
+                                        documentId: 'doc_waterglass',
+                                        sourcePath: 'Knowledge_Base/chemistry/water glass.md',
+                                        title: 'Water glass',
+                                        headingPath: ['Water glass'],
+                                        startLine: 2,
+                                        endLine: 2,
+                                        charCount: 58,
+                                        tokenEstimate: 15,
+                                        truncated: false,
+                                        citationIds: ['citation_waterglass'],
+                                        sourceBoundary: 'full_document',
+                                    },
+                                    {
+                                        fragmentId: 'rag_parent_waterglass',
+                                        role: 'parent_context',
+                                        text: 'The section describes composition, visible properties, and handling constraints.',
+                                        atomId: 'atom_waterglass',
+                                        documentId: 'doc_waterglass',
+                                        sourcePath: 'Knowledge_Base/chemistry/water glass.md',
+                                        title: 'Water glass',
+                                        headingPath: ['Water glass', 'Properties'],
+                                        charCount: 78,
+                                        tokenEstimate: 20,
+                                        truncated: false,
+                                        citationIds: ['citation_waterglass'],
+                                        sourceBoundary: 'full_document',
+                                    },
+                                    {
+                                        fragmentId: 'rag_graph_silicate',
+                                        role: 'graph_neighbor_support',
+                                        text: 'Sodium silicate is connected as the composition node for water glass.',
+                                        atomId: 'atom_silicate',
+                                        documentId: 'doc_silicate',
+                                        sourcePath: 'Knowledge_Base/chemistry/sodium silicate.md',
+                                        title: 'Sodium silicate',
+                                        headingPath: ['Sodium silicate'],
+                                        charCount: 70,
+                                        tokenEstimate: 18,
+                                        truncated: false,
+                                        citationIds: ['citation_silicate'],
+                                        relationEdgeIds: ['edge_waterglass_silicate'],
+                                        sourceBoundary: 'full_document',
+                                    },
+                                ],
+                                sourceDecisions: [
+                                    {
+                                        documentId: 'doc_waterglass',
+                                        sourcePath: 'Knowledge_Base/chemistry/water glass.md',
+                                        sourceBoundary: 'full_document',
+                                        status: 'read',
+                                        charsRead: 4096,
+                                        fragmentsSelected: 2,
+                                    },
+                                    {
+                                        documentId: 'doc_silicate',
+                                        sourcePath: 'Knowledge_Base/chemistry/sodium silicate.md',
+                                        sourceBoundary: 'full_document',
+                                        status: 'fragment_truncated',
+                                        reason: 'max_chars_per_fragment_exceeded',
+                                    },
+                                ],
+                            },
+                            ragSufficiencyReview: {
+                                reviewedAt: '2026-07-05T09:00:00.000Z',
+                                status: 'borderline',
+                                score: 0.71,
+                                reasons: ['partial_coverage', 'context_budget_dropped_fragments'],
+                                deterministic: true,
+                                recoveryAttempted: false,
+                                llmJudgeUsed: false,
+                                degradationState: 'partial_coverage',
+                            },
+                        },
+                    },
+                },
+            },
+        ]));
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'what is water glass?';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+
+        expect((window as any).NoteConnectionAgentWorkspace.getLastConversationGrounding()).toEqual(
+            expect.objectContaining({
+                scopeLabel: 'global',
+                ragContextPack: expect.objectContaining({
+                    sourceBoundary: 'full_document',
+                }),
+                ragSufficiencyReview: expect.objectContaining({
+                    status: 'borderline',
+                    degradationState: 'partial_coverage',
+                }),
+            })
+        );
+
+        const status = document.getElementById('agent-workspace-api-status') as HTMLElement | null;
+        expect(status?.getAttribute('data-agent-inspectable')).toBe('true');
+        expect(String(status?.textContent || '')).toContain('RAG: borderline, 3 fragments');
+        status?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
+
+        const evidenceBody = document.getElementById('agent-evidence-body');
+        expect(String(evidenceBody?.textContent || '')).toContain('RAG context');
+        expect(String(evidenceBody?.textContent || '')).toContain('Sufficiency');
+        expect(String(evidenceBody?.textContent || '')).toContain('borderline');
+        expect(String(evidenceBody?.textContent || '')).toContain('Source boundary');
+        expect(String(evidenceBody?.textContent || '')).toContain('full document');
+        expect(String(evidenceBody?.textContent || '')).toContain('Direct support');
+        expect(String(evidenceBody?.textContent || '')).toContain('Document augmentation');
+        expect(String(evidenceBody?.textContent || '')).toContain('Graph neighbor support');
+        expect(String(evidenceBody?.textContent || '')).toContain('Truncated fragments');
+        expect(String(evidenceBody?.textContent || '')).toContain('partial coverage');
+        expect(String(evidenceBody?.textContent || '')).toContain('context budget dropped fragments');
+        expect(String(evidenceBody?.textContent || '')).not.toContain('Water glass is a transparent sodium silicate solution.');
     });
 
     test('clears stale grounding state when a later conversation turn returns no grounding payload', async () => {
