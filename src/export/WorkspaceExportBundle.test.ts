@@ -463,6 +463,21 @@ describe('WorkspaceExportBundle', () => {
             llmJudgeUsed: true,
             degradationState: 'none' as const,
         };
+        const ragRecovery = {
+            attempted: true,
+            strategy: 'expanded_context_pack' as const,
+            reason: 'borderline' as const,
+            beforeStatus: 'borderline' as const,
+            afterStatus: 'sufficient' as const,
+            beforeScore: 0.58,
+            afterScore: 0.86,
+            beforeFragmentCount: 14,
+            afterFragmentCount: 16,
+            addedFragmentCount: 2,
+            addedRoleCounts: {
+                parent_context: 2,
+            },
+        };
 
         const bundle = buildWorkspaceExportBundle({
             request: {
@@ -565,6 +580,7 @@ describe('WorkspaceExportBundle', () => {
                             },
                             ragContextPack,
                             ragSufficiencyReview,
+                            ragRecovery,
                         },
                     },
                 },
@@ -579,6 +595,7 @@ describe('WorkspaceExportBundle', () => {
         ragContextPack.fragments[0].text = 'mutated after export';
         (ragContextPack.sourceDecisions[0] as any).reason = 'mutated_after_export';
         ragSufficiencyReview.reasons.push('mutated_after_export');
+        ragRecovery.addedRoleCounts.parent_context = 999;
 
         const exportedTrace = (bundle.runtime.conversationTurns[0] as any).response.trace;
         expect(exportedTrace.ragContextPack.fragments[0].text).toBe(
@@ -586,6 +603,7 @@ describe('WorkspaceExportBundle', () => {
         );
         expect(exportedTrace.ragContextPack.sourceDecisions[0].reason).toBeUndefined();
         expect(exportedTrace.ragSufficiencyReview.reasons).toEqual(['answerable_from_context']);
+        expect(exportedTrace.ragRecovery.addedRoleCounts.parent_context).toBe(2);
     });
 
     test('adds durable knowledge-run graph reports to the exported runtime surface', () => {

@@ -421,6 +421,20 @@ export interface RagSufficiencyReview {
     degradationState?: 'none' | 'partial_coverage' | 'conflict' | 'stale_evidence' | 'insufficient_evidence';
 }
 
+export interface RagEvidenceRecoveryTrace {
+    attempted: boolean;
+    strategy: 'expanded_context_pack';
+    reason: 'borderline' | 'insufficient';
+    beforeStatus: RagSufficiencyReview['status'];
+    afterStatus: RagSufficiencyReview['status'];
+    beforeScore: number;
+    afterScore: number;
+    beforeFragmentCount: number;
+    afterFragmentCount: number;
+    addedFragmentCount: number;
+    addedRoleCounts: Partial<Record<RagEvidenceRole, number>>;
+}
+
 export interface KnowledgeQueryResponse {
     items: KnowledgeQueryItem[];
     trace: {
@@ -1289,6 +1303,7 @@ export interface AgentConversationTrace {
     graphContext?: AgentConversationGraphContext;
     ragContextPack?: RagContextPack;
     ragSufficiencyReview?: RagSufficiencyReview;
+    ragRecovery?: RagEvidenceRecoveryTrace;
     answerReleaseReview?: AnswerReleaseReview;
 }
 

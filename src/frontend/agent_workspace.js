@@ -938,6 +938,9 @@
         const ragSufficiencyReview = trace && trace.ragSufficiencyReview && typeof trace.ragSufficiencyReview === 'object'
             ? trace.ragSufficiencyReview
             : null;
+        const ragRecovery = trace && trace.ragRecovery && typeof trace.ragRecovery === 'object'
+            ? trace.ragRecovery
+            : null;
         if (
             citationCount <= 0
             && memoryCount <= 0
@@ -947,6 +950,7 @@
             && !graphContext
             && !ragContextPack
             && !ragSufficiencyReview
+            && !ragRecovery
         ) {
             return null;
         }
@@ -972,6 +976,7 @@
                 : null,
             ragContextPack,
             ragSufficiencyReview,
+            ragRecovery,
         };
     }
 
@@ -994,10 +999,12 @@
         const trace = result && typeof result.trace === 'object' ? result.trace : {};
         const ragContextPack = trace && typeof trace.ragContextPack === 'object' ? trace.ragContextPack : null;
         const ragSufficiencyReview = trace && typeof trace.ragSufficiencyReview === 'object' ? trace.ragSufficiencyReview : null;
+        const ragRecovery = trace && typeof trace.ragRecovery === 'object' ? trace.ragRecovery : null;
         const ragFragmentCount = Array.isArray(ragContextPack && ragContextPack.fragments)
             ? ragContextPack.fragments.length
             : 0;
         const ragSufficiencyStatus = String(ragSufficiencyReview && ragSufficiencyReview.status || '').trim();
+        const ragRecovered = Boolean(ragRecovery && ragRecovery.attempted === true);
         const retrievalTrace = trace && typeof trace.retrieval === 'object' ? trace.retrieval : {};
         const scopeRecovery = retrievalTrace && typeof retrievalTrace.scopeRecovery === 'object'
             ? retrievalTrace.scopeRecovery
@@ -1035,7 +1042,7 @@
             state === 'ok' ? pluralizeApiStatusCount(memoryCount, 'memory', 'memories') : '',
             state === 'ok' && ragSufficiencyStatus
                 ? translate('agentWorkspace.apiStatus.rag', 'RAG: {status}, {fragments}', {
-                    status: ragSufficiencyStatus,
+                    status: ragRecovered ? `${ragSufficiencyStatus}+recovered` : ragSufficiencyStatus,
                     fragments: pluralizeApiStatusCount(ragFragmentCount, 'fragment', 'fragments'),
                 })
                 : '',

@@ -5132,7 +5132,10 @@
         const ragSufficiencyReview = payload && payload.ragSufficiencyReview && typeof payload.ragSufficiencyReview === 'object'
             ? payload.ragSufficiencyReview
             : null;
-        if (!ragContextPack && !ragSufficiencyReview) {
+        const ragRecovery = payload && payload.ragRecovery && typeof payload.ragRecovery === 'object'
+            ? payload.ragRecovery
+            : null;
+        if (!ragContextPack && !ragSufficiencyReview && !ragRecovery) {
             return '';
         }
 
@@ -5209,6 +5212,17 @@
             {
                 title: translate('agentWorkspace.evidence.ragDegradationLabel', 'Degradation'),
                 value: humanizeEvidenceRelationKind(ragSufficiencyReview && ragSufficiencyReview.degradationState) || noneLabel,
+            },
+            {
+                title: translate('agentWorkspace.evidence.ragRecoveryLabel', 'Recovery'),
+                value: ragRecovery && ragRecovery.attempted
+                    ? [
+                        humanizeEvidenceRelationKind(ragRecovery.beforeStatus),
+                        '->',
+                        humanizeEvidenceRelationKind(ragRecovery.afterStatus),
+                        `+${String(Number(ragRecovery.addedFragmentCount || 0))}`,
+                    ].filter(Boolean).join(' ')
+                    : noneLabel,
             },
             {
                 title: translate('agentWorkspace.evidence.ragReasonsLabel', 'Reasons'),

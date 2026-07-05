@@ -65,6 +65,11 @@ import type {
     MemoryLayer,
     MemoryPolicyRequest,
     MemoryPolicyResponse,
+    RagContextBudget,
+    RagContextPack,
+    RagEvidenceRecoveryTrace,
+    RagEvidenceRole,
+    RagSufficiencyReview,
     RelationRecomputeMode,
     RelationEdge,
     RelationKind,
@@ -361,6 +366,11 @@ type GraphFocusRenderDiagnosticsRecord = {
     failureReason: string;
 };
 
+type ReviewedRagEvidenceContext = {
+    ragContextPack: RagContextPack;
+    ragSufficiencyReview: RagSufficiencyReview;
+};
+
 export type KnowledgeLearningPlatformOptions = {
     nowProvider?: () => Date;
     store?: KnowledgeGraphStore;
@@ -390,6 +400,22 @@ const STOPWORDS = new Set<string>([
     'were', 'with', 'without', 'your', 'you', 'we', 'our', 'can',
     'will', 'shall', 'not', 'do', 'does', 'did', 'if', 'then',
 ]);
+
+const AGENT_RAG_BASE_CONTEXT_BUDGET: RagContextBudget = {
+    maxFragments: 14,
+    maxCharsPerFragment: 1400,
+    maxTotalChars: 5600,
+};
+
+const AGENT_RAG_RECOVERY_CONTEXT_BUDGET: RagContextBudget = {
+    maxFragments: 32,
+    maxCharsPerFragment: 1800,
+    maxTotalChars: 12000,
+};
+
+const AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT = 6;
+const AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT = 8;
+const AGENT_RAG_RECOVERY_PARAGRAPH_WINDOW = 8;
 
 const MEMORY_LAYER_CAPACITY: Record<MemoryLayer, number> = {
     session: 80,
@@ -6265,10 +6291,155 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         }
     }
 
+    private async assembleReviewedRagEvidenceContext(params: {
+        query: string;
+        items: KnowledgeQueryItem[];
+        graphNeighborItems: KnowledgeQueryItem[];
+        graphContext: AgentConversationResponse['trace']['graphContext'] | null;
+        generatedAt: string;
+        budget: RagContextBudget;
+        paragraphWindow?: number;
+    }): Promise<ReviewedRagEvidenceContext> {
+        const ragContextPack = await assembleRagEvidenceContext({
+            query: params.query,
+            items: params.items,
+            graphNeighborItems: params.graphNeighborItems,
+            generatedAt: params.generatedAt,
+            sourceResolver: (lookup) => this.resolveRagEvidenceSourceDocument(lookup),
+            budget: params.budget,
+            paragraphWindow: params.paragraphWindow,
+        });
+        const ragSufficiencyReview = await reviewRagContextSufficiency({
+            query: params.query,
+            contextPack: ragContextPack,
+            graphContext: params.graphContext,
+            reviewedAt: params.generatedAt,
+            allowLlmJudge: Boolean(this.ragSufficiencyLlmJudge),
+            llmJudge: this.ragSufficiencyLlmJudge || undefined,
+        });
+        return {
+            ragContextPack,
+            ragSufficiencyReview,
+        };
+    }
+
+    private canRecoverRagEvidenceContext(
+        pack: RagContextPack,
+        review: RagSufficiencyReview,
+        graphContext: AgentConversationResponse['trace']['graphContext'] | null
+    ): boolean {
+        if (review.status === 'sufficient' || pack.fragments.length <= 0) {
+            return false;
+        }
+        if (review.reasons.includes('missing_direct_support')) {
+            return false;
+        }
+        const budgetLimited = pack.sourceDecisions.some((decision) => (
+            decision.status === 'fragment_dropped'
+            || decision.status === 'fragment_truncated'
+        ));
+        if (budgetLimited) {
+            return true;
+        }
+        const hasReadableFullDocument = pack.sourceDecisions.some((decision) => (
+            decision.status === 'read'
+            && decision.sourceBoundary === 'full_document'
+            && Number(decision.charsRead || 0) > 0
+        ));
+        if (hasReadableFullDocument && review.reasons.includes('document_augmentation_missing')) {
+            return true;
+        }
+        const graphHasMoreCandidateContext = Boolean(graphContext && (
+            (graphContext.predecessorWindow?.length || 0) > 0
+            || (graphContext.successorWindow?.length || 0) > 0
+            || (graphContext.supportingAtomIds?.length || 0) > 0
+        ));
+        return graphHasMoreCandidateContext && review.reasons.includes('graph_neighbor_evidence_missing');
+    }
+
+    private ragReviewStatusRank(status: RagSufficiencyReview['status']): number {
+        if (status === 'sufficient') {
+            return 3;
+        }
+        if (status === 'borderline') {
+            return 2;
+        }
+        return 1;
+    }
+
+    private shouldUseRecoveredRagEvidenceContext(
+        beforeReview: RagSufficiencyReview,
+        afterReview: RagSufficiencyReview
+    ): boolean {
+        const rankDelta = this.ragReviewStatusRank(afterReview.status) - this.ragReviewStatusRank(beforeReview.status);
+        if (rankDelta > 0) {
+            return true;
+        }
+        if (rankDelta < 0) {
+            return false;
+        }
+        return Number(afterReview.score || 0) >= Number(beforeReview.score || 0);
+    }
+
+    private buildRagEvidenceRecoveryTrace(params: {
+        beforePack: RagContextPack;
+        beforeReview: RagSufficiencyReview;
+        afterPack: RagContextPack;
+        afterReview: RagSufficiencyReview;
+    }): RagEvidenceRecoveryTrace {
+        const beforeFragmentIds = new Set(
+            params.beforePack.fragments.map((fragment) => String(fragment.fragmentId || '').trim()).filter(Boolean)
+        );
+        const addedRoleCounts: Partial<Record<RagEvidenceRole, number>> = {};
+        let addedFragmentCount = 0;
+        params.afterPack.fragments.forEach((fragment) => {
+            const fragmentId = String(fragment.fragmentId || '').trim();
+            if (fragmentId && beforeFragmentIds.has(fragmentId)) {
+                return;
+            }
+            addedFragmentCount += 1;
+            addedRoleCounts[fragment.role] = (addedRoleCounts[fragment.role] || 0) + 1;
+        });
+        return {
+            attempted: true,
+            strategy: 'expanded_context_pack',
+            reason: params.beforeReview.status === 'insufficient' ? 'insufficient' : 'borderline',
+            beforeStatus: params.beforeReview.status,
+            afterStatus: params.afterReview.status,
+            beforeScore: Number(Number(params.beforeReview.score || 0).toFixed(4)),
+            afterScore: Number(Number(params.afterReview.score || 0).toFixed(4)),
+            beforeFragmentCount: params.beforePack.fragments.length,
+            afterFragmentCount: params.afterPack.fragments.length,
+            addedFragmentCount,
+            addedRoleCounts,
+        };
+    }
+
+    private markRagReviewWithRecovery(
+        review: RagSufficiencyReview,
+        recovery: RagEvidenceRecoveryTrace,
+        usedRecoveredPack: boolean
+    ): RagSufficiencyReview {
+        const recoveryReason = recovery.afterStatus === 'sufficient'
+            ? 'evidence_recovery_succeeded'
+            : usedRecoveredPack
+                ? 'evidence_recovery_attempted'
+                : 'evidence_recovery_no_improvement';
+        return {
+            ...review,
+            recoveryAttempted: true,
+            reasons: Array.from(new Set([
+                ...review.reasons,
+                recoveryReason,
+            ])),
+        };
+    }
+
     private buildRagGraphNeighborQueryItems(
         graphContext: AgentConversationResponse['trace']['graphContext'] | null,
         knowledgePoints: AgentConversationKnowledgePoint[],
-        checkedAt: string
+        checkedAt: string,
+        maxNeighbors = AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT
     ): KnowledgeQueryItem[] {
         if (!graphContext) {
             return [];
@@ -6294,9 +6465,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         });
         const activeRelations = this.collectActiveRelationEdges(checkedAt);
         const neighborItems: KnowledgeQueryItem[] = [];
+        const limit = Math.max(0, Math.min(24, Math.floor(Number(maxNeighbors) || 0)));
         Array.from(neighborScores.entries())
             .sort((left, right) => right[1] - left[1])
-            .slice(0, 6)
+            .slice(0, limit)
             .forEach(([atomId, score]) => {
                 const atom = this.atoms.get(atomId);
                 if (!atom) {
@@ -9264,28 +9436,61 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const graphNeighborItems = this.buildRagGraphNeighborQueryItems(
             graphContext,
             conversationKnowledgePoints,
-            generatedAt
+            generatedAt,
+            AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT
         );
-        const ragContextPack = await assembleRagEvidenceContext({
+        const firstReviewedRag = await this.assembleReviewedRagEvidenceContext({
             query: message || 'local knowledge',
             items: queryResult.items,
             graphNeighborItems,
-            generatedAt,
-            sourceResolver: (lookup) => this.resolveRagEvidenceSourceDocument(lookup),
-            budget: {
-                maxFragments: 14,
-                maxCharsPerFragment: 1400,
-                maxTotalChars: 5600,
-            },
-        });
-        const ragSufficiencyReview = await reviewRagContextSufficiency({
-            query: message || 'local knowledge',
-            contextPack: ragContextPack,
             graphContext,
-            reviewedAt: generatedAt,
-            allowLlmJudge: Boolean(this.ragSufficiencyLlmJudge),
-            llmJudge: this.ragSufficiencyLlmJudge || undefined,
+            generatedAt,
+            budget: AGENT_RAG_BASE_CONTEXT_BUDGET,
         });
+        let ragContextPack = firstReviewedRag.ragContextPack;
+        let ragSufficiencyReview = firstReviewedRag.ragSufficiencyReview;
+        let ragRecovery: RagEvidenceRecoveryTrace | undefined;
+        if (this.canRecoverRagEvidenceContext(ragContextPack, ragSufficiencyReview, graphContext)) {
+            const recoveryGraphNeighborItems = this.buildRagGraphNeighborQueryItems(
+                graphContext,
+                conversationKnowledgePoints,
+                generatedAt,
+                AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT
+            );
+            const recoveredReviewedRag = await this.assembleReviewedRagEvidenceContext({
+                query: message || 'local knowledge',
+                items: queryResult.items,
+                graphNeighborItems: recoveryGraphNeighborItems,
+                graphContext,
+                generatedAt,
+                budget: AGENT_RAG_RECOVERY_CONTEXT_BUDGET,
+                paragraphWindow: AGENT_RAG_RECOVERY_PARAGRAPH_WINDOW,
+            });
+            ragRecovery = this.buildRagEvidenceRecoveryTrace({
+                beforePack: ragContextPack,
+                beforeReview: ragSufficiencyReview,
+                afterPack: recoveredReviewedRag.ragContextPack,
+                afterReview: recoveredReviewedRag.ragSufficiencyReview,
+            });
+            const useRecoveredPack = this.shouldUseRecoveredRagEvidenceContext(
+                ragSufficiencyReview,
+                recoveredReviewedRag.ragSufficiencyReview
+            );
+            if (useRecoveredPack) {
+                ragContextPack = recoveredReviewedRag.ragContextPack;
+                ragSufficiencyReview = this.markRagReviewWithRecovery(
+                    recoveredReviewedRag.ragSufficiencyReview,
+                    ragRecovery,
+                    true
+                );
+            } else {
+                ragSufficiencyReview = this.markRagReviewWithRecovery(
+                    ragSufficiencyReview,
+                    ragRecovery,
+                    false
+                );
+            }
+        }
         const activeConversationAtomIds = collectAgentConversationAtomIds(conversationKnowledgePoints);
         const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(activeConversationAtomIds);
         const effectiveWorkspaceId = traceScope.workspaceId || scopedWorkspace.workspaceId;
@@ -9344,6 +9549,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 graphContext: graphContext || reply.graphContext || undefined,
                 ragContextPack,
                 ragSufficiencyReview,
+                ragRecovery,
                 answerReleaseReview: reply.answerReleaseReview,
             },
         };
@@ -9361,6 +9567,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 graphContext: graphContext || reply.graphContext || undefined,
                 ragContextPack,
                 ragSufficiencyReview,
+                ragRecovery,
                 answerReleaseReview: reply.answerReleaseReview,
                 citations,
                 recalledMemories,

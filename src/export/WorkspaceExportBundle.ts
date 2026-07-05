@@ -24,6 +24,7 @@ import type {
     EvidenceSpan,
     KnowledgeAtom,
     RagContextPack,
+    RagEvidenceRecoveryTrace,
     RagSufficiencyReview,
     RelationEdge,
     TemporalEdge,
@@ -71,6 +72,18 @@ function cloneRagSufficiencyReview(
     return {
         ...review,
         reasons: [...review.reasons],
+    };
+}
+
+function cloneRagEvidenceRecoveryTrace(
+    recovery: RagEvidenceRecoveryTrace | undefined
+): RagEvidenceRecoveryTrace | undefined {
+    if (!recovery) {
+        return undefined;
+    }
+    return {
+        ...recovery,
+        addedRoleCounts: { ...recovery.addedRoleCounts },
     };
 }
 
@@ -371,6 +384,7 @@ function sortAndCloneConversationTurns(records: AgentConversationTurnRecord[]): 
                         : undefined,
                     ragContextPack: cloneRagContextPack(record.response.trace.ragContextPack),
                     ragSufficiencyReview: cloneRagSufficiencyReview(record.response.trace.ragSufficiencyReview),
+                    ragRecovery: cloneRagEvidenceRecoveryTrace(record.response.trace.ragRecovery),
                 },
             },
         }));

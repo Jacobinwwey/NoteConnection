@@ -2261,6 +2261,80 @@ describe('KnowledgeLearningPlatform', () => {
         expect(response.answer).toContain('observed optical behavior');
     });
 
+    test('agent conversation performs one bounded recovery pass when direct spans crowd out document augmentation', async () => {
+        const crowdedSections = Array.from({ length: 18 }, (_value, index) => [
+            `## Water Glass Evidence ${index + 1}`,
+            '',
+            `Water glass evidence ${index + 1}: a water glass remains a transparent drinking vessel, and this section repeats the query terms to force a direct retrieval span.`,
+        ].join('\n')).join('\n\n');
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_agent_rag_recovery_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/recovery-water-glass.md',
+                    language: 'en',
+                    workspaceId: 'waterglass',
+                    corpusId: 'waterglass',
+                    content: [
+                        '# Water Glass Recovery Corpus',
+                        '',
+                        '## Definition',
+                        '',
+                        'A water glass is a transparent drinking vessel that contains water.',
+                        '',
+                        crowdedSections,
+                        '',
+                        '## Boundary',
+                        '',
+                        'The full source document also explains that the vessel boundary and water surface determine observed optical behavior.',
+                    ].join('\n'),
+                },
+            ],
+        });
+
+        const response = await platform.agentConversation({
+            userId: 'agent_rag_recovery_user',
+            sessionId: 'session_rag_recovery_scope',
+            message: 'what is water glass?',
+            topK: 18,
+            scope: {
+                workspaceId: 'waterglass',
+                corpusId: 'waterglass',
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+            },
+            persistMemory: false,
+        });
+
+        expect(response.trace.ragRecovery).toEqual(expect.objectContaining({
+            attempted: true,
+            strategy: 'expanded_context_pack',
+            beforeStatus: 'borderline',
+            afterStatus: 'sufficient',
+        }));
+        expect(response.trace.ragRecovery?.addedRoleCounts).toEqual(expect.objectContaining({
+            parent_context: expect.any(Number),
+        }));
+        expect(response.trace.ragSufficiencyReview).toEqual(expect.objectContaining({
+            status: 'sufficient',
+            recoveryAttempted: true,
+        }));
+        expect(response.trace.ragContextPack).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            budget: expect.objectContaining({
+                maxFragments: expect.any(Number),
+            }),
+        }));
+        expect(response.trace.ragContextPack?.budget.maxFragments).toBeGreaterThan(14);
+        expect(response.trace.ragContextPack?.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                sourceBoundary: 'full_document',
+            }),
+        ]));
+        expect(response.answer).toContain('transparent drinking vessel');
+    });
+
     test('agent conversation uses optional LLM sufficiency judge for borderline legacy source windows', async () => {
         const savedAt = '2026-07-05T00:00:00.000Z';
         const sourcePath = 'tmp/missing-rag-legacy-source/water-glass.md';

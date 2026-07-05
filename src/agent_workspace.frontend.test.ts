@@ -6706,13 +6706,28 @@ describe('agent workspace learning-path integration', () => {
                             },
                             ragSufficiencyReview: {
                                 reviewedAt: '2026-07-05T09:00:00.000Z',
-                                status: 'borderline',
-                                score: 0.71,
-                                reasons: ['partial_coverage', 'context_budget_dropped_fragments'],
+                                status: 'sufficient',
+                                score: 0.82,
+                                reasons: ['evidence_recovery_succeeded'],
                                 deterministic: true,
-                                recoveryAttempted: false,
+                                recoveryAttempted: true,
                                 llmJudgeUsed: false,
-                                degradationState: 'partial_coverage',
+                                degradationState: 'none',
+                            },
+                            ragRecovery: {
+                                attempted: true,
+                                strategy: 'expanded_context_pack',
+                                reason: 'borderline',
+                                beforeStatus: 'borderline',
+                                afterStatus: 'sufficient',
+                                beforeScore: 0.71,
+                                afterScore: 0.82,
+                                beforeFragmentCount: 2,
+                                afterFragmentCount: 3,
+                                addedFragmentCount: 1,
+                                addedRoleCounts: {
+                                    parent_context: 1,
+                                },
                             },
                         },
                     },
@@ -6731,15 +6746,19 @@ describe('agent workspace learning-path integration', () => {
                     sourceBoundary: 'full_document',
                 }),
                 ragSufficiencyReview: expect.objectContaining({
-                    status: 'borderline',
-                    degradationState: 'partial_coverage',
+                    status: 'sufficient',
+                    degradationState: 'none',
+                }),
+                ragRecovery: expect.objectContaining({
+                    attempted: true,
+                    afterStatus: 'sufficient',
                 }),
             })
         );
 
         const status = document.getElementById('agent-workspace-api-status') as HTMLElement | null;
         expect(status?.getAttribute('data-agent-inspectable')).toBe('true');
-        expect(String(status?.textContent || '')).toContain('RAG: borderline, 3 fragments');
+        expect(String(status?.textContent || '')).toContain('RAG: sufficient+recovered, 3 fragments');
         status?.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
         await Promise.resolve();
@@ -6747,15 +6766,17 @@ describe('agent workspace learning-path integration', () => {
         const evidenceBody = document.getElementById('agent-evidence-body');
         expect(String(evidenceBody?.textContent || '')).toContain('RAG context');
         expect(String(evidenceBody?.textContent || '')).toContain('Sufficiency');
-        expect(String(evidenceBody?.textContent || '')).toContain('borderline');
+        expect(String(evidenceBody?.textContent || '')).toContain('sufficient');
+        expect(String(evidenceBody?.textContent || '')).toContain('Recovery');
+        expect(String(evidenceBody?.textContent || '')).toContain('borderline -> sufficient +1');
         expect(String(evidenceBody?.textContent || '')).toContain('Source boundary');
         expect(String(evidenceBody?.textContent || '')).toContain('full document');
         expect(String(evidenceBody?.textContent || '')).toContain('Direct support');
         expect(String(evidenceBody?.textContent || '')).toContain('Document augmentation');
         expect(String(evidenceBody?.textContent || '')).toContain('Graph neighbor support');
         expect(String(evidenceBody?.textContent || '')).toContain('Truncated fragments');
-        expect(String(evidenceBody?.textContent || '')).toContain('partial coverage');
-        expect(String(evidenceBody?.textContent || '')).toContain('context budget dropped fragments');
+        expect(String(evidenceBody?.textContent || '')).toContain('none');
+        expect(String(evidenceBody?.textContent || '')).toContain('evidence recovery succeeded');
         expect(String(evidenceBody?.textContent || '')).not.toContain('Water glass is a transparent sodium silicate solution.');
     });
 

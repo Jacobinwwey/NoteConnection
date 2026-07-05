@@ -286,11 +286,11 @@ flowchart TB
 **Verification:**
 - Context assembly cannot produce unbounded prompt input.
 
-- [ ] **Unit 5: Sufficiency Judge and One-Step Evidence Recovery**
+- [x] **Unit 5: Sufficiency Judge and One-Step Evidence Recovery**
 
 **Goal:** Decide whether the assembled context can support a complete answer, and recover once when it cannot.
 
-**Implementation status (2026-07-05):** Partially implemented. `src/learning/ragSufficiencyJudge.ts` provides deterministic sufficiency gates, explicit degradation states, and an injected optional LLM judge hook. `src/learning/ragSufficiencyProviderJudge.ts` now wires that hook through the existing `LlmProviderClient` / NoteMD settings boundary with task key `ragSufficiencyJudge`, strict JSON parsing, bounded timeout, zero retries, and deterministic fallback on timeout or malformed provider output. The one-step recovery pass is not yet implemented as a second assembly cycle.
+**Implementation status (2026-07-05):** Implemented. `src/learning/ragSufficiencyJudge.ts` provides deterministic sufficiency gates, explicit degradation states, and an injected optional LLM judge hook. `src/learning/ragSufficiencyProviderJudge.ts` wires that hook through the existing `LlmProviderClient` / NoteMD settings boundary with task key `ragSufficiencyJudge`, strict JSON parsing, bounded timeout, zero retries, and deterministic fallback on timeout or malformed provider output. `KnowledgeLearningPlatform.agentConversation()` now performs at most one bounded recovery assembly/review pass when the first context pack is recoverably `borderline` or `insufficient`, then records `ragRecovery` and `recoveryAttempted` without changing the one-message public answer contract.
 
 **Requirements:** R5, R7.
 
@@ -302,6 +302,7 @@ flowchart TB
 - Test: `src/learning/ragSufficiencyJudge.test.ts`
 - Test: `src/learning/ragSufficiencyProviderJudge.test.ts`
 - Modify: `src/learning/KnowledgeLearningPlatform.ts`
+- Modify: `src/learning/types.ts`
 - Modify: `src/notemd/types.ts` with additive task key `ragSufficiencyJudge`.
 
 **Approach:**
@@ -331,7 +332,7 @@ flowchart TB
 **Test scenarios:**
 - Happy path: deterministic sufficiency passes and no LLM call is required.
 - Borderline path: provider-backed LLM judge can revise the sufficiency status without changing the public one-message contract.
-- Recovery path: LLM judge requests one expansion; second pass produces answer basis. This remains pending.
+- Recovery path: first pass can be recoverably borderline; second bounded assembly admits additional full-document-aware fragments and produces a sufficient answer basis.
 - Failure path: provider timeout or malformed JSON falls back to deterministic partial/insufficient state.
 - Guardrail: judge cannot trigger unbounded recursive expansion.
 - Error path: malformed LLM JSON is ignored and recorded as judge failure.
@@ -384,7 +385,7 @@ flowchart TB
 
 **Goal:** Make the pipeline debuggable and replayable without exposing backend clutter in the chat answer.
 
-**Implementation status (2026-07-05):** Partially implemented. Backend trace and knowledge-run artifact payloads now include `ragContextPack` and `ragSufficiencyReview`; `scripts/verify-knowledge-workspace-runtime.js` summarizes and validates them; `src/frontend/agent_workspace.js` and `src/frontend/workspace_panes.js` surface compact RAG status, source boundary, role counts, budget/degradation state, and sufficiency without rendering raw fragment text. `WorkspaceExportBundle` now deep-clones RAG context/review trace fields so export replay material is preserved without sharing mutable runtime references. Broader replay ids and recovery-action ledgers remain follow-up work.
+**Implementation status (2026-07-05):** Partially implemented. Backend trace and knowledge-run artifact payloads now include `ragContextPack`, `ragSufficiencyReview`, and `ragRecovery`; `scripts/verify-knowledge-workspace-runtime.js` summarizes and validates the core RAG fields; `src/frontend/agent_workspace.js` and `src/frontend/workspace_panes.js` surface compact RAG status, source boundary, role counts, budget/degradation/recovery state, and sufficiency without rendering raw fragment text. `WorkspaceExportBundle` now deep-clones RAG context/review/recovery trace fields so export replay material is preserved without sharing mutable runtime references. Broader replay ids remain follow-up work.
 
 **Requirements:** R4, R7, R8.
 
@@ -411,7 +412,7 @@ flowchart TB
 **Test scenarios:**
 - Happy path: status shows evidence-ready and graph-ready without showing raw internal prompt.
 - Degraded path: status shows partial/insufficient evidence with actionable reason.
-- Export path: workspace export preserves RAG context/review trace fields without mutable reference leakage; compact replay ids remain follow-up.
+- Export path: workspace export preserves RAG context/review/recovery trace fields without mutable reference leakage; compact replay ids remain follow-up.
 - Compatibility: older frontend payloads without RAG trace still render.
 
 **Verification:**
@@ -421,7 +422,7 @@ flowchart TB
 
 **Goal:** Prevent "better answer" work from regressing retrieval, graph correctness, latency, or UI compatibility.
 
-**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, sufficiency judging, provider-backed judge timeout/schema handling, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
+**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, sufficiency judging, provider-backed judge timeout/schema handling, bounded one-step recovery, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
 
 **Requirements:** R8.
 
@@ -744,11 +745,11 @@ flowchart TB
 - 过多邻居按 role priority 确定性丢弃。
 - public answer 仍然是一条消息。
 
-- [ ] **单元 5：充分性 Judge 与一次性证据恢复**
+- [x] **单元 5：充分性 Judge 与一次性证据恢复**
 
 **目标：** 判断当前 context 是否能支撑完整回答，不足时只恢复一次。
 
-**实现状态（2026-07-05）：** 部分实现。`src/learning/ragSufficiencyJudge.ts` 已提供确定性充分性 gate、显式 degradation state 和可注入的可选 LLM judge hook；`src/learning/ragSufficiencyProviderJudge.ts` 现在通过现有 `LlmProviderClient` / NoteMD settings 边界完成接线，使用增量 task key `ragSufficiencyJudge`，并提供严格 JSON 解析、有界 timeout、零重试，以及 timeout / malformed provider output 时的确定性 fallback。一次性 recovery 仍尚未作为第二轮 assembly cycle 落地。
+**实现状态（2026-07-05）：** 已实现。`src/learning/ragSufficiencyJudge.ts` 已提供确定性充分性 gate、显式 degradation state 和可注入的可选 LLM judge hook；`src/learning/ragSufficiencyProviderJudge.ts` 通过现有 `LlmProviderClient` / NoteMD settings 边界完成接线，使用增量 task key `ragSufficiencyJudge`，并提供严格 JSON 解析、有界 timeout、零重试，以及 timeout / malformed provider output 时的确定性 fallback。`KnowledgeLearningPlatform.agentConversation()` 现在会在首轮 context pack 可恢复地 `borderline` 或 `insufficient` 时，最多执行一次有界 recovery assembly / review，并记录 `ragRecovery` 与 `recoveryAttempted`，同时不改变单条公开回答契约。
 
 **文件：**
 - 新增：`src/learning/ragSufficiencyJudge.ts`
@@ -756,6 +757,7 @@ flowchart TB
 - 测试：`src/learning/ragSufficiencyJudge.test.ts`
 - 测试：`src/learning/ragSufficiencyProviderJudge.test.ts`
 - 修改：`src/learning/KnowledgeLearningPlatform.ts`
+- 修改：`src/learning/types.ts`
 - 增量修改：`src/notemd/types.ts`，新增 task key `ragSufficiencyJudge`
 
 **做法：**
@@ -775,7 +777,7 @@ flowchart TB
 **测试：**
 - 充分证据不调用 LLM。
 - 边界样本可通过接入 provider 的 LLM judge 修订充分性状态，同时不改变单条公开回答契约。
-- recovery 路径触发一次扩展；这一项仍待落地。
+- recovery 路径可以由首轮 recoverably borderline 触发；第二轮有界 assembly 会纳入额外 full-document-aware fragment 并产出充分 answer basis。
 - provider timeout / malformed JSON 不阻塞主链路，并 fallback 到确定性判断。
 - judge 无法触发递归扩展。
 - malformed JSON 被记录但不污染结果。
@@ -814,7 +816,7 @@ flowchart TB
 
 **目标：** 不把后台细节塞进聊天答案，同时让工程侧可诊断、可回放。
 
-**实现状态（2026-07-05）：** 部分实现。后端 trace 与 knowledge-run artifact payload 已包含 `ragContextPack` 和 `ragSufficiencyReview`；`scripts/verify-knowledge-workspace-runtime.js` 已摘要和校验这些字段；`src/frontend/agent_workspace.js` 与 `src/frontend/workspace_panes.js` 已显示 compact RAG status、source boundary、role count、budget / degradation state 与 sufficiency，且不渲染 raw fragment text。`WorkspaceExportBundle` 现在会 deep-clone RAG context / review trace 字段，保证导出回放材料不会共享可变运行时引用。更完整 replay id 和 recovery-action ledger 仍是后续项。
+**实现状态（2026-07-05）：** 部分实现。后端 trace 与 knowledge-run artifact payload 已包含 `ragContextPack`、`ragSufficiencyReview` 和 `ragRecovery`；`scripts/verify-knowledge-workspace-runtime.js` 已摘要和校验核心 RAG 字段；`src/frontend/agent_workspace.js` 与 `src/frontend/workspace_panes.js` 已显示 compact RAG status、source boundary、role count、budget / degradation / recovery state 与 sufficiency，且不渲染 raw fragment text。`WorkspaceExportBundle` 现在会 deep-clone RAG context / review / recovery trace 字段，保证导出回放材料不会共享可变运行时引用。更完整 replay id 仍是后续项。
 
 **文件：**
 - 修改：`src/learning/types.ts`
@@ -833,14 +835,14 @@ flowchart TB
 **测试：**
 - happy path 显示 evidence-ready / graph-ready。
 - degraded path 显示 partial / insufficient reason。
-- export 会保留 RAG context / review trace 字段且不泄漏可变引用；compact replay id 仍是后续项。
+- export 会保留 RAG context / review / recovery trace 字段且不泄漏可变引用；compact replay id 仍是后续项。
 - 老 payload 缺 RAG trace 时前端仍渲染。
 
 - [ ] **单元 8：回归语料与运行时探针**
 
 **目标：** 防止“答案更充分”引入召回、图谱、延迟或 UI 兼容性回退。
 
-**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、sufficiency judge、接入 provider 的 judge timeout / schema handling、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
+**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、sufficiency judge、接入 provider 的 judge timeout / schema handling、有界一次性 recovery、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
 
 **文件：**
 - 修改：`src/learning/KnowledgeWorkspaceConversationRegression.ts`
