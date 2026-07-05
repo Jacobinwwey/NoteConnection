@@ -5,7 +5,7 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
 
 ## 2026-07-05 RSE Document-Augmented Graph RAG Implementation Plan
 
-This slice now tracks implementation progress for richer Knowledge Workspace answers. The concrete plan remains at [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md), but the branch has moved beyond planning: the deterministic RSE/document-augmentation path, query-intent graph-neighbor ranking, budgeted context pack, stable RAG context replay ids, provider-backed sufficiency trace, bounded one-step recovery, RAG-aware one-message release review, operand-aware compare answer-profile budgeting, how-to answer-profile budgeting, generic answer-profile ranking, Mermaid-label evidence extraction, runtime verifier fields, context-budget truncation/drop/malformed-provider probe coverage, compact frontend RAG status, and export RAG trace preservation are implemented. Calibrated graph-confidence thresholds, broader replay tooling over larger corpora, more natural synthesis over label-heavy evidence, broader release-budget calibration, and larger runtime probes remain follow-up work.
+This slice now tracks implementation progress for richer Knowledge Workspace answers. The concrete plan remains at [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md), but the branch has moved beyond planning: the deterministic RSE/document-augmentation path, query-intent graph-neighbor ranking, budgeted context pack, stable RAG context replay ids, provider-backed sufficiency trace, bounded one-step recovery, RAG-aware one-message release review, operand-aware compare answer-profile budgeting, how-to answer-profile budgeting, generic answer-profile ranking, Mermaid-label evidence extraction, runtime verifier fields, context-budget truncation/drop/malformed-provider/timeout-provider probe coverage, compact frontend RAG status, and export RAG trace preservation are implemented. Calibrated graph-confidence thresholds, broader replay tooling over larger corpora, more natural synthesis over label-heavy evidence, broader release-budget calibration, and larger runtime probes remain follow-up work.
 
 Current code-vs-plan reading:
 
@@ -48,11 +48,12 @@ Fresh implementation evidence in this slice:
 - The runtime probe `contextbudget_source_window_truncation_en` now verifies that `what is context budget probe?` reads the scoped full source document from `Knowledge_Base/contextbudget/context budget probe.md` while recording a `fragment_truncated` source decision in the model-visible `RagContextPack`.
 - The runtime probe `contextoverflow_no_provider_budget_drop_en` now verifies that `what is overflow budget probe?` stays deterministic without an LLM judge and records `fragment_dropped` in the final bounded `RagContextPack`; recovery source-decision counts are preserved in `ragRecovery` when recovery actually occurs.
 - The runtime probe `contextoverflow_malformed_provider_judge_fallback_en` now verifies that a local malformed OpenAI-compatible judge response does not block the answer path: the fixture is called once, the first review records `llm_judge_failed` in `ragRecovery.beforeReasons`, and the recovered answer remains deterministic and bounded.
+- The runtime probe `contextoverflow_timeout_provider_judge_fallback_en` now verifies that a delayed local OpenAI-compatible judge response times out through the bounded provider-judge path: the fixture is called once, `ragRecovery.beforeReasons` records `llm_judge_failed:RAG sufficiency judge timed out.`, and the final recovered answer remains deterministic and bounded.
 
 Next movement:
 
 - Calibrate graph relation weights and low-confidence exclusion thresholds against representative hard negatives instead of treating the current scoring constants as final.
-- Expand runtime probes for provider timeout fallback, intent-specific graph-neighbor selection, and large-corpus hard negatives.
+- Expand runtime probes for intent-specific graph-neighbor selection and large-corpus hard negatives.
 - Calibrate profile-specific release budgets beyond the current deterministic definition, compare, how-to, and generic baselines while preserving hard public-answer caps.
 - Extend replay tooling beyond stable context ids, and add larger runtime probes for repeated snippets, conflicting adjacent evidence, missing graph-neighbor evidence, stricter total-character budget drop cases, and provider fallback.
 

@@ -160,6 +160,23 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
         expect(new Set(caseIds).size).toBe(caseIds.length);
     });
 
+    test('registers a runtime provider timeout fallback case', () => {
+        expect(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    id: 'contextoverflow_timeout_provider_judge_fallback_en',
+                    runtimeProviderFixture: 'timeout',
+                    expected: expect.objectContaining({
+                        expectedRagDeterministic: true,
+                        expectedRagLlmJudgeUsed: false,
+                        expectedRagRecoveryAttempted: true,
+                        runtimeRequiredRagRecoveryBeforeReasonFragments: ['llm_judge_failed'],
+                    }),
+                }),
+            ])
+        );
+    });
+
     test.each(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES)(
         'conversation regression case: $id',
         async (caseEntry) => {

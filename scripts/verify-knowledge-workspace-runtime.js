@@ -76,14 +76,16 @@ function requestJson(port, method, requestPath, body, timeoutMs = 90000) {
 }
 
 function startRuntimeProviderFixture(fixtureKind) {
-  if (fixtureKind !== 'malformed_json') {
+  if (!['malformed_json', 'timeout'].includes(fixtureKind)) {
     throw new Error(`Unsupported runtime provider fixture: ${fixtureKind}`);
   }
+  const timeoutDelayMs = 6000;
   const state = {
     kind: fixtureKind,
     requestCount: 0,
     completionCount: 0,
     modelProbeCount: 0,
+    timeoutDelayMs: fixtureKind === 'timeout' ? timeoutDelayMs : undefined,
   };
   const server = http.createServer((req, res) => {
     state.requestCount += 1;
@@ -99,6 +101,28 @@ function startRuntimeProviderFixture(fixtureKind) {
       }
       if (req.method === 'POST' && requestPath.endsWith('/chat/completions')) {
         state.completionCount += 1;
+        if (fixtureKind === 'timeout') {
+          const timer = setTimeout(() => {
+            if (res.destroyed || res.writableEnded) {
+              return;
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              choices: [
+                {
+                  message: {
+                    role: 'assistant',
+                    content: '{"status":"sufficient","score":0.99,"reasons":["late_fixture_response"],"degradationState":"none"}',
+                  },
+                },
+              ],
+            }));
+          }, timeoutDelayMs);
+          res.on('close', () => {
+            clearTimeout(timer);
+          });
+          return;
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           choices: [

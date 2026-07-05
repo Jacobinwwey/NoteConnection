@@ -5,7 +5,7 @@
 
 ## 2026-07-05 RSE + document augmentation 图谱 RAG 实践计划
 
-本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、query-intent 图邻居排序、有界 context pack、稳定 RAG context replay id、接入 provider 的充分性 trace、有界一次性 recovery、RAG-aware 单消息 release review、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、context-budget truncation/drop/malformed-provider 探针覆盖、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、大语料上的更完整 replay tooling、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
+本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、query-intent 图邻居排序、有界 context pack、稳定 RAG context replay id、接入 provider 的充分性 trace、有界一次性 recovery、RAG-aware 单消息 release review、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、context-budget truncation/drop/malformed-provider/timeout-provider 探针覆盖、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、大语料上的更完整 replay tooling、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
 
 当前代码 / 方案对齐判断：
 
@@ -48,11 +48,12 @@
 - runtime probe `contextbudget_source_window_truncation_en` 现在验证 `what is context budget probe?` 会从 `Knowledge_Base/contextbudget/context budget probe.md` 读取 scoped 完整源文档，同时在 model-visible `RagContextPack` 中记录 `fragment_truncated` source decision。
 - runtime probe `contextoverflow_no_provider_budget_drop_en` 现在验证 `what is overflow budget probe?` 在未使用 LLM judge 时仍保持 deterministic，并在最终有界 `RagContextPack` 中记录 `fragment_dropped`；当 recovery 实际发生时，recovery source-decision 计数会继续保留在 `ragRecovery` 中。
 - runtime probe `contextoverflow_malformed_provider_judge_fallback_en` 现在验证本地 malformed OpenAI-compatible judge response 不会阻塞主回答链路：fixture 会被调用一次，首轮 review 会在 `ragRecovery.beforeReasons` 中记录 `llm_judge_failed`，最终 recovered answer 仍保持 deterministic 与有界。
+- runtime probe `contextoverflow_timeout_provider_judge_fallback_en` 现在验证延迟响应的本地 OpenAI-compatible judge 会通过有界 provider-judge 路径超时：fixture 会被调用一次，`ragRecovery.beforeReasons` 会记录 `llm_judge_failed:RAG sufficiency judge timed out.`，最终 recovered answer 仍保持 deterministic 与有界。
 
 后续推进：
 
 - 基于代表性 hard negative 校准图关系权重与低置信排除阈值，不把当前 scoring 常量当作最终形态。
-- 扩展 provider timeout fallback、intent-specific 图邻居选择与大语料 hard negative 的 runtime probes。
+- 扩展 intent-specific 图邻居选择与大语料 hard negative 的 runtime probes。
 - 在当前 deterministic definition / compare / how-to / generic 基线之上继续校准 profile-specific release budget，同时保留公开回答硬上限。
 - 在稳定 context id 之上扩展 replay tooling，并补齐 repeated snippet、conflicting adjacent evidence、missing graph-neighbor evidence、更严格的 total-character budget drop、provider fallback 的更大 runtime probes。
 
