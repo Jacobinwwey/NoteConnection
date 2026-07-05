@@ -1439,6 +1439,128 @@ describe('conversationComposer', () => {
         expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toBe(reply.answer);
     });
 
+    test('uses generic RAG profile to rank direct evidence by query coverage', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_generic_optical_bench_drift',
+                documentId: 'doc_generic_optical_bench_drift',
+                sourcePath: 'Knowledge_Base/test/optical-bench-drift.md',
+                title: 'Optical Bench Drift',
+                content: 'Optical bench drift changes beam measurements over time.',
+            },
+            evidence: {
+                id: 'evidence_generic_optical_bench_drift',
+                snippet: 'Optical bench drift is detected by comparing the reference beam against the current beam centroid.',
+                startLine: 6,
+                endLine: 11,
+            },
+            score: 0.93,
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const citations = knowledgePoints.flatMap((point) => point.citations || []);
+        const ragContextPack: RagContextPack = {
+            query: 'tell me about optical bench drift',
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 4,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 2600,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_generic_optical_bench_drift',
+                    role: 'direct_support',
+                    text: [
+                        'This note begins with a broad overview of laboratory documentation.',
+                        'Optical bench drift is detected by comparing the reference beam against the current beam centroid.',
+                        'Drift correction requires recording the centroid delta before changing hardware.',
+                    ].join(' '),
+                    atomId: 'atom_generic_optical_bench_drift',
+                    documentId: 'doc_generic_optical_bench_drift',
+                    sourcePath: 'Knowledge_Base/test/optical-bench-drift.md',
+                    title: 'Optical Bench Drift',
+                    headingPath: ['Optical Bench Drift', 'Detection'],
+                    startLine: 6,
+                    endLine: 11,
+                    charCount: 222,
+                    tokenEstimate: 44,
+                    truncated: false,
+                    citationIds: ['evidence_generic_optical_bench_drift'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_parent_generic_optical_bench_drift',
+                    role: 'parent_context',
+                    text: 'The procedure context says stable baseline records distinguish drift from alignment noise.',
+                    atomId: 'atom_generic_optical_bench_drift',
+                    documentId: 'doc_generic_optical_bench_drift',
+                    sourcePath: 'Knowledge_Base/test/optical-bench-drift.md',
+                    title: 'Optical Bench Drift',
+                    headingPath: ['Optical Bench Drift', 'Context'],
+                    startLine: 2,
+                    endLine: 5,
+                    charCount: 86,
+                    tokenEstimate: 15,
+                    truncated: false,
+                    citationIds: ['evidence_generic_optical_bench_drift'],
+                    sourceBoundary: 'full_document',
+                },
+                {
+                    fragmentId: 'rag_graph_generic_optical_bench_drift',
+                    role: 'graph_neighbor_support',
+                    text: 'Graph caveat: downstream calibration quality depends on the beam stability check.',
+                    atomId: 'atom_generic_optical_bench_drift',
+                    documentId: 'doc_generic_optical_bench_drift',
+                    sourcePath: 'Knowledge_Base/test/optical-bench-drift.md',
+                    title: 'Beam Stability Check',
+                    headingPath: ['Optical Bench Drift', 'Graph'],
+                    startLine: 12,
+                    endLine: 13,
+                    charCount: 78,
+                    tokenEstimate: 13,
+                    truncated: false,
+                    citationIds: ['evidence_generic_optical_bench_drift'],
+                    relationEdgeIds: ['edge_drift_stability_check'],
+                    sourceBoundary: 'full_document',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 386,
+            tokenEstimate: 72,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-05T00:00:00.000Z',
+            status: 'sufficient',
+            score: 0.88,
+            reasons: [],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'none',
+        };
+        let blockCounter = 0;
+
+        const reply = buildScopedConversationReply({
+            message: 'tell me about optical bench drift',
+            knowledgePoints,
+            citations,
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            ragContextPack,
+            ragSufficiencyReview,
+        });
+
+        expect(reply.answer).toContain('reference beam against the current beam centroid');
+        expect(reply.answer).toContain('centroid delta before changing hardware');
+        expect(reply.answer).toContain('stable baseline records');
+        expect(reply.answer).toContain('downstream calibration quality');
+        expect(reply.answer).not.toContain('broad overview of laboratory documentation');
+    });
+
     test('fails graph comparison gate when compare intent only has reference context and no real branch signal', () => {
         const knowledgePoints: AgentConversationKnowledgePoint[] = [
             {

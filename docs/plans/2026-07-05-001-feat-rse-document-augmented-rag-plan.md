@@ -344,7 +344,7 @@ flowchart TB
 
 **Goal:** Generate a more complete public answer from the RAG context pack while preserving one-message UX.
 
-**Implementation status (2026-07-05):** Partially implemented. `conversationComposer.ts` now uses `RagContextPack` and `RagSufficiencyReview` to build a richer deterministic one-message draft from direct support, document augmentation, and graph-neighbor evidence, then passes that pack/review into `answerReleaseReview.ts`. Release review now treats RAG fragments as grounding candidates, evaluates the additive `rag_answer_completeness` gate, and can revise contracted definition answers from direct/document/graph RAG clauses instead of falling back to citation-only summaries. The platform/composer path now also applies operand-aware compare and how-to profiles: compare-style planner queries extract both operands for boosting and traceability, explicit scope is not hard-narrowed to only title-hit document ids, four direct-support clauses are reserved for the compared sides, compare evidence is ranked by operand and fragment coverage, and Mermaid comparison labels are converted into readable evidence instead of being discarded; how-to answers now reserve enough direct, parent, and graph-neighbor budget to keep concrete steps, prerequisites, downstream checks, and failure handling in one public answer. The remaining gap is a calibrated generic answer profile, more natural synthesis over label-heavy evidence, and broader profile-specific release budgets.
+**Implementation status (2026-07-05):** Partially implemented. `conversationComposer.ts` now uses `RagContextPack` and `RagSufficiencyReview` to build a richer deterministic one-message draft from direct support, document augmentation, and graph-neighbor evidence, then passes that pack/review into `answerReleaseReview.ts`. Release review now treats RAG fragments as grounding candidates, evaluates the additive `rag_answer_completeness` gate, and can revise contracted definition answers from direct/document/graph RAG clauses instead of falling back to citation-only summaries. The platform/composer path now applies deterministic definition, compare, how-to, and generic profiles: compare-style planner queries extract both operands for boosting and traceability, explicit scope is not hard-narrowed to only title-hit document ids, four direct-support clauses are reserved for the compared sides, compare evidence is ranked by operand and fragment coverage, and Mermaid comparison labels are converted into readable evidence instead of being discarded; how-to answers reserve enough direct, parent, and graph-neighbor budget to keep concrete steps, prerequisites, downstream checks, and failure handling in one public answer; generic answers now use query-term coverage ranking and a two-direct-support budget so broad prompts keep the most relevant grounded clauses instead of generic preambles. The remaining gap is more natural synthesis over label-heavy evidence and broader profile-specific release budgets.
 
 **Requirements:** R4, R6, R7.
 
@@ -363,7 +363,7 @@ flowchart TB
   - `compare`: shared anchor, branch differences, evidence-backed contrast;
   - `generic`: answer, support, graph/context caveat.
 - Use the context pack to structure the answer; do not ask the LLM to rediscover evidence from raw concatenated text.
-- Keep public answer bounded; compare now has deterministic operand-aware per-role evidence budgets, including four direct-support slots before graph contrast clauses, and how-to now has a deterministic 3/1/2 direct/document/graph budget for steps, prerequisites, downstream checks, and failure modes. Generic profile-specific tuning remains pending beyond the current six-sentence / 900-character release cap.
+- Keep public answer bounded; compare now has deterministic operand-aware per-role evidence budgets, including four direct-support slots before graph contrast clauses; how-to has a deterministic 3/1/2 direct/document/graph budget for steps, prerequisites, downstream checks, and failure modes; generic has a deterministic 2/2/1 budget plus query-term coverage ranking. Broader release-budget calibration remains pending beyond the current six-sentence / 900-character release cap.
 - Add claim-to-citation mapping internally even if UI shows a compact citation list.
 - `answerReleaseReview.ts` validates completeness and support through the additive RAG role gate; broader profile-specific completeness gates remain pending.
 
@@ -375,6 +375,7 @@ flowchart TB
 - Happy path: `what is waterglass?` returns definition, composition, key properties, graph predecessor/successor context, and citations without duplicate knowledge points.
 - Compare path: `compare water glass and plastic cup` preserves direct evidence for both compared sides, keeps readable Mermaid-label evidence without leaking fenced blocks, and only then adds bounded graph-neighbor contrast context.
 - How-to path: `how to calibrate prism alignment?` preserves ordered steps, prerequisites, downstream verification, and failure handling from the RAG pack instead of collapsing to a generic overview.
+- Generic path: `tell me about optical bench drift` ranks direct evidence by query coverage, keeps the reference-beam and centroid-delta support, and avoids generic preamble leakage.
 - Edge case: graph context exists but neighbor evidence is weak; answer names graph limitation instead of overstating.
 - Edge case: sufficient direct evidence but no graph ops; answer remains grounded without graph claims.
 - Error path: release review catches unsupported graph-order or causal claims.
@@ -792,7 +793,7 @@ flowchart TB
 
 **目标：** 从 RAG context pack 组织更完整的 public answer。
 
-**实现状态（2026-07-05）：** 部分实现。`conversationComposer.ts` 已能基于 `RagContextPack` 与 `RagSufficiencyReview`，从 direct support、document augmentation 和 graph-neighbor evidence 组织更充分的确定性单消息 draft，并把 pack / review 继续传入 `answerReleaseReview.ts`。release review 现在会把 RAG fragment 作为 grounding candidate，评估增量 `rag_answer_completeness` gate，并能在公开回答被 contraction 修订时继续使用 direct / document / graph RAG clause，而不是退回 citation-only 摘要。platform / composer 路径现在还会应用 operand-aware compare 与 how-to profile：compare-style planner query 会抽取被对比双方用于 boosting 与 trace，显式 scope 不会被硬收窄到仅 title-hit document id，compare 回答会为双方预留 4 个 direct-support clause，证据排序会同时看 operand 覆盖与 fragment 覆盖，并且 Mermaid 对比图里的 label 会转为可读证据而不是被整块丢弃；how-to 回答现在会保留足够 direct、parent 与 graph-neighbor 预算，把具体步骤、前置条件、下游检查和失败处理组织进一条公开回答。这让 `compare water glass and plastic cup` 与 `how to calibrate prism alignment?` 这类问题都能在一条公开回答中使用更完整证据，同时不把后端编排暴露给用户。剩余缺口是 generic answer profile、对 label-heavy evidence 的自然语言 synthesis，以及更广的 profile-specific release budget 校准。
+**实现状态（2026-07-05）：** 部分实现。`conversationComposer.ts` 已能基于 `RagContextPack` 与 `RagSufficiencyReview`，从 direct support、document augmentation 和 graph-neighbor evidence 组织更充分的确定性单消息 draft，并把 pack / review 继续传入 `answerReleaseReview.ts`。release review 现在会把 RAG fragment 作为 grounding candidate，评估增量 `rag_answer_completeness` gate，并能在公开回答被 contraction 修订时继续使用 direct / document / graph RAG clause，而不是退回 citation-only 摘要。platform / composer 路径现在已应用 definition、operand-aware compare、how-to 与 generic profile：compare-style planner query 会抽取被对比双方用于 boosting 与 trace，显式 scope 不会被硬收窄到仅 title-hit document id，compare 回答会为双方预留 4 个 direct-support clause，证据排序会同时看 operand 覆盖与 fragment 覆盖，并且 Mermaid 对比图里的 label 会转为可读证据而不是被整块丢弃；how-to 回答会保留足够 direct、parent 与 graph-neighbor 预算，把具体步骤、前置条件、下游检查和失败处理组织进一条公开回答；generic 回答现在会按 query-term 覆盖度排序直接证据，并使用 2 个 direct-support slot，避免普通问题只返回泛化开头。这让 `compare water glass and plastic cup`、`how to calibrate prism alignment?` 与 `tell me about optical bench drift` 这类问题都能在一条公开回答中使用更完整证据，同时不把后端编排暴露给用户。剩余缺口是对 label-heavy evidence 的自然语言 synthesis，以及更广的 profile-specific release budget 校准。
 
 **文件：**
 - 修改：`src/learning/conversationComposer.ts`
@@ -807,7 +808,7 @@ flowchart TB
   - compare：共同 anchor、分支差异、证据支撑对比；
   - generic：回答、支撑、图/上下文 caveat。
 - 让 LLM 或 deterministic composer 基于结构化 context pack 组织答案，不让模型从原始拼接文本里重新发现证据。
-- public answer 继续保持有界；compare 已有基于 operand 的确定性按角色证据预算，会先保留 4 个 direct-support slot，再加入 graph contrast clause；how-to 已有 3/1/2 的 direct/document/graph 预算，用于保留步骤、前置条件、下游检查和失败处理；generic 的 profile-specific tuning 仍需在当前六句 / 900 字符 release cap 之上继续推进。
+- public answer 继续保持有界；compare 已有基于 operand 的确定性按角色证据预算，会先保留 4 个 direct-support slot，再加入 graph contrast clause；how-to 已有 3/1/2 的 direct/document/graph 预算，用于保留步骤、前置条件、下游检查和失败处理；generic 已有 2/2/1 预算和 query-term 覆盖排序。更广的 release-budget 校准仍需在当前六句 / 900 字符 release cap 之上继续推进。
 - 内部保留 claim-to-citation mapping。
 - `answerReleaseReview.ts` 已通过增量 RAG role gate 增加 completeness / support review；更广的 profile-specific completeness gate 仍待推进。
 
@@ -815,6 +816,7 @@ flowchart TB
 - `what is waterglass?` 返回定义、构成、关键属性、前后继图上下文和 citation。
 - `compare water glass and plastic cup` 在加入有界 graph-neighbor contrast context 前，会保留被对比双方的 direct evidence，并把 Mermaid label evidence 转成可读内容而不是泄漏 fenced block。
 - `how to calibrate prism alignment?` 会从 RAG pack 保留 ordered steps、prerequisites、downstream verification 与 failure handling，而不是压缩成泛化概览。
+- `tell me about optical bench drift` 会按 query coverage 排序 direct evidence，保留 reference-beam 与 centroid-delta 支撑，并避免泛化 preamble 泄漏。
 - 图 context 有但邻居证据弱时，不强行生成邻居内容。
 - 无 graph ops 时仍可 grounded 回答。
 - release review 能拦截 unsupported graph-order / causal claim。

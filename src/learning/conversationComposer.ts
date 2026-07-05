@@ -531,6 +531,14 @@ function resolveRagAnswerProfile(message: string): RagAnswerProfile {
             publicSentenceCount: 6,
         };
     }
+    if (intent === 'generic') {
+        return {
+            directSupportSentenceCount: 2,
+            documentContextSentenceCount: 2,
+            graphNeighborSentenceCount: 1,
+            publicSentenceCount: 6,
+        };
+    }
     return {
         directSupportSentenceCount: 1,
         documentContextSentenceCount: 2,
@@ -689,9 +697,9 @@ function buildGraphProfileAnswerSentence(
 }
 
 const RAG_ANSWER_QUERY_STOPWORDS = new Set([
-    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'between', 'by', 'compare',
+    'a', 'about', 'an', 'and', 'are', 'as', 'at', 'be', 'between', 'by', 'compare',
     'contrast', 'difference', 'differences', 'do', 'does', 'from', 'how',
-    'in', 'is', 'it', 'of', 'on', 'or', 'plan', 'step', 'steps', 'the', 'to', 'versus', 'vs', 'what',
+    'in', 'is', 'it', 'me', 'of', 'on', 'or', 'plan', 'step', 'steps', 'tell', 'the', 'to', 'versus', 'vs', 'what',
     'which', 'with',
 ]);
 
@@ -817,7 +825,7 @@ function rankRagEvidenceSentenceCandidates(
                 .length;
             const score = uncoveredTermCount * 4
                 + (uncoveredTermCount > 0 ? totalTermCount : 0)
-                + candidate.fragmentQueryTermCount / 2
+                + (totalTermCount > 0 ? candidate.fragmentQueryTermCount / 2 : 0)
                 - candidate.order / 10000;
             if (score > bestScore) {
                 bestScore = score;
@@ -890,7 +898,7 @@ function buildRagAugmentedConversationAnswer(
     }
     const profile = resolveRagAnswerProfile(params.message);
     const intent = classifyScopedConversationIntent(params.message);
-    const answerQueryTerms = intent === 'compare' || intent === 'how_to'
+    const answerQueryTerms = intent === 'compare' || intent === 'how_to' || intent === 'generic'
         ? extractRagAnswerQueryTerms(params.message)
         : [];
     const answerSentences: string[] = [];
