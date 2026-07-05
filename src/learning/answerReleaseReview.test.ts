@@ -4,6 +4,8 @@ import type {
     AgentConversationKnowledgePoint,
     KnowledgeCitation,
     KnowledgeQueryResolvedScope,
+    RagContextPack,
+    RagSufficiencyReview,
 } from './types';
 
 const scopedWaterglass: KnowledgeQueryResolvedScope = {
@@ -554,6 +556,137 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).not.toContain('next nodes include Water Glass');
         expect(review.publicAnswer).not.toContain('(mermaid block)');
         expect(review.publicAnswer).not.toContain('```');
+    });
+
+    test('keeps RAG evidence in revised definition answers after public-surface contraction', () => {
+        const baseCitation = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water glass is a transparent drinking vessel containing water.',
+            evidenceSnippet: 'Water glass is a transparent drinking vessel containing water.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass',
+                snippet: 'Water glass is a transparent drinking vessel containing water.',
+            },
+        }).citation as KnowledgeCitation;
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: baseCitation.snippet,
+            evidenceSnippet: baseCitation.snippet,
+            citation: baseCitation,
+            citations: [baseCitation],
+        });
+        const ragContextPack: RagContextPack = {
+            query: 'what is water glass?',
+            generatedAt: '2026-07-05T08:30:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 6,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 2400,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_water_glass',
+                    role: 'direct_support',
+                    text: 'Water glass is a transparent drinking vessel containing water.',
+                    atomId: 'atom_water_glass',
+                    documentId: 'doc_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                    title: 'Water Glass',
+                    headingPath: ['Water Glass', 'Definition'],
+                    startLine: 3,
+                    endLine: 3,
+                    charCount: 61,
+                    tokenEstimate: 16,
+                    truncated: false,
+                    citationIds: ['citation_water_glass'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_parent_water_glass_boundary',
+                    role: 'parent_context',
+                    text: 'The vessel boundary and water surface jointly determine the observed optical behavior.',
+                    atomId: 'atom_water_glass',
+                    documentId: 'doc_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                    title: 'Boundary',
+                    headingPath: ['Water Glass', 'Boundary'],
+                    startLine: 7,
+                    endLine: 8,
+                    charCount: 83,
+                    tokenEstimate: 18,
+                    truncated: false,
+                    citationIds: ['citation_boundary'],
+                    sourceBoundary: 'full_document',
+                },
+                {
+                    fragmentId: 'rag_graph_water_glass_refraction',
+                    role: 'graph_neighbor_support',
+                    text: 'Light refracts through air, glass, and water, so the cup can act like a simple optical lens.',
+                    atomId: 'atom_refraction',
+                    documentId: 'doc_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                    title: 'Optical Refraction',
+                    headingPath: ['Water Glass', 'Optics'],
+                    startLine: 11,
+                    endLine: 12,
+                    charCount: 93,
+                    tokenEstimate: 22,
+                    truncated: false,
+                    citationIds: ['citation_refraction'],
+                    relationEdgeIds: ['edge_water_glass_refraction'],
+                    sourceBoundary: 'direct_span_only',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 237,
+            tokenEstimate: 56,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-05T08:30:00.000Z',
+            status: 'sufficient',
+            score: 0.91,
+            reasons: [],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'none',
+        };
+
+        const review = reviewAnswerRelease({
+            message: 'what is water glass?',
+            draftAnswer: [
+                'Grounded by RAG context.',
+                'Water glass is a transparent drinking vessel containing water.',
+                'The vessel boundary and water surface jointly determine the observed optical behavior.',
+                'Light refracts through air, glass, and water, so the cup can act like a simple optical lens.',
+            ].join(' '),
+            knowledgePoints: [point],
+            citations: [baseCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({
+                anchorTitle: 'Water Glass',
+                successorWindow: [
+                    {
+                        atomId: 'atom_refraction',
+                        title: 'Optical Refraction',
+                        relationKind: 'sequence',
+                        confidence: 0.86,
+                    },
+                ],
+            }),
+            ragContextPack,
+            ragSufficiencyReview,
+            reviewedAt: '2026-07-05T08:31:00.000Z',
+        } as any);
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('public_surface_contraction');
+        expect(review.publicAnswer).toContain('transparent drinking vessel');
+        expect(review.publicAnswer).toContain('vessel boundary and water surface');
+        expect(review.publicAnswer).toContain('Light refracts through air, glass, and water');
+        expect(review.publicAnswer).not.toContain('Grounded by RAG context');
     });
 
     test('revises grounded answers when structured numeric facts conflict with support', () => {

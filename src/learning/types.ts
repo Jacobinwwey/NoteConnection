@@ -1393,6 +1393,7 @@ export type AnswerReleaseGateId =
     | 'claim_graph_order_consistency'
     | 'claim_graph_comparison_consistency'
     | 'claim_temporal_validity_consistency'
+    | 'rag_answer_completeness'
     | 'public_surface_contraction'
     | 'internal_diagnostic_leakage'
     | 'abstention_hygiene';

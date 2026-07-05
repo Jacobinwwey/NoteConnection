@@ -344,7 +344,7 @@ flowchart TB
 
 **Goal:** Generate a more complete public answer from the RAG context pack while preserving one-message UX.
 
-**Implementation status (2026-07-05):** Partially implemented. `conversationComposer.ts` now uses `RagContextPack` and `RagSufficiencyReview` to build a richer deterministic one-message answer from direct support, document augmentation, and graph-neighbor evidence. The remaining gap is a broader answer-profile system plus `answerReleaseReview.ts` completeness/budget expansion beyond the existing release contraction.
+**Implementation status (2026-07-05):** Partially implemented. `conversationComposer.ts` now uses `RagContextPack` and `RagSufficiencyReview` to build a richer deterministic one-message draft from direct support, document augmentation, and graph-neighbor evidence, then passes that pack/review into `answerReleaseReview.ts`. Release review now treats RAG fragments as grounding candidates, evaluates the additive `rag_answer_completeness` gate, and can revise contracted definition answers from direct/document/graph RAG clauses instead of falling back to citation-only summaries. The remaining gap is a broader answer-profile system beyond the current definition/RAG path plus calibrated profile-specific budgets.
 
 **Requirements:** R4, R6, R7.
 
@@ -363,9 +363,9 @@ flowchart TB
   - `compare`: shared anchor, branch differences, evidence-backed contrast;
   - `generic`: answer, support, graph/context caveat.
 - Use the context pack to structure the answer; do not ask the LLM to rediscover evidence from raw concatenated text.
-- Keep public answer bounded but raise the default budget from the current overly narrow 900-character behavior for evidence-rich cases.
+- Keep public answer bounded; profile-specific budget tuning remains pending beyond the current six-sentence / 900-character release cap.
 - Add claim-to-citation mapping internally even if UI shows a compact citation list.
-- `answerReleaseReview.ts` should validate completeness and support, not merely contract the answer.
+- `answerReleaseReview.ts` validates completeness and support through the additive RAG role gate; broader profile-specific completeness gates remain pending.
 
 **Patterns to follow:**
 - `buildScopedConversationAnswer()` as the current owner of public answer shape.
@@ -376,6 +376,7 @@ flowchart TB
 - Edge case: graph context exists but neighbor evidence is weak; answer names graph limitation instead of overstating.
 - Edge case: sufficient direct evidence but no graph ops; answer remains grounded without graph claims.
 - Error path: release review catches unsupported graph-order or causal claims.
+- Regression path: release review contraction preserves RAG direct, document-augmentation, and graph-neighbor clauses instead of shrinking back to citation-only summaries.
 - Compatibility: `structured_answer.directAnswer` equals the final public answer.
 
 **Verification:**
@@ -422,7 +423,7 @@ flowchart TB
 
 **Goal:** Prevent "better answer" work from regressing retrieval, graph correctness, latency, or UI compatibility.
 
-**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, sufficiency judging, provider-backed judge timeout/schema handling, bounded one-step recovery, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
+**Implementation status (2026-07-05):** Partially implemented. New unit tests cover evidence assembly, context budgeting, sufficiency judging, provider-backed judge timeout/schema handling, bounded one-step recovery, RAG-aware answer release review, persistence compatibility, richer composer behavior, platform integration, export RAG trace preservation, frontend RAG grounding display, and `waterglass` regression expectations. The broader runtime probe corpus and large-corpus hard-negative samples remain follow-up work.
 
 **Requirements:** R8.
 
@@ -786,7 +787,7 @@ flowchart TB
 
 **目标：** 从 RAG context pack 组织更完整的 public answer。
 
-**实现状态（2026-07-05）：** 部分实现。`conversationComposer.ts` 已能基于 `RagContextPack` 与 `RagSufficiencyReview`，从 direct support、document augmentation 和 graph-neighbor evidence 组织更充分的确定性单消息回答。剩余缺口是完整 answer profile 系统，以及 `answerReleaseReview.ts` 对 completeness / budget 的进一步放宽与审查。
+**实现状态（2026-07-05）：** 部分实现。`conversationComposer.ts` 已能基于 `RagContextPack` 与 `RagSufficiencyReview`，从 direct support、document augmentation 和 graph-neighbor evidence 组织更充分的确定性单消息 draft，并把 pack / review 继续传入 `answerReleaseReview.ts`。release review 现在会把 RAG fragment 作为 grounding candidate，评估增量 `rag_answer_completeness` gate，并能在公开回答被 contraction 修订时继续使用 direct / document / graph RAG clause，而不是退回 citation-only 摘要。剩余缺口是超出当前 definition / RAG 路径的完整 answer-profile 系统，以及按 profile 校准的预算。
 
 **文件：**
 - 修改：`src/learning/conversationComposer.ts`
@@ -801,15 +802,16 @@ flowchart TB
   - compare：共同 anchor、分支差异、证据支撑对比；
   - generic：回答、支撑、图/上下文 caveat。
 - 让 LLM 或 deterministic composer 基于结构化 context pack 组织答案，不让模型从原始拼接文本里重新发现证据。
-- 放宽当前过窄 public answer budget，但仍保持硬上限。
+- public answer 继续保持有界；当前仍沿用六句 / 900 字符 release cap，profile-specific budget tuning 仍待推进。
 - 内部保留 claim-to-citation mapping。
-- `answerReleaseReview.ts` 增加 completeness / support review，而不是只做收缩。
+- `answerReleaseReview.ts` 已通过增量 RAG role gate 增加 completeness / support review；更广的 profile-specific completeness gate 仍待推进。
 
 **测试：**
 - `what is waterglass?` 返回定义、构成、关键属性、前后继图上下文和 citation。
 - 图 context 有但邻居证据弱时，不强行生成邻居内容。
 - 无 graph ops 时仍可 grounded 回答。
 - release review 能拦截 unsupported graph-order / causal claim。
+- release review contraction 后仍保留 RAG direct、document augmentation 与 graph-neighbor clause，而不是缩回 citation-only 摘要。
 - `structured_answer.directAnswer` 与 final public answer 一致。
 
 - [ ] **单元 7：Trace、状态显示与 evidence ledger**
@@ -842,7 +844,7 @@ flowchart TB
 
 **目标：** 防止“答案更充分”引入召回、图谱、延迟或 UI 兼容性回退。
 
-**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、sufficiency judge、接入 provider 的 judge timeout / schema handling、有界一次性 recovery、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
+**实现状态（2026-07-05）：** 部分实现。新增测试已覆盖 evidence assembly、context budget、sufficiency judge、接入 provider 的 judge timeout / schema handling、有界一次性 recovery、RAG-aware answer release review、持久化兼容、composer 增强、平台集成、导出 RAG trace 保留、前端 RAG grounding 展示，以及 `waterglass` 回归预期。更大的 runtime probe 语料和 hard-negative 大语料样本仍需继续补齐。
 
 **文件：**
 - 修改：`src/learning/KnowledgeWorkspaceConversationRegression.ts`

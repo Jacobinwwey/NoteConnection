@@ -7,6 +7,10 @@ import type {
     AnswerReleaseReview,
     KnowledgeCitation,
     KnowledgeQueryResolvedScope,
+    RagContextPack,
+    RagEvidenceFragment,
+    RagEvidenceRole,
+    RagSufficiencyReview,
     RelationKind,
 } from './types';
 
@@ -17,12 +21,21 @@ export interface AnswerReleaseReviewContext {
     citations: KnowledgeCitation[];
     usedScope: KnowledgeQueryResolvedScope;
     graphContext: AgentConversationGraphContext | null;
+    ragContextPack?: RagContextPack;
+    ragSufficiencyReview?: RagSufficiencyReview;
     reviewedAt?: string;
 }
 
 type AnswerReleaseSupportCandidate = {
     label: string;
     text: string;
+};
+
+type RagAnswerCompleteness = {
+    passed: boolean;
+    applicable: boolean;
+    requiredRoles: RagEvidenceRole[];
+    missingRoles: RagEvidenceRole[];
 };
 
 type StructuredFactKind = 'number_with_unit' | 'year';
@@ -497,6 +510,10 @@ function buildAbstentionAnswer(
 function buildGroundedRevisionAnswer(
     context: AnswerReleaseReviewContext
 ): string {
+    const ragGroundedAnswer = buildRagGroundedRevisionAnswer(context);
+    if (ragGroundedAnswer) {
+        return ragGroundedAnswer;
+    }
     const leadingPoint = context.knowledgePoints[0];
     const summary = normalizeWhitespace(String(
         leadingPoint?.evidenceSnippet
@@ -841,6 +858,164 @@ function expandAnswerWithGraphContext(
     return sentences.slice(0, ANSWER_RELEASE_SENTENCE_BUDGET).join(useChinese ? '' : ' ');
 }
 
+function hasUsableRagEvidenceContext(context: AnswerReleaseReviewContext): boolean {
+    const pack = context.ragContextPack;
+    if (!pack || !Array.isArray(pack.fragments) || pack.fragments.length <= 0) {
+        return false;
+    }
+    return context.ragSufficiencyReview?.status !== 'insufficient';
+}
+
+function collectRagRoleFragments(
+    context: AnswerReleaseReviewContext,
+    roles: Set<RagEvidenceRole>
+): RagEvidenceFragment[] {
+    if (!hasUsableRagEvidenceContext(context)) {
+        return [];
+    }
+    return (context.ragContextPack?.fragments || []).filter((fragment) => roles.has(fragment.role));
+}
+
+function normalizeRagClauseKey(value: string): string {
+    return stripTerminalSentencePunctuation(value).toLowerCase();
+}
+
+function ragClauseAlreadyCovered(candidate: string, selectedClauses: string[]): boolean {
+    const candidateKey = normalizeRagClauseKey(candidate);
+    if (!candidateKey) {
+        return true;
+    }
+    return selectedClauses.some((selected) => {
+        const selectedKey = normalizeRagClauseKey(selected);
+        return selectedKey === candidateKey
+            || (candidateKey.length >= 32 && selectedKey.includes(candidateKey))
+            || (selectedKey.length >= 32 && candidateKey.includes(selectedKey));
+    });
+}
+
+function splitRagPublicEvidenceClauses(fragment: RagEvidenceFragment): string[] {
+    const title = normalizeWhitespace(String(fragment.title || '').trim());
+    let cleaned = normalizeWhitespace(
+        String(fragment.text || '')
+            .replace(/^#{1,6}\s+/gmu, '')
+            .replace(/```[\s\S]*?(?:```|$)/gu, ' ')
+            .replace(/!\[[^\]]*\]\([^)]*\)/gu, ' ')
+            .replace(/\[[^\]]+\]\([^)]*\)/gu, ' ')
+            .replace(/<[^>]+>/gu, ' ')
+            .replace(/\s*\|\s*/gu, ' ')
+    );
+    const removeLeadingRagHeading = (value: string, heading: string): string => {
+        const normalizedValue = normalizeWhitespace(value);
+        const normalizedHeading = normalizeWhitespace(heading);
+        if (!normalizedValue || !normalizedHeading) {
+            return normalizedValue;
+        }
+        const escapedHeading = escapeRegExp(normalizedHeading);
+        const match = normalizedValue.match(new RegExp(`^${escapedHeading}\\s*`, 'iu'));
+        if (!match) {
+            return normalizedValue;
+        }
+        const remainder = normalizedValue.slice(match[0].length).trim();
+        if (/^(?:is|are|was|were|means|refers)\b/iu.test(remainder) || /^[是为為]/u.test(remainder)) {
+            return normalizedValue;
+        }
+        return normalizeWhitespace(remainder.replace(/^[:：\-–—]+/u, ''));
+    };
+    const leadingHeadings = [
+        title,
+        ...(Array.isArray(fragment.headingPath) ? fragment.headingPath.slice().reverse() : []),
+    ];
+    leadingHeadings.forEach((heading) => {
+        cleaned = removeLeadingRagHeading(cleaned, normalizeWhitespace(String(heading || '').trim()));
+    });
+    if (!cleaned) {
+        return [];
+    }
+    const clauseSeparator = containsCjk(cleaned)
+        ? /[。！？；\n\r]+/u
+        : /[.!?;\n\r]+/u;
+    const clauses = cleaned
+        .split(clauseSeparator)
+        .map((clause) => normalizeWhitespace(clause))
+        .filter((clause) => (
+            clause.length >= 8
+            && !ENGLISH_META_DOCUMENTARY_PATTERN.test(clause)
+            && !CHINESE_META_DOCUMENTARY_PATTERN.test(clause)
+            && !/^[:：\-–—]+$/u.test(clause)
+        ));
+    return clauses.length > 0 ? clauses : [cleaned];
+}
+
+function collectRagPublicEvidenceClauses(
+    context: AnswerReleaseReviewContext,
+    roles: Set<RagEvidenceRole>,
+    limit: number,
+    excludedClauses: string[] = []
+): string[] {
+    const clauses: string[] = [];
+    const selected = [...excludedClauses];
+    collectRagRoleFragments(context, roles).forEach((fragment) => {
+        if (clauses.length >= limit) {
+            return;
+        }
+        splitRagPublicEvidenceClauses(fragment).forEach((clause) => {
+            if (clauses.length >= limit || ragClauseAlreadyCovered(clause, selected)) {
+                return;
+            }
+            selected.push(clause);
+            clauses.push(clause);
+        });
+    });
+    return clauses;
+}
+
+function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): string {
+    if (!hasUsableRagEvidenceContext(context)) {
+        return '';
+    }
+    const useChinese = containsCjk([
+        context.message,
+        context.draftAnswer,
+        context.graphContext?.anchorTitle || '',
+        ...(context.ragContextPack?.fragments || []).slice(0, 4).map((fragment) => fragment.text),
+    ].join(' '));
+    const directClauses = collectRagPublicEvidenceClauses(context, new Set(['direct_support']), 1);
+    const documentClauses = collectRagPublicEvidenceClauses(
+        context,
+        new Set(['parent_context', 'adjacent_context']),
+        2,
+        directClauses
+    );
+    const graphClauses = collectRagPublicEvidenceClauses(
+        context,
+        new Set(['graph_neighbor_support']),
+        1,
+        [...directClauses, ...documentClauses]
+    );
+    const fallback = normalizeWhitespace(String(
+        context.knowledgePoints[0]?.evidenceSnippet
+        || context.knowledgePoints[0]?.summary
+        || context.knowledgePoints[0]?.title
+        || context.draftAnswer
+    ));
+    const baseAnswer = directClauses[0] || fallback;
+    if (!baseAnswer) {
+        return '';
+    }
+    const extraSentences = [
+        ...documentClauses,
+        ...graphClauses,
+    ];
+    if (context.ragSufficiencyReview?.status === 'borderline') {
+        extraSentences.push(
+            useChinese
+                ? '当前证据覆盖仍然有限，因此回答只使用已命中的材料'
+                : 'The evidence coverage is still partial, so the answer stays within the retrieved material'
+        );
+    }
+    return expandAnswerWithGraphContext(baseAnswer, context, useChinese, extraSentences);
+}
+
 function hasStrongEnglishAnchorCaseSignal(value: string): boolean {
     const normalized = normalizeWhitespace(value);
     if (!normalized || containsCjk(normalized)) {
@@ -882,6 +1057,10 @@ function buildDefinitionIntentRevisionAnswer(
     context: AnswerReleaseReviewContext,
     supportFrame: StateFrame & { label: string }
 ): string {
+    const ragGroundedAnswer = buildRagGroundedRevisionAnswer(context);
+    if (ragGroundedAnswer) {
+        return ragGroundedAnswer;
+    }
     const leadingPoint = context.knowledgePoints[0];
     const subject = normalizeWhitespace(String(leadingPoint?.title || supportFrame.subject || ''));
     const value = stripTerminalSentencePunctuation(supportFrame.value);
@@ -938,6 +1117,10 @@ function buildReleasedPublicAnswer(
 ): string {
     if (!isDefinitionIntentQuery(context.message)) {
         return draftAnswer;
+    }
+    const ragGroundedAnswer = buildRagGroundedRevisionAnswer(context);
+    if (ragGroundedAnswer) {
+        return ragGroundedAnswer;
     }
     const useChinese = containsCjk([
         context.message,
@@ -1103,6 +1286,18 @@ function buildSupportCandidates(
     context: AnswerReleaseReviewContext
 ): AnswerReleaseSupportCandidate[] {
     const candidates: AnswerReleaseSupportCandidate[] = [];
+    if (hasUsableRagEvidenceContext(context)) {
+        (context.ragContextPack?.fragments || []).forEach((fragment, index) => {
+            const title = normalizeWhitespace(String(fragment.title || '').trim()) || `rag_fragment_${index + 1}`;
+            const text = [title, normalizeWhitespace(String(fragment.text || '').trim())].filter(Boolean).join(' ');
+            if (text) {
+                candidates.push({
+                    label: title,
+                    text,
+                });
+            }
+        });
+    }
     context.citations.forEach((citation, index) => {
         const title = normalizeWhitespace(String(citation.title || '').trim()) || `citation_${index + 1}`;
         const snippet = normalizeWhitespace(String(citation.snippet || '').trim());
@@ -3037,6 +3232,74 @@ function evaluateGroundingAlignment(context: AnswerReleaseReviewContext): {
     };
 }
 
+function collectAvailableRagAnswerRoles(context: AnswerReleaseReviewContext): RagEvidenceRole[] {
+    if (!hasUsableRagEvidenceContext(context)) {
+        return [];
+    }
+    const roles = new Set<RagEvidenceRole>();
+    (context.ragContextPack?.fragments || []).forEach((fragment) => {
+        if (fragment.role === 'direct_support') {
+            roles.add('direct_support');
+        }
+        if (fragment.role === 'parent_context' || fragment.role === 'adjacent_context') {
+            roles.add('parent_context');
+        }
+        if (fragment.role === 'graph_neighbor_support') {
+            roles.add('graph_neighbor_support');
+        }
+    });
+    return ['direct_support', 'parent_context', 'graph_neighbor_support'].filter((role) => roles.has(role as RagEvidenceRole)) as RagEvidenceRole[];
+}
+
+function ragAnswerRoleIsCovered(
+    context: AnswerReleaseReviewContext,
+    role: RagEvidenceRole
+): boolean {
+    const roleSet = role === 'parent_context'
+        ? new Set<RagEvidenceRole>(['parent_context', 'adjacent_context'])
+        : new Set<RagEvidenceRole>([role]);
+    const supportText = collectRagRoleFragments(context, roleSet)
+        .map((fragment) => fragment.text)
+        .join(' ');
+    if (!supportText) {
+        return true;
+    }
+    return computeGroundingAlignmentScore(context.draftAnswer, supportText) >= 0.22;
+}
+
+function evaluateRagAnswerCompleteness(context: AnswerReleaseReviewContext): RagAnswerCompleteness {
+    const availableRoles = collectAvailableRagAnswerRoles(context);
+    if (availableRoles.length <= 0) {
+        return {
+            passed: true,
+            applicable: false,
+            requiredRoles: [],
+            missingRoles: [],
+        };
+    }
+    const sufficiencyStatus = context.ragSufficiencyReview?.status || 'borderline';
+    const requiredRoles = sufficiencyStatus === 'sufficient'
+        ? availableRoles
+        : availableRoles.filter((role) => role === 'direct_support');
+    const missingRoles = requiredRoles.filter((role) => !ragAnswerRoleIsCovered(context, role));
+    return {
+        passed: missingRoles.length <= 0,
+        applicable: true,
+        requiredRoles,
+        missingRoles,
+    };
+}
+
+function buildRagAnswerCompletenessMessage(result: RagAnswerCompleteness): string {
+    if (!result.applicable) {
+        return 'No usable RAG context pack was available, so RAG completeness was not evaluated.';
+    }
+    if (result.passed) {
+        return `Draft answer covered the required RAG evidence roles: ${result.requiredRoles.join(', ') || 'none'}.`;
+    }
+    return `Draft answer missed required RAG evidence roles: ${result.missingRoles.join(', ')}.`;
+}
+
 function isDefinitionIntentQuery(message: string): boolean {
     const normalizedMessage = normalizeWhitespace(message);
     if (!normalizedMessage) {
@@ -4196,6 +4459,7 @@ function buildDecision(
     graphOrderConsistencyPassed: boolean,
     graphComparisonConsistencyPassed: boolean,
     temporalValidityConsistencyPassed: boolean,
+    ragAnswerCompletenessPassed: boolean,
     leakedInternalFragments: string[],
     publicSurfaceContracted: boolean
 ): AnswerReleaseDecision {
@@ -4220,6 +4484,7 @@ function buildDecision(
         || !graphOrderConsistencyPassed
         || !graphComparisonConsistencyPassed
         || !temporalValidityConsistencyPassed
+        || !ragAnswerCompletenessPassed
         || leakedInternalFragments.length > 0
         || !publicSurfaceContracted
     ) {
@@ -4245,7 +4510,9 @@ function buildReason(
 
 export function reviewAnswerRelease(context: AnswerReleaseReviewContext): AnswerReleaseReview {
     const draftAnswer = normalizeWhitespace(context.draftAnswer);
-    const groundedEvidenceAvailable = context.knowledgePoints.length > 0 || context.citations.length > 0;
+    const groundedEvidenceAvailable = context.knowledgePoints.length > 0
+        || context.citations.length > 0
+        || hasUsableRagEvidenceContext(context);
     const leakedInternalFragments = collectLeakedInternalFragments(draftAnswer);
     const groundingAlignment = groundedEvidenceAvailable
         ? evaluateGroundingAlignment({
@@ -4419,6 +4686,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             qualificationSource: 'not_required' as const,
             conflict: null,
         };
+    const ragAnswerCompleteness = groundedEvidenceAvailable
+        ? evaluateRagAnswerCompleteness({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            applicable: false,
+            requiredRoles: [],
+            missingRoles: [],
+        };
     const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer);
     const graphSupportCount = context.graphContext
         ? (
@@ -4447,6 +4725,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         graphOrderConsistency.passed,
         graphComparisonConsistency.passed,
         temporalValidityConsistency.passed,
+        ragAnswerCompleteness.passed,
         leakedInternalFragments,
         publicSurfaceContracted
     );
@@ -4685,6 +4964,11 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             message: groundedEvidenceAvailable
                 ? buildTemporalValidityConflictMessage(temporalValidityConsistency)
                 : 'No evidence was available, so temporal-validity release checking was not evaluated.',
+        },
+        {
+            gateId: 'rag_answer_completeness',
+            passed: ragAnswerCompleteness.passed,
+            message: buildRagAnswerCompletenessMessage(ragAnswerCompleteness),
         },
         {
             gateId: 'public_surface_contraction',

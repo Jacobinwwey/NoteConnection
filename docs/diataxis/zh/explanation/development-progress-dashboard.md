@@ -5,7 +5,7 @@
 
 ## 2026-07-05 RSE + document augmentation 图谱 RAG 实践计划
 
-本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、有界 context pack、接入 provider 的充分性 trace、有界一次性 recovery、更充分的单消息 composer 路径、runtime verifier 字段、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。更深的图邻居排序、更完整 answer profile、更丰富 replay id 和更大的 runtime probe 语料仍是后续工作。
+本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、有界 context pack、接入 provider 的充分性 trace、有界一次性 recovery、RAG-aware 单消息 release review、runtime verifier 字段、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。更深的图邻居排序、更完整 answer profile、更丰富 replay id 和更大的 runtime probe 语料仍是后续工作。
 
 当前代码 / 方案对齐判断：
 
@@ -14,7 +14,7 @@
 | RSE 应从精确命中片段开始，而不是直接召回大段文档 | `src/learning/queryBackend.ts` 与 `src/learning/KnowledgeLearningPlatform.ts` 已经返回 evidence span、citation、relation path、query variant 与 scoped recovery trace；`src/learning/evidenceContextAssembler.ts` 现在从这些 span 出发，而不是 dump 整篇文档。 | 确定性路径已实现 |
 | document augmentation 应恢复足够的源文档上下文来支撑完整回答 | `evidenceContextAssembler.ts` 现在通过平台边界读取被选中源文档的完整内容，保留 direct support，补入 parent / adjacent context，去重重叠窗口，并在无法恢复源文本时标记 `source_window_unavailable`。 | 确定性路径已实现 |
 | 图上下文应使用入度/出度与邻居内容，而不是只显示邻居标题 | `KnowledgeLearningPlatform.agentConversation()` 现在会物化选中的图邻居 item，并让 evidence assembler 生成 `graph_neighbor_support` fragment。更深的 `graphContextAssembler.ts` 图排序 owner 仍需要 relation / intent / confidence 调优。 | 部分实现 |
-| 用户只应看到一条回答，编排留在后端 | `conversationComposer.ts` 现在接收 `ragContextPack` 与 `ragSufficiencyReview`，从 direct、document、graph evidence 组织更充分的单条公开回答。`agent_workspace.js` / `workspace_panes.js` 显示 compact 状态，而不是追加聊天消息。 | 已保持并增强 |
+| 用户只应看到一条回答，编排留在后端 | `conversationComposer.ts` 现在会把 `ragContextPack` 与 `ragSufficiencyReview` 传入 `answerReleaseReview.ts`；release review 可以基于 direct、document、graph fragment 修订或增强公开回答，同时把编排细节留在 trace / status surface。`agent_workspace.js` / `workspace_panes.js` 显示 compact 状态，而不是追加聊天消息。 | 已保持并增强 |
 | LLM judging 应提升回答完整性 | `ragSufficiencyJudge.ts` 已有确定性 gate 与可注入的可选 LLM judge hook；`ragSufficiencyProviderJudge.ts` 现在通过现有 `LlmProviderClient` / NoteMD settings 边界完成 adapter 接入，包含严格 JSON 解析、timeout、无重试和 reviewer catch path 的确定性 fallback。`KnowledgeLearningPlatform.agentConversation()` 现在会在首轮 pack 可恢复地 borderline / insufficient 时，最多执行一次有界 recovery assembly / review。 | Unit 5 已实现 |
 | 弱证据应显式降级 | `RagSufficiencyReview` 现在记录 `sufficient`、`borderline` 或 `insufficient`，并带有 `partial_coverage`、`conflict`、`insufficient_evidence` 等降级状态；前端 evidence pane 会显示 compact 状态。 | 确定性 review 已实现 |
 
@@ -26,7 +26,8 @@
 - `ragSufficiencyJudge.ts` 持有确定性充分性判断与可选 judge 接入点。
 - `ragSufficiencyProviderJudge.ts` 持有 NoteMD provider adapter，用于有界 JSON-only 充分性评审。
 - `KnowledgeLearningPlatform.ts` 负责 source resolution、图邻居物化、一次性 RAG recovery、trace/artifact 持久化和 conversation response 装配。
-- `conversationComposer.ts` 负责基于结构化 pack 生成单条 public answer。
+- `conversationComposer.ts` 负责基于结构化 pack 生成单条 public answer draft。
+- `answerReleaseReview.ts` 负责 public-surface contraction、RAG answer completeness 与最终公开回答修订。
 - `agent_workspace.js` 与 `workspace_panes.js` 在 API status / evidence surface 展示 compact RAG 健康状态，不把 raw fragment 渲染进聊天。
 
 对用户提出方案的关键修正不变：“命中点前后各五段”只是局部扩展启发式，不是最大 source 读取范围。最大 source 边界是每个被选知识点对应的完整 scoped document；真正的硬上限属于 model-visible `RagContextPack`。当前实现遵循 small-to-big 形状：先保留 direct span，再基于完整文档 source 视图选择 parent / adjacent context，最后在 graph context 提供可用 id 时补入图邻居证据。
@@ -34,7 +35,7 @@
 本切片新增实现证据：
 
 - 新增模块：`src/learning/evidenceContextAssembler.ts`、`src/learning/ragContextPack.ts`、`src/learning/ragSufficiencyJudge.ts`、`src/learning/ragSufficiencyProviderJudge.ts`。
-- 新增 / 更新测试：evidence assembler、context pack budgeter、sufficiency judge、接入 provider 的 sufficiency judge adapter、有界 recovery、持久化兼容、composer、平台集成、导出 RAG trace 保留、Knowledge Workspace conversation regression、runtime verifier 校验，以及前端 RAG grounding 展示。
+- 新增 / 更新测试：evidence assembler、context pack budgeter、sufficiency judge、接入 provider 的 sufficiency judge adapter、有界 recovery、RAG-aware release review、持久化兼容、composer、平台集成、导出 RAG trace 保留、Knowledge Workspace conversation regression、runtime verifier 校验，以及前端 RAG grounding 展示。
 - `scripts/verify-knowledge-workspace-runtime.js` 现在能校验期望 RAG source boundary、roles、answer terms 和 sufficiency statuses。
 - `src/frontend/agent_workspace.js` 会把仅含 RAG trace 的 payload 标记为可 inspect；API 状态行显示 `RAG: <status>, <N> fragments`，并在本回合使用 recovery pass 时追加 `+recovered`。
 - `src/frontend/workspace_panes.js` 显示 compact RAG context metrics：sufficiency、source boundary、fragment budget、direct/document/graph roles、truncated/dropped/unavailable source counts、degradation、recovery 与 reasons。
@@ -43,7 +44,7 @@
 
 - 将更多图邻居排序责任下沉到 `graphContextAssembler.ts`，避免邻居证据选择只停留在 platform-level materialization。
 - 扩展 provider timeout/fallback、malformed judge JSON 与大语料 hard negative 的 runtime probes。
-- 扩展 answer profile 与 `answerReleaseReview.ts` completeness gate，同时保留公开回答硬预算。
+- 将当前 RAG-aware definition 路径继续扩展为完整 answer-profile 系统，同时保留公开回答硬预算。
 - 补齐 export replay 覆盖，以及 repeated snippet、conflicting adjacent evidence、missing graph-neighbor evidence、context truncation、no-provider fallback 的更大 runtime probes。
 
 ## 2026-07-04 知识工作区 scope 可见性、聚合 RAG 回答与命中文件交互收口

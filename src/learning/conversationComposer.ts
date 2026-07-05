@@ -1487,6 +1487,8 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         citations: params.citations,
         usedScope: params.usedScope,
         graphContext,
+        ragContextPack: params.ragContextPack,
+        ragSufficiencyReview: params.ragSufficiencyReview,
         reviewedAt: params.generatedAt,
     });
     knowledgeRun.answerReleaseReview = answerReleaseReview;
