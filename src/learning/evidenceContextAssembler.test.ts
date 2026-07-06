@@ -1339,6 +1339,176 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionDependency);
     });
 
+    test('marks dependency facts from different documents as conflicting evidence', async () => {
+        const nominalDependency = 'The storage dependency is SQLite in the nominal deployment manifest.';
+        const fieldDependency = 'The storage dependency is PostgreSQL in the field deployment manifest.';
+        const nominalDocument = [
+            '# Nominal Storage Dependency Conflict Probe',
+            '',
+            'Nominal storage dependency conflict probe records the nominal dependency source.',
+            '',
+            '## Nominal Dependency',
+            nominalDependency,
+        ].join('\n');
+        const fieldDocument = [
+            '# Field Storage Dependency Conflict Evidence',
+            '',
+            'Field storage dependency conflict evidence records the field dependency source.',
+            '',
+            '## Field Dependency',
+            fieldDependency,
+        ].join('\n');
+        const nominalAtom = makeAtom({
+            id: 'atom_nominal_dependency_conflict',
+            documentId: 'doc_nominal_dependency_conflict',
+            sourcePath: 'Knowledge_Base/ragdependencymulticonflict/nominal storage dependency conflict probe.md',
+            title: 'Nominal Storage Dependency Conflict Probe',
+            content: nominalDependency,
+            keywords: ['dependency', 'storage', 'nominal'],
+        });
+        const fieldAtom = makeAtom({
+            id: 'atom_field_dependency_conflict',
+            documentId: 'doc_field_dependency_conflict',
+            sourcePath: 'Knowledge_Base/ragdependencymulticonflict/field storage dependency conflict evidence.md',
+            title: 'Field Storage Dependency Conflict Evidence',
+            content: fieldDependency,
+            keywords: ['dependency', 'storage', 'field'],
+        });
+        const nominalItem = makeQueryItem({
+            atom: nominalAtom,
+            evidence: {
+                id: 'evidence_nominal_dependency',
+                documentId: nominalAtom.documentId,
+                sourcePath: nominalAtom.sourcePath,
+                startOffset: nominalDocument.indexOf(nominalDependency),
+                endOffset: nominalDocument.indexOf(nominalDependency) + nominalDependency.length,
+                startLine: 6,
+                endLine: 6,
+                snippet: nominalDependency,
+            },
+        });
+        const fieldItem = makeQueryItem({
+            atom: fieldAtom,
+            evidence: {
+                id: 'evidence_field_dependency',
+                documentId: fieldAtom.documentId,
+                sourcePath: fieldAtom.sourcePath,
+                startOffset: fieldDocument.indexOf(fieldDependency),
+                endOffset: fieldDocument.indexOf(fieldDependency) + fieldDependency.length,
+                startLine: 6,
+                endLine: 6,
+                snippet: fieldDependency,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare nominal storage dependency conflict probe with field storage dependency conflict evidence',
+            items: [nominalItem, fieldItem],
+            sourceResolver: async (lookup) => ({
+                documentId: lookup.documentId,
+                sourcePath: lookup.sourcePath,
+                content: lookup.documentId === nominalAtom.documentId ? nominalDocument : fieldDocument,
+            }),
+            paragraphWindow: 1,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 2600,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => (
+            fragment.role === 'conflict'
+            && fragment.fragmentId.startsWith('rag_conflict_cross_document_')
+        ));
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_dependency',
+                'evidence_field_dependency',
+            ]),
+            text: expect.stringContaining('across documents'),
+        }));
+        expect(conflictFragment?.text).toContain(nominalDependency);
+        expect(conflictFragment?.text).toContain(fieldDependency);
+    });
+
+    test('does not mark version-scoped dependency facts as conflicting evidence', async () => {
+        const versionOneDependency = 'The storage dependency is SQLite in version 1.0.';
+        const versionTwoDependency = 'The storage dependency is PostgreSQL in version 2.0.';
+        const fullDocument = [
+            '# Version Scoped Dependency Probe',
+            '',
+            'Version scoped dependency probe validates that version-specific dependencies stay condition-qualified.',
+            '',
+            '## Version Dependencies',
+            versionOneDependency,
+            '',
+            versionTwoDependency,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_version_scoped_dependency',
+            documentId: 'doc_version_scoped_dependency',
+            sourcePath: 'Knowledge_Base/ragdependencyversionqualifier/version scoped dependency probe.md',
+            title: 'Version Scoped Dependency Probe',
+            content: versionOneDependency,
+            keywords: ['version', 'dependency', 'storage'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_version_one_dependency',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(versionOneDependency),
+                    endOffset: fullDocument.indexOf(versionOneDependency) + versionOneDependency.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: versionOneDependency,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_version_two_dependency',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(versionTwoDependency),
+                    endOffset: fullDocument.indexOf(versionTwoDependency) + versionTwoDependency.length,
+                    startLine: 8,
+                    endLine: 8,
+                    snippet: versionTwoDependency,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is version scoped dependency probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(versionOneDependency),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(versionTwoDependency);
+    });
+
     test('does not mark current and historical location facts as conflicting evidence', async () => {
         const currentLocation = 'The control module location is Rack A in the current release record.';
         const historicalLocation = 'The control module location is Rack B in the historical placement archive.';
