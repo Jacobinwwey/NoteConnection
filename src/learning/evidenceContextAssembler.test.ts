@@ -1433,6 +1433,119 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text).toContain(fieldDependency);
     });
 
+    test('scans complete selected documents for dependency conflicts beyond the local context window', async () => {
+        const nominalIntro = 'Nominal dependency full scan source introduces the deployment dependency comparison without listing the final dependency value.';
+        const fieldIntro = 'Field dependency full scan source introduces the comparison evidence without listing the final dependency value.';
+        const nominalDependency = 'The storage dependency is SQLite in the remote nominal dependency appendix.';
+        const fieldDependency = 'The storage dependency is PostgreSQL in the remote field dependency appendix.';
+        const filler = Array.from({ length: 8 }, (_, index) => `Dependency filler paragraph ${index + 1} keeps the appendix outside the local window.`);
+        const nominalDocument = [
+            '# Nominal Dependency Full Scan Source',
+            '',
+            nominalIntro,
+            '',
+            ...filler.flatMap((line) => [line, '']),
+            '## Remote Nominal Dependency Appendix',
+            nominalDependency,
+        ].join('\n');
+        const fieldDocument = [
+            '# Field Dependency Full Scan Source',
+            '',
+            fieldIntro,
+            '',
+            ...filler.flatMap((line) => [line, '']),
+            '## Remote Field Dependency Appendix',
+            fieldDependency,
+        ].join('\n');
+        const nominalAtom = makeAtom({
+            id: 'atom_nominal_dependency_full_scan_source',
+            documentId: 'doc_nominal_dependency_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragdependencyfullscan/nominal dependency full scan source.md',
+            title: 'Nominal Dependency Full Scan Source',
+            content: nominalIntro,
+            keywords: ['nominal', 'dependency', 'full', 'scan'],
+        });
+        const fieldAtom = makeAtom({
+            id: 'atom_field_dependency_full_scan_source',
+            documentId: 'doc_field_dependency_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragdependencyfullscan/field dependency full scan source.md',
+            title: 'Field Dependency Full Scan Source',
+            content: fieldIntro,
+            keywords: ['field', 'dependency', 'full', 'scan'],
+        });
+        const nominalItem = makeQueryItem({
+            atom: nominalAtom,
+            evidence: {
+                id: 'evidence_nominal_dependency_full_scan_intro',
+                documentId: nominalAtom.documentId,
+                sourcePath: nominalAtom.sourcePath,
+                startOffset: nominalDocument.indexOf(nominalIntro),
+                endOffset: nominalDocument.indexOf(nominalIntro) + nominalIntro.length,
+                startLine: 3,
+                endLine: 3,
+                snippet: nominalIntro,
+            },
+        });
+        const fieldItem = makeQueryItem({
+            atom: fieldAtom,
+            evidence: {
+                id: 'evidence_field_dependency_full_scan_intro',
+                documentId: fieldAtom.documentId,
+                sourcePath: fieldAtom.sourcePath,
+                startOffset: fieldDocument.indexOf(fieldIntro),
+                endOffset: fieldDocument.indexOf(fieldIntro) + fieldIntro.length,
+                startLine: 3,
+                endLine: 3,
+                snippet: fieldIntro,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare nominal dependency full scan source with field dependency full scan source',
+            items: [nominalItem, fieldItem],
+            sourceResolver: async (lookup) => ({
+                documentId: lookup.documentId,
+                sourcePath: lookup.sourcePath,
+                content: lookup.documentId === nominalAtom.documentId ? nominalDocument : fieldDocument,
+            }),
+            paragraphWindow: 1,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 2600,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => (
+            fragment.role === 'conflict'
+            && fragment.fragmentId.startsWith('rag_conflict_cross_document_')
+        ));
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_dependency_full_scan_intro',
+                'evidence_field_dependency_full_scan_intro',
+            ]),
+            text: expect.stringContaining('across documents'),
+        }));
+        expect(conflictFragment?.text).toContain(nominalDependency);
+        expect(conflictFragment?.text).toContain(fieldDependency);
+        expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: nominalAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: nominalDocument.length,
+            }),
+            expect.objectContaining({
+                documentId: fieldAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: fieldDocument.length,
+            }),
+        ]));
+    });
+
     test('does not mark version-scoped dependency facts as conflicting evidence', async () => {
         const versionOneDependency = 'The storage dependency is SQLite in version 1.0.';
         const versionTwoDependency = 'The storage dependency is PostgreSQL in version 2.0.';

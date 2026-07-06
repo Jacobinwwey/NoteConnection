@@ -74,6 +74,8 @@
 - runtime probe `conflicting_endpoint_evidence_probe_en` 与 `environment_scoped_endpoint_probe_en` 现在由 `Knowledge_Base/ragendpointconflict` 和 `Knowledge_Base/ragendpointqualifier` 支撑，把受控语义冲突覆盖扩展到显式 endpoint/url/uri/route facts。同一 section 中 `/api/v1/hooks` 与 `/api/v2/hooks` 会产出 `conflict` fragment 并在 `context_assembly` 下降级；staging 与 production endpoint routes 会保留为 environment-qualified evidence，不会误产出 conflict。`/v1/` 这类 endpoint path segment 会被视为 route value，而不是 version scope。
 - runtime probe `conflicting_dependency_evidence_probe_en`、`conflicting_multi_document_dependency_evidence_probe_en`、`environment_scoped_dependency_probe_en` 与 `version_scoped_dependency_probe_en` 现在由 `Knowledge_Base/ragdependencyconflict`、`Knowledge_Base/ragdependencymulticonflict`、`Knowledge_Base/ragdependencyqualifier` 和 `Knowledge_Base/ragdependencyversionqualifier` 支撑，把受控语义冲突覆盖扩展到显式 dependency/package/provider/driver/runtime/library/module/plugin/adapter facts。同一 section 与跨文档的 SQLite / PostgreSQL storage dependency 会产出 `conflict` fragment 并在 `context_assembly` 下降级；staging / production 与 version 1.0 / version 2.0 dependency records 会保留为条件限定 evidence，不会误产出 conflict。
 
+- runtime probe `full_document_dependency_scan_remote_conflict_probe_en` 现在由 `Knowledge_Base/ragdependencyfullscan` 支撑，把完整文档远端扫描规则专门锁定到 dependency comparable-fact 类：命中的开头段落可以不包含 SQLite / PostgreSQL 值，但两个被选 scoped documents 仍会完整读入，远端 appendix 中的 storage dependency 事实仍会进入有界 `conflict` fragment，并把降级归因到 `context_assembly`。
+
 后续推进：
 
 - 基于代表性 hard negative 校准图关系权重与低置信排除阈值，不把当前 scoring 常量当作最终形态。
