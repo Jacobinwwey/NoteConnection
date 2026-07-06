@@ -908,6 +908,101 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(plannedDate);
     });
 
+    test('does not mark current and planned date facts from different documents as conflicting evidence', async () => {
+        const currentDate = 'The migration release date is 2026-08-15 in the current release record.';
+        const plannedDate = 'The migration release date is 2026-09-20 in the planned rollout draft.';
+        const currentDocument = [
+            '# Temporal Current Release Source',
+            '',
+            'Temporal current release source is the active schedule document.',
+            '',
+            '## Current Schedule',
+            currentDate,
+        ].join('\n');
+        const plannedDocument = [
+            '# Temporal Planned Roadmap Source',
+            '',
+            'Temporal planned roadmap source is the future-qualified schedule document.',
+            '',
+            '## Planned Roadmap',
+            plannedDate,
+        ].join('\n');
+        const currentAtom = makeAtom({
+            id: 'atom_temporal_current_release_source',
+            documentId: 'doc_temporal_current_release_source',
+            sourcePath: 'Knowledge_Base/ragtemporalcrossscope/temporal current release source.md',
+            title: 'Temporal Current Release Source',
+            content: currentDate,
+            keywords: ['temporal', 'current', 'release', 'date'],
+        });
+        const plannedAtom = makeAtom({
+            id: 'atom_temporal_planned_roadmap_source',
+            documentId: 'doc_temporal_planned_roadmap_source',
+            sourcePath: 'Knowledge_Base/ragtemporalcrossscope/temporal planned roadmap source.md',
+            title: 'Temporal Planned Roadmap Source',
+            content: plannedDate,
+            keywords: ['temporal', 'planned', 'release', 'date'],
+        });
+        const currentItem = makeQueryItem({
+            atom: currentAtom,
+            evidence: {
+                id: 'evidence_temporal_current_release_date',
+                documentId: currentAtom.documentId,
+                sourcePath: currentAtom.sourcePath,
+                startOffset: currentDocument.indexOf(currentDate),
+                endOffset: currentDocument.indexOf(currentDate) + currentDate.length,
+                startLine: 6,
+                endLine: 6,
+                snippet: currentDate,
+            },
+        });
+        const plannedItem = makeQueryItem({
+            atom: plannedAtom,
+            evidence: {
+                id: 'evidence_temporal_planned_release_date',
+                documentId: plannedAtom.documentId,
+                sourcePath: plannedAtom.sourcePath,
+                startOffset: plannedDocument.indexOf(plannedDate),
+                endOffset: plannedDocument.indexOf(plannedDate) + plannedDate.length,
+                startLine: 6,
+                endLine: 6,
+                snippet: plannedDate,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare temporal current release source with temporal planned roadmap source',
+            items: [currentItem, plannedItem],
+            sourceResolver: async (lookup) => ({
+                documentId: lookup.documentId,
+                sourcePath: lookup.sourcePath,
+                content: lookup.documentId === currentAtom.documentId ? currentDocument : plannedDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 10,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2600,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: currentAtom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(currentDate),
+            }),
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: plannedAtom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(plannedDate),
+            }),
+        ]));
+    });
+
     test('marks comparable facts from different documents as conflicting evidence', async () => {
         const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the nominal procedure.';
         const fieldTolerance = 'The calibration tolerance is +/-0.50 mm in the field procedure.';

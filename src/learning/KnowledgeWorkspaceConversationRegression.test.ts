@@ -260,6 +260,34 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_temporal_current_release_source',
+            sourcePath: 'Knowledge_Base/ragtemporalcrossscope/temporal current release source.md',
+            language: 'en',
+            workspaceId: 'ragtemporalcrossscope',
+            corpusId: 'ragtemporalcrossscope',
+            content: [
+                '# Temporal Current Release Source',
+                'Temporal current release source records that the migration release date is 2026-08-15 in the current release record.',
+                '',
+                '## Current Schedule',
+                'The migration release date is 2026-08-15 in the current release record.',
+            ].join('\n'),
+        },
+        {
+            documentId: 'doc_temporal_planned_roadmap_source',
+            sourcePath: 'Knowledge_Base/ragtemporalcrossscope/temporal planned roadmap source.md',
+            language: 'en',
+            workspaceId: 'ragtemporalcrossscope',
+            corpusId: 'ragtemporalcrossscope',
+            content: [
+                '# Temporal Planned Roadmap Source',
+                'Temporal planned roadmap source records that the migration release date is 2026-09-20 in the planned rollout draft.',
+                '',
+                '## Planned Roadmap',
+                'The migration release date is 2026-09-20 in the planned rollout draft.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_multi_document_calibration_tolerance_conflict_probe',
             sourcePath: 'Knowledge_Base/ragmulticonflict/multi document calibration tolerance conflict probe.md',
             language: 'en',
@@ -784,6 +812,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
                         acceptedRagDegradationStates: ['none'],
                         answerMustContain: expect.arrayContaining(['2026-08-15', 'current']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'temporal_cross_document_planned_release_date_probe_en',
+                    expected: expect.objectContaining({
+                        minCitations: 2,
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['2026-08-15', '2026-09-20', 'planned']),
                         answerMustNotContain: expect.arrayContaining([
                             'Conflicting evidence',
                             'immediate predecessors',
