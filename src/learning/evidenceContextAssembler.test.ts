@@ -993,6 +993,84 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionState);
     });
 
+    test('does not mark version-scoped state facts as conflicting evidence', async () => {
+        const v1State = 'The migration gate status is enabled in version 1.0.';
+        const v2State = 'The migration gate status is disabled in version 2.0.';
+        const fullDocument = [
+            '# Version Scoped State Status Probe',
+            '',
+            'Version scoped state status probe validates that version qualifiers do not become false conflicts.',
+            '',
+            '## Gate Status By Version',
+            v1State,
+            '',
+            'Operators should preserve the version label when comparing release records.',
+            '',
+            v2State,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_version_state_status',
+            documentId: 'doc_version_state_status',
+            sourcePath: 'Knowledge_Base/ragversionqualifier/version scoped state status probe.md',
+            title: 'Version Scoped State Status Probe',
+            content: v1State,
+            keywords: ['version', 'state', 'status'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_v1_state_status',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(v1State),
+                    endOffset: fullDocument.indexOf(v1State) + v1State.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: v1State,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_v2_state_status',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(v2State),
+                    endOffset: fullDocument.indexOf(v2State) + v2State.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: v2State,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is version scoped state status probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(v1State),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(v2State);
+    });
+
     test('does not mark current and historical date facts as conflicting evidence', async () => {
         const currentDate = 'The migration release date is 2026-08-15 in the current release record.';
         const historicalDate = 'The migration release date is 2026-07-01 in the historical rollout archive.';

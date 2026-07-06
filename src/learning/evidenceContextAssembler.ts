@@ -94,7 +94,10 @@ interface ComparableEvidenceFact {
 }
 
 type ComparableTemporalScopeKey = 'current' | 'historical' | 'planned';
-type ComparableFactScopeKey = `temporal:${ComparableTemporalScopeKey}` | `environment:${string}`;
+type ComparableFactScopeKey =
+    | `temporal:${ComparableTemporalScopeKey}`
+    | `environment:${string}`
+    | `version:${string}`;
 
 const DEFAULT_PARAGRAPH_WINDOW = 5;
 const MAX_GRAPH_NEIGHBOR_DOCUMENT_CONTEXT_FRAGMENTS = 2;
@@ -155,6 +158,7 @@ const COMPARABLE_ENVIRONMENT_SCOPE_ALIASES: Record<string, string> = {
     canary: 'canary',
 };
 const COMPARABLE_ENVIRONMENT_SCOPE_PATTERN = /\b(?:in|for|on|under|within)\s+(?:the\s+)?(production|prod|staging|stage|development|dev|test|testing|qa|uat|sandbox|local|preview|canary)(?:\s+(?:environment|env|deployment|cluster|workspace|tenant|runtime))?\b|\b(production|staging|development|test|testing|qa|uat|sandbox|local|preview|canary)\s+(?:environment|env|deployment|cluster|workspace|tenant|runtime)\b/i;
+const COMPARABLE_VERSION_SCOPE_PATTERN = /\b(?:in|for|on|under|within)\s+(?:the\s+)?(?:version|ver\.?|v)\s*([0-9]+(?:\.[0-9]+){0,3}(?:[-+._][a-z0-9]+)?)\b|\b(?:version|ver\.?|v)\s*([0-9]+(?:\.[0-9]+){0,3}(?:[-+._][a-z0-9]+)?)\b/i;
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -425,6 +429,19 @@ function comparableFactEnvironmentScopeKey(subjectLabel: string, sentenceTail: s
     return COMPARABLE_ENVIRONMENT_SCOPE_ALIASES[environmentLabel] || null;
 }
 
+function comparableFactVersionScopeKey(subjectLabel: string, sentenceTail: string): string | null {
+    const scopedText = `${normalizeWhitespace(subjectLabel)} ${normalizeWhitespace(sentenceTail)}`;
+    const match = COMPARABLE_VERSION_SCOPE_PATTERN.exec(scopedText);
+    if (!match) {
+        return null;
+    }
+    const versionLabel = normalizeWhitespace(match[1] || match[2] || '').toLowerCase();
+    if (!/^[0-9]+(?:\.[0-9]+){0,3}(?:[-+._][a-z0-9]+)?$/.test(versionLabel)) {
+        return null;
+    }
+    return versionLabel;
+}
+
 function comparableFactScopeKeys(subjectLabel: string, sentenceTail: string): ComparableFactScopeKey[] {
     const scopeKeys: ComparableFactScopeKey[] = [];
     const temporalScopeKey = comparableFactTemporalScopeKey(subjectLabel, sentenceTail);
@@ -434,6 +451,10 @@ function comparableFactScopeKeys(subjectLabel: string, sentenceTail: string): Co
     const environmentScopeKey = comparableFactEnvironmentScopeKey(subjectLabel, sentenceTail);
     if (environmentScopeKey) {
         scopeKeys.push(`environment:${environmentScopeKey}`);
+    }
+    const versionScopeKey = comparableFactVersionScopeKey(subjectLabel, sentenceTail);
+    if (versionScopeKey) {
+        scopeKeys.push(`version:${versionScopeKey}`);
     }
     return scopeKeys.sort();
 }

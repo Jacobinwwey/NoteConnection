@@ -276,6 +276,24 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_version_scoped_state_status_probe',
+            sourcePath: 'Knowledge_Base/ragversionqualifier/version scoped state status probe.md',
+            language: 'en',
+            workspaceId: 'ragversionqualifier',
+            corpusId: 'ragversionqualifier',
+            content: [
+                '# Version Scoped State Status Probe',
+                'Version scoped state status probe validates that the migration gate status is enabled in version 1.0 while version 2.0 status facts remain version-qualified evidence rather than a conflict.',
+                '',
+                '## Gate Status By Version',
+                'The migration gate status is enabled in version 1.0.',
+                '',
+                'Operators should preserve the version label when comparing release records.',
+                '',
+                'The migration gate status is disabled in version 2.0.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_temporal_location_probe',
             sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal location probe.md',
             language: 'en',
@@ -926,6 +944,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
                         acceptedRagDegradationStates: ['none'],
                         answerMustContain: expect.arrayContaining(['enabled', 'staging']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'stable migration gate status',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'version_scoped_state_status_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['enabled', 'version 1.0']),
                         answerMustNotContain: expect.arrayContaining([
                             'Conflicting evidence',
                             'stable migration gate status',
