@@ -674,6 +674,91 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(disabledState.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('marks unitless quantity facts in the same section as conflicting evidence', async () => {
+        const checklistLimit = 'The retry limit is 3 in the release checklist.';
+        const appendixLimit = 'The retry limit is 5 in the rollback appendix.';
+        const fullDocument = [
+            '# Quantity Limit Conflict Probe',
+            '',
+            'Quantity limit conflict probe validates that unitless operational limits are not flattened into one stable value.',
+            '',
+            '## Retry Limit',
+            checklistLimit,
+            '',
+            'Operators must inspect both operational records before publishing the limit.',
+            '',
+            appendixLimit,
+            'Operators must resolve which retry limit is active before release.',
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_conflicting_quantity_limit',
+            documentId: 'doc_conflicting_quantity_limit',
+            sourcePath: 'Knowledge_Base/ragquantityconflict/quantity limit conflict probe.md',
+            title: 'Quantity Limit Conflict Probe',
+            content: checklistLimit,
+            keywords: ['quantity', 'limit', 'conflict'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_checklist_retry_limit',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(checklistLimit),
+                    endOffset: fullDocument.indexOf(checklistLimit) + checklistLimit.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: checklistLimit,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_appendix_retry_limit',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(appendixLimit),
+                    endOffset: fullDocument.indexOf(appendixLimit) + appendixLimit.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: appendixLimit,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is quantity limit conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_checklist_retry_limit',
+                'evidence_appendix_retry_limit',
+            ]),
+            startLine: 6,
+            endLine: 11,
+        }));
+        expect(conflictFragment?.text).toContain(checklistLimit);
+        expect(conflictFragment?.text).toContain(appendixLimit);
+        expect(conflictFragment?.text.match(new RegExp(checklistLimit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+        expect(conflictFragment?.text.match(new RegExp(appendixLimit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+    });
+
     test('marks location facts in the same section as conflicting evidence', async () => {
         const primaryLocation = 'The control module location is Rack A in the primary bay.';
         const fieldLocation = 'The control module location is Rack B in the field bay.';

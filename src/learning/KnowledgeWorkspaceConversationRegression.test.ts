@@ -221,6 +221,25 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_conflicting_quantity_limit_probe',
+            sourcePath: 'Knowledge_Base/ragquantityconflict/quantity limit conflict probe.md',
+            language: 'en',
+            workspaceId: 'ragquantityconflict',
+            corpusId: 'ragquantityconflict',
+            content: [
+                '# Quantity Limit Conflict Probe',
+                'Quantity limit conflict probe validates that unitless operational limits are not flattened into one stable value.',
+                '',
+                '## Retry Limit',
+                'The retry limit is 3 in the release checklist.',
+                '',
+                'Context paragraph keeps the retry limit conflict inside one scoped section.',
+                '',
+                'The retry limit is 5 in the rollback appendix.',
+                'Operators must resolve which retry limit is active before release.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_conflicting_location_probe',
             sourcePath: 'Knowledge_Base/raglocationconflict/location conflict probe.md',
             language: 'en',
@@ -936,6 +955,19 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         answerMustContain: expect.arrayContaining(['enabled', 'disabled']),
                         answerMustNotContain: expect.arrayContaining([
                             'stable migration gate status',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'conflicting_quantity_limit_evidence_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context', 'conflict']),
+                        acceptedRagSufficiencyStatuses: ['borderline'],
+                        acceptedRagDegradationStates: ['conflict'],
+                        requiredRagFailureStages: ['context_assembly'],
+                        answerMustContain: expect.arrayContaining(['retry limit', '3', '5']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'stable retry limit',
                         ]),
                     }),
                 }),
