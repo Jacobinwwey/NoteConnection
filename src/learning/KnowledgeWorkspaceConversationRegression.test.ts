@@ -206,6 +206,24 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_temporal_state_status_probe',
+            sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal state status probe.md',
+            language: 'en',
+            workspaceId: 'ragtemporalqualifier',
+            corpusId: 'ragtemporalqualifier',
+            content: [
+                '# Temporal State Status Probe',
+                'Temporal state status probe validates that the migration gate status is enabled in the current release record while historical status facts remain condition-qualified evidence rather than a conflict.',
+                '',
+                '## Gate Status History',
+                'The migration gate status is enabled in the current release record.',
+                '',
+                'Operators should answer with the active record while retaining the older record as provenance.',
+                '',
+                'The migration gate status is disabled in the historical rollback archive.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_multi_document_calibration_tolerance_conflict_probe',
             sourcePath: 'Knowledge_Base/ragmulticonflict/multi document calibration tolerance conflict probe.md',
             language: 'en',
@@ -693,6 +711,19 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                     }),
                 }),
                 expect.objectContaining({
+                    id: 'temporal_scoped_state_status_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['enabled', 'current']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
                     id: 'conflicting_multi_document_evidence_probe_en',
                     expected: expect.objectContaining({
                         minCitations: 2,
@@ -800,6 +831,13 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                 const observedRagRoles = (response.trace.ragContextPack?.fragments || [])
                     .map((fragment) => fragment.role);
                 expect(observedRagRoles).toEqual(expect.arrayContaining(expected.requiredRagRoles));
+            }
+            if (expected.forbiddenRagRoles && expected.forbiddenRagRoles.length > 0) {
+                const observedRagRoles = (response.trace.ragContextPack?.fragments || [])
+                    .map((fragment) => fragment.role);
+                expected.forbiddenRagRoles.forEach((role) => {
+                    expect(observedRagRoles).not.toContain(role);
+                });
             }
             if (expected.minimumRagFullDocumentFragmentCounts) {
                 const observedFullDocumentFragmentCounts = countFullDocumentRagFragmentsByRole(response);

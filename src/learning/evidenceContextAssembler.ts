@@ -116,6 +116,20 @@ const COMPARABLE_STATE_VALUE_GROUPS: Record<string, string> = {
     on: 'on_off',
     off: 'on_off',
 };
+const COMPARABLE_TEMPORAL_SCOPE_GROUPS: Record<string, 'current' | 'historical'> = {
+    current: 'current',
+    active: 'current',
+    present: 'current',
+    latest: 'current',
+    historical: 'historical',
+    historic: 'historical',
+    legacy: 'historical',
+    previous: 'historical',
+    archived: 'historical',
+    deprecated: 'historical',
+    superseded: 'historical',
+};
+const COMPARABLE_TEMPORAL_SCOPE_PATTERN = /\b(current|active|present|latest|historical|historic|legacy|previous|archived|deprecated|superseded)\b/i;
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -358,6 +372,34 @@ function normalizeComparableFactSubject(value: string): string {
         .trim();
 }
 
+function comparableFactSentenceTail(blockText: string, match: RegExpMatchArray): string {
+    const matchIndex = typeof match.index === 'number' ? match.index : -1;
+    if (matchIndex < 0) {
+        return '';
+    }
+    const tail = String(blockText || '').slice(matchIndex + String(match[0] || '').length);
+    return normalizeWhitespace(tail.split(/[.!?]/)[0] || '');
+}
+
+function comparableFactTemporalScopeKey(subjectLabel: string, sentenceTail: string): 'current' | 'historical' | null {
+    const scopedText = `${normalizeWhitespace(subjectLabel)} ${normalizeWhitespace(sentenceTail)}`;
+    const match = COMPARABLE_TEMPORAL_SCOPE_PATTERN.exec(scopedText);
+    if (!match) {
+        return null;
+    }
+    return COMPARABLE_TEMPORAL_SCOPE_GROUPS[String(match[1] || '').toLowerCase()] || null;
+}
+
+function comparableFactSubjectKey(subjectLabel: string, temporalScopeKey: 'current' | 'historical' | null): string {
+    const scopedSubjectLabel = temporalScopeKey
+        ? normalizeWhitespace(subjectLabel).replace(COMPARABLE_TEMPORAL_SCOPE_PATTERN, '')
+        : subjectLabel;
+    const subjectKey = normalizeComparableFactSubject(scopedSubjectLabel);
+    return temporalScopeKey && subjectKey
+        ? `${subjectKey}@temporal:${temporalScopeKey}`
+        : subjectKey;
+}
+
 function normalizeComparableFactUnit(value: string): string {
     const normalized = normalizeWhitespace(value).toLowerCase();
     if (normalized === 'um') {
@@ -411,7 +453,11 @@ function extractComparableEvidenceFacts(params: {
     const facts: ComparableEvidenceFact[] = [];
     for (const match of String(params.block.text || '').matchAll(COMPARABLE_NUMERIC_FACT_PATTERN)) {
         const subjectLabel = normalizeWhitespace(match[1]);
-        const subjectKey = normalizeComparableFactSubject(subjectLabel);
+        const temporalScopeKey = comparableFactTemporalScopeKey(
+            subjectLabel,
+            comparableFactSentenceTail(params.block.text, match)
+        );
+        const subjectKey = comparableFactSubjectKey(subjectLabel, temporalScopeKey);
         const value = Number(match[2]);
         const unit = normalizeComparableFactUnit(match[3]);
         if (!subjectKey || !Number.isFinite(value) || !unit) {
@@ -430,7 +476,11 @@ function extractComparableEvidenceFacts(params: {
     }
     for (const match of String(params.block.text || '').matchAll(COMPARABLE_DATE_FACT_PATTERN)) {
         const subjectLabel = normalizeWhitespace(match[1]);
-        const subjectKey = normalizeComparableFactSubject(subjectLabel);
+        const temporalScopeKey = comparableFactTemporalScopeKey(
+            subjectLabel,
+            comparableFactSentenceTail(params.block.text, match)
+        );
+        const subjectKey = comparableFactSubjectKey(subjectLabel, temporalScopeKey);
         const valueKey = normalizeComparableDateValue(match[2]);
         if (!subjectKey || !valueKey) {
             continue;
@@ -448,7 +498,11 @@ function extractComparableEvidenceFacts(params: {
     }
     for (const match of String(params.block.text || '').matchAll(COMPARABLE_STATE_FACT_PATTERN)) {
         const subjectLabel = normalizeWhitespace(match[1]);
-        const subjectKey = normalizeComparableFactSubject(subjectLabel);
+        const temporalScopeKey = comparableFactTemporalScopeKey(
+            subjectLabel,
+            comparableFactSentenceTail(params.block.text, match)
+        );
+        const subjectKey = comparableFactSubjectKey(subjectLabel, temporalScopeKey);
         const stateValue = normalizeComparableStateValue(match[2]);
         if (!subjectKey || !stateValue) {
             continue;

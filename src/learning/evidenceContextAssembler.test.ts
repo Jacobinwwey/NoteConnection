@@ -674,6 +674,84 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(disabledState.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('does not mark current and historical state facts as conflicting evidence', async () => {
+        const currentState = 'The migration gate status is enabled in the current release record.';
+        const historicalState = 'The migration gate status is disabled in the historical rollback archive.';
+        const fullDocument = [
+            '# Temporal State Status Probe',
+            '',
+            'Temporal state status probe validates that scoped current and historical status facts are not flattened into one contradiction.',
+            '',
+            '## Gate Status History',
+            currentState,
+            '',
+            'Operators should answer with the active record while retaining the older record as provenance.',
+            '',
+            historicalState,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_temporal_state_status',
+            documentId: 'doc_temporal_state_status',
+            sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal state status probe.md',
+            title: 'Temporal State Status Probe',
+            content: currentState,
+            keywords: ['temporal', 'state', 'status'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_current_state_status',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(currentState),
+                    endOffset: fullDocument.indexOf(currentState) + currentState.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: currentState,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_historical_state_status',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(historicalState),
+                    endOffset: fullDocument.indexOf(historicalState) + historicalState.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: historicalState,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is temporal state status probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(currentState),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(historicalState);
+    });
+
     test('marks comparable facts from different documents as conflicting evidence', async () => {
         const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the nominal procedure.';
         const fieldTolerance = 'The calibration tolerance is +/-0.50 mm in the field procedure.';

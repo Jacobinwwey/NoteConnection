@@ -25,6 +25,7 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     answerMustNotContain?: string[];
     ragSourceBoundary?: RagSourceBoundary;
     requiredRagRoles?: RagEvidenceRole[];
+    forbiddenRagRoles?: RagEvidenceRole[];
     minimumRagFullDocumentFragmentCounts?: Partial<Record<RagEvidenceRole, number>>;
     acceptedRagSufficiencyStatuses?: Array<RagSufficiencyReview['status']>;
     minimumRagSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
@@ -471,6 +472,34 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             acceptedRagSufficiencyStatuses: ['borderline'],
             acceptedRagDegradationStates: ['conflict'],
             requiredRagFailureStages: ['context_assembly'],
+            expectedRagDeterministic: true,
+            expectedRagLlmJudgeUsed: false,
+            requireScopedDocumentIds: false,
+        },
+    },
+    {
+        id: 'temporal_scoped_state_status_probe_en',
+        description: 'A scoped note with current and historical status facts should retain both facts without degrading as a conflict.',
+        preloadTargets: ['ragtemporalqualifier'],
+        activeTarget: 'ragtemporalqualifier',
+        query: 'what is temporal state status probe?',
+        expected: {
+            minCitations: 1,
+            scopeSource: 'explicit_request',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
+            plannerTitleLikeQueries: ['temporal state status probe'],
+            primarySourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal state status probe.md',
+            answerMustContain: ['migration gate status', 'enabled', 'current'],
+            answerMustNotContain: [
+                'No scoped knowledge points matched',
+                'retrieval_candidates_below_threshold',
+                'Conflicting evidence',
+            ],
+            ragSourceBoundary: 'full_document',
+            requiredRagRoles: ['direct_support', 'parent_context'],
+            forbiddenRagRoles: ['conflict'],
+            acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            acceptedRagDegradationStates: ['none'],
             expectedRagDeterministic: true,
             expectedRagLlmJudgeUsed: false,
             requireScopedDocumentIds: false,
