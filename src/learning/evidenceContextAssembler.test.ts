@@ -1416,6 +1416,84 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(v2State);
     });
 
+    test('does not mark version-scoped ownership identity facts as conflicting evidence', async () => {
+        const v1Owner = 'The deployment owner is Release Ops in version 1.0.';
+        const v2Owner = 'The deployment owner is Rollback Team in version 2.0.';
+        const fullDocument = [
+            '# Version Scoped Deployment Owner Probe',
+            '',
+            'Version scoped deployment owner probe validates that version qualifiers do not become false ownership conflicts.',
+            '',
+            '## Deployment Owner By Version',
+            v1Owner,
+            '',
+            'Operators should preserve the version label before comparing owner records.',
+            '',
+            v2Owner,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_version_deployment_owner',
+            documentId: 'doc_version_deployment_owner',
+            sourcePath: 'Knowledge_Base/ragversionqualifier/version scoped deployment owner probe.md',
+            title: 'Version Scoped Deployment Owner Probe',
+            content: v1Owner,
+            keywords: ['version', 'deployment', 'owner'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_v1_deployment_owner',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(v1Owner),
+                    endOffset: fullDocument.indexOf(v1Owner) + v1Owner.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: v1Owner,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_v2_deployment_owner',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(v2Owner),
+                    endOffset: fullDocument.indexOf(v2Owner) + v2Owner.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: v2Owner,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is version scoped deployment owner probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(v1Owner),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(v2Owner);
+    });
+
     test('does not mark platform-scoped state facts as conflicting evidence', async () => {
         const windowsState = 'The migration gate status is enabled on the Windows platform.';
         const androidState = 'The migration gate status is disabled on the Android platform.';
@@ -1492,6 +1570,84 @@ describe('assembleRagEvidenceContext', () => {
             }),
         ]));
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(androidState);
+    });
+
+    test('does not mark platform-scoped ownership identity facts as conflicting evidence', async () => {
+        const windowsOwner = 'The deployment owner is Release Ops on the Windows platform.';
+        const androidOwner = 'The deployment owner is Rollback Team on the Android platform.';
+        const fullDocument = [
+            '# Platform Scoped Deployment Owner Probe',
+            '',
+            'Platform scoped deployment owner probe validates that OS/platform qualifiers do not become false ownership conflicts.',
+            '',
+            '## Deployment Owner By Platform',
+            windowsOwner,
+            '',
+            'Operators should preserve the platform label before comparing owner records.',
+            '',
+            androidOwner,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_platform_deployment_owner',
+            documentId: 'doc_platform_deployment_owner',
+            sourcePath: 'Knowledge_Base/ragplatformqualifier/platform scoped deployment owner probe.md',
+            title: 'Platform Scoped Deployment Owner Probe',
+            content: windowsOwner,
+            keywords: ['platform', 'deployment', 'owner'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_windows_deployment_owner',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(windowsOwner),
+                    endOffset: fullDocument.indexOf(windowsOwner) + windowsOwner.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: windowsOwner,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_android_deployment_owner',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(androidOwner),
+                    endOffset: fullDocument.indexOf(androidOwner) + androidOwner.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: androidOwner,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is platform scoped deployment owner probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(windowsOwner),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(androidOwner);
     });
 
     test('does not mark current and historical date facts as conflicting evidence', async () => {

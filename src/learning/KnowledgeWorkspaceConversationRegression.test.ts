@@ -380,6 +380,24 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_version_scoped_deployment_owner_probe',
+            sourcePath: 'Knowledge_Base/ragversionqualifier/version scoped deployment owner probe.md',
+            language: 'en',
+            workspaceId: 'ragversionqualifier',
+            corpusId: 'ragversionqualifier',
+            content: [
+                '# Version Scoped Deployment Owner Probe',
+                'Version scoped deployment owner probe validates that the deployment owner is Release Ops in version 1.0 while version 2.0 owner facts remain version-qualified evidence rather than a conflict.',
+                '',
+                '## Deployment Owner By Version',
+                'The deployment owner is Release Ops in version 1.0.',
+                '',
+                'Operators should preserve the version label before comparing owner records.',
+                '',
+                'The deployment owner is Rollback Team in version 2.0.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_platform_scoped_state_status_probe',
             sourcePath: 'Knowledge_Base/ragplatformqualifier/platform scoped state status probe.md',
             language: 'en',
@@ -395,6 +413,24 @@ function buildRegressionDocuments() {
                 'Operators should preserve the platform label when comparing runtime records.',
                 '',
                 'The migration gate status is disabled on the Android platform.',
+            ].join('\n'),
+        },
+        {
+            documentId: 'doc_platform_scoped_deployment_owner_probe',
+            sourcePath: 'Knowledge_Base/ragplatformqualifier/platform scoped deployment owner probe.md',
+            language: 'en',
+            workspaceId: 'ragplatformqualifier',
+            corpusId: 'ragplatformqualifier',
+            content: [
+                '# Platform Scoped Deployment Owner Probe',
+                'Platform scoped deployment owner probe validates that the deployment owner is Release Ops on the Windows platform while Android owner facts remain platform-qualified evidence rather than a conflict.',
+                '',
+                '## Deployment Owner By Platform',
+                'The deployment owner is Release Ops on the Windows platform.',
+                '',
+                'Operators should preserve the platform label before comparing owner records.',
+                '',
+                'The deployment owner is Rollback Team on the Android platform.',
             ].join('\n'),
         },
         {
@@ -1158,6 +1194,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                     }),
                 }),
                 expect.objectContaining({
+                    id: 'version_scoped_ownership_identity_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['deployment owner', 'Release Ops', 'version 1.0']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'stable deployment owner',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
                     id: 'platform_scoped_state_status_probe_en',
                     expected: expect.objectContaining({
                         requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
@@ -1168,6 +1220,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         answerMustNotContain: expect.arrayContaining([
                             'Conflicting evidence',
                             'stable migration gate status',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'platform_scoped_ownership_identity_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['deployment owner', 'Release Ops', 'Windows']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'stable deployment owner',
                             'immediate predecessors',
                             'likely next nodes',
                         ]),
