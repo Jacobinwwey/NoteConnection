@@ -844,6 +844,103 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(rollbackOwner.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('marks controlled ownership identity facts from different documents as conflicting evidence', async () => {
+        const handoffOwner = 'The deployment owner is Release Ops in the handoff owner record.';
+        const rollbackOwner = 'The deployment owner is Rollback Team in the rollback owner record.';
+        const handoffDocument = [
+            '# Handoff Deployment Owner Conflict Probe',
+            '',
+            'Handoff deployment owner conflict probe provides the handoff-side owner record.',
+            '',
+            '## Handoff Owner Source',
+            handoffOwner,
+            'Operators must compare this owner source against rollback evidence before publishing a deployment owner.',
+        ].join('\n');
+        const rollbackDocument = [
+            '# Rollback Deployment Owner Conflict Evidence',
+            '',
+            'Rollback deployment owner conflict evidence provides the rollback-side owner record.',
+            '',
+            '## Rollback Owner Source',
+            rollbackOwner,
+            'Operators must resolve the active owner source before publishing a stable deployment owner.',
+        ].join('\n');
+        const handoffAtom = makeAtom({
+            id: 'atom_handoff_deployment_owner_conflict',
+            documentId: 'doc_handoff_deployment_owner_conflict',
+            sourcePath: 'Knowledge_Base/ragidentitymulticonflict/handoff deployment owner conflict probe.md',
+            title: 'Handoff Deployment Owner Conflict Probe',
+            content: handoffOwner,
+            keywords: ['deployment', 'owner', 'handoff'],
+        });
+        const rollbackAtom = makeAtom({
+            id: 'atom_rollback_deployment_owner_conflict',
+            documentId: 'doc_rollback_deployment_owner_conflict',
+            sourcePath: 'Knowledge_Base/ragidentitymulticonflict/rollback deployment owner conflict evidence.md',
+            title: 'Rollback Deployment Owner Conflict Evidence',
+            content: rollbackOwner,
+            keywords: ['deployment', 'owner', 'rollback'],
+        });
+        const handoffItem = makeQueryItem({
+            atom: handoffAtom,
+            evidence: {
+                id: 'evidence_handoff_deployment_owner_cross_document',
+                documentId: handoffAtom.documentId,
+                sourcePath: handoffAtom.sourcePath,
+                startOffset: handoffDocument.indexOf(handoffOwner),
+                endOffset: handoffDocument.indexOf(handoffOwner) + handoffOwner.length,
+                startLine: 6,
+                endLine: 6,
+                snippet: handoffOwner,
+            },
+        });
+        const rollbackItem = makeQueryItem({
+            atom: rollbackAtom,
+            evidence: {
+                id: 'evidence_rollback_deployment_owner_cross_document',
+                documentId: rollbackAtom.documentId,
+                sourcePath: rollbackAtom.sourcePath,
+                startOffset: rollbackDocument.indexOf(rollbackOwner),
+                endOffset: rollbackDocument.indexOf(rollbackOwner) + rollbackOwner.length,
+                startLine: 6,
+                endLine: 6,
+                snippet: rollbackOwner,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare handoff deployment owner conflict probe with rollback deployment owner conflict evidence',
+            items: [handoffItem, rollbackItem],
+            sourceResolver: async (lookup) => ({
+                documentId: lookup.documentId,
+                sourcePath: lookup.sourcePath,
+                content: lookup.documentId === handoffAtom.documentId ? handoffDocument : rollbackDocument,
+            }),
+            budget: {
+                maxFragments: 10,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2400,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => (
+            fragment.role === 'conflict'
+            && fragment.fragmentId.startsWith('rag_conflict_cross_document_')
+        ));
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_handoff_deployment_owner_cross_document',
+                'evidence_rollback_deployment_owner_cross_document',
+            ]),
+            text: expect.stringContaining('across documents'),
+        }));
+        expect(conflictFragment?.text).toContain('Handoff Deployment Owner Conflict Probe');
+        expect(conflictFragment?.text).toContain('Rollback Deployment Owner Conflict Evidence');
+        expect(conflictFragment?.text).toContain(handoffOwner);
+        expect(conflictFragment?.text).toContain(rollbackOwner);
+    });
+
     test('marks location facts in the same section as conflicting evidence', async () => {
         const primaryLocation = 'The control module location is Rack A in the primary bay.';
         const fieldLocation = 'The control module location is Rack B in the field bay.';

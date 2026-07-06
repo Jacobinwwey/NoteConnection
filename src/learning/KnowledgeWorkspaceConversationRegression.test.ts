@@ -259,6 +259,36 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_handoff_deployment_owner_conflict_probe',
+            sourcePath: 'Knowledge_Base/ragidentitymulticonflict/handoff deployment owner conflict probe.md',
+            language: 'en',
+            workspaceId: 'ragidentitymulticonflict',
+            corpusId: 'ragidentitymulticonflict',
+            content: [
+                '# Handoff Deployment Owner Conflict Probe',
+                'Handoff deployment owner conflict probe provides the handoff-side owner record.',
+                '',
+                '## Handoff Owner Source',
+                'The deployment owner is Release Ops in the handoff owner record.',
+                'Operators must compare this owner source against rollback evidence before publishing a deployment owner.',
+            ].join('\n'),
+        },
+        {
+            documentId: 'doc_rollback_deployment_owner_conflict_evidence',
+            sourcePath: 'Knowledge_Base/ragidentitymulticonflict/rollback deployment owner conflict evidence.md',
+            language: 'en',
+            workspaceId: 'ragidentitymulticonflict',
+            corpusId: 'ragidentitymulticonflict',
+            content: [
+                '# Rollback Deployment Owner Conflict Evidence',
+                'Rollback deployment owner conflict evidence provides the rollback-side owner record.',
+                '',
+                '## Rollback Owner Source',
+                'The deployment owner is Rollback Team in the rollback owner record.',
+                'Operators must resolve the active owner source before publishing a stable deployment owner.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_conflicting_location_probe',
             sourcePath: 'Knowledge_Base/raglocationconflict/location conflict probe.md',
             language: 'en',
@@ -1022,6 +1052,19 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                 }),
                 expect.objectContaining({
                     id: 'conflicting_ownership_identity_evidence_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context', 'conflict']),
+                        acceptedRagSufficiencyStatuses: ['borderline'],
+                        acceptedRagDegradationStates: ['conflict'],
+                        requiredRagFailureStages: ['context_assembly'],
+                        answerMustContain: expect.arrayContaining(['deployment owner', 'Release Ops', 'Rollback Team']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'stable deployment owner',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'conflicting_multi_document_ownership_identity_evidence_probe_en',
                     expected: expect.objectContaining({
                         requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context', 'conflict']),
                         acceptedRagSufficiencyStatuses: ['borderline'],
