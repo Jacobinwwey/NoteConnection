@@ -674,6 +674,169 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(disabledState.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('marks location facts in the same section as conflicting evidence', async () => {
+        const primaryLocation = 'The control module location is Rack A in the primary bay.';
+        const fieldLocation = 'The control module location is Rack B in the field bay.';
+        const fullDocument = [
+            '# Location Conflict Probe',
+            '',
+            'Location conflict probe validates that controlled location contradictions are not flattened into one stable site.',
+            '',
+            '## Module Placement',
+            primaryLocation,
+            '',
+            'Operators should verify which placement record is active before dispatch.',
+            '',
+            fieldLocation,
+            'Operators must resolve the active placement record before publishing location guidance.',
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_conflicting_location',
+            documentId: 'doc_conflicting_location',
+            sourcePath: 'Knowledge_Base/raglocationconflict/location conflict probe.md',
+            title: 'Location Conflict Probe',
+            content: primaryLocation,
+            keywords: ['location', 'conflict', 'module'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_primary_location',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(primaryLocation),
+                    endOffset: fullDocument.indexOf(primaryLocation) + primaryLocation.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: primaryLocation,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_field_location',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(fieldLocation),
+                    endOffset: fullDocument.indexOf(fieldLocation) + fieldLocation.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: fieldLocation,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is location conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_primary_location',
+                'evidence_field_location',
+            ]),
+            startLine: 6,
+            endLine: 11,
+        }));
+        expect(conflictFragment?.text).toContain(primaryLocation);
+        expect(conflictFragment?.text).toContain(fieldLocation);
+        expect(conflictFragment?.text.match(new RegExp(primaryLocation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+        expect(conflictFragment?.text.match(new RegExp(fieldLocation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+    });
+
+    test('does not mark current and historical location facts as conflicting evidence', async () => {
+        const currentLocation = 'The control module location is Rack A in the current release record.';
+        const historicalLocation = 'The control module location is Rack B in the historical placement archive.';
+        const fullDocument = [
+            '# Temporal Location Probe',
+            '',
+            'Temporal location probe validates that current and historical placements stay scoped.',
+            '',
+            '## Module Placement History',
+            currentLocation,
+            '',
+            'Operators should answer with the active placement while retaining the older placement as provenance.',
+            '',
+            historicalLocation,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_temporal_location',
+            documentId: 'doc_temporal_location',
+            sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal location probe.md',
+            title: 'Temporal Location Probe',
+            content: currentLocation,
+            keywords: ['temporal', 'location', 'module'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_current_location',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(currentLocation),
+                    endOffset: fullDocument.indexOf(currentLocation) + currentLocation.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: currentLocation,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_historical_location',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(historicalLocation),
+                    endOffset: fullDocument.indexOf(historicalLocation) + historicalLocation.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: historicalLocation,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is temporal location probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(currentLocation),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(historicalLocation);
+    });
+
     test('does not mark current and historical state facts as conflicting evidence', async () => {
         const currentState = 'The migration gate status is enabled in the current release record.';
         const historicalState = 'The migration gate status is disabled in the historical rollback archive.';
