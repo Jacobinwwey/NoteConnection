@@ -121,6 +121,7 @@
 | 查询与预览链路必须鲁棒且向前兼容 | 读查询和只读 path preview 都不再触发 snapshot 持久化；新增字段、action-strip selector、缓存诊断和方法都保持 additive，耐久写路径保持原有行为。 | 已显著改善 |
 | 架构压力应继续下降 | `KnowledgeLearningPlatform.ts` 仍承载 hydrate、retrieval、store snapshot、path preview composition 和 query context assembly 等多个 owner；本次先收紧读写边界，后续应继续拆小持久化、retrieval context 与 preview composition owner。 | 改善但仍需推进 |
 
+- `contextoverflow_deep_profile_budget_en` 现在验证显式 deep / explain 请求会使用更宽的一次 RAG answer profile（`24` 个 fragment、每 fragment `1600` 字符、总计 `9000` 字符），同时继续遵守有界 `RagContextPack` contract，避免只能通过 recovery 预算或无界上下文来获得更充分回答。
 - `conflicting_adjacent_evidence_probe_en` 现在由 `Knowledge_Base/ragconflict/calibration tolerance conflict probe.md` 支撑，验证相邻的 `+/-0.10 mm` 与 `+/-0.50 mm` calibration-tolerance 证据会进入 `conflict` RAG role，把 sufficiency 降级为 `borderline/conflict`，并归因到 `context_assembly`，而不是发布单一稳定值。
 - `conflicting_nonadjacent_section_evidence_probe_en` 现在由 `Knowledge_Base/ragconflict/remote calibration tolerance conflict probe.md` 支撑，验证同一 scoped section 内非相邻的 `+/-0.10 mm` 与 `+/-0.50 mm` calibration-tolerance 证据也会进入 `conflict` RAG role，证明完整文档增强不会把远距离同节矛盾压平成单一值。
 - `conflicting_release_date_evidence_probe_en` 现在由 `Knowledge_Base/ragdateconflict/release date conflict probe.md` 支撑，验证同一 scoped section 内的 `2026-07-01` 与 `2026-08-15` release-date 证据也会进入 `conflict` RAG role，并保持 `borderline/conflict` 降级，而不是发布单一稳定 schedule。

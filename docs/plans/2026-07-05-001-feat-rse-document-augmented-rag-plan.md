@@ -441,11 +441,14 @@ flowchart TB
 
 **Condition-qualified increment (2026-07-06):** `temporal_scoped_state_status_probe_en`, `temporal_scoped_release_date_probe_en`, and `temporal_scoped_planned_release_date_probe_en`, backed by `Knowledge_Base/ragtemporalqualifier`, plus `temporal_cross_document_planned_release_date_probe_en`, backed by `Knowledge_Base/ragtemporalcrossscope`, now verify that explicitly current, historical, and planned/future-qualified state/status or release-date facts remain separate comparable scopes. The public answer can use the current fact, the historical or planned fact stays available as scoped evidence, and the RAG pack must not emit a false `conflict` fragment, including when the current and planned dates are read from separate scoped documents through the full-document cross-document conflict scanner. The release-review path now also keeps generic graph-profile narration such as predecessor/successor window labels out of RAG-grounded public answers unless that content is present as citation-backed RAG evidence. This closes four controlled false-positive classes while leaving broader condition-qualified facts and unconstrained semantic contradiction detection as follow-up work.
 
+**Answer-profile budget increment (2026-07-06):** `KnowledgeLearningPlatform.agentConversation()` now resolves a bounded first-pass RAG answer profile from the user query. Ordinary turns keep the existing base context budget (`14` fragments, `1400` chars per fragment, `5600` total chars), while explicit deep/explain/analyze requests use a wider but still capped profile (`24` fragments, `1600` chars per fragment, `9000` total chars) plus the larger paragraph window and graph-neighbor limit before any recovery pass. The runtime verifier and conversation regression contract can now assert `expectedRagBudget`; `contextoverflow_deep_profile_budget_en`, backed by `Knowledge_Base/contextoverflow`, verifies that deep answer requests expand the evidence budget without switching to an unbounded pack or exposing orchestration details in the public answer.
+
 **Requirements:** R8.
 
 **Dependencies:** Unit 7.
 
 **Files:**
+- Modify: `src/learning/KnowledgeLearningPlatform.ts`
 - Modify: `src/learning/KnowledgeWorkspaceConversationRegression.ts`
 - Modify: `scripts/verify-knowledge-workspace-runtime.js`
 - Test: `src/learning/KnowledgeWorkspaceConversationRegression.test.ts`
@@ -906,7 +909,10 @@ flowchart TB
 
 **条件限定增量（2026-07-06）：** 新增由 `Knowledge_Base/ragtemporalqualifier` 支撑的 `temporal_scoped_state_status_probe_en`、`temporal_scoped_release_date_probe_en` 与 `temporal_scoped_planned_release_date_probe_en`，以及由 `Knowledge_Base/ragtemporalcrossscope` 支撑的 `temporal_cross_document_planned_release_date_probe_en`，验证显式 current、historical 以及 planned/future-qualified 的 state/status 或 release-date 事实会进入不同 comparable scope。公开回答可以使用 current 事实，historical 或 planned 事实仍保留为 scoped evidence，且 RAG pack 不应误产出 `conflict` fragment；即使 current 与 planned 日期来自两个不同 scoped 文档，并经过完整文档 cross-document conflict scanner，也不应误判为冲突。release-review 路径现在也会把 predecessor / successor window label 这类通用 graph-profile 叙述留在 trace/结构面，除非它们已经作为带引用支撑的 RAG evidence 进入 context pack，否则不进入 RAG-grounded 公开回答。这个切片关闭了四类受控误报，但更广的条件限定事实和无约束语义矛盾检测仍是后续工作。
 
+**回答 profile 预算增量（2026-07-06）：** `KnowledgeLearningPlatform.agentConversation()` 现在会根据用户 query 解析有界的一次 RAG answer profile。普通 turn 保持既有 base context budget（`14` 个 fragment、每 fragment `1400` 字符、总计 `5600` 字符）；显式 deep / explain / analyze 请求会在 recovery 之前使用更宽但仍有硬上限的 profile（`24` 个 fragment、每 fragment `1600` 字符、总计 `9000` 字符），并同步扩大 paragraph window 与 graph-neighbor limit。runtime verifier 与 conversation regression contract 现在可以断言 `expectedRagBudget`；由 `Knowledge_Base/contextoverflow` 支撑的 `contextoverflow_deep_profile_budget_en` 验证深度回答请求会扩大证据预算，但不会切换成无界 context pack，也不会把编排细节暴露到公开回答。
+
 **文件：**
+- 修改：`src/learning/KnowledgeLearningPlatform.ts`
 - 修改：`src/learning/KnowledgeWorkspaceConversationRegression.ts`
 - 修改：`scripts/verify-knowledge-workspace-runtime.js`
 - 测试：`src/learning/KnowledgeWorkspaceConversationRegression.test.ts`

@@ -2,6 +2,7 @@ import type {
     AnswerReleaseDecision,
     AnswerReleaseGateId,
     KnowledgeQueryResolvedScope,
+    RagContextBudget,
     RagEvidenceRole,
     RagFailureStage,
     RagSourceDecision,
@@ -28,6 +29,7 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     forbiddenRagRoles?: RagEvidenceRole[];
     minimumRagFullDocumentFragmentCounts?: Partial<Record<RagEvidenceRole, number>>;
     acceptedRagSufficiencyStatuses?: Array<RagSufficiencyReview['status']>;
+    expectedRagBudget?: Partial<RagContextBudget>;
     minimumRagSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
     inMemoryMinimumRagSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
     requiredRagFailureStages?: RagFailureStage[];
@@ -756,6 +758,40 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             inMemoryMinimumRagRecoveryBeforeSourceDecisionStatusCounts: {
                 fragment_dropped: 1,
             },
+        },
+    },
+    {
+        id: 'contextoverflow_deep_profile_budget_en',
+        description: 'An explicit deep scoped query should use the wider first-pass RAG answer profile without switching to an unbounded context pack.',
+        preloadTargets: ['contextoverflow'],
+        activeTarget: 'contextoverflow',
+        query: 'explain in detail overflow budget probe',
+        expected: {
+            minCitations: 1,
+            scopeSource: 'explicit_request',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
+            plannerTitleLikeQueries: ['overflow budget probe'],
+            primarySourcePath: 'Knowledge_Base/contextoverflow/overflow budget probe.md',
+            answerMustNotContain: [
+                'No scoped knowledge points matched',
+                'retrieval_candidates_below_threshold',
+                'llm_judge_failed',
+            ],
+            ragSourceBoundary: 'full_document',
+            requiredRagRoles: ['direct_support', 'parent_context'],
+            acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            expectedRagBudget: {
+                maxFragments: 24,
+                maxCharsPerFragment: 1600,
+                maxTotalChars: 9000,
+            },
+            minimumRagSourceDecisionStatusCounts: {
+                read: 1,
+            },
+            expectedRagDeterministic: true,
+            expectedRagLlmJudgeUsed: false,
+            expectedRagRecoveryAttempted: false,
+            acceptedRagDegradationStates: ['none', 'partial_coverage'],
         },
     },
     {

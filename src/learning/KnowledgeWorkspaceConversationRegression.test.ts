@@ -6,7 +6,7 @@ import {
     type KnowledgeWorkspaceConversationRegressionCase,
 } from './KnowledgeWorkspaceConversationRegression';
 import { createKnowledgeGraphStore } from './store';
-import type { RagEvidenceRole, RagFailureStage, RagSourceDecision } from './types';
+import type { RagContextBudget, RagEvidenceRole, RagFailureStage, RagSourceDecision } from './types';
 
 function deriveScopedConversationRequest(caseEntry: KnowledgeWorkspaceConversationRegressionCase) {
     const activeTarget = String(caseEntry.activeTarget || '').trim();
@@ -468,6 +468,25 @@ function countRagSourceDecisionStatuses(
     }, {});
 }
 
+function expectRagBudget(
+    actual: RagContextBudget | undefined,
+    expected: Partial<RagContextBudget> | undefined
+): void {
+    if (!expected) {
+        return;
+    }
+    expect(actual).toBeDefined();
+    if (typeof expected.maxFragments === 'number') {
+        expect(actual?.maxFragments).toBe(expected.maxFragments);
+    }
+    if (typeof expected.maxCharsPerFragment === 'number') {
+        expect(actual?.maxCharsPerFragment).toBe(expected.maxCharsPerFragment);
+    }
+    if (typeof expected.maxTotalChars === 'number') {
+        expect(actual?.maxTotalChars).toBe(expected.maxTotalChars);
+    }
+}
+
 function countFullDocumentRagFragmentsByRole(
     response: Awaited<ReturnType<KnowledgeLearningPlatform['agentConversation']>>
 ): Partial<Record<RagEvidenceRole, number>> {
@@ -722,6 +741,25 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
         );
     });
 
+    test('registers explicit deep RAG answer profile budget probe', () => {
+        expect(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    id: 'contextoverflow_deep_profile_budget_en',
+                    query: 'explain in detail overflow budget probe',
+                    expected: expect.objectContaining({
+                        expectedRagBudget: {
+                            maxFragments: 24,
+                            maxCharsPerFragment: 1600,
+                            maxTotalChars: 9000,
+                        },
+                        expectedRagRecoveryAttempted: false,
+                    }),
+                }),
+            ])
+        );
+    });
+
     test('registers conflicting evidence hard-negative probes', () => {
         expect(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES).toEqual(
             expect.arrayContaining([
@@ -961,6 +999,7 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
             if (expected.acceptedRagSufficiencyStatuses && expected.acceptedRagSufficiencyStatuses.length > 0) {
                 expect(expected.acceptedRagSufficiencyStatuses).toContain(response.trace.ragSufficiencyReview?.status);
             }
+            expectRagBudget(response.trace.ragContextPack?.budget, expected.expectedRagBudget);
             if (expected.requiredRagFailureStages && expected.requiredRagFailureStages.length > 0) {
                 expect(collectRagFailureStages(response)).toEqual(
                     expect.arrayContaining(expected.requiredRagFailureStages)

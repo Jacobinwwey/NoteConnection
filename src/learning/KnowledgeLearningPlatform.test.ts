@@ -2358,6 +2358,67 @@ describe('KnowledgeLearningPlatform', () => {
         expect(response.answer).toContain('transparent drinking vessel');
     });
 
+    test('agent conversation widens the first-pass RAG budget only for explicit depth requests', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_answer_profile_budget_probe',
+                    sourcePath: 'Knowledge_Base/answerprofile/answer profile budget probe.md',
+                    language: 'en',
+                    workspaceId: 'answerprofile',
+                    corpusId: 'answerprofile',
+                    content: [
+                        '# Answer Profile Budget Probe',
+                        '',
+                        'Answer profile budget probe defines a bounded RAG answer profile for ordinary and explicit deep requests.',
+                        '',
+                        '## Detail Layer',
+                        '',
+                        'The detail layer keeps full-document source reading available while the model-visible RAG pack remains capped.',
+                    ].join('\n'),
+                },
+            ],
+        });
+
+        const baseResponse = await platform.agentConversation({
+            userId: 'agent_rag_profile_user',
+            sessionId: 'session_rag_profile_base',
+            message: 'what is answer profile budget probe?',
+            topK: 3,
+            scope: {
+                workspaceId: 'answerprofile',
+                corpusId: 'answerprofile',
+                sourcePathPrefixes: ['Knowledge_Base/answerprofile'],
+            },
+            persistMemory: false,
+        });
+        const deepResponse = await platform.agentConversation({
+            userId: 'agent_rag_profile_user',
+            sessionId: 'session_rag_profile_deep',
+            message: 'explain in detail answer profile budget probe',
+            topK: 3,
+            scope: {
+                workspaceId: 'answerprofile',
+                corpusId: 'answerprofile',
+                sourcePathPrefixes: ['Knowledge_Base/answerprofile'],
+            },
+            persistMemory: false,
+        });
+
+        expect(baseResponse.trace.ragContextPack?.budget).toEqual({
+            maxFragments: 14,
+            maxCharsPerFragment: 1400,
+            maxTotalChars: 5600,
+        });
+        expect(deepResponse.trace.ragContextPack?.budget).toEqual({
+            maxFragments: 24,
+            maxCharsPerFragment: 1600,
+            maxTotalChars: 9000,
+        });
+        expect(deepResponse.trace.ragContextPack?.sourceBoundary).toBe('full_document');
+    });
+
     test('agent conversation uses optional LLM sufficiency judge for borderline legacy source windows', async () => {
         const savedAt = '2026-07-05T00:00:00.000Z';
         const sourcePath = 'tmp/missing-rag-legacy-source/water-glass.md';

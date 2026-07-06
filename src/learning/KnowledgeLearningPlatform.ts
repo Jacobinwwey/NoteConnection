@@ -416,9 +416,23 @@ const AGENT_RAG_RECOVERY_CONTEXT_BUDGET: RagContextBudget = {
     maxTotalChars: 12000,
 };
 
+const AGENT_RAG_DEEP_CONTEXT_BUDGET: RagContextBudget = {
+    maxFragments: 24,
+    maxCharsPerFragment: 1600,
+    maxTotalChars: 9000,
+};
+
 const AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT = 6;
+const AGENT_RAG_DEEP_GRAPH_NEIGHBOR_LIMIT = 8;
 const AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT = 8;
+const AGENT_RAG_DEEP_PARAGRAPH_WINDOW = 8;
 const AGENT_RAG_RECOVERY_PARAGRAPH_WINDOW = 8;
+
+type AgentRagEvidenceProfile = {
+    budget: RagContextBudget;
+    graphNeighborLimit: number;
+    paragraphWindow?: number;
+};
 
 const MEMORY_LAYER_CAPACITY: Record<MemoryLayer, number> = {
     session: 80,
@@ -531,6 +545,25 @@ function tokenize(text: string): string[] {
         .map((token) => token.trim())
         .filter((token) => token.length >= 2 && !STOPWORDS.has(token));
     return Array.from(new Set(normalized));
+}
+
+function resolveAgentRagEvidenceProfile(message: string): AgentRagEvidenceProfile {
+    const normalizedMessage = normalizeWhitespace(String(message || '')).toLowerCase();
+    const explicitDeepSignal = Boolean(
+        /\b(?:deep|detailed|comprehensive|thorough|in-depth|in depth|fully|complete|explain|analy[sz]e)\b/i.test(normalizedMessage)
+        || /深度|详细|詳盡|详尽|完整|充分|展开|展開|分析|解释|解釋/u.test(normalizedMessage)
+    );
+    if (!explicitDeepSignal) {
+        return {
+            budget: { ...AGENT_RAG_BASE_CONTEXT_BUDGET },
+            graphNeighborLimit: AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT,
+        };
+    }
+    return {
+        budget: { ...AGENT_RAG_DEEP_CONTEXT_BUDGET },
+        graphNeighborLimit: AGENT_RAG_DEEP_GRAPH_NEIGHBOR_LIMIT,
+        paragraphWindow: AGENT_RAG_DEEP_PARAGRAPH_WINDOW,
+    };
 }
 
 function computeJaccard(left: string[], right: string[]): number {
@@ -4028,8 +4061,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             baseCandidates.add(candidate);
         });
         const stripped = normalized
-            .replace(/^(what is|what are|define|explain|tell me about|what's)\s+/i, '')
-            .replace(/^(什么是|解释一下|介绍一下|请解释|请介绍)\s*/i, '')
+            .replace(/^(what is|what are|define|explain(?:\s+(?:in\s+detail|deeply|thoroughly|fully|comprehensively))?|tell me about|what's)\s+/i, '')
+            .replace(/^(什么是|解释一下|详细解释|詳盡解釋|深入解释|深度解释|介绍一下|请解释|请详细解释|请介绍|深度分析|深入分析)\s*/i, '')
             .trim();
         if (stripped) {
             baseCandidates.add(stripped);
@@ -9851,12 +9884,13 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         });
         const conversationKnowledgePoints = assembledConversation.knowledgePoints;
         const graphContext = assembledConversation.graphContext;
+        const ragEvidenceProfile = resolveAgentRagEvidenceProfile(message);
         const graphNeighborItems = this.buildRagGraphNeighborQueryItems(
             graphContext,
             conversationKnowledgePoints,
             generatedAt,
             message,
-            AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT
+            ragEvidenceProfile.graphNeighborLimit
         );
         const firstReviewedRag = await this.assembleReviewedRagEvidenceContext({
             query: message || 'local knowledge',
@@ -9864,7 +9898,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             graphNeighborItems,
             graphContext,
             generatedAt,
-            budget: AGENT_RAG_BASE_CONTEXT_BUDGET,
+            budget: ragEvidenceProfile.budget,
+            paragraphWindow: ragEvidenceProfile.paragraphWindow,
         });
         let ragContextPack = firstReviewedRag.ragContextPack;
         let ragSufficiencyReview = firstReviewedRag.ragSufficiencyReview;

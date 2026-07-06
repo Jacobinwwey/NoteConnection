@@ -423,6 +423,7 @@ function validatePositiveConversationResult(summary, options) {
     answerMustContain,
     answerMustNotContain,
     expectedRagSourceBoundary,
+    expectedRagBudget,
     requiredRagRoles,
     minimumRagFullDocumentFragmentCounts,
     acceptedRagSufficiencyStatuses,
@@ -544,6 +545,21 @@ function validatePositiveConversationResult(summary, options) {
     if (!/^ragctx_[a-f0-9]{16}$/.test(String(summary.ragContextPack.replayId || ''))) {
       throw new Error(`RAG replay id missing or invalid for query=${query}: actual=${JSON.stringify(summary.ragContextPack)}`);
     }
+  }
+  if (expectedRagBudget && typeof expectedRagBudget === 'object') {
+    const observedBudget = summary.ragContextPack && summary.ragContextPack.budget
+      ? summary.ragContextPack.budget
+      : null;
+    ['maxFragments', 'maxCharsPerFragment', 'maxTotalChars'].forEach((field) => {
+      if (typeof expectedRagBudget[field] !== 'number') {
+        return;
+      }
+      if (!observedBudget || Number(observedBudget[field]) !== Number(expectedRagBudget[field])) {
+        throw new Error(
+          `RAG budget mismatch for query=${query}: field=${field} expected=${expectedRagBudget[field]} actual=${JSON.stringify(observedBudget)}`
+        );
+      }
+    });
   }
   if (Array.isArray(requiredRagRoles) && requiredRagRoles.length > 0) {
     const observedRoles = Array.isArray(summary.ragContextPack && summary.ragContextPack.fragments)
@@ -1054,6 +1070,7 @@ async function main() {
           answerMustContain: regressionCase.expected.answerMustContain,
           answerMustNotContain: regressionCase.expected.answerMustNotContain,
           expectedRagSourceBoundary: regressionCase.expected.ragSourceBoundary,
+          expectedRagBudget: regressionCase.expected.expectedRagBudget,
           requiredRagRoles: regressionCase.expected.requiredRagRoles,
           acceptedRagSufficiencyStatuses: regressionCase.expected.runtimeAcceptedRagSufficiencyStatuses
             || regressionCase.expected.acceptedRagSufficiencyStatuses,
