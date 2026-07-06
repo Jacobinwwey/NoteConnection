@@ -258,6 +258,24 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_environment_scoped_state_status_probe',
+            sourcePath: 'Knowledge_Base/ragenvironmentqualifier/environment scoped state status probe.md',
+            language: 'en',
+            workspaceId: 'ragenvironmentqualifier',
+            corpusId: 'ragenvironmentqualifier',
+            content: [
+                '# Environment Scoped State Status Probe',
+                'Environment scoped state status probe validates that the migration gate status is enabled in the staging environment while production status facts remain environment-qualified evidence rather than a conflict.',
+                '',
+                '## Gate Status By Environment',
+                'The migration gate status is enabled in the staging environment.',
+                '',
+                'Operators should preserve the environment label when comparing deployment records.',
+                '',
+                'The migration gate status is disabled in the production environment.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_temporal_location_probe',
             sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal location probe.md',
             language: 'en',
@@ -895,6 +913,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         answerMustContain: expect.arrayContaining(['enabled', 'current']),
                         answerMustNotContain: expect.arrayContaining([
                             'Conflicting evidence',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'environment_scoped_state_status_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['enabled', 'staging']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'stable migration gate status',
                             'immediate predecessors',
                             'likely next nodes',
                         ]),

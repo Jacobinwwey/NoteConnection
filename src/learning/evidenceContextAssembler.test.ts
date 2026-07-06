@@ -915,6 +915,84 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(historicalState);
     });
 
+    test('does not mark environment-scoped state facts as conflicting evidence', async () => {
+        const stagingState = 'The migration gate status is enabled in the staging environment.';
+        const productionState = 'The migration gate status is disabled in the production environment.';
+        const fullDocument = [
+            '# Environment Scoped State Status Probe',
+            '',
+            'Environment scoped state status probe validates that deployment-environment qualifiers do not become false conflicts.',
+            '',
+            '## Gate Status By Environment',
+            stagingState,
+            '',
+            'Operators should preserve the environment label when comparing deployment records.',
+            '',
+            productionState,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_environment_state_status',
+            documentId: 'doc_environment_state_status',
+            sourcePath: 'Knowledge_Base/ragenvironmentqualifier/environment scoped state status probe.md',
+            title: 'Environment Scoped State Status Probe',
+            content: stagingState,
+            keywords: ['environment', 'state', 'status'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_staging_state_status',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(stagingState),
+                    endOffset: fullDocument.indexOf(stagingState) + stagingState.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: stagingState,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_production_state_status',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(productionState),
+                    endOffset: fullDocument.indexOf(productionState) + productionState.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: productionState,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is environment scoped state status probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(stagingState),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionState);
+    });
+
     test('does not mark current and historical date facts as conflicting evidence', async () => {
         const currentDate = 'The migration release date is 2026-08-15 in the current release record.';
         const historicalDate = 'The migration release date is 2026-07-01 in the historical rollout archive.';

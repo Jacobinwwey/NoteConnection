@@ -94,6 +94,7 @@ interface ComparableEvidenceFact {
 }
 
 type ComparableTemporalScopeKey = 'current' | 'historical' | 'planned';
+type ComparableFactScopeKey = `temporal:${ComparableTemporalScopeKey}` | `environment:${string}`;
 
 const DEFAULT_PARAGRAPH_WINDOW = 5;
 const MAX_GRAPH_NEIGHBOR_DOCUMENT_CONTEXT_FRAGMENTS = 2;
@@ -137,6 +138,23 @@ const COMPARABLE_TEMPORAL_SCOPE_GROUPS: Record<string, ComparableTemporalScopeKe
     scheduled: 'planned',
 };
 const COMPARABLE_TEMPORAL_SCOPE_PATTERN = /\b(current|active|present|latest|historical|historic|legacy|previous|archived|deprecated|superseded|planned|future|upcoming|scheduled)\b/i;
+const COMPARABLE_ENVIRONMENT_SCOPE_ALIASES: Record<string, string> = {
+    production: 'production',
+    prod: 'production',
+    staging: 'staging',
+    stage: 'staging',
+    development: 'development',
+    dev: 'development',
+    test: 'test',
+    testing: 'test',
+    qa: 'qa',
+    uat: 'uat',
+    sandbox: 'sandbox',
+    local: 'local',
+    preview: 'preview',
+    canary: 'canary',
+};
+const COMPARABLE_ENVIRONMENT_SCOPE_PATTERN = /\b(?:in|for|on|under|within)\s+(?:the\s+)?(production|prod|staging|stage|development|dev|test|testing|qa|uat|sandbox|local|preview|canary)(?:\s+(?:environment|env|deployment|cluster|workspace|tenant|runtime))?\b|\b(production|staging|development|test|testing|qa|uat|sandbox|local|preview|canary)\s+(?:environment|env|deployment|cluster|workspace|tenant|runtime)\b/i;
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -397,13 +415,36 @@ function comparableFactTemporalScopeKey(subjectLabel: string, sentenceTail: stri
     return COMPARABLE_TEMPORAL_SCOPE_GROUPS[String(match[1] || '').toLowerCase()] || null;
 }
 
-function comparableFactSubjectKey(subjectLabel: string, temporalScopeKey: ComparableTemporalScopeKey | null): string {
-    const scopedSubjectLabel = temporalScopeKey
+function comparableFactEnvironmentScopeKey(subjectLabel: string, sentenceTail: string): string | null {
+    const scopedText = `${normalizeWhitespace(subjectLabel)} ${normalizeWhitespace(sentenceTail)}`;
+    const match = COMPARABLE_ENVIRONMENT_SCOPE_PATTERN.exec(scopedText);
+    if (!match) {
+        return null;
+    }
+    const environmentLabel = String(match[1] || match[2] || '').toLowerCase();
+    return COMPARABLE_ENVIRONMENT_SCOPE_ALIASES[environmentLabel] || null;
+}
+
+function comparableFactScopeKeys(subjectLabel: string, sentenceTail: string): ComparableFactScopeKey[] {
+    const scopeKeys: ComparableFactScopeKey[] = [];
+    const temporalScopeKey = comparableFactTemporalScopeKey(subjectLabel, sentenceTail);
+    if (temporalScopeKey) {
+        scopeKeys.push(`temporal:${temporalScopeKey}`);
+    }
+    const environmentScopeKey = comparableFactEnvironmentScopeKey(subjectLabel, sentenceTail);
+    if (environmentScopeKey) {
+        scopeKeys.push(`environment:${environmentScopeKey}`);
+    }
+    return scopeKeys.sort();
+}
+
+function comparableFactSubjectKey(subjectLabel: string, scopeKeys: ComparableFactScopeKey[]): string {
+    const scopedSubjectLabel = scopeKeys.some((scopeKey) => scopeKey.startsWith('temporal:'))
         ? normalizeWhitespace(subjectLabel).replace(COMPARABLE_TEMPORAL_SCOPE_PATTERN, '')
         : subjectLabel;
     const subjectKey = normalizeComparableFactSubject(scopedSubjectLabel);
-    return temporalScopeKey && subjectKey
-        ? `${subjectKey}@temporal:${temporalScopeKey}`
+    return scopeKeys.length > 0 && subjectKey
+        ? `${subjectKey}@scope:${scopeKeys.join('+')}`
         : subjectKey;
 }
 
@@ -468,11 +509,11 @@ function extractComparableEvidenceFacts(params: {
     const facts: ComparableEvidenceFact[] = [];
     for (const match of String(params.block.text || '').matchAll(COMPARABLE_NUMERIC_FACT_PATTERN)) {
         const subjectLabel = normalizeWhitespace(match[1]);
-        const temporalScopeKey = comparableFactTemporalScopeKey(
+        const scopeKeys = comparableFactScopeKeys(
             subjectLabel,
             comparableFactSentenceTail(params.block.text, match)
         );
-        const subjectKey = comparableFactSubjectKey(subjectLabel, temporalScopeKey);
+        const subjectKey = comparableFactSubjectKey(subjectLabel, scopeKeys);
         const value = Number(match[2]);
         const unit = normalizeComparableFactUnit(match[3]);
         if (!subjectKey || !Number.isFinite(value) || !unit) {
@@ -491,11 +532,11 @@ function extractComparableEvidenceFacts(params: {
     }
     for (const match of String(params.block.text || '').matchAll(COMPARABLE_DATE_FACT_PATTERN)) {
         const subjectLabel = normalizeWhitespace(match[1]);
-        const temporalScopeKey = comparableFactTemporalScopeKey(
+        const scopeKeys = comparableFactScopeKeys(
             subjectLabel,
             comparableFactSentenceTail(params.block.text, match)
         );
-        const subjectKey = comparableFactSubjectKey(subjectLabel, temporalScopeKey);
+        const subjectKey = comparableFactSubjectKey(subjectLabel, scopeKeys);
         const valueKey = normalizeComparableDateValue(match[2]);
         if (!subjectKey || !valueKey) {
             continue;
@@ -513,11 +554,11 @@ function extractComparableEvidenceFacts(params: {
     }
     for (const match of String(params.block.text || '').matchAll(COMPARABLE_STATE_FACT_PATTERN)) {
         const subjectLabel = normalizeWhitespace(match[1]);
-        const temporalScopeKey = comparableFactTemporalScopeKey(
+        const scopeKeys = comparableFactScopeKeys(
             subjectLabel,
             comparableFactSentenceTail(params.block.text, match)
         );
-        const subjectKey = comparableFactSubjectKey(subjectLabel, temporalScopeKey);
+        const subjectKey = comparableFactSubjectKey(subjectLabel, scopeKeys);
         const stateValue = normalizeComparableStateValue(match[2]);
         if (!subjectKey || !stateValue) {
             continue;
@@ -535,11 +576,11 @@ function extractComparableEvidenceFacts(params: {
     }
     for (const match of String(params.block.text || '').matchAll(COMPARABLE_LOCATION_FACT_PATTERN)) {
         const subjectLabel = normalizeWhitespace(match[1]);
-        const temporalScopeKey = comparableFactTemporalScopeKey(
+        const scopeKeys = comparableFactScopeKeys(
             subjectLabel,
             `${normalizeWhitespace(match[2])} ${comparableFactSentenceTail(params.block.text, match)}`
         );
-        const subjectKey = comparableFactSubjectKey(subjectLabel, temporalScopeKey);
+        const subjectKey = comparableFactSubjectKey(subjectLabel, scopeKeys);
         const valueKey = normalizeComparableLocationValue(match[2]);
         if (!subjectKey || !valueKey) {
             continue;
