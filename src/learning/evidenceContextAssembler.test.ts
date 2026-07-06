@@ -838,4 +838,108 @@ describe('assembleRagEvidenceContext', () => {
             }),
         ]));
     });
+
+    test('records unavailable source windows for each missing graph-neighbor document', async () => {
+        const anchorDefinition = 'A brittle glass vessel is stiff and transparent but has low impact tolerance.';
+        const anchorItem = makeQueryItem({
+            atom: {
+                id: 'atom_brittle_glass_multi_missing_neighbor',
+                documentId: 'doc_brittle_glass_multi_missing_neighbor',
+                title: 'Brittle Glass Vessel',
+                content: anchorDefinition,
+            },
+            evidence: {
+                id: 'evidence_brittle_glass_multi_missing_neighbor',
+                snippet: anchorDefinition,
+            },
+        });
+        const neighborItems = [
+            makeQueryItem({
+                atom: {
+                    id: 'atom_missing_polymer_cup',
+                    documentId: 'doc_missing_polymer_cup',
+                    sourcePath: 'Knowledge_Base/test/missing-polymer-cup.md',
+                    title: 'Missing Polymer Cup Evidence',
+                    content: 'A missing polymer cup qualifier should not be treated as complete graph evidence.',
+                },
+                evidence: {
+                    id: 'evidence_missing_polymer_cup',
+                    documentId: 'doc_missing_polymer_cup',
+                    sourcePath: 'Knowledge_Base/test/missing-polymer-cup.md',
+                    snippet: 'A missing polymer cup qualifier should not be treated as complete graph evidence.',
+                },
+                relationPath: [
+                    {
+                        id: 'edge_missing_polymer_cup',
+                        sourceAtomId: 'atom_brittle_glass_multi_missing_neighbor',
+                        targetAtomId: 'atom_missing_polymer_cup',
+                        relationKind: 'analogy',
+                        evidenceSpanIds: ['evidence_missing_polymer_cup'],
+                    },
+                ],
+            }),
+            makeQueryItem({
+                atom: {
+                    id: 'atom_missing_polymer_vessel',
+                    documentId: 'doc_missing_polymer_vessel',
+                    sourcePath: 'Knowledge_Base/test/missing-polymer-vessel.md',
+                    title: 'Missing Polymer Vessel Evidence',
+                    content: 'A missing polymer vessel qualifier should not be treated as complete graph evidence.',
+                },
+                evidence: {
+                    id: 'evidence_missing_polymer_vessel',
+                    documentId: 'doc_missing_polymer_vessel',
+                    sourcePath: 'Knowledge_Base/test/missing-polymer-vessel.md',
+                    snippet: 'A missing polymer vessel qualifier should not be treated as complete graph evidence.',
+                },
+                relationPath: [
+                    {
+                        id: 'edge_missing_polymer_vessel',
+                        sourceAtomId: 'atom_brittle_glass_multi_missing_neighbor',
+                        targetAtomId: 'atom_missing_polymer_vessel',
+                        relationKind: 'analogy',
+                        evidenceSpanIds: ['evidence_missing_polymer_vessel'],
+                    },
+                ],
+            }),
+        ];
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare brittle glass vessel with polymer cup material behavior',
+            items: [anchorItem],
+            graphNeighborItems: neighborItems,
+            sourceResolver: async (lookup) => {
+                if (lookup.documentId.startsWith('doc_missing_polymer_')) {
+                    return null;
+                }
+                return {
+                    documentId: lookup.documentId,
+                    sourcePath: lookup.sourcePath,
+                    content: '# Brittle Glass Vessel\n\nA brittle glass vessel is stiff and transparent but has low impact tolerance.',
+                };
+            },
+        });
+
+        const unavailableNeighborDecisions = assembly.sourceDecisions.filter((decision) => (
+            decision.status === 'source_window_unavailable'
+            && String(decision.reason || '').includes('graph_neighbor_support')
+        ));
+        expect(unavailableNeighborDecisions).toHaveLength(2);
+        expect(unavailableNeighborDecisions.map((decision) => decision.documentId).sort()).toEqual([
+            'doc_missing_polymer_cup',
+            'doc_missing_polymer_vessel',
+        ]);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'graph_neighbor_support',
+                documentId: 'doc_missing_polymer_cup',
+                sourceBoundary: 'direct_span_only',
+            }),
+            expect.objectContaining({
+                role: 'graph_neighbor_support',
+                documentId: 'doc_missing_polymer_vessel',
+                sourceBoundary: 'direct_span_only',
+            }),
+        ]));
+    });
 });
