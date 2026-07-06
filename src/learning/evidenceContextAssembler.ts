@@ -699,12 +699,19 @@ export async function assembleRagEvidenceContext(params: AssembleRagEvidenceCont
 
         const source = await resolveDocumentSource(group, params.sourceResolver);
         if (!source) {
+            const unavailableRoles = Array.from(new Set(
+                group.entries
+                    .map((entry) => entry.directRole)
+                    .filter(Boolean)
+            )).join(',');
             decisions.push({
                 documentId: group.documentId,
                 sourcePath: group.sourcePath,
                 sourceBoundary: 'direct_span_only',
                 status: 'source_window_unavailable',
-                reason: 'source_resolver_returned_no_content',
+                reason: unavailableRoles
+                    ? `source_resolver_returned_no_content:${unavailableRoles}`
+                    : 'source_resolver_returned_no_content',
             });
             continue;
         }

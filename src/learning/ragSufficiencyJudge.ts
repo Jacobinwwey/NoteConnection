@@ -56,6 +56,13 @@ function hasConflictEvidence(fragments: RagEvidenceFragment[]): boolean {
     return fragments.some((fragment) => fragment.role === 'conflict' && textHasSubstance(fragment));
 }
 
+function hasUnavailableGraphNeighborSourceWindow(pack: RagContextPack): boolean {
+    return pack.sourceDecisions.some((decision) => (
+        decision.status === 'source_window_unavailable'
+        && String(decision.reason || '').includes('graph_neighbor_support')
+    ));
+}
+
 function hasBudgetViolation(pack: RagContextPack): boolean {
     return pack.sourceDecisions.some((decision) => (
         decision.status === 'fragment_dropped'
@@ -69,6 +76,7 @@ function buildDeterministicReview(params: ReviewRagContextSufficiencyParams): Ra
     const documentAugmentation = hasDocumentAugmentation(fragments);
     const graphEvidence = hasGraphEvidence(fragments);
     const conflictEvidence = hasConflictEvidence(fragments);
+    const graphNeighborSourceUnavailable = hasUnavailableGraphNeighborSourceWindow(params.contextPack);
     const budgetViolation = hasBudgetViolation(params.contextPack);
     const reasons: string[] = [];
 
@@ -78,10 +86,13 @@ function buildDeterministicReview(params: ReviewRagContextSufficiencyParams): Ra
     if (!documentAugmentation) {
         reasons.push('document_augmentation_missing');
     }
-    if (params.graphContext && !graphEvidence && (
+    const graphNeighborEvidenceMissing = Boolean(params.graphContext && (
+        !graphEvidence || graphNeighborSourceUnavailable
+    ) && (
         (params.graphContext.predecessorWindow?.length || 0) > 0
         || (params.graphContext.successorWindow?.length || 0) > 0
-    )) {
+    ));
+    if (graphNeighborEvidenceMissing) {
         reasons.push('graph_neighbor_evidence_missing');
     }
     if (conflictEvidence) {
@@ -118,7 +129,10 @@ function buildDeterministicReview(params: ReviewRagContextSufficiencyParams): Ra
         score -= 0.18;
     }
     score = clampUnit(score);
-    const status: RagSufficiencyReview['status'] = score >= 0.75 && documentAugmentation && !conflictEvidence
+    const status: RagSufficiencyReview['status'] = score >= 0.75
+        && documentAugmentation
+        && !conflictEvidence
+        && !graphNeighborEvidenceMissing
         ? 'sufficient'
         : 'borderline';
     return {

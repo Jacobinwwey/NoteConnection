@@ -574,4 +574,76 @@ describe('assembleRagEvidenceContext', () => {
             }),
         ]));
     });
+
+    test('marks unavailable graph-neighbor source windows so sufficiency can degrade graph evidence', async () => {
+        const anchorDefinition = 'A brittle glass vessel is stiff and transparent but has low impact tolerance.';
+        const neighborHit = 'A missing neighbor qualifier should not be treated as complete graph evidence from title alone.';
+        const anchorItem = makeQueryItem({
+            atom: {
+                id: 'atom_brittle_glass_missing_neighbor',
+                documentId: 'doc_brittle_glass_missing_neighbor',
+                title: 'Brittle Glass Vessel',
+                content: anchorDefinition,
+            },
+            evidence: {
+                id: 'evidence_brittle_glass_missing_neighbor',
+                snippet: anchorDefinition,
+            },
+        });
+        const neighborItem = makeQueryItem({
+            atom: {
+                id: 'atom_missing_neighbor',
+                documentId: 'doc_missing_neighbor',
+                sourcePath: 'Knowledge_Base/test/missing-neighbor.md',
+                title: 'Missing Neighbor Evidence',
+                content: neighborHit,
+            },
+            evidence: {
+                id: 'evidence_missing_neighbor',
+                documentId: 'doc_missing_neighbor',
+                sourcePath: 'Knowledge_Base/test/missing-neighbor.md',
+                snippet: neighborHit,
+            },
+            relationPath: [
+                {
+                    id: 'edge_missing_neighbor',
+                    sourceAtomId: 'atom_brittle_glass_missing_neighbor',
+                    targetAtomId: 'atom_missing_neighbor',
+                    relationKind: 'analogy',
+                    evidenceSpanIds: ['evidence_missing_neighbor'],
+                },
+            ],
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare brittle glass vessel with missing neighbor evidence',
+            items: [anchorItem],
+            graphNeighborItems: [neighborItem],
+            sourceResolver: async (lookup) => {
+                if (lookup.documentId === 'doc_missing_neighbor') {
+                    return null;
+                }
+                return {
+                    documentId: lookup.documentId,
+                    sourcePath: lookup.sourcePath,
+                    content: '# Brittle Glass Vessel\n\nA brittle glass vessel is stiff and transparent but has low impact tolerance.',
+                };
+            },
+        });
+
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'graph_neighbor_support',
+                documentId: 'doc_missing_neighbor',
+                sourceBoundary: 'direct_span_only',
+            }),
+        ]));
+        expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: 'doc_missing_neighbor',
+                status: 'source_window_unavailable',
+                reason: expect.stringContaining('graph_neighbor_support'),
+            }),
+        ]));
+    });
 });

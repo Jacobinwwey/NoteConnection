@@ -113,4 +113,82 @@ describe('reviewRagContextSufficiency', () => {
             'document_augmentation_missing',
         ]));
     });
+
+    test('degrades graph evidence when graph-neighbor source windows are unavailable', async () => {
+        const pack = makePack([
+            makeFragment({
+                role: 'direct_support',
+                text: 'A brittle glass vessel is stiff and transparent but has low impact tolerance.',
+                documentId: 'doc_brittle_glass',
+                sourcePath: 'Knowledge_Base/test/brittle-glass.md',
+            }),
+            makeFragment({
+                role: 'parent_context',
+                text: '# Brittle Glass Vessel\n\nA brittle glass vessel is stiff and transparent but has low impact tolerance.',
+                documentId: 'doc_brittle_glass',
+                sourcePath: 'Knowledge_Base/test/brittle-glass.md',
+                sourceBoundary: 'full_document',
+            }),
+            makeFragment({
+                role: 'graph_neighbor_support',
+                text: 'Missing neighbor evidence should not be treated as complete graph evidence.',
+                atomId: 'atom_missing_neighbor',
+                documentId: 'doc_missing_neighbor',
+                sourcePath: 'Knowledge_Base/test/missing-neighbor.md',
+                title: 'Missing Neighbor Evidence',
+                sourceBoundary: 'direct_span_only',
+            }),
+        ]);
+        pack.sourceDecisions = [
+            {
+                documentId: 'doc_brittle_glass',
+                sourcePath: 'Knowledge_Base/test/brittle-glass.md',
+                sourceBoundary: 'full_document',
+                status: 'read',
+            },
+            {
+                documentId: 'doc_missing_neighbor',
+                sourcePath: 'Knowledge_Base/test/missing-neighbor.md',
+                sourceBoundary: 'direct_span_only',
+                status: 'source_window_unavailable',
+                reason: 'source_resolver_returned_no_content:graph_neighbor_support',
+            },
+        ];
+
+        const review = await reviewRagContextSufficiency({
+            query: 'compare brittle glass vessel with missing neighbor evidence',
+            contextPack: pack,
+            graphContext: {
+                anchorAtomId: 'atom_brittle_glass',
+                anchorTitle: 'Brittle Glass Vessel',
+                anchorDocumentId: 'doc_brittle_glass',
+                predecessorWindow: [],
+                successorWindow: [
+                    {
+                        atomId: 'atom_missing_neighbor',
+                        title: 'Missing Neighbor Evidence',
+                        relationKind: 'analogy',
+                        confidence: 0.91,
+                    },
+                ],
+                supportingAtomIds: ['atom_missing_neighbor'],
+                supportingTitles: ['Missing Neighbor Evidence'],
+                relationKinds: ['analogy'],
+                relationSummaries: [],
+                knowledgePointRelations: [],
+                temporalValidity: {
+                    checkedAt: '2026-07-05T00:00:00.000Z',
+                    allPointsValid: true,
+                    warningReasons: [],
+                    invalidKnowledgePointTitles: [],
+                    edgeKinds: [],
+                    details: [],
+                },
+            },
+        });
+
+        expect(review.status).toBe('borderline');
+        expect(review.degradationState).toBe('partial_coverage');
+        expect(review.reasons).toContain('graph_neighbor_evidence_missing');
+    });
 });
