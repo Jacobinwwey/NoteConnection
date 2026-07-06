@@ -1260,6 +1260,84 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionState);
     });
 
+    test('does not mark environment-scoped ownership identity facts as conflicting evidence', async () => {
+        const stagingOwner = 'The deployment owner is Release Ops in the staging environment.';
+        const productionOwner = 'The deployment owner is Rollback Team in the production environment.';
+        const fullDocument = [
+            '# Environment Scoped Deployment Owner Probe',
+            '',
+            'Environment scoped deployment owner probe validates that deployment-environment qualifiers do not become false ownership conflicts.',
+            '',
+            '## Deployment Owner By Environment',
+            stagingOwner,
+            '',
+            'Operators should preserve the environment label before comparing owner records.',
+            '',
+            productionOwner,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_environment_deployment_owner',
+            documentId: 'doc_environment_deployment_owner',
+            sourcePath: 'Knowledge_Base/ragenvironmentqualifier/environment scoped deployment owner probe.md',
+            title: 'Environment Scoped Deployment Owner Probe',
+            content: stagingOwner,
+            keywords: ['environment', 'deployment', 'owner'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_staging_deployment_owner',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(stagingOwner),
+                    endOffset: fullDocument.indexOf(stagingOwner) + stagingOwner.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: stagingOwner,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_production_deployment_owner',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(productionOwner),
+                    endOffset: fullDocument.indexOf(productionOwner) + productionOwner.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: productionOwner,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is environment scoped deployment owner probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(stagingOwner),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionOwner);
+    });
+
     test('does not mark version-scoped state facts as conflicting evidence', async () => {
         const v1State = 'The migration gate status is enabled in version 1.0.';
         const v2State = 'The migration gate status is disabled in version 2.0.';

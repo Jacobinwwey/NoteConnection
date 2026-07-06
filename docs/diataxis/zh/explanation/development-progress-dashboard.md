@@ -66,6 +66,7 @@
 - runtime probe `conflicting_multi_document_quantity_evidence_probe_en` 现在由 `Knowledge_Base/ragquantitymulticonflict` 支撑，验证跨文档复数无单位数量事实：`retry attempts are 3` 与 `retry attempts are 5` 会产出跨文档 `conflict` fragment，在单条公开回答中保留两侧数值，并在 `context_assembly` 下显式降级；该切片只扩大显式 quantity subject 的语法覆盖，不把开放域数量语义冲突纳入已完成范围。
 - runtime probe `conflicting_ownership_identity_evidence_probe_en` 现在由 `Knowledge_Base/ragidentityconflict` 支撑，验证受控责任归属事实：显式 owner/assignee/contact/maintainer/team/group subject 中 `Release Ops` 与 `Rollback Team` 会产出 `conflict` fragment，在单条公开回答中保留两侧证据，并在 `context_assembly` 下显式降级；该切片只覆盖责任归属 identity 类，不把开放域身份或语义矛盾纳入已完成范围。
 - runtime probe `conflicting_multi_document_ownership_identity_evidence_probe_en` 现在由 `Knowledge_Base/ragidentitymulticonflict` 支撑，把同一受控责任归属 identity fact class 扩展到两个 scoped documents：handoff 侧 `Release Ops` owner 与 rollback 侧 `Rollback Team` owner 会产出一个 cross-document `conflict` fragment，并在公开回答中保留两侧值。
+- runtime probe `environment_scoped_ownership_identity_probe_en` 现在由 `Knowledge_Base/ragenvironmentqualifier` 支撑，把环境限定 false-positive guard 扩展到受控责任归属 identity facts：staging `Release Ops` owner 与 production `Rollback Team` owner 会保留为环境限定 evidence，而不是误产出 `conflict` fragment。
 
 后续推进：
 

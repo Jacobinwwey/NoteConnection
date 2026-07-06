@@ -344,6 +344,24 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_environment_scoped_deployment_owner_probe',
+            sourcePath: 'Knowledge_Base/ragenvironmentqualifier/environment scoped deployment owner probe.md',
+            language: 'en',
+            workspaceId: 'ragenvironmentqualifier',
+            corpusId: 'ragenvironmentqualifier',
+            content: [
+                '# Environment Scoped Deployment Owner Probe',
+                'Environment scoped deployment owner probe validates that the deployment owner is Release Ops in the staging environment while production owner facts remain environment-qualified evidence rather than a conflict.',
+                '',
+                '## Deployment Owner By Environment',
+                'The deployment owner is Release Ops in the staging environment.',
+                '',
+                'Operators should preserve the environment label before comparing owner records.',
+                '',
+                'The deployment owner is Rollback Team in the production environment.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_version_scoped_state_status_probe',
             sourcePath: 'Knowledge_Base/ragversionqualifier/version scoped state status probe.md',
             language: 'en',
@@ -1102,6 +1120,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         answerMustNotContain: expect.arrayContaining([
                             'Conflicting evidence',
                             'stable migration gate status',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'environment_scoped_ownership_identity_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['deployment owner', 'Release Ops', 'staging']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'stable deployment owner',
                             'immediate predecessors',
                             'likely next nodes',
                         ]),
