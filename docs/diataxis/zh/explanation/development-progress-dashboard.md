@@ -5,7 +5,7 @@
 
 ## 2026-07-05 RSE + document augmentation 图谱 RAG 实践计划
 
-本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、完整文档感知的图邻居 augmentation、query-intent 图邻居排序、intent-aware graph connection-path 排序、intent-aligned graph-window ambiguity filtering、有界 context pack、稳定 RAG context replay id、接入 provider 的充分性 trace、有界一次性 recovery、RAG failure-stage classification、RAG-aware 单消息 release review、claim-level citation-backed RAG release gate、public RAG clause 的 prompt / preamble artifact 过滤、answer claim-to-citation trace / export 映射、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、graph successor-window 与 graph-diagnostics verifier 断言、context-budget truncation/drop/malformed-provider/timeout-provider/graphintent 探针覆盖、相邻 / 同节非相邻 / 跨文档 structured measurement / date conflicting evidence 与 full-document remote-scan hard-negative 覆盖、单邻居与多邻居 graph source-unavailable hard-negative 覆盖、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、大语料上的更完整 replay tooling、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
+本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、完整文档感知的图邻居 augmentation、query-intent 图邻居排序、intent-aware graph connection-path 排序、intent-aligned graph-window ambiguity filtering、有界 context pack、稳定 RAG context replay id、接入 provider 的充分性 trace、有界一次性 recovery、RAG failure-stage classification、RAG-aware 单消息 release review、claim-level citation-backed RAG release gate、public RAG clause 的 prompt / preamble artifact 过滤、answer claim-to-citation trace / export 映射、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、graph successor-window 与 graph-diagnostics verifier 断言、context-budget truncation/drop/malformed-provider/timeout-provider/graphintent 探针覆盖、相邻 / 同节非相邻 / 跨文档 structured measurement / date conflicting evidence 与 full-document remote-scan hard-negative 覆盖、单邻居与多邻居 graph source-unavailable hard-negative 覆盖、前端本地化 RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、大语料上的更完整 replay tooling、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
 
 当前代码 / 方案对齐判断：
 
@@ -28,7 +28,7 @@
 - `KnowledgeLearningPlatform.ts` 负责 source resolution、图邻居物化、一次性 RAG recovery、failure-stage classification、answer claim-to-citation trace 映射、trace/artifact 持久化和 conversation response 装配。
 - `conversationComposer.ts` 负责基于结构化 pack 生成单条 public answer draft。
 - `answerReleaseReview.ts` 负责 public-surface contraction、RAG answer completeness、claim-level citation-backed RAG release gate、prompt / preamble artifact 过滤与最终公开回答修订。
-- `agent_workspace.js` 与 `workspace_panes.js` 在 API status / evidence surface 展示 compact RAG 健康状态，不把 raw fragment 渲染进聊天。
+- `agent_workspace.js` 与 `workspace_panes.js` 在 API status / evidence surface 展示本地化 compact RAG 健康状态，不把 raw fragment 渲染进聊天。
 
 对用户提出方案的关键修正不变：“命中点前后各五段”只是局部扩展启发式，不是最大 source 读取范围。最大 source 边界是每个被选直接证据或图邻居知识点对应的完整 scoped document；真正的硬上限属于 model-visible `RagContextPack`。当前实现遵循 small-to-big 形状：先保留 direct span，再基于完整文档 source 视图选择 parent / adjacent context，最后在 graph context 提供可用 id 时补入完整文档感知的图邻居证据。
 
@@ -37,8 +37,8 @@
 - 新增模块：`src/learning/evidenceContextAssembler.ts`、`src/learning/ragContextPack.ts`、`src/learning/ragSufficiencyJudge.ts`、`src/learning/ragSufficiencyProviderJudge.ts`。
 - 新增 / 更新测试：evidence assembler、context pack budgeter、稳定 context replay id、sufficiency judge、接入 provider 的 sufficiency judge adapter、有界 recovery、RAG failure-stage classification、answer claim-to-citation trace 映射、RAG-aware claim release gate、RAG-aware release review、持久化兼容、composer、平台集成、导出 RAG trace 保留、Knowledge Workspace conversation regression、runtime verifier 校验，以及前端 RAG grounding 展示。
 - `scripts/verify-knowledge-workspace-runtime.js` 现在能校验期望 RAG source boundary、有效 `ragctx_*` replay id、roles、answer terms、sufficiency statuses、deterministic/no-provider judge 标志、recovery 标志、degradation state、required RAG failure stages、RAG source-decision status 最小计数、source-decision reason fragment、sufficiency reason fragment、按 role 统计的 full-document fragment 最小计数、recovery 前 source-decision status 最小计数、recovery 前 reason fragment，以及 graph successor-window 预期；同时支持按用例配置 scoped document-id 预期、按用例传递 `topK`、隔离临时 NoteMD config、本地 malformed-provider fixture、按 source path 注入 source-unavailable fixture，默认严格要求 scoped id，并对 answer term 做大小写不敏感匹配。
-- `src/frontend/agent_workspace.js` 会把仅含 RAG trace 的 payload 标记为可 inspect；API 状态行显示 `RAG: <status>, <N> fragments`，并在本回合使用 recovery pass 时追加 `+recovered`。
-- `src/frontend/workspace_panes.js` 显示 compact RAG context metrics：replay id、sufficiency、source boundary、fragment budget、direct/document/graph roles、truncated/dropped/unavailable source counts、degradation、recovery、reasons 与 failure stages。
+- `src/frontend/agent_workspace.js` 会把仅含 RAG trace 的 payload 标记为可 inspect；API 状态行现在显示本地化的 recovered/degraded RAG 状态与 fragment 计数，而不是 raw `sufficient+recovered` token。
+- `src/frontend/workspace_panes.js` 显示本地化 compact RAG context metrics：replay id、evidence status summary、sufficiency、source boundary、fragment budget、direct/document/graph roles、truncated/dropped/unavailable source counts、degradation、recovery、reasons 与 failure stages。
 - `src/learning/KnowledgeLearningPlatform.ts` 现在会为最终公开回答的 claim 生成可选 `answerClaimCitations` 记录，`src/export/WorkspaceExportBundle.ts` 会 deep-clone 这些记录，因此 replay / export 消费者可以检查 citation、fragment 与 source-path grounding，而不把编排暴露进聊天正文。
 - `src/learning/answerReleaseReview.ts` 现在会执行 `rag_claim_citation_support`，因此句子级公开 RAG claim 必须先被带 citation 的 fragment 支撑才能 release；无支撑或弱支撑 claim 会触发现有 RAG-grounded revision 路径。
 - `src/learning/answerReleaseReview.ts` 现在会在 RAG-grounded 公开修订前过滤“所有推理过程”“最终输出语言”等 prompt / preamble artifact，避免非知识性前言进入用户答案。
@@ -137,7 +137,7 @@
 
 后续推进方向：
 
-- 优先把 API 状态面板从“成功/失败”推进到“scope readiness、backend warmup、最近延迟、缓存命中、索引规模”的可读状态，而不是把诊断藏在 developer detail 中。
+- 在新增本地化 RAG 证据状态之后，继续把 API 状态面板推进到“scope readiness、backend warmup、最近延迟、缓存命中、索引规模”的可读状态，而不是把诊断藏在 developer detail 中。
 - 用 representative large corpus 重复压测 `water glass` 类 title-like query，确认 scoped ANN fallback、document augmentation、grouped graph window 和 file-first hit rendering 在大语料下仍稳定。
 - 在更大语料上继续校准前驱/后继的公开回答措辞；当前 reference/bibliography 类图节点已不会在存在更强语义邻居时主导有界公开图摘要。
 - 继续把 `KnowledgeLearningPlatform.ts` 中的 snapshot persistence、query context assembly、retrieval telemetry 和 path preview composition 拆到更窄 owner，避免下一次读写边界再被混在同一个大类里。

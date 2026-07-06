@@ -5108,10 +5108,121 @@
         return sourceDecisions.filter((decision) => String(decision && decision.status || '').trim() === status).length;
     }
 
+    function translateRagSufficiencyStatus(value) {
+        const normalizedValue = String(value || '').trim().toLowerCase();
+        if (normalizedValue === 'sufficient') {
+            return translate('agentWorkspace.evidence.ragStatusSufficient', 'Sufficient');
+        }
+        if (normalizedValue === 'borderline') {
+            return translate('agentWorkspace.evidence.ragStatusBorderline', 'Borderline');
+        }
+        if (normalizedValue === 'insufficient') {
+            return translate('agentWorkspace.evidence.ragStatusInsufficient', 'Insufficient');
+        }
+        return humanizeEvidenceRelationKind(value);
+    }
+
+    function translateRagDegradationState(value) {
+        const normalizedValue = String(value || '').trim().toLowerCase();
+        if (!normalizedValue || normalizedValue === 'none') {
+            return translate('agentWorkspace.evidence.ragDegradationNone', 'No degradation');
+        }
+        if (normalizedValue === 'partial_coverage') {
+            return translate('agentWorkspace.evidence.ragDegradationPartialCoverage', 'Partial evidence coverage');
+        }
+        if (normalizedValue === 'conflict') {
+            return translate('agentWorkspace.evidence.ragDegradationConflict', 'Conflicting evidence');
+        }
+        if (normalizedValue === 'insufficient') {
+            return translate('agentWorkspace.evidence.ragDegradationInsufficient', 'Insufficient evidence');
+        }
+        if (normalizedValue === 'stale_evidence') {
+            return translate('agentWorkspace.evidence.ragDegradationStaleEvidence', 'Stale evidence');
+        }
+        return humanizeEvidenceRelationKind(value);
+    }
+
+    function translateRagSourceBoundary(value) {
+        const normalizedValue = String(value || '').trim().toLowerCase();
+        if (normalizedValue === 'full_document') {
+            return translate('agentWorkspace.evidence.ragSourceBoundaryFullDocument', 'Full selected document');
+        }
+        if (normalizedValue === 'source_window') {
+            return translate('agentWorkspace.evidence.ragSourceBoundarySourceWindow', 'Selected source window');
+        }
+        if (normalizedValue === 'snippet_only') {
+            return translate('agentWorkspace.evidence.ragSourceBoundarySnippetOnly', 'Snippet only');
+        }
+        return humanizeEvidenceRelationKind(value);
+    }
+
+    function translateRagDiagnosticToken(value) {
+        const rawValue = String(value || '').trim();
+        const separatorIndex = rawValue.indexOf(':');
+        const token = (separatorIndex >= 0 ? rawValue.slice(0, separatorIndex) : rawValue).trim().toLowerCase();
+        const detail = separatorIndex >= 0 ? rawValue.slice(separatorIndex + 1).trim() : '';
+        let label = '';
+        if (token === 'partial_coverage') {
+            label = translate('agentWorkspace.evidence.ragReasonPartialCoverage', 'partial coverage');
+        } else if (token === 'conflict') {
+            label = translate('agentWorkspace.evidence.ragReasonConflict', 'conflict');
+        } else if (token === 'insufficient') {
+            label = translate('agentWorkspace.evidence.ragReasonInsufficient', 'insufficient evidence');
+        } else if (token === 'source_window_unavailable') {
+            label = translate('agentWorkspace.evidence.ragReasonSourceWindowUnavailable', 'source window unavailable');
+        } else if (token === 'context_budget_limited') {
+            label = translate('agentWorkspace.evidence.ragReasonContextBudgetLimited', 'context budget limited');
+        } else if (token === 'graph_neighbor_evidence_missing') {
+            label = translate('agentWorkspace.evidence.ragReasonGraphNeighborEvidenceMissing', 'graph neighbor evidence missing');
+        } else if (token === 'llm_judge_failed') {
+            label = translate('agentWorkspace.evidence.ragReasonLlmJudgeFailed', 'LLM judge fallback');
+        } else if (token === 'context_assembly') {
+            label = translate('agentWorkspace.evidence.ragFailureContextAssembly', 'context assembly');
+        } else if (token === 'graph_evidence') {
+            label = translate('agentWorkspace.evidence.ragFailureGraphEvidence', 'graph evidence');
+        } else if (token === 'parsing_source') {
+            label = translate('agentWorkspace.evidence.ragFailureParsingSource', 'source parsing');
+        } else if (token === 'generation') {
+            label = translate('agentWorkspace.evidence.ragFailureGeneration', 'generation');
+        } else if (token === 'release_generation') {
+            label = translate('agentWorkspace.evidence.ragFailureReleaseGeneration', 'release review');
+        } else {
+            label = humanizeEvidenceRelationKind(token);
+        }
+        return detail ? `${label}: ${detail}` : label;
+    }
+
+    function buildRagEvidenceStatusSummary(ragSufficiencyReview, sourceDecisions) {
+        const status = translateRagSufficiencyStatus(ragSufficiencyReview && ragSufficiencyReview.status)
+            || translate('agentWorkspace.reply.knowledgeRunNone', 'none');
+        const degradation = translateRagDegradationState(ragSufficiencyReview && ragSufficiencyReview.degradationState);
+        const unavailableCount = countRagSourceDecisionsByStatus(sourceDecisions, 'source_window_unavailable');
+        const truncatedCount = countRagSourceDecisionsByStatus(sourceDecisions, 'fragment_truncated');
+        const droppedCount = countRagSourceDecisionsByStatus(sourceDecisions, 'fragment_dropped');
+        const issues = [
+            unavailableCount > 0
+                ? translate('agentWorkspace.evidence.ragStatusUnavailableSources', '{count} unavailable source window(s)', { count: String(unavailableCount) })
+                : '',
+            truncatedCount > 0
+                ? translate('agentWorkspace.evidence.ragStatusTruncatedFragments', '{count} truncated fragment(s)', { count: String(truncatedCount) })
+                : '',
+            droppedCount > 0
+                ? translate('agentWorkspace.evidence.ragStatusDroppedFragments', '{count} dropped fragment(s)', { count: String(droppedCount) })
+                : '',
+        ].filter(Boolean);
+        return translate('agentWorkspace.evidence.ragStatusSummary', '{status}; {degradation}; {issues}', {
+            status,
+            degradation,
+            issues: issues.length > 0
+                ? issues.join(', ')
+                : translate('agentWorkspace.evidence.ragStatusNoEvidenceLoss', 'no evidence loss recorded'),
+        });
+    }
+
     function formatRagWordList(values, noneLabel) {
         const normalizedValues = Array.isArray(values)
             ? values
-                .map((value) => humanizeEvidenceRelationKind(value))
+                .map((value) => translateRagDiagnosticToken(value))
                 .filter(Boolean)
             : [];
         return normalizedValues.length > 0 ? normalizedValues.join(', ') : noneLabel;
@@ -5156,14 +5267,14 @@
         const reviewStatus = String(ragSufficiencyReview && ragSufficiencyReview.status || '').trim();
         const reviewStatusValue = reviewStatus
             ? [
-                humanizeEvidenceRelationKind(reviewStatus),
+                translateRagSufficiencyStatus(reviewStatus),
                 Number.isFinite(reviewScore) ? `(${formatEvidenceConfidence(reviewScore)})` : '',
             ].filter(Boolean).join(' ')
             : noneLabel;
         const replayId = String(ragContextPack && ragContextPack.replayId || '').trim();
         const failureStages = Array.from(new Set(
             ragFailureClassifications
-                .map((classification) => humanizeEvidenceRelationKind(classification && classification.stage))
+                .map((classification) => String(classification && classification.stage || '').trim())
                 .filter(Boolean)
         ));
         const totalCharCount = Number.isFinite(Number(ragContextPack && ragContextPack.totalCharCount))
@@ -5174,12 +5285,16 @@
             : null;
         const metrics = [
             {
+                title: translate('agentWorkspace.evidence.ragStatusSummaryLabel', 'Evidence status'),
+                value: buildRagEvidenceStatusSummary(ragSufficiencyReview, sourceDecisions),
+            },
+            {
                 title: translate('agentWorkspace.evidence.ragSufficiencyLabel', 'Sufficiency'),
                 value: reviewStatusValue,
             },
             {
                 title: translate('agentWorkspace.evidence.ragSourceBoundaryLabel', 'Source boundary'),
-                value: humanizeEvidenceRelationKind(ragContextPack && ragContextPack.sourceBoundary) || noneLabel,
+                value: translateRagSourceBoundary(ragContextPack && ragContextPack.sourceBoundary) || noneLabel,
             },
             {
                 title: translate('agentWorkspace.evidence.ragFragmentsLabel', 'Fragments'),
@@ -5220,15 +5335,15 @@
             },
             {
                 title: translate('agentWorkspace.evidence.ragDegradationLabel', 'Degradation'),
-                value: humanizeEvidenceRelationKind(ragSufficiencyReview && ragSufficiencyReview.degradationState) || noneLabel,
+                value: translateRagDegradationState(ragSufficiencyReview && ragSufficiencyReview.degradationState) || noneLabel,
             },
             {
                 title: translate('agentWorkspace.evidence.ragRecoveryLabel', 'Recovery'),
                 value: ragRecovery && ragRecovery.attempted
                     ? [
-                        humanizeEvidenceRelationKind(ragRecovery.beforeStatus),
+                        translateRagSufficiencyStatus(ragRecovery.beforeStatus),
                         '->',
-                        humanizeEvidenceRelationKind(ragRecovery.afterStatus),
+                        translateRagSufficiencyStatus(ragRecovery.afterStatus),
                         `+${String(Number(ragRecovery.addedFragmentCount || 0))}`,
                     ].filter(Boolean).join(' ')
                     : noneLabel,

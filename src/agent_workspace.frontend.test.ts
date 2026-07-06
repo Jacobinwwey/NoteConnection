@@ -105,6 +105,35 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphTemporalValid': 'valid',
             'agentWorkspace.evidence.graphTemporalWarning': 'warning',
             'agentWorkspace.evidence.ragContextLabel': 'RAG context',
+            'agentWorkspace.evidence.ragStatusSummaryLabel': 'Evidence status',
+            'agentWorkspace.evidence.ragStatusSummary': '{status}; {degradation}; {issues}',
+            'agentWorkspace.evidence.ragStatusSufficient': 'Sufficient',
+            'agentWorkspace.evidence.ragStatusBorderline': 'Borderline',
+            'agentWorkspace.evidence.ragStatusInsufficient': 'Insufficient',
+            'agentWorkspace.evidence.ragStatusUnavailableSources': '{count} unavailable source window(s)',
+            'agentWorkspace.evidence.ragStatusTruncatedFragments': '{count} truncated fragment(s)',
+            'agentWorkspace.evidence.ragStatusDroppedFragments': '{count} dropped fragment(s)',
+            'agentWorkspace.evidence.ragStatusNoEvidenceLoss': 'no evidence loss recorded',
+            'agentWorkspace.evidence.ragDegradationNone': 'No degradation',
+            'agentWorkspace.evidence.ragDegradationPartialCoverage': 'Partial evidence coverage',
+            'agentWorkspace.evidence.ragDegradationConflict': 'Conflicting evidence',
+            'agentWorkspace.evidence.ragDegradationInsufficient': 'Insufficient evidence',
+            'agentWorkspace.evidence.ragDegradationStaleEvidence': 'Stale evidence',
+            'agentWorkspace.evidence.ragSourceBoundaryFullDocument': 'Full selected document',
+            'agentWorkspace.evidence.ragSourceBoundarySourceWindow': 'Selected source window',
+            'agentWorkspace.evidence.ragSourceBoundarySnippetOnly': 'Snippet only',
+            'agentWorkspace.evidence.ragReasonPartialCoverage': 'partial coverage',
+            'agentWorkspace.evidence.ragReasonConflict': 'conflict',
+            'agentWorkspace.evidence.ragReasonInsufficient': 'insufficient evidence',
+            'agentWorkspace.evidence.ragReasonSourceWindowUnavailable': 'source window unavailable',
+            'agentWorkspace.evidence.ragReasonContextBudgetLimited': 'context budget limited',
+            'agentWorkspace.evidence.ragReasonGraphNeighborEvidenceMissing': 'graph neighbor evidence missing',
+            'agentWorkspace.evidence.ragReasonLlmJudgeFailed': 'LLM judge fallback',
+            'agentWorkspace.evidence.ragFailureContextAssembly': 'context assembly',
+            'agentWorkspace.evidence.ragFailureGraphEvidence': 'graph evidence',
+            'agentWorkspace.evidence.ragFailureParsingSource': 'source parsing',
+            'agentWorkspace.evidence.ragFailureGeneration': 'generation',
+            'agentWorkspace.evidence.ragFailureReleaseGeneration': 'release review',
             'agentWorkspace.evidence.ragSufficiencyLabel': 'Sufficiency',
             'agentWorkspace.evidence.ragSourceBoundaryLabel': 'Source boundary',
             'agentWorkspace.evidence.ragFragmentsLabel': 'Fragments',
@@ -940,6 +969,35 @@ function createI18nStub() {
             'agentWorkspace.evidence.graphTemporalValid': '有效',
             'agentWorkspace.evidence.graphTemporalWarning': '告警',
             'agentWorkspace.evidence.ragContextLabel': 'RAG 上下文',
+            'agentWorkspace.evidence.ragStatusSummaryLabel': '证据状态',
+            'agentWorkspace.evidence.ragStatusSummary': '{status}；{degradation}；{issues}',
+            'agentWorkspace.evidence.ragStatusSufficient': '充分',
+            'agentWorkspace.evidence.ragStatusBorderline': '边界充分',
+            'agentWorkspace.evidence.ragStatusInsufficient': '不充分',
+            'agentWorkspace.evidence.ragStatusUnavailableSources': '{count} 个源窗口不可用',
+            'agentWorkspace.evidence.ragStatusTruncatedFragments': '{count} 个片段被截断',
+            'agentWorkspace.evidence.ragStatusDroppedFragments': '{count} 个片段被丢弃',
+            'agentWorkspace.evidence.ragStatusNoEvidenceLoss': '未记录证据损失',
+            'agentWorkspace.evidence.ragDegradationNone': '未降级',
+            'agentWorkspace.evidence.ragDegradationPartialCoverage': '证据覆盖不完整',
+            'agentWorkspace.evidence.ragDegradationConflict': '证据存在冲突',
+            'agentWorkspace.evidence.ragDegradationInsufficient': '证据不足',
+            'agentWorkspace.evidence.ragDegradationStaleEvidence': '证据已过期',
+            'agentWorkspace.evidence.ragSourceBoundaryFullDocument': '完整选中文档',
+            'agentWorkspace.evidence.ragSourceBoundarySourceWindow': '选中源窗口',
+            'agentWorkspace.evidence.ragSourceBoundarySnippetOnly': '仅片段',
+            'agentWorkspace.evidence.ragReasonPartialCoverage': '覆盖不完整',
+            'agentWorkspace.evidence.ragReasonConflict': '冲突',
+            'agentWorkspace.evidence.ragReasonInsufficient': '证据不足',
+            'agentWorkspace.evidence.ragReasonSourceWindowUnavailable': '源窗口不可用',
+            'agentWorkspace.evidence.ragReasonContextBudgetLimited': '上下文预算受限',
+            'agentWorkspace.evidence.ragReasonGraphNeighborEvidenceMissing': '缺少图邻居证据',
+            'agentWorkspace.evidence.ragReasonLlmJudgeFailed': 'LLM 评审回退',
+            'agentWorkspace.evidence.ragFailureContextAssembly': '上下文装配',
+            'agentWorkspace.evidence.ragFailureGraphEvidence': '图证据',
+            'agentWorkspace.evidence.ragFailureParsingSource': '源解析',
+            'agentWorkspace.evidence.ragFailureGeneration': '生成',
+            'agentWorkspace.evidence.ragFailureReleaseGeneration': '发布审查',
             'agentWorkspace.evidence.ragSufficiencyLabel': '充分性',
             'agentWorkspace.evidence.ragSourceBoundaryLabel': '源边界',
             'agentWorkspace.evidence.ragFragmentsLabel': '片段',
@@ -3640,6 +3698,46 @@ describe('workspace panes controller', () => {
             memoryActionCount: 2,
             readinessMessage: 'Workspace hydrated.',
             missMessage: 'Recovered document outside requested scope.',
+            ragContextPack: {
+                replayId: 'ragctx_probe_1',
+                sourceBoundary: 'full_document',
+                totalCharCount: 730,
+                budget: {
+                    maxFragments: 6,
+                    maxTotalChars: 1000,
+                },
+                fragments: [
+                    { role: 'direct_support' },
+                    { role: 'parent_context' },
+                    { role: 'graph_neighbor_support' },
+                ],
+                sourceDecisions: [
+                    { status: 'included' },
+                    { status: 'source_window_unavailable' },
+                    { status: 'fragment_truncated' },
+                    { status: 'fragment_dropped' },
+                ],
+            },
+            ragSufficiencyReview: {
+                status: 'borderline',
+                score: 0.62,
+                degradationState: 'partial_coverage',
+                reasons: [
+                    'source_window_unavailable',
+                    'graph_neighbor_evidence_missing',
+                    'llm_judge_failed:RAG sufficiency judge timed out.',
+                ],
+            },
+            ragRecovery: {
+                attempted: true,
+                beforeStatus: 'borderline',
+                afterStatus: 'sufficient',
+                addedFragmentCount: 2,
+            },
+            ragFailureClassifications: [
+                { stage: 'context_assembly' },
+                { stage: 'graph_evidence' },
+            ],
             graphContext: {
                 anchorAtomId: 'atom_reflection',
                 anchorTitle: 'Reflection',
@@ -3743,6 +3841,16 @@ describe('workspace panes controller', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('waterglass');
         expect(String(evidenceBody?.textContent || '')).toContain('Workspace hydrated.');
         expect(String(evidenceBody?.textContent || '')).toContain('Recovered document outside requested scope.');
+        expect(String(evidenceBody?.textContent || '')).toContain('RAG context');
+        expect(String(evidenceBody?.textContent || '')).toContain('Evidence status');
+        expect(String(evidenceBody?.textContent || '')).toContain('Borderline; Partial evidence coverage; 1 unavailable source window(s), 1 truncated fragment(s), 1 dropped fragment(s)');
+        expect(String(evidenceBody?.textContent || '')).toContain('Full selected document');
+        expect(String(evidenceBody?.textContent || '')).toContain('Borderline -> Sufficient +2');
+        expect(String(evidenceBody?.textContent || '')).toContain('source window unavailable');
+        expect(String(evidenceBody?.textContent || '')).toContain('graph neighbor evidence missing');
+        expect(String(evidenceBody?.textContent || '')).toContain('LLM judge fallback: RAG sufficiency judge timed out.');
+        expect(String(evidenceBody?.textContent || '')).toContain('context assembly');
+        expect(String(evidenceBody?.textContent || '')).toContain('graph evidence');
         expect(String(evidenceBody?.textContent || '')).toContain('Graph context');
         expect(String(evidenceBody?.textContent || '')).toContain('Reflection');
         expect(String(evidenceBody?.textContent || '')).toContain('Phase Matching');
@@ -3792,6 +3900,34 @@ describe('workspace panes controller', () => {
             citationCount: 1,
             memoryCount: 0,
             memoryActionCount: 0,
+            ragContextPack: {
+                sourceBoundary: 'full_document',
+                totalCharCount: 420,
+                budget: {
+                    maxFragments: 4,
+                    maxTotalChars: 900,
+                },
+                fragments: [
+                    { role: 'direct_support' },
+                    { role: 'parent_context' },
+                ],
+                sourceDecisions: [
+                    { status: 'source_window_unavailable' },
+                    { status: 'fragment_dropped' },
+                ],
+            },
+            ragSufficiencyReview: {
+                status: 'borderline',
+                score: 0.5,
+                degradationState: 'partial_coverage',
+                reasons: [
+                    'source_window_unavailable',
+                    'context_budget_limited',
+                ],
+            },
+            ragFailureClassifications: [
+                { stage: 'context_assembly' },
+            ],
             graphContext: {
                 anchorAtomId: 'atom_reflection',
                 anchorTitle: 'Reflection',
@@ -3851,6 +3987,9 @@ describe('workspace panes controller', () => {
         });
 
         const evidenceBody = document.getElementById('agent-evidence-body');
+        expect(String(evidenceBody?.textContent || '')).toContain('RAG context');
+        expect(String(evidenceBody?.textContent || '')).toContain('Evidence status');
+        expect(String(evidenceBody?.textContent || '')).toContain('Borderline; Partial evidence coverage; 1 unavailable source window(s), 1 dropped fragment(s)');
         expect(String(evidenceBody?.textContent || '')).toContain('Graph context');
         expect(String(evidenceBody?.textContent || '')).toContain('Anchor');
         expect(String(evidenceBody?.textContent || '')).toContain('Relation summaries');
@@ -3859,6 +3998,13 @@ describe('workspace panes controller', () => {
 
         await window.i18n.setLanguage('zh');
 
+        expect(String(evidenceBody?.textContent || '')).toContain('RAG 上下文');
+        expect(String(evidenceBody?.textContent || '')).toContain('证据状态');
+        expect(String(evidenceBody?.textContent || '')).toContain('边界充分；证据覆盖不完整；1 个源窗口不可用, 1 个片段被丢弃');
+        expect(String(evidenceBody?.textContent || '')).toContain('完整选中文档');
+        expect(String(evidenceBody?.textContent || '')).toContain('源窗口不可用');
+        expect(String(evidenceBody?.textContent || '')).toContain('上下文预算受限');
+        expect(String(evidenceBody?.textContent || '')).toContain('上下文装配');
         expect(String(evidenceBody?.textContent || '')).toContain('图结构上下文');
         expect(String(evidenceBody?.textContent || '')).toContain('锚点');
         expect(String(evidenceBody?.textContent || '')).toContain('关系摘要');
@@ -6775,7 +6921,7 @@ describe('agent workspace learning-path integration', () => {
 
         const status = document.getElementById('agent-workspace-api-status') as HTMLElement | null;
         expect(status?.getAttribute('data-agent-inspectable')).toBe('true');
-        expect(String(status?.textContent || '')).toContain('RAG: sufficient+recovered, 3 fragments');
+        expect(String(status?.textContent || '')).toContain('RAG: Sufficient after recovery / No degradation, 3 fragments');
         status?.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
         await Promise.resolve();
@@ -6785,18 +6931,18 @@ describe('agent workspace learning-path integration', () => {
         expect(String(evidenceBody?.textContent || '')).toContain('Replay id');
         expect(String(evidenceBody?.textContent || '')).toContain('ragctx_0123456789abcdef');
         expect(String(evidenceBody?.textContent || '')).toContain('Sufficiency');
-        expect(String(evidenceBody?.textContent || '')).toContain('sufficient');
+        expect(String(evidenceBody?.textContent || '')).toContain('Sufficient');
         expect(String(evidenceBody?.textContent || '')).toContain('Recovery');
-        expect(String(evidenceBody?.textContent || '')).toContain('borderline -> sufficient +1');
+        expect(String(evidenceBody?.textContent || '')).toContain('Borderline -> Sufficient +1');
         expect(String(evidenceBody?.textContent || '')).toContain('Source boundary');
-        expect(String(evidenceBody?.textContent || '')).toContain('full document');
+        expect(String(evidenceBody?.textContent || '')).toContain('Full selected document');
         expect(String(evidenceBody?.textContent || '')).toContain('Direct support');
         expect(String(evidenceBody?.textContent || '')).toContain('Document augmentation');
         expect(String(evidenceBody?.textContent || '')).toContain('Graph neighbor support');
         expect(String(evidenceBody?.textContent || '')).toContain('Truncated fragments');
         expect(String(evidenceBody?.textContent || '')).toContain('Failure stages');
         expect(String(evidenceBody?.textContent || '')).toContain('context assembly');
-        expect(String(evidenceBody?.textContent || '')).toContain('none');
+        expect(String(evidenceBody?.textContent || '')).toContain('No degradation');
         expect(String(evidenceBody?.textContent || '')).toContain('evidence recovery succeeded');
         expect(String(evidenceBody?.textContent || '')).not.toContain('Water glass is a transparent sodium silicate solution.');
     });

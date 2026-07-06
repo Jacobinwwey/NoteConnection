@@ -923,6 +923,56 @@
         return `${count} ${count === 1 ? singular : plural}`;
     }
 
+    function translateApiRagSufficiencyStatus(value) {
+        const normalizedValue = String(value || '').trim().toLowerCase();
+        if (normalizedValue === 'sufficient') {
+            return translate('agentWorkspace.evidence.ragStatusSufficient', 'Sufficient');
+        }
+        if (normalizedValue === 'borderline') {
+            return translate('agentWorkspace.evidence.ragStatusBorderline', 'Borderline');
+        }
+        if (normalizedValue === 'insufficient') {
+            return translate('agentWorkspace.evidence.ragStatusInsufficient', 'Insufficient');
+        }
+        return String(value || '').trim();
+    }
+
+    function translateApiRagDegradationState(value) {
+        const normalizedValue = String(value || '').trim().toLowerCase();
+        if (!normalizedValue || normalizedValue === 'none') {
+            return translate('agentWorkspace.evidence.ragDegradationNone', 'No degradation');
+        }
+        if (normalizedValue === 'partial_coverage') {
+            return translate('agentWorkspace.evidence.ragDegradationPartialCoverage', 'Partial evidence coverage');
+        }
+        if (normalizedValue === 'conflict') {
+            return translate('agentWorkspace.evidence.ragDegradationConflict', 'Conflicting evidence');
+        }
+        if (normalizedValue === 'insufficient') {
+            return translate('agentWorkspace.evidence.ragDegradationInsufficient', 'Insufficient evidence');
+        }
+        if (normalizedValue === 'stale_evidence') {
+            return translate('agentWorkspace.evidence.ragDegradationStaleEvidence', 'Stale evidence');
+        }
+        return String(value || '').trim().replace(/_/g, ' ');
+    }
+
+    function buildApiRagStatusLabel(ragSufficiencyReview, ragRecovery) {
+        const reviewStatus = String(ragSufficiencyReview && ragSufficiencyReview.status || '').trim();
+        if (!reviewStatus) {
+            return '';
+        }
+        const status = translateApiRagSufficiencyStatus(reviewStatus);
+        const degradation = translateApiRagDegradationState(ragSufficiencyReview && ragSufficiencyReview.degradationState);
+        const recovered = Boolean(ragRecovery && ragRecovery.attempted === true);
+        const baseLabel = recovered
+            ? translate('agentWorkspace.apiStatus.ragRecoveredStatus', '{status} after recovery', { status })
+            : status;
+        return degradation
+            ? `${baseLabel} / ${degradation}`
+            : baseLabel;
+    }
+
     function buildConversationGroundingPayload(result) {
         const citationCount = Array.isArray(result && result.citations) ? result.citations.length : 0;
         const memoryCount = Array.isArray(result && result.recalledMemories) ? result.recalledMemories.length : 0;
@@ -1008,8 +1058,7 @@
         const ragFragmentCount = Array.isArray(ragContextPack && ragContextPack.fragments)
             ? ragContextPack.fragments.length
             : 0;
-        const ragSufficiencyStatus = String(ragSufficiencyReview && ragSufficiencyReview.status || '').trim();
-        const ragRecovered = Boolean(ragRecovery && ragRecovery.attempted === true);
+        const ragStatusLabel = buildApiRagStatusLabel(ragSufficiencyReview, ragRecovery);
         const retrievalTrace = trace && typeof trace.retrieval === 'object' ? trace.retrieval : {};
         const scopeRecovery = retrievalTrace && typeof retrievalTrace.scopeRecovery === 'object'
             ? retrievalTrace.scopeRecovery
@@ -1045,9 +1094,9 @@
             state === 'ok' ? pluralizeApiStatusCount(knowledgePointCount, 'knowledge point', 'knowledge points') : '',
             state === 'ok' ? pluralizeApiStatusCount(citationCount, 'citation', 'citations') : '',
             state === 'ok' ? pluralizeApiStatusCount(memoryCount, 'memory', 'memories') : '',
-            state === 'ok' && ragSufficiencyStatus
+            state === 'ok' && ragStatusLabel
                 ? translate('agentWorkspace.apiStatus.rag', 'RAG: {status}, {fragments}', {
-                    status: ragRecovered ? `${ragSufficiencyStatus}+recovered` : ragSufficiencyStatus,
+                    status: ragStatusLabel,
                     fragments: pluralizeApiStatusCount(ragFragmentCount, 'fragment', 'fragments'),
                 })
                 : '',
