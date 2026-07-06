@@ -70,6 +70,7 @@
 - runtime probe `version_scoped_ownership_identity_probe_en` 现在由 `Knowledge_Base/ragversionqualifier` 支撑，把版本限定 false-positive guard 扩展到受控责任归属 identity facts：version 1.0 `Release Ops` owner 与 version 2.0 `Rollback Team` owner 会保留为版本限定 evidence，而不是误产出 `conflict` fragment。
 - runtime probe `platform_scoped_ownership_identity_probe_en` 现在由 `Knowledge_Base/ragplatformqualifier` 支撑，把平台限定 false-positive guard 扩展到受控责任归属 identity facts：Windows `Release Ops` owner 与 Android `Rollback Team` owner 会保留为平台限定 evidence，而不是误产出 `conflict` fragment。
 - runtime probe `temporal_scoped_ownership_identity_probe_en` 现在由 `Knowledge_Base/ragtemporalqualifier` 支撑，把 current-vs-historical false-positive guard 扩展到受控责任归属 identity facts：current `Release Ops` owner 与 historical `Rollback Team` owner 会保留为条件限定 evidence，而不是误产出 `conflict` fragment。
+- runtime probe `cross_document_environment_scoped_ownership_identity_probe_en`、`cross_document_version_scoped_ownership_identity_probe_en` 与 `cross_document_platform_scoped_ownership_identity_probe_en` 现在由 `Knowledge_Base/ragconditionownercrossscope` 支撑，验证完整文档 cross-document conflict scanner 会在两个 scoped documents 之间保留 environment / version / platform 限定 owner facts，而不是误产出 `conflict` fragment。
 
 后续推进：
 

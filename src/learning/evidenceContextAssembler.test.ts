@@ -1979,6 +1979,143 @@ describe('assembleRagEvidenceContext', () => {
         ]));
     });
 
+    test('does not mark condition-scoped ownership identity facts from different documents as conflicting evidence', async () => {
+        const conditionScopedOwnerCases = [
+            {
+                query: 'compare cross environment staging owner source with cross environment production owner source',
+                leftTitle: 'Cross Environment Staging Owner Source',
+                rightTitle: 'Cross Environment Production Owner Source',
+                leftDocumentId: 'doc_cross_environment_staging_owner_source',
+                rightDocumentId: 'doc_cross_environment_production_owner_source',
+                leftSourcePath: 'Knowledge_Base/ragconditionownercrossscope/cross environment staging owner source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditionownercrossscope/cross environment production owner source.md',
+                leftOwner: 'The deployment owner is Release Ops in the staging environment.',
+                rightOwner: 'The deployment owner is Rollback Team in the production environment.',
+                leftKeywords: ['environment', 'staging', 'owner'],
+                rightKeywords: ['environment', 'production', 'owner'],
+            },
+            {
+                query: 'compare cross version one owner source with cross version two owner source',
+                leftTitle: 'Cross Version One Owner Source',
+                rightTitle: 'Cross Version Two Owner Source',
+                leftDocumentId: 'doc_cross_version_one_owner_source',
+                rightDocumentId: 'doc_cross_version_two_owner_source',
+                leftSourcePath: 'Knowledge_Base/ragconditionownercrossscope/cross version one owner source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditionownercrossscope/cross version two owner source.md',
+                leftOwner: 'The deployment owner is Release Ops in version 1.0.',
+                rightOwner: 'The deployment owner is Rollback Team in version 2.0.',
+                leftKeywords: ['version', 'one', 'owner'],
+                rightKeywords: ['version', 'two', 'owner'],
+            },
+            {
+                query: 'compare cross platform windows owner source with cross platform android owner source',
+                leftTitle: 'Cross Platform Windows Owner Source',
+                rightTitle: 'Cross Platform Android Owner Source',
+                leftDocumentId: 'doc_cross_platform_windows_owner_source',
+                rightDocumentId: 'doc_cross_platform_android_owner_source',
+                leftSourcePath: 'Knowledge_Base/ragconditionownercrossscope/cross platform windows owner source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditionownercrossscope/cross platform android owner source.md',
+                leftOwner: 'The deployment owner is Release Ops on the Windows platform.',
+                rightOwner: 'The deployment owner is Rollback Team on the Android platform.',
+                leftKeywords: ['platform', 'windows', 'owner'],
+                rightKeywords: ['platform', 'android', 'owner'],
+            },
+        ];
+
+        for (const ownerCase of conditionScopedOwnerCases) {
+            const leftDocument = [
+                `# ${ownerCase.leftTitle}`,
+                '',
+                `${ownerCase.leftTitle} records the scoped deployment owner.`,
+                '',
+                '## Scoped Owner',
+                ownerCase.leftOwner,
+            ].join('\n');
+            const rightDocument = [
+                `# ${ownerCase.rightTitle}`,
+                '',
+                `${ownerCase.rightTitle} records the scoped deployment owner.`,
+                '',
+                '## Scoped Owner',
+                ownerCase.rightOwner,
+            ].join('\n');
+            const leftAtom = makeAtom({
+                id: ownerCase.leftDocumentId.replace(/^doc_/, 'atom_'),
+                documentId: ownerCase.leftDocumentId,
+                sourcePath: ownerCase.leftSourcePath,
+                title: ownerCase.leftTitle,
+                content: ownerCase.leftOwner,
+                keywords: ownerCase.leftKeywords,
+            });
+            const rightAtom = makeAtom({
+                id: ownerCase.rightDocumentId.replace(/^doc_/, 'atom_'),
+                documentId: ownerCase.rightDocumentId,
+                sourcePath: ownerCase.rightSourcePath,
+                title: ownerCase.rightTitle,
+                content: ownerCase.rightOwner,
+                keywords: ownerCase.rightKeywords,
+            });
+            const leftItem = makeQueryItem({
+                atom: leftAtom,
+                evidence: {
+                    id: `evidence_${ownerCase.leftDocumentId}`,
+                    documentId: leftAtom.documentId,
+                    sourcePath: leftAtom.sourcePath,
+                    startOffset: leftDocument.indexOf(ownerCase.leftOwner),
+                    endOffset: leftDocument.indexOf(ownerCase.leftOwner) + ownerCase.leftOwner.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: ownerCase.leftOwner,
+                },
+            });
+            const rightItem = makeQueryItem({
+                atom: rightAtom,
+                evidence: {
+                    id: `evidence_${ownerCase.rightDocumentId}`,
+                    documentId: rightAtom.documentId,
+                    sourcePath: rightAtom.sourcePath,
+                    startOffset: rightDocument.indexOf(ownerCase.rightOwner),
+                    endOffset: rightDocument.indexOf(ownerCase.rightOwner) + ownerCase.rightOwner.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: ownerCase.rightOwner,
+                },
+            });
+
+            const assembly = await assembleRagEvidenceContext({
+                query: ownerCase.query,
+                items: [leftItem, rightItem],
+                sourceResolver: async (lookup) => ({
+                    documentId: lookup.documentId,
+                    sourcePath: lookup.sourcePath,
+                    content: lookup.documentId === leftAtom.documentId ? leftDocument : rightDocument,
+                }),
+                paragraphWindow: 5,
+                budget: {
+                    maxFragments: 10,
+                    maxCharsPerFragment: 700,
+                    maxTotalChars: 2600,
+                },
+            });
+
+            expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+            expect(assembly.fragments).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    role: 'parent_context',
+                    documentId: leftAtom.documentId,
+                    sourceBoundary: 'full_document',
+                    text: expect.stringContaining(ownerCase.leftOwner),
+                }),
+                expect.objectContaining({
+                    role: 'parent_context',
+                    documentId: rightAtom.documentId,
+                    sourceBoundary: 'full_document',
+                    text: expect.stringContaining(ownerCase.rightOwner),
+                }),
+            ]));
+        }
+    });
+
     test('marks comparable facts from different documents as conflicting evidence', async () => {
         const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the nominal procedure.';
         const fieldTolerance = 'The calibration tolerance is +/-0.50 mm in the field procedure.';
