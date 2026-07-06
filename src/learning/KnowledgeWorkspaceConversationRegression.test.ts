@@ -443,6 +443,36 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_nominal_retry_attempts_quantity_conflict_probe',
+            sourcePath: 'Knowledge_Base/ragquantitymulticonflict/nominal retry attempts quantity conflict probe.md',
+            language: 'en',
+            workspaceId: 'ragquantitymulticonflict',
+            corpusId: 'ragquantitymulticonflict',
+            content: [
+                '# Nominal Retry Attempts Quantity Conflict Probe',
+                'Nominal retry attempts quantity conflict probe validates that plural unitless quantity facts across documents are not flattened into one stable count.',
+                '',
+                '## Nominal Retry Source',
+                'The retry attempts are 3 in the nominal retry record.',
+                'Operators must compare this source against field evidence before publishing a retry-attempt count.',
+            ].join('\n'),
+        },
+        {
+            documentId: 'doc_field_retry_attempts_quantity_conflict_evidence',
+            sourcePath: 'Knowledge_Base/ragquantitymulticonflict/field retry attempts quantity conflict evidence.md',
+            language: 'en',
+            workspaceId: 'ragquantitymulticonflict',
+            corpusId: 'ragquantitymulticonflict',
+            content: [
+                '# Field Retry Attempts Quantity Conflict Evidence',
+                'Field retry attempts quantity conflict evidence records the field-side plural retry quantity.',
+                '',
+                '## Field Retry Source',
+                'The retry attempts are 5 in the field retry record.',
+                'Operators must resolve the active retry source before publishing a stable retry-attempt count.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_nominal_full_scan_source',
             sourcePath: 'Knowledge_Base/ragfullscan/nominal full scan source.md',
             language: 'en',
@@ -1091,6 +1121,20 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         answerMustContain: expect.arrayContaining(['+/-0.10 mm', '+/-0.50 mm']),
                         answerMustNotContain: expect.arrayContaining([
                             'single stable calibration tolerance',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'conflicting_multi_document_quantity_evidence_probe_en',
+                    expected: expect.objectContaining({
+                        minCitations: 2,
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context', 'conflict']),
+                        acceptedRagSufficiencyStatuses: ['borderline'],
+                        acceptedRagDegradationStates: ['conflict'],
+                        requiredRagFailureStages: ['context_assembly'],
+                        answerMustContain: expect.arrayContaining(['retry attempts', '3', '5']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'single stable retry-attempt count',
                         ]),
                     }),
                 }),

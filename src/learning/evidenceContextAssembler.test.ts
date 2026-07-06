@@ -1576,6 +1576,103 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text).toContain(fieldTolerance);
     });
 
+    test('marks cross-document unitless quantity facts with plural predicates as conflicting evidence', async () => {
+        const nominalAttempts = 'The retry attempts are 3 in the nominal retry record.';
+        const fieldAttempts = 'The retry attempts are 5 in the field retry record.';
+        const nominalDocument = [
+            '# Nominal Retry Attempts Quantity Conflict Probe',
+            '',
+            'Nominal retry attempts quantity conflict probe provides the nominal-side retry record.',
+            '',
+            '## Nominal Retry Source',
+            nominalAttempts,
+            'Operators must compare this source against field evidence before publishing a retry-attempt count.',
+        ].join('\n');
+        const fieldDocument = [
+            '# Field Retry Attempts Quantity Conflict Evidence',
+            '',
+            'Field retry attempts quantity conflict evidence provides the field-side retry record.',
+            '',
+            '## Field Retry Source',
+            fieldAttempts,
+            'Operators must resolve the active retry source before publishing a stable retry-attempt count.',
+        ].join('\n');
+        const nominalAtom = makeAtom({
+            id: 'atom_nominal_retry_attempts_quantity_conflict',
+            documentId: 'doc_nominal_retry_attempts_quantity_conflict',
+            sourcePath: 'Knowledge_Base/ragquantitymulticonflict/nominal retry attempts quantity conflict probe.md',
+            title: 'Nominal Retry Attempts Quantity Conflict Probe',
+            content: nominalAttempts,
+            keywords: ['retry', 'attempts', 'quantity', 'nominal'],
+        });
+        const fieldAtom = makeAtom({
+            id: 'atom_field_retry_attempts_quantity_conflict',
+            documentId: 'doc_field_retry_attempts_quantity_conflict',
+            sourcePath: 'Knowledge_Base/ragquantitymulticonflict/field retry attempts quantity conflict evidence.md',
+            title: 'Field Retry Attempts Quantity Conflict Evidence',
+            content: fieldAttempts,
+            keywords: ['retry', 'attempts', 'quantity', 'field'],
+        });
+        const nominalItem = makeQueryItem({
+            atom: nominalAtom,
+            evidence: {
+                id: 'evidence_nominal_retry_attempts_quantity',
+                documentId: nominalAtom.documentId,
+                sourcePath: nominalAtom.sourcePath,
+                startOffset: nominalDocument.indexOf(nominalAttempts),
+                endOffset: nominalDocument.indexOf(nominalAttempts) + nominalAttempts.length,
+                startLine: 6,
+                endLine: 6,
+                snippet: nominalAttempts,
+            },
+        });
+        const fieldItem = makeQueryItem({
+            atom: fieldAtom,
+            evidence: {
+                id: 'evidence_field_retry_attempts_quantity',
+                documentId: fieldAtom.documentId,
+                sourcePath: fieldAtom.sourcePath,
+                startOffset: fieldDocument.indexOf(fieldAttempts),
+                endOffset: fieldDocument.indexOf(fieldAttempts) + fieldAttempts.length,
+                startLine: 6,
+                endLine: 6,
+                snippet: fieldAttempts,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare nominal retry attempts quantity conflict probe with field retry attempts quantity conflict evidence',
+            items: [nominalItem, fieldItem],
+            sourceResolver: async (lookup) => ({
+                documentId: lookup.documentId,
+                sourcePath: lookup.sourcePath,
+                content: lookup.documentId === nominalAtom.documentId ? nominalDocument : fieldDocument,
+            }),
+            budget: {
+                maxFragments: 10,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2400,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => (
+            fragment.role === 'conflict'
+            && fragment.fragmentId.startsWith('rag_conflict_cross_document_')
+        ));
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_retry_attempts_quantity',
+                'evidence_field_retry_attempts_quantity',
+            ]),
+            text: expect.stringContaining('across documents'),
+        }));
+        expect(conflictFragment?.text).toContain('Nominal Retry Attempts Quantity Conflict Probe');
+        expect(conflictFragment?.text).toContain('Field Retry Attempts Quantity Conflict Evidence');
+        expect(conflictFragment?.text).toContain(nominalAttempts);
+        expect(conflictFragment?.text).toContain(fieldAttempts);
+    });
+
     test('scans complete selected documents for cross-document conflicts beyond the local context window', async () => {
         const nominalIntro = 'Nominal calibration overview establishes the scoped source document.';
         const fieldIntro = 'Field calibration overview establishes the comparison source document.';

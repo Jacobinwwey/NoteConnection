@@ -490,6 +490,7 @@ flowchart TB
   - explicit version-qualified state false-positive guards through `version_scoped_state_status_probe_en`;
   - explicit platform-qualified state false-positive guards through `platform_scoped_state_status_probe_en`;
   - explicit unitless quantity/limit conflict coverage through `conflicting_quantity_limit_evidence_probe_en`;
+  - cross-document plural unitless quantity conflict coverage through `conflicting_multi_document_quantity_evidence_probe_en`;
   - causal answer-profile budgeting through `causal_answer_profile_budget_en`;
   - full-document graph-neighbor augmentation through minimum role/boundary fragment-count assertions;
   - graph self-neighbor filtering;
@@ -523,6 +524,7 @@ flowchart TB
 - Runtime: `what is version scoped state status probe?` reads `Knowledge_Base/ragversionqualifier/version scoped state status probe.md`, preserves version-1.0-enabled and version-2.0-disabled state facts as version-qualified evidence, keeps `forbiddenRagRoles: ['conflict']`, and returns `sufficient/none` instead of degrading as a conflict.
 - Runtime: `what is platform scoped state status probe?` reads `Knowledge_Base/ragplatformqualifier/platform scoped state status probe.md`, preserves Windows-enabled and Android-disabled state facts as platform-qualified evidence, keeps `forbiddenRagRoles: ['conflict']`, and returns `sufficient/none` instead of degrading as a conflict.
 - Runtime: `what is quantity limit conflict probe?` reads `Knowledge_Base/ragquantityconflict/quantity limit conflict probe.md`, preserves `retry limit is 3` and `retry limit is 5` as unitless quantity conflict evidence, keeps both values in one public answer, and classifies the degradation under `context_assembly`.
+- Runtime: `compare nominal retry attempts quantity conflict probe with field retry attempts quantity conflict evidence` reads two scoped files under `Knowledge_Base/ragquantitymulticonflict`, preserves plural `retry attempts are 3` and `retry attempts are 5` statements as a cross-document unitless quantity `conflict` fragment, keeps both values in one public answer, and classifies the degradation under `context_assembly`.
 - Runtime: `why causal answer profile probe needs bounded evidence?` reads `Knowledge_Base/ragcausalprofile/causal answer profile probe.md`, uses the bounded causal RAG profile (`20` fragments, `1500` chars per fragment, `7600` total chars), keeps the source boundary at `full_document`, and returns one public answer containing mechanism and downstream evidence.
 - Runtime: `compare multi document calibration tolerance conflict probe with field calibration tolerance conflict evidence` reads two scoped files under `Knowledge_Base/ragmulticonflict`, preserves `+/-0.10 mm` and `+/-0.50 mm` as a cross-document `conflict` fragment, keeps both values in the one public answer, and classifies the degradation under `context_assembly`.
 - Runtime: `compare nominal full scan source with field full scan source` reads two scoped files under `Knowledge_Base/ragfullscan`, detects remote appendix `+/-0.10 mm` and `+/-0.50 mm` facts outside the matched opening spans through full-document scanning, keeps both values in one public answer, and proves the local paragraph window is not the source-reading maximum.
@@ -994,6 +996,8 @@ flowchart TB
 - `compare multi document calibration tolerance conflict probe with field calibration tolerance conflict evidence` 会读取 `Knowledge_Base/ragmulticonflict` 下的两个 scoped 文件，把 `+/-0.10 mm` 与 `+/-0.50 mm` 保留为跨文档 `conflict` fragment，在单条公开回答中保留两侧数值，并把降级归类到 `context_assembly`。
 - `compare nominal full scan source with field full scan source` 会读取 `Knowledge_Base/ragfullscan` 下的两个 scoped 文件，通过完整文档扫描发现命中开头段落之外的远端 appendix 中 `+/-0.10 mm` 与 `+/-0.50 mm` 矛盾，在单条公开回答中保留两侧数值，并证明局部段落窗口不是 source 读取最大范围。
 - 当 evidence span 的 offset 数值合法但已经陈旧、且 line range 指向重复 snippet 的正确 occurrence 时，assembler 只在 offset 候选不包含 snippet 而 line 候选包含 snippet 的情况下使用 line provenance，避免重复文本被锚到第一处错误 source block。
+
+**跨文档数量事实增量（2026-07-07）：** `evidenceContextAssembler.ts` 的 unitless quantity 抽取现在支持复数谓词 `are`，用于覆盖 `retry attempts are 3` 这类自然工程写法。由 `Knowledge_Base/ragquantitymulticonflict` 支撑的 `conflicting_multi_document_quantity_evidence_probe_en` 验证两个 scoped 文档中的 `retry attempts are 3` 与 `retry attempts are 5` 会作为跨文档 quantity `conflict` fragment 进入有界 `RagContextPack`，公开回答仍保持单条消息并保留两侧数值，降级归因仍是 `context_assembly`。该切片只扩大保守 quantity fact 的语法覆盖，不声称解决开放域数量语义冲突。
 
 ## 系统影响
 

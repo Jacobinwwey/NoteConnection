@@ -103,7 +103,7 @@ type ComparableFactScopeKey =
 const DEFAULT_PARAGRAPH_WINDOW = 5;
 const MAX_GRAPH_NEIGHBOR_DOCUMENT_CONTEXT_FRAGMENTS = 2;
 const COMPARABLE_NUMERIC_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?)\s+(?:is|=|:)\s*(?:±|\+\/-|\+\s*\/\s*-)?\s*(-?\d+(?:\.\d+)?)\s*(mm|cm|m|um|µm|nm|kg|g|mg|s|ms|%|deg|degree|degrees|c|k)\b/gi;
-const COMPARABLE_QUANTITY_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:count|limit|threshold|budget|quota|capacity|size|window|attempts|retries))\s+(?:is|=|:)\s*(-?\d+(?:\.\d+)?)\b/gi;
+const COMPARABLE_QUANTITY_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:count|limit|threshold|budget|quota|capacity|size|window|attempts|retries))\s+(?:is|are|=|:)\s*(-?\d+(?:\.\d+)?)\b/gi;
 const COMPARABLE_DATE_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:date|year|deadline|cutoff|cut-off|version|release|revision|effective))\s+(?:is|=|:)\s*(\d{4}(?:-\d{2}-\d{2})?)\b/gi;
 const COMPARABLE_STATE_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:status|state|mode|flag|policy|availability|setting|gate|switch))\s+(?:is|=|:)\s*(enabled|disabled|active|inactive|available|unavailable|supported|unsupported|allowed|blocked|required|optional|open|closed|on|off)\b/gi;
 const COMPARABLE_LOCATION_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:location|site|region|zone|room|rack|slot|bay))\s+(?:is|=|:)\s*([a-z0-9][a-z0-9 /_.-]{1,80}?)(?=\.|,|;|\n|$)/gi;
