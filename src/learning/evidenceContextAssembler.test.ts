@@ -1182,6 +1182,84 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(historicalState);
     });
 
+    test('does not mark current and historical ownership identity facts as conflicting evidence', async () => {
+        const currentOwner = 'The deployment owner is Release Ops in the current release record.';
+        const historicalOwner = 'The deployment owner is Rollback Team in the historical rollback archive.';
+        const fullDocument = [
+            '# Temporal Deployment Owner Probe',
+            '',
+            'Temporal deployment owner probe validates that current and historical owner facts stay scoped.',
+            '',
+            '## Deployment Owner History',
+            currentOwner,
+            '',
+            'Operators should answer with the active owner while retaining the older owner as provenance.',
+            '',
+            historicalOwner,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_temporal_deployment_owner',
+            documentId: 'doc_temporal_deployment_owner',
+            sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal deployment owner probe.md',
+            title: 'Temporal Deployment Owner Probe',
+            content: currentOwner,
+            keywords: ['temporal', 'deployment', 'owner'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_current_deployment_owner',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(currentOwner),
+                    endOffset: fullDocument.indexOf(currentOwner) + currentOwner.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: currentOwner,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_historical_deployment_owner',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(historicalOwner),
+                    endOffset: fullDocument.indexOf(historicalOwner) + historicalOwner.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: historicalOwner,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is temporal deployment owner probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(currentOwner),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(historicalOwner);
+    });
+
     test('does not mark environment-scoped state facts as conflicting evidence', async () => {
         const stagingState = 'The migration gate status is enabled in the staging environment.';
         const productionState = 'The migration gate status is disabled in the production environment.';
