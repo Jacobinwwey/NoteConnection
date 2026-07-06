@@ -1056,6 +1056,105 @@ describe('conversationComposer', () => {
         expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toBe(reply.answer);
     });
 
+    test('keeps decimal numeric evidence intact in RAG public answers', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_rag_conflict_tolerance',
+                documentId: 'doc_rag_conflict_tolerance',
+                sourcePath: 'Knowledge_Base/ragconflict/calibration tolerance conflict probe.md',
+                title: 'Calibration Tolerance Conflict Probe',
+                content: 'The calibration tolerance is +/-0.10 mm in the nominal bench procedure. The calibration tolerance is +/-0.50 mm in the field override note.',
+                keywords: ['calibration', 'tolerance', 'conflict'],
+            },
+            evidence: {
+                id: 'evidence_rag_conflict_tolerance',
+                snippet: 'The calibration tolerance is +/-0.10 mm in the nominal bench procedure. The calibration tolerance is +/-0.50 mm in the field override note.',
+                startLine: 5,
+                endLine: 6,
+            },
+            score: 0.94,
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const citations = knowledgePoints[0].citations || [];
+        const ragContextPack: RagContextPack = {
+            query: 'what is calibration tolerance conflict probe?',
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 4,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1600,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_conflict_tolerance',
+                    role: 'direct_support',
+                    text: 'The calibration tolerance is +/-0.10 mm in the nominal bench procedure. The calibration tolerance is +/-0.50 mm in the field override note.',
+                    atomId: 'atom_rag_conflict_tolerance',
+                    documentId: 'doc_rag_conflict_tolerance',
+                    sourcePath: 'Knowledge_Base/ragconflict/calibration tolerance conflict probe.md',
+                    title: 'Calibration Tolerance Conflict Probe',
+                    headingPath: ['Calibration Tolerance Conflict Probe', 'Tolerance Statements'],
+                    startLine: 5,
+                    endLine: 6,
+                    charCount: 139,
+                    tokenEstimate: 35,
+                    truncated: false,
+                    citationIds: ['evidence_rag_conflict_tolerance'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_conflict_tolerance',
+                    role: 'conflict',
+                    text: 'Conflicting evidence for calibration tolerance:\nThe calibration tolerance is +/-0.10 mm in the nominal bench procedure.\nThe calibration tolerance is +/-0.50 mm in the field override note.',
+                    atomId: 'atom_rag_conflict_tolerance',
+                    documentId: 'doc_rag_conflict_tolerance',
+                    sourcePath: 'Knowledge_Base/ragconflict/calibration tolerance conflict probe.md',
+                    title: 'Calibration Tolerance Conflict Probe',
+                    headingPath: ['Calibration Tolerance Conflict Probe', 'Tolerance Statements'],
+                    startLine: 5,
+                    endLine: 6,
+                    charCount: 174,
+                    tokenEstimate: 44,
+                    truncated: false,
+                    citationIds: ['evidence_rag_conflict_tolerance'],
+                    sourceBoundary: 'full_document',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 139,
+            tokenEstimate: 35,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-05T00:00:00.000Z',
+            status: 'borderline',
+            score: 0.7,
+            reasons: ['conflict_evidence_present'],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'conflict',
+        };
+        let blockCounter = 0;
+
+        const reply = buildScopedConversationReply({
+            message: 'what is calibration tolerance conflict probe?',
+            knowledgePoints,
+            citations,
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            ragContextPack,
+            ragSufficiencyReview,
+        });
+
+        expect(reply.answer).toContain('+/-0.10 mm');
+        expect(reply.answer).toContain('+/-0.50 mm');
+        expect(reply.answer).not.toContain('+/-0. 10 mm');
+    });
+
     test('uses compare RAG profile to include direct evidence for both compared sides', () => {
         const waterGlassItem = makeQueryItem({
             atom: {

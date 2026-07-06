@@ -672,16 +672,43 @@ function removeLeadingEvidenceTitle(value: string, title: string): string {
     );
 }
 
+function isPublicEvidenceClauseBoundary(value: string, index: number): boolean {
+    const char = value[index];
+    if (char === '\n' || char === '\r' || char === ';' || char === '；') {
+        return true;
+    }
+    if (char === '.' && /\d/u.test(value[index - 1] || '') && /\d/u.test(value[index + 1] || '')) {
+        return false;
+    }
+    return /[.!?。！？]/u.test(char);
+}
+
+function splitPublicEvidenceClauses(value: string): string[] {
+    const source = String(value || '');
+    if (!source) {
+        return [];
+    }
+    const clauses: string[] = [];
+    let start = 0;
+    for (let index = 0; index < source.length; index += 1) {
+        if (!isPublicEvidenceClauseBoundary(source, index)) {
+            continue;
+        }
+        clauses.push(source.slice(start, index));
+        start = index + 1;
+    }
+    if (start < source.length) {
+        clauses.push(source.slice(start));
+    }
+    return clauses;
+}
+
 function selectPublicEvidenceClause(snippet: string, title: string): string {
     const cleaned = removeLeadingEvidenceTitle(stripMarkdownScaffolding(snippet), title);
     if (!cleaned) {
         return '';
     }
-    const clauseSeparator = containsCjk(cleaned)
-        ? /[。！？；\n\r]+/u
-        : /[.!?;\n\r]+/u;
-    const clauses = cleaned
-        .split(clauseSeparator)
+    const clauses = splitPublicEvidenceClauses(cleaned)
         .map((clause) => normalizeWhitespace(clause))
         .filter((clause) => (
             clause.length >= 8
@@ -956,11 +983,7 @@ function splitRagPublicEvidenceClauses(fragment: RagEvidenceFragment): string[] 
     if (!cleaned) {
         return [];
     }
-    const clauseSeparator = containsCjk(cleaned)
-        ? /[。！？；\n\r]+/u
-        : /[.!?;\n\r]+/u;
-    const clauses = cleaned
-        .split(clauseSeparator)
+    const clauses = splitPublicEvidenceClauses(cleaned)
         .map((clause) => normalizeWhitespace(clause))
         .filter((clause) => (
             clause.length >= 8
@@ -1012,11 +1035,21 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
         2,
         directClauses
     );
+    const hasConflictEvidence = context.ragSufficiencyReview?.degradationState === 'conflict'
+        || (context.ragSufficiencyReview?.reasons || []).some((reason) => String(reason || '').includes('conflict_evidence_present'));
+    const conflictClauses = hasConflictEvidence
+        ? collectRagPublicEvidenceClauses(
+            context,
+            new Set(['conflict']),
+            3,
+            [...directClauses, ...documentClauses]
+        )
+        : [];
     const graphClauses = collectRagPublicEvidenceClauses(
         context,
         new Set(['graph_neighbor_support']),
         1,
-        [...directClauses, ...documentClauses]
+        [...directClauses, ...documentClauses, ...conflictClauses]
     );
     const fallback = normalizeWhitespace(String(
         context.knowledgePoints[0]?.evidenceSnippet
@@ -1029,6 +1062,7 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
         return '';
     }
     const extraSentences = [
+        ...conflictClauses,
         ...documentClauses,
         ...graphClauses,
     ];

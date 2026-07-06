@@ -250,6 +250,88 @@ describe('assembleRagEvidenceContext', () => {
         expect(parentFragments[0].citationIds).toEqual(expect.arrayContaining(['evidence_first', 'evidence_second']));
     });
 
+    test('marks adjacent numeric facts about the same tolerance as conflicting evidence', async () => {
+        const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the nominal bench procedure.';
+        const overrideTolerance = 'The calibration tolerance is +/-0.50 mm in the field override note.';
+        const fullDocument = [
+            '# Conflicting Adjacent Evidence Probe',
+            '',
+            'Calibration tolerance conflict probe validates that adjacent contradictory source facts are not flattened into a stable value.',
+            '',
+            '## Tolerance Statements',
+            nominalTolerance,
+            overrideTolerance,
+            'Operators must resolve the active procedure before publishing a tolerance value.',
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_conflicting_tolerance',
+            documentId: 'doc_conflicting_tolerance',
+            sourcePath: 'Knowledge_Base/ragconflict/calibration tolerance conflict probe.md',
+            title: 'Conflicting Adjacent Evidence Probe',
+            content: nominalTolerance,
+            keywords: ['calibration', 'tolerance', 'conflict'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_nominal_tolerance',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(nominalTolerance),
+                    endOffset: fullDocument.indexOf(nominalTolerance) + nominalTolerance.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: nominalTolerance,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_override_tolerance',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(overrideTolerance),
+                    endOffset: fullDocument.indexOf(overrideTolerance) + overrideTolerance.length,
+                    startLine: 7,
+                    endLine: 7,
+                    snippet: overrideTolerance,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is calibration tolerance conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 500,
+                maxTotalChars: 1600,
+            },
+        });
+
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'conflict',
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                sourceBoundary: 'full_document',
+                citationIds: expect.arrayContaining([
+                    'evidence_nominal_tolerance',
+                    'evidence_override_tolerance',
+                ]),
+                text: expect.stringContaining(nominalTolerance),
+            }),
+        ]));
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment?.text).toContain(overrideTolerance);
+        expect(conflictFragment?.text.match(new RegExp(nominalTolerance.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+        expect(conflictFragment?.text.match(new RegExp(overrideTolerance.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+    });
+
     test('adds graph neighbor evidence as support fragments instead of title-only context', async () => {
         const anchorItem = makeQueryItem({
             atom: {

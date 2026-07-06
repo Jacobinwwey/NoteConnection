@@ -117,6 +117,8 @@
 | 查询与预览链路必须鲁棒且向前兼容 | 读查询和只读 path preview 都不再触发 snapshot 持久化；新增字段、action-strip selector、缓存诊断和方法都保持 additive，耐久写路径保持原有行为。 | 已显著改善 |
 | 架构压力应继续下降 | `KnowledgeLearningPlatform.ts` 仍承载 hydrate、retrieval、store snapshot、path preview composition 和 query context assembly 等多个 owner；本次先收紧读写边界，后续应继续拆小持久化、retrieval context 与 preview composition owner。 | 改善但仍需推进 |
 
+- `conflicting_adjacent_evidence_probe_en` 现在由 `Knowledge_Base/ragconflict/calibration tolerance conflict probe.md` 支撑，验证相邻的 `+/-0.10 mm` 与 `+/-0.50 mm` calibration-tolerance 证据会进入 `conflict` RAG role，把 sufficiency 降级为 `borderline/conflict`，并归因到 `context_assembly`，而不是发布单一稳定值。
+
 后续推进方向：
 
 - 优先把 API 状态面板从“成功/失败”推进到“scope readiness、backend warmup、最近延迟、缓存命中、索引规模”的可读状态，而不是把诊断藏在 developer detail 中。

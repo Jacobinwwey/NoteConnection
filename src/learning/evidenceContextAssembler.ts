@@ -82,8 +82,19 @@ interface ParentFragmentDraft {
     score: number;
 }
 
+interface ComparableNumericFact {
+    subjectKey: string;
+    subjectLabel: string;
+    value: number;
+    unit: string;
+    block: SourceBlock;
+    citationIds: string[];
+    item: KnowledgeQueryItem;
+}
+
 const DEFAULT_PARAGRAPH_WINDOW = 5;
 const MAX_GRAPH_NEIGHBOR_DOCUMENT_CONTEXT_FRAGMENTS = 2;
+const COMPARABLE_NUMERIC_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?)\s+(?:is|=|:)\s*(?:±|\+\/-|\+\s*\/\s*-)?\s*(-?\d+(?:\.\d+)?)\s*(mm|cm|m|um|µm|nm|kg|g|mg|s|ms|%|deg|degree|degrees|c|k)\b/gi;
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -282,11 +293,15 @@ function buildSectionBlocks(blocks: SourceBlock[], evidenceBlocks: SourceBlock[]
     return blocks.slice(start, end + 1);
 }
 
+function sourceBlockKey(block: SourceBlock): string {
+    return `${block.startOffset}:${block.endOffset}:${block.text}`;
+}
+
 function mergeBlocks(blocks: SourceBlock[]): SourceBlock[] {
     const seen = new Set<string>();
     const merged: SourceBlock[] = [];
     blocks.forEach((block) => {
-        const key = `${block.startOffset}:${block.endOffset}:${block.text}`;
+        const key = sourceBlockKey(block);
         if (seen.has(key)) {
             return;
         }
@@ -302,6 +317,166 @@ function fragmentTextFromBlocks(blocks: SourceBlock[]): string {
         .filter(Boolean)
         .join('\n\n')
         .trim();
+}
+
+function normalizeComparableFactSubject(value: string): string {
+    return normalizeWhitespace(value)
+        .toLowerCase()
+        .replace(/^(the|a|an)\s+/i, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+}
+
+function normalizeComparableFactUnit(value: string): string {
+    const normalized = normalizeWhitespace(value).toLowerCase();
+    if (normalized === 'um') {
+        return 'µm';
+    }
+    if (normalized === 'degree' || normalized === 'degrees') {
+        return 'deg';
+    }
+    return normalized;
+}
+
+function extractComparableNumericFacts(params: {
+    block: SourceBlock;
+    citationIds: string[];
+    item: KnowledgeQueryItem;
+}): ComparableNumericFact[] {
+    if (params.block.kind === 'heading' || params.block.kind === 'code') {
+        return [];
+    }
+    const facts: ComparableNumericFact[] = [];
+    for (const match of String(params.block.text || '').matchAll(COMPARABLE_NUMERIC_FACT_PATTERN)) {
+        const subjectLabel = normalizeWhitespace(match[1]);
+        const subjectKey = normalizeComparableFactSubject(subjectLabel);
+        const value = Number(match[2]);
+        const unit = normalizeComparableFactUnit(match[3]);
+        if (!subjectKey || !Number.isFinite(value) || !unit) {
+            continue;
+        }
+        facts.push({
+            subjectKey,
+            subjectLabel,
+            value,
+            unit,
+            block: params.block,
+            citationIds: params.citationIds,
+            item: params.item,
+        });
+    }
+    return facts;
+}
+
+function buildBlockCitationMap(
+    group: DocumentEvidenceGroup,
+    blocks: SourceBlock[],
+    source: RagEvidenceSourceDocument
+): Map<string, Set<string>> {
+    const citationIdsByBlock = new Map<string, Set<string>>();
+    group.entries.forEach(({ item }) => {
+        itemEvidenceSpans(item).forEach((span) => {
+            blocksForEvidence(blocks, span, source.content).forEach((block) => {
+                const key = sourceBlockKey(block);
+                const citationIds = citationIdsByBlock.get(key) || new Set<string>();
+                citationIds.add(span.id);
+                citationIdsByBlock.set(key, citationIds);
+            });
+        });
+    });
+    return citationIdsByBlock;
+}
+
+function buildConflictFragments(
+    group: DocumentEvidenceGroup,
+    source: RagEvidenceSourceDocument,
+    paragraphWindow: number
+): RagEvidenceFragment[] {
+    const blocks = parseMarkdownBlocks(source.content);
+    const citationIdsByBlock = buildBlockCitationMap(group, blocks, source);
+    const selectedBlocks = new Map<string, { block: SourceBlock; item: KnowledgeQueryItem }>();
+
+    group.entries
+        .filter((entry) => entry.expandDocumentContext)
+        .forEach(({ item }) => {
+            itemEvidenceSpans(item).forEach((span) => {
+                const evidenceBlocks = blocksForEvidence(blocks, span, source.content);
+                buildSectionBlocks(blocks, evidenceBlocks, paragraphWindow).forEach((block) => {
+                    selectedBlocks.set(sourceBlockKey(block), { block, item });
+                });
+            });
+        });
+
+    const facts = Array.from(selectedBlocks.values())
+        .sort((left, right) => left.block.startOffset - right.block.startOffset)
+        .flatMap(({ block, item }) => extractComparableNumericFacts({
+            block,
+            item,
+            citationIds: Array.from(citationIdsByBlock.get(sourceBlockKey(block)) || []),
+        }));
+    const fragments: RagEvidenceFragment[] = [];
+    const seenConflicts = new Set<string>();
+
+    facts.forEach((left, leftIndex) => {
+        facts.slice(leftIndex + 1).forEach((right) => {
+            if (left.subjectKey !== right.subjectKey || left.unit !== right.unit) {
+                return;
+            }
+            if (Math.abs(left.value - right.value) < 0.000001) {
+                return;
+            }
+            const blockDistance = Math.abs(left.block.startLine - right.block.startLine);
+            if (blockDistance > Math.max(2, paragraphWindow)) {
+                return;
+            }
+            const conflictKey = `${left.subjectKey}:${left.unit}:${Math.min(left.value, right.value)}:${Math.max(left.value, right.value)}`;
+            if (seenConflicts.has(conflictKey)) {
+                return;
+            }
+            seenConflicts.add(conflictKey);
+            const firstBlock = left.block.startOffset <= right.block.startOffset ? left.block : right.block;
+            const lastBlock = left.block.endOffset >= right.block.endOffset ? left.block : right.block;
+            const citationIds = Array.from(new Set([
+                ...left.citationIds,
+                ...right.citationIds,
+                ...itemEvidenceSpans(left.item).map((span) => span.id),
+                ...itemEvidenceSpans(right.item).map((span) => span.id),
+            ].filter(Boolean)));
+            const conflictBlockTexts = Array.from(new Map(
+                [left.block, right.block].map((block) => [sourceBlockKey(block), block.text] as const)
+            ).values());
+            const text = [
+                `Conflicting evidence for ${left.subjectLabel}:`,
+                ...conflictBlockTexts,
+            ].join('\n');
+            fragments.push({
+                fragmentId: `rag_conflict_${sanitizeFragmentPart(group.documentId)}_${fragments.length + 1}`,
+                role: 'conflict',
+                text,
+                atomId: left.item.atom.id,
+                documentId: group.documentId,
+                sourcePath: group.sourcePath,
+                title: left.item.atom.title,
+                headingPath: [...left.block.headingPath],
+                startOffset: firstBlock.startOffset,
+                endOffset: lastBlock.endOffset,
+                startLine: firstBlock.startLine,
+                endLine: lastBlock.endLine,
+                charCount: text.length,
+                tokenEstimate: estimateRagTokenCount(text),
+                truncated: false,
+                citationIds,
+                relationEdgeIds: Array.from(new Set([
+                    ...left.item.relationPath.map((edge) => edge.id),
+                    ...right.item.relationPath.map((edge) => edge.id),
+                ])),
+                score: Number(Math.max(Number(left.item.score || 0), Number(right.item.score || 0)).toFixed(4)),
+                sourceBoundary: 'full_document',
+            });
+        });
+    });
+
+    return fragments;
 }
 
 function limitGraphNeighborDocumentContextFragments(fragments: RagEvidenceFragment[]): RagEvidenceFragment[] {
@@ -542,6 +717,7 @@ export async function assembleRagEvidenceContext(params: AssembleRagEvidenceCont
             charsRead: source.content.length,
         });
         rawFragments.push(...buildParentFragments(group, source, paragraphWindow));
+        rawFragments.push(...buildConflictFragments(group, source, paragraphWindow));
     }
 
     return buildRagContextPack({

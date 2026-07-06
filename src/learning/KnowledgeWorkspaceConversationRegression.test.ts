@@ -111,6 +111,22 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_conflicting_adjacent_evidence_probe',
+            sourcePath: 'Knowledge_Base/ragconflict/calibration tolerance conflict probe.md',
+            language: 'en',
+            workspaceId: 'ragconflict',
+            corpusId: 'ragconflict',
+            content: [
+                '# The Calibration Tolerance Conflict Probe',
+                'Calibration tolerance conflict probe validates that adjacent contradictory source facts are not flattened into a stable value.',
+                '',
+                '## Tolerance Statements',
+                'The calibration tolerance is +/-0.10 mm in the nominal bench procedure.',
+                'The calibration tolerance is +/-0.50 mm in the field override note.',
+                'Operators must resolve the active procedure before publishing a tolerance value.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_graphintent_brittle_glass_vessel',
             sourcePath: 'Knowledge_Base/graphintent/brittle glass vessel.md',
             language: 'en',
@@ -353,6 +369,25 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                 expect.objectContaining({
                     id: 'waterglass_explicit_scope_spaced_zh',
                     expected: expectedWaterglassReleaseAcceptance,
+                }),
+            ])
+        );
+    });
+
+    test('registers a conflicting adjacent evidence hard-negative probe', () => {
+        expect(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    id: 'conflicting_adjacent_evidence_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context', 'conflict']),
+                        acceptedRagSufficiencyStatuses: ['borderline'],
+                        acceptedRagDegradationStates: ['conflict'],
+                        requiredRagFailureStages: ['context_assembly'],
+                        answerMustNotContain: expect.arrayContaining([
+                            'single stable calibration tolerance',
+                        ]),
+                    }),
                 }),
             ])
         );

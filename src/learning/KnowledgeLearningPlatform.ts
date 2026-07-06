@@ -6578,6 +6578,21 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ],
             });
         }
+        if (
+            allReviewReasons.includes('conflict_evidence_present')
+            || params.review.degradationState === 'conflict'
+        ) {
+            addClassification({
+                stage: 'context_assembly',
+                code: 'conflict_evidence_present',
+                severity: 'warning',
+                message: 'The assembled RAG context contains adjacent evidence with conflicting values.',
+                evidence: [
+                    allReviewReasons.includes('conflict_evidence_present') ? 'conflict_evidence_present' : '',
+                    params.review.degradationState === 'conflict' ? 'degradation_state:conflict' : '',
+                ],
+            });
+        }
         if (reviewReasons.includes('missing_direct_support')) {
             addClassification({
                 stage: 'retrieval',

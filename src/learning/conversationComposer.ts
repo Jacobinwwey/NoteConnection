@@ -766,7 +766,24 @@ function splitRagEvidenceSentences(fragment: RagEvidenceFragment): string[] {
     if (!cleaned) {
         return [];
     }
-    return (cleaned.match(/[^.!?\u3002\uFF01\uFF1F]+[.!?\u3002\uFF01\uFF1F]?/gu) || [cleaned])
+    const sentences: string[] = [];
+    let start = 0;
+    for (let index = 0; index < cleaned.length; index += 1) {
+        const char = cleaned[index];
+        const isDecimalPoint = char === '.'
+            && /\d/u.test(cleaned[index - 1] || '')
+            && /\d/u.test(cleaned[index + 1] || '');
+        const isBoundary = !isDecimalPoint && /[.!?\u3002\uFF01\uFF1F]/u.test(char);
+        if (!isBoundary) {
+            continue;
+        }
+        sentences.push(cleaned.slice(start, index + 1));
+        start = index + 1;
+    }
+    if (start < cleaned.length) {
+        sentences.push(cleaned.slice(start));
+    }
+    return (sentences.length > 0 ? sentences : [cleaned])
         .map((sentence) => normalizeWhitespace(sentence))
         .filter((sentence) => sentence.length >= 16);
 }
