@@ -426,7 +426,9 @@ function buildConflictFragments(
                 return;
             }
             const blockDistance = Math.abs(left.block.startLine - right.block.startLine);
-            if (blockDistance > Math.max(2, paragraphWindow)) {
+            const sameScopedSection = left.block.headingPath.length > 0
+                && sameHeadingPath(left.block.headingPath, right.block.headingPath);
+            if (!sameScopedSection && blockDistance > Math.max(2, paragraphWindow)) {
                 return;
             }
             const conflictKey = `${left.subjectKey}:${left.unit}:${Math.min(left.value, right.value)}:${Math.max(left.value, right.value)}`;

@@ -127,6 +127,37 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_conflicting_nonadjacent_evidence_probe',
+            sourcePath: 'Knowledge_Base/ragconflict/remote calibration tolerance conflict probe.md',
+            language: 'en',
+            workspaceId: 'ragconflict',
+            corpusId: 'ragconflict',
+            content: [
+                '# Remote Calibration Tolerance Conflict Probe',
+                'Remote calibration tolerance conflict probe validates that non-adjacent contradictory source facts inside one section are not flattened into a stable value.',
+                '',
+                '## Tolerance Statements',
+                'The calibration tolerance is +/-0.10 mm in the nominal bench procedure.',
+                '',
+                'Context paragraph one keeps the source section long enough to exceed the local window.',
+                '',
+                'Context paragraph two keeps the source section long enough to exceed the local window.',
+                '',
+                'Context paragraph three keeps the source section long enough to exceed the local window.',
+                '',
+                'Context paragraph four keeps the source section long enough to exceed the local window.',
+                '',
+                'Context paragraph five keeps the source section long enough to exceed the local window.',
+                '',
+                'Context paragraph six keeps the source section long enough to exceed the local window.',
+                '',
+                'Context paragraph seven keeps the source section long enough to exceed the local window.',
+                '',
+                'The calibration tolerance is +/-0.50 mm in the field override note.',
+                'Operators must resolve the active procedure before publishing a tolerance value.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_graphintent_brittle_glass_vessel',
             sourcePath: 'Knowledge_Base/graphintent/brittle glass vessel.md',
             language: 'en',
@@ -422,11 +453,23 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
         );
     });
 
-    test('registers a conflicting adjacent evidence hard-negative probe', () => {
+    test('registers conflicting evidence hard-negative probes', () => {
         expect(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
                     id: 'conflicting_adjacent_evidence_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context', 'conflict']),
+                        acceptedRagSufficiencyStatuses: ['borderline'],
+                        acceptedRagDegradationStates: ['conflict'],
+                        requiredRagFailureStages: ['context_assembly'],
+                        answerMustNotContain: expect.arrayContaining([
+                            'single stable calibration tolerance',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'conflicting_nonadjacent_section_evidence_probe_en',
                     expected: expect.objectContaining({
                         requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context', 'conflict']),
                         acceptedRagSufficiencyStatuses: ['borderline'],

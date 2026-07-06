@@ -332,6 +332,103 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(overrideTolerance.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('marks non-adjacent numeric facts in the same section as conflicting evidence', async () => {
+        const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the nominal bench procedure.';
+        const overrideTolerance = 'The calibration tolerance is +/-0.50 mm in the field override note.';
+        const fullDocument = [
+            '# Non Adjacent Conflict Probe',
+            '',
+            'Remote calibration tolerance conflict probe validates that distant contradictory source facts inside one section are not flattened into a stable value.',
+            '',
+            '## Tolerance Statements',
+            nominalTolerance,
+            '',
+            'Context paragraph one keeps the source section long enough to exceed the local window.',
+            '',
+            'Context paragraph two keeps the source section long enough to exceed the local window.',
+            '',
+            'Context paragraph three keeps the source section long enough to exceed the local window.',
+            '',
+            'Context paragraph four keeps the source section long enough to exceed the local window.',
+            '',
+            'Context paragraph five keeps the source section long enough to exceed the local window.',
+            '',
+            'Context paragraph six keeps the source section long enough to exceed the local window.',
+            '',
+            'Context paragraph seven keeps the source section long enough to exceed the local window.',
+            '',
+            overrideTolerance,
+            'Operators must resolve the active procedure before publishing a tolerance value.',
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_conflicting_nonadjacent_tolerance',
+            documentId: 'doc_conflicting_nonadjacent_tolerance',
+            sourcePath: 'Knowledge_Base/ragconflict/remote calibration tolerance conflict probe.md',
+            title: 'Non Adjacent Conflict Probe',
+            content: nominalTolerance,
+            keywords: ['remote', 'calibration', 'tolerance', 'conflict'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_nominal_nonadjacent_tolerance',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(nominalTolerance),
+                    endOffset: fullDocument.indexOf(nominalTolerance) + nominalTolerance.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: nominalTolerance,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_override_nonadjacent_tolerance',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(overrideTolerance),
+                    endOffset: fullDocument.indexOf(overrideTolerance) + overrideTolerance.length,
+                    startLine: 22,
+                    endLine: 22,
+                    snippet: overrideTolerance,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is remote calibration tolerance conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_nonadjacent_tolerance',
+                'evidence_override_nonadjacent_tolerance',
+            ]),
+            startLine: 6,
+            endLine: 23,
+        }));
+        expect(conflictFragment?.text).toContain(nominalTolerance);
+        expect(conflictFragment?.text).toContain(overrideTolerance);
+        expect(conflictFragment?.text.match(new RegExp(nominalTolerance.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+        expect(conflictFragment?.text.match(new RegExp(overrideTolerance.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+    });
+
     test('adds graph neighbor evidence as support fragments instead of title-only context', async () => {
         const anchorItem = makeQueryItem({
             atom: {
