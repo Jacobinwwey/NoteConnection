@@ -752,6 +752,84 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(historicalState);
     });
 
+    test('does not mark current and historical date facts as conflicting evidence', async () => {
+        const currentDate = 'The migration release date is 2026-08-15 in the current release record.';
+        const historicalDate = 'The migration release date is 2026-07-01 in the historical rollout archive.';
+        const fullDocument = [
+            '# Temporal Release Date Probe',
+            '',
+            'Temporal release date probe validates that scoped current and historical dates are not flattened into one contradiction.',
+            '',
+            '## Release Date History',
+            currentDate,
+            '',
+            'Operators should answer with the current schedule while retaining the older schedule as provenance.',
+            '',
+            historicalDate,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_temporal_release_date',
+            documentId: 'doc_temporal_release_date',
+            sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal release date probe.md',
+            title: 'Temporal Release Date Probe',
+            content: currentDate,
+            keywords: ['temporal', 'release', 'date'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_current_release_date',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(currentDate),
+                    endOffset: fullDocument.indexOf(currentDate) + currentDate.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: currentDate,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_historical_release_date',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(historicalDate),
+                    endOffset: fullDocument.indexOf(historicalDate) + historicalDate.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: historicalDate,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is temporal release date probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(currentDate),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(historicalDate);
+    });
+
     test('marks comparable facts from different documents as conflicting evidence', async () => {
         const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the nominal procedure.';
         const fieldTolerance = 'The calibration tolerance is +/-0.50 mm in the field procedure.';

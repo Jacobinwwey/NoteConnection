@@ -224,6 +224,24 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_temporal_release_date_probe',
+            sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal release date probe.md',
+            language: 'en',
+            workspaceId: 'ragtemporalqualifier',
+            corpusId: 'ragtemporalqualifier',
+            content: [
+                '# Temporal Release Date Probe',
+                'Temporal release date probe validates that the migration release date is 2026-08-15 in the current release record while historical dates remain condition-qualified evidence rather than a conflict.',
+                '',
+                '## Release Date History',
+                'The migration release date is 2026-08-15 in the current release record.',
+                '',
+                'Operators should answer with the current schedule while retaining the older schedule as provenance.',
+                '',
+                'The migration release date is 2026-07-01 in the historical rollout archive.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_multi_document_calibration_tolerance_conflict_probe',
             sourcePath: 'Knowledge_Base/ragmulticonflict/multi document calibration tolerance conflict probe.md',
             language: 'en',
@@ -720,6 +738,23 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         answerMustContain: expect.arrayContaining(['enabled', 'current']),
                         answerMustNotContain: expect.arrayContaining([
                             'Conflicting evidence',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'temporal_scoped_release_date_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['2026-08-15', 'current']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'immediate predecessors',
+                            'likely next nodes',
                         ]),
                     }),
                 }),

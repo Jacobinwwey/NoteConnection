@@ -910,6 +910,17 @@ function expandAnswerWithGraphContext(
     return sentences.slice(0, ANSWER_RELEASE_SENTENCE_BUDGET).join(useChinese ? '' : ' ');
 }
 
+function expandRagGroundedAnswer(
+    baseAnswer: string,
+    useChinese: boolean,
+    evidenceSentences: string[] = []
+): string {
+    const sentences: string[] = [];
+    appendRevisionAnswerSentence(sentences, baseAnswer, useChinese);
+    evidenceSentences.forEach((sentence) => appendRevisionAnswerSentence(sentences, sentence, useChinese));
+    return sentences.slice(0, ANSWER_RELEASE_SENTENCE_BUDGET).join(useChinese ? '' : ' ');
+}
+
 function hasUsableRagEvidenceContext(context: AnswerReleaseReviewContext): boolean {
     const pack = context.ragContextPack;
     if (!pack || !Array.isArray(pack.fragments) || pack.fragments.length <= 0) {
@@ -985,6 +996,7 @@ type RagPublicEvidenceClauseSelectionOptions = {
     useLeafHeadingScore?: boolean;
     preferBestLeafHeadingMatch?: boolean;
     minimumLeafHeadingTermCount?: number;
+    preserveLeadingHeading?: boolean;
 };
 
 type RagPublicEvidenceClauseCandidate = {
@@ -994,7 +1006,10 @@ type RagPublicEvidenceClauseCandidate = {
     order: number;
 };
 
-function splitRagPublicEvidenceClauses(fragment: RagEvidenceFragment): string[] {
+function splitRagPublicEvidenceClauses(
+    fragment: RagEvidenceFragment,
+    options: RagPublicEvidenceClauseSelectionOptions = {}
+): string[] {
     const title = normalizeWhitespace(String(fragment.title || '').trim());
     let cleaned = normalizeWhitespace(
         String(fragment.text || '')
@@ -1022,13 +1037,15 @@ function splitRagPublicEvidenceClauses(fragment: RagEvidenceFragment): string[] 
         }
         return normalizeWhitespace(remainder.replace(/^[:：\-–—]+/u, ''));
     };
-    const leadingHeadings = [
-        title,
-        ...(Array.isArray(fragment.headingPath) ? fragment.headingPath.slice().reverse() : []),
-    ];
-    leadingHeadings.forEach((heading) => {
-        cleaned = removeLeadingRagHeading(cleaned, normalizeWhitespace(String(heading || '').trim()));
-    });
+    if (!options.preserveLeadingHeading) {
+        const leadingHeadings = [
+            title,
+            ...(Array.isArray(fragment.headingPath) ? fragment.headingPath.slice().reverse() : []),
+        ];
+        leadingHeadings.forEach((heading) => {
+            cleaned = removeLeadingRagHeading(cleaned, normalizeWhitespace(String(heading || '').trim()));
+        });
+    }
     if (!cleaned) {
         return [];
     }
@@ -1058,7 +1075,7 @@ function collectRagPublicEvidenceClauses(
     let order = 0;
     collectRagRoleFragments(context, roles).forEach((fragment) => {
         const headingQueryTerms = collectRagPublicLeafHeadingQueryTerms(fragment, queryTerms);
-        splitRagPublicEvidenceClauses(fragment).forEach((clause) => {
+        splitRagPublicEvidenceClauses(fragment, options).forEach((clause) => {
             candidates.push({
                 clause,
                 queryTerms: collectRagPublicClauseQueryTerms(clause, queryTerms),
@@ -1112,7 +1129,15 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
     ].join(' '));
     const queryTerms = extractRagPublicQueryTerms(context.message);
     const isCompareQuery = isRagPublicCompareQuery(context.message);
-    const directClauses = collectRagPublicEvidenceClauses(context, new Set(['direct_support']), 1);
+    const directClauses = collectRagPublicEvidenceClauses(
+        context,
+        new Set(['direct_support']),
+        1,
+        [],
+        {
+            preserveLeadingHeading: isCompareQuery,
+        }
+    );
     const documentClauses = collectRagPublicEvidenceClauses(
         context,
         new Set(['parent_context', 'adjacent_context']),
@@ -1120,8 +1145,9 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
         directClauses,
         {
             queryTerms,
-            useLeafHeadingScore: !isCompareQuery,
-            preferBestLeafHeadingMatch: !isCompareQuery,
+            useLeafHeadingScore: true,
+            preferBestLeafHeadingMatch: true,
+            preserveLeadingHeading: isCompareQuery,
         }
     );
     const hasConflictEvidence = context.ragSufficiencyReview?.degradationState === 'conflict'
@@ -1137,10 +1163,12 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
     const graphClauses = collectRagPublicEvidenceClauses(
         context,
         new Set(['graph_neighbor_support']),
-        1,
+        isCompareQuery ? 2 : 1,
         [...directClauses, ...documentClauses, ...conflictClauses],
         isCompareQuery
-            ? {}
+            ? {
+                preserveLeadingHeading: true,
+            }
             : {
                 queryTerms,
                 useLeafHeadingScore: true,
@@ -1170,7 +1198,7 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
                 : 'The evidence coverage is still partial, so the answer stays within the retrieved material'
         );
     }
-    return expandAnswerWithGraphContext(baseAnswer, context, useChinese, extraSentences);
+    return expandRagGroundedAnswer(baseAnswer, useChinese, extraSentences);
 }
 
 function hasStrongEnglishAnchorCaseSignal(value: string): boolean {

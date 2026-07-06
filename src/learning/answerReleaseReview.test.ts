@@ -667,6 +667,14 @@ describe('answerReleaseReview', () => {
             usedScope: scopedWaterglass,
             graphContext: makeGraphContext({
                 anchorTitle: 'Water Glass',
+                predecessorWindow: [
+                    {
+                        atomId: 'atom_container_physics',
+                        title: 'Container Physics',
+                        relationKind: 'prerequisite',
+                        confidence: 0.88,
+                    },
+                ],
                 successorWindow: [
                     {
                         atomId: 'atom_refraction',
@@ -687,6 +695,8 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).toContain('vessel boundary and water surface');
         expect(review.publicAnswer).toContain('Light refracts through air, glass, and water');
         expect(review.publicAnswer).not.toContain('Grounded by RAG context');
+        expect(review.publicAnswer).not.toContain('immediate predecessors');
+        expect(review.publicAnswer).not.toContain('likely next nodes');
     });
 
     test('revises RAG answers when a public claim lacks citation-backed fragment support', () => {
