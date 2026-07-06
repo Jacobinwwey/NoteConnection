@@ -945,6 +945,55 @@ function ragClauseAlreadyCovered(candidate: string, selectedClauses: string[]): 
     });
 }
 
+const RAG_PUBLIC_QUERY_STOPWORDS = new Set([
+    'a', 'about', 'an', 'and', 'are', 'as', 'at', 'be', 'between', 'by', 'compare',
+    'contrast', 'difference', 'differences', 'do', 'does', 'from', 'how',
+    'in', 'is', 'it', 'me', 'of', 'on', 'or', 'plan', 'step', 'steps', 'tell', 'the', 'to', 'versus', 'vs', 'what',
+    'which', 'with',
+]);
+
+function extractRagPublicQueryTerms(message: string): string[] {
+    const terms = (String(message || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || [])
+        .map((term) => term.trim())
+        .filter((term) => term.length >= 2 && !RAG_PUBLIC_QUERY_STOPWORDS.has(term));
+    return Array.from(new Set(terms));
+}
+
+function isRagPublicCompareQuery(message: string): boolean {
+    const normalized = normalizeWhitespace(String(message || '').toLowerCase());
+    return /\b(?:compare|contrast|vs|versus|difference|differences)\b/u.test(normalized)
+        || normalized.includes('区别')
+        || normalized.includes('对比');
+}
+
+function collectRagPublicClauseQueryTerms(value: string, queryTerms: string[]): Set<string> {
+    const lower = String(value || '').toLowerCase();
+    return new Set(queryTerms.filter((term) => lower.includes(term)));
+}
+
+function collectRagPublicLeafHeadingQueryTerms(fragment: RagEvidenceFragment, queryTerms: string[]): Set<string> {
+    const headingPath = Array.isArray(fragment.headingPath) ? fragment.headingPath : [];
+    const leafHeading = normalizeWhitespace(String(headingPath[headingPath.length - 1] || ''));
+    if (!leafHeading) {
+        return new Set();
+    }
+    return collectRagPublicClauseQueryTerms(leafHeading, queryTerms);
+}
+
+type RagPublicEvidenceClauseSelectionOptions = {
+    queryTerms?: string[];
+    useLeafHeadingScore?: boolean;
+    preferBestLeafHeadingMatch?: boolean;
+    minimumLeafHeadingTermCount?: number;
+};
+
+type RagPublicEvidenceClauseCandidate = {
+    clause: string;
+    queryTerms: Set<string>;
+    headingQueryTerms: Set<string>;
+    order: number;
+};
+
 function splitRagPublicEvidenceClauses(fragment: RagEvidenceFragment): string[] {
     const title = normalizeWhitespace(String(fragment.title || '').trim());
     let cleaned = normalizeWhitespace(
@@ -999,21 +1048,54 @@ function collectRagPublicEvidenceClauses(
     context: AnswerReleaseReviewContext,
     roles: Set<RagEvidenceRole>,
     limit: number,
-    excludedClauses: string[] = []
+    excludedClauses: string[] = [],
+    options: RagPublicEvidenceClauseSelectionOptions = {}
 ): string[] {
     const clauses: string[] = [];
     const selected = [...excludedClauses];
+    const queryTerms = Array.isArray(options.queryTerms) ? options.queryTerms : [];
+    const candidates: RagPublicEvidenceClauseCandidate[] = [];
+    let order = 0;
     collectRagRoleFragments(context, roles).forEach((fragment) => {
-        if (clauses.length >= limit) {
+        const headingQueryTerms = collectRagPublicLeafHeadingQueryTerms(fragment, queryTerms);
+        splitRagPublicEvidenceClauses(fragment).forEach((clause) => {
+            candidates.push({
+                clause,
+                queryTerms: collectRagPublicClauseQueryTerms(clause, queryTerms),
+                headingQueryTerms,
+                order,
+            });
+            order += 1;
+        });
+    });
+    const maxHeadingTermCount = candidates.reduce(
+        (max, candidate) => Math.max(max, candidate.headingQueryTerms.size),
+        0
+    );
+    const minimumLeafHeadingTermCount = Math.max(0, Math.floor(Number(options.minimumLeafHeadingTermCount || 0)));
+    const thresholdCandidates = minimumLeafHeadingTermCount > 0
+        ? candidates.filter((candidate) => candidate.headingQueryTerms.size >= minimumLeafHeadingTermCount)
+        : candidates;
+    const rankedCandidates = (
+        options.preferBestLeafHeadingMatch && maxHeadingTermCount > 0
+            ? thresholdCandidates.filter((candidate) => candidate.headingQueryTerms.size === maxHeadingTermCount)
+            : thresholdCandidates
+    ).sort((left, right) => {
+        const leftHeadingScore = options.useLeafHeadingScore ? left.headingQueryTerms.size : 0;
+        const rightHeadingScore = options.useLeafHeadingScore ? right.headingQueryTerms.size : 0;
+        const leftScore = left.queryTerms.size * 4 + leftHeadingScore * 6;
+        const rightScore = right.queryTerms.size * 4 + rightHeadingScore * 6;
+        if (rightScore !== leftScore) {
+            return rightScore - leftScore;
+        }
+        return left.order - right.order;
+    });
+    rankedCandidates.forEach((candidate) => {
+        if (clauses.length >= limit || ragClauseAlreadyCovered(candidate.clause, selected)) {
             return;
         }
-        splitRagPublicEvidenceClauses(fragment).forEach((clause) => {
-            if (clauses.length >= limit || ragClauseAlreadyCovered(clause, selected)) {
-                return;
-            }
-            selected.push(clause);
-            clauses.push(clause);
-        });
+        selected.push(candidate.clause);
+        clauses.push(candidate.clause);
     });
     return clauses;
 }
@@ -1028,12 +1110,19 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
         context.graphContext?.anchorTitle || '',
         ...(context.ragContextPack?.fragments || []).slice(0, 4).map((fragment) => fragment.text),
     ].join(' '));
+    const queryTerms = extractRagPublicQueryTerms(context.message);
+    const isCompareQuery = isRagPublicCompareQuery(context.message);
     const directClauses = collectRagPublicEvidenceClauses(context, new Set(['direct_support']), 1);
     const documentClauses = collectRagPublicEvidenceClauses(
         context,
         new Set(['parent_context', 'adjacent_context']),
         2,
-        directClauses
+        directClauses,
+        {
+            queryTerms,
+            useLeafHeadingScore: !isCompareQuery,
+            preferBestLeafHeadingMatch: !isCompareQuery,
+        }
     );
     const hasConflictEvidence = context.ragSufficiencyReview?.degradationState === 'conflict'
         || (context.ragSufficiencyReview?.reasons || []).some((reason) => String(reason || '').includes('conflict_evidence_present'));
@@ -1049,7 +1138,15 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
         context,
         new Set(['graph_neighbor_support']),
         1,
-        [...directClauses, ...documentClauses, ...conflictClauses]
+        [...directClauses, ...documentClauses, ...conflictClauses],
+        isCompareQuery
+            ? {}
+            : {
+                queryTerms,
+                useLeafHeadingScore: true,
+                preferBestLeafHeadingMatch: true,
+                minimumLeafHeadingTermCount: queryTerms.length >= 3 ? queryTerms.length : 0,
+            }
     );
     const fallback = normalizeWhitespace(String(
         context.knowledgePoints[0]?.evidenceSnippet

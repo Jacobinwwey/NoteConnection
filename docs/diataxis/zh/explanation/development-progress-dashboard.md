@@ -127,6 +127,7 @@
 - `conflicting_multi_document_evidence_probe_en` 现在由 `Knowledge_Base/ragmulticonflict` 支撑，验证两个 scoped 文档中的 `+/-0.10 mm` 与 `+/-0.50 mm` calibration-tolerance 矛盾会进入跨文档 `conflict` RAG role，保留在单条公开回答中，并保持 `borderline/conflict` 降级。
 - `full_document_scan_remote_conflict_probe_en` 现在由 `Knowledge_Base/ragfullscan` 支撑，验证修正后的 source-boundary 规则：局部段落窗口不是最大范围。两个被选文档会先完整读入，命中开头段落之外的远端 appendix 事实也会参与结构化冲突扫描；真正被硬限制的是进入公开回答编排前的有界 `RagContextPack`。
 - focused provenance 测试现在验证 repeated snippet 不会在 offset 陈旧时强制落到第一处文本命中。如果 offset 候选不包含 evidence snippet，而 line-range 候选包含它，`evidenceContextAssembler.ts` 会使用 line provenance 选择正确 source block 与 parent section。
+- `repeated_snippet_target_section_probe_en` 现在由 `Knowledge_Base/ragrepeatedspan` 支撑，把同类 repeated snippet 风险提升到 conversation / release 层验证：被选源文档仍按完整文档读入并保留在 trace 中，但单条公开回答会优先选择 target section 叶子 heading 下的 clause，不会泄漏 distractor section 的上下文。该 section-aware 过滤对 compare query 关闭，避免破坏既有双边材料对比回答的向前兼容性。
 
 后续推进方向：
 

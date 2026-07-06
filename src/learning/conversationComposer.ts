@@ -816,8 +816,14 @@ function appendRagEvidenceSentence(
 type RagEvidenceSentenceCandidate = {
     sentence: string;
     queryTerms: Set<string>;
+    headingQueryTerms: Set<string>;
     fragmentQueryTermCount: number;
     order: number;
+};
+
+type RagEvidenceSentenceSelectionOptions = {
+    useLeafHeadingScore?: boolean;
+    preferBestLeafHeadingMatch?: boolean;
 };
 
 function collectSentenceQueryTerms(sentence: string, queryTerms: string[]): Set<string> {
@@ -825,9 +831,19 @@ function collectSentenceQueryTerms(sentence: string, queryTerms: string[]): Set<
     return new Set(queryTerms.filter((term) => lower.includes(term)));
 }
 
+function collectFragmentLeafHeadingQueryTerms(fragment: RagEvidenceFragment, queryTerms: string[]): Set<string> {
+    const headingPath = Array.isArray(fragment.headingPath) ? fragment.headingPath : [];
+    const leafHeading = normalizeWhitespace(String(headingPath[headingPath.length - 1] || ''));
+    if (!leafHeading) {
+        return new Set();
+    }
+    return collectSentenceQueryTerms(leafHeading, queryTerms);
+}
+
 function rankRagEvidenceSentenceCandidates(
     candidates: RagEvidenceSentenceCandidate[],
-    limit: number
+    limit: number,
+    options: RagEvidenceSentenceSelectionOptions = {}
 ): RagEvidenceSentenceCandidate[] {
     const remaining = candidates.slice();
     const ranked: RagEvidenceSentenceCandidate[] = [];
@@ -837,12 +853,14 @@ function rankRagEvidenceSentenceCandidates(
         let bestScore = Number.NEGATIVE_INFINITY;
         remaining.forEach((candidate, index) => {
             const totalTermCount = candidate.queryTerms.size;
+            const headingTermCount = options.useLeafHeadingScore ? candidate.headingQueryTerms.size : 0;
             const uncoveredTermCount = Array.from(candidate.queryTerms)
                 .filter((term) => !coveredTerms.has(term))
                 .length;
             const score = uncoveredTermCount * 4
                 + (uncoveredTermCount > 0 ? totalTermCount : 0)
                 + (totalTermCount > 0 ? candidate.fragmentQueryTermCount / 2 : 0)
+                + headingTermCount * 6
                 - candidate.order / 10000;
             if (score > bestScore) {
                 bestScore = score;
@@ -860,7 +878,8 @@ function selectRagEvidenceSentences(
     fragments: RagEvidenceFragment[],
     roles: Set<RagEvidenceFragment['role']>,
     limit: number,
-    queryTerms: string[] = []
+    queryTerms: string[] = [],
+    options: RagEvidenceSentenceSelectionOptions = {}
 ): string[] {
     const selected: string[] = [];
     const candidates: RagEvidenceSentenceCandidate[] = [];
@@ -869,6 +888,7 @@ function selectRagEvidenceSentences(
         .filter((fragment) => roles.has(fragment.role))
         .forEach((fragment) => {
             const sentences = splitRagEvidenceSentences(fragment);
+            const headingQueryTerms = collectFragmentLeafHeadingQueryTerms(fragment, queryTerms);
             const fragmentQueryTerms = new Set(
                 sentences.flatMap((sentence) => Array.from(collectSentenceQueryTerms(sentence, queryTerms)))
             );
@@ -878,6 +898,7 @@ function selectRagEvidenceSentences(
                     candidates.push({
                         sentence,
                         queryTerms: collectSentenceQueryTerms(sentence, queryTerms),
+                        headingQueryTerms,
                         fragmentQueryTermCount: fragmentQueryTerms.size,
                         order: sentenceOrder,
                     });
@@ -885,10 +906,19 @@ function selectRagEvidenceSentences(
                 sentenceOrder += 1;
             });
         });
-    const hasQuerySignal = queryTerms.length > 0 && candidates.some((candidate) => candidate.queryTerms.size > 0);
-    const orderedCandidates = hasQuerySignal
-        ? rankRagEvidenceSentenceCandidates(candidates, limit)
+    const maxHeadingTermCount = candidates.reduce(
+        (max, candidate) => Math.max(max, candidate.headingQueryTerms.size),
+        0
+    );
+    const selectionCandidates = options.preferBestLeafHeadingMatch && maxHeadingTermCount > 0
+        ? candidates.filter((candidate) => candidate.headingQueryTerms.size === maxHeadingTermCount)
         : candidates;
+    const hasQuerySignal = queryTerms.length > 0 && selectionCandidates.some((candidate) => (
+        candidate.queryTerms.size > 0 || candidate.headingQueryTerms.size > 0
+    ));
+    const orderedCandidates = hasQuerySignal
+        ? rankRagEvidenceSentenceCandidates(selectionCandidates, limit, options)
+        : selectionCandidates;
     orderedCandidates.forEach((candidate) => {
         if (selected.length >= limit) {
             return;
@@ -915,9 +945,7 @@ function buildRagAugmentedConversationAnswer(
     }
     const profile = resolveRagAnswerProfile(params.message);
     const intent = classifyScopedConversationIntent(params.message);
-    const answerQueryTerms = intent === 'compare' || intent === 'how_to' || intent === 'generic'
-        ? extractRagAnswerQueryTerms(params.message)
-        : [];
+    const answerQueryTerms = extractRagAnswerQueryTerms(params.message);
     const answerSentences: string[] = [];
     selectRagEvidenceSentences(pack.fragments, new Set(['direct_support']), profile.directSupportSentenceCount, answerQueryTerms)
         .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
@@ -927,7 +955,16 @@ function buildRagAugmentedConversationAnswer(
         selectRagEvidenceSentences(pack.fragments, new Set(['conflict']), 3, answerQueryTerms)
             .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
     }
-    selectRagEvidenceSentences(pack.fragments, new Set(['parent_context', 'adjacent_context']), profile.documentContextSentenceCount, answerQueryTerms)
+    selectRagEvidenceSentences(
+        pack.fragments,
+        new Set(['parent_context', 'adjacent_context']),
+        profile.documentContextSentenceCount,
+        answerQueryTerms,
+        {
+            useLeafHeadingScore: intent !== 'compare',
+            preferBestLeafHeadingMatch: intent !== 'compare',
+        }
+    )
         .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
     selectRagEvidenceSentences(pack.fragments, new Set(['graph_neighbor_support']), profile.graphNeighborSentenceCount, answerQueryTerms)
         .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));

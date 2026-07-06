@@ -273,6 +273,25 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_repeated_snippet_target_probe',
+            sourcePath: 'Knowledge_Base/ragrepeatedspan/repeated snippet target section.md',
+            language: 'en',
+            workspaceId: 'ragrepeatedspan',
+            corpusId: 'ragrepeatedspan',
+            content: [
+                '# Repeated Snippet Target Section',
+                'Repeated snippet target probe validates source anchoring when the same clause appears in multiple sections.',
+                '',
+                '## Repeated Snippet Distractor Section',
+                'The repeated snippet uses shared repeated wording.',
+                'Distractor section context belongs to the first occurrence and must not guide the target answer.',
+                '',
+                '## Repeated Snippet Target Section',
+                'The repeated snippet uses shared repeated wording.',
+                'Target section context says the second occurrence controls the answer.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_graphintent_brittle_glass_vessel',
             sourcePath: 'Knowledge_Base/graphintent/brittle glass vessel.md',
             language: 'en',
@@ -666,6 +685,20 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         answerMustContain: expect.arrayContaining(['+/-0.10 mm', '+/-0.50 mm']),
                         answerMustNotContain: expect.arrayContaining([
                             'single stable calibration tolerance',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'repeated_snippet_target_section_probe_en',
+                    expected: expect.objectContaining({
+                        minCitations: 1,
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        answerMustContain: expect.arrayContaining([
+                            'Target section context says the second occurrence controls the answer',
+                        ]),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Distractor section context belongs to the first occurrence',
                         ]),
                     }),
                 }),
