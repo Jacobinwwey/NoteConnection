@@ -429,6 +429,101 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(overrideTolerance.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('marks non-adjacent date facts in the same section as conflicting evidence', async () => {
+        const announcedDate = 'The migration release date is 2026-07-01.';
+        const revisedDate = 'The migration release date is 2026-08-15.';
+        const fullDocument = [
+            '# Release Date Conflict Probe',
+            '',
+            'Release date conflict probe validates that date contradictions are treated as evidence conflicts.',
+            '',
+            '## Release Schedule',
+            announcedDate,
+            '',
+            'Context paragraph one keeps the release schedule section beyond the local window.',
+            '',
+            'Context paragraph two keeps the release schedule section beyond the local window.',
+            '',
+            'Context paragraph three keeps the release schedule section beyond the local window.',
+            '',
+            'Context paragraph four keeps the release schedule section beyond the local window.',
+            '',
+            'Context paragraph five keeps the release schedule section beyond the local window.',
+            '',
+            'Context paragraph six keeps the release schedule section beyond the local window.',
+            '',
+            revisedDate,
+            'Operators must resolve the active release record before publishing the schedule.',
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_conflicting_release_date',
+            documentId: 'doc_conflicting_release_date',
+            sourcePath: 'Knowledge_Base/ragdateconflict/release date conflict probe.md',
+            title: 'Release Date Conflict Probe',
+            content: announcedDate,
+            keywords: ['release', 'date', 'conflict'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_announced_release_date',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(announcedDate),
+                    endOffset: fullDocument.indexOf(announcedDate) + announcedDate.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: announcedDate,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_revised_release_date',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(revisedDate),
+                    endOffset: fullDocument.indexOf(revisedDate) + revisedDate.length,
+                    startLine: 20,
+                    endLine: 20,
+                    snippet: revisedDate,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is release date conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_announced_release_date',
+                'evidence_revised_release_date',
+            ]),
+            startLine: 6,
+            endLine: 21,
+        }));
+        expect(conflictFragment?.text).toContain(announcedDate);
+        expect(conflictFragment?.text).toContain(revisedDate);
+        expect(conflictFragment?.text.match(new RegExp(announcedDate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+        expect(conflictFragment?.text.match(new RegExp(revisedDate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+    });
+
     test('adds graph neighbor evidence as support fragments instead of title-only context', async () => {
         const anchorItem = makeQueryItem({
             atom: {

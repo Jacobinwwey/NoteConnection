@@ -82,11 +82,12 @@ interface ParentFragmentDraft {
     score: number;
 }
 
-interface ComparableNumericFact {
+interface ComparableEvidenceFact {
     subjectKey: string;
     subjectLabel: string;
-    value: number;
-    unit: string;
+    valueKey: string;
+    valueLabel: string;
+    factKind: 'measurement' | 'date';
     block: SourceBlock;
     citationIds: string[];
     item: KnowledgeQueryItem;
@@ -95,6 +96,7 @@ interface ComparableNumericFact {
 const DEFAULT_PARAGRAPH_WINDOW = 5;
 const MAX_GRAPH_NEIGHBOR_DOCUMENT_CONTEXT_FRAGMENTS = 2;
 const COMPARABLE_NUMERIC_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?)\s+(?:is|=|:)\s*(?:±|\+\/-|\+\s*\/\s*-)?\s*(-?\d+(?:\.\d+)?)\s*(mm|cm|m|um|µm|nm|kg|g|mg|s|ms|%|deg|degree|degrees|c|k)\b/gi;
+const COMPARABLE_DATE_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:date|year|deadline|cutoff|cut-off|version|release|revision|effective))\s+(?:is|=|:)\s*(\d{4}(?:-\d{2}-\d{2})?)\b/gi;
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -338,15 +340,37 @@ function normalizeComparableFactUnit(value: string): string {
     return normalized;
 }
 
-function extractComparableNumericFacts(params: {
+function normalizeComparableDateValue(value: string): string | null {
+    const normalized = normalizeWhitespace(value);
+    const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normalized);
+    if (dateMatch) {
+        const year = Number(dateMatch[1]);
+        const month = Number(dateMatch[2]);
+        const day = Number(dateMatch[3]);
+        if (year >= 1000 && year <= 2999 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            return `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
+        }
+        return null;
+    }
+    const yearMatch = /^(\d{4})$/.exec(normalized);
+    if (yearMatch) {
+        const year = Number(yearMatch[1]);
+        if (year >= 1000 && year <= 2999) {
+            return yearMatch[1];
+        }
+    }
+    return null;
+}
+
+function extractComparableEvidenceFacts(params: {
     block: SourceBlock;
     citationIds: string[];
     item: KnowledgeQueryItem;
-}): ComparableNumericFact[] {
+}): ComparableEvidenceFact[] {
     if (params.block.kind === 'heading' || params.block.kind === 'code') {
         return [];
     }
-    const facts: ComparableNumericFact[] = [];
+    const facts: ComparableEvidenceFact[] = [];
     for (const match of String(params.block.text || '').matchAll(COMPARABLE_NUMERIC_FACT_PATTERN)) {
         const subjectLabel = normalizeWhitespace(match[1]);
         const subjectKey = normalizeComparableFactSubject(subjectLabel);
@@ -358,8 +382,27 @@ function extractComparableNumericFacts(params: {
         facts.push({
             subjectKey,
             subjectLabel,
-            value,
-            unit,
+            valueKey: `${Number(value.toFixed(12))}:${unit}`,
+            valueLabel: `${match[2]} ${match[3]}`,
+            factKind: 'measurement',
+            block: params.block,
+            citationIds: params.citationIds,
+            item: params.item,
+        });
+    }
+    for (const match of String(params.block.text || '').matchAll(COMPARABLE_DATE_FACT_PATTERN)) {
+        const subjectLabel = normalizeWhitespace(match[1]);
+        const subjectKey = normalizeComparableFactSubject(subjectLabel);
+        const valueKey = normalizeComparableDateValue(match[2]);
+        if (!subjectKey || !valueKey) {
+            continue;
+        }
+        facts.push({
+            subjectKey,
+            subjectLabel,
+            valueKey,
+            valueLabel: match[2],
+            factKind: 'date',
             block: params.block,
             citationIds: params.citationIds,
             item: params.item,
@@ -409,7 +452,7 @@ function buildConflictFragments(
 
     const facts = Array.from(selectedBlocks.values())
         .sort((left, right) => left.block.startOffset - right.block.startOffset)
-        .flatMap(({ block, item }) => extractComparableNumericFacts({
+        .flatMap(({ block, item }) => extractComparableEvidenceFacts({
             block,
             item,
             citationIds: Array.from(citationIdsByBlock.get(sourceBlockKey(block)) || []),
@@ -419,10 +462,10 @@ function buildConflictFragments(
 
     facts.forEach((left, leftIndex) => {
         facts.slice(leftIndex + 1).forEach((right) => {
-            if (left.subjectKey !== right.subjectKey || left.unit !== right.unit) {
+            if (left.subjectKey !== right.subjectKey || left.factKind !== right.factKind) {
                 return;
             }
-            if (Math.abs(left.value - right.value) < 0.000001) {
+            if (left.valueKey === right.valueKey) {
                 return;
             }
             const blockDistance = Math.abs(left.block.startLine - right.block.startLine);
@@ -431,7 +474,8 @@ function buildConflictFragments(
             if (!sameScopedSection && blockDistance > Math.max(2, paragraphWindow)) {
                 return;
             }
-            const conflictKey = `${left.subjectKey}:${left.unit}:${Math.min(left.value, right.value)}:${Math.max(left.value, right.value)}`;
+            const orderedValues = [left.valueKey, right.valueKey].sort();
+            const conflictKey = `${left.subjectKey}:${left.factKind}:${orderedValues[0]}:${orderedValues[1]}`;
             if (seenConflicts.has(conflictKey)) {
                 return;
             }

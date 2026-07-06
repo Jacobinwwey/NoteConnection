@@ -6628,7 +6628,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 stage: 'context_assembly',
                 code: 'conflict_evidence_present',
                 severity: 'warning',
-                message: 'The assembled RAG context contains adjacent evidence with conflicting values.',
+                message: 'The assembled RAG context contains conflicting evidence facts.',
                 evidence: [
                     allReviewReasons.includes('conflict_evidence_present') ? 'conflict_evidence_present' : '',
                     params.review.degradationState === 'conflict' ? 'degradation_state:conflict' : '',
