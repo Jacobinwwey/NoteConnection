@@ -326,6 +326,38 @@ function collectGraphNeighborFragmentTitles(ragContextPack) {
     .filter(Boolean);
 }
 
+function graphDiagnostics(graphContext) {
+  return graphContext && graphContext.diagnostics && typeof graphContext.diagnostics === 'object'
+    ? graphContext.diagnostics
+    : {};
+}
+
+function assertMinimumGraphDiagnosticCount(query, graphContext, fieldName, minimumCount) {
+  if (typeof minimumCount !== 'number') {
+    return;
+  }
+  const diagnostics = graphDiagnostics(graphContext);
+  const observed = Number(diagnostics[fieldName] || 0);
+  if (!Number.isFinite(observed) || observed < minimumCount) {
+    throw new Error(
+      `graph diagnostic ${fieldName} below minimum for query=${query}: expected>=${minimumCount} observed=${observed} graphContext=${JSON.stringify(graphContext)}`
+    );
+  }
+}
+
+function assertGraphDiagnosticBoolean(query, graphContext, fieldName, expectedValue) {
+  if (typeof expectedValue !== 'boolean') {
+    return;
+  }
+  const diagnostics = graphDiagnostics(graphContext);
+  const observed = diagnostics[fieldName] === true;
+  if (observed !== expectedValue) {
+    throw new Error(
+      `graph diagnostic ${fieldName} mismatch for query=${query}: expected=${expectedValue} observed=${observed} graphContext=${JSON.stringify(graphContext)}`
+    );
+  }
+}
+
 function collectRagSourceDecisionReasons(ragContextPack) {
   const decisions = Array.isArray(ragContextPack && ragContextPack.sourceDecisions)
     ? ragContextPack.sourceDecisions
@@ -409,6 +441,12 @@ function validatePositiveConversationResult(summary, options) {
     forbiddenGraphSuccessorTitles,
     requiredGraphSuccessorRelationKinds,
     forbiddenGraphNeighborFragmentTitles,
+    minimumGraphIntentAlignedPredecessorCandidates,
+    minimumGraphIntentAlignedSuccessorCandidates,
+    minimumGraphIntentMisalignedPredecessorCandidates,
+    minimumGraphIntentMisalignedSuccessorCandidates,
+    expectedGraphUsedMisalignedPredecessorFallback,
+    expectedGraphUsedMisalignedSuccessorFallback,
     requireScopedDocumentIds,
   } = options;
   const forbiddenFragments = Array.isArray(answerMustNotContain) && answerMustNotContain.length > 0
@@ -683,6 +721,42 @@ function validatePositiveConversationResult(summary, options) {
       }
     });
   }
+  assertMinimumGraphDiagnosticCount(
+    query,
+    summary.graphContext,
+    'intentAlignedPredecessorCandidateCount',
+    minimumGraphIntentAlignedPredecessorCandidates
+  );
+  assertMinimumGraphDiagnosticCount(
+    query,
+    summary.graphContext,
+    'intentAlignedSuccessorCandidateCount',
+    minimumGraphIntentAlignedSuccessorCandidates
+  );
+  assertMinimumGraphDiagnosticCount(
+    query,
+    summary.graphContext,
+    'intentMisalignedPredecessorCandidateCount',
+    minimumGraphIntentMisalignedPredecessorCandidates
+  );
+  assertMinimumGraphDiagnosticCount(
+    query,
+    summary.graphContext,
+    'intentMisalignedSuccessorCandidateCount',
+    minimumGraphIntentMisalignedSuccessorCandidates
+  );
+  assertGraphDiagnosticBoolean(
+    query,
+    summary.graphContext,
+    'usedIntentMisalignedPredecessorFallback',
+    expectedGraphUsedMisalignedPredecessorFallback
+  );
+  assertGraphDiagnosticBoolean(
+    query,
+    summary.graphContext,
+    'usedIntentMisalignedSuccessorFallback',
+    expectedGraphUsedMisalignedSuccessorFallback
+  );
   if (
     Array.isArray(expectedPlannerTitleLikeQueries)
     && expectedPlannerTitleLikeQueries.length > 0
@@ -1001,6 +1075,12 @@ async function main() {
           forbiddenGraphSuccessorTitles: regressionCase.expected.forbiddenGraphSuccessorTitles,
           requiredGraphSuccessorRelationKinds: regressionCase.expected.requiredGraphSuccessorRelationKinds,
           forbiddenGraphNeighborFragmentTitles: regressionCase.expected.forbiddenGraphNeighborFragmentTitles,
+          minimumGraphIntentAlignedPredecessorCandidates: regressionCase.expected.minimumGraphIntentAlignedPredecessorCandidates,
+          minimumGraphIntentAlignedSuccessorCandidates: regressionCase.expected.minimumGraphIntentAlignedSuccessorCandidates,
+          minimumGraphIntentMisalignedPredecessorCandidates: regressionCase.expected.minimumGraphIntentMisalignedPredecessorCandidates,
+          minimumGraphIntentMisalignedSuccessorCandidates: regressionCase.expected.minimumGraphIntentMisalignedSuccessorCandidates,
+          expectedGraphUsedMisalignedPredecessorFallback: regressionCase.expected.expectedGraphUsedMisalignedPredecessorFallback,
+          expectedGraphUsedMisalignedSuccessorFallback: regressionCase.expected.expectedGraphUsedMisalignedSuccessorFallback,
           minimumRagFullDocumentFragmentCounts: regressionCase.expected.minimumRagFullDocumentFragmentCounts,
           requireScopedDocumentIds: regressionCase.expected.requireScopedDocumentIds,
         });

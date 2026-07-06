@@ -5,7 +5,7 @@
 
 ## 2026-07-05 RSE + document augmentation 图谱 RAG 实践计划
 
-本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、完整文档感知的图邻居 augmentation、query-intent 图邻居排序、intent-aware graph connection-path 排序、intent-aligned graph-window ambiguity filtering、有界 context pack、稳定 RAG context replay id、接入 provider 的充分性 trace、有界一次性 recovery、RAG failure-stage classification、RAG-aware 单消息 release review、claim-level citation-backed RAG release gate、public RAG clause 的 prompt / preamble artifact 过滤、answer claim-to-citation trace / export 映射、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、graph successor-window verifier 断言、context-budget truncation/drop/malformed-provider/timeout-provider/graphintent 探针覆盖、conflicting-adjacent-evidence hard-negative 覆盖、graph-neighbor source-unavailable hard-negative 覆盖、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、大语料上的更完整 replay tooling、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
+本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、完整文档感知的图邻居 augmentation、query-intent 图邻居排序、intent-aware graph connection-path 排序、intent-aligned graph-window ambiguity filtering、有界 context pack、稳定 RAG context replay id、接入 provider 的充分性 trace、有界一次性 recovery、RAG failure-stage classification、RAG-aware 单消息 release review、claim-level citation-backed RAG release gate、public RAG clause 的 prompt / preamble artifact 过滤、answer claim-to-citation trace / export 映射、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、generic answer-profile 排序、Mermaid label evidence 抽取、runtime verifier 字段、graph successor-window 与 graph-diagnostics verifier 断言、context-budget truncation/drop/malformed-provider/timeout-provider/graphintent 探针覆盖、conflicting-adjacent-evidence hard-negative 覆盖、graph-neighbor source-unavailable hard-negative 覆盖、前端 compact RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、大语料上的更完整 replay tooling、对 label-heavy evidence 的自然语言 synthesis、更广的 release-budget 校准和更大的 runtime probe 语料仍是后续工作。
 
 当前代码 / 方案对齐判断：
 
@@ -56,14 +56,14 @@
 - runtime probe `graphintent_compare_neighbor_selection_en` 现在验证 `compare brittle glass vessel with polymer cup material behavior` 会从 `Knowledge_Base/graphintent` 选择 analogy graph successors，从 `successorWindow` 排除高重叠 procedural successor，保留 `graph_neighbor_support`，至少包含一个 `full_document` 图邻居支撑 fragment，并且不会把 procedural path 泄漏进公开回答。
 - runtime probe `graphintent_missing_neighbor_source_window_en` 现在验证当被选中的图邻居 source path 不可用时，图邻居 direct span 仍可观测，但不能单独满足图证据充分性：source decision 会包含 `source_resolver_returned_no_content:direct_support,graph_neighbor_support`，sufficiency 保持 `borderline/partial_coverage`，failure classification 同时包含 `parsing_source` 与 `graph_evidence`。
 - focused hard-negative 测试现在验证 graph-neighbor source-window 不可用时不会仅凭图邻居标题或 direct span 通过图证据充分性：`evidenceContextAssembler.ts` 会记录 `source_resolver_returned_no_content:graph_neighbor_support`，`ragSufficiencyJudge.ts` 会保持 `borderline/partial_coverage` 并输出 `graph_neighbor_evidence_missing`。
-- focused graph-window ambiguity 测试现在验证：compare intent 在存在 `contrast` / `analogy` 邻居时会过滤高置信 `sequence` / `prerequisite` successor；当图里没有 compare-aligned 邻居时仍 fail-open 到结构 successor。graph diagnostics 会保留 aligned / misaligned candidate 计数，后续 runtime probe 可以直接断言该行为，而不必解析公开回答文本。
+- focused graph-window ambiguity 测试现在验证：compare intent 在存在 `contrast` / `analogy` 邻居时会过滤高置信 `sequence` / `prerequisite` successor；当图里没有 compare-aligned 邻居时仍 fail-open 到结构 successor。runtime verifier 现在也会在 `graphintent` compare 探针中断言 graph diagnostics：至少 2 个 intent-aligned successor candidate、至少 1 个 intent-misaligned successor candidate，并确认没有使用 misaligned-successor fallback。
 
 后续推进：
 
 - 基于代表性 hard negative 校准图关系权重与低置信排除阈值，不把当前 scoring 常量当作最终形态。
 - 在当前 `graphintent` intent-selection 基线之上，继续扩展大语料 hard negative 与关系抽取歧义样本的 runtime probes。
 - 在当前 deterministic definition / compare / how-to / generic 基线之上继续校准 profile-specific release budget，同时保留公开回答硬上限。
-- 在稳定 context id、failure-stage classification、graph-window ambiguity diagnostics 与 answer claim-citation map 之上扩展 replay tooling，并补齐 repeated snippet、更广 conflict pattern、多文档 missing graph-neighbor evidence、更严格的 total-character budget drop、运行时规模 relation ambiguity、provider fallback 的更大 runtime probes。
+- 在稳定 context id、failure-stage classification、graph-window ambiguity diagnostics 与 answer claim-citation map 之上扩展 replay tooling，并补齐 repeated snippet、更广 conflict pattern、多文档 missing graph-neighbor evidence、更严格的 total-character budget drop、更广 relation-ambiguity 语料、provider fallback 的更大 runtime probes。
 
 ## 2026-07-04 知识工作区 scope 可见性、聚合 RAG 回答与命中文件交互收口
 

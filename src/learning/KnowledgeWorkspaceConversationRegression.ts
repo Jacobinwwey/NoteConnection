@@ -49,6 +49,12 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     forbiddenGraphSuccessorTitles?: string[];
     requiredGraphSuccessorRelationKinds?: RelationKind[];
     forbiddenGraphNeighborFragmentTitles?: string[];
+    minimumGraphIntentAlignedPredecessorCandidates?: number;
+    minimumGraphIntentAlignedSuccessorCandidates?: number;
+    minimumGraphIntentMisalignedPredecessorCandidates?: number;
+    minimumGraphIntentMisalignedSuccessorCandidates?: number;
+    expectedGraphUsedMisalignedPredecessorFallback?: boolean;
+    expectedGraphUsedMisalignedSuccessorFallback?: boolean;
     requireScopedDocumentIds?: boolean;
 }
 
@@ -210,6 +216,9 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             forbiddenGraphSuccessorTitles: ['Procedural Calibration Sequence'],
             requiredGraphSuccessorRelationKinds: ['analogy'],
             forbiddenGraphNeighborFragmentTitles: ['Procedural Calibration Sequence'],
+            minimumGraphIntentAlignedSuccessorCandidates: 2,
+            minimumGraphIntentMisalignedSuccessorCandidates: 1,
+            expectedGraphUsedMisalignedSuccessorFallback: false,
             requireScopedDocumentIds: false,
         },
     },
@@ -258,6 +267,9 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
                 'Reusable Polymer Vessel Analogy',
             ],
             requiredGraphSuccessorRelationKinds: ['analogy'],
+            minimumGraphIntentAlignedSuccessorCandidates: 2,
+            minimumGraphIntentMisalignedSuccessorCandidates: 1,
+            expectedGraphUsedMisalignedSuccessorFallback: false,
             requireScopedDocumentIds: false,
         },
     },

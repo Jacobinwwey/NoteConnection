@@ -264,6 +264,13 @@ function graphNeighborFragmentTitles(response: Awaited<ReturnType<KnowledgeLearn
         .filter(Boolean);
 }
 
+function graphDiagnostics(response: Awaited<ReturnType<KnowledgeLearningPlatform['agentConversation']>>) {
+    const graphContext = response.trace.graphContext as any;
+    return graphContext?.diagnostics && typeof graphContext.diagnostics === 'object'
+        ? graphContext.diagnostics
+        : {};
+}
+
 function caseNeedsGraphOpsStore(caseEntry: KnowledgeWorkspaceConversationRegressionCase): boolean {
     const expected = caseEntry.expected;
     return Boolean(
@@ -271,6 +278,12 @@ function caseNeedsGraphOpsStore(caseEntry: KnowledgeWorkspaceConversationRegress
         || (expected.requiredGraphSuccessorTitles && expected.requiredGraphSuccessorTitles.length > 0)
         || (expected.forbiddenGraphSuccessorTitles && expected.forbiddenGraphSuccessorTitles.length > 0)
         || (expected.requiredGraphSuccessorRelationKinds && expected.requiredGraphSuccessorRelationKinds.length > 0)
+        || typeof expected.minimumGraphIntentAlignedPredecessorCandidates === 'number'
+        || typeof expected.minimumGraphIntentAlignedSuccessorCandidates === 'number'
+        || typeof expected.minimumGraphIntentMisalignedPredecessorCandidates === 'number'
+        || typeof expected.minimumGraphIntentMisalignedSuccessorCandidates === 'number'
+        || typeof expected.expectedGraphUsedMisalignedPredecessorFallback === 'boolean'
+        || typeof expected.expectedGraphUsedMisalignedSuccessorFallback === 'boolean'
     );
 }
 
@@ -340,6 +353,9 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         forbiddenGraphSuccessorTitles: ['Procedural Calibration Sequence'],
                         requiredGraphSuccessorRelationKinds: ['analogy'],
                         forbiddenGraphNeighborFragmentTitles: ['Procedural Calibration Sequence'],
+                        minimumGraphIntentAlignedSuccessorCandidates: 2,
+                        minimumGraphIntentMisalignedSuccessorCandidates: 1,
+                        expectedGraphUsedMisalignedSuccessorFallback: false,
                     }),
                 }),
             ])
@@ -369,6 +385,9 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         runtimeRequiredRagSourceDecisionReasonFragments: ['graph_neighbor_support'],
                         expectedRagRecoveryAttempted: true,
                         inMemoryExpectedRagRecoveryAttempted: false,
+                        minimumGraphIntentAlignedSuccessorCandidates: 2,
+                        minimumGraphIntentMisalignedSuccessorCandidates: 1,
+                        expectedGraphUsedMisalignedSuccessorFallback: false,
                     }),
                 }),
             ])
@@ -522,6 +541,31 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                 expected.forbiddenGraphNeighborFragmentTitles.forEach((title) => {
                     expect(graphNeighborFragmentTitles(response)).not.toContain(title);
                 });
+            }
+            const diagnostics = graphDiagnostics(response);
+            if (typeof expected.minimumGraphIntentAlignedPredecessorCandidates === 'number') {
+                expect(Number(diagnostics.intentAlignedPredecessorCandidateCount || 0))
+                    .toBeGreaterThanOrEqual(expected.minimumGraphIntentAlignedPredecessorCandidates);
+            }
+            if (typeof expected.minimumGraphIntentAlignedSuccessorCandidates === 'number') {
+                expect(Number(diagnostics.intentAlignedSuccessorCandidateCount || 0))
+                    .toBeGreaterThanOrEqual(expected.minimumGraphIntentAlignedSuccessorCandidates);
+            }
+            if (typeof expected.minimumGraphIntentMisalignedPredecessorCandidates === 'number') {
+                expect(Number(diagnostics.intentMisalignedPredecessorCandidateCount || 0))
+                    .toBeGreaterThanOrEqual(expected.minimumGraphIntentMisalignedPredecessorCandidates);
+            }
+            if (typeof expected.minimumGraphIntentMisalignedSuccessorCandidates === 'number') {
+                expect(Number(diagnostics.intentMisalignedSuccessorCandidateCount || 0))
+                    .toBeGreaterThanOrEqual(expected.minimumGraphIntentMisalignedSuccessorCandidates);
+            }
+            if (typeof expected.expectedGraphUsedMisalignedPredecessorFallback === 'boolean') {
+                expect(Boolean(diagnostics.usedIntentMisalignedPredecessorFallback))
+                    .toBe(expected.expectedGraphUsedMisalignedPredecessorFallback);
+            }
+            if (typeof expected.expectedGraphUsedMisalignedSuccessorFallback === 'boolean') {
+                expect(Boolean(diagnostics.usedIntentMisalignedSuccessorFallback))
+                    .toBe(expected.expectedGraphUsedMisalignedSuccessorFallback);
             }
             if (typeof expected.expectedRagDeterministic === 'boolean') {
                 expect(response.trace.ragSufficiencyReview?.deterministic).toBe(expected.expectedRagDeterministic);
