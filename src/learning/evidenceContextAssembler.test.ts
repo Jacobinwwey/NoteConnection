@@ -1183,6 +1183,162 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionEndpoint);
     });
 
+    test('marks dependency facts in the same section as conflicting evidence', async () => {
+        const sqliteDependency = 'The storage dependency is SQLite in the release manifest.';
+        const postgresDependency = 'The storage dependency is PostgreSQL in the rollback manifest.';
+        const fullDocument = [
+            '# Dependency Conflict Probe',
+            '',
+            'Dependency conflict probe validates that explicit dependency values are comparable operational facts.',
+            '',
+            '## Storage Dependency',
+            sqliteDependency,
+            '',
+            postgresDependency,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_conflicting_dependency',
+            documentId: 'doc_conflicting_dependency',
+            sourcePath: 'Knowledge_Base/ragdependencyconflict/dependency conflict probe.md',
+            title: 'Dependency Conflict Probe',
+            content: sqliteDependency,
+            keywords: ['dependency', 'conflict', 'storage'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_sqlite_dependency',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(sqliteDependency),
+                    endOffset: fullDocument.indexOf(sqliteDependency) + sqliteDependency.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: sqliteDependency,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_postgres_dependency',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(postgresDependency),
+                    endOffset: fullDocument.indexOf(postgresDependency) + postgresDependency.length,
+                    startLine: 8,
+                    endLine: 8,
+                    snippet: postgresDependency,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is dependency conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_sqlite_dependency',
+                'evidence_postgres_dependency',
+            ]),
+            startLine: 6,
+            endLine: 8,
+        }));
+        expect(conflictFragment?.text).toContain(sqliteDependency);
+        expect(conflictFragment?.text).toContain(postgresDependency);
+    });
+
+    test('does not mark environment-scoped dependency facts as conflicting evidence', async () => {
+        const stagingDependency = 'The storage dependency is SQLite in the staging environment.';
+        const productionDependency = 'The storage dependency is PostgreSQL in the production environment.';
+        const fullDocument = [
+            '# Environment Scoped Dependency Probe',
+            '',
+            'Environment scoped dependency probe validates that deployment-environment dependency values stay condition-qualified.',
+            '',
+            '## Environment Dependencies',
+            stagingDependency,
+            '',
+            productionDependency,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_environment_scoped_dependency',
+            documentId: 'doc_environment_scoped_dependency',
+            sourcePath: 'Knowledge_Base/ragdependencyqualifier/environment scoped dependency probe.md',
+            title: 'Environment Scoped Dependency Probe',
+            content: stagingDependency,
+            keywords: ['environment', 'dependency', 'storage'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_staging_dependency',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(stagingDependency),
+                    endOffset: fullDocument.indexOf(stagingDependency) + stagingDependency.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: stagingDependency,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_production_dependency',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(productionDependency),
+                    endOffset: fullDocument.indexOf(productionDependency) + productionDependency.length,
+                    startLine: 8,
+                    endLine: 8,
+                    snippet: productionDependency,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is environment scoped dependency probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(stagingDependency),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionDependency);
+    });
+
     test('does not mark current and historical location facts as conflicting evidence', async () => {
         const currentLocation = 'The control module location is Rack A in the current release record.';
         const historicalLocation = 'The control module location is Rack B in the historical placement archive.';
