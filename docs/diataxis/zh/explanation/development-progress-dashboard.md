@@ -36,7 +36,7 @@
 
 - 新增模块：`src/learning/evidenceContextAssembler.ts`、`src/learning/ragContextPack.ts`、`src/learning/ragSufficiencyJudge.ts`、`src/learning/ragSufficiencyProviderJudge.ts`。
 - 新增 / 更新测试：evidence assembler、context pack budgeter、稳定 context replay id、sufficiency judge、接入 provider 的 sufficiency judge adapter、有界 recovery、RAG failure-stage classification、answer claim-to-citation trace 映射、RAG-aware claim release gate、RAG-aware release review、持久化兼容、composer、平台集成、导出 RAG trace 保留、Knowledge Workspace conversation regression、runtime verifier 校验，以及前端 RAG grounding 展示。
-- `scripts/verify-knowledge-workspace-runtime.js` 现在能校验期望 RAG source boundary、有效 `ragctx_*` replay id、roles、answer terms、sufficiency statuses、deterministic/no-provider judge 标志、recovery 标志、degradation state、required RAG failure stages、RAG source-decision status 最小计数、按 role 统计的 full-document fragment 最小计数、recovery 前 source-decision status 最小计数、recovery 前 reason fragment，以及 graph successor-window 预期；同时支持按用例配置 scoped document-id 预期、按用例传递 `topK`、隔离临时 NoteMD config、本地 malformed-provider fixture，默认严格要求 scoped id，并对 answer term 做大小写不敏感匹配。
+- `scripts/verify-knowledge-workspace-runtime.js` 现在能校验期望 RAG source boundary、有效 `ragctx_*` replay id、roles、answer terms、sufficiency statuses、deterministic/no-provider judge 标志、recovery 标志、degradation state、required RAG failure stages、RAG source-decision status 最小计数、source-decision reason fragment、sufficiency reason fragment、按 role 统计的 full-document fragment 最小计数、recovery 前 source-decision status 最小计数、recovery 前 reason fragment，以及 graph successor-window 预期；同时支持按用例配置 scoped document-id 预期、按用例传递 `topK`、隔离临时 NoteMD config、本地 malformed-provider fixture、按 source path 注入 source-unavailable fixture，默认严格要求 scoped id，并对 answer term 做大小写不敏感匹配。
 - `src/frontend/agent_workspace.js` 会把仅含 RAG trace 的 payload 标记为可 inspect；API 状态行显示 `RAG: <status>, <N> fragments`，并在本回合使用 recovery pass 时追加 `+recovered`。
 - `src/frontend/workspace_panes.js` 显示 compact RAG context metrics：replay id、sufficiency、source boundary、fragment budget、direct/document/graph roles、truncated/dropped/unavailable source counts、degradation、recovery、reasons 与 failure stages。
 - `src/learning/KnowledgeLearningPlatform.ts` 现在会为最终公开回答的 claim 生成可选 `answerClaimCitations` 记录，`src/export/WorkspaceExportBundle.ts` 会 deep-clone 这些记录，因此 replay / export 消费者可以检查 citation、fragment 与 source-path grounding，而不把编排暴露进聊天正文。
@@ -54,6 +54,7 @@
 - runtime probe `contextoverflow_malformed_provider_judge_fallback_en` 现在验证本地 malformed OpenAI-compatible judge response 不会阻塞主回答链路：fixture 会被调用一次，首轮 review 会在 `ragRecovery.beforeReasons` 中记录 `llm_judge_failed`，最终 recovered answer 仍保持 deterministic 与有界。
 - runtime probe `contextoverflow_timeout_provider_judge_fallback_en` 现在验证延迟响应的本地 OpenAI-compatible judge 会通过有界 provider-judge 路径超时：fixture 会被调用一次，`ragRecovery.beforeReasons` 会记录 `llm_judge_failed:RAG sufficiency judge timed out.`，最终 recovered answer 仍保持 deterministic 与有界。
 - runtime probe `graphintent_compare_neighbor_selection_en` 现在验证 `compare brittle glass vessel with polymer cup material behavior` 会从 `Knowledge_Base/graphintent` 选择 analogy graph successors，从 `successorWindow` 排除高重叠 procedural successor，保留 `graph_neighbor_support`，至少包含一个 `full_document` 图邻居支撑 fragment，并且不会把 procedural path 泄漏进公开回答。
+- runtime probe `graphintent_missing_neighbor_source_window_en` 现在验证当被选中的图邻居 source path 不可用时，图邻居 direct span 仍可观测，但不能单独满足图证据充分性：source decision 会包含 `source_resolver_returned_no_content:direct_support,graph_neighbor_support`，sufficiency 保持 `borderline/partial_coverage`，failure classification 同时包含 `parsing_source` 与 `graph_evidence`。
 - focused hard-negative 测试现在验证 graph-neighbor source-window 不可用时不会仅凭图邻居标题或 direct span 通过图证据充分性：`evidenceContextAssembler.ts` 会记录 `source_resolver_returned_no_content:graph_neighbor_support`，`ragSufficiencyJudge.ts` 会保持 `borderline/partial_coverage` 并输出 `graph_neighbor_evidence_missing`。
 
 后续推进：
@@ -61,7 +62,7 @@
 - 基于代表性 hard negative 校准图关系权重与低置信排除阈值，不把当前 scoring 常量当作最终形态。
 - 在当前 `graphintent` intent-selection 基线之上，继续扩展大语料 hard negative 与关系抽取歧义样本的 runtime probes。
 - 在当前 deterministic definition / compare / how-to / generic 基线之上继续校准 profile-specific release budget，同时保留公开回答硬上限。
-- 在稳定 context id、failure-stage classification 与 answer claim-citation map 之上扩展 replay tooling，并补齐 repeated snippet、更广 conflict pattern、file-backed missing graph-neighbor evidence、更严格的 total-character budget drop、provider fallback 的更大 runtime probes。
+- 在稳定 context id、failure-stage classification 与 answer claim-citation map 之上扩展 replay tooling，并补齐 repeated snippet、更广 conflict pattern、多文档 missing graph-neighbor evidence、更严格的 total-character budget drop、provider fallback 的更大 runtime probes。
 
 ## 2026-07-04 知识工作区 scope 可见性、聚合 RAG 回答与命中文件交互收口
 

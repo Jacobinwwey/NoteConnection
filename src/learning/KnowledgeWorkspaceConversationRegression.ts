@@ -31,6 +31,10 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     inMemoryMinimumRagSourceDecisionStatusCounts?: Partial<Record<RagSourceDecision['status'], number>>;
     requiredRagFailureStages?: RagFailureStage[];
     runtimeRequiredRagFailureStages?: RagFailureStage[];
+    runtimeAcceptedRagSufficiencyStatuses?: Array<RagSufficiencyReview['status']>;
+    runtimeAcceptedRagDegradationStates?: Array<NonNullable<RagSufficiencyReview['degradationState']>>;
+    runtimeRequiredRagSufficiencyReasonFragments?: string[];
+    runtimeRequiredRagSourceDecisionReasonFragments?: string[];
     expectedRagDeterministic?: boolean;
     expectedRagLlmJudgeUsed?: boolean;
     expectedRagRecoveryAttempted?: boolean;
@@ -56,6 +60,7 @@ export interface KnowledgeWorkspaceConversationRegressionCase {
     query: string;
     topK?: number;
     runtimeProviderFixture?: 'malformed_json' | 'timeout';
+    runtimeUnavailableSourcePaths?: string[];
     expected: KnowledgeWorkspaceConversationRegressionExpectation;
 }
 
@@ -205,6 +210,54 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             forbiddenGraphSuccessorTitles: ['Procedural Calibration Sequence'],
             requiredGraphSuccessorRelationKinds: ['analogy'],
             forbiddenGraphNeighborFragmentTitles: ['Procedural Calibration Sequence'],
+            requireScopedDocumentIds: false,
+        },
+    },
+    {
+        id: 'graphintent_missing_neighbor_source_window_en',
+        description: 'Graph-neighbor source-window loss should degrade graph evidence instead of treating direct spans as complete graph support.',
+        preloadTargets: ['graphintent'],
+        activeTarget: 'graphintent',
+        query: 'compare brittle glass vessel with polymer cup material behavior',
+        runtimeUnavailableSourcePaths: [
+            'Knowledge_Base/graphintent/ductile polymer cup analogy.md',
+            'Knowledge_Base/graphintent/reusable polymer vessel analogy.md',
+        ],
+        expected: {
+            minCitations: 1,
+            scopeSource: 'explicit_request',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
+            plannerTitleLikeQueries: ['brittle glass vessel', 'polymer cup material behavior'],
+            primarySourcePath: 'Knowledge_Base/graphintent/brittle glass vessel.md',
+            answerMustContain: ['Brittle'],
+            answerMustNotContain: [
+                'No scoped knowledge points matched',
+                'retrieval_candidates_below_threshold',
+            ],
+            ragSourceBoundary: 'full_document',
+            requiredRagRoles: ['direct_support', 'parent_context', 'graph_neighbor_support'],
+            acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            runtimeAcceptedRagSufficiencyStatuses: ['borderline'],
+            acceptedRagDegradationStates: ['none', 'partial_coverage'],
+            runtimeAcceptedRagDegradationStates: ['partial_coverage'],
+            minimumRagSourceDecisionStatusCounts: {
+                source_window_unavailable: 1,
+            },
+            inMemoryMinimumRagSourceDecisionStatusCounts: {
+                read: 1,
+            },
+            runtimeRequiredRagFailureStages: ['parsing_source', 'graph_evidence'],
+            runtimeRequiredRagSufficiencyReasonFragments: ['graph_neighbor_evidence_missing'],
+            runtimeRequiredRagSourceDecisionReasonFragments: ['graph_neighbor_support'],
+            expectedRagDeterministic: true,
+            expectedRagLlmJudgeUsed: false,
+            expectedRagRecoveryAttempted: true,
+            inMemoryExpectedRagRecoveryAttempted: false,
+            requiredGraphSuccessorTitles: [
+                'Ductile Polymer Cup Analogy',
+                'Reusable Polymer Vessel Analogy',
+            ],
+            requiredGraphSuccessorRelationKinds: ['analogy'],
             requireScopedDocumentIds: false,
         },
     },

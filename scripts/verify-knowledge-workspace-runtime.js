@@ -326,6 +326,15 @@ function collectGraphNeighborFragmentTitles(ragContextPack) {
     .filter(Boolean);
 }
 
+function collectRagSourceDecisionReasons(ragContextPack) {
+  const decisions = Array.isArray(ragContextPack && ragContextPack.sourceDecisions)
+    ? ragContextPack.sourceDecisions
+    : [];
+  return decisions
+    .map((decision) => String(decision && decision.reason || '').trim())
+    .filter(Boolean);
+}
+
 function loadConversationRegressionCases(caseIds) {
   const modulePath = path.join(
     process.cwd(),
@@ -393,6 +402,8 @@ function validatePositiveConversationResult(summary, options) {
     requiredRagFailureStages,
     minimumRagRecoveryBeforeSourceDecisionStatusCounts,
     requiredRagRecoveryBeforeReasonFragments,
+    requiredRagSufficiencyReasonFragments,
+    requiredRagSourceDecisionReasonFragments,
     requiredFirstGraphSuccessorTitle,
     requiredGraphSuccessorTitles,
     forbiddenGraphSuccessorTitles,
@@ -612,6 +623,18 @@ function validatePositiveConversationResult(summary, options) {
     'RAG recovery-before review',
     summary.ragRecovery && summary.ragRecovery.beforeReasons,
     requiredRagRecoveryBeforeReasonFragments
+  );
+  assertReasonFragments(
+    query,
+    'RAG sufficiency review',
+    summary.ragSufficiencyReview && summary.ragSufficiencyReview.reasons,
+    requiredRagSufficiencyReasonFragments
+  );
+  assertReasonFragments(
+    query,
+    'RAG source decisions',
+    collectRagSourceDecisionReasons(summary.ragContextPack),
+    requiredRagSourceDecisionReasonFragments
   );
   const graphSuccessorTitles = collectGraphSuccessorWindowTitles(summary.graphContext);
   const graphSuccessorRelationKinds = collectGraphSuccessorWindowRelationKinds(summary.graphContext);
@@ -869,11 +892,19 @@ async function main() {
       }
       let runtimeProviderFixture = null;
       let previousNotemdSettings = null;
+      const previousUnavailableSourcePaths = process.env.NOTE_CONNECTION_RAG_UNAVAILABLE_SOURCE_PATHS;
       try {
         if (regressionCase.runtimeProviderFixture) {
           runtimeProviderFixture = await startRuntimeProviderFixture(regressionCase.runtimeProviderFixture);
           previousNotemdSettings = await applyRuntimeProviderFixture(port, runtimeProviderFixture);
           console.log(`[verify-knowledge-workspace-runtime] step=provider-fixture case=${regressionCase.id} kind=${runtimeProviderFixture.kind} port=${runtimeProviderFixture.port}`);
+        }
+        if (
+          Array.isArray(regressionCase.runtimeUnavailableSourcePaths)
+          && regressionCase.runtimeUnavailableSourcePaths.length > 0
+        ) {
+          process.env.NOTE_CONNECTION_RAG_UNAVAILABLE_SOURCE_PATHS = regressionCase.runtimeUnavailableSourcePaths.join(';');
+          console.log(`[verify-knowledge-workspace-runtime] step=source-unavailable-fixture case=${regressionCase.id} paths=${regressionCase.runtimeUnavailableSourcePaths.length}`);
         }
         console.log(`[verify-knowledge-workspace-runtime] step=conversation case=${regressionCase.id} query=${regressionCase.query}`);
         const conversationResponse = await requestJson(
@@ -950,14 +981,18 @@ async function main() {
           answerMustNotContain: regressionCase.expected.answerMustNotContain,
           expectedRagSourceBoundary: regressionCase.expected.ragSourceBoundary,
           requiredRagRoles: regressionCase.expected.requiredRagRoles,
-          acceptedRagSufficiencyStatuses: regressionCase.expected.acceptedRagSufficiencyStatuses,
+          acceptedRagSufficiencyStatuses: regressionCase.expected.runtimeAcceptedRagSufficiencyStatuses
+            || regressionCase.expected.acceptedRagSufficiencyStatuses,
           minimumRagSourceDecisionStatusCounts: regressionCase.expected.minimumRagSourceDecisionStatusCounts,
           expectedRagDeterministic: regressionCase.expected.expectedRagDeterministic,
           expectedRagLlmJudgeUsed: regressionCase.expected.expectedRagLlmJudgeUsed,
           expectedRagRecoveryAttempted: regressionCase.expected.expectedRagRecoveryAttempted,
-          acceptedRagDegradationStates: regressionCase.expected.acceptedRagDegradationStates,
+          acceptedRagDegradationStates: regressionCase.expected.runtimeAcceptedRagDegradationStates
+            || regressionCase.expected.acceptedRagDegradationStates,
           requiredRagFailureStages: regressionCase.expected.runtimeRequiredRagFailureStages
             || regressionCase.expected.requiredRagFailureStages,
+          requiredRagSufficiencyReasonFragments: regressionCase.expected.runtimeRequiredRagSufficiencyReasonFragments,
+          requiredRagSourceDecisionReasonFragments: regressionCase.expected.runtimeRequiredRagSourceDecisionReasonFragments,
           minimumRagRecoveryBeforeSourceDecisionStatusCounts: regressionCase.expected.minimumRagRecoveryBeforeSourceDecisionStatusCounts,
           requiredRagRecoveryBeforeReasonFragments: regressionCase.expected.runtimeRequiredRagRecoveryBeforeReasonFragments
             || regressionCase.expected.requiredRagRecoveryBeforeReasonFragments,
@@ -972,6 +1007,11 @@ async function main() {
         caseResults.push(summary);
       } finally {
         try {
+          if (typeof previousUnavailableSourcePaths === 'string') {
+            process.env.NOTE_CONNECTION_RAG_UNAVAILABLE_SOURCE_PATHS = previousUnavailableSourcePaths;
+          } else {
+            delete process.env.NOTE_CONNECTION_RAG_UNAVAILABLE_SOURCE_PATHS;
+          }
           if (previousNotemdSettings) {
             await writeNotemdSettings(port, previousNotemdSettings);
           }

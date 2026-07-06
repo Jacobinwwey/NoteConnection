@@ -346,6 +346,35 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
         );
     });
 
+    test('registers a runtime graph-neighbor source-missing hard-negative probe', () => {
+        expect(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    id: 'graphintent_missing_neighbor_source_window_en',
+                    runtimeUnavailableSourcePaths: expect.arrayContaining([
+                        'Knowledge_Base/graphintent/ductile polymer cup analogy.md',
+                        'Knowledge_Base/graphintent/reusable polymer vessel analogy.md',
+                    ]),
+                    expected: expect.objectContaining({
+                        runtimeAcceptedRagSufficiencyStatuses: ['borderline'],
+                        runtimeAcceptedRagDegradationStates: ['partial_coverage'],
+                        minimumRagSourceDecisionStatusCounts: {
+                            source_window_unavailable: 1,
+                        },
+                        inMemoryMinimumRagSourceDecisionStatusCounts: {
+                            read: 1,
+                        },
+                        runtimeRequiredRagFailureStages: ['parsing_source', 'graph_evidence'],
+                        runtimeRequiredRagSufficiencyReasonFragments: ['graph_neighbor_evidence_missing'],
+                        runtimeRequiredRagSourceDecisionReasonFragments: ['graph_neighbor_support'],
+                        expectedRagRecoveryAttempted: true,
+                        inMemoryExpectedRagRecoveryAttempted: false,
+                    }),
+                }),
+            ])
+        );
+    });
+
     test('registers waterglass RAG claim-gate and preamble-leak runtime acceptance', () => {
         const expectedWaterglassReleaseAcceptance = expect.objectContaining({
             runtimeAnswerReleaseDecision: 'revise',

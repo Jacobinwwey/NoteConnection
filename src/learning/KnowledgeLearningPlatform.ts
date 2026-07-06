@@ -6316,6 +6316,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             requestedSourcePathKey
             && normalizeIdentifier(candidate.sourcePath.replace(/\\/g, '/')) === requestedSourcePathKey
         ));
+        if (this.isRuntimeFaultedRagSourcePath(requestedSourcePath, snapshot?.sourcePath)) {
+            return null;
+        }
         if (snapshot && typeof snapshot.content === 'string' && snapshot.content.trim()) {
             return {
                 documentId: snapshot.documentId,
@@ -6349,6 +6352,39 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         } catch (_error) {
             return null;
         }
+    }
+
+    private isRuntimeFaultedRagSourcePath(
+        requestedSourcePath: string,
+        snapshotSourcePath?: string
+    ): boolean {
+        const configuredPaths = String(process.env.NOTE_CONNECTION_RAG_UNAVAILABLE_SOURCE_PATHS || '').trim();
+        if (!configuredPaths) {
+            return false;
+        }
+        const projectRoot = process.env.NOTE_CONNECTION_PROJECT_ROOT || process.cwd();
+        const normalizePathKey = (value: string): string => {
+            const trimmedValue = String(value || '').trim();
+            if (!trimmedValue) {
+                return '';
+            }
+            const absolutePath = path.isAbsolute(trimmedValue)
+                ? path.resolve(trimmedValue)
+                : path.resolve(projectRoot, trimmedValue);
+            return absolutePath.replace(/\\/g, '/').toLowerCase();
+        };
+        const candidateKeys = [
+            normalizePathKey(requestedSourcePath),
+            normalizePathKey(snapshotSourcePath || ''),
+        ].filter(Boolean);
+        if (candidateKeys.length <= 0) {
+            return false;
+        }
+        return configuredPaths
+            .split(';')
+            .map((entry) => normalizePathKey(entry))
+            .filter(Boolean)
+            .some((configuredPath) => candidateKeys.includes(configuredPath));
     }
 
     private async assembleReviewedRagEvidenceContext(params: {
