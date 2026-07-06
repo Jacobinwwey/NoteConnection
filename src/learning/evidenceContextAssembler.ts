@@ -246,21 +246,31 @@ function spanHasUsableOffsets(span: EvidenceSpan, sourceLength: number): boolean
         && span.startOffset <= sourceLength;
 }
 
+function blocksContainSnippet(blocks: SourceBlock[], snippet: string): boolean {
+    if (!snippet) {
+        return true;
+    }
+    return normalizeWhitespace(blocks.map((block) => block.text).join(' ')).includes(snippet);
+}
+
 function blocksForEvidence(blocks: SourceBlock[], span: EvidenceSpan, content: string): SourceBlock[] {
+    const snippet = normalizeWhitespace(span.snippet);
+    const lineMatches = Number.isFinite(span.startLine) && Number.isFinite(span.endLine) && span.startLine > 0
+        ? blocks.filter((block) => block.endLine >= span.startLine && block.startLine <= span.endLine)
+        : [];
     if (spanHasUsableOffsets(span, content.length)) {
         const endOffset = Math.min(span.endOffset, content.length);
         const matches = blocks.filter((block) => block.endOffset >= span.startOffset && block.startOffset <= endOffset);
         if (matches.length > 0) {
+            if (!blocksContainSnippet(matches, snippet) && blocksContainSnippet(lineMatches, snippet)) {
+                return lineMatches;
+            }
             return matches;
         }
     }
-    if (Number.isFinite(span.startLine) && Number.isFinite(span.endLine) && span.startLine > 0) {
-        const matches = blocks.filter((block) => block.endLine >= span.startLine && block.startLine <= span.endLine);
-        if (matches.length > 0) {
-            return matches;
-        }
+    if (lineMatches.length > 0) {
+        return lineMatches;
     }
-    const snippet = normalizeWhitespace(span.snippet);
     if (snippet) {
         const normalizedBlocks = blocks.filter((block) => normalizeWhitespace(block.text).includes(snippet));
         if (normalizedBlocks.length > 0) {

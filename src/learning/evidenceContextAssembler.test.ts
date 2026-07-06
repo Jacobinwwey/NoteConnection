@@ -250,6 +250,71 @@ describe('assembleRagEvidenceContext', () => {
         expect(parentFragments[0].citationIds).toEqual(expect.arrayContaining(['evidence_first', 'evidence_second']));
     });
 
+    test('uses line provenance to disambiguate repeated snippets when offsets are stale', async () => {
+        const repeatedSnippet = 'The calibration note uses the shared repeated wording.';
+        const firstOnly = 'First section context must not be selected for the second hit.';
+        const secondOnly = 'Second section context is the intended source window.';
+        const fullDocument = [
+            '# Repeated Snippet Provenance Probe',
+            '',
+            '## First Section',
+            repeatedSnippet,
+            firstOnly,
+            '',
+            '## Second Section',
+            repeatedSnippet,
+            secondOnly,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_repeated_snippet_provenance',
+            documentId: 'doc_repeated_snippet_provenance',
+            sourcePath: 'Knowledge_Base/test/repeated-snippet-provenance.md',
+            title: 'Repeated Snippet Provenance Probe',
+            content: repeatedSnippet,
+            keywords: ['repeated', 'snippet', 'provenance'],
+        });
+        const item = makeQueryItem({
+            atom,
+            evidence: {
+                id: 'evidence_second_repeated_snippet',
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                startOffset: 0,
+                endOffset: 1,
+                startLine: 8,
+                endLine: 8,
+                snippet: repeatedSnippet,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what does the repeated snippet provenance probe say?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 1,
+            budget: {
+                maxFragments: 6,
+                maxCharsPerFragment: 500,
+                maxTotalChars: 1400,
+            },
+        });
+
+        const parentFragment = assembly.fragments.find((fragment) => (
+            fragment.role === 'parent_context'
+            && fragment.text.includes(secondOnly)
+        ));
+        expect(parentFragment).toEqual(expect.objectContaining({
+            headingPath: ['Repeated Snippet Provenance Probe', 'Second Section'],
+            citationIds: ['evidence_second_repeated_snippet'],
+        }));
+        expect(parentFragment?.text).toContain(secondOnly);
+        expect(parentFragment?.text).not.toContain(firstOnly);
+    });
+
     test('marks adjacent numeric facts about the same tolerance as conflicting evidence', async () => {
         const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the nominal bench procedure.';
         const overrideTolerance = 'The calibration tolerance is +/-0.50 mm in the field override note.';

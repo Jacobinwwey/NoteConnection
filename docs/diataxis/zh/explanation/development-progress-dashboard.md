@@ -126,6 +126,7 @@
 - `conflicting_release_date_evidence_probe_en` 现在由 `Knowledge_Base/ragdateconflict/release date conflict probe.md` 支撑，验证同一 scoped section 内的 `2026-07-01` 与 `2026-08-15` release-date 证据也会进入 `conflict` RAG role，并保持 `borderline/conflict` 降级，而不是发布单一稳定 schedule。
 - `conflicting_multi_document_evidence_probe_en` 现在由 `Knowledge_Base/ragmulticonflict` 支撑，验证两个 scoped 文档中的 `+/-0.10 mm` 与 `+/-0.50 mm` calibration-tolerance 矛盾会进入跨文档 `conflict` RAG role，保留在单条公开回答中，并保持 `borderline/conflict` 降级。
 - `full_document_scan_remote_conflict_probe_en` 现在由 `Knowledge_Base/ragfullscan` 支撑，验证修正后的 source-boundary 规则：局部段落窗口不是最大范围。两个被选文档会先完整读入，命中开头段落之外的远端 appendix 事实也会参与结构化冲突扫描；真正被硬限制的是进入公开回答编排前的有界 `RagContextPack`。
+- focused provenance 测试现在验证 repeated snippet 不会在 offset 陈旧时强制落到第一处文本命中。如果 offset 候选不包含 evidence snippet，而 line-range 候选包含它，`evidenceContextAssembler.ts` 会使用 line provenance 选择正确 source block 与 parent section。
 
 后续推进方向：
 
