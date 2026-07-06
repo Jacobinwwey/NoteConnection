@@ -64,6 +64,7 @@
 - focused graph-window ambiguity 测试现在验证：compare intent 在存在 `contrast` / `analogy` 邻居时会过滤高置信 `sequence` / `prerequisite` successor；当图里没有 compare-aligned 邻居时仍 fail-open 到结构 successor。runtime verifier 现在也会在 `graphintent` compare 探针中断言 graph diagnostics：至少 2 个 intent-aligned successor candidate、至少 1 个 intent-misaligned successor candidate，并确认没有使用 misaligned-successor fallback。
 
 - runtime probe `conflicting_multi_document_quantity_evidence_probe_en` 现在由 `Knowledge_Base/ragquantitymulticonflict` 支撑，验证跨文档复数无单位数量事实：`retry attempts are 3` 与 `retry attempts are 5` 会产出跨文档 `conflict` fragment，在单条公开回答中保留两侧数值，并在 `context_assembly` 下显式降级；该切片只扩大显式 quantity subject 的语法覆盖，不把开放域数量语义冲突纳入已完成范围。
+- runtime probe `conflicting_ownership_identity_evidence_probe_en` 现在由 `Knowledge_Base/ragidentityconflict` 支撑，验证受控责任归属事实：显式 owner/assignee/contact/maintainer/team/group subject 中 `Release Ops` 与 `Rollback Team` 会产出 `conflict` fragment，在单条公开回答中保留两侧证据，并在 `context_assembly` 下显式降级；该切片只覆盖责任归属 identity 类，不把开放域身份或语义矛盾纳入已完成范围。
 
 后续推进：
 

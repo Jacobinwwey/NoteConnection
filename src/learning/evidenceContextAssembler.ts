@@ -87,7 +87,7 @@ interface ComparableEvidenceFact {
     subjectLabel: string;
     valueKey: string;
     valueLabel: string;
-    factKind: 'measurement' | 'quantity' | 'date' | 'state' | 'location';
+    factKind: 'measurement' | 'quantity' | 'date' | 'state' | 'location' | 'identity';
     block: SourceBlock;
     citationIds: string[];
     item: KnowledgeQueryItem;
@@ -107,6 +107,7 @@ const COMPARABLE_QUANTITY_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?
 const COMPARABLE_DATE_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:date|year|deadline|cutoff|cut-off|version|release|revision|effective))\s+(?:is|=|:)\s*(\d{4}(?:-\d{2}-\d{2})?)\b/gi;
 const COMPARABLE_STATE_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:status|state|mode|flag|policy|availability|setting|gate|switch))\s+(?:is|=|:)\s*(enabled|disabled|active|inactive|available|unavailable|supported|unsupported|allowed|blocked|required|optional|open|closed|on|off)\b/gi;
 const COMPARABLE_LOCATION_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:location|site|region|zone|room|rack|slot|bay))\s+(?:is|=|:)\s*([a-z0-9][a-z0-9 /_.-]{1,80}?)(?=\.|,|;|\n|$)/gi;
+const COMPARABLE_IDENTITY_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:owner|assignee|contact|maintainer|team|group))\s+(?:is|=|:)\s*([a-z][a-z0-9 &/_.-]{1,80}?)(?=\s+(?:in|for|on|under|within)\s+|\.|,|;|\n|$)/gi;
 const COMPARABLE_STATE_VALUE_GROUPS: Record<string, string> = {
     enabled: 'enabled_disabled',
     disabled: 'enabled_disabled',
@@ -548,6 +549,14 @@ function normalizeComparableLocationValue(value: string): string {
         .trim();
 }
 
+function normalizeComparableIdentityValue(value: string): string {
+    return normalizeWhitespace(value)
+        .toLowerCase()
+        .replace(/^(the|a|an)\s+/i, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+}
+
 function extractComparableEvidenceFacts(params: {
     block: SourceBlock;
     citationIds: string[];
@@ -663,6 +672,28 @@ function extractComparableEvidenceFacts(params: {
             valueKey,
             valueLabel: normalizeWhitespace(match[2]),
             factKind: 'location',
+            block: params.block,
+            citationIds: params.citationIds,
+            item: params.item,
+        });
+    }
+    for (const match of String(params.block.text || '').matchAll(COMPARABLE_IDENTITY_FACT_PATTERN)) {
+        const subjectLabel = normalizeWhitespace(match[1]);
+        const scopeKeys = comparableFactScopeKeys(
+            subjectLabel,
+            `${normalizeWhitespace(match[2])} ${comparableFactSentenceTail(params.block.text, match)}`
+        );
+        const subjectKey = comparableFactSubjectKey(subjectLabel, scopeKeys);
+        const valueKey = normalizeComparableIdentityValue(match[2]);
+        if (!subjectKey || !valueKey) {
+            continue;
+        }
+        facts.push({
+            subjectKey,
+            subjectLabel,
+            valueKey,
+            valueLabel: normalizeWhitespace(match[2]),
+            factKind: 'identity',
             block: params.block,
             citationIds: params.citationIds,
             item: params.item,

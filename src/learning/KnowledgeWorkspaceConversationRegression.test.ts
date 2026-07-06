@@ -240,6 +240,25 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_conflicting_ownership_identity_probe',
+            sourcePath: 'Knowledge_Base/ragidentityconflict/ownership conflict probe.md',
+            language: 'en',
+            workspaceId: 'ragidentityconflict',
+            corpusId: 'ragidentityconflict',
+            content: [
+                '# Ownership Conflict Probe',
+                'Ownership conflict probe validates that controlled responsibility records are not flattened into one stable owner.',
+                '',
+                '## Deployment Ownership',
+                'The deployment owner is Release Ops in the handoff sheet.',
+                '',
+                'Context paragraph keeps the ownership conflict inside one scoped section.',
+                '',
+                'The deployment owner is Rollback Team in the rollback appendix.',
+                'Operators must resolve which deployment owner is active before release.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_conflicting_location_probe',
             sourcePath: 'Knowledge_Base/raglocationconflict/location conflict probe.md',
             language: 'en',
@@ -998,6 +1017,19 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         answerMustContain: expect.arrayContaining(['retry limit', '3', '5']),
                         answerMustNotContain: expect.arrayContaining([
                             'stable retry limit',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'conflicting_ownership_identity_evidence_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context', 'conflict']),
+                        acceptedRagSufficiencyStatuses: ['borderline'],
+                        acceptedRagDegradationStates: ['conflict'],
+                        requiredRagFailureStages: ['context_assembly'],
+                        answerMustContain: expect.arrayContaining(['deployment owner', 'Release Ops', 'Rollback Team']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'stable deployment owner',
                         ]),
                     }),
                 }),

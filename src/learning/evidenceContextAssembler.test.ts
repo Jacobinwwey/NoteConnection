@@ -759,6 +759,91 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(appendixLimit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('marks controlled ownership identity facts in the same section as conflicting evidence', async () => {
+        const handoffOwner = 'The deployment owner is Release Ops in the handoff sheet.';
+        const rollbackOwner = 'The deployment owner is Rollback Team in the rollback appendix.';
+        const fullDocument = [
+            '# Ownership Conflict Probe',
+            '',
+            'Ownership conflict probe validates that controlled responsibility records are not flattened into one stable owner.',
+            '',
+            '## Deployment Ownership',
+            handoffOwner,
+            '',
+            'Operators must inspect both ownership records before publishing the responsible team.',
+            '',
+            rollbackOwner,
+            'Operators must resolve which deployment owner is active before release.',
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_conflicting_ownership',
+            documentId: 'doc_conflicting_ownership',
+            sourcePath: 'Knowledge_Base/ragidentityconflict/ownership conflict probe.md',
+            title: 'Ownership Conflict Probe',
+            content: handoffOwner,
+            keywords: ['ownership', 'owner', 'conflict'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_handoff_deployment_owner',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(handoffOwner),
+                    endOffset: fullDocument.indexOf(handoffOwner) + handoffOwner.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: handoffOwner,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_rollback_deployment_owner',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(rollbackOwner),
+                    endOffset: fullDocument.indexOf(rollbackOwner) + rollbackOwner.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: rollbackOwner,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is ownership conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_handoff_deployment_owner',
+                'evidence_rollback_deployment_owner',
+            ]),
+            startLine: 6,
+            endLine: 11,
+        }));
+        expect(conflictFragment?.text).toContain(handoffOwner);
+        expect(conflictFragment?.text).toContain(rollbackOwner);
+        expect(conflictFragment?.text.match(new RegExp(handoffOwner.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+        expect(conflictFragment?.text.match(new RegExp(rollbackOwner.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+    });
+
     test('marks location facts in the same section as conflicting evidence', async () => {
         const primaryLocation = 'The control module location is Rack A in the primary bay.';
         const fieldLocation = 'The control module location is Rack B in the field bay.';

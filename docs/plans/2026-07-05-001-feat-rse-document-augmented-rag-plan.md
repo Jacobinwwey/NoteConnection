@@ -491,6 +491,7 @@ flowchart TB
   - explicit platform-qualified state false-positive guards through `platform_scoped_state_status_probe_en`;
   - explicit unitless quantity/limit conflict coverage through `conflicting_quantity_limit_evidence_probe_en`;
   - cross-document plural unitless quantity conflict coverage through `conflicting_multi_document_quantity_evidence_probe_en`;
+  - controlled ownership identity conflict coverage through `conflicting_ownership_identity_evidence_probe_en`;
   - causal answer-profile budgeting through `causal_answer_profile_budget_en`;
   - full-document graph-neighbor augmentation through minimum role/boundary fragment-count assertions;
   - graph self-neighbor filtering;
@@ -525,6 +526,7 @@ flowchart TB
 - Runtime: `what is platform scoped state status probe?` reads `Knowledge_Base/ragplatformqualifier/platform scoped state status probe.md`, preserves Windows-enabled and Android-disabled state facts as platform-qualified evidence, keeps `forbiddenRagRoles: ['conflict']`, and returns `sufficient/none` instead of degrading as a conflict.
 - Runtime: `what is quantity limit conflict probe?` reads `Knowledge_Base/ragquantityconflict/quantity limit conflict probe.md`, preserves `retry limit is 3` and `retry limit is 5` as unitless quantity conflict evidence, keeps both values in one public answer, and classifies the degradation under `context_assembly`.
 - Runtime: `compare nominal retry attempts quantity conflict probe with field retry attempts quantity conflict evidence` reads two scoped files under `Knowledge_Base/ragquantitymulticonflict`, preserves plural `retry attempts are 3` and `retry attempts are 5` statements as a cross-document unitless quantity `conflict` fragment, keeps both values in one public answer, and classifies the degradation under `context_assembly`.
+- Runtime: `what is ownership conflict probe?` reads `Knowledge_Base/ragidentityconflict/ownership conflict probe.md`, preserves `deployment owner is Release Ops` and `deployment owner is Rollback Team` as a controlled ownership identity `conflict` fragment, keeps both values in one public answer, and classifies the degradation under `context_assembly`.
 - Runtime: `why causal answer profile probe needs bounded evidence?` reads `Knowledge_Base/ragcausalprofile/causal answer profile probe.md`, uses the bounded causal RAG profile (`20` fragments, `1500` chars per fragment, `7600` total chars), keeps the source boundary at `full_document`, and returns one public answer containing mechanism and downstream evidence.
 - Runtime: `compare multi document calibration tolerance conflict probe with field calibration tolerance conflict evidence` reads two scoped files under `Knowledge_Base/ragmulticonflict`, preserves `+/-0.10 mm` and `+/-0.50 mm` as a cross-document `conflict` fragment, keeps both values in the one public answer, and classifies the degradation under `context_assembly`.
 - Runtime: `compare nominal full scan source with field full scan source` reads two scoped files under `Knowledge_Base/ragfullscan`, detects remote appendix `+/-0.10 mm` and `+/-0.50 mm` facts outside the matched opening spans through full-document scanning, keeps both values in one public answer, and proves the local paragraph window is not the source-reading maximum.
@@ -998,6 +1000,8 @@ flowchart TB
 - 当 evidence span 的 offset 数值合法但已经陈旧、且 line range 指向重复 snippet 的正确 occurrence 时，assembler 只在 offset 候选不包含 snippet 而 line 候选包含 snippet 的情况下使用 line provenance，避免重复文本被锚到第一处错误 source block。
 
 **跨文档数量事实增量（2026-07-07）：** `evidenceContextAssembler.ts` 的 unitless quantity 抽取现在支持复数谓词 `are`，用于覆盖 `retry attempts are 3` 这类自然工程写法。由 `Knowledge_Base/ragquantitymulticonflict` 支撑的 `conflicting_multi_document_quantity_evidence_probe_en` 验证两个 scoped 文档中的 `retry attempts are 3` 与 `retry attempts are 5` 会作为跨文档 quantity `conflict` fragment 进入有界 `RagContextPack`，公开回答仍保持单条消息并保留两侧数值，降级归因仍是 `context_assembly`。该切片只扩大保守 quantity fact 的语法覆盖，不声称解决开放域数量语义冲突。
+
+**责任归属事实增量（2026-07-07）：** `evidenceContextAssembler.ts` 现在加入保守的 `identity` comparable-fact 类，只识别 owner、assignee、contact、maintainer、team、group 等显式责任归属主题。由 `Knowledge_Base/ragidentityconflict` 支撑的 `conflicting_ownership_identity_evidence_probe_en` 验证同一 scoped section 中 `deployment owner is Release Ops` 与 `deployment owner is Rollback Team` 会产出 `conflict` fragment、`borderline/conflict` sufficiency 和 `context_assembly` 归因。该切片扩大的是受控责任归属语义类，不声称已经解决开放域身份或语义矛盾检测。
 
 ## 系统影响
 
