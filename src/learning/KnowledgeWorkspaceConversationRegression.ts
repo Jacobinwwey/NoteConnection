@@ -58,6 +58,7 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     minimumGraphIntentMisalignedSuccessorCandidates?: number;
     expectedGraphUsedMisalignedPredecessorFallback?: boolean;
     expectedGraphUsedMisalignedSuccessorFallback?: boolean;
+    requirePlannerTitleHitDocumentIds?: boolean;
     requireScopedDocumentIds?: boolean;
 }
 
@@ -850,6 +851,46 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             expectedRagLlmJudgeUsed: false,
             expectedRagRecoveryAttempted: false,
             acceptedRagDegradationStates: ['none', 'partial_coverage'],
+        },
+    },
+    {
+        id: 'causal_answer_profile_budget_en',
+        description: 'A causal why-query should use a wider bounded first-pass RAG answer profile without requiring an explicit deep prompt.',
+        preloadTargets: ['ragcausalprofile'],
+        activeTarget: 'ragcausalprofile',
+        query: 'why causal answer profile probe needs bounded evidence?',
+        expected: {
+            minCitations: 1,
+            scopeSource: 'explicit_request',
+            acceptedAnswerReleaseDecisions: ['release', 'revise'],
+            plannerTitleLikeQueries: ['why causal answer profile probe needs bounded evidence'],
+            primarySourcePath: 'Knowledge_Base/ragcausalprofile/causal answer profile probe.md',
+            answerMustContain: [
+                'why question asks for mechanism evidence',
+                'graph-neighbor evidence can clarify consequences',
+            ],
+            answerMustNotContain: [
+                'No scoped knowledge points matched',
+                'retrieval_candidates_below_threshold',
+                'llm_judge_failed',
+            ],
+            ragSourceBoundary: 'full_document',
+            requiredRagRoles: ['direct_support', 'parent_context'],
+            acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            expectedRagBudget: {
+                maxFragments: 20,
+                maxCharsPerFragment: 1500,
+                maxTotalChars: 7600,
+            },
+            minimumRagSourceDecisionStatusCounts: {
+                read: 1,
+            },
+            expectedRagDeterministic: true,
+            expectedRagLlmJudgeUsed: false,
+            expectedRagRecoveryAttempted: false,
+            acceptedRagDegradationStates: ['none', 'partial_coverage'],
+            requirePlannerTitleHitDocumentIds: false,
+            requireScopedDocumentIds: false,
         },
     },
     {

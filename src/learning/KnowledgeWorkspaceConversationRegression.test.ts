@@ -65,6 +65,21 @@ function buildOverflowBudgetProbeContent(): string {
     ].join('\n\n');
 }
 
+function buildCausalAnswerProfileProbeContent(): string {
+    return [
+        '# Causal Answer Profile Probe',
+        'Causal answer profile probe explains why graph-backed RAG answers need bounded causal evidence instead of a single definition sentence.',
+        '',
+        '## Mechanism',
+        'The direct cause is that a why question asks for mechanism evidence, not only a label.',
+        '',
+        'The mechanism layer keeps the direct cause, the source boundary, and the downstream implication available before the bounded RAG pack chooses visible fragments.',
+        '',
+        '## Downstream Evidence',
+        'The downstream implication is that graph-neighbor evidence can clarify consequences while the public answer still remains one bounded message.',
+    ].join('\n');
+}
+
 function buildRegressionDocuments() {
     return [
         {
@@ -489,6 +504,14 @@ function buildRegressionDocuments() {
             corpusId: 'contextoverflow',
             content: buildOverflowBudgetProbeContent(),
         },
+        {
+            documentId: 'doc_causal_answer_profile_probe',
+            sourcePath: 'Knowledge_Base/ragcausalprofile/causal answer profile probe.md',
+            language: 'en',
+            workspaceId: 'ragcausalprofile',
+            corpusId: 'ragcausalprofile',
+            content: buildCausalAnswerProfileProbeContent(),
+        },
     ];
 }
 
@@ -778,9 +801,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
         );
     });
 
-    test('registers explicit deep RAG answer profile budget probe', () => {
+    test('registers causal and explicit deep RAG answer profile budget probes', () => {
         expect(KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES).toEqual(
             expect.arrayContaining([
+                expect.objectContaining({
+                    id: 'causal_answer_profile_budget_en',
+                    query: 'why causal answer profile probe needs bounded evidence?',
+                    expected: expect.objectContaining({
+                        expectedRagBudget: {
+                            maxFragments: 20,
+                            maxCharsPerFragment: 1500,
+                            maxTotalChars: 7600,
+                        },
+                        expectedRagRecoveryAttempted: false,
+                        requirePlannerTitleHitDocumentIds: false,
+                    }),
+                }),
                 expect.objectContaining({
                     id: 'contextoverflow_deep_profile_budget_en',
                     query: 'explain in detail overflow budget probe',
@@ -1002,7 +1038,9 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
             expect(planner.titleLikeQueries).toEqual(
                 expect.arrayContaining(expected.plannerTitleLikeQueries)
             );
-            expect(planner.titleHitDocumentIds.length).toBeGreaterThan(0);
+            if (expected.requirePlannerTitleHitDocumentIds !== false) {
+                expect(planner.titleHitDocumentIds.length).toBeGreaterThan(0);
+            }
             expected.answerMustContain?.forEach((fragment) => {
                 expect(response.answer).toContain(fragment);
             });

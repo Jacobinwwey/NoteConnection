@@ -474,7 +474,7 @@ function selectScopedConversationDirectSentence(message: string, point: AgentCon
     return normalizeWhitespace(String(point.summary || point.evidenceSnippet || point.title || message || ''));
 }
 
-function classifyScopedConversationIntent(message: string): 'explain' | 'compare' | 'how_to' | 'generic' {
+function classifyScopedConversationIntent(message: string): 'explain' | 'compare' | 'how_to' | 'causal_explain' | 'generic' {
     const normalized = String(message || '').trim().toLowerCase();
     if (!normalized) {
         return 'generic';
@@ -496,17 +496,30 @@ function classifyScopedConversationIntent(message: string): 'explain' | 'compare
         || normalized.includes('如何')
         || normalized.includes('怎么')
         || normalized.includes('步骤')
-        || normalized.includes('方案')
+            || normalized.includes('方案')
     ) {
         return 'how_to';
     }
     if (
+        /\b(?:why|cause|causes|caused|causal|because|reason|mechanism|mechanisms)\b/u.test(normalized)
+        || normalized.includes('为什么')
+        || normalized.includes('為什麼')
+        || normalized.includes('为何')
+        || normalized.includes('為何')
+        || normalized.includes('原因')
+        || normalized.includes('因果')
+        || normalized.includes('机制')
+        || normalized.includes('機制')
+        || normalized.includes('导致')
+        || normalized.includes('導致')
+    ) {
+        return 'causal_explain';
+    }
+    if (
         normalized.includes('what is')
-        || normalized.includes('why')
         || normalized.includes('explain')
         || normalized.includes('解释')
         || normalized.includes('什么是')
-        || normalized.includes('为什么')
     ) {
         return 'explain';
     }
@@ -527,6 +540,14 @@ function resolveRagAnswerProfile(message: string): RagAnswerProfile {
         return {
             directSupportSentenceCount: 3,
             documentContextSentenceCount: 1,
+            graphNeighborSentenceCount: 2,
+            publicSentenceCount: 6,
+        };
+    }
+    if (intent === 'causal_explain') {
+        return {
+            directSupportSentenceCount: 2,
+            documentContextSentenceCount: 2,
             graphNeighborSentenceCount: 2,
             publicSentenceCount: 6,
         };

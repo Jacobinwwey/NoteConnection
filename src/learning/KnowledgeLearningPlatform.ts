@@ -422,9 +422,17 @@ const AGENT_RAG_DEEP_CONTEXT_BUDGET: RagContextBudget = {
     maxTotalChars: 9000,
 };
 
+const AGENT_RAG_CAUSAL_CONTEXT_BUDGET: RagContextBudget = {
+    maxFragments: 20,
+    maxCharsPerFragment: 1500,
+    maxTotalChars: 7600,
+};
+
 const AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT = 6;
+const AGENT_RAG_CAUSAL_GRAPH_NEIGHBOR_LIMIT = 8;
 const AGENT_RAG_DEEP_GRAPH_NEIGHBOR_LIMIT = 8;
 const AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT = 8;
+const AGENT_RAG_CAUSAL_PARAGRAPH_WINDOW = 7;
 const AGENT_RAG_DEEP_PARAGRAPH_WINDOW = 8;
 const AGENT_RAG_RECOVERY_PARAGRAPH_WINDOW = 8;
 
@@ -553,6 +561,17 @@ function resolveAgentRagEvidenceProfile(message: string): AgentRagEvidenceProfil
         /\b(?:deep|detailed|comprehensive|thorough|in-depth|in depth|fully|complete|explain|analy[sz]e)\b/i.test(normalizedMessage)
         || /深度|详细|詳盡|详尽|完整|充分|展开|展開|分析|解释|解釋/u.test(normalizedMessage)
     );
+    const causalExplanationSignal = Boolean(
+        /\b(?:why|cause|causes|caused|causal|because|reason|mechanism|mechanisms)\b/i.test(normalizedMessage)
+        || /为什么|為什麼|为何|為何|原因|因果|机制|機制|导致|導致/u.test(normalizedMessage)
+    );
+    if (causalExplanationSignal && !explicitDeepSignal) {
+        return {
+            budget: { ...AGENT_RAG_CAUSAL_CONTEXT_BUDGET },
+            graphNeighborLimit: AGENT_RAG_CAUSAL_GRAPH_NEIGHBOR_LIMIT,
+            paragraphWindow: AGENT_RAG_CAUSAL_PARAGRAPH_WINDOW,
+        };
+    }
     if (!explicitDeepSignal) {
         return {
             budget: { ...AGENT_RAG_BASE_CONTEXT_BUDGET },

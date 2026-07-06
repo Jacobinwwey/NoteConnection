@@ -2358,7 +2358,7 @@ describe('KnowledgeLearningPlatform', () => {
         expect(response.answer).toContain('transparent drinking vessel');
     });
 
-    test('agent conversation widens the first-pass RAG budget only for explicit depth requests', async () => {
+    test('agent conversation widens the first-pass RAG budget for causal and explicit depth requests', async () => {
         await platform.ingestKnowledge({
             incremental: true,
             documents: [
@@ -2393,6 +2393,18 @@ describe('KnowledgeLearningPlatform', () => {
             },
             persistMemory: false,
         });
+        const causalResponse = await platform.agentConversation({
+            userId: 'agent_rag_profile_user',
+            sessionId: 'session_rag_profile_causal',
+            message: 'why does answer profile budget probe need bounded evidence?',
+            topK: 3,
+            scope: {
+                workspaceId: 'answerprofile',
+                corpusId: 'answerprofile',
+                sourcePathPrefixes: ['Knowledge_Base/answerprofile'],
+            },
+            persistMemory: false,
+        });
         const deepResponse = await platform.agentConversation({
             userId: 'agent_rag_profile_user',
             sessionId: 'session_rag_profile_deep',
@@ -2411,11 +2423,17 @@ describe('KnowledgeLearningPlatform', () => {
             maxCharsPerFragment: 1400,
             maxTotalChars: 5600,
         });
+        expect(causalResponse.trace.ragContextPack?.budget).toEqual({
+            maxFragments: 20,
+            maxCharsPerFragment: 1500,
+            maxTotalChars: 7600,
+        });
         expect(deepResponse.trace.ragContextPack?.budget).toEqual({
             maxFragments: 24,
             maxCharsPerFragment: 1600,
             maxTotalChars: 9000,
         });
+        expect(causalResponse.trace.ragContextPack?.sourceBoundary).toBe('full_document');
         expect(deepResponse.trace.ragContextPack?.sourceBoundary).toBe('full_document');
     });
 

@@ -1538,6 +1538,134 @@ describe('conversationComposer', () => {
         expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toBe(reply.answer);
     });
 
+    test('uses causal RAG profile to preserve mechanism evidence and graph consequences', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_causal_beam_drift',
+                documentId: 'doc_causal_beam_drift',
+                sourcePath: 'Knowledge_Base/test/beam-drift-cause.md',
+                title: 'Beam Drift Cause',
+                content: 'Beam drift occurs when clamp relaxation changes the prism angle.',
+            },
+            evidence: {
+                id: 'evidence_causal_beam_drift',
+                snippet: 'Beam drift occurs because clamp relaxation changes the prism angle.',
+                startLine: 8,
+                endLine: 14,
+            },
+            score: 0.95,
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const citations = knowledgePoints.flatMap((point) => point.citations || []);
+        const ragContextPack: RagContextPack = {
+            query: 'why does beam drift happen?',
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 6,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 3000,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_beam_drift_cause',
+                    role: 'direct_support',
+                    text: [
+                        'Beam drift occurs because clamp relaxation changes the prism angle.',
+                        'The angle change moves the beam centroid away from the reference mark.',
+                    ].join(' '),
+                    atomId: 'atom_causal_beam_drift',
+                    documentId: 'doc_causal_beam_drift',
+                    sourcePath: 'Knowledge_Base/test/beam-drift-cause.md',
+                    title: 'Beam Drift Cause',
+                    headingPath: ['Beam Drift Cause', 'Cause'],
+                    startLine: 8,
+                    endLine: 10,
+                    charCount: 132,
+                    tokenEstimate: 32,
+                    truncated: false,
+                    citationIds: ['evidence_causal_beam_drift'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_parent_beam_drift_mechanism',
+                    role: 'parent_context',
+                    text: [
+                        'Mechanism: thermal cycling loosens the clamp before the operator notices visual displacement.',
+                        'Reasoning boundary: the source ties the symptom to mechanical relaxation, not sensor firmware.',
+                    ].join(' '),
+                    atomId: 'atom_causal_beam_drift',
+                    documentId: 'doc_causal_beam_drift',
+                    sourcePath: 'Knowledge_Base/test/beam-drift-cause.md',
+                    title: 'Beam Drift Cause',
+                    headingPath: ['Beam Drift Cause', 'Mechanism'],
+                    startLine: 4,
+                    endLine: 7,
+                    charCount: 178,
+                    tokenEstimate: 42,
+                    truncated: false,
+                    citationIds: ['evidence_causal_beam_drift'],
+                    sourceBoundary: 'full_document',
+                },
+                {
+                    fragmentId: 'rag_graph_beam_drift_consequence',
+                    role: 'graph_neighbor_support',
+                    text: [
+                        'Downstream consequence: centroid drift invalidates the calibration reading.',
+                        'Mitigation neighbor: re-locking the clamp restores the reference beam path.',
+                    ].join(' '),
+                    atomId: 'atom_beam_drift_downstream',
+                    documentId: 'doc_beam_drift_downstream',
+                    sourcePath: 'Knowledge_Base/test/beam-drift-downstream.md',
+                    title: 'Beam Drift Downstream',
+                    headingPath: ['Beam Drift Downstream'],
+                    startLine: 3,
+                    endLine: 8,
+                    charCount: 139,
+                    tokenEstimate: 34,
+                    truncated: false,
+                    citationIds: ['evidence_causal_beam_drift'],
+                    relationEdgeIds: ['edge_beam_drift_causal_downstream'],
+                    sourceBoundary: 'full_document',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 449,
+            tokenEstimate: 108,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-05T00:00:00.000Z',
+            status: 'sufficient',
+            score: 0.92,
+            reasons: [],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'none',
+        };
+        let blockCounter = 0;
+
+        const reply = buildScopedConversationReply({
+            message: 'why does beam drift happen?',
+            knowledgePoints,
+            citations,
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-07-05T00:00:00.000Z',
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            ragContextPack,
+            ragSufficiencyReview,
+        });
+
+        expect(reply.answer).toContain('Beam drift occurs because clamp relaxation changes the prism angle');
+        expect(reply.answer).toContain('The angle change moves the beam centroid');
+        expect(reply.answer).toContain('Mechanism: thermal cycling loosens the clamp');
+        expect(reply.answer).toContain('Reasoning boundary: the source ties the symptom');
+        expect(reply.answer).toContain('Downstream consequence: centroid drift invalidates the calibration reading');
+        expect(reply.answer).toContain('Mitigation neighbor: re-locking the clamp restores the reference beam path');
+    });
+
     test('uses generic RAG profile to rank direct evidence by query coverage', () => {
         const item = makeQueryItem({
             atom: {
