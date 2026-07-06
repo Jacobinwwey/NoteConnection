@@ -921,6 +921,12 @@ function buildRagAugmentedConversationAnswer(
     const answerSentences: string[] = [];
     selectRagEvidenceSentences(pack.fragments, new Set(['direct_support']), profile.directSupportSentenceCount, answerQueryTerms)
         .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
+    const hasConflictEvidence = params.ragSufficiencyReview?.degradationState === 'conflict'
+        || (params.ragSufficiencyReview?.reasons || []).some((reason) => String(reason || '').includes('conflict_evidence_present'));
+    if (hasConflictEvidence) {
+        selectRagEvidenceSentences(pack.fragments, new Set(['conflict']), 3, answerQueryTerms)
+            .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
+    }
     selectRagEvidenceSentences(pack.fragments, new Set(['parent_context', 'adjacent_context']), profile.documentContextSentenceCount, answerQueryTerms)
         .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
     selectRagEvidenceSentences(pack.fragments, new Set(['graph_neighbor_support']), profile.graphNeighborSentenceCount, answerQueryTerms)

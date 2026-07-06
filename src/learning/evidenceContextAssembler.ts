@@ -430,11 +430,11 @@ function buildBlockCitationMap(
     return citationIdsByBlock;
 }
 
-function buildConflictFragments(
+function collectComparableEvidenceFacts(
     group: DocumentEvidenceGroup,
     source: RagEvidenceSourceDocument,
     paragraphWindow: number
-): RagEvidenceFragment[] {
+): ComparableEvidenceFact[] {
     const blocks = parseMarkdownBlocks(source.content);
     const citationIdsByBlock = buildBlockCitationMap(group, blocks, source);
     const selectedBlocks = new Map<string, { block: SourceBlock; item: KnowledgeQueryItem }>();
@@ -450,13 +450,24 @@ function buildConflictFragments(
             });
         });
 
-    const facts = Array.from(selectedBlocks.values())
+    return Array.from(selectedBlocks.values())
         .sort((left, right) => left.block.startOffset - right.block.startOffset)
         .flatMap(({ block, item }) => extractComparableEvidenceFacts({
             block,
             item,
             citationIds: Array.from(citationIdsByBlock.get(sourceBlockKey(block)) || []),
         }));
+}
+
+function comparableFactDocumentKey(fact: ComparableEvidenceFact): string {
+    return `${fact.item.atom.documentId}\n${fact.item.atom.sourcePath}`;
+}
+
+function buildConflictFragments(
+    group: DocumentEvidenceGroup,
+    facts: ComparableEvidenceFact[],
+    paragraphWindow: number
+): RagEvidenceFragment[] {
     const fragments: RagEvidenceFragment[] = [];
     const seenConflicts = new Set<string>();
 
@@ -508,6 +519,72 @@ function buildConflictFragments(
                 endOffset: lastBlock.endOffset,
                 startLine: firstBlock.startLine,
                 endLine: lastBlock.endLine,
+                charCount: text.length,
+                tokenEstimate: estimateRagTokenCount(text),
+                truncated: false,
+                citationIds,
+                relationEdgeIds: Array.from(new Set([
+                    ...left.item.relationPath.map((edge) => edge.id),
+                    ...right.item.relationPath.map((edge) => edge.id),
+                ])),
+                score: Number(Math.max(Number(left.item.score || 0), Number(right.item.score || 0)).toFixed(4)),
+                sourceBoundary: 'full_document',
+            });
+        });
+    });
+
+    return fragments;
+}
+
+function buildCrossDocumentConflictFragments(facts: ComparableEvidenceFact[]): RagEvidenceFragment[] {
+    const orderedFacts = facts.slice().sort((left, right) => {
+        const sourceDelta = String(left.item.atom.sourcePath || '').localeCompare(String(right.item.atom.sourcePath || ''));
+        if (sourceDelta !== 0) {
+            return sourceDelta;
+        }
+        return left.block.startOffset - right.block.startOffset;
+    });
+    const fragments: RagEvidenceFragment[] = [];
+    const seenConflicts = new Set<string>();
+
+    orderedFacts.forEach((left, leftIndex) => {
+        orderedFacts.slice(leftIndex + 1).forEach((right) => {
+            if (comparableFactDocumentKey(left) === comparableFactDocumentKey(right)) {
+                return;
+            }
+            if (left.subjectKey !== right.subjectKey || left.factKind !== right.factKind) {
+                return;
+            }
+            if (left.valueKey === right.valueKey) {
+                return;
+            }
+            const orderedSourceKeys = [comparableFactDocumentKey(left), comparableFactDocumentKey(right)].sort();
+            const orderedValues = [left.valueKey, right.valueKey].sort();
+            const conflictKey = `${left.subjectKey}:${left.factKind}:${orderedSourceKeys[0]}:${orderedSourceKeys[1]}:${orderedValues[0]}:${orderedValues[1]}`;
+            if (seenConflicts.has(conflictKey)) {
+                return;
+            }
+            seenConflicts.add(conflictKey);
+            const citationIds = Array.from(new Set([
+                ...left.citationIds,
+                ...right.citationIds,
+                ...itemEvidenceSpans(left.item).map((span) => span.id),
+                ...itemEvidenceSpans(right.item).map((span) => span.id),
+            ].filter(Boolean)));
+            const text = [
+                `Conflicting evidence for ${left.subjectLabel} across documents:`,
+                `${left.item.atom.title}: ${left.block.text}`,
+                `${right.item.atom.title}: ${right.block.text}`,
+            ].join('\n');
+            fragments.push({
+                fragmentId: `rag_conflict_cross_document_${sanitizeFragmentPart(left.item.atom.documentId)}_${sanitizeFragmentPart(right.item.atom.documentId)}_${fragments.length + 1}`,
+                role: 'conflict',
+                text,
+                atomId: left.item.atom.id,
+                documentId: `cross_document_conflict_${sanitizeFragmentPart(left.item.atom.documentId)}_${sanitizeFragmentPart(right.item.atom.documentId)}`,
+                sourcePath: `${left.item.atom.sourcePath} | ${right.item.atom.sourcePath}`,
+                title: `${left.item.atom.title} / ${right.item.atom.title}`,
+                headingPath: [],
                 charCount: text.length,
                 tokenEstimate: estimateRagTokenCount(text),
                 truncated: false,
@@ -729,6 +806,7 @@ export async function assembleRagEvidenceContext(params: AssembleRagEvidenceCont
     const paragraphWindow = Math.floor(Math.max(0, Math.min(20, Number(params.paragraphWindow ?? DEFAULT_PARAGRAPH_WINDOW))));
     const decisions: RagSourceDecision[] = [];
     const rawFragments: RagEvidenceFragment[] = [];
+    const comparableFacts: ComparableEvidenceFact[] = [];
     let readFullDocument = false;
 
     const groups = groupItemsByDocument(
@@ -770,8 +848,11 @@ export async function assembleRagEvidenceContext(params: AssembleRagEvidenceCont
             charsRead: source.content.length,
         });
         rawFragments.push(...buildParentFragments(group, source, paragraphWindow));
-        rawFragments.push(...buildConflictFragments(group, source, paragraphWindow));
+        const groupComparableFacts = collectComparableEvidenceFacts(group, source, paragraphWindow);
+        comparableFacts.push(...groupComparableFacts);
+        rawFragments.push(...buildConflictFragments(group, groupComparableFacts, paragraphWindow));
     }
+    rawFragments.push(...buildCrossDocumentConflictFragments(comparableFacts));
 
     return buildRagContextPack({
         query: params.query,

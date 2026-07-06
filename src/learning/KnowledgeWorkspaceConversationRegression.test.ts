@@ -187,6 +187,36 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_multi_document_calibration_tolerance_conflict_probe',
+            sourcePath: 'Knowledge_Base/ragmulticonflict/multi document calibration tolerance conflict probe.md',
+            language: 'en',
+            workspaceId: 'ragmulticonflict',
+            corpusId: 'ragmulticonflict',
+            content: [
+                '# Multi Document Calibration Tolerance Conflict Probe',
+                'Multi document calibration tolerance conflict probe validates that contradictory scoped facts across documents are not flattened into one stable value.',
+                '',
+                '## Nominal Source',
+                'The calibration tolerance is +/-0.10 mm in the nominal record.',
+                'Operators must compare this source against field evidence before publishing a tolerance value.',
+            ].join('\n'),
+        },
+        {
+            documentId: 'doc_field_calibration_tolerance_conflict_evidence',
+            sourcePath: 'Knowledge_Base/ragmulticonflict/field calibration tolerance conflict evidence.md',
+            language: 'en',
+            workspaceId: 'ragmulticonflict',
+            corpusId: 'ragmulticonflict',
+            content: [
+                '# Field Calibration Tolerance Conflict Evidence',
+                'Multi document calibration tolerance conflict probe field evidence records the field-side tolerance statement.',
+                '',
+                '## Field Source',
+                'The calibration tolerance is +/-0.50 mm in the field record.',
+                'Operators must resolve the active source before publishing a stable calibration tolerance.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_graphintent_brittle_glass_vessel',
             sourcePath: 'Knowledge_Base/graphintent/brittle glass vessel.md',
             language: 'en',
@@ -552,6 +582,20 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         requiredRagFailureStages: ['context_assembly'],
                         answerMustNotContain: expect.arrayContaining([
                             'stable migration release date',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'conflicting_multi_document_evidence_probe_en',
+                    expected: expect.objectContaining({
+                        minCitations: 2,
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context', 'conflict']),
+                        acceptedRagSufficiencyStatuses: ['borderline'],
+                        acceptedRagDegradationStates: ['conflict'],
+                        requiredRagFailureStages: ['context_assembly'],
+                        answerMustContain: expect.arrayContaining(['+/-0.10 mm', '+/-0.50 mm']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'single stable calibration tolerance',
                         ]),
                     }),
                 }),

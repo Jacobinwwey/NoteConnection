@@ -524,6 +524,97 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(revisedDate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('marks comparable facts from different documents as conflicting evidence', async () => {
+        const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the nominal procedure.';
+        const fieldTolerance = 'The calibration tolerance is +/-0.50 mm in the field procedure.';
+        const nominalDocument = [
+            '# Nominal Calibration Record',
+            '',
+            '## Calibration Facts',
+            nominalTolerance,
+        ].join('\n');
+        const fieldDocument = [
+            '# Field Calibration Record',
+            '',
+            '## Calibration Facts',
+            fieldTolerance,
+        ].join('\n');
+        const nominalAtom = makeAtom({
+            id: 'atom_nominal_calibration_record',
+            documentId: 'doc_nominal_calibration_record',
+            sourcePath: 'Knowledge_Base/ragmulticonflict/nominal calibration record.md',
+            title: 'Nominal Calibration Record',
+            content: nominalTolerance,
+            keywords: ['calibration', 'tolerance', 'nominal'],
+        });
+        const fieldAtom = makeAtom({
+            id: 'atom_field_calibration_record',
+            documentId: 'doc_field_calibration_record',
+            sourcePath: 'Knowledge_Base/ragmulticonflict/field calibration record.md',
+            title: 'Field Calibration Record',
+            content: fieldTolerance,
+            keywords: ['calibration', 'tolerance', 'field'],
+        });
+        const nominalItem = makeQueryItem({
+            atom: nominalAtom,
+            evidence: {
+                id: 'evidence_nominal_calibration_tolerance',
+                documentId: nominalAtom.documentId,
+                sourcePath: nominalAtom.sourcePath,
+                startOffset: nominalDocument.indexOf(nominalTolerance),
+                endOffset: nominalDocument.indexOf(nominalTolerance) + nominalTolerance.length,
+                startLine: 4,
+                endLine: 4,
+                snippet: nominalTolerance,
+            },
+        });
+        const fieldItem = makeQueryItem({
+            atom: fieldAtom,
+            evidence: {
+                id: 'evidence_field_calibration_tolerance',
+                documentId: fieldAtom.documentId,
+                sourcePath: fieldAtom.sourcePath,
+                startOffset: fieldDocument.indexOf(fieldTolerance),
+                endOffset: fieldDocument.indexOf(fieldTolerance) + fieldTolerance.length,
+                startLine: 4,
+                endLine: 4,
+                snippet: fieldTolerance,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is multi document calibration tolerance conflict probe?',
+            items: [nominalItem, fieldItem],
+            sourceResolver: async (lookup) => ({
+                documentId: lookup.documentId,
+                sourcePath: lookup.sourcePath,
+                content: lookup.documentId === nominalAtom.documentId ? nominalDocument : fieldDocument,
+            }),
+            budget: {
+                maxFragments: 10,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2400,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => (
+            fragment.role === 'conflict'
+            && fragment.fragmentId.startsWith('rag_conflict_cross_document_')
+        ));
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_calibration_tolerance',
+                'evidence_field_calibration_tolerance',
+            ]),
+            text: expect.stringContaining('across documents'),
+        }));
+        expect(conflictFragment?.text).toContain('Nominal Calibration Record');
+        expect(conflictFragment?.text).toContain('Field Calibration Record');
+        expect(conflictFragment?.text).toContain(nominalTolerance);
+        expect(conflictFragment?.text).toContain(fieldTolerance);
+    });
+
     test('adds graph neighbor evidence as support fragments instead of title-only context', async () => {
         const anchorItem = makeQueryItem({
             atom: {
