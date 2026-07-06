@@ -87,7 +87,7 @@ interface ComparableEvidenceFact {
     subjectLabel: string;
     valueKey: string;
     valueLabel: string;
-    factKind: 'measurement' | 'date';
+    factKind: 'measurement' | 'date' | 'state';
     block: SourceBlock;
     citationIds: string[];
     item: KnowledgeQueryItem;
@@ -97,6 +97,25 @@ const DEFAULT_PARAGRAPH_WINDOW = 5;
 const MAX_GRAPH_NEIGHBOR_DOCUMENT_CONTEXT_FRAGMENTS = 2;
 const COMPARABLE_NUMERIC_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?)\s+(?:is|=|:)\s*(?:±|\+\/-|\+\s*\/\s*-)?\s*(-?\d+(?:\.\d+)?)\s*(mm|cm|m|um|µm|nm|kg|g|mg|s|ms|%|deg|degree|degrees|c|k)\b/gi;
 const COMPARABLE_DATE_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:date|year|deadline|cutoff|cut-off|version|release|revision|effective))\s+(?:is|=|:)\s*(\d{4}(?:-\d{2}-\d{2})?)\b/gi;
+const COMPARABLE_STATE_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:status|state|mode|flag|policy|availability|setting|gate|switch))\s+(?:is|=|:)\s*(enabled|disabled|active|inactive|available|unavailable|supported|unsupported|allowed|blocked|required|optional|open|closed|on|off)\b/gi;
+const COMPARABLE_STATE_VALUE_GROUPS: Record<string, string> = {
+    enabled: 'enabled_disabled',
+    disabled: 'enabled_disabled',
+    active: 'active_inactive',
+    inactive: 'active_inactive',
+    available: 'available_unavailable',
+    unavailable: 'available_unavailable',
+    supported: 'supported_unsupported',
+    unsupported: 'supported_unsupported',
+    allowed: 'allowed_blocked',
+    blocked: 'allowed_blocked',
+    required: 'required_optional',
+    optional: 'required_optional',
+    open: 'open_closed',
+    closed: 'open_closed',
+    on: 'on_off',
+    off: 'on_off',
+};
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -372,6 +391,15 @@ function normalizeComparableDateValue(value: string): string | null {
     return null;
 }
 
+function normalizeComparableStateValue(value: string): { valueKey: string; groupKey: string } | null {
+    const valueKey = normalizeWhitespace(value).toLowerCase();
+    const groupKey = COMPARABLE_STATE_VALUE_GROUPS[valueKey];
+    if (!valueKey || !groupKey) {
+        return null;
+    }
+    return { valueKey, groupKey };
+}
+
 function extractComparableEvidenceFacts(params: {
     block: SourceBlock;
     citationIds: string[];
@@ -413,6 +441,24 @@ function extractComparableEvidenceFacts(params: {
             valueKey,
             valueLabel: match[2],
             factKind: 'date',
+            block: params.block,
+            citationIds: params.citationIds,
+            item: params.item,
+        });
+    }
+    for (const match of String(params.block.text || '').matchAll(COMPARABLE_STATE_FACT_PATTERN)) {
+        const subjectLabel = normalizeWhitespace(match[1]);
+        const subjectKey = normalizeComparableFactSubject(subjectLabel);
+        const stateValue = normalizeComparableStateValue(match[2]);
+        if (!subjectKey || !stateValue) {
+            continue;
+        }
+        facts.push({
+            subjectKey: `${subjectKey}:${stateValue.groupKey}`,
+            subjectLabel,
+            valueKey: stateValue.valueKey,
+            valueLabel: match[2],
+            factKind: 'state',
             block: params.block,
             citationIds: params.citationIds,
             item: params.item,

@@ -187,6 +187,25 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_conflicting_state_status_probe',
+            sourcePath: 'Knowledge_Base/ragstateconflict/state status conflict probe.md',
+            language: 'en',
+            workspaceId: 'ragstateconflict',
+            corpusId: 'ragstateconflict',
+            content: [
+                '# State Status Conflict Probe',
+                'State status conflict probe validates that categorical state contradictions are not flattened into one stable status.',
+                '',
+                '## Gate Status',
+                'The migration gate status is enabled in the release checklist.',
+                '',
+                'Context paragraph keeps the categorical state conflict inside one scoped section.',
+                '',
+                'The migration gate status is disabled in the rollback appendix.',
+                'Operators must resolve which status record is active before release.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_multi_document_calibration_tolerance_conflict_probe',
             sourcePath: 'Knowledge_Base/ragmulticonflict/multi document calibration tolerance conflict probe.md',
             language: 'en',
@@ -657,6 +676,19 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         requiredRagFailureStages: ['context_assembly'],
                         answerMustNotContain: expect.arrayContaining([
                             'stable migration release date',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'conflicting_state_status_evidence_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context', 'conflict']),
+                        acceptedRagSufficiencyStatuses: ['borderline'],
+                        acceptedRagDegradationStates: ['conflict'],
+                        requiredRagFailureStages: ['context_assembly'],
+                        answerMustContain: expect.arrayContaining(['enabled', 'disabled']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'stable migration gate status',
                         ]),
                     }),
                 }),

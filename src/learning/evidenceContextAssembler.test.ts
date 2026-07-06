@@ -589,6 +589,91 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(revisedDate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('marks categorical state facts in the same section as conflicting evidence', async () => {
+        const enabledState = 'The migration gate status is enabled in the release checklist.';
+        const disabledState = 'The migration gate status is disabled in the rollback appendix.';
+        const fullDocument = [
+            '# State Status Conflict Probe',
+            '',
+            'State status conflict probe validates that categorical state contradictions are not flattened into one stable status.',
+            '',
+            '## Gate Status',
+            enabledState,
+            '',
+            'Operators must inspect the release checklist before publishing a status.',
+            '',
+            disabledState,
+            'Operators must resolve which status record is active before release.',
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_conflicting_state_status',
+            documentId: 'doc_conflicting_state_status',
+            sourcePath: 'Knowledge_Base/ragstateconflict/state status conflict probe.md',
+            title: 'State Status Conflict Probe',
+            content: enabledState,
+            keywords: ['state', 'status', 'conflict'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_enabled_state_status',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(enabledState),
+                    endOffset: fullDocument.indexOf(enabledState) + enabledState.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: enabledState,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_disabled_state_status',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(disabledState),
+                    endOffset: fullDocument.indexOf(disabledState) + disabledState.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: disabledState,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is state status conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_enabled_state_status',
+                'evidence_disabled_state_status',
+            ]),
+            startLine: 6,
+            endLine: 11,
+        }));
+        expect(conflictFragment?.text).toContain(enabledState);
+        expect(conflictFragment?.text).toContain(disabledState);
+        expect(conflictFragment?.text.match(new RegExp(enabledState.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+        expect(conflictFragment?.text.match(new RegExp(disabledState.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
+    });
+
     test('marks comparable facts from different documents as conflicting evidence', async () => {
         const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the nominal procedure.';
         const fieldTolerance = 'The calibration tolerance is +/-0.50 mm in the field procedure.';
