@@ -1071,6 +1071,84 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(v2State);
     });
 
+    test('does not mark platform-scoped state facts as conflicting evidence', async () => {
+        const windowsState = 'The migration gate status is enabled on the Windows platform.';
+        const androidState = 'The migration gate status is disabled on the Android platform.';
+        const fullDocument = [
+            '# Platform Scoped State Status Probe',
+            '',
+            'Platform scoped state status probe validates that OS/platform qualifiers do not become false conflicts.',
+            '',
+            '## Gate Status By Platform',
+            windowsState,
+            '',
+            'Operators should preserve the platform label when comparing runtime records.',
+            '',
+            androidState,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_platform_state_status',
+            documentId: 'doc_platform_state_status',
+            sourcePath: 'Knowledge_Base/ragplatformqualifier/platform scoped state status probe.md',
+            title: 'Platform Scoped State Status Probe',
+            content: windowsState,
+            keywords: ['platform', 'state', 'status'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_windows_state_status',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(windowsState),
+                    endOffset: fullDocument.indexOf(windowsState) + windowsState.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: windowsState,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_android_state_status',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(androidState),
+                    endOffset: fullDocument.indexOf(androidState) + androidState.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: androidState,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is platform scoped state status probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(windowsState),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(androidState);
+    });
+
     test('does not mark current and historical date facts as conflicting evidence', async () => {
         const currentDate = 'The migration release date is 2026-08-15 in the current release record.';
         const historicalDate = 'The migration release date is 2026-07-01 in the historical rollout archive.';

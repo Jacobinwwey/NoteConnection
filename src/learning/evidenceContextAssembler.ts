@@ -97,7 +97,8 @@ type ComparableTemporalScopeKey = 'current' | 'historical' | 'planned';
 type ComparableFactScopeKey =
     | `temporal:${ComparableTemporalScopeKey}`
     | `environment:${string}`
-    | `version:${string}`;
+    | `version:${string}`
+    | `platform:${string}`;
 
 const DEFAULT_PARAGRAPH_WINDOW = 5;
 const MAX_GRAPH_NEIGHBOR_DOCUMENT_CONTEXT_FRAGMENTS = 2;
@@ -159,6 +160,19 @@ const COMPARABLE_ENVIRONMENT_SCOPE_ALIASES: Record<string, string> = {
 };
 const COMPARABLE_ENVIRONMENT_SCOPE_PATTERN = /\b(?:in|for|on|under|within)\s+(?:the\s+)?(production|prod|staging|stage|development|dev|test|testing|qa|uat|sandbox|local|preview|canary)(?:\s+(?:environment|env|deployment|cluster|workspace|tenant|runtime))?\b|\b(production|staging|development|test|testing|qa|uat|sandbox|local|preview|canary)\s+(?:environment|env|deployment|cluster|workspace|tenant|runtime)\b/i;
 const COMPARABLE_VERSION_SCOPE_PATTERN = /\b(?:in|for|on|under|within)\s+(?:the\s+)?(?:version|ver\.?|v)\s*([0-9]+(?:\.[0-9]+){0,3}(?:[-+._][a-z0-9]+)?)\b|\b(?:version|ver\.?|v)\s*([0-9]+(?:\.[0-9]+){0,3}(?:[-+._][a-z0-9]+)?)\b/i;
+const COMPARABLE_PLATFORM_SCOPE_ALIASES: Record<string, string> = {
+    windows: 'windows',
+    win32: 'windows',
+    macos: 'macos',
+    mac: 'macos',
+    linux: 'linux',
+    android: 'android',
+    ios: 'ios',
+    web: 'web',
+    desktop: 'desktop',
+    mobile: 'mobile',
+};
+const COMPARABLE_PLATFORM_SCOPE_PATTERN = /\b(?:in|for|on|under|within)\s+(?:the\s+)?(windows|win32|macos|mac|linux|android|ios|web|desktop|mobile)(?:\s+(?:platform|os|runtime|client|app|build|target))?\b|\b(windows|win32|macos|mac|linux|android|ios|web|desktop|mobile)\s+(?:platform|os|runtime|client|app|build|target)\b/i;
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -442,6 +456,16 @@ function comparableFactVersionScopeKey(subjectLabel: string, sentenceTail: strin
     return versionLabel;
 }
 
+function comparableFactPlatformScopeKey(subjectLabel: string, sentenceTail: string): string | null {
+    const scopedText = `${normalizeWhitespace(subjectLabel)} ${normalizeWhitespace(sentenceTail)}`;
+    const match = COMPARABLE_PLATFORM_SCOPE_PATTERN.exec(scopedText);
+    if (!match) {
+        return null;
+    }
+    const platformLabel = String(match[1] || match[2] || '').toLowerCase();
+    return COMPARABLE_PLATFORM_SCOPE_ALIASES[platformLabel] || null;
+}
+
 function comparableFactScopeKeys(subjectLabel: string, sentenceTail: string): ComparableFactScopeKey[] {
     const scopeKeys: ComparableFactScopeKey[] = [];
     const temporalScopeKey = comparableFactTemporalScopeKey(subjectLabel, sentenceTail);
@@ -455,6 +479,10 @@ function comparableFactScopeKeys(subjectLabel: string, sentenceTail: string): Co
     const versionScopeKey = comparableFactVersionScopeKey(subjectLabel, sentenceTail);
     if (versionScopeKey) {
         scopeKeys.push(`version:${versionScopeKey}`);
+    }
+    const platformScopeKey = comparableFactPlatformScopeKey(subjectLabel, sentenceTail);
+    if (platformScopeKey) {
+        scopeKeys.push(`platform:${platformScopeKey}`);
     }
     return scopeKeys.sort();
 }

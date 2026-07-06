@@ -294,6 +294,24 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_platform_scoped_state_status_probe',
+            sourcePath: 'Knowledge_Base/ragplatformqualifier/platform scoped state status probe.md',
+            language: 'en',
+            workspaceId: 'ragplatformqualifier',
+            corpusId: 'ragplatformqualifier',
+            content: [
+                '# Platform Scoped State Status Probe',
+                'Platform scoped state status probe validates that the migration gate status is enabled on the Windows platform while Android status facts remain platform-qualified evidence rather than a conflict.',
+                '',
+                '## Gate Status By Platform',
+                'The migration gate status is enabled on the Windows platform.',
+                '',
+                'Operators should preserve the platform label when comparing runtime records.',
+                '',
+                'The migration gate status is disabled on the Android platform.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_temporal_location_probe',
             sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal location probe.md',
             language: 'en',
@@ -960,6 +978,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
                         acceptedRagDegradationStates: ['none'],
                         answerMustContain: expect.arrayContaining(['enabled', 'version 1.0']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'stable migration gate status',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'platform_scoped_state_status_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['enabled', 'Windows']),
                         answerMustNotContain: expect.arrayContaining([
                             'Conflicting evidence',
                             'stable migration gate status',
