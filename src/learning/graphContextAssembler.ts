@@ -57,9 +57,17 @@ type CachedGraphNodeMetrics = {
 type GraphWindowScoringPolicy = {
     relationPriorities: Partial<Record<RelationKind, number>>;
     defaultRelationPriority: number;
+    intentAlignedRelationKinds: Set<RelationKind>;
     confidenceWeight: number;
     factProvenanceBonus: number;
     bibliographyPenalty: number;
+};
+
+type GraphWindowAssemblyResult = {
+    nodes: AgentConversationGraphWindowNode[];
+    alignedCandidateCount: number;
+    misalignedCandidateCount: number;
+    usedMisalignedFallback: boolean;
 };
 
 type AnchorNodeExclusion = {
@@ -683,6 +691,7 @@ function resolveGraphWindowScoringPolicy(intent: GraphContextAssemblyIntent): Gr
                 reference: 18,
             },
             defaultRelationPriority: 0,
+            intentAlignedRelationKinds: new Set<RelationKind>(['contrast', 'analogy']),
             confidenceWeight: 10,
             factProvenanceBonus: 2,
             bibliographyPenalty: 1000,
@@ -700,6 +709,7 @@ function resolveGraphWindowScoringPolicy(intent: GraphContextAssemblyIntent): Gr
                 reference: 18,
             },
             defaultRelationPriority: 0,
+            intentAlignedRelationKinds: new Set<RelationKind>(['prerequisite', 'sequence', 'application']),
             confidenceWeight: 10,
             factProvenanceBonus: 2,
             bibliographyPenalty: 1000,
@@ -717,6 +727,7 @@ function resolveGraphWindowScoringPolicy(intent: GraphContextAssemblyIntent): Gr
                 reference: 18,
             },
             defaultRelationPriority: 0,
+            intentAlignedRelationKinds: new Set<RelationKind>(['prerequisite', 'causal', 'application', 'sequence']),
             confidenceWeight: 10,
             factProvenanceBonus: 2,
             bibliographyPenalty: 1000,
@@ -725,6 +736,7 @@ function resolveGraphWindowScoringPolicy(intent: GraphContextAssemblyIntent): Gr
     return {
         relationPriorities: structuralPriorities,
         defaultRelationPriority: 0,
+        intentAlignedRelationKinds: new Set<RelationKind>(),
         confidenceWeight: 10,
         factProvenanceBonus: 2,
         bibliographyPenalty: 1000,
@@ -771,12 +783,13 @@ async function buildWindowNodes(
     limit: number,
     missingIds: Set<string>,
     scoringPolicy: GraphWindowScoringPolicy
-): Promise<AgentConversationGraphWindowNode[]> {
+): Promise<GraphWindowAssemblyResult> {
     const rankedEdges = rankRelationEdges(edges);
     const candidates: Array<{
         node: AgentConversationGraphWindowNode;
         score: number;
         confidence: number;
+        intentAligned: boolean;
     }> = [];
     const seenNodeKeys = new Set<string>();
     for (const edge of rankedEdges) {
@@ -804,9 +817,12 @@ async function buildWindowNodes(
         seenNodeKeys.add(nodeKey);
         const metrics = await resolveNodeMetrics(opsStore, relatedAtomId, metricsCache);
         const confidence = Number(Number(edge.confidence || 0).toFixed(4));
+        const intentAligned = scoringPolicy.intentAlignedRelationKinds.size <= 0
+            || Boolean(edge.relationKind && scoringPolicy.intentAlignedRelationKinds.has(edge.relationKind));
         candidates.push({
             score: scoreGraphWindowCandidate(edge, title, scoringPolicy),
             confidence,
+            intentAligned,
             node: {
                 atomId: relatedAtomId,
                 title,
@@ -818,14 +834,24 @@ async function buildWindowNodes(
             },
         });
     }
-    return candidates
+    const alignedCandidateCount = candidates.filter((candidate) => candidate.intentAligned).length;
+    const misalignedCandidateCount = candidates.length - alignedCandidateCount;
+    const candidatePool = alignedCandidateCount > 0
+        ? candidates.filter((candidate) => candidate.intentAligned)
+        : candidates;
+    return {
+        nodes: candidatePool
         .sort((left, right) => (
             right.score - left.score
             || right.confidence - left.confidence
             || left.node.title.localeCompare(right.node.title)
         ))
         .slice(0, limit)
-        .map((candidate) => candidate.node);
+        .map((candidate) => candidate.node),
+        alignedCandidateCount,
+        misalignedCandidateCount,
+        usedMisalignedFallback: alignedCandidateCount <= 0 && misalignedCandidateCount > 0,
+    };
 }
 
 async function buildConnectionPaths(
@@ -961,7 +987,9 @@ function buildDiagnostics(
     budget: ResolvedAssemblyBudget,
     missingConnectionPathSourceAtomIds: Set<string>,
     missingPredecessorAtomIds: Set<string>,
-    missingSuccessorAtomIds: Set<string>
+    missingSuccessorAtomIds: Set<string>,
+    predecessorWindowResult?: GraphWindowAssemblyResult,
+    successorWindowResult?: GraphWindowAssemblyResult
 ): AgentConversationGraphDiagnostics {
     return {
         graphOpsAvailable,
@@ -971,6 +999,12 @@ function buildDiagnostics(
         supportNodeCount,
         supportNodeLimit: budget.maxSupportNodes,
         pathDepthLimit: budget.maxPathDepth,
+        intentAlignedPredecessorCandidateCount: predecessorWindowResult?.alignedCandidateCount ?? 0,
+        intentAlignedSuccessorCandidateCount: successorWindowResult?.alignedCandidateCount ?? 0,
+        intentMisalignedPredecessorCandidateCount: predecessorWindowResult?.misalignedCandidateCount ?? 0,
+        intentMisalignedSuccessorCandidateCount: successorWindowResult?.misalignedCandidateCount ?? 0,
+        usedIntentMisalignedPredecessorFallback: predecessorWindowResult?.usedMisalignedFallback === true,
+        usedIntentMisalignedSuccessorFallback: successorWindowResult?.usedMisalignedFallback === true,
         missingConnectionPathSourceAtomIds: Array.from(missingConnectionPathSourceAtomIds.values()),
         missingPredecessorAtomIds: Array.from(missingPredecessorAtomIds.values()),
         missingSuccessorAtomIds: Array.from(missingSuccessorAtomIds.values()),
@@ -1075,7 +1109,19 @@ export async function assembleAgentConversationGraphContext(
             useCompleteNeighborhoodDegree ? undefined : successorEdgeLimit
         )
         : [];
-    const predecessorWindow = budget.maxPredecessors > 0
+    const emptyPredecessorWindowResult: GraphWindowAssemblyResult = {
+        nodes: [],
+        alignedCandidateCount: 0,
+        misalignedCandidateCount: 0,
+        usedMisalignedFallback: false,
+    };
+    const emptySuccessorWindowResult: GraphWindowAssemblyResult = {
+        nodes: [],
+        alignedCandidateCount: 0,
+        misalignedCandidateCount: 0,
+        usedMisalignedFallback: false,
+    };
+    const predecessorWindowResult = budget.maxPredecessors > 0
         ? await buildWindowNodes(
             opsStore,
             predecessorEdges,
@@ -1087,8 +1133,8 @@ export async function assembleAgentConversationGraphContext(
             missingPredecessorAtomIds,
             graphWindowScoringPolicy
         )
-        : [];
-    const successorWindow = budget.maxSuccessors > 0
+        : emptyPredecessorWindowResult;
+    const successorWindowResult = budget.maxSuccessors > 0
         ? await buildWindowNodes(
             opsStore,
             successorEdges,
@@ -1100,7 +1146,9 @@ export async function assembleAgentConversationGraphContext(
             missingSuccessorAtomIds,
             graphWindowScoringPolicy
         )
-        : [];
+        : emptySuccessorWindowResult;
+    const predecessorWindow = predecessorWindowResult.nodes;
+    const successorWindow = successorWindowResult.nodes;
     const anchorGraphProfile = await buildAnchorGraphProfile(
         opsStore,
         anchorPoint,
@@ -1129,7 +1177,9 @@ export async function assembleAgentConversationGraphContext(
                 budget,
                 missingConnectionPathSourceAtomIds,
                 missingPredecessorAtomIds,
-                missingSuccessorAtomIds
+                missingSuccessorAtomIds,
+                predecessorWindowResult,
+                successorWindowResult
             ),
         },
     };

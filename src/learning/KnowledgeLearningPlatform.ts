@@ -3717,6 +3717,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     supportNodeCount: Math.max(0, Math.floor(Number((value as any).diagnostics.supportNodeCount || 0))),
                     supportNodeLimit: Math.max(0, Math.floor(Number((value as any).diagnostics.supportNodeLimit || 0))),
                     pathDepthLimit: Math.max(0, Math.floor(Number((value as any).diagnostics.pathDepthLimit || 0))),
+                    intentAlignedPredecessorCandidateCount: Math.max(0, Math.floor(Number((value as any).diagnostics.intentAlignedPredecessorCandidateCount || 0))),
+                    intentAlignedSuccessorCandidateCount: Math.max(0, Math.floor(Number((value as any).diagnostics.intentAlignedSuccessorCandidateCount || 0))),
+                    intentMisalignedPredecessorCandidateCount: Math.max(0, Math.floor(Number((value as any).diagnostics.intentMisalignedPredecessorCandidateCount || 0))),
+                    intentMisalignedSuccessorCandidateCount: Math.max(0, Math.floor(Number((value as any).diagnostics.intentMisalignedSuccessorCandidateCount || 0))),
+                    usedIntentMisalignedPredecessorFallback: (value as any).diagnostics.usedIntentMisalignedPredecessorFallback === true,
+                    usedIntentMisalignedSuccessorFallback: (value as any).diagnostics.usedIntentMisalignedSuccessorFallback === true,
                     missingConnectionPathSourceAtomIds: Array.isArray((value as any).diagnostics.missingConnectionPathSourceAtomIds)
                         ? (value as any).diagnostics.missingConnectionPathSourceAtomIds.map((entry: unknown) => String(entry || '').trim()).filter(Boolean)
                         : [],

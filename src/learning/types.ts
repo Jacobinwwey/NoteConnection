@@ -1259,6 +1259,12 @@ export interface AgentConversationGraphDiagnostics {
     supportNodeCount: number;
     supportNodeLimit: number;
     pathDepthLimit: number;
+    intentAlignedPredecessorCandidateCount?: number;
+    intentAlignedSuccessorCandidateCount?: number;
+    intentMisalignedPredecessorCandidateCount?: number;
+    intentMisalignedSuccessorCandidateCount?: number;
+    usedIntentMisalignedPredecessorFallback?: boolean;
+    usedIntentMisalignedSuccessorFallback?: boolean;
     missingConnectionPathSourceAtomIds?: string[];
     missingPredecessorAtomIds?: string[];
     missingSuccessorAtomIds?: string[];

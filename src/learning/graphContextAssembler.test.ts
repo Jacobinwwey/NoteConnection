@@ -842,6 +842,175 @@ describe('assembleAgentConversationGraphContext', () => {
         ]));
     });
 
+    test('filters intent-misaligned structural successors when compare-aligned neighbors exist', async () => {
+        const atoms: KnowledgeAtom[] = [
+            createAtom({
+                id: 'atom_brittle_glass',
+                stableKey: 'brittle_glass',
+                title: 'Brittle Glass Vessel',
+            }),
+            createAtom({
+                id: 'atom_setup_sequence',
+                stableKey: 'setup_sequence',
+                title: 'Setup Sequence',
+            }),
+            createAtom({
+                id: 'atom_prior_material_lesson',
+                stableKey: 'prior_material_lesson',
+                title: 'Prior Material Lesson',
+            }),
+            createAtom({
+                id: 'atom_polymer_contrast',
+                stableKey: 'polymer_contrast',
+                title: 'Polymer Contrast',
+            }),
+        ];
+        const edges: RelationEdge[] = [
+            {
+                id: 'edge_brittle_setup_sequence',
+                sourceAtomId: 'atom_brittle_glass',
+                targetAtomId: 'atom_setup_sequence',
+                relationKind: 'sequence',
+                provenance: 'fact',
+                confidence: 0.99,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-07-05T00:00:00.000Z',
+                },
+            },
+            {
+                id: 'edge_brittle_prior_lesson',
+                sourceAtomId: 'atom_brittle_glass',
+                targetAtomId: 'atom_prior_material_lesson',
+                relationKind: 'prerequisite',
+                provenance: 'fact',
+                confidence: 0.98,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-07-05T00:00:00.000Z',
+                },
+            },
+            {
+                id: 'edge_brittle_polymer_contrast',
+                sourceAtomId: 'atom_brittle_glass',
+                targetAtomId: 'atom_polymer_contrast',
+                relationKind: 'contrast',
+                provenance: 'fact',
+                confidence: 0.51,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-07-05T00:00:00.000Z',
+                },
+            },
+        ];
+        const knowledgePoints: AgentConversationKnowledgePoint[] = [
+            createKnowledgePoint({
+                atomId: 'atom_brittle_glass',
+                atomIds: ['atom_brittle_glass'],
+                documentId: 'doc_brittle_glass',
+                sourcePath: 'Knowledge_Base/graphintent/brittle-glass.md',
+                title: 'Brittle Glass Vessel',
+                summary: 'Brittle glass vessel compares material behavior with polymer vessels.',
+                evidenceSnippet: 'Brittle glass vessel compares material behavior with polymer vessels.',
+                score: 0.96,
+            }),
+        ];
+
+        const result = await assembleAgentConversationGraphContext({
+            message: 'compare brittle glass vessel with polymer cup material behavior',
+            usedScope: globalScope,
+            knowledgePoints,
+            store: new InMemoryOpsStore(atoms, edges),
+            budget: {
+                maxSuccessors: 3,
+            },
+        });
+
+        expect((result.graphContext as any)?.successorWindow).toEqual([
+            expect.objectContaining({
+                atomId: 'atom_polymer_contrast',
+                title: 'Polymer Contrast',
+                relationKind: 'contrast',
+            }),
+        ]);
+        expect((result.graphContext as any)?.successorWindow).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                atomId: 'atom_setup_sequence',
+            }),
+            expect.objectContaining({
+                atomId: 'atom_prior_material_lesson',
+            }),
+        ]));
+        expect((result.graphContext as any)?.diagnostics).toEqual(expect.objectContaining({
+            intentAlignedSuccessorCandidateCount: 1,
+            intentMisalignedSuccessorCandidateCount: 2,
+            usedIntentMisalignedSuccessorFallback: false,
+        }));
+    });
+
+    test('fails open to structural successors when compare intent has no aligned graph neighbor', async () => {
+        const atoms: KnowledgeAtom[] = [
+            createAtom({
+                id: 'atom_brittle_glass',
+                stableKey: 'brittle_glass',
+                title: 'Brittle Glass Vessel',
+            }),
+            createAtom({
+                id: 'atom_setup_sequence',
+                stableKey: 'setup_sequence',
+                title: 'Setup Sequence',
+            }),
+        ];
+        const edges: RelationEdge[] = [
+            {
+                id: 'edge_brittle_setup_sequence',
+                sourceAtomId: 'atom_brittle_glass',
+                targetAtomId: 'atom_setup_sequence',
+                relationKind: 'sequence',
+                provenance: 'fact',
+                confidence: 0.99,
+                evidenceSpanIds: [],
+                temporal: {
+                    validFrom: '2026-07-05T00:00:00.000Z',
+                },
+            },
+        ];
+        const knowledgePoints: AgentConversationKnowledgePoint[] = [
+            createKnowledgePoint({
+                atomId: 'atom_brittle_glass',
+                atomIds: ['atom_brittle_glass'],
+                documentId: 'doc_brittle_glass',
+                sourcePath: 'Knowledge_Base/graphintent/brittle-glass.md',
+                title: 'Brittle Glass Vessel',
+                summary: 'Brittle glass vessel compares material behavior with polymer vessels.',
+                evidenceSnippet: 'Brittle glass vessel compares material behavior with polymer vessels.',
+                score: 0.96,
+            }),
+        ];
+
+        const result = await assembleAgentConversationGraphContext({
+            message: 'compare brittle glass vessel with polymer cup material behavior',
+            usedScope: globalScope,
+            knowledgePoints,
+            store: new InMemoryOpsStore(atoms, edges),
+            budget: {
+                maxSuccessors: 1,
+            },
+        });
+
+        expect((result.graphContext as any)?.successorWindow).toEqual([
+            expect.objectContaining({
+                atomId: 'atom_setup_sequence',
+                relationKind: 'sequence',
+            }),
+        ]);
+        expect((result.graphContext as any)?.diagnostics).toEqual(expect.objectContaining({
+            intentAlignedSuccessorCandidateCount: 0,
+            intentMisalignedSuccessorCandidateCount: 1,
+            usedIntentMisalignedSuccessorFallback: true,
+        }));
+    });
+
     test('fails open to retrieval-shaped graph context when graph ops are unavailable', async () => {
         const knowledgePoints: AgentConversationKnowledgePoint[] = [
             createKnowledgePoint({
