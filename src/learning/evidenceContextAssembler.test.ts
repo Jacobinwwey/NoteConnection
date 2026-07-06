@@ -1026,6 +1026,163 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(fieldLocation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('marks endpoint facts in the same section as conflicting evidence', async () => {
+        const legacyEndpoint = 'The webhook endpoint is /api/v1/hooks.';
+        const currentEndpoint = 'The webhook endpoint is /api/v2/hooks.';
+        const fullDocument = [
+            '# Endpoint Conflict Probe',
+            '',
+            'Endpoint conflict probe validates that route values are comparable operational facts.',
+            '',
+            '## Webhook Routing',
+            legacyEndpoint,
+            '',
+            currentEndpoint,
+            'Operators must resolve which webhook endpoint is active before release.',
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_conflicting_endpoint',
+            documentId: 'doc_conflicting_endpoint',
+            sourcePath: 'Knowledge_Base/ragendpointconflict/endpoint conflict probe.md',
+            title: 'Endpoint Conflict Probe',
+            content: legacyEndpoint,
+            keywords: ['endpoint', 'conflict', 'webhook'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_legacy_endpoint',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(legacyEndpoint),
+                    endOffset: fullDocument.indexOf(legacyEndpoint) + legacyEndpoint.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: legacyEndpoint,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_current_endpoint',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(currentEndpoint),
+                    endOffset: fullDocument.indexOf(currentEndpoint) + currentEndpoint.length,
+                    startLine: 8,
+                    endLine: 8,
+                    snippet: currentEndpoint,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is endpoint conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_legacy_endpoint',
+                'evidence_current_endpoint',
+            ]),
+            startLine: 6,
+            endLine: 9,
+        }));
+        expect(conflictFragment?.text).toContain(legacyEndpoint);
+        expect(conflictFragment?.text).toContain(currentEndpoint);
+    });
+
+    test('does not mark environment-scoped endpoint facts as conflicting evidence', async () => {
+        const stagingEndpoint = 'The webhook endpoint is /api/staging/hooks in the staging environment.';
+        const productionEndpoint = 'The webhook endpoint is /api/prod/hooks in the production environment.';
+        const fullDocument = [
+            '# Environment Scoped Endpoint Probe',
+            '',
+            'Environment scoped endpoint probe validates that deployment-environment route values stay condition-qualified.',
+            '',
+            '## Environment Routes',
+            stagingEndpoint,
+            '',
+            productionEndpoint,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_environment_scoped_endpoint',
+            documentId: 'doc_environment_scoped_endpoint',
+            sourcePath: 'Knowledge_Base/ragendpointqualifier/environment scoped endpoint probe.md',
+            title: 'Environment Scoped Endpoint Probe',
+            content: stagingEndpoint,
+            keywords: ['environment', 'endpoint', 'webhook'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_staging_endpoint',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(stagingEndpoint),
+                    endOffset: fullDocument.indexOf(stagingEndpoint) + stagingEndpoint.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: stagingEndpoint,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_production_endpoint',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(productionEndpoint),
+                    endOffset: fullDocument.indexOf(productionEndpoint) + productionEndpoint.length,
+                    startLine: 8,
+                    endLine: 8,
+                    snippet: productionEndpoint,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is environment scoped endpoint probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(stagingEndpoint),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionEndpoint);
+    });
+
     test('does not mark current and historical location facts as conflicting evidence', async () => {
         const currentLocation = 'The control module location is Rack A in the current release record.';
         const historicalLocation = 'The control module location is Rack B in the historical placement archive.';
