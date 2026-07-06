@@ -242,6 +242,24 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_temporal_planned_release_date_probe',
+            sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal planned release date probe.md',
+            language: 'en',
+            workspaceId: 'ragtemporalqualifier',
+            corpusId: 'ragtemporalqualifier',
+            content: [
+                '# Temporal Planned Release Date Probe',
+                'Temporal planned release date probe validates that the migration release date is 2026-08-15 in the current release record while planned roadmap dates remain future-qualified evidence rather than a conflict.',
+                '',
+                '## Release Date Roadmap',
+                'The migration release date is 2026-08-15 in the current release record.',
+                '',
+                'Operators should answer with the current schedule while retaining planned roadmap material as future-qualified evidence.',
+                '',
+                'The migration release date is 2026-09-20 in the planned rollout draft.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_multi_document_calibration_tolerance_conflict_probe',
             sourcePath: 'Knowledge_Base/ragmulticonflict/multi document calibration tolerance conflict probe.md',
             language: 'en',
@@ -745,6 +763,21 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                 }),
                 expect.objectContaining({
                     id: 'temporal_scoped_release_date_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['2026-08-15', 'current']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'temporal_scoped_planned_release_date_probe_en',
                     expected: expect.objectContaining({
                         requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
                         forbiddenRagRoles: expect.arrayContaining(['conflict']),

@@ -93,6 +93,8 @@ interface ComparableEvidenceFact {
     item: KnowledgeQueryItem;
 }
 
+type ComparableTemporalScopeKey = 'current' | 'historical' | 'planned';
+
 const DEFAULT_PARAGRAPH_WINDOW = 5;
 const MAX_GRAPH_NEIGHBOR_DOCUMENT_CONTEXT_FRAGMENTS = 2;
 const COMPARABLE_NUMERIC_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?)\s+(?:is|=|:)\s*(?:±|\+\/-|\+\s*\/\s*-)?\s*(-?\d+(?:\.\d+)?)\s*(mm|cm|m|um|µm|nm|kg|g|mg|s|ms|%|deg|degree|degrees|c|k)\b/gi;
@@ -116,7 +118,7 @@ const COMPARABLE_STATE_VALUE_GROUPS: Record<string, string> = {
     on: 'on_off',
     off: 'on_off',
 };
-const COMPARABLE_TEMPORAL_SCOPE_GROUPS: Record<string, 'current' | 'historical'> = {
+const COMPARABLE_TEMPORAL_SCOPE_GROUPS: Record<string, ComparableTemporalScopeKey> = {
     current: 'current',
     active: 'current',
     present: 'current',
@@ -128,8 +130,12 @@ const COMPARABLE_TEMPORAL_SCOPE_GROUPS: Record<string, 'current' | 'historical'>
     archived: 'historical',
     deprecated: 'historical',
     superseded: 'historical',
+    planned: 'planned',
+    future: 'planned',
+    upcoming: 'planned',
+    scheduled: 'planned',
 };
-const COMPARABLE_TEMPORAL_SCOPE_PATTERN = /\b(current|active|present|latest|historical|historic|legacy|previous|archived|deprecated|superseded)\b/i;
+const COMPARABLE_TEMPORAL_SCOPE_PATTERN = /\b(current|active|present|latest|historical|historic|legacy|previous|archived|deprecated|superseded|planned|future|upcoming|scheduled)\b/i;
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -381,7 +387,7 @@ function comparableFactSentenceTail(blockText: string, match: RegExpMatchArray):
     return normalizeWhitespace(tail.split(/[.!?]/)[0] || '');
 }
 
-function comparableFactTemporalScopeKey(subjectLabel: string, sentenceTail: string): 'current' | 'historical' | null {
+function comparableFactTemporalScopeKey(subjectLabel: string, sentenceTail: string): ComparableTemporalScopeKey | null {
     const scopedText = `${normalizeWhitespace(subjectLabel)} ${normalizeWhitespace(sentenceTail)}`;
     const match = COMPARABLE_TEMPORAL_SCOPE_PATTERN.exec(scopedText);
     if (!match) {
@@ -390,7 +396,7 @@ function comparableFactTemporalScopeKey(subjectLabel: string, sentenceTail: stri
     return COMPARABLE_TEMPORAL_SCOPE_GROUPS[String(match[1] || '').toLowerCase()] || null;
 }
 
-function comparableFactSubjectKey(subjectLabel: string, temporalScopeKey: 'current' | 'historical' | null): string {
+function comparableFactSubjectKey(subjectLabel: string, temporalScopeKey: ComparableTemporalScopeKey | null): string {
     const scopedSubjectLabel = temporalScopeKey
         ? normalizeWhitespace(subjectLabel).replace(COMPARABLE_TEMPORAL_SCOPE_PATTERN, '')
         : subjectLabel;

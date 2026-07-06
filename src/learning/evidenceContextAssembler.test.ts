@@ -830,6 +830,84 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(historicalDate);
     });
 
+    test('does not mark current and planned date facts as conflicting evidence', async () => {
+        const currentDate = 'The migration release date is 2026-08-15 in the current release record.';
+        const plannedDate = 'The migration release date is 2026-09-20 in the planned rollout draft.';
+        const fullDocument = [
+            '# Temporal Planned Release Date Probe',
+            '',
+            'Temporal planned release date probe validates that scoped current and planned dates are not flattened into one contradiction.',
+            '',
+            '## Release Date Roadmap',
+            currentDate,
+            '',
+            'Operators should answer with the current schedule while retaining planned roadmap material as future-qualified evidence.',
+            '',
+            plannedDate,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_temporal_planned_release_date',
+            documentId: 'doc_temporal_planned_release_date',
+            sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal planned release date probe.md',
+            title: 'Temporal Planned Release Date Probe',
+            content: currentDate,
+            keywords: ['temporal', 'planned', 'release', 'date'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_current_planned_release_date',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(currentDate),
+                    endOffset: fullDocument.indexOf(currentDate) + currentDate.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: currentDate,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_planned_release_date',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(plannedDate),
+                    endOffset: fullDocument.indexOf(plannedDate) + plannedDate.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: plannedDate,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is temporal planned release date probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(currentDate),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(plannedDate);
+    });
+
     test('marks comparable facts from different documents as conflicting evidence', async () => {
         const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the nominal procedure.';
         const fieldTolerance = 'The calibration tolerance is +/-0.50 mm in the field procedure.';
