@@ -430,7 +430,50 @@ function buildBlockCitationMap(
     return citationIdsByBlock;
 }
 
-function collectComparableEvidenceFacts(
+function extractComparableEvidenceFactsFromBlockEntries(
+    entries: Array<{ block: SourceBlock; item: KnowledgeQueryItem }>,
+    citationIdsByBlock: Map<string, Set<string>>
+): ComparableEvidenceFact[] {
+    return entries
+        .sort((left, right) => left.block.startOffset - right.block.startOffset)
+        .flatMap(({ block, item }) => extractComparableEvidenceFacts({
+            block,
+            item,
+            citationIds: Array.from(citationIdsByBlock.get(sourceBlockKey(block)) || []),
+        }));
+}
+
+function selectRepresentativeGroupItem(group: DocumentEvidenceGroup): KnowledgeQueryItem | null {
+    const rankedEntries = group.entries.slice().sort((left, right) => {
+        if (left.directRole !== right.directRole) {
+            return left.directRole === 'direct_support' ? -1 : 1;
+        }
+        return Number(right.item.score || 0) - Number(left.item.score || 0);
+    });
+    return rankedEntries[0]?.item || null;
+}
+
+function buildEvidenceItemMap(
+    group: DocumentEvidenceGroup,
+    blocks: SourceBlock[],
+    source: RagEvidenceSourceDocument
+): Map<string, KnowledgeQueryItem> {
+    const itemByBlock = new Map<string, KnowledgeQueryItem>();
+    group.entries.forEach(({ item }) => {
+        itemEvidenceSpans(item).forEach((span) => {
+            blocksForEvidence(blocks, span, source.content).forEach((block) => {
+                const key = sourceBlockKey(block);
+                const previous = itemByBlock.get(key);
+                if (!previous || Number(item.score || 0) > Number(previous.score || 0)) {
+                    itemByBlock.set(key, item);
+                }
+            });
+        });
+    });
+    return itemByBlock;
+}
+
+function collectSelectedContextComparableFacts(
     group: DocumentEvidenceGroup,
     source: RagEvidenceSourceDocument,
     paragraphWindow: number
@@ -450,13 +493,27 @@ function collectComparableEvidenceFacts(
             });
         });
 
-    return Array.from(selectedBlocks.values())
-        .sort((left, right) => left.block.startOffset - right.block.startOffset)
-        .flatMap(({ block, item }) => extractComparableEvidenceFacts({
+    return extractComparableEvidenceFactsFromBlockEntries(Array.from(selectedBlocks.values()), citationIdsByBlock);
+}
+
+function collectFullDocumentComparableFacts(
+    group: DocumentEvidenceGroup,
+    source: RagEvidenceSourceDocument
+): ComparableEvidenceFact[] {
+    const fallbackItem = selectRepresentativeGroupItem(group);
+    if (!fallbackItem) {
+        return [];
+    }
+    const blocks = parseMarkdownBlocks(source.content);
+    const citationIdsByBlock = buildBlockCitationMap(group, blocks, source);
+    const evidenceItemByBlock = buildEvidenceItemMap(group, blocks, source);
+    return extractComparableEvidenceFactsFromBlockEntries(
+        blocks.map((block) => ({
             block,
-            item,
-            citationIds: Array.from(citationIdsByBlock.get(sourceBlockKey(block)) || []),
-        }));
+            item: evidenceItemByBlock.get(sourceBlockKey(block)) || fallbackItem,
+        })),
+        citationIdsByBlock
+    );
 }
 
 function comparableFactDocumentKey(fact: ComparableEvidenceFact): string {
@@ -806,7 +863,7 @@ export async function assembleRagEvidenceContext(params: AssembleRagEvidenceCont
     const paragraphWindow = Math.floor(Math.max(0, Math.min(20, Number(params.paragraphWindow ?? DEFAULT_PARAGRAPH_WINDOW))));
     const decisions: RagSourceDecision[] = [];
     const rawFragments: RagEvidenceFragment[] = [];
-    const comparableFacts: ComparableEvidenceFact[] = [];
+    const fullDocumentComparableFacts: ComparableEvidenceFact[] = [];
     let readFullDocument = false;
 
     const groups = groupItemsByDocument(
@@ -848,11 +905,11 @@ export async function assembleRagEvidenceContext(params: AssembleRagEvidenceCont
             charsRead: source.content.length,
         });
         rawFragments.push(...buildParentFragments(group, source, paragraphWindow));
-        const groupComparableFacts = collectComparableEvidenceFacts(group, source, paragraphWindow);
-        comparableFacts.push(...groupComparableFacts);
-        rawFragments.push(...buildConflictFragments(group, groupComparableFacts, paragraphWindow));
+        const selectedContextComparableFacts = collectSelectedContextComparableFacts(group, source, paragraphWindow);
+        fullDocumentComparableFacts.push(...collectFullDocumentComparableFacts(group, source));
+        rawFragments.push(...buildConflictFragments(group, selectedContextComparableFacts, paragraphWindow));
     }
-    rawFragments.push(...buildCrossDocumentConflictFragments(comparableFacts));
+    rawFragments.push(...buildCrossDocumentConflictFragments(fullDocumentComparableFacts));
 
     return buildRagContextPack({
         query: params.query,

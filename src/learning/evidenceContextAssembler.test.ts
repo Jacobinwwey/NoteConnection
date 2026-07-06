@@ -615,6 +615,119 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text).toContain(fieldTolerance);
     });
 
+    test('scans complete selected documents for cross-document conflicts beyond the local context window', async () => {
+        const nominalIntro = 'Nominal calibration overview establishes the scoped source document.';
+        const fieldIntro = 'Field calibration overview establishes the comparison source document.';
+        const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the remote nominal appendix.';
+        const fieldTolerance = 'The calibration tolerance is +/-0.50 mm in the remote field appendix.';
+        const filler = Array.from({ length: 8 }, (_, index) => `Unselected filler paragraph ${index + 1} keeps the appendix outside the local window.`);
+        const nominalDocument = [
+            '# Nominal Full Scan Probe',
+            '',
+            nominalIntro,
+            '',
+            ...filler.flatMap((line) => [line, '']),
+            '## Remote Nominal Appendix',
+            nominalTolerance,
+        ].join('\n');
+        const fieldDocument = [
+            '# Field Full Scan Probe',
+            '',
+            fieldIntro,
+            '',
+            ...filler.flatMap((line) => [line, '']),
+            '## Remote Field Appendix',
+            fieldTolerance,
+        ].join('\n');
+        const nominalAtom = makeAtom({
+            id: 'atom_nominal_full_scan_probe',
+            documentId: 'doc_nominal_full_scan_probe',
+            sourcePath: 'Knowledge_Base/ragfullscan/nominal full scan probe.md',
+            title: 'Nominal Full Scan Probe',
+            content: nominalIntro,
+            keywords: ['nominal', 'calibration', 'full', 'scan'],
+        });
+        const fieldAtom = makeAtom({
+            id: 'atom_field_full_scan_probe',
+            documentId: 'doc_field_full_scan_probe',
+            sourcePath: 'Knowledge_Base/ragfullscan/field full scan probe.md',
+            title: 'Field Full Scan Probe',
+            content: fieldIntro,
+            keywords: ['field', 'calibration', 'full', 'scan'],
+        });
+        const nominalItem = makeQueryItem({
+            atom: nominalAtom,
+            evidence: {
+                id: 'evidence_nominal_full_scan_intro',
+                documentId: nominalAtom.documentId,
+                sourcePath: nominalAtom.sourcePath,
+                startOffset: nominalDocument.indexOf(nominalIntro),
+                endOffset: nominalDocument.indexOf(nominalIntro) + nominalIntro.length,
+                startLine: 3,
+                endLine: 3,
+                snippet: nominalIntro,
+            },
+        });
+        const fieldItem = makeQueryItem({
+            atom: fieldAtom,
+            evidence: {
+                id: 'evidence_field_full_scan_intro',
+                documentId: fieldAtom.documentId,
+                sourcePath: fieldAtom.sourcePath,
+                startOffset: fieldDocument.indexOf(fieldIntro),
+                endOffset: fieldDocument.indexOf(fieldIntro) + fieldIntro.length,
+                startLine: 3,
+                endLine: 3,
+                snippet: fieldIntro,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare nominal full scan probe with field full scan probe',
+            items: [nominalItem, fieldItem],
+            sourceResolver: async (lookup) => ({
+                documentId: lookup.documentId,
+                sourcePath: lookup.sourcePath,
+                content: lookup.documentId === nominalAtom.documentId ? nominalDocument : fieldDocument,
+            }),
+            paragraphWindow: 1,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 2600,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => (
+            fragment.role === 'conflict'
+            && fragment.fragmentId.startsWith('rag_conflict_cross_document_')
+        ));
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_full_scan_intro',
+                'evidence_field_full_scan_intro',
+            ]),
+            text: expect.stringContaining('across documents'),
+        }));
+        expect(conflictFragment?.text).toContain(nominalTolerance);
+        expect(conflictFragment?.text).toContain(fieldTolerance);
+        expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: nominalAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: nominalDocument.length,
+            }),
+            expect.objectContaining({
+                documentId: fieldAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: fieldDocument.length,
+            }),
+        ]));
+    });
+
     test('adds graph neighbor evidence as support fragments instead of title-only context', async () => {
         const anchorItem = makeQueryItem({
             atom: {
