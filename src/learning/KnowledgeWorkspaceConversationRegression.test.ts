@@ -1151,6 +1151,24 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_environment_scoped_retry_limit_probe',
+            sourcePath: 'Knowledge_Base/ragenvironmentqualifier/environment scoped retry limit probe.md',
+            language: 'en',
+            workspaceId: 'ragenvironmentqualifier',
+            corpusId: 'ragenvironmentqualifier',
+            content: [
+                '# Environment Scoped Retry Limit Probe',
+                'Environment scoped retry limit probe validates that the retry limit is 3 in the staging environment while production quantity facts remain environment-qualified evidence rather than a conflict.',
+                '',
+                '## Retry Limit By Environment',
+                'The retry limit is 3 in the staging environment.',
+                '',
+                'Operators should preserve the environment label when comparing retry records.',
+                '',
+                'The retry limit is 5 in the production environment.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_environment_scoped_deployment_owner_probe',
             sourcePath: 'Knowledge_Base/ragenvironmentqualifier/environment scoped deployment owner probe.md',
             language: 'en',
@@ -2305,6 +2323,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         answerMustNotContain: expect.arrayContaining([
                             'Conflicting evidence',
                             'stable migration gate status',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'environment_scoped_quantity_limit_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['retry limit', '3', 'staging']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'stable retry limit',
                             'immediate predecessors',
                             'likely next nodes',
                         ]),

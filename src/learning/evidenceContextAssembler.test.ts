@@ -1212,6 +1212,84 @@ describe('assembleRagEvidenceContext', () => {
         ]));
     });
 
+    test('does not mark environment-scoped quantity facts as conflicting evidence', async () => {
+        const stagingLimit = 'The retry limit is 3 in the staging environment.';
+        const productionLimit = 'The retry limit is 5 in the production environment.';
+        const fullDocument = [
+            '# Environment Scoped Retry Limit Probe',
+            '',
+            'Environment scoped retry limit probe validates that deployment-environment quantity values stay condition-qualified.',
+            '',
+            '## Retry Limit By Environment',
+            stagingLimit,
+            '',
+            'Operators should preserve the environment label when comparing retry records.',
+            '',
+            productionLimit,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_environment_scoped_retry_limit',
+            documentId: 'doc_environment_scoped_retry_limit',
+            sourcePath: 'Knowledge_Base/ragenvironmentqualifier/environment scoped retry limit probe.md',
+            title: 'Environment Scoped Retry Limit Probe',
+            content: stagingLimit,
+            keywords: ['environment', 'quantity', 'retry', 'limit'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_staging_retry_limit',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(stagingLimit),
+                    endOffset: fullDocument.indexOf(stagingLimit) + stagingLimit.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: stagingLimit,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_production_retry_limit',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(productionLimit),
+                    endOffset: fullDocument.indexOf(productionLimit) + productionLimit.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: productionLimit,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is environment scoped retry limit probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(stagingLimit),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionLimit);
+    });
+
     test('marks controlled ownership identity facts in the same section as conflicting evidence', async () => {
         const handoffOwner = 'The deployment owner is Release Ops in the handoff sheet.';
         const rollbackOwner = 'The deployment owner is Rollback Team in the rollback appendix.';
