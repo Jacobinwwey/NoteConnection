@@ -22,3 +22,16 @@ export function naturalizeRagPublicEvidenceClause(value: string): string {
     }
     return normalized;
 }
+
+export function shouldRejectCompareProcedureEvidenceClause(value: string, query: string): boolean {
+    const normalizedClause = normalizeWhitespace(value).toLowerCase();
+    const normalizedQuery = normalizeWhitespace(query).toLowerCase();
+    if (!normalizedClause) {
+        return false;
+    }
+    if (/\b(?:procedure|procedural|workflow|runbook|steps?|step\s*\d+|sequence)\b/u.test(normalizedQuery)) {
+        return false;
+    }
+    return /\b(?:procedure|workflow|runbook|steps?|step\s*\d+)\b/u.test(normalizedClause)
+        || /\bprocedural\b.{0,80}\bsequence\b/u.test(normalizedClause);
+}

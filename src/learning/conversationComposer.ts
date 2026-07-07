@@ -25,7 +25,10 @@ import type {
 } from './types';
 import { reviewAnswerRelease } from './answerReleaseReview';
 import { buildAgentConversationGraphContextFromKnowledgePoints } from './graphContextAssembler';
-import { naturalizeRagPublicEvidenceClause } from './ragPublicText';
+import {
+    naturalizeRagPublicEvidenceClause,
+    shouldRejectCompareProcedureEvidenceClause,
+} from './ragPublicText';
 
 export type BuildAgentWorkspaceCapabilities = (atomId: string) => unknown[];
 
@@ -849,6 +852,7 @@ type RagEvidenceSentenceCandidate = {
 type RagEvidenceSentenceSelectionOptions = {
     useLeafHeadingScore?: boolean;
     preferBestLeafHeadingMatch?: boolean;
+    rejectSentence?: (sentence: string) => boolean;
 };
 
 function collectSentenceQueryTerms(sentence: string, queryTerms: string[]): Set<string> {
@@ -918,6 +922,10 @@ function selectRagEvidenceSentences(
                 sentences.flatMap((sentence) => Array.from(collectSentenceQueryTerms(sentence, queryTerms)))
             );
             sentences.forEach((sentence) => {
+                if (options.rejectSentence?.(sentence)) {
+                    sentenceOrder += 1;
+                    return;
+                }
                 const comparable = sentenceComparableKey(sentence);
                 if (!candidates.some((existing) => sentenceComparableKey(existing.sentence) === comparable)) {
                     candidates.push({
@@ -971,8 +979,19 @@ function buildRagAugmentedConversationAnswer(
     const profile = resolveRagAnswerProfile(params.message);
     const intent = classifyScopedConversationIntent(params.message);
     const answerQueryTerms = extractRagAnswerQueryTerms(params.message);
+    const rejectCompareProcedureSentence = intent === 'compare'
+        ? (sentence: string) => shouldRejectCompareProcedureEvidenceClause(sentence, params.message)
+        : undefined;
     const answerSentences: string[] = [];
-    selectRagEvidenceSentences(pack.fragments, new Set(['direct_support']), profile.directSupportSentenceCount, answerQueryTerms)
+    selectRagEvidenceSentences(
+        pack.fragments,
+        new Set(['direct_support']),
+        profile.directSupportSentenceCount,
+        answerQueryTerms,
+        {
+            rejectSentence: rejectCompareProcedureSentence,
+        }
+    )
         .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
     const hasConflictEvidence = params.ragSufficiencyReview?.degradationState === 'conflict'
         || (params.ragSufficiencyReview?.reasons || []).some((reason) => String(reason || '').includes('conflict_evidence_present'));
@@ -988,10 +1007,19 @@ function buildRagAugmentedConversationAnswer(
         {
             useLeafHeadingScore: intent !== 'compare',
             preferBestLeafHeadingMatch: intent !== 'compare',
+            rejectSentence: rejectCompareProcedureSentence,
         }
     )
         .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
-    selectRagEvidenceSentences(pack.fragments, new Set(['graph_neighbor_support']), profile.graphNeighborSentenceCount, answerQueryTerms)
+    selectRagEvidenceSentences(
+        pack.fragments,
+        new Set(['graph_neighbor_support']),
+        profile.graphNeighborSentenceCount,
+        answerQueryTerms,
+        {
+            rejectSentence: rejectCompareProcedureSentence,
+        }
+    )
         .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
     if (params.ragSufficiencyReview?.status === 'borderline') {
         appendRagEvidenceSentence(

@@ -13,7 +13,10 @@ import type {
     RagSufficiencyReview,
     RelationKind,
 } from './types';
-import { naturalizeRagPublicEvidenceClause } from './ragPublicText';
+import {
+    naturalizeRagPublicEvidenceClause,
+    shouldRejectCompareProcedureEvidenceClause,
+} from './ragPublicText';
 
 export interface AnswerReleaseReviewContext {
     message: string;
@@ -37,6 +40,8 @@ type RagAnswerCompleteness = {
     applicable: boolean;
     requiredRoles: RagEvidenceRole[];
     missingRoles: RagEvidenceRole[];
+    requiredProfileSignals: RagProfileCompletenessSignal[];
+    missingProfileSignals: RagProfileCompletenessSignal[];
 };
 
 type RagClaimCitationSupport = {
@@ -979,6 +984,35 @@ function isRagPublicCompareQuery(message: string): boolean {
         || normalized.includes('对比');
 }
 
+function resolveRagPublicAnswerProfile(message: string): RagPublicAnswerProfile {
+    const normalized = normalizeWhitespace(String(message || '').toLowerCase());
+    if (isRagPublicCompareQuery(normalized)) {
+        return 'compare';
+    }
+    if (
+        /\b(?:how to|steps?|procedure|workflow|runbook|calibrat|configure|setup|install|fix|troubleshoot)\b/u.test(normalized)
+        || normalized.includes('\u5982\u4F55')
+        || normalized.includes('\u600E\u4E48')
+        || normalized.includes('\u600E\u6A23')
+        || normalized.includes('\u6B65\u9AA4')
+    ) {
+        return 'how_to';
+    }
+    if (
+        /\b(?:why|cause|causes|caused|causal|because|reason|mechanism|consequence|downstream|implication)\b/u.test(normalized)
+        || normalized.includes('\u4E3A\u4EC0\u4E48')
+        || normalized.includes('\u70BA\u4EC0\u9EBC')
+        || normalized.includes('\u539F\u56E0')
+        || normalized.includes('\u673A\u5236')
+        || normalized.includes('\u6A5F\u5236')
+        || normalized.includes('\u5BFC\u81F4')
+        || normalized.includes('\u5C0E\u81F4')
+    ) {
+        return 'causal';
+    }
+    return 'generic';
+}
+
 function collectRagPublicClauseQueryTerms(value: string, queryTerms: string[]): Set<string> {
     const lower = String(value || '').toLowerCase();
     return new Set(queryTerms.filter((term) => lower.includes(term)));
@@ -999,6 +1033,22 @@ type RagPublicEvidenceClauseSelectionOptions = {
     preferBestLeafHeadingMatch?: boolean;
     minimumLeafHeadingTermCount?: number;
     preserveLeadingHeading?: boolean;
+    rejectClause?: (clause: string) => boolean;
+};
+
+type RagPublicAnswerProfile = 'compare' | 'how_to' | 'causal' | 'generic';
+type RagProfileCompletenessSignal =
+    | 'how_to_steps'
+    | 'how_to_prerequisites'
+    | 'how_to_failure_handling'
+    | 'causal_mechanism'
+    | 'causal_consequence'
+    | 'causal_boundary';
+
+type RagProfileSignalRule = {
+    signal: RagProfileCompletenessSignal;
+    supportPatterns: RegExp[];
+    answerPatterns: RegExp[];
 };
 
 type RagPublicEvidenceClauseCandidate = {
@@ -1079,6 +1129,10 @@ function collectRagPublicEvidenceClauses(
     collectRagRoleFragments(context, roles).forEach((fragment) => {
         const headingQueryTerms = collectRagPublicLeafHeadingQueryTerms(fragment, queryTerms);
         splitRagPublicEvidenceClauses(fragment, options).forEach((clause) => {
+            if (options.rejectClause?.(clause)) {
+                order += 1;
+                return;
+            }
             candidates.push({
                 clause,
                 queryTerms: collectRagPublicClauseQueryTerms(clause, queryTerms),
@@ -1120,6 +1174,83 @@ function collectRagPublicEvidenceClauses(
     return clauses;
 }
 
+function ragRevisionDirectClauseLimit(profile: RagPublicAnswerProfile): number {
+    if (profile === 'compare') {
+        return 1;
+    }
+    if (profile === 'how_to') {
+        return 3;
+    }
+    if (profile === 'causal') {
+        return 2;
+    }
+    return 1;
+}
+
+function ragRevisionDocumentClauseLimit(profile: RagPublicAnswerProfile): number {
+    if (profile === 'compare') {
+        return 2;
+    }
+    if (profile === 'how_to' || profile === 'causal') {
+        return 2;
+    }
+    return 2;
+}
+
+function ragRevisionGraphClauseLimit(profile: RagPublicAnswerProfile): number {
+    if (profile === 'compare' || profile === 'how_to' || profile === 'causal') {
+        return 2;
+    }
+    return 1;
+}
+
+function ragRevisionDocumentClauseOptions(
+    profile: RagPublicAnswerProfile,
+    queryTerms: string[]
+): RagPublicEvidenceClauseSelectionOptions {
+    if (profile === 'compare') {
+        return {
+            preserveLeadingHeading: true,
+        };
+    }
+    if (profile === 'how_to' || profile === 'causal') {
+        return {
+            queryTerms,
+            useLeafHeadingScore: true,
+            preferBestLeafHeadingMatch: false,
+        };
+    }
+    return {
+        queryTerms,
+        useLeafHeadingScore: true,
+        preferBestLeafHeadingMatch: true,
+    };
+}
+
+function ragRevisionGraphClauseOptions(
+    profile: RagPublicAnswerProfile,
+    queryTerms: string[]
+): RagPublicEvidenceClauseSelectionOptions {
+    if (profile === 'compare') {
+        return {
+            preserveLeadingHeading: true,
+        };
+    }
+    if (profile === 'how_to' || profile === 'causal') {
+        return {
+            queryTerms,
+            useLeafHeadingScore: true,
+            preferBestLeafHeadingMatch: false,
+        };
+    }
+    return {
+        queryTerms,
+        useLeafHeadingScore: true,
+        preferBestLeafHeadingMatch: true,
+        minimumLeafHeadingTermCount: queryTerms.length >= 3 ? queryTerms.length : 0,
+    };
+}
+
 function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): string {
     if (!hasUsableRagEvidenceContext(context)) {
         return '';
@@ -1131,26 +1262,29 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
         ...(context.ragContextPack?.fragments || []).slice(0, 4).map((fragment) => fragment.text),
     ].join(' '));
     const queryTerms = extractRagPublicQueryTerms(context.message);
-    const isCompareQuery = isRagPublicCompareQuery(context.message);
+    const profile = resolveRagPublicAnswerProfile(context.message);
+    const isCompareQuery = profile === 'compare';
+    const rejectCompareProcedureClause = isCompareQuery
+        ? (clause: string) => shouldRejectCompareProcedureEvidenceClause(clause, context.message)
+        : undefined;
     const directClauses = collectRagPublicEvidenceClauses(
         context,
         new Set(['direct_support']),
-        1,
+        ragRevisionDirectClauseLimit(profile),
         [],
         {
             preserveLeadingHeading: isCompareQuery,
+            rejectClause: rejectCompareProcedureClause,
         }
     );
     const documentClauses = collectRagPublicEvidenceClauses(
         context,
         new Set(['parent_context', 'adjacent_context']),
-        2,
+        ragRevisionDocumentClauseLimit(profile),
         directClauses,
         {
-            queryTerms,
-            useLeafHeadingScore: true,
-            preferBestLeafHeadingMatch: true,
-            preserveLeadingHeading: isCompareQuery,
+            ...ragRevisionDocumentClauseOptions(profile, queryTerms),
+            rejectClause: rejectCompareProcedureClause,
         }
     );
     const hasConflictEvidence = context.ragSufficiencyReview?.degradationState === 'conflict'
@@ -1166,18 +1300,12 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
     const graphClauses = collectRagPublicEvidenceClauses(
         context,
         new Set(['graph_neighbor_support']),
-        isCompareQuery ? 2 : 1,
+        ragRevisionGraphClauseLimit(profile),
         [...directClauses, ...documentClauses, ...conflictClauses],
-        isCompareQuery
-            ? {
-                preserveLeadingHeading: true,
-            }
-            : {
-                queryTerms,
-                useLeafHeadingScore: true,
-                preferBestLeafHeadingMatch: true,
-                minimumLeafHeadingTermCount: queryTerms.length >= 3 ? queryTerms.length : 0,
-            }
+        {
+            ...ragRevisionGraphClauseOptions(profile, queryTerms),
+            rejectClause: rejectCompareProcedureClause,
+        }
     );
     const fallback = normalizeWhitespace(String(
         context.knowledgePoints[0]?.evidenceSnippet
@@ -1189,7 +1317,11 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
     if (!baseAnswer) {
         return '';
     }
+    const additionalDirectClauses = profile === 'compare'
+        ? []
+        : directClauses.slice(1);
     const extraSentences = [
+        ...additionalDirectClauses,
         ...conflictClauses,
         ...documentClauses,
         ...graphClauses,
@@ -3455,6 +3587,96 @@ function ragAnswerRoleIsCovered(
     return computeGroundingAlignmentScore(context.draftAnswer, supportText) >= 0.22;
 }
 
+const HOW_TO_PROFILE_SIGNAL_RULES: RagProfileSignalRule[] = [
+    {
+        signal: 'how_to_steps',
+        supportPatterns: [/\b(?:step\s*\d+|procedure|workflow|ordered steps?)\b/iu],
+        answerPatterns: [/\b(?:step\s*\d+|procedure|workflow|ordered steps?)\b/iu],
+    },
+    {
+        signal: 'how_to_prerequisites',
+        supportPatterns: [/\b(?:prerequisites?|preconditions?|requirements?|before|confirm|ensure)\b/iu],
+        answerPatterns: [/\b(?:prerequisites?|preconditions?|requirements?|before|confirm|ensure|stable bench|laser is off)\b/iu],
+    },
+    {
+        signal: 'how_to_failure_handling',
+        supportPatterns: [/\b(?:failure modes?|failure handling|if\b.{0,100}\b(?:fail|drift|error|repeat)|fallback|recover|retry)\b/iu],
+        answerPatterns: [/\b(?:failure modes?|failure handling|if\b.{0,100}\b(?:fail|drift|error|repeat)|fallback|recover|retry)\b/iu],
+    },
+];
+
+const CAUSAL_PROFILE_SIGNAL_RULES: RagProfileSignalRule[] = [
+    {
+        signal: 'causal_mechanism',
+        supportPatterns: [/\b(?:because|cause|causal|mechanism|reason|direct cause|occurs when|occurs because)\b/iu],
+        answerPatterns: [/\b(?:because|cause|causal|mechanism|reason|occurs when|occurs because|changes)\b/iu],
+    },
+    {
+        signal: 'causal_consequence',
+        supportPatterns: [/\b(?:downstream|consequence|implication|invalidates|leads to|therefore|so\b)\b/iu],
+        answerPatterns: [/\b(?:downstream|consequence|implication|invalidates|leads to|therefore|so\b)\b/iu],
+    },
+    {
+        signal: 'causal_boundary',
+        supportPatterns: [/\b(?:not only|not just|rather than|instead of|boundary)\b/iu],
+        answerPatterns: [/\b(?:not only|not just|rather than|instead of|boundary)\b/iu],
+    },
+];
+
+function ragProfileSignalRules(profile: RagPublicAnswerProfile): RagProfileSignalRule[] {
+    if (profile === 'how_to') {
+        return HOW_TO_PROFILE_SIGNAL_RULES;
+    }
+    if (profile === 'causal') {
+        return CAUSAL_PROFILE_SIGNAL_RULES;
+    }
+    return [];
+}
+
+function ragProfileTextMatches(value: string, patterns: RegExp[]): boolean {
+    const normalized = normalizeWhitespace(value);
+    return Boolean(normalized) && patterns.some((pattern) => pattern.test(normalized));
+}
+
+function collectRagProfileSupportText(context: AnswerReleaseReviewContext): string {
+    return (context.ragContextPack?.fragments || [])
+        .map((fragment) => normalizeWhitespace([
+            fragment.title || '',
+            Array.isArray(fragment.headingPath) ? fragment.headingPath.join(' ') : '',
+            fragment.text || '',
+        ].join(' ')))
+        .filter(Boolean)
+        .join(' ');
+}
+
+function evaluateRagProfileCompleteness(context: AnswerReleaseReviewContext): {
+    requiredProfileSignals: RagProfileCompletenessSignal[];
+    missingProfileSignals: RagProfileCompletenessSignal[];
+} {
+    const rules = ragProfileSignalRules(resolveRagPublicAnswerProfile(context.message));
+    if (rules.length <= 0) {
+        return {
+            requiredProfileSignals: [],
+            missingProfileSignals: [],
+        };
+    }
+    const supportText = collectRagProfileSupportText(context);
+    const answerText = String(context.draftAnswer || '');
+    const requiredProfileSignals = rules
+        .filter((rule) => ragProfileTextMatches(supportText, rule.supportPatterns))
+        .map((rule) => rule.signal);
+    const missingProfileSignals = rules
+        .filter((rule) => (
+            requiredProfileSignals.includes(rule.signal)
+            && !ragProfileTextMatches(answerText, rule.answerPatterns)
+        ))
+        .map((rule) => rule.signal);
+    return {
+        requiredProfileSignals,
+        missingProfileSignals,
+    };
+}
+
 function evaluateRagAnswerCompleteness(context: AnswerReleaseReviewContext): RagAnswerCompleteness {
     const availableRoles = collectAvailableRagAnswerRoles(context);
     if (availableRoles.length <= 0) {
@@ -3463,6 +3685,8 @@ function evaluateRagAnswerCompleteness(context: AnswerReleaseReviewContext): Rag
             applicable: false,
             requiredRoles: [],
             missingRoles: [],
+            requiredProfileSignals: [],
+            missingProfileSignals: [],
         };
     }
     const sufficiencyStatus = context.ragSufficiencyReview?.status || 'borderline';
@@ -3470,11 +3694,14 @@ function evaluateRagAnswerCompleteness(context: AnswerReleaseReviewContext): Rag
         ? availableRoles
         : availableRoles.filter((role) => role === 'direct_support');
     const missingRoles = requiredRoles.filter((role) => !ragAnswerRoleIsCovered(context, role));
+    const profileCompleteness = evaluateRagProfileCompleteness(context);
     return {
-        passed: missingRoles.length <= 0,
+        passed: missingRoles.length <= 0 && profileCompleteness.missingProfileSignals.length <= 0,
         applicable: true,
         requiredRoles,
         missingRoles,
+        requiredProfileSignals: profileCompleteness.requiredProfileSignals,
+        missingProfileSignals: profileCompleteness.missingProfileSignals,
     };
 }
 
@@ -3483,9 +3710,9 @@ function buildRagAnswerCompletenessMessage(result: RagAnswerCompleteness): strin
         return 'No usable RAG context pack was available, so RAG completeness was not evaluated.';
     }
     if (result.passed) {
-        return `Draft answer covered the required RAG evidence roles: ${result.requiredRoles.join(', ') || 'none'}.`;
+        return `Draft answer covered the required RAG evidence roles: ${result.requiredRoles.join(', ') || 'none'}; profile signals: ${result.requiredProfileSignals.join(', ') || 'none'}.`;
     }
-    return `Draft answer missed required RAG evidence roles: ${result.missingRoles.join(', ')}.`;
+    return `Draft answer missed required RAG evidence roles: ${result.missingRoles.join(', ') || 'none'}; missing profile signals: ${result.missingProfileSignals.join(', ') || 'none'}.`;
 }
 
 function collectCitationBackedRagFragments(context: AnswerReleaseReviewContext): RagEvidenceFragment[] {
@@ -5083,6 +5310,8 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             applicable: false,
             requiredRoles: [],
             missingRoles: [],
+            requiredProfileSignals: [],
+            missingProfileSignals: [],
         };
     const ragClaimCitationSupport = groundedEvidenceAvailable
         ? evaluateRagClaimCitationSupport({

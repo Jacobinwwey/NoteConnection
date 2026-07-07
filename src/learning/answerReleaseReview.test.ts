@@ -776,6 +776,212 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).not.toContain('Italy');
     });
 
+    test('revises how-to RAG drafts that omit profile-required failure handling', () => {
+        const baseCitation = {
+            ...(makeKnowledgePoint().citation as KnowledgeCitation),
+            title: 'Prism Alignment',
+            snippet: 'Step 1: clean the lens mount before calibration.',
+        };
+        const point = makeKnowledgePoint({
+            title: 'Prism Alignment',
+            summary: baseCitation.snippet,
+            evidenceSnippet: baseCitation.snippet,
+            citation: baseCitation,
+            citations: [baseCitation],
+        });
+        const ragContextPack: RagContextPack = {
+            query: 'how to calibrate prism alignment?',
+            generatedAt: '2026-07-07T10:00:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 6,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 2600,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_prism_steps',
+                    role: 'direct_support',
+                    text: 'Step 1: clean the lens mount before calibration. Step 2: lock the clamp before measuring beam position.',
+                    atomId: 'atom_prism_alignment',
+                    documentId: 'doc_prism_alignment',
+                    sourcePath: 'Knowledge_Base/test/prism-alignment.md',
+                    title: 'Prism Alignment',
+                    headingPath: ['Prism Alignment', 'Procedure'],
+                    startLine: 8,
+                    endLine: 10,
+                    charCount: 101,
+                    tokenEstimate: 24,
+                    truncated: false,
+                    citationIds: ['citation_prism_steps'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_parent_prism_prerequisite',
+                    role: 'parent_context',
+                    text: 'Prerequisite: use a stable bench and confirm the laser is off before touching the mount.',
+                    atomId: 'atom_prism_alignment',
+                    documentId: 'doc_prism_alignment',
+                    sourcePath: 'Knowledge_Base/test/prism-alignment.md',
+                    title: 'Prerequisites',
+                    headingPath: ['Prism Alignment', 'Prerequisites'],
+                    startLine: 4,
+                    endLine: 5,
+                    charCount: 86,
+                    tokenEstimate: 18,
+                    truncated: false,
+                    citationIds: ['citation_prism_prerequisite'],
+                    sourceBoundary: 'full_document',
+                },
+                {
+                    fragmentId: 'rag_graph_prism_failure',
+                    role: 'graph_neighbor_support',
+                    text: 'Failure mode: if the beam drifts, repeat clamp inspection before measuring.',
+                    atomId: 'atom_beam_drift_check',
+                    documentId: 'doc_beam_drift_check',
+                    sourcePath: 'Knowledge_Base/test/beam-drift-check.md',
+                    title: 'Failure Handling',
+                    headingPath: ['Prism Alignment', 'Failure Handling'],
+                    startLine: 14,
+                    endLine: 15,
+                    charCount: 78,
+                    tokenEstimate: 16,
+                    truncated: false,
+                    citationIds: ['citation_prism_failure'],
+                    relationEdgeIds: ['edge_prism_failure'],
+                    sourceBoundary: 'full_document',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 265,
+            tokenEstimate: 58,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-07T10:00:00.000Z',
+            status: 'sufficient',
+            score: 0.9,
+            reasons: [],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'none',
+        };
+
+        const review = reviewAnswerRelease({
+            message: 'how to calibrate prism alignment?',
+            draftAnswer: 'Step 1: clean the lens mount before calibration. Step 2: lock the clamp before measuring beam position.',
+            knowledgePoints: [point],
+            citations: [baseCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            ragContextPack,
+            ragSufficiencyReview,
+            reviewedAt: '2026-07-07T10:01:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('rag_answer_completeness');
+        expect(review.publicAnswer).toContain('Step 1: clean the lens mount');
+        expect(review.publicAnswer).toContain('use a stable bench');
+        expect(review.publicAnswer).toContain('if the beam drifts');
+        expect(review.publicAnswer).not.toContain('Prerequisite:');
+        expect(review.publicAnswer).not.toContain('Failure mode:');
+    });
+
+    test('revises causal RAG drafts that omit downstream consequence evidence', () => {
+        const baseCitation = {
+            ...(makeKnowledgePoint().citation as KnowledgeCitation),
+            title: 'Beam Drift Cause',
+            snippet: 'Beam drift occurs because clamp relaxation changes the prism angle.',
+        };
+        const point = makeKnowledgePoint({
+            title: 'Beam Drift Cause',
+            summary: baseCitation.snippet,
+            evidenceSnippet: baseCitation.snippet,
+            citation: baseCitation,
+            citations: [baseCitation],
+        });
+        const ragContextPack: RagContextPack = {
+            query: 'why does beam drift happen?',
+            generatedAt: '2026-07-07T10:10:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 6,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 2600,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_direct_beam_drift_cause',
+                    role: 'direct_support',
+                    text: 'Mechanism: Beam drift occurs because clamp relaxation changes the prism angle.',
+                    atomId: 'atom_beam_drift_cause',
+                    documentId: 'doc_beam_drift_cause',
+                    sourcePath: 'Knowledge_Base/test/beam-drift-cause.md',
+                    title: 'Beam Drift Cause',
+                    headingPath: ['Beam Drift Cause', 'Mechanism'],
+                    startLine: 8,
+                    endLine: 9,
+                    charCount: 78,
+                    tokenEstimate: 18,
+                    truncated: false,
+                    citationIds: ['citation_beam_drift_cause'],
+                    sourceBoundary: 'direct_span_only',
+                },
+                {
+                    fragmentId: 'rag_graph_beam_drift_downstream',
+                    role: 'graph_neighbor_support',
+                    text: 'Downstream consequence: centroid drift invalidates the calibration reading.',
+                    atomId: 'atom_beam_drift_downstream',
+                    documentId: 'doc_beam_drift_downstream',
+                    sourcePath: 'Knowledge_Base/test/beam-drift-downstream.md',
+                    title: 'Beam Drift Downstream',
+                    headingPath: ['Beam Drift Cause', 'Downstream Consequence'],
+                    startLine: 13,
+                    endLine: 14,
+                    charCount: 74,
+                    tokenEstimate: 16,
+                    truncated: false,
+                    citationIds: ['citation_beam_drift_downstream'],
+                    relationEdgeIds: ['edge_beam_drift_downstream'],
+                    sourceBoundary: 'full_document',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 152,
+            tokenEstimate: 34,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-07-07T10:10:00.000Z',
+            status: 'sufficient',
+            score: 0.88,
+            reasons: [],
+            deterministic: true,
+            recoveryAttempted: false,
+            llmJudgeUsed: false,
+            degradationState: 'none',
+        };
+
+        const review = reviewAnswerRelease({
+            message: 'why does beam drift happen?',
+            draftAnswer: 'Beam drift occurs because clamp relaxation changes the prism angle.',
+            knowledgePoints: [point],
+            citations: [baseCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            ragContextPack,
+            ragSufficiencyReview,
+            reviewedAt: '2026-07-07T10:11:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('rag_answer_completeness');
+        expect(review.publicAnswer).toContain('Beam drift occurs because clamp relaxation changes the prism angle');
+        expect(review.publicAnswer).toContain('centroid drift invalidates the calibration reading');
+        expect(review.publicAnswer).not.toContain('Mechanism:');
+        expect(review.publicAnswer).not.toContain('Downstream consequence:');
+    });
+
     test('filters prompt-style preamble clauses from RAG-grounded revisions', () => {
         const baseCitation = {
             ...(makeKnowledgePoint().citation as KnowledgeCitation),
