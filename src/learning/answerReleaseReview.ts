@@ -13,6 +13,7 @@ import type {
     RagSufficiencyReview,
     RelationKind,
 } from './types';
+import { naturalizeRagPublicEvidenceClause } from './ragPublicText';
 
 export interface AnswerReleaseReviewContext {
     message: string;
@@ -710,6 +711,7 @@ function selectPublicEvidenceClause(snippet: string, title: string): string {
     }
     const clauses = splitPublicEvidenceClauses(cleaned)
         .map((clause) => normalizeWhitespace(clause))
+        .map((clause) => naturalizeRagPublicEvidenceClause(clause))
         .filter((clause) => (
             clause.length >= 8
             && !ENGLISH_META_DOCUMENTARY_PATTERN.test(clause)
@@ -1051,6 +1053,7 @@ function splitRagPublicEvidenceClauses(
     }
     const clauses = splitPublicEvidenceClauses(cleaned)
         .map((clause) => normalizeWhitespace(clause))
+        .map((clause) => naturalizeRagPublicEvidenceClause(clause))
         .filter((clause) => (
             clause.length >= 8
             && !ENGLISH_META_DOCUMENTARY_PATTERN.test(clause)

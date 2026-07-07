@@ -25,6 +25,7 @@ import type {
 } from './types';
 import { reviewAnswerRelease } from './answerReleaseReview';
 import { buildAgentConversationGraphContextFromKnowledgePoints } from './graphContextAssembler';
+import { naturalizeRagPublicEvidenceClause } from './ragPublicText';
 
 export type BuildAgentWorkspaceCapabilities = (atomId: string) => unknown[];
 
@@ -818,7 +819,10 @@ function appendRagEvidenceSentence(
     candidate: string,
     useChinese: boolean
 ): void {
-    const normalized = normalizeConversationAnswerSentence(candidate, useChinese);
+    const normalized = normalizeConversationAnswerSentence(
+        naturalizeRagPublicEvidenceClause(candidate),
+        useChinese
+    );
     if (!normalized) {
         return;
     }

@@ -1530,9 +1530,12 @@ describe('conversationComposer', () => {
 
         expect(reply.answer).toContain('Step 1: clean the lens mount');
         expect(reply.answer).toContain('Step 2: lock the clamp');
-        expect(reply.answer).toContain('Prerequisite: use a stable bench');
-        expect(reply.answer).toContain('Downstream check: verify beam drift');
-        expect(reply.answer).toContain('Failure mode: if the beam drifts');
+        expect(reply.answer).toContain('use a stable bench');
+        expect(reply.answer).toContain('verify beam drift');
+        expect(reply.answer).toContain('if the beam drifts');
+        expect(reply.answer).not.toContain('Prerequisite:');
+        expect(reply.answer).not.toContain('Downstream check:');
+        expect(reply.answer).not.toContain('Failure mode:');
         expect(reply.assistantBlocks.filter((block) => block.type === 'structured_answer')).toHaveLength(1);
         const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
         expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toBe(reply.answer);
@@ -1660,10 +1663,14 @@ describe('conversationComposer', () => {
 
         expect(reply.answer).toContain('Beam drift occurs because clamp relaxation changes the prism angle');
         expect(reply.answer).toContain('The angle change moves the beam centroid');
-        expect(reply.answer).toContain('Mechanism: thermal cycling loosens the clamp');
-        expect(reply.answer).toContain('Reasoning boundary: the source ties the symptom');
-        expect(reply.answer).toContain('Downstream consequence: centroid drift invalidates the calibration reading');
-        expect(reply.answer).toContain('Mitigation neighbor: re-locking the clamp restores the reference beam path');
+        expect(reply.answer).toContain('thermal cycling loosens the clamp');
+        expect(reply.answer).toContain('the source ties the symptom');
+        expect(reply.answer).toContain('centroid drift invalidates the calibration reading');
+        expect(reply.answer).toContain('re-locking the clamp restores the reference beam path');
+        expect(reply.answer).not.toContain('Mechanism:');
+        expect(reply.answer).not.toContain('Reasoning boundary:');
+        expect(reply.answer).not.toContain('Downstream consequence:');
+        expect(reply.answer).not.toContain('Mitigation neighbor:');
     });
 
     test('uses generic RAG profile to rank direct evidence by query coverage', () => {
@@ -1786,6 +1793,7 @@ describe('conversationComposer', () => {
         expect(reply.answer).toContain('stable baseline records');
         expect(reply.answer).toContain('downstream calibration quality');
         expect(reply.answer).not.toContain('broad overview of laboratory documentation');
+        expect(reply.answer).not.toContain('Graph caveat:');
     });
 
     test('fails graph comparison gate when compare intent only has reference context and no real branch signal', () => {

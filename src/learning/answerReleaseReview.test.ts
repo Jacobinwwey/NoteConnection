@@ -606,7 +606,7 @@ describe('answerReleaseReview', () => {
                 {
                     fragmentId: 'rag_parent_water_glass_boundary',
                     role: 'parent_context',
-                    text: 'The vessel boundary and water surface jointly determine the observed optical behavior.',
+                    text: 'Mechanism: The vessel boundary and water surface jointly determine the observed optical behavior.',
                     atomId: 'atom_water_glass',
                     documentId: 'doc_water_glass',
                     sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
@@ -623,7 +623,7 @@ describe('answerReleaseReview', () => {
                 {
                     fragmentId: 'rag_graph_water_glass_refraction',
                     role: 'graph_neighbor_support',
-                    text: 'Light refracts through air, glass, and water, so the cup can act like a simple optical lens.',
+                    text: 'Graph caveat: Light refracts through air, glass, and water, so the cup can act like a simple optical lens.',
                     atomId: 'atom_refraction',
                     documentId: 'doc_water_glass',
                     sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
@@ -694,6 +694,8 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).toContain('transparent drinking vessel');
         expect(review.publicAnswer).toContain('vessel boundary and water surface');
         expect(review.publicAnswer).toContain('Light refracts through air, glass, and water');
+        expect(review.publicAnswer).not.toContain('Mechanism:');
+        expect(review.publicAnswer).not.toContain('Graph caveat:');
         expect(review.publicAnswer).not.toContain('Grounded by RAG context');
         expect(review.publicAnswer).not.toContain('immediate predecessors');
         expect(review.publicAnswer).not.toContain('likely next nodes');
