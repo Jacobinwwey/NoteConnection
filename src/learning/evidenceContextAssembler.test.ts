@@ -1107,6 +1107,157 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text).toContain(currentEndpoint);
     });
 
+    test('finds remote endpoint conflicts from the full selected documents beyond matched opening spans', async () => {
+        const nominalOpening = 'Nominal endpoint full scan source is the scoped comparison document for full-document endpoint augmentation.';
+        const fieldOpening = 'Field endpoint full scan source is the scoped comparison document for full-document endpoint augmentation.';
+        const legacyEndpoint = 'The webhook endpoint is /api/v1/hooks in the remote nominal endpoint appendix.';
+        const currentEndpoint = 'The webhook endpoint is /api/v2/hooks in the remote field endpoint appendix.';
+        const nominalDocument = [
+            '# Nominal Endpoint Full Scan Source',
+            nominalOpening,
+            '',
+            'This opening section is intentionally separate from the remote endpoint statement.',
+            '',
+            'Local endpoint filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local endpoint filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local endpoint filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local endpoint filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local endpoint filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local endpoint filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Nominal Endpoint Appendix',
+            legacyEndpoint,
+        ].join('\n');
+        const fieldDocument = [
+            '# Field Endpoint Full Scan Source',
+            fieldOpening,
+            '',
+            'This opening section is intentionally separate from the remote endpoint statement.',
+            '',
+            'Local endpoint filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local endpoint filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local endpoint filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local endpoint filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local endpoint filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local endpoint filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Field Endpoint Appendix',
+            currentEndpoint,
+        ].join('\n');
+        const nominalAtom = makeAtom({
+            id: 'atom_nominal_endpoint_full_scan_source',
+            documentId: 'doc_nominal_endpoint_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragendpointfullscan/nominal endpoint full scan source.md',
+            title: 'Nominal Endpoint Full Scan Source',
+            content: nominalOpening,
+            keywords: ['endpoint', 'webhook', 'full scan'],
+        });
+        const fieldAtom = makeAtom({
+            id: 'atom_field_endpoint_full_scan_source',
+            documentId: 'doc_field_endpoint_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragendpointfullscan/field endpoint full scan source.md',
+            title: 'Field Endpoint Full Scan Source',
+            content: fieldOpening,
+            keywords: ['endpoint', 'webhook', 'full scan'],
+        });
+        const items: KnowledgeQueryItem[] = [
+            {
+                ...makeQueryItem({ atom: nominalAtom }),
+                atom: nominalAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_nominal_endpoint_opening',
+                        documentId: nominalAtom.documentId,
+                        sourcePath: nominalAtom.sourcePath,
+                        startOffset: nominalDocument.indexOf(nominalOpening),
+                        endOffset: nominalDocument.indexOf(nominalOpening) + nominalOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: nominalOpening,
+                    }),
+                ],
+            },
+            {
+                ...makeQueryItem({ atom: fieldAtom }),
+                atom: fieldAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_field_endpoint_opening',
+                        documentId: fieldAtom.documentId,
+                        sourcePath: fieldAtom.sourcePath,
+                        startOffset: fieldDocument.indexOf(fieldOpening),
+                        endOffset: fieldDocument.indexOf(fieldOpening) + fieldOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: fieldOpening,
+                    }),
+                ],
+            },
+        ];
+        const documentsById = new Map([
+            [nominalAtom.documentId, nominalDocument],
+            [fieldAtom.documentId, fieldDocument],
+        ]);
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare nominal endpoint full scan source with field endpoint full scan source',
+            items,
+            sourceResolver: async (request) => ({
+                documentId: request.documentId,
+                sourcePath: request.sourcePath,
+                content: documentsById.get(request.documentId) || '',
+            }),
+            paragraphWindow: 1,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 3000,
+            },
+        });
+
+        const directSupportText = assembly.fragments
+            .filter((fragment) => fragment.role === 'direct_support')
+            .map((fragment) => fragment.text)
+            .join('\n');
+        expect(directSupportText).not.toContain('/api/v1/hooks');
+        expect(directSupportText).not.toContain('/api/v2/hooks');
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_endpoint_opening',
+                'evidence_field_endpoint_opening',
+            ]),
+        }));
+        expect(conflictFragment?.text).toContain(legacyEndpoint);
+        expect(conflictFragment?.text).toContain(currentEndpoint);
+        expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: nominalAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: nominalDocument.length,
+            }),
+            expect.objectContaining({
+                documentId: fieldAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: fieldDocument.length,
+            }),
+        ]));
+    });
+
     test('does not mark environment-scoped endpoint facts as conflicting evidence', async () => {
         const stagingEndpoint = 'The webhook endpoint is /api/staging/hooks in the staging environment.';
         const productionEndpoint = 'The webhook endpoint is /api/prod/hooks in the production environment.';
