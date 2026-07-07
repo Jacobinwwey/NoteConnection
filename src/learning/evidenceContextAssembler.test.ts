@@ -4544,6 +4544,143 @@ describe('assembleRagEvidenceContext', () => {
         }
     });
 
+    test('does not mark condition-scoped quantity facts from different documents as conflicting evidence', async () => {
+        const conditionScopedQuantityCases = [
+            {
+                query: 'compare cross environment staging retry limit source with cross environment production retry limit source',
+                leftTitle: 'Cross Environment Staging Retry Limit Source',
+                rightTitle: 'Cross Environment Production Retry Limit Source',
+                leftDocumentId: 'doc_cross_environment_staging_retry_limit_source',
+                rightDocumentId: 'doc_cross_environment_production_retry_limit_source',
+                leftSourcePath: 'Knowledge_Base/ragconditionquantitycrossscope/cross environment staging retry limit source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditionquantitycrossscope/cross environment production retry limit source.md',
+                leftLimit: 'The retry limit is 3 in the staging environment.',
+                rightLimit: 'The retry limit is 5 in the production environment.',
+                leftKeywords: ['environment', 'staging', 'retry', 'limit'],
+                rightKeywords: ['environment', 'production', 'retry', 'limit'],
+            },
+            {
+                query: 'compare cross version one retry limit source with cross version two retry limit source',
+                leftTitle: 'Cross Version One Retry Limit Source',
+                rightTitle: 'Cross Version Two Retry Limit Source',
+                leftDocumentId: 'doc_cross_version_one_retry_limit_source',
+                rightDocumentId: 'doc_cross_version_two_retry_limit_source',
+                leftSourcePath: 'Knowledge_Base/ragconditionquantitycrossscope/cross version one retry limit source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditionquantitycrossscope/cross version two retry limit source.md',
+                leftLimit: 'The retry limit is 3 in version 1.0.',
+                rightLimit: 'The retry limit is 5 in version 2.0.',
+                leftKeywords: ['version', 'one', 'retry', 'limit'],
+                rightKeywords: ['version', 'two', 'retry', 'limit'],
+            },
+            {
+                query: 'compare cross platform windows retry limit source with cross platform android retry limit source',
+                leftTitle: 'Cross Platform Windows Retry Limit Source',
+                rightTitle: 'Cross Platform Android Retry Limit Source',
+                leftDocumentId: 'doc_cross_platform_windows_retry_limit_source',
+                rightDocumentId: 'doc_cross_platform_android_retry_limit_source',
+                leftSourcePath: 'Knowledge_Base/ragconditionquantitycrossscope/cross platform windows retry limit source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditionquantitycrossscope/cross platform android retry limit source.md',
+                leftLimit: 'The retry limit is 3 on the Windows platform.',
+                rightLimit: 'The retry limit is 5 on the Android platform.',
+                leftKeywords: ['platform', 'windows', 'retry', 'limit'],
+                rightKeywords: ['platform', 'android', 'retry', 'limit'],
+            },
+        ];
+
+        for (const quantityCase of conditionScopedQuantityCases) {
+            const leftDocument = [
+                `# ${quantityCase.leftTitle}`,
+                '',
+                `${quantityCase.leftTitle} records the scoped retry limit.`,
+                '',
+                '## Scoped Retry Limit',
+                quantityCase.leftLimit,
+            ].join('\n');
+            const rightDocument = [
+                `# ${quantityCase.rightTitle}`,
+                '',
+                `${quantityCase.rightTitle} records the scoped retry limit.`,
+                '',
+                '## Scoped Retry Limit',
+                quantityCase.rightLimit,
+            ].join('\n');
+            const leftAtom = makeAtom({
+                id: quantityCase.leftDocumentId.replace(/^doc_/, 'atom_'),
+                documentId: quantityCase.leftDocumentId,
+                sourcePath: quantityCase.leftSourcePath,
+                title: quantityCase.leftTitle,
+                content: quantityCase.leftLimit,
+                keywords: quantityCase.leftKeywords,
+            });
+            const rightAtom = makeAtom({
+                id: quantityCase.rightDocumentId.replace(/^doc_/, 'atom_'),
+                documentId: quantityCase.rightDocumentId,
+                sourcePath: quantityCase.rightSourcePath,
+                title: quantityCase.rightTitle,
+                content: quantityCase.rightLimit,
+                keywords: quantityCase.rightKeywords,
+            });
+            const leftItem = makeQueryItem({
+                atom: leftAtom,
+                evidence: {
+                    id: `evidence_${quantityCase.leftDocumentId}`,
+                    documentId: leftAtom.documentId,
+                    sourcePath: leftAtom.sourcePath,
+                    startOffset: leftDocument.indexOf(quantityCase.leftLimit),
+                    endOffset: leftDocument.indexOf(quantityCase.leftLimit) + quantityCase.leftLimit.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: quantityCase.leftLimit,
+                },
+            });
+            const rightItem = makeQueryItem({
+                atom: rightAtom,
+                evidence: {
+                    id: `evidence_${quantityCase.rightDocumentId}`,
+                    documentId: rightAtom.documentId,
+                    sourcePath: rightAtom.sourcePath,
+                    startOffset: rightDocument.indexOf(quantityCase.rightLimit),
+                    endOffset: rightDocument.indexOf(quantityCase.rightLimit) + quantityCase.rightLimit.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: quantityCase.rightLimit,
+                },
+            });
+
+            const assembly = await assembleRagEvidenceContext({
+                query: quantityCase.query,
+                items: [leftItem, rightItem],
+                sourceResolver: async (lookup) => ({
+                    documentId: lookup.documentId,
+                    sourcePath: lookup.sourcePath,
+                    content: lookup.documentId === leftAtom.documentId ? leftDocument : rightDocument,
+                }),
+                paragraphWindow: 5,
+                budget: {
+                    maxFragments: 10,
+                    maxCharsPerFragment: 700,
+                    maxTotalChars: 2600,
+                },
+            });
+
+            expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+            expect(assembly.fragments).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    role: 'parent_context',
+                    documentId: leftAtom.documentId,
+                    sourceBoundary: 'full_document',
+                    text: expect.stringContaining(quantityCase.leftLimit),
+                }),
+                expect.objectContaining({
+                    role: 'parent_context',
+                    documentId: rightAtom.documentId,
+                    sourceBoundary: 'full_document',
+                    text: expect.stringContaining(quantityCase.rightLimit),
+                }),
+            ]));
+        }
+    });
+
     test('marks comparable facts from different documents as conflicting evidence', async () => {
         const nominalTolerance = 'The calibration tolerance is +/-0.10 mm in the nominal procedure.';
         const fieldTolerance = 'The calibration tolerance is +/-0.50 mm in the field procedure.';
