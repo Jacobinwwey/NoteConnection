@@ -4800,6 +4800,242 @@ describe('assembleRagEvidenceContext', () => {
         }
     });
 
+    test('does not mark condition-scoped interface facts from different documents as conflicting evidence', async () => {
+        const conditionScopedInterfaceCases = [
+            {
+                query: 'compare cross environment staging endpoint source with cross environment production endpoint source',
+                leftTitle: 'Cross Environment Staging Endpoint Source',
+                rightTitle: 'Cross Environment Production Endpoint Source',
+                leftDocumentId: 'doc_cross_environment_staging_endpoint_source',
+                rightDocumentId: 'doc_cross_environment_production_endpoint_source',
+                leftSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross environment staging endpoint source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross environment production endpoint source.md',
+                leftFact: 'The webhook endpoint is /api/staging/hooks in the staging environment.',
+                rightFact: 'The webhook endpoint is /api/production/hooks in the production environment.',
+                factLabel: 'webhook endpoint',
+                leftKeywords: ['environment', 'staging', 'endpoint'],
+                rightKeywords: ['environment', 'production', 'endpoint'],
+            },
+            {
+                query: 'compare cross version one endpoint source with cross version two endpoint source',
+                leftTitle: 'Cross Version One Endpoint Source',
+                rightTitle: 'Cross Version Two Endpoint Source',
+                leftDocumentId: 'doc_cross_version_one_endpoint_source',
+                rightDocumentId: 'doc_cross_version_two_endpoint_source',
+                leftSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross version one endpoint source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross version two endpoint source.md',
+                leftFact: 'The webhook endpoint is /api/release-one/hooks in version 1.0.',
+                rightFact: 'The webhook endpoint is /api/release-two/hooks in version 2.0.',
+                factLabel: 'webhook endpoint',
+                leftKeywords: ['version', 'one', 'endpoint'],
+                rightKeywords: ['version', 'two', 'endpoint'],
+            },
+            {
+                query: 'compare cross platform windows endpoint source with cross platform android endpoint source',
+                leftTitle: 'Cross Platform Windows Endpoint Source',
+                rightTitle: 'Cross Platform Android Endpoint Source',
+                leftDocumentId: 'doc_cross_platform_windows_endpoint_source',
+                rightDocumentId: 'doc_cross_platform_android_endpoint_source',
+                leftSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross platform windows endpoint source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross platform android endpoint source.md',
+                leftFact: 'The webhook endpoint is /api/windows/hooks on the Windows platform.',
+                rightFact: 'The webhook endpoint is /api/android/hooks on the Android platform.',
+                factLabel: 'webhook endpoint',
+                leftKeywords: ['platform', 'windows', 'endpoint'],
+                rightKeywords: ['platform', 'android', 'endpoint'],
+            },
+            {
+                query: 'compare cross environment staging format source with cross environment production format source',
+                leftTitle: 'Cross Environment Staging Format Source',
+                rightTitle: 'Cross Environment Production Format Source',
+                leftDocumentId: 'doc_cross_environment_staging_format_source',
+                rightDocumentId: 'doc_cross_environment_production_format_source',
+                leftSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross environment staging format source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross environment production format source.md',
+                leftFact: 'The payload format is JSON in the staging environment.',
+                rightFact: 'The payload format is XML in the production environment.',
+                factLabel: 'payload format',
+                leftKeywords: ['environment', 'staging', 'format'],
+                rightKeywords: ['environment', 'production', 'format'],
+            },
+            {
+                query: 'compare cross version one format source with cross version two format source',
+                leftTitle: 'Cross Version One Format Source',
+                rightTitle: 'Cross Version Two Format Source',
+                leftDocumentId: 'doc_cross_version_one_format_source',
+                rightDocumentId: 'doc_cross_version_two_format_source',
+                leftSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross version one format source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross version two format source.md',
+                leftFact: 'The payload format is JSON in version 1.0.',
+                rightFact: 'The payload format is XML in version 2.0.',
+                factLabel: 'payload format',
+                leftKeywords: ['version', 'one', 'format'],
+                rightKeywords: ['version', 'two', 'format'],
+            },
+            {
+                query: 'compare cross platform windows format source with cross platform android format source',
+                leftTitle: 'Cross Platform Windows Format Source',
+                rightTitle: 'Cross Platform Android Format Source',
+                leftDocumentId: 'doc_cross_platform_windows_format_source',
+                rightDocumentId: 'doc_cross_platform_android_format_source',
+                leftSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross platform windows format source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross platform android format source.md',
+                leftFact: 'The payload format is JSON on the Windows platform.',
+                rightFact: 'The payload format is XML on the Android platform.',
+                factLabel: 'payload format',
+                leftKeywords: ['platform', 'windows', 'format'],
+                rightKeywords: ['platform', 'android', 'format'],
+            },
+            {
+                query: 'compare cross environment staging protocol source with cross environment production protocol source',
+                leftTitle: 'Cross Environment Staging Protocol Source',
+                rightTitle: 'Cross Environment Production Protocol Source',
+                leftDocumentId: 'doc_cross_environment_staging_protocol_source',
+                rightDocumentId: 'doc_cross_environment_production_protocol_source',
+                leftSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross environment staging protocol source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross environment production protocol source.md',
+                leftFact: 'The transport protocol is HTTP/2 in the staging environment.',
+                rightFact: 'The transport protocol is gRPC in the production environment.',
+                factLabel: 'transport protocol',
+                leftKeywords: ['environment', 'staging', 'protocol'],
+                rightKeywords: ['environment', 'production', 'protocol'],
+            },
+            {
+                query: 'compare cross version one protocol source with cross version two protocol source',
+                leftTitle: 'Cross Version One Protocol Source',
+                rightTitle: 'Cross Version Two Protocol Source',
+                leftDocumentId: 'doc_cross_version_one_protocol_source',
+                rightDocumentId: 'doc_cross_version_two_protocol_source',
+                leftSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross version one protocol source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross version two protocol source.md',
+                leftFact: 'The transport protocol is HTTP/2 in version 1.0.',
+                rightFact: 'The transport protocol is gRPC in version 2.0.',
+                factLabel: 'transport protocol',
+                leftKeywords: ['version', 'one', 'protocol'],
+                rightKeywords: ['version', 'two', 'protocol'],
+            },
+            {
+                query: 'compare cross platform windows protocol source with cross platform android protocol source',
+                leftTitle: 'Cross Platform Windows Protocol Source',
+                rightTitle: 'Cross Platform Android Protocol Source',
+                leftDocumentId: 'doc_cross_platform_windows_protocol_source',
+                rightDocumentId: 'doc_cross_platform_android_protocol_source',
+                leftSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross platform windows protocol source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditioninterfacecrossscope/cross platform android protocol source.md',
+                leftFact: 'The transport protocol is HTTP/2 on the Windows platform.',
+                rightFact: 'The transport protocol is gRPC on the Android platform.',
+                factLabel: 'transport protocol',
+                leftKeywords: ['platform', 'windows', 'protocol'],
+                rightKeywords: ['platform', 'android', 'protocol'],
+            },
+        ];
+
+        for (const interfaceCase of conditionScopedInterfaceCases) {
+            const leftDocument = [
+                `# ${interfaceCase.leftTitle}`,
+                '',
+                `${interfaceCase.leftTitle} records the scoped ${interfaceCase.factLabel}.`,
+                '',
+                `## Scoped ${interfaceCase.factLabel}`,
+                interfaceCase.leftFact,
+            ].join('\n');
+            const rightDocument = [
+                `# ${interfaceCase.rightTitle}`,
+                '',
+                `${interfaceCase.rightTitle} records the scoped ${interfaceCase.factLabel}.`,
+                '',
+                `## Scoped ${interfaceCase.factLabel}`,
+                interfaceCase.rightFact,
+            ].join('\n');
+            const leftAtom = makeAtom({
+                id: interfaceCase.leftDocumentId.replace(/^doc_/, 'atom_'),
+                documentId: interfaceCase.leftDocumentId,
+                sourcePath: interfaceCase.leftSourcePath,
+                title: interfaceCase.leftTitle,
+                content: interfaceCase.leftFact,
+                keywords: interfaceCase.leftKeywords,
+            });
+            const rightAtom = makeAtom({
+                id: interfaceCase.rightDocumentId.replace(/^doc_/, 'atom_'),
+                documentId: interfaceCase.rightDocumentId,
+                sourcePath: interfaceCase.rightSourcePath,
+                title: interfaceCase.rightTitle,
+                content: interfaceCase.rightFact,
+                keywords: interfaceCase.rightKeywords,
+            });
+            const leftItem = makeQueryItem({
+                atom: leftAtom,
+                evidence: {
+                    id: `evidence_${interfaceCase.leftDocumentId}`,
+                    documentId: leftAtom.documentId,
+                    sourcePath: leftAtom.sourcePath,
+                    startOffset: leftDocument.indexOf(interfaceCase.leftFact),
+                    endOffset: leftDocument.indexOf(interfaceCase.leftFact) + interfaceCase.leftFact.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: interfaceCase.leftFact,
+                },
+            });
+            const rightItem = makeQueryItem({
+                atom: rightAtom,
+                evidence: {
+                    id: `evidence_${interfaceCase.rightDocumentId}`,
+                    documentId: rightAtom.documentId,
+                    sourcePath: rightAtom.sourcePath,
+                    startOffset: rightDocument.indexOf(interfaceCase.rightFact),
+                    endOffset: rightDocument.indexOf(interfaceCase.rightFact) + interfaceCase.rightFact.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: interfaceCase.rightFact,
+                },
+            });
+
+            const assembly = await assembleRagEvidenceContext({
+                query: interfaceCase.query,
+                items: [leftItem, rightItem],
+                sourceResolver: async (lookup) => ({
+                    documentId: lookup.documentId,
+                    sourcePath: lookup.sourcePath,
+                    content: lookup.documentId === leftAtom.documentId ? leftDocument : rightDocument,
+                }),
+                paragraphWindow: 5,
+                budget: {
+                    maxFragments: 10,
+                    maxCharsPerFragment: 700,
+                    maxTotalChars: 2600,
+                },
+            });
+
+            expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+            expect(assembly.fragments).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    role: 'parent_context',
+                    documentId: leftAtom.documentId,
+                    sourceBoundary: 'full_document',
+                    text: expect.stringContaining(interfaceCase.leftFact),
+                }),
+                expect.objectContaining({
+                    role: 'parent_context',
+                    documentId: rightAtom.documentId,
+                    sourceBoundary: 'full_document',
+                    text: expect.stringContaining(interfaceCase.rightFact),
+                }),
+            ]));
+            expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    documentId: leftAtom.documentId,
+                    status: 'read',
+                    charsRead: leftDocument.length,
+                }),
+                expect.objectContaining({
+                    documentId: rightAtom.documentId,
+                    status: 'read',
+                    charsRead: rightDocument.length,
+                }),
+            ]));
+        }
+    });
+
     test('does not mark condition-scoped quantity facts from different documents as conflicting evidence', async () => {
         const conditionScopedQuantityCases = [
             {
