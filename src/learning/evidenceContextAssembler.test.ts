@@ -4651,6 +4651,155 @@ describe('assembleRagEvidenceContext', () => {
         }
     });
 
+    test('does not mark condition-scoped state facts from different documents as conflicting evidence', async () => {
+        const conditionScopedStateCases = [
+            {
+                query: 'compare cross environment staging state source with cross environment production state source',
+                leftTitle: 'Cross Environment Staging State Source',
+                rightTitle: 'Cross Environment Production State Source',
+                leftDocumentId: 'doc_cross_environment_staging_state_source',
+                rightDocumentId: 'doc_cross_environment_production_state_source',
+                leftSourcePath: 'Knowledge_Base/ragconditionstatecrossscope/cross environment staging state source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditionstatecrossscope/cross environment production state source.md',
+                leftState: 'The migration gate status is enabled in the staging environment.',
+                rightState: 'The migration gate status is disabled in the production environment.',
+                leftKeywords: ['environment', 'staging', 'state'],
+                rightKeywords: ['environment', 'production', 'state'],
+            },
+            {
+                query: 'compare cross version one state source with cross version two state source',
+                leftTitle: 'Cross Version One State Source',
+                rightTitle: 'Cross Version Two State Source',
+                leftDocumentId: 'doc_cross_version_one_state_source',
+                rightDocumentId: 'doc_cross_version_two_state_source',
+                leftSourcePath: 'Knowledge_Base/ragconditionstatecrossscope/cross version one state source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditionstatecrossscope/cross version two state source.md',
+                leftState: 'The migration gate status is enabled in version 1.0.',
+                rightState: 'The migration gate status is disabled in version 2.0.',
+                leftKeywords: ['version', 'one', 'state'],
+                rightKeywords: ['version', 'two', 'state'],
+            },
+            {
+                query: 'compare cross platform windows state source with cross platform android state source',
+                leftTitle: 'Cross Platform Windows State Source',
+                rightTitle: 'Cross Platform Android State Source',
+                leftDocumentId: 'doc_cross_platform_windows_state_source',
+                rightDocumentId: 'doc_cross_platform_android_state_source',
+                leftSourcePath: 'Knowledge_Base/ragconditionstatecrossscope/cross platform windows state source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditionstatecrossscope/cross platform android state source.md',
+                leftState: 'The migration gate status is enabled on the Windows platform.',
+                rightState: 'The migration gate status is disabled on the Android platform.',
+                leftKeywords: ['platform', 'windows', 'state'],
+                rightKeywords: ['platform', 'android', 'state'],
+            },
+        ];
+
+        for (const stateCase of conditionScopedStateCases) {
+            const leftDocument = [
+                `# ${stateCase.leftTitle}`,
+                '',
+                `${stateCase.leftTitle} records the scoped migration gate status.`,
+                '',
+                '## Scoped Migration Gate Status',
+                stateCase.leftState,
+            ].join('\n');
+            const rightDocument = [
+                `# ${stateCase.rightTitle}`,
+                '',
+                `${stateCase.rightTitle} records the scoped migration gate status.`,
+                '',
+                '## Scoped Migration Gate Status',
+                stateCase.rightState,
+            ].join('\n');
+            const leftAtom = makeAtom({
+                id: stateCase.leftDocumentId.replace(/^doc_/, 'atom_'),
+                documentId: stateCase.leftDocumentId,
+                sourcePath: stateCase.leftSourcePath,
+                title: stateCase.leftTitle,
+                content: stateCase.leftState,
+                keywords: stateCase.leftKeywords,
+            });
+            const rightAtom = makeAtom({
+                id: stateCase.rightDocumentId.replace(/^doc_/, 'atom_'),
+                documentId: stateCase.rightDocumentId,
+                sourcePath: stateCase.rightSourcePath,
+                title: stateCase.rightTitle,
+                content: stateCase.rightState,
+                keywords: stateCase.rightKeywords,
+            });
+            const leftItem = makeQueryItem({
+                atom: leftAtom,
+                evidence: {
+                    id: `evidence_${stateCase.leftDocumentId}`,
+                    documentId: leftAtom.documentId,
+                    sourcePath: leftAtom.sourcePath,
+                    startOffset: leftDocument.indexOf(stateCase.leftState),
+                    endOffset: leftDocument.indexOf(stateCase.leftState) + stateCase.leftState.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: stateCase.leftState,
+                },
+            });
+            const rightItem = makeQueryItem({
+                atom: rightAtom,
+                evidence: {
+                    id: `evidence_${stateCase.rightDocumentId}`,
+                    documentId: rightAtom.documentId,
+                    sourcePath: rightAtom.sourcePath,
+                    startOffset: rightDocument.indexOf(stateCase.rightState),
+                    endOffset: rightDocument.indexOf(stateCase.rightState) + stateCase.rightState.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: stateCase.rightState,
+                },
+            });
+
+            const assembly = await assembleRagEvidenceContext({
+                query: stateCase.query,
+                items: [leftItem, rightItem],
+                sourceResolver: async (lookup) => ({
+                    documentId: lookup.documentId,
+                    sourcePath: lookup.sourcePath,
+                    content: lookup.documentId === leftAtom.documentId ? leftDocument : rightDocument,
+                }),
+                paragraphWindow: 5,
+                budget: {
+                    maxFragments: 10,
+                    maxCharsPerFragment: 700,
+                    maxTotalChars: 2600,
+                },
+            });
+
+            expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+            expect(assembly.fragments).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    role: 'parent_context',
+                    documentId: leftAtom.documentId,
+                    sourceBoundary: 'full_document',
+                    text: expect.stringContaining(stateCase.leftState),
+                }),
+                expect.objectContaining({
+                    role: 'parent_context',
+                    documentId: rightAtom.documentId,
+                    sourceBoundary: 'full_document',
+                    text: expect.stringContaining(stateCase.rightState),
+                }),
+            ]));
+            expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    documentId: leftAtom.documentId,
+                    status: 'read',
+                    charsRead: leftDocument.length,
+                }),
+                expect.objectContaining({
+                    documentId: rightAtom.documentId,
+                    status: 'read',
+                    charsRead: rightDocument.length,
+                }),
+            ]));
+        }
+    });
+
     test('does not mark condition-scoped quantity facts from different documents as conflicting evidence', async () => {
         const conditionScopedQuantityCases = [
             {
