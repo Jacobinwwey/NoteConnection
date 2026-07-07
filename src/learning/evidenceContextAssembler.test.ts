@@ -1622,6 +1622,162 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(versionTwoDependency);
     });
 
+    test('marks format facts in the same section as conflicting evidence', async () => {
+        const jsonFormat = 'The payload format is JSON in the release contract.';
+        const yamlFormat = 'The payload format is YAML in the rollback contract.';
+        const fullDocument = [
+            '# Format Conflict Probe',
+            '',
+            'Format conflict probe validates that explicit serialization formats are comparable operational facts.',
+            '',
+            '## Payload Contract',
+            jsonFormat,
+            '',
+            'Context paragraph keeps the format conflict inside one scoped section.',
+            '',
+            yamlFormat,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_conflicting_format',
+            documentId: 'doc_conflicting_format',
+            sourcePath: 'Knowledge_Base/ragformatconflict/format conflict probe.md',
+            title: 'Format Conflict Probe',
+            content: jsonFormat,
+            keywords: ['format', 'payload', 'serialization'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_json_format',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(jsonFormat),
+                    endOffset: fullDocument.indexOf(jsonFormat) + jsonFormat.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: jsonFormat,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_yaml_format',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(yamlFormat),
+                    endOffset: fullDocument.indexOf(yamlFormat) + yamlFormat.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: yamlFormat,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is format conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_json_format',
+                'evidence_yaml_format',
+            ]),
+        }));
+        expect(conflictFragment?.text).toContain(jsonFormat);
+        expect(conflictFragment?.text).toContain(yamlFormat);
+    });
+
+    test('does not mark environment-scoped format facts as conflicting evidence', async () => {
+        const stagingFormat = 'The payload format is JSON in the staging environment.';
+        const productionFormat = 'The payload format is XML in the production environment.';
+        const fullDocument = [
+            '# Environment Scoped Format Probe',
+            '',
+            'Environment scoped format probe validates that deployment-environment formats stay condition-qualified.',
+            '',
+            '## Environment Payload Formats',
+            stagingFormat,
+            '',
+            'Context paragraph keeps both environment-specific formats in one scoped section.',
+            '',
+            productionFormat,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_environment_scoped_format',
+            documentId: 'doc_environment_scoped_format',
+            sourcePath: 'Knowledge_Base/ragformatqualifier/environment scoped format probe.md',
+            title: 'Environment Scoped Format Probe',
+            content: stagingFormat,
+            keywords: ['environment', 'format', 'payload'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_staging_format',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(stagingFormat),
+                    endOffset: fullDocument.indexOf(stagingFormat) + stagingFormat.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: stagingFormat,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_production_format',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(productionFormat),
+                    endOffset: fullDocument.indexOf(productionFormat) + productionFormat.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: productionFormat,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is environment scoped format probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(stagingFormat),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionFormat);
+    });
+
     test('does not mark current and historical location facts as conflicting evidence', async () => {
         const currentLocation = 'The control module location is Rack A in the current release record.';
         const historicalLocation = 'The control module location is Rack B in the historical placement archive.';

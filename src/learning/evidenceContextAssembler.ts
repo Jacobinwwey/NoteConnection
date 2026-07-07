@@ -87,7 +87,7 @@ interface ComparableEvidenceFact {
     subjectLabel: string;
     valueKey: string;
     valueLabel: string;
-    factKind: 'measurement' | 'quantity' | 'date' | 'state' | 'location' | 'identity' | 'endpoint' | 'dependency';
+    factKind: 'measurement' | 'quantity' | 'date' | 'state' | 'location' | 'identity' | 'endpoint' | 'dependency' | 'format';
     block: SourceBlock;
     citationIds: string[];
     item: KnowledgeQueryItem;
@@ -110,6 +110,7 @@ const COMPARABLE_LOCATION_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?
 const COMPARABLE_IDENTITY_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:owner|assignee|contact|maintainer|team|group))\s+(?:is|=|:)\s*([a-z][a-z0-9 &/_.-]{1,80}?)(?=\s+(?:in|for|on|under|within)\s+|\.|,|;|\n|$)/gi;
 const COMPARABLE_ENDPOINT_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:endpoint|url|uri|route))\s+(?:is|=|:)\s*((?:https?:\/\/|\/|[a-z0-9][a-z0-9._-]*\/)[a-z0-9/?#&=._~:%+\-/]*?[a-z0-9/#&=_~:%+\-/])(?=\s+(?:in|for|on|under|within)\s+|\.|,|;|\n|$)/gi;
 const COMPARABLE_DEPENDENCY_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:dependency|package|provider|driver|runtime|library|module|plugin|adapter))\s+(?:is|are|=|:)\s*((?:@[a-z0-9._-]+\/)?[a-z0-9][a-z0-9+.#/_@ -]{0,79}?)(?=\s+(?:in|for|on|under|within)\s+|\.|,|;|\n|$)/gi;
+const COMPARABLE_FORMAT_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:format|schema|encoding|serialization|content type|mime type))\s+(?:is|are|=|:)\s*([a-z0-9][a-z0-9+.#/_ -]{0,79}?)(?=\s+(?:in|for|on|under|within)\s+|\.|,|;|\n|$)/gi;
 const COMPARABLE_STATE_VALUE_GROUPS: Record<string, string> = {
     enabled: 'enabled_disabled',
     disabled: 'enabled_disabled',
@@ -578,6 +579,16 @@ function normalizeComparableDependencyValue(value: string): string {
         .trim();
 }
 
+function normalizeComparableFormatValue(value: string): string {
+    return normalizeWhitespace(value)
+        .toLowerCase()
+        .replace(/^['"`]+|['"`]+$/g, '')
+        .replace(/^(the|a|an)\s+/i, '')
+        .replace(/[^a-z0-9+.#/_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function extractComparableEvidenceFacts(params: {
     block: SourceBlock;
     citationIds: string[];
@@ -759,6 +770,28 @@ function extractComparableEvidenceFacts(params: {
             valueKey,
             valueLabel: normalizeWhitespace(match[2]),
             factKind: 'dependency',
+            block: params.block,
+            citationIds: params.citationIds,
+            item: params.item,
+        });
+    }
+    for (const match of String(params.block.text || '').matchAll(COMPARABLE_FORMAT_FACT_PATTERN)) {
+        const subjectLabel = normalizeWhitespace(match[1]);
+        const scopeKeys = comparableFactScopeKeys(
+            subjectLabel,
+            comparableFactSentenceTail(params.block.text, match)
+        );
+        const subjectKey = comparableFactSubjectKey(subjectLabel, scopeKeys);
+        const valueKey = normalizeComparableFormatValue(match[2]);
+        if (!subjectKey || !valueKey) {
+            continue;
+        }
+        facts.push({
+            subjectKey,
+            subjectLabel,
+            valueKey,
+            valueLabel: normalizeWhitespace(match[2]),
+            factKind: 'format',
             block: params.block,
             citationIds: params.citationIds,
             item: params.item,
