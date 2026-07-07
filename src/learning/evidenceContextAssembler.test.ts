@@ -759,6 +759,157 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(appendixLimit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('finds remote unitless quantity conflicts from the full selected documents beyond matched opening spans', async () => {
+        const nominalOpening = 'Nominal quantity full scan source is the scoped comparison document for full-document quantity augmentation.';
+        const fieldOpening = 'Field quantity full scan source is the scoped comparison document for full-document quantity augmentation.';
+        const nominalLimit = 'The retry limit is 3 in the remote nominal quantity appendix.';
+        const fieldLimit = 'The retry limit is 5 in the remote field quantity appendix.';
+        const nominalDocument = [
+            '# Nominal Quantity Full Scan Source',
+            nominalOpening,
+            '',
+            'This opening section is intentionally separate from the remote quantity statement.',
+            '',
+            'Local quantity filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local quantity filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local quantity filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local quantity filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local quantity filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local quantity filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Nominal Quantity Appendix',
+            nominalLimit,
+        ].join('\n');
+        const fieldDocument = [
+            '# Field Quantity Full Scan Source',
+            fieldOpening,
+            '',
+            'This opening section is intentionally separate from the remote quantity statement.',
+            '',
+            'Local quantity filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local quantity filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local quantity filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local quantity filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local quantity filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local quantity filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Field Quantity Appendix',
+            fieldLimit,
+        ].join('\n');
+        const nominalAtom = makeAtom({
+            id: 'atom_nominal_quantity_full_scan_source',
+            documentId: 'doc_nominal_quantity_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragquantityfullscan/nominal quantity full scan source.md',
+            title: 'Nominal Quantity Full Scan Source',
+            content: nominalOpening,
+            keywords: ['quantity', 'limit', 'full scan'],
+        });
+        const fieldAtom = makeAtom({
+            id: 'atom_field_quantity_full_scan_source',
+            documentId: 'doc_field_quantity_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragquantityfullscan/field quantity full scan source.md',
+            title: 'Field Quantity Full Scan Source',
+            content: fieldOpening,
+            keywords: ['quantity', 'limit', 'full scan'],
+        });
+        const items: KnowledgeQueryItem[] = [
+            {
+                ...makeQueryItem({ atom: nominalAtom }),
+                atom: nominalAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_nominal_quantity_opening',
+                        documentId: nominalAtom.documentId,
+                        sourcePath: nominalAtom.sourcePath,
+                        startOffset: nominalDocument.indexOf(nominalOpening),
+                        endOffset: nominalDocument.indexOf(nominalOpening) + nominalOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: nominalOpening,
+                    }),
+                ],
+            },
+            {
+                ...makeQueryItem({ atom: fieldAtom }),
+                atom: fieldAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_field_quantity_opening',
+                        documentId: fieldAtom.documentId,
+                        sourcePath: fieldAtom.sourcePath,
+                        startOffset: fieldDocument.indexOf(fieldOpening),
+                        endOffset: fieldDocument.indexOf(fieldOpening) + fieldOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: fieldOpening,
+                    }),
+                ],
+            },
+        ];
+        const documentsById = new Map([
+            [nominalAtom.documentId, nominalDocument],
+            [fieldAtom.documentId, fieldDocument],
+        ]);
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare nominal quantity full scan source with field quantity full scan source',
+            items,
+            sourceResolver: async (request) => ({
+                documentId: request.documentId,
+                sourcePath: request.sourcePath,
+                content: documentsById.get(request.documentId) || '',
+            }),
+            paragraphWindow: 1,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 3000,
+            },
+        });
+
+        const directSupportText = assembly.fragments
+            .filter((fragment) => fragment.role === 'direct_support')
+            .map((fragment) => fragment.text)
+            .join('\n');
+        expect(directSupportText).not.toContain('retry limit is 3');
+        expect(directSupportText).not.toContain('retry limit is 5');
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_quantity_opening',
+                'evidence_field_quantity_opening',
+            ]),
+        }));
+        expect(conflictFragment?.text).toContain(nominalLimit);
+        expect(conflictFragment?.text).toContain(fieldLimit);
+        expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: nominalAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: nominalDocument.length,
+            }),
+            expect.objectContaining({
+                documentId: fieldAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: fieldDocument.length,
+            }),
+        ]));
+    });
+
     test('marks controlled ownership identity facts in the same section as conflicting evidence', async () => {
         const handoffOwner = 'The deployment owner is Release Ops in the handoff sheet.';
         const rollbackOwner = 'The deployment owner is Rollback Team in the rollback appendix.';
