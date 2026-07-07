@@ -1177,6 +1177,157 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(fieldLocation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('finds remote location conflicts from the full selected documents beyond matched opening spans', async () => {
+        const nominalOpening = 'Nominal location full scan source is the scoped comparison document for full-document location augmentation.';
+        const fieldOpening = 'Field location full scan source is the scoped comparison document for full-document location augmentation.';
+        const primaryLocation = 'The control module location is Rack A in the remote nominal location appendix.';
+        const fieldLocation = 'The control module location is Rack B in the remote field location appendix.';
+        const nominalDocument = [
+            '# Nominal Location Full Scan Source',
+            nominalOpening,
+            '',
+            'This opening section is intentionally separate from the remote location statement.',
+            '',
+            'Local location filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local location filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local location filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local location filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local location filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local location filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Nominal Location Appendix',
+            primaryLocation,
+        ].join('\n');
+        const fieldDocument = [
+            '# Field Location Full Scan Source',
+            fieldOpening,
+            '',
+            'This opening section is intentionally separate from the remote location statement.',
+            '',
+            'Local location filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local location filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local location filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local location filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local location filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local location filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Field Location Appendix',
+            fieldLocation,
+        ].join('\n');
+        const nominalAtom = makeAtom({
+            id: 'atom_nominal_location_full_scan_source',
+            documentId: 'doc_nominal_location_full_scan_source',
+            sourcePath: 'Knowledge_Base/raglocationfullscan/nominal location full scan source.md',
+            title: 'Nominal Location Full Scan Source',
+            content: nominalOpening,
+            keywords: ['location', 'placement', 'full scan'],
+        });
+        const fieldAtom = makeAtom({
+            id: 'atom_field_location_full_scan_source',
+            documentId: 'doc_field_location_full_scan_source',
+            sourcePath: 'Knowledge_Base/raglocationfullscan/field location full scan source.md',
+            title: 'Field Location Full Scan Source',
+            content: fieldOpening,
+            keywords: ['location', 'placement', 'full scan'],
+        });
+        const items: KnowledgeQueryItem[] = [
+            {
+                ...makeQueryItem({ atom: nominalAtom }),
+                atom: nominalAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_nominal_location_opening',
+                        documentId: nominalAtom.documentId,
+                        sourcePath: nominalAtom.sourcePath,
+                        startOffset: nominalDocument.indexOf(nominalOpening),
+                        endOffset: nominalDocument.indexOf(nominalOpening) + nominalOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: nominalOpening,
+                    }),
+                ],
+            },
+            {
+                ...makeQueryItem({ atom: fieldAtom }),
+                atom: fieldAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_field_location_opening',
+                        documentId: fieldAtom.documentId,
+                        sourcePath: fieldAtom.sourcePath,
+                        startOffset: fieldDocument.indexOf(fieldOpening),
+                        endOffset: fieldDocument.indexOf(fieldOpening) + fieldOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: fieldOpening,
+                    }),
+                ],
+            },
+        ];
+        const documentsById = new Map([
+            [nominalAtom.documentId, nominalDocument],
+            [fieldAtom.documentId, fieldDocument],
+        ]);
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare nominal location full scan source with field location full scan source',
+            items,
+            sourceResolver: async (request) => ({
+                documentId: request.documentId,
+                sourcePath: request.sourcePath,
+                content: documentsById.get(request.documentId) || '',
+            }),
+            paragraphWindow: 1,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 3000,
+            },
+        });
+
+        const directSupportText = assembly.fragments
+            .filter((fragment) => fragment.role === 'direct_support')
+            .map((fragment) => fragment.text)
+            .join('\n');
+        expect(directSupportText).not.toContain('Rack A');
+        expect(directSupportText).not.toContain('Rack B');
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_location_opening',
+                'evidence_field_location_opening',
+            ]),
+        }));
+        expect(conflictFragment?.text).toContain(primaryLocation);
+        expect(conflictFragment?.text).toContain(fieldLocation);
+        expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: nominalAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: nominalDocument.length,
+            }),
+            expect.objectContaining({
+                documentId: fieldAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: fieldDocument.length,
+            }),
+        ]));
+    });
+
     test('marks endpoint facts in the same section as conflicting evidence', async () => {
         const legacyEndpoint = 'The webhook endpoint is /api/v1/hooks.';
         const currentEndpoint = 'The webhook endpoint is /api/v2/hooks.';
