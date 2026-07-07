@@ -2007,6 +2007,157 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text).toContain(websocketProtocol);
     });
 
+    test('finds remote protocol conflicts from the full selected documents beyond matched opening spans', async () => {
+        const nominalOpening = 'Nominal protocol full scan source is the scoped comparison document for full-document protocol augmentation.';
+        const fieldOpening = 'Field protocol full scan source is the scoped comparison document for full-document protocol augmentation.';
+        const httpProtocol = 'The transport protocol is HTTP/1.1 in the remote nominal protocol appendix.';
+        const websocketProtocol = 'The transport protocol is WebSocket in the remote field protocol appendix.';
+        const nominalDocument = [
+            '# Nominal Protocol Full Scan Source',
+            nominalOpening,
+            '',
+            'This opening section is intentionally separate from the remote protocol statement.',
+            '',
+            'Local protocol filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local protocol filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local protocol filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local protocol filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local protocol filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local protocol filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Nominal Protocol Appendix',
+            httpProtocol,
+        ].join('\n');
+        const fieldDocument = [
+            '# Field Protocol Full Scan Source',
+            fieldOpening,
+            '',
+            'This opening section is intentionally separate from the remote protocol statement.',
+            '',
+            'Local protocol filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local protocol filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local protocol filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local protocol filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local protocol filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local protocol filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Field Protocol Appendix',
+            websocketProtocol,
+        ].join('\n');
+        const nominalAtom = makeAtom({
+            id: 'atom_nominal_protocol_full_scan_source',
+            documentId: 'doc_nominal_protocol_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragprotocolfullscan/nominal protocol full scan source.md',
+            title: 'Nominal Protocol Full Scan Source',
+            content: nominalOpening,
+            keywords: ['protocol', 'transport', 'full scan'],
+        });
+        const fieldAtom = makeAtom({
+            id: 'atom_field_protocol_full_scan_source',
+            documentId: 'doc_field_protocol_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragprotocolfullscan/field protocol full scan source.md',
+            title: 'Field Protocol Full Scan Source',
+            content: fieldOpening,
+            keywords: ['protocol', 'transport', 'full scan'],
+        });
+        const items: KnowledgeQueryItem[] = [
+            {
+                ...makeQueryItem({ atom: nominalAtom }),
+                atom: nominalAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_nominal_protocol_opening',
+                        documentId: nominalAtom.documentId,
+                        sourcePath: nominalAtom.sourcePath,
+                        startOffset: nominalDocument.indexOf(nominalOpening),
+                        endOffset: nominalDocument.indexOf(nominalOpening) + nominalOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: nominalOpening,
+                    }),
+                ],
+            },
+            {
+                ...makeQueryItem({ atom: fieldAtom }),
+                atom: fieldAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_field_protocol_opening',
+                        documentId: fieldAtom.documentId,
+                        sourcePath: fieldAtom.sourcePath,
+                        startOffset: fieldDocument.indexOf(fieldOpening),
+                        endOffset: fieldDocument.indexOf(fieldOpening) + fieldOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: fieldOpening,
+                    }),
+                ],
+            },
+        ];
+        const documentsById = new Map([
+            [nominalAtom.documentId, nominalDocument],
+            [fieldAtom.documentId, fieldDocument],
+        ]);
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare nominal protocol full scan source with field protocol full scan source',
+            items,
+            sourceResolver: async (request) => ({
+                documentId: request.documentId,
+                sourcePath: request.sourcePath,
+                content: documentsById.get(request.documentId) || '',
+            }),
+            paragraphWindow: 1,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 3000,
+            },
+        });
+
+        const directSupportText = assembly.fragments
+            .filter((fragment) => fragment.role === 'direct_support')
+            .map((fragment) => fragment.text)
+            .join('\n');
+        expect(directSupportText).not.toContain('HTTP/1.1');
+        expect(directSupportText).not.toContain('WebSocket');
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_protocol_opening',
+                'evidence_field_protocol_opening',
+            ]),
+        }));
+        expect(conflictFragment?.text).toContain(httpProtocol);
+        expect(conflictFragment?.text).toContain(websocketProtocol);
+        expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: nominalAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: nominalDocument.length,
+            }),
+            expect.objectContaining({
+                documentId: fieldAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: fieldDocument.length,
+            }),
+        ]));
+    });
+
     test('does not mark environment-scoped protocol facts as conflicting evidence', async () => {
         const stagingProtocol = 'The transport protocol is HTTP/2 in the staging environment.';
         const productionProtocol = 'The transport protocol is gRPC in the production environment.';
