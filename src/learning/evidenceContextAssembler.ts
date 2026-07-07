@@ -87,7 +87,7 @@ interface ComparableEvidenceFact {
     subjectLabel: string;
     valueKey: string;
     valueLabel: string;
-    factKind: 'measurement' | 'quantity' | 'date' | 'state' | 'location' | 'identity' | 'endpoint' | 'dependency' | 'format' | 'protocol' | 'version';
+    factKind: 'measurement' | 'quantity' | 'date' | 'state' | 'location' | 'identity' | 'endpoint' | 'dependency' | 'format' | 'protocol' | 'version' | 'port';
     block: SourceBlock;
     citationIds: string[];
     item: KnowledgeQueryItem;
@@ -113,6 +113,7 @@ const COMPARABLE_DEPENDENCY_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?
 const COMPARABLE_FORMAT_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:format|schema|encoding|serialization|content type|mime type))\s+(?:is|are|=|:)\s*([a-z0-9][a-z0-9+.#/_ -]{0,79}?)(?=\s+(?:in|for|on|under|within)\s+|\.|,|;|\n|$)/gi;
 const COMPARABLE_PROTOCOL_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:protocol|transport protocol|wire protocol))\s+(?:is|are|=|:)\s*([a-z0-9][a-z0-9+.#/_ -]{0,79}?)(?=\s+(?:in|for|on|under|within)\s+|\.|,|;|\n|$)/gi;
 const COMPARABLE_VERSION_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:version|revision))\s+(?:is|are|=|:)\s*((?:v\s*)?\d+(?:\.\d+){1,4}(?:[-+._][a-z0-9]+)?|v\s*\d+(?:[-+._][a-z0-9]+)?)(?=\s+(?:in|for|on|under|within)\s+|\.|,|;|\n|$)/gi;
+const COMPARABLE_PORT_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:port|listener port|service port))\s+(?:is|are|=|:)\s*(\d{1,5})(?=\s+(?:in|for|on|under|within)\s+|\.|,|;|\n|$)/gi;
 const COMPARABLE_STATE_VALUE_GROUPS: Record<string, string> = {
     enabled: 'enabled_disabled',
     disabled: 'enabled_disabled',
@@ -610,6 +611,14 @@ function normalizeComparableVersionValue(value: string): string {
         .trim();
 }
 
+function normalizeComparablePortValue(value: string): string | null {
+    const port = Number(normalizeWhitespace(value));
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+        return null;
+    }
+    return String(port);
+}
+
 function extractComparableEvidenceFacts(params: {
     block: SourceBlock;
     citationIds: string[];
@@ -857,6 +866,28 @@ function extractComparableEvidenceFacts(params: {
             valueKey,
             valueLabel: normalizeWhitespace(match[2]),
             factKind: 'version',
+            block: params.block,
+            citationIds: params.citationIds,
+            item: params.item,
+        });
+    }
+    for (const match of String(params.block.text || '').matchAll(COMPARABLE_PORT_FACT_PATTERN)) {
+        const subjectLabel = normalizeWhitespace(match[1]);
+        const scopeKeys = comparableFactScopeKeys(
+            subjectLabel,
+            comparableFactSentenceTail(params.block.text, match)
+        );
+        const subjectKey = comparableFactSubjectKey(subjectLabel, scopeKeys);
+        const valueKey = normalizeComparablePortValue(match[2]);
+        if (!subjectKey || !valueKey) {
+            continue;
+        }
+        facts.push({
+            subjectKey,
+            subjectLabel,
+            valueKey,
+            valueLabel: match[2],
+            factKind: 'port',
             block: params.block,
             citationIds: params.citationIds,
             item: params.item,

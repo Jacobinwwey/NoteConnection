@@ -6220,4 +6220,183 @@ describe('assembleRagEvidenceContext', () => {
             }),
         ]));
     });
+
+    test('marks service port facts about the same listener as conflicting evidence', async () => {
+        const releasePort = 'The service port is 443 in the release manifest.';
+        const rollbackPort = 'The service port is 8443 in the rollback manifest.';
+        const fullDocument = [
+            '# Service Port Conflict Probe',
+            '',
+            'Service port conflict probe validates that listener port contradictions are not flattened into one stable port.',
+            '',
+            '## Listener Port',
+            releasePort,
+            '',
+            'Context paragraph keeps the service port conflict inside one scoped section.',
+            '',
+            rollbackPort,
+            'Operators must resolve which service port is active before release.',
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_service_port_conflict',
+            documentId: 'doc_service_port_conflict',
+            sourcePath: 'Knowledge_Base/ragportconflict/service port conflict probe.md',
+            title: 'Service Port Conflict Probe',
+            content: releasePort,
+            keywords: ['service', 'port', 'conflict'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_release_service_port',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(releasePort),
+                    endOffset: fullDocument.indexOf(releasePort) + releasePort.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: releasePort,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_rollback_service_port',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(rollbackPort),
+                    endOffset: fullDocument.indexOf(rollbackPort) + rollbackPort.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: rollbackPort,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is service port conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1800,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_release_service_port',
+                'evidence_rollback_service_port',
+            ]),
+        }));
+        expect(conflictFragment?.text).toContain(releasePort);
+        expect(conflictFragment?.text).toContain(rollbackPort);
+    });
+
+    test('keeps environment-scoped service port facts from different documents out of conflict evidence', async () => {
+        const stagingPort = 'The service port is 443 in the staging environment.';
+        const productionPort = 'The service port is 8443 in the production environment.';
+        const stagingDocument = [
+            '# Cross Environment Staging Service Port Source',
+            'Cross environment staging service port source records the staging listener port.',
+            '',
+            '## Staging Service Port',
+            stagingPort,
+        ].join('\n');
+        const productionDocument = [
+            '# Cross Environment Production Service Port Source',
+            'Cross environment production service port source records the production listener port.',
+            '',
+            '## Production Service Port',
+            productionPort,
+        ].join('\n');
+        const stagingAtom = makeAtom({
+            id: 'atom_cross_environment_staging_service_port',
+            documentId: 'doc_cross_environment_staging_service_port',
+            sourcePath: 'Knowledge_Base/ragconditionportcrossscope/cross environment staging service port source.md',
+            title: 'Cross Environment Staging Service Port Source',
+            content: stagingPort,
+            keywords: ['service', 'port', 'staging'],
+        });
+        const productionAtom = makeAtom({
+            id: 'atom_cross_environment_production_service_port',
+            documentId: 'doc_cross_environment_production_service_port',
+            sourcePath: 'Knowledge_Base/ragconditionportcrossscope/cross environment production service port source.md',
+            title: 'Cross Environment Production Service Port Source',
+            content: productionPort,
+            keywords: ['service', 'port', 'production'],
+        });
+        const stagingItem = makeQueryItem({
+            atom: stagingAtom,
+            evidence: {
+                id: 'evidence_staging_service_port',
+                documentId: stagingAtom.documentId,
+                sourcePath: stagingAtom.sourcePath,
+                startOffset: stagingDocument.indexOf(stagingPort),
+                endOffset: stagingDocument.indexOf(stagingPort) + stagingPort.length,
+                startLine: 5,
+                endLine: 5,
+                snippet: stagingPort,
+            },
+        });
+        const productionItem = makeQueryItem({
+            atom: productionAtom,
+            evidence: {
+                id: 'evidence_production_service_port',
+                documentId: productionAtom.documentId,
+                sourcePath: productionAtom.sourcePath,
+                startOffset: productionDocument.indexOf(productionPort),
+                endOffset: productionDocument.indexOf(productionPort) + productionPort.length,
+                startLine: 5,
+                endLine: 5,
+                snippet: productionPort,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare cross environment staging service port source with cross environment production service port source',
+            items: [stagingItem, productionItem],
+            sourceResolver: async (lookup) => {
+                if (lookup.documentId === stagingAtom.documentId) {
+                    return {
+                        documentId: stagingAtom.documentId,
+                        sourcePath: stagingAtom.sourcePath,
+                        content: stagingDocument,
+                    };
+                }
+                return {
+                    documentId: productionAtom.documentId,
+                    sourcePath: productionAtom.sourcePath,
+                    content: productionDocument,
+                };
+            },
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1800,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'direct_support',
+                documentId: stagingAtom.documentId,
+                text: stagingPort,
+            }),
+            expect.objectContaining({
+                role: 'direct_support',
+                documentId: productionAtom.documentId,
+                text: productionPort,
+            }),
+        ]));
+    });
 });
