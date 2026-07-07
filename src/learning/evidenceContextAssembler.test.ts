@@ -4407,6 +4407,113 @@ describe('assembleRagEvidenceContext', () => {
         ]));
     });
 
+    test('does not mark current and historical quantity facts from different documents as conflicting evidence', async () => {
+        const currentLimit = 'The retry limit is 3 in the current release record.';
+        const historicalLimit = 'The retry limit is 5 in the historical rollback archive.';
+        const currentDocument = [
+            '# Temporal Current Retry Limit Source',
+            '',
+            'Temporal current retry limit source is the active retry policy document.',
+            '',
+            '## Current Retry Limit',
+            currentLimit,
+        ].join('\n');
+        const historicalDocument = [
+            '# Temporal Historical Retry Limit Source',
+            '',
+            'Temporal historical retry limit source is the retired rollback policy document.',
+            '',
+            '## Historical Retry Limit',
+            historicalLimit,
+        ].join('\n');
+        const currentAtom = makeAtom({
+            id: 'atom_temporal_current_retry_limit_source',
+            documentId: 'doc_temporal_current_retry_limit_source',
+            sourcePath: 'Knowledge_Base/ragtemporalcrossscope/temporal current retry limit source.md',
+            title: 'Temporal Current Retry Limit Source',
+            content: currentLimit,
+            keywords: ['temporal', 'current', 'retry', 'limit'],
+        });
+        const historicalAtom = makeAtom({
+            id: 'atom_temporal_historical_retry_limit_source',
+            documentId: 'doc_temporal_historical_retry_limit_source',
+            sourcePath: 'Knowledge_Base/ragtemporalcrossscope/temporal historical retry limit source.md',
+            title: 'Temporal Historical Retry Limit Source',
+            content: historicalLimit,
+            keywords: ['temporal', 'historical', 'retry', 'limit'],
+        });
+        const currentItem = makeQueryItem({
+            atom: currentAtom,
+            evidence: {
+                id: 'evidence_temporal_current_retry_limit',
+                documentId: currentAtom.documentId,
+                sourcePath: currentAtom.sourcePath,
+                startOffset: currentDocument.indexOf(currentLimit),
+                endOffset: currentDocument.indexOf(currentLimit) + currentLimit.length,
+                startLine: 6,
+                endLine: 6,
+                snippet: currentLimit,
+            },
+        });
+        const historicalItem = makeQueryItem({
+            atom: historicalAtom,
+            evidence: {
+                id: 'evidence_temporal_historical_retry_limit',
+                documentId: historicalAtom.documentId,
+                sourcePath: historicalAtom.sourcePath,
+                startOffset: historicalDocument.indexOf(historicalLimit),
+                endOffset: historicalDocument.indexOf(historicalLimit) + historicalLimit.length,
+                startLine: 6,
+                endLine: 6,
+                snippet: historicalLimit,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare temporal current retry limit source with temporal historical retry limit source',
+            items: [currentItem, historicalItem],
+            sourceResolver: async (lookup) => ({
+                documentId: lookup.documentId,
+                sourcePath: lookup.sourcePath,
+                content: lookup.documentId === currentAtom.documentId ? currentDocument : historicalDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 10,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2600,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: currentAtom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(currentLimit),
+            }),
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: historicalAtom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(historicalLimit),
+            }),
+        ]));
+        expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: currentAtom.documentId,
+                status: 'read',
+                charsRead: currentDocument.length,
+            }),
+            expect.objectContaining({
+                documentId: historicalAtom.documentId,
+                status: 'read',
+                charsRead: historicalDocument.length,
+            }),
+        ]));
+    });
+
     test('does not mark condition-scoped ownership identity facts from different documents as conflicting evidence', async () => {
         const conditionScopedOwnerCases = [
             {

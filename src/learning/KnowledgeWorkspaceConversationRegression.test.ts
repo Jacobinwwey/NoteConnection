@@ -1479,6 +1479,34 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_temporal_current_retry_limit_source',
+            sourcePath: 'Knowledge_Base/ragtemporalcrossscope/temporal current retry limit source.md',
+            language: 'en',
+            workspaceId: 'ragtemporalcrossscope',
+            corpusId: 'ragtemporalcrossscope',
+            content: [
+                '# Temporal Current Retry Limit Source',
+                'Temporal current retry limit source records that the retry limit is 3 in the current release record.',
+                '',
+                '## Current Retry Limit',
+                'The retry limit is 3 in the current release record.',
+            ].join('\n'),
+        },
+        {
+            documentId: 'doc_temporal_historical_retry_limit_source',
+            sourcePath: 'Knowledge_Base/ragtemporalcrossscope/temporal historical retry limit source.md',
+            language: 'en',
+            workspaceId: 'ragtemporalcrossscope',
+            corpusId: 'ragtemporalcrossscope',
+            content: [
+                '# Temporal Historical Retry Limit Source',
+                'Temporal historical retry limit source records that the retry limit is 5 in the historical rollback archive.',
+                '',
+                '## Historical Retry Limit',
+                'The retry limit is 5 in the historical rollback archive.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_multi_document_calibration_tolerance_conflict_probe',
             sourcePath: 'Knowledge_Base/ragmulticonflict/multi document calibration tolerance conflict probe.md',
             language: 'en',
@@ -2435,6 +2463,23 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
                         acceptedRagDegradationStates: ['none'],
                         answerMustContain: expect.arrayContaining(['retry limit', '3', '5', 'Windows', 'Android']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'stable retry limit',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'temporal_cross_document_quantity_limit_probe_en',
+                    expected: expect.objectContaining({
+                        minCitations: 2,
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['retry limit', '3', '5', 'current', 'historical']),
                         answerMustNotContain: expect.arrayContaining([
                             'Conflicting evidence',
                             'stable retry limit',
