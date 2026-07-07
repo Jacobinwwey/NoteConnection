@@ -6041,4 +6041,183 @@ describe('assembleRagEvidenceContext', () => {
             }),
         ]));
     });
+
+    test('marks semantic version facts about the same runtime as conflicting evidence', async () => {
+        const releaseVersion = 'The runtime version is 1.2.0 in the release manifest.';
+        const rollbackVersion = 'The runtime version is 2.0.0 in the rollback manifest.';
+        const fullDocument = [
+            '# Semantic Version Conflict Probe',
+            '',
+            'Semantic version conflict probe validates that runtime version contradictions are not flattened into one stable version.',
+            '',
+            '## Runtime Version',
+            releaseVersion,
+            '',
+            'Context paragraph keeps the semantic version conflict inside one scoped section.',
+            '',
+            rollbackVersion,
+            'Operators must resolve which runtime version is active before release.',
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_semantic_version_conflict',
+            documentId: 'doc_semantic_version_conflict',
+            sourcePath: 'Knowledge_Base/ragversionfactconflict/semantic version conflict probe.md',
+            title: 'Semantic Version Conflict Probe',
+            content: releaseVersion,
+            keywords: ['semantic', 'version', 'runtime', 'conflict'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_release_runtime_version',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(releaseVersion),
+                    endOffset: fullDocument.indexOf(releaseVersion) + releaseVersion.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: releaseVersion,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_rollback_runtime_version',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(rollbackVersion),
+                    endOffset: fullDocument.indexOf(rollbackVersion) + rollbackVersion.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: rollbackVersion,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is semantic version conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1800,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_release_runtime_version',
+                'evidence_rollback_runtime_version',
+            ]),
+        }));
+        expect(conflictFragment?.text).toContain(releaseVersion);
+        expect(conflictFragment?.text).toContain(rollbackVersion);
+    });
+
+    test('keeps environment-scoped semantic version facts from different documents out of conflict evidence', async () => {
+        const stagingVersion = 'The runtime version is 1.2.0 in the staging environment.';
+        const productionVersion = 'The runtime version is 2.0.0 in the production environment.';
+        const stagingDocument = [
+            '# Cross Environment Staging Runtime Version Source',
+            'Cross environment staging runtime version source records the staging runtime version.',
+            '',
+            '## Staging Runtime Version',
+            stagingVersion,
+        ].join('\n');
+        const productionDocument = [
+            '# Cross Environment Production Runtime Version Source',
+            'Cross environment production runtime version source records the production runtime version.',
+            '',
+            '## Production Runtime Version',
+            productionVersion,
+        ].join('\n');
+        const stagingAtom = makeAtom({
+            id: 'atom_cross_environment_staging_runtime_version',
+            documentId: 'doc_cross_environment_staging_runtime_version',
+            sourcePath: 'Knowledge_Base/ragconditionversionfactcrossscope/cross environment staging runtime version source.md',
+            title: 'Cross Environment Staging Runtime Version Source',
+            content: stagingVersion,
+            keywords: ['runtime', 'version', 'staging'],
+        });
+        const productionAtom = makeAtom({
+            id: 'atom_cross_environment_production_runtime_version',
+            documentId: 'doc_cross_environment_production_runtime_version',
+            sourcePath: 'Knowledge_Base/ragconditionversionfactcrossscope/cross environment production runtime version source.md',
+            title: 'Cross Environment Production Runtime Version Source',
+            content: productionVersion,
+            keywords: ['runtime', 'version', 'production'],
+        });
+        const stagingItem = makeQueryItem({
+            atom: stagingAtom,
+            evidence: {
+                id: 'evidence_staging_runtime_version',
+                documentId: stagingAtom.documentId,
+                sourcePath: stagingAtom.sourcePath,
+                startOffset: stagingDocument.indexOf(stagingVersion),
+                endOffset: stagingDocument.indexOf(stagingVersion) + stagingVersion.length,
+                startLine: 5,
+                endLine: 5,
+                snippet: stagingVersion,
+            },
+        });
+        const productionItem = makeQueryItem({
+            atom: productionAtom,
+            evidence: {
+                id: 'evidence_production_runtime_version',
+                documentId: productionAtom.documentId,
+                sourcePath: productionAtom.sourcePath,
+                startOffset: productionDocument.indexOf(productionVersion),
+                endOffset: productionDocument.indexOf(productionVersion) + productionVersion.length,
+                startLine: 5,
+                endLine: 5,
+                snippet: productionVersion,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare cross environment staging runtime version source with cross environment production runtime version source',
+            items: [stagingItem, productionItem],
+            sourceResolver: async (lookup) => {
+                if (lookup.documentId === stagingAtom.documentId) {
+                    return {
+                        documentId: stagingAtom.documentId,
+                        sourcePath: stagingAtom.sourcePath,
+                        content: stagingDocument,
+                    };
+                }
+                return {
+                    documentId: productionAtom.documentId,
+                    sourcePath: productionAtom.sourcePath,
+                    content: productionDocument,
+                };
+            },
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1800,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'direct_support',
+                documentId: stagingAtom.documentId,
+                text: stagingVersion,
+            }),
+            expect.objectContaining({
+                role: 'direct_support',
+                documentId: productionAtom.documentId,
+                text: productionVersion,
+            }),
+        ]));
+    });
 });
