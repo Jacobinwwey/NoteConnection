@@ -6399,4 +6399,183 @@ describe('assembleRagEvidenceContext', () => {
             }),
         ]));
     });
+
+    test('marks response status code facts about the same endpoint as conflicting evidence', async () => {
+        const releaseStatus = 'The response status code is 200 in the release manifest.';
+        const rollbackStatus = 'The response status code is 503 in the rollback manifest.';
+        const fullDocument = [
+            '# Response Status Code Conflict Probe',
+            '',
+            'Response status code conflict probe validates that HTTP response contradictions are not flattened into one stable code.',
+            '',
+            '## Endpoint Response Code',
+            releaseStatus,
+            '',
+            'Context paragraph keeps the response status code conflict inside one scoped section.',
+            '',
+            rollbackStatus,
+            'Operators must resolve which response status code is active before release.',
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_response_status_code_conflict',
+            documentId: 'doc_response_status_code_conflict',
+            sourcePath: 'Knowledge_Base/ragstatuscodeconflict/response status code conflict probe.md',
+            title: 'Response Status Code Conflict Probe',
+            content: releaseStatus,
+            keywords: ['response', 'status', 'code', 'conflict'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_release_response_status_code',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(releaseStatus),
+                    endOffset: fullDocument.indexOf(releaseStatus) + releaseStatus.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: releaseStatus,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_rollback_response_status_code',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(rollbackStatus),
+                    endOffset: fullDocument.indexOf(rollbackStatus) + rollbackStatus.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: rollbackStatus,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is response status code conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1800,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            documentId: atom.documentId,
+            sourcePath: atom.sourcePath,
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_release_response_status_code',
+                'evidence_rollback_response_status_code',
+            ]),
+        }));
+        expect(conflictFragment?.text).toContain(releaseStatus);
+        expect(conflictFragment?.text).toContain(rollbackStatus);
+    });
+
+    test('keeps environment-scoped response status code facts from different documents out of conflict evidence', async () => {
+        const stagingStatus = 'The response status code is 200 in the staging environment.';
+        const productionStatus = 'The response status code is 503 in the production environment.';
+        const stagingDocument = [
+            '# Cross Environment Staging Response Status Code Source',
+            'Cross environment staging response status code source records the staging endpoint status.',
+            '',
+            '## Staging Response Status Code',
+            stagingStatus,
+        ].join('\n');
+        const productionDocument = [
+            '# Cross Environment Production Response Status Code Source',
+            'Cross environment production response status code source records the production endpoint status.',
+            '',
+            '## Production Response Status Code',
+            productionStatus,
+        ].join('\n');
+        const stagingAtom = makeAtom({
+            id: 'atom_cross_environment_staging_response_status_code',
+            documentId: 'doc_cross_environment_staging_response_status_code',
+            sourcePath: 'Knowledge_Base/ragconditionstatuscodecrossscope/cross environment staging response status code source.md',
+            title: 'Cross Environment Staging Response Status Code Source',
+            content: stagingStatus,
+            keywords: ['response', 'status', 'code', 'staging'],
+        });
+        const productionAtom = makeAtom({
+            id: 'atom_cross_environment_production_response_status_code',
+            documentId: 'doc_cross_environment_production_response_status_code',
+            sourcePath: 'Knowledge_Base/ragconditionstatuscodecrossscope/cross environment production response status code source.md',
+            title: 'Cross Environment Production Response Status Code Source',
+            content: productionStatus,
+            keywords: ['response', 'status', 'code', 'production'],
+        });
+        const stagingItem = makeQueryItem({
+            atom: stagingAtom,
+            evidence: {
+                id: 'evidence_staging_response_status_code',
+                documentId: stagingAtom.documentId,
+                sourcePath: stagingAtom.sourcePath,
+                startOffset: stagingDocument.indexOf(stagingStatus),
+                endOffset: stagingDocument.indexOf(stagingStatus) + stagingStatus.length,
+                startLine: 5,
+                endLine: 5,
+                snippet: stagingStatus,
+            },
+        });
+        const productionItem = makeQueryItem({
+            atom: productionAtom,
+            evidence: {
+                id: 'evidence_production_response_status_code',
+                documentId: productionAtom.documentId,
+                sourcePath: productionAtom.sourcePath,
+                startOffset: productionDocument.indexOf(productionStatus),
+                endOffset: productionDocument.indexOf(productionStatus) + productionStatus.length,
+                startLine: 5,
+                endLine: 5,
+                snippet: productionStatus,
+            },
+        });
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare cross environment staging response status code source with cross environment production response status code source',
+            items: [stagingItem, productionItem],
+            sourceResolver: async (lookup) => {
+                if (lookup.documentId === stagingAtom.documentId) {
+                    return {
+                        documentId: stagingAtom.documentId,
+                        sourcePath: stagingAtom.sourcePath,
+                        content: stagingDocument,
+                    };
+                }
+                return {
+                    documentId: productionAtom.documentId,
+                    sourcePath: productionAtom.sourcePath,
+                    content: productionDocument,
+                };
+            },
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 600,
+                maxTotalChars: 1800,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'direct_support',
+                documentId: stagingAtom.documentId,
+                text: stagingStatus,
+            }),
+            expect.objectContaining({
+                role: 'direct_support',
+                documentId: productionAtom.documentId,
+                text: productionStatus,
+            }),
+        ]));
+    });
 });

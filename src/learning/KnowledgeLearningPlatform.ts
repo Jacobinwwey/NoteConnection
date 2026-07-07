@@ -6466,7 +6466,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const ragSufficiencyReview = await reviewRagContextSufficiency({
             query: params.query,
             contextPack: ragContextPack,
-            graphContext: params.graphContext,
+            graphContext: params.graphNeighborItems.length > 0 ? params.graphContext : null,
             reviewedAt: params.generatedAt,
             allowLlmJudge: Boolean(this.ragSufficiencyLlmJudge),
             llmJudge: this.ragSufficiencyLlmJudge || undefined,
@@ -6888,11 +6888,22 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         knowledgePoints: AgentConversationKnowledgePoint[],
         checkedAt: string,
         message = '',
-        maxNeighbors = AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT
+        maxNeighbors = AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT,
+        scope?: KnowledgeQueryResolvedScope
     ): KnowledgeQueryItem[] {
         if (!graphContext) {
             return [];
         }
+        const graphNeighborScope: KnowledgeQueryRequest['scope'] | undefined = scope
+            ? {
+                workspaceId: scope.workspaceId || undefined,
+                corpusId: scope.corpusId || undefined,
+                documentIds: [...(scope.documentIds || [])],
+                atomIds: [...(scope.atomIds || [])],
+                sourcePathPrefixes: [...(scope.sourcePathPrefixes || [])],
+                languages: [...(scope.languages || [])],
+            }
+            : undefined;
         const neighborScores = new Map<string, number>();
         const addNeighbor = (atomId: unknown, confidence: unknown): void => {
             const normalizedAtomId = String(atomId || '').trim();
@@ -6942,6 +6953,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             .forEach(([atomId, score]) => {
                 const atom = this.atoms.get(atomId);
                 if (!atom) {
+                    return;
+                }
+                if (
+                    scope?.source === 'scoped'
+                    && this.filterAtomsByKnowledgeScope([atom], graphNeighborScope).atoms.length <= 0
+                ) {
                     return;
                 }
                 const evidenceSpans = atom.evidenceSpanIds
@@ -9909,7 +9926,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             conversationKnowledgePoints,
             generatedAt,
             message,
-            ragEvidenceProfile.graphNeighborLimit
+            ragEvidenceProfile.graphNeighborLimit,
+            traceScope
         );
         const firstReviewedRag = await this.assembleReviewedRagEvidenceContext({
             query: message || 'local knowledge',
@@ -9929,7 +9947,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 conversationKnowledgePoints,
                 generatedAt,
                 message,
-                AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT
+                AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT,
+                traceScope
             );
             const recoveredReviewedRag = await this.assembleReviewedRagEvidenceContext({
                 query: message || 'local knowledge',

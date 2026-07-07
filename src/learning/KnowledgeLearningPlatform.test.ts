@@ -1842,6 +1842,86 @@ describe('KnowledgeLearningPlatform', () => {
         );
     });
 
+    test('agent conversation keeps compare queries inside an explicit scope when scoped operands exist', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_status_conflict_outside_scope',
+                    sourcePath: 'Knowledge_Base/ragstatuscodeconflict/response status code conflict probe.md',
+                    language: 'en',
+                    workspaceId: 'ragstatuscodeconflict',
+                    corpusId: 'ragstatuscodeconflict',
+                    content: [
+                        '# Response Status Code Conflict Probe',
+                        'Response status code conflict probe records competing HTTP response status values.',
+                        '',
+                        '## Endpoint Response Code',
+                        'The response status code is 200 in the release manifest.',
+                        '',
+                        'The response status code is 503 in the rollback manifest.',
+                    ].join('\n'),
+                },
+                {
+                    documentId: 'doc_status_staging_scoped',
+                    sourcePath: 'Knowledge_Base/ragconditionstatuscodecrossscope/cross environment staging response status code source.md',
+                    language: 'en',
+                    workspaceId: 'ragconditionstatuscodecrossscope',
+                    corpusId: 'ragconditionstatuscodecrossscope',
+                    content: [
+                        '# Cross Environment Staging Response Status Code Source',
+                        'Cross environment staging response status code source records that the response status code is 200 in the staging environment.',
+                        '',
+                        '## Staging Response Status Code',
+                        'The response status code is 200 in the staging environment.',
+                    ].join('\n'),
+                },
+                {
+                    documentId: 'doc_status_production_scoped',
+                    sourcePath: 'Knowledge_Base/ragconditionstatuscodecrossscope/cross environment production response status code source.md',
+                    language: 'en',
+                    workspaceId: 'ragconditionstatuscodecrossscope',
+                    corpusId: 'ragconditionstatuscodecrossscope',
+                    content: [
+                        '# Cross Environment Production Response Status Code Source',
+                        'Cross environment production response status code source records that the response status code is 503 in the production environment.',
+                        '',
+                        '## Production Response Status Code',
+                        'The response status code is 503 in the production environment.',
+                    ].join('\n'),
+                },
+            ],
+        });
+
+        const response = await platform.agentConversation({
+            userId: 'agent_compare_scope_boundary_user',
+            sessionId: 'session_compare_scope_boundary',
+            message: 'compare cross environment staging response status code source with cross environment production response status code source',
+            scope: {
+                workspaceId: 'ragconditionstatuscodecrossscope',
+                corpusId: 'ragconditionstatuscodecrossscope',
+                sourcePathPrefixes: ['Knowledge_Base/ragconditionstatuscodecrossscope'],
+            },
+            topK: 8,
+            persistMemory: false,
+        });
+
+        expect(response.trace.usedScope.scopeSource).toBe('explicit_request');
+        expect(response.answer).toContain('response status code');
+        expect(response.answer).toContain('200');
+        expect(response.answer).toContain('503');
+        expect(response.answer).toContain('staging');
+        expect(response.answer).toContain('production');
+        expect(response.answer).not.toContain('Conflicting evidence');
+        expect(response.knowledgePoints.map((point: any) => point.sourcePath)).toEqual(expect.arrayContaining([
+            'Knowledge_Base/ragconditionstatuscodecrossscope/cross environment staging response status code source.md',
+            'Knowledge_Base/ragconditionstatuscodecrossscope/cross environment production response status code source.md',
+        ]));
+        expect(response.knowledgePoints.some((point: any) => (
+            String(point.sourcePath || '').includes('ragstatuscodeconflict')
+        ))).toBe(false);
+    });
+
     test('workflow artifact review follow-up consumes review cards and archives completed batches', async () => {
         await platform.ingestKnowledge({
             incremental: true,
