@@ -1929,6 +1929,162 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionFormat);
     });
 
+    test('marks protocol facts in the same section as conflicting evidence', async () => {
+        const httpProtocol = 'The transport protocol is HTTP/1.1 in the release channel.';
+        const websocketProtocol = 'The transport protocol is WebSocket in the rollback channel.';
+        const fullDocument = [
+            '# Protocol Conflict Probe',
+            '',
+            'Protocol conflict probe validates that explicit transport protocols are comparable operational facts.',
+            '',
+            '## Transport Contract',
+            httpProtocol,
+            '',
+            'Context paragraph keeps the protocol conflict inside one scoped section.',
+            '',
+            websocketProtocol,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_conflicting_protocol',
+            documentId: 'doc_conflicting_protocol',
+            sourcePath: 'Knowledge_Base/ragprotocolconflict/protocol conflict probe.md',
+            title: 'Protocol Conflict Probe',
+            content: httpProtocol,
+            keywords: ['protocol', 'transport', 'wire'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_http_protocol',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(httpProtocol),
+                    endOffset: fullDocument.indexOf(httpProtocol) + httpProtocol.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: httpProtocol,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_websocket_protocol',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(websocketProtocol),
+                    endOffset: fullDocument.indexOf(websocketProtocol) + websocketProtocol.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: websocketProtocol,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is protocol conflict probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_http_protocol',
+                'evidence_websocket_protocol',
+            ]),
+        }));
+        expect(conflictFragment?.text).toContain(httpProtocol);
+        expect(conflictFragment?.text).toContain(websocketProtocol);
+    });
+
+    test('does not mark environment-scoped protocol facts as conflicting evidence', async () => {
+        const stagingProtocol = 'The transport protocol is HTTP/2 in the staging environment.';
+        const productionProtocol = 'The transport protocol is gRPC in the production environment.';
+        const fullDocument = [
+            '# Environment Scoped Protocol Probe',
+            '',
+            'Environment scoped protocol probe validates that deployment-environment protocols stay condition-qualified.',
+            '',
+            '## Environment Transport Protocols',
+            stagingProtocol,
+            '',
+            'Context paragraph keeps both environment-specific protocols in one scoped section.',
+            '',
+            productionProtocol,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_environment_scoped_protocol',
+            documentId: 'doc_environment_scoped_protocol',
+            sourcePath: 'Knowledge_Base/ragprotocolqualifier/environment scoped protocol probe.md',
+            title: 'Environment Scoped Protocol Probe',
+            content: stagingProtocol,
+            keywords: ['environment', 'protocol', 'transport'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_staging_protocol',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(stagingProtocol),
+                    endOffset: fullDocument.indexOf(stagingProtocol) + stagingProtocol.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: stagingProtocol,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_production_protocol',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(productionProtocol),
+                    endOffset: fullDocument.indexOf(productionProtocol) + productionProtocol.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: productionProtocol,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is environment scoped protocol probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(stagingProtocol),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(productionProtocol);
+    });
+
     test('does not mark current and historical location facts as conflicting evidence', async () => {
         const currentLocation = 'The control module location is Rack A in the current release record.';
         const historicalLocation = 'The control module location is Rack B in the historical placement archive.';
