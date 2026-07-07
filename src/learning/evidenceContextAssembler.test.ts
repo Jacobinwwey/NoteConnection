@@ -5036,6 +5036,155 @@ describe('assembleRagEvidenceContext', () => {
         }
     });
 
+    test('does not mark condition-scoped dependency facts from different documents as conflicting evidence', async () => {
+        const conditionScopedDependencyCases = [
+            {
+                query: 'compare cross environment staging dependency source with cross environment production dependency source',
+                leftTitle: 'Cross Environment Staging Dependency Source',
+                rightTitle: 'Cross Environment Production Dependency Source',
+                leftDocumentId: 'doc_cross_environment_staging_dependency_source',
+                rightDocumentId: 'doc_cross_environment_production_dependency_source',
+                leftSourcePath: 'Knowledge_Base/ragconditiondependencycrossscope/cross environment staging dependency source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditiondependencycrossscope/cross environment production dependency source.md',
+                leftDependency: 'The storage dependency is SQLite in the staging environment.',
+                rightDependency: 'The storage dependency is PostgreSQL in the production environment.',
+                leftKeywords: ['environment', 'staging', 'dependency'],
+                rightKeywords: ['environment', 'production', 'dependency'],
+            },
+            {
+                query: 'compare cross version one dependency source with cross version two dependency source',
+                leftTitle: 'Cross Version One Dependency Source',
+                rightTitle: 'Cross Version Two Dependency Source',
+                leftDocumentId: 'doc_cross_version_one_dependency_source',
+                rightDocumentId: 'doc_cross_version_two_dependency_source',
+                leftSourcePath: 'Knowledge_Base/ragconditiondependencycrossscope/cross version one dependency source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditiondependencycrossscope/cross version two dependency source.md',
+                leftDependency: 'The storage dependency is SQLite in version 1.0.',
+                rightDependency: 'The storage dependency is PostgreSQL in version 2.0.',
+                leftKeywords: ['version', 'one', 'dependency'],
+                rightKeywords: ['version', 'two', 'dependency'],
+            },
+            {
+                query: 'compare cross platform windows dependency source with cross platform android dependency source',
+                leftTitle: 'Cross Platform Windows Dependency Source',
+                rightTitle: 'Cross Platform Android Dependency Source',
+                leftDocumentId: 'doc_cross_platform_windows_dependency_source',
+                rightDocumentId: 'doc_cross_platform_android_dependency_source',
+                leftSourcePath: 'Knowledge_Base/ragconditiondependencycrossscope/cross platform windows dependency source.md',
+                rightSourcePath: 'Knowledge_Base/ragconditiondependencycrossscope/cross platform android dependency source.md',
+                leftDependency: 'The storage dependency is SQLite on the Windows platform.',
+                rightDependency: 'The storage dependency is PostgreSQL on the Android platform.',
+                leftKeywords: ['platform', 'windows', 'dependency'],
+                rightKeywords: ['platform', 'android', 'dependency'],
+            },
+        ];
+
+        for (const dependencyCase of conditionScopedDependencyCases) {
+            const leftDocument = [
+                `# ${dependencyCase.leftTitle}`,
+                '',
+                `${dependencyCase.leftTitle} records the scoped storage dependency.`,
+                '',
+                '## Scoped Storage Dependency',
+                dependencyCase.leftDependency,
+            ].join('\n');
+            const rightDocument = [
+                `# ${dependencyCase.rightTitle}`,
+                '',
+                `${dependencyCase.rightTitle} records the scoped storage dependency.`,
+                '',
+                '## Scoped Storage Dependency',
+                dependencyCase.rightDependency,
+            ].join('\n');
+            const leftAtom = makeAtom({
+                id: dependencyCase.leftDocumentId.replace(/^doc_/, 'atom_'),
+                documentId: dependencyCase.leftDocumentId,
+                sourcePath: dependencyCase.leftSourcePath,
+                title: dependencyCase.leftTitle,
+                content: dependencyCase.leftDependency,
+                keywords: dependencyCase.leftKeywords,
+            });
+            const rightAtom = makeAtom({
+                id: dependencyCase.rightDocumentId.replace(/^doc_/, 'atom_'),
+                documentId: dependencyCase.rightDocumentId,
+                sourcePath: dependencyCase.rightSourcePath,
+                title: dependencyCase.rightTitle,
+                content: dependencyCase.rightDependency,
+                keywords: dependencyCase.rightKeywords,
+            });
+            const leftItem = makeQueryItem({
+                atom: leftAtom,
+                evidence: {
+                    id: `evidence_${dependencyCase.leftDocumentId}`,
+                    documentId: leftAtom.documentId,
+                    sourcePath: leftAtom.sourcePath,
+                    startOffset: leftDocument.indexOf(dependencyCase.leftDependency),
+                    endOffset: leftDocument.indexOf(dependencyCase.leftDependency) + dependencyCase.leftDependency.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: dependencyCase.leftDependency,
+                },
+            });
+            const rightItem = makeQueryItem({
+                atom: rightAtom,
+                evidence: {
+                    id: `evidence_${dependencyCase.rightDocumentId}`,
+                    documentId: rightAtom.documentId,
+                    sourcePath: rightAtom.sourcePath,
+                    startOffset: rightDocument.indexOf(dependencyCase.rightDependency),
+                    endOffset: rightDocument.indexOf(dependencyCase.rightDependency) + dependencyCase.rightDependency.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: dependencyCase.rightDependency,
+                },
+            });
+
+            const assembly = await assembleRagEvidenceContext({
+                query: dependencyCase.query,
+                items: [leftItem, rightItem],
+                sourceResolver: async (lookup) => ({
+                    documentId: lookup.documentId,
+                    sourcePath: lookup.sourcePath,
+                    content: lookup.documentId === leftAtom.documentId ? leftDocument : rightDocument,
+                }),
+                paragraphWindow: 5,
+                budget: {
+                    maxFragments: 10,
+                    maxCharsPerFragment: 700,
+                    maxTotalChars: 2600,
+                },
+            });
+
+            expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+            expect(assembly.fragments).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    role: 'parent_context',
+                    documentId: leftAtom.documentId,
+                    sourceBoundary: 'full_document',
+                    text: expect.stringContaining(dependencyCase.leftDependency),
+                }),
+                expect.objectContaining({
+                    role: 'parent_context',
+                    documentId: rightAtom.documentId,
+                    sourceBoundary: 'full_document',
+                    text: expect.stringContaining(dependencyCase.rightDependency),
+                }),
+            ]));
+            expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    documentId: leftAtom.documentId,
+                    status: 'read',
+                    charsRead: leftDocument.length,
+                }),
+                expect.objectContaining({
+                    documentId: rightAtom.documentId,
+                    status: 'read',
+                    charsRead: rightDocument.length,
+                }),
+            ]));
+        }
+    });
+
     test('does not mark condition-scoped quantity facts from different documents as conflicting evidence', async () => {
         const conditionScopedQuantityCases = [
             {
