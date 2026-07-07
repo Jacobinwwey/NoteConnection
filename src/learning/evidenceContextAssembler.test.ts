@@ -941,6 +941,157 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text).toContain(rollbackOwner);
     });
 
+    test('finds remote ownership identity conflicts from the full selected documents beyond matched opening spans', async () => {
+        const nominalOpening = 'Nominal owner full scan source is the scoped comparison document for full-document ownership augmentation.';
+        const fieldOpening = 'Field owner full scan source is the scoped comparison document for full-document ownership augmentation.';
+        const releaseOwner = 'The deployment owner is Release Ops in the remote nominal owner appendix.';
+        const rollbackOwner = 'The deployment owner is Rollback Team in the remote field owner appendix.';
+        const nominalDocument = [
+            '# Nominal Owner Full Scan Source',
+            nominalOpening,
+            '',
+            'This opening section is intentionally separate from the remote owner statement.',
+            '',
+            'Local owner filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local owner filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local owner filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local owner filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local owner filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local owner filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Nominal Owner Appendix',
+            releaseOwner,
+        ].join('\n');
+        const fieldDocument = [
+            '# Field Owner Full Scan Source',
+            fieldOpening,
+            '',
+            'This opening section is intentionally separate from the remote owner statement.',
+            '',
+            'Local owner filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local owner filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local owner filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local owner filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local owner filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local owner filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Field Owner Appendix',
+            rollbackOwner,
+        ].join('\n');
+        const nominalAtom = makeAtom({
+            id: 'atom_nominal_owner_full_scan_source',
+            documentId: 'doc_nominal_owner_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragidentityfullscan/nominal owner full scan source.md',
+            title: 'Nominal Owner Full Scan Source',
+            content: nominalOpening,
+            keywords: ['owner', 'ownership', 'full scan'],
+        });
+        const fieldAtom = makeAtom({
+            id: 'atom_field_owner_full_scan_source',
+            documentId: 'doc_field_owner_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragidentityfullscan/field owner full scan source.md',
+            title: 'Field Owner Full Scan Source',
+            content: fieldOpening,
+            keywords: ['owner', 'ownership', 'full scan'],
+        });
+        const items: KnowledgeQueryItem[] = [
+            {
+                ...makeQueryItem({ atom: nominalAtom }),
+                atom: nominalAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_nominal_owner_opening',
+                        documentId: nominalAtom.documentId,
+                        sourcePath: nominalAtom.sourcePath,
+                        startOffset: nominalDocument.indexOf(nominalOpening),
+                        endOffset: nominalDocument.indexOf(nominalOpening) + nominalOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: nominalOpening,
+                    }),
+                ],
+            },
+            {
+                ...makeQueryItem({ atom: fieldAtom }),
+                atom: fieldAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_field_owner_opening',
+                        documentId: fieldAtom.documentId,
+                        sourcePath: fieldAtom.sourcePath,
+                        startOffset: fieldDocument.indexOf(fieldOpening),
+                        endOffset: fieldDocument.indexOf(fieldOpening) + fieldOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: fieldOpening,
+                    }),
+                ],
+            },
+        ];
+        const documentsById = new Map([
+            [nominalAtom.documentId, nominalDocument],
+            [fieldAtom.documentId, fieldDocument],
+        ]);
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare nominal owner full scan source with field owner full scan source',
+            items,
+            sourceResolver: async (request) => ({
+                documentId: request.documentId,
+                sourcePath: request.sourcePath,
+                content: documentsById.get(request.documentId) || '',
+            }),
+            paragraphWindow: 1,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 3000,
+            },
+        });
+
+        const directSupportText = assembly.fragments
+            .filter((fragment) => fragment.role === 'direct_support')
+            .map((fragment) => fragment.text)
+            .join('\n');
+        expect(directSupportText).not.toContain('Release Ops');
+        expect(directSupportText).not.toContain('Rollback Team');
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_owner_opening',
+                'evidence_field_owner_opening',
+            ]),
+        }));
+        expect(conflictFragment?.text).toContain(releaseOwner);
+        expect(conflictFragment?.text).toContain(rollbackOwner);
+        expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: nominalAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: nominalDocument.length,
+            }),
+            expect.objectContaining({
+                documentId: fieldAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: fieldDocument.length,
+            }),
+        ]));
+    });
+
     test('marks location facts in the same section as conflicting evidence', async () => {
         const primaryLocation = 'The control module location is Rack A in the primary bay.';
         const fieldLocation = 'The control module location is Rack B in the field bay.';
