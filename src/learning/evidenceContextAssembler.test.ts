@@ -674,6 +674,157 @@ describe('assembleRagEvidenceContext', () => {
         expect(conflictFragment?.text.match(new RegExp(disabledState.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(1);
     });
 
+    test('finds remote state conflicts from the full selected documents beyond matched opening spans', async () => {
+        const nominalOpening = 'Nominal state full scan source is the scoped comparison document for full-document state augmentation.';
+        const fieldOpening = 'Field state full scan source is the scoped comparison document for full-document state augmentation.';
+        const nominalState = 'The migration gate status is enabled in the remote nominal state appendix.';
+        const fieldState = 'The migration gate status is disabled in the remote field state appendix.';
+        const nominalDocument = [
+            '# Nominal State Full Scan Source',
+            nominalOpening,
+            '',
+            'This opening section is intentionally separate from the remote state statement.',
+            '',
+            'Local state filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local state filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local state filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local state filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local state filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local state filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Nominal State Appendix',
+            nominalState,
+        ].join('\n');
+        const fieldDocument = [
+            '# Field State Full Scan Source',
+            fieldOpening,
+            '',
+            'This opening section is intentionally separate from the remote state statement.',
+            '',
+            'Local state filler paragraph one keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local state filler paragraph two keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local state filler paragraph three keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local state filler paragraph four keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local state filler paragraph five keeps the remote appendix away from the matched opening span.',
+            '',
+            'Local state filler paragraph six keeps the remote appendix away from the matched opening span.',
+            '',
+            '## Remote Field State Appendix',
+            fieldState,
+        ].join('\n');
+        const nominalAtom = makeAtom({
+            id: 'atom_nominal_state_full_scan_source',
+            documentId: 'doc_nominal_state_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragstatefullscan/nominal state full scan source.md',
+            title: 'Nominal State Full Scan Source',
+            content: nominalOpening,
+            keywords: ['state', 'status', 'full scan'],
+        });
+        const fieldAtom = makeAtom({
+            id: 'atom_field_state_full_scan_source',
+            documentId: 'doc_field_state_full_scan_source',
+            sourcePath: 'Knowledge_Base/ragstatefullscan/field state full scan source.md',
+            title: 'Field State Full Scan Source',
+            content: fieldOpening,
+            keywords: ['state', 'status', 'full scan'],
+        });
+        const items: KnowledgeQueryItem[] = [
+            {
+                ...makeQueryItem({ atom: nominalAtom }),
+                atom: nominalAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_nominal_state_opening',
+                        documentId: nominalAtom.documentId,
+                        sourcePath: nominalAtom.sourcePath,
+                        startOffset: nominalDocument.indexOf(nominalOpening),
+                        endOffset: nominalDocument.indexOf(nominalOpening) + nominalOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: nominalOpening,
+                    }),
+                ],
+            },
+            {
+                ...makeQueryItem({ atom: fieldAtom }),
+                atom: fieldAtom,
+                evidenceSpans: [
+                    makeEvidenceSpan({
+                        id: 'evidence_field_state_opening',
+                        documentId: fieldAtom.documentId,
+                        sourcePath: fieldAtom.sourcePath,
+                        startOffset: fieldDocument.indexOf(fieldOpening),
+                        endOffset: fieldDocument.indexOf(fieldOpening) + fieldOpening.length,
+                        startLine: 2,
+                        endLine: 2,
+                        snippet: fieldOpening,
+                    }),
+                ],
+            },
+        ];
+        const documentsById = new Map([
+            [nominalAtom.documentId, nominalDocument],
+            [fieldAtom.documentId, fieldDocument],
+        ]);
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'compare nominal state full scan source with field state full scan source',
+            items,
+            sourceResolver: async (request) => ({
+                documentId: request.documentId,
+                sourcePath: request.sourcePath,
+                content: documentsById.get(request.documentId) || '',
+            }),
+            paragraphWindow: 1,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 900,
+                maxTotalChars: 3000,
+            },
+        });
+
+        const directSupportText = assembly.fragments
+            .filter((fragment) => fragment.role === 'direct_support')
+            .map((fragment) => fragment.text)
+            .join('\n');
+        expect(directSupportText).not.toContain('status is enabled');
+        expect(directSupportText).not.toContain('status is disabled');
+
+        const conflictFragment = assembly.fragments.find((fragment) => fragment.role === 'conflict');
+        expect(conflictFragment).toEqual(expect.objectContaining({
+            sourceBoundary: 'full_document',
+            citationIds: expect.arrayContaining([
+                'evidence_nominal_state_opening',
+                'evidence_field_state_opening',
+            ]),
+        }));
+        expect(conflictFragment?.text).toContain(nominalState);
+        expect(conflictFragment?.text).toContain(fieldState);
+        expect(assembly.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: nominalAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: nominalDocument.length,
+            }),
+            expect.objectContaining({
+                documentId: fieldAtom.documentId,
+                sourceBoundary: 'full_document',
+                status: 'read',
+                charsRead: fieldDocument.length,
+            }),
+        ]));
+    });
+
     test('marks unitless quantity facts in the same section as conflicting evidence', async () => {
         const checklistLimit = 'The retry limit is 3 in the release checklist.';
         const appendixLimit = 'The retry limit is 5 in the rollback appendix.';
