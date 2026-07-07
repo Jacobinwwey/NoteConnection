@@ -3688,6 +3688,84 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(v2State);
     });
 
+    test('does not mark version-scoped quantity facts as conflicting evidence', async () => {
+        const v1Limit = 'The retry limit is 3 in version 1.0.';
+        const v2Limit = 'The retry limit is 5 in version 2.0.';
+        const fullDocument = [
+            '# Version Scoped Retry Limit Probe',
+            '',
+            'Version scoped retry limit probe validates that version qualifiers do not become false quantity conflicts.',
+            '',
+            '## Retry Limit By Version',
+            v1Limit,
+            '',
+            'Operators should preserve the version label when comparing retry records.',
+            '',
+            v2Limit,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_version_retry_limit',
+            documentId: 'doc_version_retry_limit',
+            sourcePath: 'Knowledge_Base/ragversionqualifier/version scoped retry limit probe.md',
+            title: 'Version Scoped Retry Limit Probe',
+            content: v1Limit,
+            keywords: ['version', 'quantity', 'retry', 'limit'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_v1_retry_limit',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(v1Limit),
+                    endOffset: fullDocument.indexOf(v1Limit) + v1Limit.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: v1Limit,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_v2_retry_limit',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(v2Limit),
+                    endOffset: fullDocument.indexOf(v2Limit) + v2Limit.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: v2Limit,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is version scoped retry limit probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(v1Limit),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(v2Limit);
+    });
+
     test('does not mark version-scoped ownership identity facts as conflicting evidence', async () => {
         const v1Owner = 'The deployment owner is Release Ops in version 1.0.';
         const v2Owner = 'The deployment owner is Rollback Team in version 2.0.';
@@ -3844,6 +3922,84 @@ describe('assembleRagEvidenceContext', () => {
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(androidState);
     });
 
+    test('does not mark platform-scoped quantity facts as conflicting evidence', async () => {
+        const windowsLimit = 'The retry limit is 3 on the Windows platform.';
+        const androidLimit = 'The retry limit is 5 on the Android platform.';
+        const fullDocument = [
+            '# Platform Scoped Retry Limit Probe',
+            '',
+            'Platform scoped retry limit probe validates that OS/platform qualifiers do not become false quantity conflicts.',
+            '',
+            '## Retry Limit By Platform',
+            windowsLimit,
+            '',
+            'Operators should preserve the platform label when comparing retry records.',
+            '',
+            androidLimit,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_platform_retry_limit',
+            documentId: 'doc_platform_retry_limit',
+            sourcePath: 'Knowledge_Base/ragplatformqualifier/platform scoped retry limit probe.md',
+            title: 'Platform Scoped Retry Limit Probe',
+            content: windowsLimit,
+            keywords: ['platform', 'quantity', 'retry', 'limit'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_windows_retry_limit',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(windowsLimit),
+                    endOffset: fullDocument.indexOf(windowsLimit) + windowsLimit.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: windowsLimit,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_android_retry_limit',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(androidLimit),
+                    endOffset: fullDocument.indexOf(androidLimit) + androidLimit.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: androidLimit,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is platform scoped retry limit probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(windowsLimit),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(androidLimit);
+    });
+
     test('does not mark platform-scoped ownership identity facts as conflicting evidence', async () => {
         const windowsOwner = 'The deployment owner is Release Ops on the Windows platform.';
         const androidOwner = 'The deployment owner is Rollback Team on the Android platform.';
@@ -3998,6 +4154,84 @@ describe('assembleRagEvidenceContext', () => {
             }),
         ]));
         expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(historicalDate);
+    });
+
+    test('does not mark current and historical quantity facts as conflicting evidence', async () => {
+        const currentLimit = 'The retry limit is 3 in the current release record.';
+        const historicalLimit = 'The retry limit is 5 in the historical rollback archive.';
+        const fullDocument = [
+            '# Temporal Retry Limit Probe',
+            '',
+            'Temporal retry limit probe validates that scoped current and historical quantities are not flattened into one contradiction.',
+            '',
+            '## Retry Limit History',
+            currentLimit,
+            '',
+            'Operators should answer with the active limit while retaining the older limit as provenance.',
+            '',
+            historicalLimit,
+        ].join('\n');
+        const atom = makeAtom({
+            id: 'atom_temporal_retry_limit',
+            documentId: 'doc_temporal_retry_limit',
+            sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal retry limit probe.md',
+            title: 'Temporal Retry Limit Probe',
+            content: currentLimit,
+            keywords: ['temporal', 'quantity', 'retry', 'limit'],
+        });
+        const item: KnowledgeQueryItem = {
+            ...makeQueryItem({ atom }),
+            atom,
+            evidenceSpans: [
+                makeEvidenceSpan({
+                    id: 'evidence_current_retry_limit',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(currentLimit),
+                    endOffset: fullDocument.indexOf(currentLimit) + currentLimit.length,
+                    startLine: 6,
+                    endLine: 6,
+                    snippet: currentLimit,
+                }),
+                makeEvidenceSpan({
+                    id: 'evidence_historical_retry_limit',
+                    documentId: atom.documentId,
+                    sourcePath: atom.sourcePath,
+                    startOffset: fullDocument.indexOf(historicalLimit),
+                    endOffset: fullDocument.indexOf(historicalLimit) + historicalLimit.length,
+                    startLine: 10,
+                    endLine: 10,
+                    snippet: historicalLimit,
+                }),
+            ],
+        };
+
+        const assembly = await assembleRagEvidenceContext({
+            query: 'what is temporal retry limit probe?',
+            items: [item],
+            sourceResolver: async () => ({
+                documentId: atom.documentId,
+                sourcePath: atom.sourcePath,
+                content: fullDocument,
+            }),
+            paragraphWindow: 5,
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 700,
+                maxTotalChars: 2200,
+            },
+        });
+
+        expect(assembly.fragments.some((fragment) => fragment.role === 'conflict')).toBe(false);
+        expect(assembly.fragments).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'parent_context',
+                documentId: atom.documentId,
+                sourceBoundary: 'full_document',
+                text: expect.stringContaining(currentLimit),
+            }),
+        ]));
+        expect(assembly.fragments.map((fragment) => fragment.text).join('\n')).toContain(historicalLimit);
     });
 
     test('does not mark current and planned date facts as conflicting evidence', async () => {

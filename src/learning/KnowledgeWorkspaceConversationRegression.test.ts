@@ -1205,6 +1205,24 @@ function buildRegressionDocuments() {
             ].join('\n'),
         },
         {
+            documentId: 'doc_version_scoped_retry_limit_probe',
+            sourcePath: 'Knowledge_Base/ragversionqualifier/version scoped retry limit probe.md',
+            language: 'en',
+            workspaceId: 'ragversionqualifier',
+            corpusId: 'ragversionqualifier',
+            content: [
+                '# Version Scoped Retry Limit Probe',
+                'Version scoped retry limit probe validates that the retry limit is 3 in version 1.0 while version 2.0 quantity facts remain version-qualified evidence rather than a conflict.',
+                '',
+                '## Retry Limit By Version',
+                'The retry limit is 3 in version 1.0.',
+                '',
+                'Operators should preserve the version label when comparing retry records.',
+                '',
+                'The retry limit is 5 in version 2.0.',
+            ].join('\n'),
+        },
+        {
             documentId: 'doc_version_scoped_deployment_owner_probe',
             sourcePath: 'Knowledge_Base/ragversionqualifier/version scoped deployment owner probe.md',
             language: 'en',
@@ -1238,6 +1256,24 @@ function buildRegressionDocuments() {
                 'Operators should preserve the platform label when comparing runtime records.',
                 '',
                 'The migration gate status is disabled on the Android platform.',
+            ].join('\n'),
+        },
+        {
+            documentId: 'doc_platform_scoped_retry_limit_probe',
+            sourcePath: 'Knowledge_Base/ragplatformqualifier/platform scoped retry limit probe.md',
+            language: 'en',
+            workspaceId: 'ragplatformqualifier',
+            corpusId: 'ragplatformqualifier',
+            content: [
+                '# Platform Scoped Retry Limit Probe',
+                'Platform scoped retry limit probe validates that the retry limit is 3 on the Windows platform while Android quantity facts remain platform-qualified evidence rather than a conflict.',
+                '',
+                '## Retry Limit By Platform',
+                'The retry limit is 3 on the Windows platform.',
+                '',
+                'Operators should preserve the platform label when comparing retry records.',
+                '',
+                'The retry limit is 5 on the Android platform.',
             ].join('\n'),
         },
         {
@@ -1292,6 +1328,24 @@ function buildRegressionDocuments() {
                 'Operators should answer with the current schedule while retaining the older schedule as provenance.',
                 '',
                 'The migration release date is 2026-07-01 in the historical rollout archive.',
+            ].join('\n'),
+        },
+        {
+            documentId: 'doc_temporal_retry_limit_probe',
+            sourcePath: 'Knowledge_Base/ragtemporalqualifier/temporal retry limit probe.md',
+            language: 'en',
+            workspaceId: 'ragtemporalqualifier',
+            corpusId: 'ragtemporalqualifier',
+            content: [
+                '# Temporal Retry Limit Probe',
+                'Temporal retry limit probe validates that the retry limit is 3 in the current release record while historical quantity facts remain condition-qualified evidence rather than a conflict.',
+                '',
+                '## Retry Limit History',
+                'The retry limit is 3 in the current release record.',
+                '',
+                'Operators should answer with the active limit while retaining the older limit as provenance.',
+                '',
+                'The retry limit is 5 in the historical rollback archive.',
             ].join('\n'),
         },
         {
@@ -2377,6 +2431,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                     }),
                 }),
                 expect.objectContaining({
+                    id: 'version_scoped_quantity_limit_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['retry limit', '3', 'version 1.0']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'stable retry limit',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
                     id: 'version_scoped_ownership_identity_probe_en',
                     expected: expect.objectContaining({
                         requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
@@ -2409,6 +2479,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                     }),
                 }),
                 expect.objectContaining({
+                    id: 'platform_scoped_quantity_limit_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['retry limit', '3', 'Windows']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'stable retry limit',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
                     id: 'platform_scoped_ownership_identity_probe_en',
                     expected: expect.objectContaining({
                         requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
@@ -2434,6 +2520,22 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
                         answerMustContain: expect.arrayContaining(['2026-08-15', 'current']),
                         answerMustNotContain: expect.arrayContaining([
                             'Conflicting evidence',
+                            'immediate predecessors',
+                            'likely next nodes',
+                        ]),
+                    }),
+                }),
+                expect.objectContaining({
+                    id: 'temporal_scoped_quantity_limit_probe_en',
+                    expected: expect.objectContaining({
+                        requiredRagRoles: expect.arrayContaining(['direct_support', 'parent_context']),
+                        forbiddenRagRoles: expect.arrayContaining(['conflict']),
+                        acceptedRagSufficiencyStatuses: expect.arrayContaining(['sufficient', 'borderline']),
+                        acceptedRagDegradationStates: ['none'],
+                        answerMustContain: expect.arrayContaining(['retry limit', '3', 'current']),
+                        answerMustNotContain: expect.arrayContaining([
+                            'Conflicting evidence',
+                            'stable retry limit',
                             'immediate predecessors',
                             'likely next nodes',
                         ]),
