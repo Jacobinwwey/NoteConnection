@@ -146,4 +146,4 @@ Git LFS 配额问题在 Godot 二进制（通常 50-100MB）上尤其严重，�
 - [知识掌握演进路线图](../diataxis/en/explanation/knowledge-mastery-evolution-roadmap.md)
 - [架构与迁移说明](../diataxis/en/explanation/architecture-and-migration.md)
 - [Agent 对话 + 聚焦模式交付计划](../diataxis/en/explanation/agent-conversation-focus-mode-plan.md)
-- [参考项目 GitNexus 分析](../../ref/GitNexus/README.md)
+- [参考项目 GitNexus 分析](https://github.com/abhigyanpatwari/GitNexus/blob/main/README.md)

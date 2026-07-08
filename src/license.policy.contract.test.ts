@@ -15,6 +15,7 @@ describe('license policy contract', () => {
   const tauriCargoTomlPath = path.join(repoRoot, 'src-tauri', 'Cargo.toml');
   const licensePath = path.join(repoRoot, 'LICENSE');
   const readmePath = path.join(repoRoot, 'README.md');
+  const chineseReadmePath = path.join(repoRoot, 'README_zh.md');
 
   test('root package manifest is pinned to GPL-3.0-only', () => {
     const pkg = readJson<PackageJson>(packageJsonPath);
@@ -32,10 +33,14 @@ describe('license policy contract', () => {
     expect(license).toContain('Version 3, 29 June 2007');
   });
 
-  test('README license section advertises GPL-3.0-only in both locales', () => {
+  test('README license sections advertise GPL-3.0-only in both locales', () => {
     const readme = fs.readFileSync(readmePath, 'utf8');
-    expect(readme).toContain('License / 开源许可');
-    expect(readme).toContain('GNU General Public License v3.0 (GPL-3.0-only)');
-    expect(readme).toContain('GNU General Public License v3.0（GPL-3.0-only）');
+    const chineseReadme = fs.readFileSync(chineseReadmePath, 'utf8');
+    expect(readme).toContain('## License');
+    expect(readme).toContain('GNU General Public License v3.0');
+    expect(readme).toContain('GPL-3.0-only');
+    expect(chineseReadme).toContain('## 开源许可');
+    expect(chineseReadme).toContain('GNU General Public License v3.0');
+    expect(chineseReadme).toContain('GPL-3.0-only');
   });
 });

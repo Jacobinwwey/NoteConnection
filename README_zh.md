@@ -5,13 +5,13 @@
 <img width="606" height="309" alt="NoteConnection banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
 
 [![npm version](https://badge.fury.io/js/noteconnection.svg)](https://www.npmjs.com/package/noteconnection)
-[![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](https://github.com/Jacobinwwey/NoteConnection/blob/main/LICENSE)
+[![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/Jacobinwwey/NoteConnection?label=release)](https://github.com/Jacobinwwey/NoteConnection/releases/latest)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-2f6f9f)](https://jacobinwwey.github.io/NoteConnection/)
 
 **面向 Markdown 知识库的本地优先知识图谱、学习工作区与 RAG 运行时。**
 
-[根目录中文 README](https://github.com/Jacobinwwey/NoteConnection/blob/main/README_zh.md) | [English docs](../en/README.md) | [Root English README](https://github.com/Jacobinwwey/NoteConnection/blob/main/README.md) | [快速开始](#quick-start) | [功能导览](#feature-tour) | [架构](#architecture) | [CLI](#cli-reference) | [文档](#documentation) | [致谢](#acknowledgments)
+[English README](README.md) | [快速开始](#快速开始) | [功能导览](#功能导览) | [架构](#架构) | [CLI](#cli-使用) | [文档](#文档) | [致谢](#acknowledgments--致谢)
 
 </div>
 
@@ -31,14 +31,14 @@ NoteConnection 是一个高性能独立系统，会把非结构化 Markdown 知�
 
 | 需要了解 | 从这里开始 |
 |---|---|
-| 安装或运行应用 | [快速开始](#quick-start) |
-| 理解主要产品入口 | [三种主要使用方式](#usage-modes) |
-| 查看恢复后的详细图文功能讲解 | [功能导览](#feature-tour) |
-| 理解代码 owner 与运行流 | [架构](#architecture) |
-| 配置知识库 | [配置](#configuration) |
-| 使用命令行 | [CLI 使用](#cli-reference) |
-| 阅读完整文档 | [文档](#documentation) |
-| 查看近期版本 | [发布说明](#release-notes) |
+| 安装或运行应用 | [快速开始](#快速开始) |
+| 理解主要产品入口 | [三种主要使用方式](#三种主要使用方式) |
+| 查看恢复后的详细图文功能讲解 | [功能导览](#功能导览) |
+| 理解代码 owner 与运行流 | [架构](#架构) |
+| 配置知识库 | [配置](#配置) |
+| 使用命令行 | [CLI 使用](#cli-使用) |
+| 阅读完整文档 | [文档](#文档) |
+| 查看近期版本 | [发布说明](#发布说明) |
 
 ## 当前架构摘要
 
@@ -54,11 +54,9 @@ README 不再作为主线架构状态流水账。此前堆叠在首页的多段�
 
 详细进展见：
 
-- [开发进度看板](../diataxis/zh/explanation/development-progress-dashboard.md)
-- [Agent 知识工作区图预览与回答审核收口](../solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md)
-- [知识工作区与 DAG 对齐推进方案](../solutions/knowledge-workspace-dag-alignment-2026-06-10.md)
-
-<a id="quick-start"></a>
+- [开发进度看板](docs/diataxis/zh/explanation/development-progress-dashboard.md)
+- [Agent 知识工作区图预览与回答审核收口](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md)
+- [知识工作区与 DAG 对齐推进方案](docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md)
 
 ## 快速开始
 
@@ -132,8 +130,6 @@ npm run tauri:android:build
 npm run tauri:android:build:universal
 ```
 
-<a id="usage-modes"></a>
-
 ## 三种主要使用方式
 
 ### 1. 知识图谱工作区
@@ -168,8 +164,6 @@ npm run tauri:android:build:universal
 - 可被 UI 和 agent workflow 复用的学习路线。
 
 因此图谱既能用于视觉探索，也能用于构建有依据的回答。
-
-<a id="feature-tour"></a>
 
 ## 功能导览
 
@@ -216,8 +210,6 @@ npm run tauri:android:build:universal
 
 <img width="2012" height="2024" alt="Controls and NoteMD workspace" src="https://github.com/user-attachments/assets/bf6e7508-7e42-46cb-9a3e-b92be063ad3d" />
 
-<a id="architecture"></a>
-
 ## 架构
 
 ```mermaid
@@ -262,8 +254,6 @@ flowchart LR
 - Godot Path Mode 作为渲染器和交互面；重图逻辑仍留在 TypeScript 运行时。
 - Godot 路径需要保持 PNG/materialized render 边界，避免直接 SVG 假设。
 
-<a id="cli-reference"></a>
-
 ## CLI 使用
 
 ```bash
@@ -287,8 +277,6 @@ npm start -- --path "E:/Knowledge/ObsidianVault" --no-gpu
 ```
 
 CLI 运行会生成类似 `data_cli_{kb_name}_{time}.js` 的唯一数据文件以保护原始 `data.js`。服务器启动时会自动为前端提供这些文件。
-
-<a id="configuration"></a>
 
 ## 配置
 
@@ -324,8 +312,8 @@ max_doc_bytes = 100663296
 
 更多配置说明：
 
-- [中文 app_config 指南](app_config.toml_guide.md)
-- [配置模板](../examples/app_config.template.toml)
+- [中文 app_config 指南](docs/zh/app_config.toml_guide.md)
+- [配置模板](docs/examples/app_config.template.toml)
 
 ## Markdown 阅读协议
 
@@ -362,17 +350,15 @@ npm run tauri:android:build
 - `npm run tauri:build:full` 显式选择打包生成型图谱资产。
 - `npm run verify:lfs:policy`、`npm run verify:sidecar:supply` 和 SBOM gates 保护发布打包。
 
-<a id="documentation"></a>
-
 ## 文档
 
-- 文档入口：[../index.md](../index.md)
-- 根目录中文 README：[README_zh.md](https://github.com/Jacobinwwey/NoteConnection/blob/main/README_zh.md)
-- 根目录英文 README：[README.md](https://github.com/Jacobinwwey/NoteConnection/blob/main/README.md)
-- 英文 docs 镜像：[../en/README.md](../en/README.md)
-- 用户手册：[User_Manual.md](User_Manual.md) / [../en/User_Manual.md](../en/User_Manual.md)
-- 接口文档：[Interface Document.md](<Interface Document.md>) / [../en/Interface Document.md](<../en/Interface Document.md>)
-- 发布说明：[../release_notes_v1.8.0.md](../release_notes_v1.8.0.md)
+- 文档入口：[docs/index.md](docs/index.md)
+- 英文 README：[README.md](README.md)
+- 英文 docs 镜像：[docs/en/README.md](docs/en/README.md)
+- 中文 docs 镜像：[docs/zh/README.md](docs/zh/README.md)
+- 用户手册：[docs/en/User_Manual.md](docs/en/User_Manual.md) / [docs/zh/User_Manual.md](docs/zh/User_Manual.md)
+- 接口文档：[docs/en/Interface Document.md](<docs/en/Interface Document.md>) / [docs/zh/Interface Document.md](<docs/zh/Interface Document.md>)
+- 发布说明：[docs/release_notes_v1.8.0.md](docs/release_notes_v1.8.0.md)
 - GitHub Pages 文档：[jacobinwwey.github.io/NoteConnection](https://jacobinwwey.github.io/NoteConnection/)
 
 ## 安全与隐私
@@ -381,8 +367,6 @@ npm run tauri:android:build
 - LLM 功能使用用户自行配置的 provider，应视为可选运行时集成。
 - 不要提交本地知识库、`app_config.toml`、provider key、生成的私有证据或机器特定 sidecar override。
 - Release workflow 包含 SBOM、sidecar、LFS、migration、docs、mobile 和 runtime evidence gates。
-
-<a id="release-notes"></a>
 
 ## 发布说明
 
@@ -394,8 +378,6 @@ README 只保留简短版本摘要。完整发布记录见 [GitHub Releases](htt
 - **v1.7.0** - 启动加速收口、多平台验证与学习路线图底座。
 - **v1.6.7** - 文档治理清理与 GitHub Pages 稳定性修复。
 - **v1.6.6** - Provider 运行时流程与 TOML 配置统一。
-
-<a id="acknowledgments"></a>
 
 ## Acknowledgments / 致谢
 
@@ -426,4 +408,4 @@ NoteConnection 受益于许多开源项目与本地参考镜像。以下致谢�
 
 ## 开源许可
 
-本项目采用 [GNU General Public License v3.0](https://github.com/Jacobinwwey/NoteConnection/blob/main/LICENSE)（`GPL-3.0-only`）开源协议。
+本项目采用 [GNU General Public License v3.0](LICENSE)（`GPL-3.0-only`）开源协议。
