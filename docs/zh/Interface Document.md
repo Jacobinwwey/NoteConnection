@@ -1,7 +1,29 @@
 # 2026-04-07 v1.7.0
+
 # 接口文档 (v1.7.0)
 
 本文件是当前代码状态下的权威接口交接文档。
+
+## 2026-07-11 v1.8.0 - Coverage-driven 图回答契约
+
+Conversation response 现在新增两个 additive contract：
+
+```ts
+interface AgentConversationResponse {
+  graphAnswerPlan?: GraphAnswerPlan;
+  graphAnswerCoverage?: GraphAnswerCoverageReview;
+}
+```
+
+相同字段也存在于 `AgentConversationTrace`、`KnowledgeRun`、knowledge-run workflow artifact 和导出的 `knowledgeRunReports` 摘要中。
+
+`GraphAnswerPlan` 包含 anchor、intent/depth、有证据的 claim、required role、关系边 provenance 和 omitted candidate。`GraphAnswerCoverageReview` 记录 required、covered、missing claim ID 与归一化 coverage score。
+
+`graph_answer_plan_coverage` 是新增的 `AnswerReleaseGateId`。必要图 claim 缺失时可触发 revision。字符数和句数不再是发布 gate。
+
+公开证据统一通过 `src/learning/ragPublicText.ts` shaping：展示前移除 authoring/control instruction、Markdown 表格脚手架、标题语法和 fenced renderer source。该 shaping 不得删除事实引导句，也不得绕过 claim coverage。
+
+兼容性：所有新增 response 字段保持 optional；旧客户端仍可继续消费 `assistantMessage`、`answer`、blocks、citations 和 release review。
 本版不是在旧文档上追加，而是按源码核对后重建。
 
 ## 0.0 多平台构建契约补充（v1.7.0）

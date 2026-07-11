@@ -49,12 +49,15 @@ Current state in brief:
 - **Graph substrate** is real code: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, mastery paths, session state, and export bundles are part of the implementation.
 - **Compatibility** is preserved through legacy `assistantMessage`, typed `assistantBlocks`, `app_config.toml` migration, Markdown reader fallback, and runtime-first packaging.
 - **Architecture pressure** remains in large owners such as `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/workspace_panes.js`, and `src/frontend/agent_workspace.js`. Future work should extract around real invariants, not import another broad orchestration framework.
+- **Coverage-driven graph answers** now use a typed `GraphAnswerPlan` and required-claim coverage review. Anchor spans, evidenced graph neighbors, relation edges, and omissions survive into response traces, knowledge-run artifacts, and export reports; public answers are no longer governed by a 900-character or six-sentence ceiling.
+- **Public evidence shaping** removes source authoring instructions, Markdown table scaffolding, and fenced renderer payloads without reducing semantic coverage. This is a content-quality boundary, not a length contraction mechanism.
 
 Detailed progress tracking belongs in:
 
 - [Development Progress Dashboard](docs/diataxis/en/explanation/development-progress-dashboard.md)
 - [Agent Knowledge Workspace Graph Preview and Review Closure](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md)
 - [Knowledge Workspace and DAG Alignment Plan](docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md)
+- [Coverage-driven Graph Answer Planning](docs/plans/2026-07-11-coverage-driven-graph-answer-planning.md)
 
 ## Quick Start
 

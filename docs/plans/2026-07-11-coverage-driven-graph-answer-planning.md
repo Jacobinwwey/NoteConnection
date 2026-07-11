@@ -108,6 +108,39 @@ A runtime audit after the initial completion found that removing answer ceilings
 
 Post-audit verification: 119/119 suites passed, 1,127 tests passed, 26 skipped; the focused answer-quality matrix passed 177/177; TypeScript, production build, and Water Glass runtime acceptance passed.
 
+### Current code versus prior approaches
+
+| Area | Former code / Scheme A | Scheme B requirement | Current implementation | Remaining risk |
+|---|---|---|---|---|
+| Retrieval breadth | Raise `topK` or sentence quotas | Select a bounded, semantically useful subgraph | Existing RAG budgets remain bounded; answer planning consumes grouped spans and evidenced graph fragments | Budget calibration still relies on fixed profile maxima, although they no longer truncate the final answer |
+| Answer unit | Independent evidence sentence | Evidence-backed semantic claim | `GraphAnswerClaimPlan` carries role, statement, node/edge provenance, confidence, and required status | Role inference is deterministic lexical logic and needs a larger multilingual calibration corpus |
+| Graph topology | Degree/path rendered as optional prose | Graph structure becomes an answer contract | Anchor, relation edges, graph-neighbor evidence, omissions, and required roles enter `GraphAnswerPlan` | Predecessor/successor nodes without source evidence remain intentionally excluded from factual prose |
+| Completeness | RAG role presence and keyword assertions | Validate required claim coverage | `graph_answer_plan_coverage` gates release; final coverage is recalculated after revision | Coverage matching is conservative lexical overlap, not semantic entailment |
+| Public answer length | 900 characters and six sentences | Adaptive progressive disclosure | Character and sentence ceilings are removed | Very large evidence packs can still produce overly dense prose; solve through novelty and claim selection, not truncation |
+| Readability | Truncation incidentally hid noisy source text | Natural synthesis without rigid templates | Shared public-evidence shaping removes control prose, table scaffolding, headings, and fenced payloads | Deterministic concatenation remains less fluent than a high-quality optional synthesizer |
+| Release behavior | Replace a rich draft with a contracted revision | Preserve coverage while correcting unsafe claims | Definition revision augments the existing draft; coverage and citation gates remain active | Release audit records draft gate failures separately from final coverage, which operator UI must present clearly |
+| Observability | Graph context mostly in secondary diagnostics | Replay plan and coverage decisions | Response, trace, knowledge run, artifact, and export report retain plan/coverage | Main frontend does not yet provide an operator-focused plan inspector |
+| Scheme C / iterative agent | Not present | Optional only for complex research | Explicitly deferred; ordinary answers stay deterministic | A future tool loop must have bounded steps, evidence budgets, approval policy, and replayable events |
+
+### Architecture progress by owner
+
+- `graphContextAssembler.ts`: remains the candidate-subgraph owner. It selects anchor, support nodes, paths, predecessor/successor windows, and temporal context.
+- `graphAnswerPlan.ts`: is now the semantic-planning owner. It converts usable evidence into answer roles and records why graph candidates were omitted.
+- `graphAnswerCoverage.ts`: owns required-claim coverage evaluation and does not perform generation or retrieval.
+- `conversationComposer.ts`: realizes the plan and ranked RAG evidence into public prose. Its remaining pressure is evidence selection/natural sequencing, not graph discovery.
+- `answerReleaseReview.ts`: owns grounding, contradiction, graph-order, temporal, citation, leakage, and plan-coverage gates. It no longer owns answer-length policy.
+- `KnowledgeLearningPlatform.ts`: still orchestrates the full turn and remains oversized. Extraction is justified only when a new owner can accept the complete conversation-evidence input and return the complete planned/reviewed answer operation.
+- `WorkspaceExportBundle.ts`: exports a compact plan/coverage summary rather than leaking the full internal evidence pack.
+
+### Prioritized next direction
+
+1. Build a multilingual role/coverage calibration corpus covering definitions, causal explanations, comparisons, procedures, temporal qualifications, and weak-evidence cases.
+2. Measure false-positive and false-negative rates for lexical claim coverage before adopting embeddings or an LLM entailment judge.
+3. Improve novelty-aware claim selection and discourse ordering so rich answers remain readable without length ceilings.
+4. Add an operator-only plan/coverage inspector if trace debugging remains costly; do not expose internal planning scaffolding in the primary answer.
+5. Introduce bounded graph-expansion tools only for explicitly deep or research-oriented requests. Each expansion must be scope-safe, evidence-backed, step-limited, and replayable.
+6. Do not add a broad orchestration framework or default multi-agent topology. The current gap is calibration and synthesis quality, not missing framework surface.
+
 ## 中文
 
 ### 决策
@@ -206,3 +239,36 @@ Post-audit verification: 119/119 suites passed, 1,127 tests passed, 26 skipped; 
 初次完成后的运行时复核发现：移除回答上限后，过去被截断掩盖的源文档创作指令、Markdown 表格和图表源码可能进入公开回答。最终 shaping 边界现在会统一拒绝中英文 authoring/control instruction，移除 fenced renderer payload，清理 heading 语法，并在保留事实引导句后截断表格脚手架。该修正不丢弃有证据的语义 claim，也没有重新引入长度上限。
 
 复核后的验证结果：119/119 个 suite 通过，1,127 个测试通过，26 个跳过；回答质量专项矩阵 177/177 通过；TypeScript、production build 和 Water Glass 运行时验收通过。
+
+### 当前代码与先前方案对比
+
+| 领域 | 旧代码 / 方案 A | 方案 B 要求 | 当前实现 | 剩余风险 |
+|---|---|---|---|---|
+| 检索广度 | 提高 `topK` 或句子配额 | 选择有界且语义有效的子图 | RAG budget 继续有界；answer plan 消费聚合 span 与有证据的图 fragment | Profile 仍存在固定最大候选数，但不再截断最终回答 |
+| 回答单位 | 独立 evidence sentence | 有证据的语义 claim | `GraphAnswerClaimPlan` 保存 role、statement、节点/边 provenance、confidence 和 required 状态 | Role inference 仍是确定性词法逻辑，需要更大的多语言校准语料 |
+| 图拓扑 | degree/path 只是可选附加句 | 图结构成为答案契约 | Anchor、关系边、图邻居证据、omission 与 required role 进入 `GraphAnswerPlan` | 没有 source evidence 的前驱/后继仍会有意排除在事实文本之外 |
+| 完整性 | 检查 RAG role 与关键词 | 验证 required claim coverage | `graph_answer_plan_coverage` 参与发布 gate；revision 后重新计算最终 coverage | Coverage matcher 是保守词法 overlap，不是语义蕴含判断 |
+| 公开回答长度 | 900 字符、六句 | 自适应渐进披露 | 字符和句数 ceiling 已移除 | 超大 evidence pack 仍可能产生密集文本，应通过 novelty/claim selection 解决，而不是重新截断 |
+| 可读性 | 截断偶然掩盖噪声 | 非固定模板的自然综合 | 共享 shaping 会清除控制文本、表格脚手架、标题与 fenced payload | 确定性串联的流畅度仍弱于高质量可选 synthesizer |
+| 发布行为 | 用收缩 revision 覆盖丰富 draft | 修正风险时保留 coverage | Definition revision 增量补齐现有 draft；coverage/citation gate 保留 | Release audit 的 draft gate failure 与 final coverage 需要在 operator UI 中清晰区分 |
+| 可观测性 | Graph context 多数仅在次级诊断 | 可回放 plan 与 coverage | Response、trace、knowledge run、artifact、export 都保留 plan/coverage | 主前端尚无 operator-only plan inspector |
+| 方案 C / 迭代 Agent | 不存在 | 仅复杂研究场景可选 | 明确延期；普通回答保持确定性 | 未来 tool loop 必须具有步数、证据预算、审批策略和可回放事件 |
+
+### 按 owner 划分的架构推进
+
+- `graphContextAssembler.ts`：继续负责候选子图，选择 anchor、support、path、前驱/后继窗口与 temporal context。
+- `graphAnswerPlan.ts`：成为语义规划 owner，把可用证据转换为 answer role，并记录图候选被排除的原因。
+- `graphAnswerCoverage.ts`：只负责 required-claim coverage，不执行生成或检索。
+- `conversationComposer.ts`：把 plan 与排序后的 RAG evidence 实现为公开文本；剩余压力是 evidence selection 和自然衔接，不是图发现。
+- `answerReleaseReview.ts`：负责 grounding、矛盾、图顺序、时序、citation、leakage 与 plan coverage gate，不再负责回答长度策略。
+- `KnowledgeLearningPlatform.ts`：仍负责完整 turn 编排且体积过大。只有新 owner 能接收完整 conversation/evidence 输入并返回完整 planned/reviewed answer 操作时，抽取才合理。
+- `WorkspaceExportBundle.ts`：只导出紧凑 plan/coverage 摘要，不泄漏完整内部 evidence pack。
+
+### 后续推进优先级
+
+1. 建立覆盖定义、因果、比较、流程、时序限定和弱证据场景的多语言 role/coverage 校准语料。
+2. 在引入 embedding 或 LLM entailment judge 前，先量化词法 coverage 的 false-positive / false-negative。
+3. 改进 novelty-aware claim selection 与 discourse ordering，使丰富回答在无长度 ceiling 时仍保持可读。
+4. 如果 trace 调试成本仍高，再增加 operator-only plan/coverage inspector；不要把内部规划脚手架暴露到主回答。
+5. 只为显式 deep/research 请求引入有界 graph-expansion tool；每次扩展必须 scope-safe、有证据、限制步数并可回放。
+6. 不引入宽泛编排框架或默认多 Agent。当前缺口是校准和综合质量，不是缺少框架表面。

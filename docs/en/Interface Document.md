@@ -5,6 +5,27 @@
 This document is the canonical interface handover for the current codebase.
 It was rebuilt from source verification, not appended to legacy sections.
 
+## 2026-07-11 v1.8.0 - Coverage-driven graph answer contracts
+
+The conversation response now exposes two additive contracts:
+
+```ts
+interface AgentConversationResponse {
+  graphAnswerPlan?: GraphAnswerPlan;
+  graphAnswerCoverage?: GraphAnswerCoverageReview;
+}
+```
+
+The same fields are available in `AgentConversationTrace`, `KnowledgeRun`, knowledge-run workflow artifacts, and exported `knowledgeRunReports` summaries.
+
+`GraphAnswerPlan` contains the anchor, intent/depth, evidence-backed claims, required roles, relation-edge provenance, and omitted candidates. `GraphAnswerCoverageReview` records required, covered, and missing claim IDs plus a normalized coverage score.
+
+`graph_answer_plan_coverage` is an additive `AnswerReleaseGateId`. It may trigger revision when required graph claims are absent. Character count and sentence count are not release gates.
+
+Public evidence is shaped through `src/learning/ragPublicText.ts`: authoring/control instructions, Markdown table scaffolding, heading syntax, and fenced renderer source are removed before presentation. This shaping must not remove the factual lead or bypass claim coverage.
+
+Compatibility: all new response fields remain optional; existing clients may continue consuming `assistantMessage`, `answer`, blocks, citations, and release review.
+
 ## 0.0 Multi-Platform Build Contract Addendum (v1.7.0)
 
 This addendum captures the build/runtime contracts that now matter to the Git LFS migration and to cross-platform delivery safety.

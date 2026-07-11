@@ -1,3 +1,49 @@
+# 2026-07-11 v1.8.0 - Coverage-driven Graph Answer Planning Closure TODO
+
+## English Document
+
+### Objective
+Keep subsequent answer-quality work aligned with the completed coverage-driven graph planning architecture instead of returning to sentence-count tuning or unbounded graph expansion.
+
+### Completed
+- [x] `GraphAnswerPlan` maps grouped anchor spans and evidenced graph neighbors into semantic claims with provenance and omissions.
+- [x] `graph_answer_plan_coverage` participates in release decisions, and final public-answer coverage is persisted separately after revision.
+- [x] Plan and coverage data cross response, trace, knowledge-run artifact, and export boundaries.
+- [x] Public answers no longer have a 900-character or six-sentence hard ceiling.
+- [x] Shared public-evidence shaping filters authoring/control prose, Markdown table scaffolding, headings, and fenced renderer payloads.
+- [x] Water Glass integration requires definition, material boundary, thermal mechanism, and full required-claim coverage.
+- [x] Final verification passed 119/119 suites, 1,127 tests, TypeScript, production build, and runtime Water Glass acceptance.
+
+### Next direction
+- [ ] Calibrate claim-role inference on a broader real-corpus evaluation set; avoid adding roles based on isolated prompt examples.
+- [ ] Replace lexical coverage matching with a conservative multilingual semantic matcher only after false-positive and false-negative corpora exist.
+- [ ] Add bounded graph-expansion tools for explicitly deep/research queries; keep ordinary definition answers deterministic.
+- [ ] Extract answer-planning orchestration from `KnowledgeLearningPlatform.ts` only when the new owner can enforce a complete operation and reduce caller knowledge.
+- [ ] Add frontend operator projection for plan/coverage only if it improves diagnosis without exposing internal scaffolding in the main answer.
+
+## 中文文档
+
+### 目标
+让后续回答质量工作继续遵守已经完成的 coverage-driven graph planning 架构，避免退回句数调参或无界图扩展。
+
+### 已完成
+- [x] `GraphAnswerPlan` 将聚合锚点 span 和有证据的图邻居映射为带 provenance 与 omission 的语义 claim。
+- [x] `graph_answer_plan_coverage` 已进入发布决策，revision 后的最终公开回答 coverage 会独立持久化。
+- [x] Plan 与 coverage 已跨越 response、trace、knowledge-run artifact 和 export 边界。
+- [x] 公开回答不再具有 900 字符或六句硬上限。
+- [x] 共享 public-evidence shaping 会过滤 authoring/control prose、Markdown 表格脚手架、标题语法与 fenced renderer payload。
+- [x] Water Glass 集成验收要求定义、材料边界、热机制与完整 required-claim coverage。
+- [x] 最终验证为 119/119 个 suite、1,127 个测试、TypeScript、production build 和 Water Glass 运行时验收通过。
+
+### 后续方向
+- [ ] 在更广泛的真实语料评估集上校准 claim-role inference；不要根据孤立 prompt 样例随意增加 role。
+- [ ] 只有建立 false-positive / false-negative 语料后，才用保守的多语言语义 matcher 替代词法 coverage matching。
+- [ ] 为显式 deep/research 查询增加有界 graph-expansion tool；普通定义回答继续保持确定性。
+- [ ] 只有新 owner 能强制完整操作并降低 caller knowledge 时，才从 `KnowledgeLearningPlatform.ts` 抽取 answer-planning 编排。
+- [ ] 仅在确实提升诊断且不会把内部脚手架暴露到主回答时，才增加 plan/coverage 的前端 operator projection。
+
+---
+
 # 2026-07-03 v1.7.0 - Knowledge Workspace RSE and Hosted Runtime Alignment TODO
 
 ## English Document

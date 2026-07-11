@@ -58,6 +58,14 @@ README 不再作为主线架构状态流水账。此前堆叠在首页的多段�
 - [Agent 知识工作区图预览与回答审核收口](docs/solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md)
 - [知识工作区与 DAG 对齐推进方案](docs/solutions/knowledge-workspace-dag-alignment-2026-06-10.md)
 
+### 2026-07-11 Coverage-driven 图回答更新
+
+- 回答链路现在使用带类型的 `GraphAnswerPlan` 与 required-claim coverage review。
+- 锚点 span、有证据的图邻居、关系边与 omission 会进入 response trace、knowledge-run artifact 和 export report。
+- 公开回答不再受 900 字符或六句硬上限控制。
+- Public-evidence shaping 会移除 authoring instruction、Markdown 表格脚手架和 fenced renderer payload，而不会降低语义 coverage。
+- 详细架构与推进记录见 [Coverage-driven Graph Answer Planning](docs/plans/2026-07-11-coverage-driven-graph-answer-planning.md)。
+
 ## 快速开始
 
 ### 桌面系统依赖

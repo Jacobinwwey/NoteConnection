@@ -1,5 +1,13 @@
 # 解释：开发进度看板
 
+## 2026-07-11 Coverage-driven 图回答规划收口
+
+回答链路已经从“按句数预算的 graph-aware RAG”推进为带类型的 coverage-driven planning contract。`graphContextAssembler.ts` 继续负责有界候选子图；`graphAnswerPlan.ts` 把聚合锚点 span 与有证据的图邻居映射为语义 claim；`graphAnswerCoverage.ts` 验证 required claim；`conversationComposer.ts` 实现公开回答；`answerReleaseReview.ts` 在没有字符或句数 ceiling 的情况下执行 grounding、图一致性、时序、citation、leakage 与 plan-coverage gate。
+
+与先前方案相比：方案 A 的 budget 调整只保留为有界 evidence candidate 控制，不再决定回答完整性；方案 B 已跨越 response、trace、knowledge-run artifact 和 export 完整落地；方案 C 的迭代 Agent expansion 继续有意延期，只面向显式 deep/research 请求。当前主要风险是多语言 role inference、词法 coverage 的 false-positive/false-negative、novelty-aware discourse ordering，以及 `KnowledgeLearningPlatform.ts` 仍然过大的编排 owner。
+
+验证证据：119/119 个 suite 通过，1,127 个测试通过，26 个跳过；回答质量专项矩阵 177/177 通过；TypeScript、production build 和 Water Glass 运行时验收通过。权威实现与后续方向对比见 [Coverage-driven Graph Answer Planning](../../../plans/2026-07-11-coverage-driven-graph-answer-planning.md)。
+
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
