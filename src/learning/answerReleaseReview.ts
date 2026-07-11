@@ -341,8 +341,6 @@ const STRUCTURED_UNIT_ALIASES: Record<string, string> = {
 };
 
 const STRUCTURED_FACT_PATTERN = /(-?\d{1,4}(?:,\d{3})*(?:\.\d+)?)(?:\s*(kg\/m(?:³|3)|gpa|mpa|kpa|pa|km\/h|m\/s|km|cm|mm|ml|mb|gb|tb|kw|mw|%|percent|percentage|years?|yrs?|yr|year|°c|℃|℉|年))?/giu;
-const ANSWER_RELEASE_PUBLIC_CHAR_LIMIT = 900;
-const ANSWER_RELEASE_SENTENCE_BUDGET = 6;
 const DEFINITION_EVIDENCE_HIGHLIGHT_LIMIT = 2;
 const RAG_CLAIM_CITATION_SUPPORT_MIN_FEATURES = 2;
 const RAG_CLAIM_CITATION_SUPPORT_MIN_COVERAGE = 0.78;
@@ -914,7 +912,7 @@ function expandAnswerWithGraphContext(
     extraSentences.forEach((sentence) => appendRevisionAnswerSentence(sentences, sentence, useChinese));
     appendRevisionAnswerSentence(sentences, buildRevisionGraphConnectionSentence(context, useChinese), useChinese);
     appendRevisionAnswerSentence(sentences, buildRevisionGraphProfileSentence(context, useChinese), useChinese);
-    return sentences.slice(0, ANSWER_RELEASE_SENTENCE_BUDGET).join(useChinese ? '' : ' ');
+    return sentences.join(useChinese ? '' : ' ');
 }
 
 function expandRagGroundedAnswer(
@@ -925,7 +923,7 @@ function expandRagGroundedAnswer(
     const sentences: string[] = [];
     appendRevisionAnswerSentence(sentences, baseAnswer, useChinese);
     evidenceSentences.forEach((sentence) => appendRevisionAnswerSentence(sentences, sentence, useChinese));
-    return sentences.slice(0, ANSWER_RELEASE_SENTENCE_BUDGET).join(useChinese ? '' : ' ');
+    return sentences.join(useChinese ? '' : ' ');
 }
 
 function hasUsableRagEvidenceContext(context: AnswerReleaseReviewContext): boolean {
@@ -1184,7 +1182,7 @@ function ragRevisionDirectClauseLimit(profile: RagPublicAnswerProfile): number {
     if (profile === 'causal') {
         return 2;
     }
-    return 1;
+    return 4;
 }
 
 function ragRevisionDocumentClauseLimit(profile: RagPublicAnswerProfile): number {
@@ -1194,14 +1192,14 @@ function ragRevisionDocumentClauseLimit(profile: RagPublicAnswerProfile): number
     if (profile === 'how_to' || profile === 'causal') {
         return 2;
     }
-    return 2;
+    return 6;
 }
 
 function ragRevisionGraphClauseLimit(profile: RagPublicAnswerProfile): number {
     if (profile === 'compare' || profile === 'how_to' || profile === 'causal') {
         return 2;
     }
-    return 1;
+    return 6;
 }
 
 function ragRevisionDocumentClauseOptions(
@@ -1264,9 +1262,15 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
     const queryTerms = extractRagPublicQueryTerms(context.message);
     const profile = resolveRagPublicAnswerProfile(context.message);
     const isCompareQuery = profile === 'compare';
+    const rejectAnswerControlClause = (clause: string) => (
+        /\b(?:distractor|must not guide|do not use|ignore this (?:section|evidence)|must (?:compare|resolve)|before publishing)\b/iu.test(clause)
+    );
     const rejectCompareProcedureClause = isCompareQuery
-        ? (clause: string) => shouldRejectCompareProcedureEvidenceClause(clause, context.message)
-        : undefined;
+        ? (clause: string) => (
+            rejectAnswerControlClause(clause)
+            || shouldRejectCompareProcedureEvidenceClause(clause, context.message)
+        )
+        : rejectAnswerControlClause;
     const directClauses = collectRagPublicEvidenceClauses(
         context,
         new Set(['direct_support']),
@@ -1435,23 +1439,13 @@ function buildReleasedPublicAnswer(
     context: AnswerReleaseReviewContext,
     draftAnswer: string
 ): string {
-    if (!isDefinitionIntentQuery(context.message)) {
-        return draftAnswer;
+    if (isDefinitionIntentQuery(context.message)) {
+        const ragGroundedAnswer = buildRagGroundedRevisionAnswer(context);
+        if (ragGroundedAnswer && !normalizeWhitespace(draftAnswer).includes(normalizeWhitespace(ragGroundedAnswer))) {
+            return normalizeWhitespace(`${draftAnswer} ${ragGroundedAnswer}`);
+        }
     }
-    const ragGroundedAnswer = buildRagGroundedRevisionAnswer(context);
-    if (ragGroundedAnswer) {
-        return ragGroundedAnswer;
-    }
-    const useChinese = containsCjk([
-        context.message,
-        draftAnswer,
-        context.knowledgePoints[0]?.title || '',
-        context.graphContext?.anchorTitle || '',
-    ].join(' '));
-    return expandAnswerWithGraphContext(draftAnswer, context, useChinese, [
-        buildDefinitionAugmentationSentence(context, useChinese),
-        buildDefinitionEvidenceHighlightSentence(context, useChinese),
-    ]);
+    return draftAnswer;
 }
 
 function buildGraphOrderRevisionAnswer(
@@ -5041,9 +5035,6 @@ function evaluateTemporalValidityConsistency(
 
 function checkPublicSurfaceContraction(answer: string): boolean {
     const normalizedAnswer = String(answer || '');
-    if (normalizeWhitespace(normalizedAnswer).length > ANSWER_RELEASE_PUBLIC_CHAR_LIMIT) {
-        return false;
-    }
     return !(
         /\bGrounded by\b/i.test(normalizedAnswer)
         || /\bKey evidence\b/i.test(normalizedAnswer)

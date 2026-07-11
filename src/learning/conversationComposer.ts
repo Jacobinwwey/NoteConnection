@@ -22,9 +22,11 @@ import type {
     RagContextPack,
     RagEvidenceFragment,
     RagSufficiencyReview,
+    GraphAnswerPlan,
 } from './types';
 import { reviewAnswerRelease } from './answerReleaseReview';
 import { buildAgentConversationGraphContextFromKnowledgePoints } from './graphContextAssembler';
+import { buildGraphAnswerPlan } from './graphAnswerPlan';
 import {
     naturalizeRagPublicEvidenceClause,
     shouldRejectCompareProcedureEvidenceClause,
@@ -534,41 +536,41 @@ function resolveRagAnswerProfile(message: string): RagAnswerProfile {
     const intent = classifyScopedConversationIntent(message);
     if (intent === 'compare') {
         return {
-            directSupportSentenceCount: 4,
-            documentContextSentenceCount: 1,
-            graphNeighborSentenceCount: 2,
-            publicSentenceCount: 6,
+            directSupportSentenceCount: 8,
+            documentContextSentenceCount: 4,
+            graphNeighborSentenceCount: 6,
+            publicSentenceCount: Number.MAX_SAFE_INTEGER,
         };
     }
     if (intent === 'how_to') {
         return {
-            directSupportSentenceCount: 3,
-            documentContextSentenceCount: 1,
-            graphNeighborSentenceCount: 2,
-            publicSentenceCount: 6,
+            directSupportSentenceCount: 8,
+            documentContextSentenceCount: 6,
+            graphNeighborSentenceCount: 6,
+            publicSentenceCount: Number.MAX_SAFE_INTEGER,
         };
     }
     if (intent === 'causal_explain') {
         return {
-            directSupportSentenceCount: 2,
-            documentContextSentenceCount: 2,
-            graphNeighborSentenceCount: 2,
-            publicSentenceCount: 6,
+            directSupportSentenceCount: 8,
+            documentContextSentenceCount: 6,
+            graphNeighborSentenceCount: 6,
+            publicSentenceCount: Number.MAX_SAFE_INTEGER,
         };
     }
     if (intent === 'generic') {
         return {
             directSupportSentenceCount: 2,
             documentContextSentenceCount: 2,
-            graphNeighborSentenceCount: 1,
-            publicSentenceCount: 6,
+            graphNeighborSentenceCount: 6,
+            publicSentenceCount: Number.MAX_SAFE_INTEGER,
         };
     }
     return {
-        directSupportSentenceCount: 1,
+        directSupportSentenceCount: 2,
         documentContextSentenceCount: 2,
-        graphNeighborSentenceCount: 1,
-        publicSentenceCount: 6,
+        graphNeighborSentenceCount: 6,
+        publicSentenceCount: Number.MAX_SAFE_INTEGER,
     };
 }
 
@@ -979,9 +981,15 @@ function buildRagAugmentedConversationAnswer(
     const profile = resolveRagAnswerProfile(params.message);
     const intent = classifyScopedConversationIntent(params.message);
     const answerQueryTerms = extractRagAnswerQueryTerms(params.message);
+    const rejectAnswerControlSentence = (sentence: string) => (
+        /\b(?:distractor|must not guide|do not use|ignore this (?:section|evidence)|must (?:compare|resolve)|before publishing)\b/iu.test(sentence)
+    );
     const rejectCompareProcedureSentence = intent === 'compare'
-        ? (sentence: string) => shouldRejectCompareProcedureEvidenceClause(sentence, params.message)
-        : undefined;
+        ? (sentence: string) => (
+            rejectAnswerControlSentence(sentence)
+            || shouldRejectCompareProcedureEvidenceClause(sentence, params.message)
+        )
+        : rejectAnswerControlSentence;
     const answerSentences: string[] = [];
     selectRagEvidenceSentences(
         pack.fragments,
@@ -1045,7 +1053,8 @@ function buildRagAugmentedConversationAnswer(
 
 function buildScopedConversationAnswer(
     params: ScopedConversationReplyParams,
-    graphContext: AgentConversationGraphContext | null
+    graphContext: AgentConversationGraphContext | null,
+    graphAnswerPlan: GraphAnswerPlan
 ): string {
     if (params.knowledgePoints.length <= 0) {
         const readinessMessage = String(params.usedScope.readiness?.message || '').trim();
@@ -1067,6 +1076,31 @@ function buildScopedConversationAnswer(
     const ragAnswer = buildRagAugmentedConversationAnswer(params, graphContext, useChinese);
     if (ragAnswer) {
         return ragAnswer;
+    }
+    if (graphAnswerPlan.claims.length > 0) {
+        graphAnswerPlan.claims.forEach((claim) => {
+            appendConversationAnswerSentence(answerSentences, claim.statement, useChinese);
+        });
+        if (params.ragSufficiencyReview?.status === 'borderline') {
+            appendConversationAnswerSentence(
+                answerSentences,
+                useChinese
+                    ? '当前证据覆盖仍然有限，因此回答只陈述已有材料能够支持的内容'
+                    : 'The evidence coverage is still partial, so the answer stays within the retrieved material',
+                useChinese
+            );
+        }
+        appendConversationAnswerSentence(
+            answerSentences,
+            buildGraphConnectionPathAnswerSentence(graphContext, useChinese),
+            useChinese
+        );
+        appendConversationAnswerSentence(
+            answerSentences,
+            buildGraphProfileAnswerSentence(graphContext, useChinese),
+            useChinese
+        );
+        return answerSentences.join(useChinese ? '' : ' ');
     }
     const directSentence = selectScopedConversationDirectSentence(params.message, leadingPoint);
     if (directSentence) {
@@ -1754,10 +1788,17 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     knowledgeRun: KnowledgeRun;
     graphContext: AgentConversationGraphContext | null;
     answerReleaseReview: AnswerReleaseReview;
+    graphAnswerPlan: GraphAnswerPlan;
 } {
     const blocks: AgentConversationAssistantBlock[] = [];
     const graphContext = params.graphContext || buildAgentConversationGraphContextFromKnowledgePoints(params.knowledgePoints);
-    const draftAnswer = buildScopedConversationAnswer(params, graphContext);
+    const graphAnswerPlan = buildGraphAnswerPlan({
+        message: params.message,
+        knowledgePoints: params.knowledgePoints,
+        graphContext,
+        ragContextPack: params.ragContextPack,
+    });
+    const draftAnswer = buildScopedConversationAnswer(params, graphContext, graphAnswerPlan);
     const knowledgeRun = buildKnowledgeRun(params, graphContext);
     const answerReleaseReview = reviewAnswerRelease({
         message: params.message,
@@ -1826,5 +1867,6 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         knowledgeRun,
         graphContext,
         answerReleaseReview,
+        graphAnswerPlan,
     };
 }

@@ -1297,6 +1297,54 @@ export interface AgentConversationGraphContext {
     temporalValidity: AgentConversationGraphTemporalContext;
 }
 
+export type GraphAnswerRole =
+    | 'definition'
+    | 'attribute'
+    | 'composition'
+    | 'prerequisite'
+    | 'mechanism'
+    | 'causal_consequence'
+    | 'sequence'
+    | 'application'
+    | 'contrast'
+    | 'analogy'
+    | 'boundary'
+    | 'temporal_warning';
+
+export interface GraphAnswerEvidenceRef {
+    evidenceId: string;
+    atomId?: string;
+    sourcePath: string;
+    citationIds: string[];
+    text: string;
+}
+
+export interface GraphAnswerClaimPlan {
+    claimId: string;
+    role: GraphAnswerRole;
+    required: boolean;
+    priority: number;
+    statement: string;
+    subjectAtomId: string;
+    supportingAtomIds: string[];
+    supportingEdgeIds: string[];
+    evidenceRefs: GraphAnswerEvidenceRef[];
+    confidence: number;
+}
+
+export interface GraphAnswerPlan {
+    intent: 'definition' | 'causal' | 'compare' | 'procedure' | 'generic';
+    depth: 'compact' | 'standard' | 'deep';
+    anchorAtomId: string;
+    leadClaimId: string;
+    claims: GraphAnswerClaimPlan[];
+    requiredRoles: GraphAnswerRole[];
+    omittedCandidates: Array<{
+        atomId: string;
+        reason: 'low_relevance' | 'redundant' | 'weak_evidence' | 'budget' | 'temporal_invalidity';
+    }>;
+}
+
 export interface AgentConversationMemoryRecord {
     memoryId: string;
     namespace: string;

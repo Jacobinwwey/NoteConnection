@@ -456,7 +456,7 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).toContain('后续分支包括 热量传递模型');
     });
 
-    test('enriches releasable definition answers with bounded evidence and graph context', () => {
+    test('releases a complete definition draft without replacing its natural answer shape', () => {
         const baseCitation = makeKnowledgePoint().citation as KnowledgeCitation;
         const thermalCitation: KnowledgeCitation = {
             ...baseCitation,
@@ -545,17 +545,35 @@ describe('answerReleaseReview', () => {
         });
 
         expect(review.decision).toBe('release');
-        expect(review.revised).toBe(true);
+        expect(review.revised).toBe(false);
         expect(review.publicAnswer).toContain('Water glass is a transparent container filled with water.');
-        expect(review.publicAnswer).toContain('The same knowledge point also covers Thermal Model.');
-        expect(review.publicAnswer).toContain('Evidence highlights: Thermal Model');
-        expect(review.publicAnswer).toContain('Water Glass has 1 incoming and 1 outgoing links');
-        expect(review.publicAnswer).toContain('its immediate predecessors include Container Physics');
-        expect(review.publicAnswer).toContain('likely next nodes include Thermal Model');
+        expect(review.publicAnswer).not.toContain('The same knowledge point also covers Thermal Model.');
+        expect(review.publicAnswer).not.toContain('Evidence highlights: Thermal Model');
+        expect(review.publicAnswer).not.toContain('Water Glass has 1 incoming and 1 outgoing links');
+        expect(review.publicAnswer).not.toContain('its immediate predecessors include Container Physics');
+        expect(review.publicAnswer).not.toContain('likely next nodes include Thermal Model');
         expect(review.publicAnswer).not.toContain('predecessors include Water Glass');
         expect(review.publicAnswer).not.toContain('next nodes include Water Glass');
         expect(review.publicAnswer).not.toContain('(mermaid block)');
         expect(review.publicAnswer).not.toContain('```');
+    });
+
+    test('does not reject an evidence-grounded answer merely because it exceeds 900 characters', () => {
+        const point = makeKnowledgePoint();
+        const groundedSentence = 'Water glass is a transparent container filled with water and its wall separates the liquid from the surrounding environment.';
+        const longGroundedAnswer = Array.from({ length: 9 }, (_, index) => `${groundedSentence} Detail ${index + 1}.`).join(' ');
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: longGroundedAnswer,
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-07-11T09:00:00.000Z',
+        });
+
+        expect(longGroundedAnswer.length).toBeGreaterThan(900);
+        expect(review.failedGateIds).not.toContain('public_surface_contraction');
     });
 
     test('keeps RAG evidence in revised definition answers after public-surface contraction', () => {
