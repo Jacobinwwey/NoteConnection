@@ -6,7 +6,15 @@ const LEADING_SOURCE_LABEL_PATTERN = /^(?:prerequisites?|preconditions?|requirem
 const PRESERVED_LEADING_LABEL_PATTERN = /^(?:step|phase|stage|section)\s*\d+\s*[:\uFF1A-]/iu;
 
 export function naturalizeRagPublicEvidenceClause(value: string): string {
-    let normalized = normalizeWhitespace(value);
+    let normalized = normalizeWhitespace(
+        String(value || '')
+            .replace(/```[\s\S]*?```/gu, ' ')
+            .replace(/^(?:#{1,6})\s+/u, '')
+    );
+    const tableStart = normalized.search(/\s\|\s*[^|]+\s*\|/u);
+    if (tableStart >= 0) {
+        normalized = normalizeWhitespace(normalized.slice(0, tableStart));
+    }
     if (!normalized || PRESERVED_LEADING_LABEL_PATTERN.test(normalized)) {
         return normalized;
     }
@@ -21,6 +29,12 @@ export function naturalizeRagPublicEvidenceClause(value: string): string {
         }
     }
     return normalized;
+}
+
+export function shouldRejectPublicEvidenceClause(value: string): boolean {
+    const normalized = normalizeWhitespace(value);
+    return /\b(?:distractor|must not guide|do not use|ignore this (?:section|evidence)|must (?:compare|resolve)|before publishing)\b/iu.test(normalized)
+        || /(?:遵从您的指示|所有推理过程|最终输出为|仅基于标题|根据您的要求生成)/u.test(normalized);
 }
 
 export function shouldRejectCompareProcedureEvidenceClause(value: string, query: string): boolean {

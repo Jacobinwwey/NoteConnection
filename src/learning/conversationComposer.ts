@@ -30,6 +30,7 @@ import { buildGraphAnswerPlan } from './graphAnswerPlan';
 import { reviewGraphAnswerCoverage } from './graphAnswerCoverage';
 import {
     naturalizeRagPublicEvidenceClause,
+    shouldRejectPublicEvidenceClause,
     shouldRejectCompareProcedureEvidenceClause,
 } from './ragPublicText';
 
@@ -976,10 +977,7 @@ function buildRagAugmentedConversationAnswer(
     const profile = resolveRagAnswerProfile(params.message);
     const intent = classifyScopedConversationIntent(params.message);
     const answerQueryTerms = extractRagAnswerQueryTerms(params.message);
-    const rejectAnswerControlSentence = (sentence: string) => (
-        /\b(?:distractor|must not guide|do not use|ignore this (?:section|evidence)|must (?:compare|resolve)|before publishing)\b/iu.test(sentence)
-        || /(?:遵从您的指示|所有推理过程|最终输出为|仅基于标题|根据您的要求生成)/u.test(sentence)
-    );
+    const rejectAnswerControlSentence = shouldRejectPublicEvidenceClause;
     const rejectCompareProcedureSentence = intent === 'compare'
         ? (sentence: string) => (
             rejectAnswerControlSentence(sentence)

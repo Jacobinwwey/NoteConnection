@@ -102,6 +102,12 @@ Final completion update:
 
 Final verification: 118/118 suites passed, 1,124 tests passed, 26 skipped; TypeScript `--noEmit`, production build, and Water Glass runtime acceptance passed.
 
+### Post-completion robustness audit
+
+A runtime audit after the initial completion found that removing answer ceilings exposed source-authoring scaffolding and Markdown table/diagram payloads that had previously been hidden by truncation. The final shaping boundary now rejects Chinese and English authoring/control instructions, removes fenced renderer payloads, strips heading syntax, and truncates table scaffolding after preserving the factual lead. This improves readability without discarding grounded semantic claims or reintroducing a length ceiling.
+
+Post-audit verification: 119/119 suites passed, 1,127 tests passed, 26 skipped; the focused answer-quality matrix passed 177/177; TypeScript, production build, and Water Glass runtime acceptance passed.
+
 ## 中文
 
 ### 决策
@@ -194,3 +200,9 @@ Final verification: 118/118 suites passed, 1,124 tests passed, 26 skipped; TypeS
 - 所有残余的公开回答字符/句数 ceiling 常量与投影均已移除。
 
 最终验证：118/118 个 suite 通过，1,124 个测试通过，26 个跳过；TypeScript `--noEmit`、production build 和 Water Glass 运行时验收均通过。
+
+### 完成后的稳健性复核
+
+初次完成后的运行时复核发现：移除回答上限后，过去被截断掩盖的源文档创作指令、Markdown 表格和图表源码可能进入公开回答。最终 shaping 边界现在会统一拒绝中英文 authoring/control instruction，移除 fenced renderer payload，清理 heading 语法，并在保留事实引导句后截断表格脚手架。该修正不丢弃有证据的语义 claim，也没有重新引入长度上限。
+
+复核后的验证结果：119/119 个 suite 通过，1,127 个测试通过，26 个跳过；回答质量专项矩阵 177/177 通过；TypeScript、production build 和 Water Glass 运行时验收通过。

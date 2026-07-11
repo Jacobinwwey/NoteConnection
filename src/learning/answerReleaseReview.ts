@@ -18,6 +18,7 @@ import type {
 import { reviewGraphAnswerCoverage } from './graphAnswerCoverage';
 import {
     naturalizeRagPublicEvidenceClause,
+    shouldRejectPublicEvidenceClause,
     shouldRejectCompareProcedureEvidenceClause,
 } from './ragPublicText';
 
@@ -1266,10 +1267,7 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
     const queryTerms = extractRagPublicQueryTerms(context.message);
     const profile = resolveRagPublicAnswerProfile(context.message);
     const isCompareQuery = profile === 'compare';
-    const rejectAnswerControlClause = (clause: string) => (
-        /\b(?:distractor|must not guide|do not use|ignore this (?:section|evidence)|must (?:compare|resolve)|before publishing)\b/iu.test(clause)
-        || /(?:遵从您的指示|所有推理过程|最终输出为|仅基于标题|根据您的要求生成)/u.test(clause)
-    );
+    const rejectAnswerControlClause = shouldRejectPublicEvidenceClause;
     const rejectCompareProcedureClause = isCompareQuery
         ? (clause: string) => (
             rejectAnswerControlClause(clause)

@@ -8,6 +8,7 @@ import type {
     RagEvidenceFragment,
     RelationKind,
 } from './types';
+import { shouldRejectPublicEvidenceClause } from './ragPublicText';
 
 export interface BuildGraphAnswerPlanParams {
     message: string;
@@ -21,8 +22,7 @@ function normalize(value: string): string {
 }
 
 function isAuthoringScaffolding(value: string): boolean {
-    return /\b(?:distractor|must not guide|do not use|ignore this (?:section|evidence)|must (?:compare|resolve)|before publishing)\b/iu.test(value)
-        || /(?:遵从您的指示|所有推理过程|最终输出为|仅基于标题|根据您的要求生成)/u.test(value);
+    return shouldRejectPublicEvidenceClause(value);
 }
 
 function classifyIntent(message: string): GraphAnswerPlan['intent'] {
