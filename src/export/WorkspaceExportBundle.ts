@@ -533,6 +533,11 @@ function buildKnowledgeRunReports(records: WorkflowArtifactRecord[]): WorkspaceE
             const answerReleaseReview = buildAnswerReleaseReviewSummary(
                 knowledgeRun.answerReleaseReview ?? payload.answerReleaseReview
             );
+            const graphAnswerPlan = (knowledgeRun.graphAnswerPlan ?? payload.graphAnswerPlan) as Record<string, unknown> | undefined;
+            const graphAnswerCoverage = (knowledgeRun.graphAnswerCoverage ?? payload.graphAnswerCoverage) as Record<string, unknown> | undefined;
+            const graphAnswerClaims = Array.isArray(graphAnswerPlan?.claims)
+                ? graphAnswerPlan.claims.filter((claim) => Boolean(claim && typeof claim === 'object')) as Record<string, unknown>[]
+                : [];
             const graphContext = payload.graphContext && typeof payload.graphContext === 'object'
                 ? payload.graphContext as Record<string, unknown>
                 : {};
@@ -588,6 +593,22 @@ function buildKnowledgeRunReports(records: WorkflowArtifactRecord[]): WorkspaceE
                         : null,
                     missingLookupCount,
                 },
+                ...(graphAnswerPlan ? {
+                    graphAnswerPlan: {
+                        intent: String(graphAnswerPlan.intent || '').trim(),
+                        depth: String(graphAnswerPlan.depth || '').trim(),
+                        anchorAtomId: String(graphAnswerPlan.anchorAtomId || '').trim(),
+                        claimCount: graphAnswerClaims.length,
+                        requiredClaimCount: graphAnswerClaims.filter((claim) => claim.required === true).length,
+                        requiredRoles: Array.isArray(graphAnswerPlan.requiredRoles)
+                            ? graphAnswerPlan.requiredRoles.map((role) => String(role || '').trim()).filter(Boolean)
+                            : [],
+                        coverageScore: normalizeOptionalScore(graphAnswerCoverage?.coverageScore),
+                        missingRequiredClaimIds: Array.isArray(graphAnswerCoverage?.missingRequiredClaimIds)
+                            ? graphAnswerCoverage.missingRequiredClaimIds.map((claimId) => String(claimId || '').trim()).filter(Boolean)
+                            : [],
+                    },
+                } : {}),
                 ...(answerReleaseReview ? { answerReleaseReview } : {}),
             };
         });

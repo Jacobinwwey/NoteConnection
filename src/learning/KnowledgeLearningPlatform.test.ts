@@ -1764,10 +1764,28 @@ describe('KnowledgeLearningPlatform', () => {
         });
 
         expect(response.answer).toMatch(/^A water glass is/i);
+        expect(response.answer).toContain('soda-lime glass');
+        expect(response.answer).toContain('conduction and convection');
         expect(response.answer).not.toContain('The strongest scoped match is');
         expect(response.knowledgePoints).toHaveLength(1);
         expect(response.summary.returnedKnowledgePoints).toBe(1);
         expect(response.citations.length).toBeGreaterThanOrEqual(2);
+        expect(response.graphAnswerPlan).toEqual(expect.objectContaining({
+            intent: 'definition',
+            anchorAtomId: expect.any(String),
+        }));
+        expect(response.graphAnswerPlan?.requiredRoles).toEqual(expect.arrayContaining([
+            'definition',
+            'boundary',
+            'mechanism',
+        ]));
+        expect(response.graphAnswerCoverage).toEqual(expect.objectContaining({
+            passed: true,
+            missingRequiredClaimIds: [],
+            coverageScore: 1,
+        }));
+        expect(response.trace.graphAnswerPlan).toEqual(response.graphAnswerPlan);
+        expect(response.trace.graphAnswerCoverage).toEqual(response.graphAnswerCoverage);
 
         const groupedPoint = response.knowledgePoints[0] as any;
         expect(groupedPoint.title).toBe('Water Glass');

@@ -1345,6 +1345,15 @@ export interface GraphAnswerPlan {
     }>;
 }
 
+export interface GraphAnswerCoverageReview {
+    passed: boolean;
+    applicable: boolean;
+    requiredClaimIds: string[];
+    coveredClaimIds: string[];
+    missingRequiredClaimIds: string[];
+    coverageScore: number;
+}
+
 export interface AgentConversationMemoryRecord {
     memoryId: string;
     namespace: string;
@@ -1392,6 +1401,8 @@ export interface AgentConversationTrace {
     ragSufficiencyReview?: RagSufficiencyReview;
     ragRecovery?: RagEvidenceRecoveryTrace;
     ragFailureClassifications?: RagFailureClassification[];
+    graphAnswerPlan?: GraphAnswerPlan;
+    graphAnswerCoverage?: GraphAnswerCoverageReview;
     answerClaimCitations?: AgentConversationAnswerClaimCitation[];
     answerReleaseReview?: AnswerReleaseReview;
 }
@@ -1484,6 +1495,7 @@ export type AnswerReleaseGateId =
     | 'claim_temporal_validity_consistency'
     | 'rag_answer_completeness'
     | 'rag_claim_citation_support'
+    | 'graph_answer_plan_coverage'
     | 'public_surface_contraction'
     | 'internal_diagnostic_leakage'
     | 'abstention_hygiene';
@@ -1586,6 +1598,8 @@ export interface KnowledgeRun {
     reviewCards: KnowledgeRunReviewCard[];
     reviewState: KnowledgeRunReviewState;
     answerReleaseReview?: AnswerReleaseReview;
+    graphAnswerPlan?: GraphAnswerPlan;
+    graphAnswerCoverage?: GraphAnswerCoverageReview;
     summary: {
         claimCount: number;
         verifiedClaimCount: number;
@@ -1621,6 +1635,8 @@ export interface AgentConversationResponse {
     assistantMessage: string;
     answer: string;
     answerReleaseReview?: AnswerReleaseReview;
+    graphAnswerPlan?: GraphAnswerPlan;
+    graphAnswerCoverage?: GraphAnswerCoverageReview;
     assistantBlocks?: AgentConversationAssistantBlock[];
     knowledgeRun?: KnowledgeRun;
     knowledgePoints: AgentConversationKnowledgePoint[];

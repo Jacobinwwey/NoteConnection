@@ -12,7 +12,10 @@ import type {
     RagEvidenceRole,
     RagSufficiencyReview,
     RelationKind,
+    GraphAnswerPlan,
+    GraphAnswerCoverageReview,
 } from './types';
+import { reviewGraphAnswerCoverage } from './graphAnswerCoverage';
 import {
     naturalizeRagPublicEvidenceClause,
     shouldRejectCompareProcedureEvidenceClause,
@@ -27,6 +30,7 @@ export interface AnswerReleaseReviewContext {
     graphContext: AgentConversationGraphContext | null;
     ragContextPack?: RagContextPack;
     ragSufficiencyReview?: RagSufficiencyReview;
+    graphAnswerPlan?: GraphAnswerPlan;
     reviewedAt?: string;
 }
 
@@ -1264,6 +1268,7 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
     const isCompareQuery = profile === 'compare';
     const rejectAnswerControlClause = (clause: string) => (
         /\b(?:distractor|must not guide|do not use|ignore this (?:section|evidence)|must (?:compare|resolve)|before publishing)\b/iu.test(clause)
+        || /(?:遵从您的指示|所有推理过程|最终输出为|仅基于标题|根据您的要求生成)/u.test(clause)
     );
     const rejectCompareProcedureClause = isCompareQuery
         ? (clause: string) => (
@@ -5064,6 +5069,7 @@ function buildDecision(
     temporalValidityConsistencyPassed: boolean,
     ragAnswerCompletenessPassed: boolean,
     ragClaimCitationSupportPassed: boolean,
+    graphAnswerPlanCoveragePassed: boolean,
     leakedInternalFragments: string[],
     publicSurfaceContracted: boolean
 ): AnswerReleaseDecision {
@@ -5090,6 +5096,7 @@ function buildDecision(
         || !temporalValidityConsistencyPassed
         || !ragAnswerCompletenessPassed
         || !ragClaimCitationSupportPassed
+        || !graphAnswerPlanCoveragePassed
         || leakedInternalFragments.length > 0
         || !publicSurfaceContracted
     ) {
@@ -5317,6 +5324,9 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             unsupportedClaims: [],
             citationBackedFragmentCount: 0,
         };
+    const graphAnswerPlanCoverage: GraphAnswerCoverageReview = groundedEvidenceAvailable
+        ? reviewGraphAnswerCoverage(draftAnswer, context.graphAnswerPlan)
+        : reviewGraphAnswerCoverage('', null);
     const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer);
     const graphSupportCount = context.graphContext
         ? (
@@ -5347,6 +5357,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         temporalValidityConsistency.passed,
         ragAnswerCompleteness.passed,
         ragClaimCitationSupport.passed,
+        graphAnswerPlanCoverage.passed,
         leakedInternalFragments,
         publicSurfaceContracted
     );
@@ -5595,6 +5606,15 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             gateId: 'rag_claim_citation_support',
             passed: ragClaimCitationSupport.passed,
             message: buildRagClaimCitationSupportMessage(ragClaimCitationSupport),
+        },
+        {
+            gateId: 'graph_answer_plan_coverage',
+            passed: graphAnswerPlanCoverage.passed,
+            message: !graphAnswerPlanCoverage.applicable
+                ? 'No required graph-answer claims were active for this answer.'
+                : graphAnswerPlanCoverage.passed
+                    ? `The public draft covered all ${graphAnswerPlanCoverage.requiredClaimIds.length} required graph-answer claim(s).`
+                    : `The public draft omitted required graph-answer claims: ${graphAnswerPlanCoverage.missingRequiredClaimIds.join(', ')}.`,
         },
         {
             gateId: 'public_surface_contraction',

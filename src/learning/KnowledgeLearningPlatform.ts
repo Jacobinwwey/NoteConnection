@@ -10020,6 +10020,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             assistantMessage: reply.answer,
             answer: reply.answer,
             answerReleaseReview: reply.answerReleaseReview,
+            graphAnswerPlan: reply.graphAnswerPlan,
+            graphAnswerCoverage: reply.graphAnswerCoverage,
             assistantBlocks: reply.assistantBlocks,
             knowledgeRun: reply.knowledgeRun,
             knowledgePoints: conversationKnowledgePoints,
@@ -10058,6 +10060,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ragFailureClassifications,
                 answerClaimCitations,
                 answerReleaseReview: reply.answerReleaseReview,
+                graphAnswerPlan: reply.graphAnswerPlan,
+                graphAnswerCoverage: reply.graphAnswerCoverage,
             },
         };
         const knowledgeRunArtifact = this.recordWorkflowArtifact({
@@ -10078,6 +10082,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ragFailureClassifications,
                 answerClaimCitations,
                 answerReleaseReview: reply.answerReleaseReview,
+                graphAnswerPlan: reply.graphAnswerPlan,
+                graphAnswerCoverage: reply.graphAnswerCoverage,
                 citations,
                 recalledMemories,
                 memoryActions,

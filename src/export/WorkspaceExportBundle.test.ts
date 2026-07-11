@@ -846,6 +846,26 @@ describe('WorkspaceExportBundle', () => {
                                 leakedInternalFragments: [],
                                 gates: [],
                             },
+                            graphAnswerPlan: {
+                                intent: 'definition',
+                                depth: 'standard',
+                                anchorAtomId: 'atom_reflection',
+                                leadClaimId: 'claim_reflection',
+                                requiredRoles: ['definition', 'mechanism'],
+                                omittedCandidates: [],
+                                claims: [
+                                    { claimId: 'claim_reflection', required: true },
+                                    { claimId: 'claim_mechanism', required: true },
+                                ],
+                            },
+                            graphAnswerCoverage: {
+                                passed: true,
+                                applicable: true,
+                                requiredClaimIds: ['claim_reflection', 'claim_mechanism'],
+                                coveredClaimIds: ['claim_reflection', 'claim_mechanism'],
+                                missingRequiredClaimIds: [],
+                                coverageScore: 1,
+                            },
                         },
                         graphContext: {
                             anchorAtomId: 'atom_reflection',
@@ -927,6 +947,16 @@ describe('WorkspaceExportBundle', () => {
                     temporalWarningCount: 0,
                     missingLookupCount: 0,
                 }),
+                graphAnswerPlan: {
+                    intent: 'definition',
+                    depth: 'standard',
+                    anchorAtomId: 'atom_reflection',
+                    claimCount: 2,
+                    requiredClaimCount: 2,
+                    requiredRoles: ['definition', 'mechanism'],
+                    coverageScore: 1,
+                    missingRequiredClaimIds: [],
+                },
             }),
             expect.objectContaining({
                 artifactId: 'workflow_artifact_knowledge_run_2',

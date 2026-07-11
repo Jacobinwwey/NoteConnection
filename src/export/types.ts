@@ -221,6 +221,16 @@ export interface WorkspaceExportKnowledgeRunReport {
     remainingReviewCardCount: number;
     scopeSource: string;
     graphSignal: WorkspaceExportKnowledgeRunGraphSignal;
+    graphAnswerPlan?: {
+        intent: string;
+        depth: string;
+        anchorAtomId: string;
+        claimCount: number;
+        requiredClaimCount: number;
+        requiredRoles: string[];
+        coverageScore: number | null;
+        missingRequiredClaimIds: string[];
+    };
     answerReleaseReview?: WorkspaceExportKnowledgeRunAnswerReleaseReviewReport;
 }
 

@@ -20,6 +20,11 @@ function normalize(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+function isAuthoringScaffolding(value: string): boolean {
+    return /\b(?:distractor|must not guide|do not use|ignore this (?:section|evidence)|must (?:compare|resolve)|before publishing)\b/iu.test(value)
+        || /(?:遵从您的指示|所有推理过程|最终输出为|仅基于标题|根据您的要求生成)/u.test(value);
+}
+
 function classifyIntent(message: string): GraphAnswerPlan['intent'] {
     const value = normalize(message).toLowerCase();
     if (/\b(?:compare|contrast|difference|versus|vs)\b/u.test(value) || /区别|对比/u.test(value)) return 'compare';
@@ -65,7 +70,7 @@ function makeClaim(params: {
     return {
         claimId: `graph_claim_${params.index + 1}`,
         role: params.role,
-        required: params.role === 'definition' || params.confidence >= 0.8,
+        required: false,
         priority: params.role === 'definition' ? 100 : Math.round(params.confidence * 90),
         statement: normalize(params.statement),
         subjectAtomId: params.anchorAtomId,
@@ -94,9 +99,9 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
         claims.push(claim);
     };
 
-    (anchor?.matchedSpans || []).forEach((span) => append(makeClaim({
+    (anchor?.matchedSpans || []).filter((span) => !isAuthoringScaffolding(span.snippet)).forEach((span, spanIndex) => append(makeClaim({
         index: claims.length,
-        role: inferRole(span.title, span.snippet),
+        role: spanIndex === 0 ? 'definition' : inferRole(span.title, span.snippet),
         statement: span.snippet,
         anchorAtomId,
         atomId: span.atomId,
@@ -107,7 +112,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
     })));
 
     (params.ragContextPack?.fragments || [])
-        .filter((fragment) => fragment.role !== 'background')
+        .filter((fragment) => fragment.role !== 'background' && !isAuthoringScaffolding(fragment.text))
         .forEach((fragment) => {
             const relationKind = fragmentRelationKind(fragment, params.graphContext);
             append(makeClaim({
@@ -147,6 +152,12 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
         .filter((node, index, nodes) => nodes.findIndex((candidate) => candidate.atomId === node.atomId) === index)
         .map((node) => ({ atomId: node.atomId, reason: 'weak_evidence' as const }));
     const sortedClaims = claims.sort((left, right) => right.priority - left.priority);
+    const requiredRoleClaims = new Set<string>();
+    sortedClaims.forEach((claim) => {
+        if (claim.confidence < 0.75 || requiredRoleClaims.has(claim.role)) return;
+        requiredRoleClaims.add(claim.role);
+        claim.required = true;
+    });
     return {
         intent: classifyIntent(params.message),
         depth: sortedClaims.length <= 2 ? 'compact' : sortedClaims.length <= 7 ? 'standard' : 'deep',

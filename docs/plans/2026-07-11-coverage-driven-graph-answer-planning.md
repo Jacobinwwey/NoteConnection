@@ -4,7 +4,7 @@ tags: [agent, augmented-rag, graph, answer-planning, coverage]
 problem_type: implementation-plan
 created: 2026-07-11
 updated: 2026-07-11
-status: in-progress
+status: completed
 ---
 
 # Coverage-driven Graph Answer Planning
@@ -49,9 +49,9 @@ Default behavior is adaptive progressive disclosure: answer directly first, then
 - [x] Build the plan deterministically from grouped knowledge spans and graph context.
 - [x] Make the composer construct and return the plan; the deterministic non-RAG path consumes planned claims, while the RAG path preserves its intent-aware sentence ranking during migration.
 - [x] Remove the 900-character hard release gate and fixed public sentence ceiling; increase explain/direct graph evidence allowances without admitting background fragments indiscriminately.
-- [ ] Replace surface contraction with graph-plan coverage and unsupported-claim review.
+- [x] Replace surface contraction with graph-plan coverage and unsupported-claim review.
 - [x] Add Water Glass plan regressions for definition, material boundary, thermal mechanism, evidenced graph application, and title-only-neighbor rejection.
-- [ ] Run focused tests, full Jest, TypeScript build, and runtime acceptance.
+- [x] Run focused tests, full Jest, TypeScript build, and runtime acceptance.
 
 ### Rejected alternatives
 
@@ -92,7 +92,15 @@ Verification at this checkpoint:
 - `waterglass_explicit_scope_compact_zh` runtime acceptance passed;
 - the repository-wide Jest run reached 113 passing suites and 1,108 passing tests, but three unrelated server/external-HTTP integration suites hit their existing 5-second `beforeAll` timeout under the concurrent full run. The affected conversation regression was rerun independently and passed 100/100.
 
-Remaining architectural work is the explicit plan-coverage release gate and first-class plan projection in trace/export. The current release path already preserves the richer draft and augments it with grounded evidence instead of replacing it with a contracted answer.
+Final completion update:
+
+- `graph_answer_plan_coverage` is now a release gate driven by required semantic claims rather than character or sentence counts;
+- final public-answer coverage is recalculated after release revision and persisted with the knowledge run;
+- response, trace, knowledge-run artifacts, and export reports now carry graph-plan and coverage summaries;
+- Water Glass integration requires definition, material boundary, thermal mechanism, and complete required-claim coverage;
+- all residual public character/sentence ceiling constants and projections have been removed.
+
+Final verification: 118/118 suites passed, 1,124 tests passed, 26 skipped; TypeScript `--noEmit`, production build, and Water Glass runtime acceptance passed.
 
 ## 中文
 
@@ -134,9 +142,9 @@ Remaining architectural work is the explicit plan-coverage release gate and firs
 - [x] 从聚合知识 span 和 graph context 确定性构建 plan。
 - [x] composer 已构建并返回 plan；确定性非 RAG 路径消费 planned claims，RAG 路径迁移期间保留原有意图感知句子排序。
 - [x] 移除 900 字符硬发布门和固定 public sentence ceiling；提高 explain/direct/graph 证据容量，同时不无条件接纳 background fragment。
-- [ ] 以 graph-plan coverage 和 unsupported-claim review 替代 surface contraction。
+- [x] 以 graph-plan coverage 和 unsupported-claim review 替代 surface contraction。
 - [x] 新增 Water Glass plan 回归，覆盖定义、材料边界、热机制、有证据的图 application 以及仅标题邻居拒绝。
-- [ ] 运行专项测试、全量 Jest、TypeScript 构建和运行时验收。
+- [x] 运行专项测试、全量 Jest、TypeScript 构建和运行时验收。
 
 ### 拒绝的替代方案
 
@@ -177,4 +185,12 @@ Remaining architectural work is the explicit plan-coverage release gate and firs
 - `waterglass_explicit_scope_compact_zh` 运行时验收通过；
 - 仓库全量 Jest 运行达到 113 个 suite、1,108 个测试通过，但三个与本变更无关的 server/external-HTTP integration suite 在并发全量运行中触发现有的 5 秒 `beforeAll` 超时。受本次修改影响的 conversation regression 已独立重跑并 100/100 通过。
 
-剩余架构工作是显式 plan-coverage 发布 gate，以及将 plan 一等投影到 trace/export。当前 release 路径已经改为保留更丰富的 draft，并用 grounded evidence 增量补齐，而不是用收缩后的短答案覆盖它。
+最终完成状态：
+
+- `graph_answer_plan_coverage` 已成为发布 gate，依据必要语义 claim，而不是字符数或句数；
+- release revision 后会重新计算最终公开回答 coverage，并随 knowledge run 持久化；
+- response、trace、knowledge-run artifact 和 export report 都携带 graph plan 与 coverage 摘要；
+- Water Glass 集成验收直接要求定义、材料边界、热机制和完整 required-claim coverage；
+- 所有残余的公开回答字符/句数 ceiling 常量与投影均已移除。
+
+最终验证：118/118 个 suite 通过，1,124 个测试通过，26 个跳过；TypeScript `--noEmit`、production build 和 Water Glass 运行时验收均通过。

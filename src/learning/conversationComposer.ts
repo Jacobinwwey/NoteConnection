@@ -27,6 +27,7 @@ import type {
 import { reviewAnswerRelease } from './answerReleaseReview';
 import { buildAgentConversationGraphContextFromKnowledgePoints } from './graphContextAssembler';
 import { buildGraphAnswerPlan } from './graphAnswerPlan';
+import { reviewGraphAnswerCoverage } from './graphAnswerCoverage';
 import {
     naturalizeRagPublicEvidenceClause,
     shouldRejectCompareProcedureEvidenceClause,
@@ -53,7 +54,6 @@ type RagAnswerProfile = {
     directSupportSentenceCount: number;
     documentContextSentenceCount: number;
     graphNeighborSentenceCount: number;
-    publicSentenceCount: number;
 };
 
 function normalizeWhitespace(value: string): string {
@@ -539,7 +539,6 @@ function resolveRagAnswerProfile(message: string): RagAnswerProfile {
             directSupportSentenceCount: 8,
             documentContextSentenceCount: 4,
             graphNeighborSentenceCount: 6,
-            publicSentenceCount: Number.MAX_SAFE_INTEGER,
         };
     }
     if (intent === 'how_to') {
@@ -547,7 +546,6 @@ function resolveRagAnswerProfile(message: string): RagAnswerProfile {
             directSupportSentenceCount: 8,
             documentContextSentenceCount: 6,
             graphNeighborSentenceCount: 6,
-            publicSentenceCount: Number.MAX_SAFE_INTEGER,
         };
     }
     if (intent === 'causal_explain') {
@@ -555,7 +553,6 @@ function resolveRagAnswerProfile(message: string): RagAnswerProfile {
             directSupportSentenceCount: 8,
             documentContextSentenceCount: 6,
             graphNeighborSentenceCount: 6,
-            publicSentenceCount: Number.MAX_SAFE_INTEGER,
         };
     }
     if (intent === 'generic') {
@@ -563,14 +560,12 @@ function resolveRagAnswerProfile(message: string): RagAnswerProfile {
             directSupportSentenceCount: 2,
             documentContextSentenceCount: 2,
             graphNeighborSentenceCount: 6,
-            publicSentenceCount: Number.MAX_SAFE_INTEGER,
         };
     }
     return {
-        directSupportSentenceCount: 2,
+        directSupportSentenceCount: 8,
         documentContextSentenceCount: 2,
         graphNeighborSentenceCount: 6,
-        publicSentenceCount: Number.MAX_SAFE_INTEGER,
     };
 }
 
@@ -983,6 +978,7 @@ function buildRagAugmentedConversationAnswer(
     const answerQueryTerms = extractRagAnswerQueryTerms(params.message);
     const rejectAnswerControlSentence = (sentence: string) => (
         /\b(?:distractor|must not guide|do not use|ignore this (?:section|evidence)|must (?:compare|resolve)|before publishing)\b/iu.test(sentence)
+        || /(?:遵从您的指示|所有推理过程|最终输出为|仅基于标题|根据您的要求生成)/u.test(sentence)
     );
     const rejectCompareProcedureSentence = intent === 'compare'
         ? (sentence: string) => (
@@ -1048,7 +1044,7 @@ function buildRagAugmentedConversationAnswer(
         buildGraphProfileAnswerSentence(graphContext, useChinese),
         useChinese
     );
-    return answerSentences.slice(0, profile.publicSentenceCount).join(useChinese ? '' : ' ');
+    return answerSentences.join(useChinese ? '' : ' ');
 }
 
 function buildScopedConversationAnswer(
@@ -1789,6 +1785,7 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     graphContext: AgentConversationGraphContext | null;
     answerReleaseReview: AnswerReleaseReview;
     graphAnswerPlan: GraphAnswerPlan;
+    graphAnswerCoverage: ReturnType<typeof reviewGraphAnswerCoverage>;
 } {
     const blocks: AgentConversationAssistantBlock[] = [];
     const graphContext = params.graphContext || buildAgentConversationGraphContextFromKnowledgePoints(params.knowledgePoints);
@@ -1809,10 +1806,14 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         graphContext,
         ragContextPack: params.ragContextPack,
         ragSufficiencyReview: params.ragSufficiencyReview,
+        graphAnswerPlan,
         reviewedAt: params.generatedAt,
     });
     knowledgeRun.answerReleaseReview = answerReleaseReview;
     const answer = answerReleaseReview.publicAnswer;
+    const graphAnswerCoverage = reviewGraphAnswerCoverage(answer, graphAnswerPlan);
+    knowledgeRun.graphAnswerPlan = graphAnswerPlan;
+    knowledgeRun.graphAnswerCoverage = graphAnswerCoverage;
     const overviewMarkdown = buildScopedConversationOverviewMarkdown(params, graphContext);
     const explanationMarkdown = buildScopedConversationExplanationMarkdown(params, graphContext);
     const evidenceMarkdown = buildScopedConversationEvidenceMarkdown(params);
@@ -1868,5 +1869,6 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         graphContext,
         answerReleaseReview,
         graphAnswerPlan,
+        graphAnswerCoverage,
     };
 }
