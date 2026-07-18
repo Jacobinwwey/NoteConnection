@@ -2533,6 +2533,24 @@ describe('KnowledgeLearningPlatform', () => {
         });
         expect(causalResponse.trace.ragContextPack?.sourceBoundary).toBe('full_document');
         expect(deepResponse.trace.ragContextPack?.sourceBoundary).toBe('full_document');
+        expect(baseResponse.trace.graphExpansion).toEqual({
+            enabled: false,
+            reason: 'ordinary_query',
+            maxSteps: 0,
+            executedSteps: 0,
+            maxNeighbors: 6,
+            selectedNeighborCount: 0,
+            maxPathDepth: 6,
+        });
+        expect(deepResponse.trace.graphExpansion).toEqual(expect.objectContaining({
+            enabled: true,
+            reason: 'explicit_depth_request',
+            maxSteps: 1,
+            maxNeighbors: 8,
+            maxPathDepth: 8,
+        }));
+        expect(deepResponse.trace.graphExpansion?.executedSteps).toBeLessThanOrEqual(1);
+        expect(deepResponse.trace.graphExpansion?.selectedNeighborCount).toBeLessThanOrEqual(8);
     });
 
     test('agent conversation uses optional LLM sufficiency judge for borderline legacy source windows', async () => {

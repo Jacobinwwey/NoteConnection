@@ -24,6 +24,14 @@ interface AgentConversationResponse {
 公开证据统一通过 `src/learning/ragPublicText.ts` shaping：展示前移除 authoring/control instruction、Markdown 表格脚手架、标题语法和 fenced renderer source。该 shaping 不得删除事实引导句，也不得绕过 claim coverage。
 
 兼容性：所有新增 response 字段保持 optional；旧客户端仍可继续消费 `assistantMessage`、`answer`、blocks、citations 和 release review。
+
+### 2026-07-18 校准与扩展补充契约
+
+`AgentConversationTrace.graphExpansion` 是 additive replay contract，包含 `enabled`、`reason`、`maxSteps`、`executedSteps`、`maxNeighbors`、`selectedNeighborCount` 和 `maxPathDepth`。普通查询暴露禁用的 `0` 步策略；只有显式 deep/research 表述才启用有界 `1` 步策略。
+
+Required-claim coverage 现在使用确定性的多语言概念归一化与分句极性一致性。它仍是保守发布 gate，不是开放式语义蕴含服务。`evaluateGraphAnswerCoverageCalibration()` 会针对版本化语料报告 precision、recall 与 false-positive/false-negative case ID。
+
+前端只在 Grounding Inspector 中投影 plan、coverage 与 expansion 摘要。Assistant answer renderer 不消费这些内部规划字段。
 本版不是在旧文档上追加，而是按源码核对后重建。
 
 ## 0.0 多平台构建契约补充（v1.7.0）

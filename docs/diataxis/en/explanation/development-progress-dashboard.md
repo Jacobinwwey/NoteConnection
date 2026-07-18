@@ -3,6 +3,12 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-07-18 Coverage-driven Follow-up Phase Closure
+
+The remaining answer-planning risks now have executable owners: multilingual concept/polarity matching plus a 24-case calibration report, novelty-aware same-role suppression and discourse ordering, an explicit-only one-step graph expansion policy with replay trace, and an operator-only Grounding Inspector projection. Ordinary `explain` requests no longer silently activate the deep profile.
+
+The orchestration owner remains intentionally unchanged. Extracting `KnowledgeLearningPlatform.ts` is still unjustified until a new owner can enforce the complete planned/reviewed-answer operation rather than forward intermediate values. Verification passed 122/122 Jest suites and 1,145 tests (26 skipped), production/Vite builds, Diataxis/MkDocs gates, and the hardened Water Glass runtime acceptance.
+
 ## 2026-07-11 Coverage-driven Graph Answer Planning Closure
 
 The answer pipeline has moved from sentence-budgeted graph-aware RAG to a typed coverage-driven planning contract. `graphContextAssembler.ts` still owns bounded candidate-subgraph selection; `graphAnswerPlan.ts` maps grouped anchor spans and evidenced graph neighbors to semantic claims; `graphAnswerCoverage.ts` verifies required claims; `conversationComposer.ts` realizes the answer; and `answerReleaseReview.ts` enforces grounding, graph consistency, temporal, citation, leakage, and plan-coverage gates without character or sentence ceilings.

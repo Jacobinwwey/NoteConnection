@@ -21,4 +21,28 @@ describe('ragPublicText', () => {
             'Heat moves by conduction and convection. ```mermaid graph TD A --> B ```'
         )).toBe('Heat moves by conduction and convection.');
     });
+
+    test('rejects flattened table introductions after Markdown extraction', () => {
+        expect(shouldRejectPublicEvidenceClause(
+            '下表列出了标准温度和压力下的典型技术参数。参数 Parameter 密度 2500 999.8 kg/m³ 单位 Unit。'
+        )).toBe(true);
+        expect(shouldRejectPublicEvidenceClause(
+            'The following table lists typical parameters. Parameter Density Value Unit.'
+        )).toBe(true);
+        expect(shouldRejectPublicEvidenceClause(
+            '参数 (Parameter) 钠钙玻璃 水 单位 (Unit) :--- :--- 密度 2500 999.8 kg/m³。'
+        )).toBe(true);
+    });
+
+    test('removes flattened section labels while retaining their factual sentence', () => {
+        expect(naturalizeRagPublicEvidenceClause(
+            '核心概念及其数学基础：水杯系统通过传导、对流和辐射与环境交换热量。'
+        )).toBe('水杯系统通过传导、对流和辐射与环境交换热量。');
+        expect(naturalizeRagPublicEvidenceClause(
+            'Material science: Glass is an amorphous solid without long-range order.'
+        )).toBe('Glass is an amorphous solid without long-range order.');
+        expect(naturalizeRagPublicEvidenceClause(
+            '核心概念及其数学基础 水杯系统通过传导、对流和辐射与环境交换热量。'
+        )).toBe('水杯系统通过传导、对流和辐射与环境交换热量。');
+    });
 });

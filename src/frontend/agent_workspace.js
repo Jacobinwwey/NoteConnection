@@ -994,6 +994,15 @@
         const ragFailureClassifications = Array.isArray(trace && trace.ragFailureClassifications)
             ? trace.ragFailureClassifications.filter((classification) => classification && typeof classification === 'object')
             : [];
+        const graphAnswerPlan = trace && trace.graphAnswerPlan && typeof trace.graphAnswerPlan === 'object'
+            ? trace.graphAnswerPlan
+            : null;
+        const graphAnswerCoverage = trace && trace.graphAnswerCoverage && typeof trace.graphAnswerCoverage === 'object'
+            ? trace.graphAnswerCoverage
+            : null;
+        const graphExpansion = trace && trace.graphExpansion && typeof trace.graphExpansion === 'object'
+            ? trace.graphExpansion
+            : null;
         if (
             citationCount <= 0
             && memoryCount <= 0
@@ -1004,6 +1013,9 @@
             && !ragContextPack
             && !ragSufficiencyReview
             && !ragRecovery
+            && !graphAnswerPlan
+            && !graphAnswerCoverage
+            && !graphExpansion
             && ragFailureClassifications.length <= 0
         ) {
             return null;
@@ -1032,6 +1044,9 @@
             ragSufficiencyReview,
             ragRecovery,
             ragFailureClassifications,
+            graphAnswerPlan,
+            graphAnswerCoverage,
+            graphExpansion,
         };
     }
 

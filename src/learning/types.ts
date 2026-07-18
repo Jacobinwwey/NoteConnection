@@ -1354,6 +1354,16 @@ export interface GraphAnswerCoverageReview {
     coverageScore: number;
 }
 
+export interface GraphAnswerExpansionTrace {
+    enabled: boolean;
+    reason: 'ordinary_query' | 'explicit_depth_request';
+    maxSteps: 0 | 1;
+    executedSteps: 0 | 1;
+    maxNeighbors: number;
+    selectedNeighborCount: number;
+    maxPathDepth: number;
+}
+
 export interface AgentConversationMemoryRecord {
     memoryId: string;
     namespace: string;
@@ -1403,6 +1413,7 @@ export interface AgentConversationTrace {
     ragFailureClassifications?: RagFailureClassification[];
     graphAnswerPlan?: GraphAnswerPlan;
     graphAnswerCoverage?: GraphAnswerCoverageReview;
+    graphExpansion?: GraphAnswerExpansionTrace;
     answerClaimCitations?: AgentConversationAnswerClaimCitation[];
     answerReleaseReview?: AnswerReleaseReview;
 }

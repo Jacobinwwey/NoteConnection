@@ -26,6 +26,14 @@ Public evidence is shaped through `src/learning/ragPublicText.ts`: authoring/con
 
 Compatibility: all new response fields remain optional; existing clients may continue consuming `assistantMessage`, `answer`, blocks, citations, and release review.
 
+### 2026-07-18 calibration and expansion addendum
+
+`AgentConversationTrace.graphExpansion` is an additive replay contract containing `enabled`, `reason`, `maxSteps`, `executedSteps`, `maxNeighbors`, `selectedNeighborCount`, and `maxPathDepth`. Ordinary queries expose a disabled `0`-step policy; only explicit deep/research wording enables the bounded `1`-step policy.
+
+Required-claim coverage now uses deterministic multilingual concept normalization and clause polarity agreement. It remains a conservative release gate, not an open-ended semantic-entailment service. `evaluateGraphAnswerCoverageCalibration()` reports precision, recall, and false-positive/false-negative case IDs against the versioned corpus.
+
+The frontend projects plan, coverage, and expansion summaries only into the Grounding Inspector. The assistant answer renderer does not consume these internal planning fields.
+
 ## 0.0 Multi-Platform Build Contract Addendum (v1.7.0)
 
 This addendum captures the build/runtime contracts that now matter to the Git LFS migration and to cross-platform delivery safety.

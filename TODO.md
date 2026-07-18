@@ -15,11 +15,13 @@ Keep subsequent answer-quality work aligned with the completed coverage-driven g
 - [x] Final verification passed 119/119 suites, 1,127 tests, TypeScript, production build, and runtime Water Glass acceptance.
 
 ### Next direction
-- [ ] Calibrate claim-role inference on a broader real-corpus evaluation set; avoid adding roles based on isolated prompt examples.
-- [ ] Replace lexical coverage matching with a conservative multilingual semantic matcher only after false-positive and false-negative corpora exist.
-- [ ] Add bounded graph-expansion tools for explicitly deep/research queries; keep ordinary definition answers deterministic.
+- [x] Add a versioned 24-case EN/ZH calibration corpus spanning definition, causal, compare, procedure, temporal, and weak-evidence positive/negative cases.
+- [x] Replace raw lexical overlap with conservative concept-and-polarity matching; calibration reports precision, recall, and exact false-positive/false-negative case IDs.
+- [x] Add novelty-aware duplicate suppression and discourse dependency ordering before public composition.
+- [x] Add a replayable one-step graph-expansion policy for explicitly deep/research queries; ordinary definition/explain answers remain deterministic and bounded.
 - [ ] Extract answer-planning orchestration from `KnowledgeLearningPlatform.ts` only when the new owner can enforce a complete operation and reduce caller knowledge.
-- [ ] Add frontend operator projection for plan/coverage only if it improves diagnosis without exposing internal scaffolding in the main answer.
+- [x] Project compact plan/coverage/expansion diagnostics into the operator-only Grounding Inspector without exposing internal scaffolding in the main answer.
+- [x] Final verification passed 122/122 suites and 1,145 tests (26 skipped), production and Vite builds, documentation checks/build, and hardened Water Glass runtime acceptance.
 
 ## 中文文档
 
@@ -36,11 +38,13 @@ Keep subsequent answer-quality work aligned with the completed coverage-driven g
 - [x] 最终验证为 119/119 个 suite、1,127 个测试、TypeScript、production build 和 Water Glass 运行时验收通过。
 
 ### 后续方向
-- [ ] 在更广泛的真实语料评估集上校准 claim-role inference；不要根据孤立 prompt 样例随意增加 role。
-- [ ] 只有建立 false-positive / false-negative 语料后，才用保守的多语言语义 matcher 替代词法 coverage matching。
-- [ ] 为显式 deep/research 查询增加有界 graph-expansion tool；普通定义回答继续保持确定性。
+- [x] 建立版本化的 24-case 中英文校准语料，覆盖 definition、causal、compare、procedure、temporal 与 weak-evidence 正反例。
+- [x] 用保守的概念与否定极性匹配替代原始词法 overlap；校准报告会输出 precision、recall 和精确 FP/FN case ID。
+- [x] 在公开文本合成前执行 novelty-aware 重复抑制与 discourse dependency ordering。
+- [x] 为显式 deep/research 查询增加可回放的一步图扩展策略；普通 definition/explain 回答继续保持确定性和有界性。
 - [ ] 只有新 owner 能强制完整操作并降低 caller knowledge 时，才从 `KnowledgeLearningPlatform.ts` 抽取 answer-planning 编排。
-- [ ] 仅在确实提升诊断且不会把内部脚手架暴露到主回答时，才增加 plan/coverage 的前端 operator projection。
+- [x] 已在 operator-only Grounding Inspector 中投影紧凑 plan/coverage/expansion 诊断，不向主回答暴露内部脚手架。
+- [x] 最终验证通过 122/122 个 suite、1,145 个测试（26 个跳过）、production/Vite build、文档检查/构建与加固后的 Water Glass 运行时验收。
 
 ---
 

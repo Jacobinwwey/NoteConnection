@@ -5673,6 +5673,50 @@
         `;
     }
 
+    function buildEvidenceGraphAnswerPlanHtml(payload) {
+        const plan = payload && payload.graphAnswerPlan && typeof payload.graphAnswerPlan === 'object'
+            ? payload.graphAnswerPlan
+            : null;
+        const coverage = payload && payload.graphAnswerCoverage && typeof payload.graphAnswerCoverage === 'object'
+            ? payload.graphAnswerCoverage
+            : null;
+        const expansion = payload && payload.graphExpansion && typeof payload.graphExpansion === 'object'
+            ? payload.graphExpansion
+            : null;
+        if (!plan && !coverage && !expansion) return '';
+        const requiredClaimIds = Array.isArray(coverage && coverage.requiredClaimIds) ? coverage.requiredClaimIds : [];
+        const coveredClaimIds = Array.isArray(coverage && coverage.coveredClaimIds) ? coverage.coveredClaimIds : [];
+        const missingRequiredClaimIds = Array.isArray(coverage && coverage.missingRequiredClaimIds)
+            ? coverage.missingRequiredClaimIds
+            : [];
+        const omissions = Array.isArray(plan && plan.omittedCandidates) ? plan.omittedCandidates : [];
+        const metrics = [
+            {
+                title: translate('agentWorkspace.evidence.graphAnswerIntentLabel', 'Intent / depth'),
+                value: [String(plan && plan.intent || '').trim(), String(plan && plan.depth || '').trim()].filter(Boolean).join(' / ') || 'none',
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphAnswerCoverageLabel', 'Required claim coverage'),
+                value: `${coveredClaimIds.length}/${requiredClaimIds.length} (${Number((Number(coverage && coverage.coverageScore || 0) * 100).toFixed(2))}%)`,
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphAnswerMissingLabel', 'Missing required claims'),
+                value: missingRequiredClaimIds.join(', ') || 'none',
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphAnswerOmissionsLabel', 'Omitted graph candidates'),
+                value: String(omissions.length),
+            },
+            {
+                title: translate('agentWorkspace.evidence.graphExpansionLabel', 'Bounded expansion'),
+                value: expansion
+                    ? `${String(expansion.executedSteps || 0)}/${String(expansion.maxSteps || 0)} steps; ${String(expansion.selectedNeighborCount || 0)}/${String(expansion.maxNeighbors || 0)} neighbors`
+                    : 'none',
+            },
+        ];
+        return `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.graphAnswerPlanLabel', 'Graph answer plan'))}</div><ul class="agent-pane-list">${buildEvidenceMetricListHtml(metrics)}</ul>`;
+    }
+
     function renderEvidenceGroundingBody(body, payload) {
         const title = String(
             payload.title
@@ -5703,6 +5747,7 @@
         const metricsHtml = buildEvidenceMetricListHtml(metrics);
         const ragContextHtml = buildEvidenceRagContextHtml(payload);
         const graphContextHtml = buildEvidenceGraphContextHtml(payload);
+        const graphAnswerPlanHtml = buildEvidenceGraphAnswerPlanHtml(payload);
         body.innerHTML = `
             <div class="agent-pane-block">
                 <div class="agent-pane-title">${escapeHtml(title)}</div>
@@ -5711,6 +5756,7 @@
                 ${missMessage ? `<div class="agent-pane-section-title">${escapeHtml(translate('agentWorkspace.evidence.missLabel', 'Scope recovery'))}</div><div class="agent-pane-summary">${escapeHtml(missMessage)}</div>` : ''}
                 ${ragContextHtml}
                 ${graphContextHtml}
+                ${graphAnswerPlanHtml}
             </div>
         `;
     }

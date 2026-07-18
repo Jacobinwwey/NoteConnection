@@ -3,7 +3,7 @@ module: learning
 tags: [agent, augmented-rag, graph, answer-planning, coverage]
 problem_type: implementation-plan
 created: 2026-07-11
-updated: 2026-07-11
+updated: 2026-07-18
 status: completed
 ---
 
@@ -141,6 +141,20 @@ Post-audit verification: 119/119 suites passed, 1,127 tests passed, 26 skipped; 
 5. Introduce bounded graph-expansion tools only for explicitly deep or research-oriented requests. Each expansion must be scope-safe, evidence-backed, step-limited, and replayable.
 6. Do not add a broad orchestration framework or default multi-agent topology. The current gap is calibration and synthesis quality, not missing framework surface.
 
+### 2026-07-18 remaining-phase closure
+
+The follow-up phases now close the concrete risks rather than introducing another orchestration layer:
+
+- `graphClaimMatcher.ts` owns deterministic multilingual concept normalization, clause-level polarity agreement, and semantic similarity. A negated paraphrase can no longer satisfy a positive required claim.
+- `graphAnswerCoverageCalibration.ts` owns a versioned 24-case EN/ZH corpus across definition, causal, compare, procedure, temporal, and weak-evidence cases. Its report exposes precision, recall, and exact false-positive/false-negative case IDs.
+- `graphAnswerPlan.ts` suppresses high-similarity same-role claims and records redundant graph atoms as omissions. Claims follow discourse dependencies before confidence tie-breaking, so applications no longer jump ahead of mechanisms merely because their retrieval score is higher.
+- `graphExpansionPolicy.ts` separates ordinary retrieval from explicit deep/research expansion. The expanded path is fixed at one step, eight neighbors, and path depth eight; the actual policy and execution counts persist in `AgentConversationTrace` and the knowledge-run artifact.
+- The existing Grounding Inspector now projects compact plan, coverage, omission, and expansion metrics. The public answer renderer remains unaware of internal plan scaffolding.
+
+The deliberate non-change is equally important: answer-planning orchestration remains inside `KnowledgeLearningPlatform.ts`. Extracting it now would add a pass-through owner without reducing caller knowledge or enforcing a stronger invariant. The next architecture extraction should wait for a complete planned/reviewed-answer operation boundary.
+
+Final verification after hardening the runtime acceptance: 122/122 Jest suites passed, 1,145 tests passed, 26 skipped; production and Vite builds passed; the Water Glass runtime case passed while rejecting flattened table introductions/rows, `:---` separators, authoring instructions, and internal section labels; Diataxis and MkDocs documentation gates passed.
+
 ## 中文
 
 ### 决策
@@ -272,3 +286,17 @@ Post-audit verification: 119/119 suites passed, 1,127 tests passed, 26 skipped; 
 4. 如果 trace 调试成本仍高，再增加 operator-only plan/coverage inspector；不要把内部规划脚手架暴露到主回答。
 5. 只为显式 deep/research 请求引入有界 graph-expansion tool；每次扩展必须 scope-safe、有证据、限制步数并可回放。
 6. 不引入宽泛编排框架或默认多 Agent。当前缺口是校准和综合质量，不是缺少框架表面。
+
+### 2026-07-18 剩余 Phase 收口
+
+后续 Phase 已针对具体风险闭环，没有引入新的宽泛编排层：
+
+- `graphClaimMatcher.ts` 负责确定性的多语言概念归一化、分句极性一致性和语义相似度。否定改写不再能够满足正向 required claim。
+- `graphAnswerCoverageCalibration.ts` 负责版本化的 24-case 中英文语料，覆盖 definition、causal、compare、procedure、temporal 和 weak-evidence；报告输出 precision、recall 以及精确的 false-positive/false-negative case ID。
+- `graphAnswerPlan.ts` 会抑制同角色高相似 claim，并把冗余图 atom 记录为 omission。Claim 先按 discourse dependency 排列，再用 confidence 打破同组平局，application 不再仅因检索分数更高而跳到 mechanism 前面。
+- `graphExpansionPolicy.ts` 把普通检索与显式 deep/research 扩展分开。扩展固定为一步、八个邻居、路径深度八；策略与实际执行量进入 `AgentConversationTrace` 和 knowledge-run artifact。
+- 现有 Grounding Inspector 会投影紧凑的 plan、coverage、omission 与 expansion 指标；公开回答 renderer 仍不感知内部 plan 脚手架。
+
+有意保持不变的是：answer-planning 编排仍留在 `KnowledgeLearningPlatform.ts`。当前抽取只会增加 pass-through owner，既不降低 caller knowledge，也不强化不变量。下一次架构抽取应等待完整 planned/reviewed-answer operation 边界成立。
+
+加固运行时验收后的最终验证：122/122 个 Jest suite 通过，1,145 个测试通过，26 个跳过；production/Vite build 通过；Water Glass 运行时用例通过，并拒绝扁平化表格引导/表行、`:---` 分隔符、创作指令与内部章节标签；Diataxis 与 MkDocs 文档门通过。

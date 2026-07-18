@@ -139,6 +139,7 @@ import {
     mergeAgentConversationKnowledgePoints,
 } from './conversationComposer';
 import { assembleAgentConversationGraphContext } from './graphContextAssembler';
+import { resolveGraphExpansionPolicy, type GraphExpansionPolicy } from './graphExpansionPolicy';
 import {
     assembleRagEvidenceContext,
     type RagEvidenceSourceDocument,
@@ -555,24 +556,20 @@ function tokenize(text: string): string[] {
     return Array.from(new Set(normalized));
 }
 
-function resolveAgentRagEvidenceProfile(message: string): AgentRagEvidenceProfile {
+function resolveAgentRagEvidenceProfile(message: string, expansionPolicy: GraphExpansionPolicy): AgentRagEvidenceProfile {
     const normalizedMessage = normalizeWhitespace(String(message || '')).toLowerCase();
-    const explicitDeepSignal = Boolean(
-        /\b(?:deep|detailed|comprehensive|thorough|in-depth|in depth|fully|complete|explain|analy[sz]e)\b/i.test(normalizedMessage)
-        || /深度|详细|詳盡|详尽|完整|充分|展开|展開|分析|解释|解釋/u.test(normalizedMessage)
-    );
     const causalExplanationSignal = Boolean(
         /\b(?:why|cause|causes|caused|causal|because|reason|mechanism|mechanisms)\b/i.test(normalizedMessage)
         || /为什么|為什麼|为何|為何|原因|因果|机制|機制|导致|導致/u.test(normalizedMessage)
     );
-    if (causalExplanationSignal && !explicitDeepSignal) {
+    if (causalExplanationSignal && !expansionPolicy.enabled) {
         return {
             budget: { ...AGENT_RAG_CAUSAL_CONTEXT_BUDGET },
             graphNeighborLimit: AGENT_RAG_CAUSAL_GRAPH_NEIGHBOR_LIMIT,
             paragraphWindow: AGENT_RAG_CAUSAL_PARAGRAPH_WINDOW,
         };
     }
-    if (!explicitDeepSignal) {
+    if (!expansionPolicy.enabled) {
         return {
             budget: { ...AGENT_RAG_BASE_CONTEXT_BUDGET },
             graphNeighborLimit: AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT,
@@ -9912,15 +9909,25 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             languages: [],
             matchedAtomCount: queryResult.items.length,
         };
+        const graphExpansionPolicy = resolveGraphExpansionPolicy(message);
         const assembledConversation = await assembleAgentConversationGraphContext({
             message,
             usedScope: traceScope,
             knowledgePoints,
             store: this.store,
+            budget: graphExpansionPolicy.enabled
+                ? {
+                    maxSupportNodes: 4,
+                    maxConnectionPaths: 4,
+                    maxPathDepth: graphExpansionPolicy.maxPathDepth,
+                    maxPredecessors: 4,
+                    maxSuccessors: 4,
+                }
+                : undefined,
         });
         const conversationKnowledgePoints = assembledConversation.knowledgePoints;
         const graphContext = assembledConversation.graphContext;
-        const ragEvidenceProfile = resolveAgentRagEvidenceProfile(message);
+        const ragEvidenceProfile = resolveAgentRagEvidenceProfile(message, graphExpansionPolicy);
         const graphNeighborItems = this.buildRagGraphNeighborQueryItems(
             graphContext,
             conversationKnowledgePoints,
@@ -9929,6 +9936,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             ragEvidenceProfile.graphNeighborLimit,
             traceScope
         );
+        const graphExpansionTrace: AgentConversationResponse['trace']['graphExpansion'] = {
+            ...graphExpansionPolicy,
+            executedSteps: graphExpansionPolicy.enabled && graphNeighborItems.length > 0 ? 1 : 0,
+            selectedNeighborCount: graphExpansionPolicy.enabled ? graphNeighborItems.length : 0,
+        };
         const firstReviewedRag = await this.assembleReviewedRagEvidenceContext({
             query: message || 'local knowledge',
             items: queryResult.items,
@@ -10062,6 +10074,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 answerReleaseReview: reply.answerReleaseReview,
                 graphAnswerPlan: reply.graphAnswerPlan,
                 graphAnswerCoverage: reply.graphAnswerCoverage,
+                graphExpansion: graphExpansionTrace,
             },
         };
         const knowledgeRunArtifact = this.recordWorkflowArtifact({
@@ -10084,6 +10097,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 answerReleaseReview: reply.answerReleaseReview,
                 graphAnswerPlan: reply.graphAnswerPlan,
                 graphAnswerCoverage: reply.graphAnswerCoverage,
+                graphExpansion: graphExpansionTrace,
                 citations,
                 recalledMemories,
                 memoryActions,

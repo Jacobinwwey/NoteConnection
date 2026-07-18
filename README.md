@@ -51,6 +51,7 @@ Current state in brief:
 - **Architecture pressure** remains in large owners such as `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/workspace_panes.js`, and `src/frontend/agent_workspace.js`. Future work should extract around real invariants, not import another broad orchestration framework.
 - **Coverage-driven graph answers** now use a typed `GraphAnswerPlan` and required-claim coverage review. Anchor spans, evidenced graph neighbors, relation edges, and omissions survive into response traces, knowledge-run artifacts, and export reports; public answers are no longer governed by a 900-character or six-sentence ceiling.
 - **Public evidence shaping** removes source authoring instructions, Markdown table scaffolding, and fenced renderer payloads without reducing semantic coverage. This is a content-quality boundary, not a length contraction mechanism.
+- **Coverage calibration and bounded expansion** now add polarity-aware multilingual claim matching, a versioned 24-case calibration corpus, novelty-aware claim ordering, and a replayable one-step graph expansion policy restricted to explicit deep/research requests. The Grounding Inspector exposes compact plan/coverage diagnostics without leaking planning scaffolding into the public answer.
 
 Detailed progress tracking belongs in:
 

@@ -64,6 +64,9 @@ README 不再作为主线架构状态流水账。此前堆叠在首页的多段�
 - 锚点 span、有证据的图邻居、关系边与 omission 会进入 response trace、knowledge-run artifact 和 export report。
 - 公开回答不再受 900 字符或六句硬上限控制。
 - Public-evidence shaping 会移除 authoring instruction、Markdown 表格脚手架和 fenced renderer payload，而不会降低语义 coverage。
+- 多语言 claim matcher 现在会检查语义概念与否定极性，并由覆盖六类意图的 24-case 校准语料约束。
+- Claim 会按信息依赖与新颖性排序；只有显式 deep/research 请求才能启用固定一步、最多八个邻居的图扩展。
+- Grounding Inspector 会展示紧凑的 plan、coverage 与 expansion 诊断，但不会把内部规划脚手架写进公开回答。
 - 详细架构与推进记录见 [Coverage-driven Graph Answer Planning](docs/plans/2026-07-11-coverage-driven-graph-answer-planning.md)。
 
 ## 快速开始

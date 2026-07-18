@@ -9,6 +9,7 @@ import type {
     RelationKind,
 } from './types';
 import { shouldRejectPublicEvidenceClause } from './ragPublicText';
+import { graphClaimSemanticSimilarity } from './graphClaimMatcher';
 
 export interface BuildGraphAnswerPlanParams {
     message: string;
@@ -91,10 +92,20 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
     const anchor = params.knowledgePoints[0];
     const anchorAtomId = params.graphContext?.anchorAtomId || anchor?.atomId || '';
     const claims: GraphAnswerClaimPlan[] = [];
+    const redundantAtomIds = new Set<string>();
     const seen = new Set<string>();
     const append = (claim: GraphAnswerClaimPlan) => {
         const key = normalize(claim.statement).toLowerCase();
         if (!key || seen.has(key)) return;
+        const redundantClaim = claims.find((existing) => (
+            existing.role === claim.role
+            && graphClaimSemanticSimilarity(existing.statement, claim.statement) >= 0.72
+        ));
+        if (redundantClaim) {
+            const redundantAtomId = claim.supportingAtomIds[0] || claim.evidenceRefs[0]?.atomId;
+            if (redundantAtomId) redundantAtomIds.add(redundantAtomId);
+            return;
+        }
         seen.add(key);
         claims.push(claim);
     };
@@ -145,13 +156,32 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
 
     const evidencedAtomIds = new Set(claims.flatMap((claim) => claim.supportingAtomIds));
     const omittedCandidates = [
-        ...(params.graphContext?.predecessorWindow || []),
-        ...(params.graphContext?.successorWindow || []),
+        ...Array.from(redundantAtomIds).map((atomId) => ({ atomId, reason: 'redundant' as const })),
+        ...[
+            ...(params.graphContext?.predecessorWindow || []),
+            ...(params.graphContext?.successorWindow || []),
+        ].map((node) => ({ atomId: node.atomId, reason: 'weak_evidence' as const })),
     ]
         .filter((node) => node.atomId !== anchorAtomId && !evidencedAtomIds.has(node.atomId))
-        .filter((node, index, nodes) => nodes.findIndex((candidate) => candidate.atomId === node.atomId) === index)
-        .map((node) => ({ atomId: node.atomId, reason: 'weak_evidence' as const }));
-    const sortedClaims = claims.sort((left, right) => right.priority - left.priority);
+        .filter((node, index, nodes) => nodes.findIndex((candidate) => candidate.atomId === node.atomId) === index);
+    const roleOrder: Record<GraphAnswerRole, number> = {
+        definition: 10,
+        composition: 20,
+        boundary: 30,
+        attribute: 40,
+        prerequisite: 50,
+        mechanism: 60,
+        causal_consequence: 70,
+        sequence: 80,
+        application: 90,
+        contrast: 100,
+        analogy: 110,
+        temporal_warning: 120,
+    };
+    const sortedClaims = claims.sort((left, right) => (
+        roleOrder[left.role] - roleOrder[right.role]
+        || right.priority - left.priority
+    ));
     const requiredRoleClaims = new Set<string>();
     sortedClaims.forEach((claim) => {
         if (claim.confidence < 0.75 || requiredRoleClaims.has(claim.role)) return;

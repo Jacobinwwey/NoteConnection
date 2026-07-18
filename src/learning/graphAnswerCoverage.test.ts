@@ -70,4 +70,45 @@ describe('reviewGraphAnswerCoverage', () => {
         expect(review.missingRequiredClaimIds).toEqual(['mechanism']);
         expect(review.coverageScore).toBeCloseTo(2 / 3, 4);
     });
+
+    test('does not count a negated paraphrase as coverage', () => {
+        const review = reviewGraphAnswerCoverage(
+            'A water glass is a transparent drinking vessel containing water. Its wall does not separate the liquid from the environment. Heat does not move through the glass wall and thickness has no effect on thermal exchange.',
+            plan
+        );
+
+        expect(review.coveredClaimIds).toEqual(['definition']);
+        expect(review.missingRequiredClaimIds).toEqual(['boundary', 'mechanism']);
+    });
+
+    test('covers conservative Chinese paraphrases without requiring exact source wording', () => {
+        const chinesePlan: GraphAnswerPlan = {
+            ...plan,
+            claims: [
+                {
+                    ...plan.claims[0],
+                    claimId: 'definition_zh',
+                    statement: '水杯是用于盛水的透明饮用容器。',
+                },
+                {
+                    ...plan.claims[1],
+                    claimId: 'boundary_zh',
+                    statement: '坚固杯壁在液体和外部环境之间形成材料边界。',
+                },
+                {
+                    ...plan.claims[2],
+                    claimId: 'mechanism_zh',
+                    statement: '热量会穿过杯壁，杯壁厚度会影响热交换。',
+                },
+            ],
+        };
+
+        const review = reviewGraphAnswerCoverage(
+            '水杯是一种透明的盛水容器。它的实体杯壁把液体与周围环境隔开；热可以经由玻璃壁传递，而壁厚会改变换热速度。',
+            chinesePlan
+        );
+
+        expect(review.passed).toBe(true);
+        expect(review.coveredClaimIds).toEqual(['definition_zh', 'boundary_zh', 'mechanism_zh']);
+    });
 });

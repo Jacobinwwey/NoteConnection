@@ -1,5 +1,11 @@
 # 解释：开发进度看板
 
+## 2026-07-18 Coverage-driven 后续 Phase 收口
+
+回答规划的剩余风险现在都有可执行 owner：多语言概念/极性匹配与 24-case 校准报告、novelty-aware 同角色抑制和 discourse ordering、仅显式请求启用且带 replay trace 的一步图扩展策略，以及 operator-only Grounding Inspector 投影。普通 `explain` 请求不再静默进入 deep profile。
+
+编排 owner 有意保持不变。在新 owner 不能强制完整 planned/reviewed-answer operation、只能转发中间值时，从 `KnowledgeLearningPlatform.ts` 抽取仍不合理。验证已通过 122/122 个 Jest suite、1,145 个测试（26 个跳过）、production/Vite build、Diataxis/MkDocs 门与加固后的 Water Glass 运行时验收。
+
 ## 2026-07-11 Coverage-driven 图回答规划收口
 
 回答链路已经从“按句数预算的 graph-aware RAG”推进为带类型的 coverage-driven planning contract。`graphContextAssembler.ts` 继续负责有界候选子图；`graphAnswerPlan.ts` 把聚合锚点 span 与有证据的图邻居映射为语义 claim；`graphAnswerCoverage.ts` 验证 required claim；`conversationComposer.ts` 实现公开回答；`answerReleaseReview.ts` 在没有字符或句数 ceiling 的情况下执行 grounding、图一致性、时序、citation、leakage 与 plan-coverage gate。

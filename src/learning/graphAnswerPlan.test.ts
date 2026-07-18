@@ -143,4 +143,47 @@ describe('buildGraphAnswerPlan', () => {
             reason: 'weak_evidence',
         }));
     });
+
+    test('orders claims by discourse dependency instead of raw confidence', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'explain water glass in detail',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: ragContextPack.fragments.map((fragment) => ({ ...fragment, score: 0.99 })),
+            },
+        });
+
+        const roles = plan.claims.map((claim) => claim.role);
+        expect(roles.indexOf('boundary')).toBeLessThan(roles.indexOf('mechanism'));
+        expect(roles.indexOf('mechanism')).toBeLessThan(roles.indexOf('application'));
+    });
+
+    test('omits semantically redundant graph evidence from the public claim plan', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'what is water glass',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: [
+                    ...ragContextPack.fragments,
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'neighbor_heat_transfer_duplicate',
+                        atomId: 'heat_transfer_duplicate',
+                        text: 'Thermal energy passes through the glass wall between the drink and its environment.',
+                        score: 0.86,
+                    },
+                ],
+            },
+        });
+
+        expect(plan.claims.filter((claim) => claim.role === 'application')).toHaveLength(1);
+        expect(plan.omittedCandidates).toContainEqual({
+            atomId: 'heat_transfer_duplicate',
+            reason: 'redundant',
+        });
+    });
 });
