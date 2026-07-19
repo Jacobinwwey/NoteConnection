@@ -4,6 +4,14 @@ import {
 } from './ragPublicText';
 
 describe('ragPublicText', () => {
+    test('removes Markdown list and bold-label scaffolding before public composition', () => {
+        expect(naturalizeRagPublicEvidenceClause('* **Quantitative analysis**: pressure follows P = rho g h.'))
+            .toBe('Quantitative analysis: pressure follows P = rho g h.');
+        expect(naturalizeRagPublicEvidenceClause('* $T$ is the temperature field.'))
+            .toBe('$T$ is the temperature field.');
+        expect(naturalizeRagPublicEvidenceClause('A value * B value remains mathematical.'))
+            .toBe('A value * B value remains mathematical.');
+    });
     test('removes markdown headings and table scaffolding while preserving the factual lead', () => {
         expect(naturalizeRagPublicEvidenceClause(
             '### Technical specifications The glass density is about 2500 kg/m³. | Parameter | Value | | :--- | :--- | | density | 2500 |'

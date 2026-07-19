@@ -27,46 +27,40 @@ function normalize(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
-function selectPublicClaimStatement(value: string, title?: string): string {
-    let normalized = naturalizeRagPublicEvidenceClause(normalize(value));
-    if (!normalized) {
-        return '';
-    }
-    const normalizedTitle = normalize(String(title || '').replace(/\s*\((?:mermaid|code|diagram)\s+block\)\s*$/iu, ''));
-    if (normalizedTitle && normalized.toLowerCase().startsWith(`${normalizedTitle.toLowerCase()} `)) {
-        normalized = normalized.slice(normalizedTitle.length).trim();
-    }
-    return normalized
-        .split(/(?<=[.!?。！？])\s*/u)
-        .map((clause) => clause.trim())
-        .filter((clause) => clause && !shouldRejectPublicEvidenceClause(clause))
-        .join(' ')
-        .replace(/(\d)\.\s+(?=\d)/gu, '$1.')
-        .trim();
-}
-
 function publicClaimAnchorTerms(message: string, title?: string): string[] {
     const source = `${message} ${title || ''}`.toLowerCase();
     return Array.from(new Set(source.match(/[a-z0-9][a-z0-9_-]{2,}|[\u3400-\u9fff]{2,}/gu) || []));
 }
 
 function selectQualityPublicClaimStatement(value: string, title: string | undefined, message: string): string {
-    const normalizedEvidence = naturalizeRagPublicEvidenceClause(normalize(value));
+    const normalizedEvidence = naturalizeRagPublicEvidenceClause(value);
     if (!normalizedEvidence) {
         return '';
     }
     const normalizedTitle = normalize(String(title || '').replace(/\s*\((?:mermaid|code|diagram)\s+block\)\s*$/iu, ''));
+    const titleMatchVariants = Array.from(new Set([
+        normalizedTitle,
+        normalizedTitle.replace(/^\d+(?:\.\d+)*[.、)]?\s*/u, ''),
+    ].filter(Boolean)));
     const anchorTerms = publicClaimAnchorTerms(message, normalizedTitle);
     const candidates = segmentRagEvidenceClauses(normalizedEvidence)
         .map((clause) => naturalizeRagPublicEvidenceClause(clause))
         .map((clause) => {
-            if (!normalizedTitle || !clause.toLowerCase().startsWith(`${normalizedTitle.toLowerCase()} `)) {
+            const matchingTitle = titleMatchVariants.find((variant) => (
+                clause.toLowerCase().startsWith(`${variant.toLowerCase()} `)
+            ));
+            if (!matchingTitle) {
                 return clause;
             }
-            const remainder = clause.slice(normalizedTitle.length).trim();
-            const repeatsTitle = remainder.toLowerCase().startsWith(`${normalizedTitle.toLowerCase()} `);
-            const titleWordCount = normalizedTitle.split(/\s+/u).filter(Boolean).length;
-            return repeatsTitle || (titleWordCount > 1 && /^(?:a|an|the)\s+/iu.test(remainder))
+            const remainder = clause.slice(matchingTitle.length).trim();
+            const repeatsTitle = remainder.toLowerCase().startsWith(`${matchingTitle.toLowerCase()} `);
+            const titleWordCount = matchingTitle.split(/\s+/u).filter(Boolean).length;
+            const structuralHeading = /^\d+(?:\.\d+)*[.、)]?\s*/u.test(normalizedTitle)
+                || /[:：]/u.test(normalizedTitle)
+                || (/[\u3400-\u9fff]/u.test(normalizedTitle) && normalizedTitle.length >= 8);
+            return structuralHeading
+                || repeatsTitle
+                || (titleWordCount > 1 && /^(?:a|an|the)\s+/iu.test(remainder))
                 ? remainder
                 : clause;
         })
@@ -134,7 +128,7 @@ function makeClaim(params: {
     confidence: number;
     message: string;
 }): GraphAnswerClaimPlan {
-    const evidenceText = normalize(params.statement);
+    const evidenceText = String(params.statement || '').trim();
     const publicStatement = selectQualityPublicClaimStatement(evidenceText, params.title, params.message);
     return {
         claimId: `graph_claim_${params.index + 1}`,

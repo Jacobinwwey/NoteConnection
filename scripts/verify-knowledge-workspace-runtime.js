@@ -451,6 +451,8 @@ function validatePositiveConversationResult(summary, options) {
     requireScopedDocumentIds,
     requireCompleteGraphAnswerCoverage,
     requireGraphAnswerPlanOrder,
+    requirePublicAnswerScaffoldingHygiene,
+    requireNoDuplicatePublicClauses,
   } = options;
   const forbiddenFragments = Array.isArray(answerMustNotContain) && answerMustNotContain.length > 0
     ? answerMustNotContain
@@ -498,6 +500,19 @@ function validatePositiveConversationResult(summary, options) {
       throw new Error(`conversation leaked "${fragment}" into the public answer for query=${query}: ${answer}`);
     }
   });
+  if (requirePublicAnswerScaffoldingHygiene === true && /(?:\*\*|(?:^|\s)\*\s+(?=\$|\*\*|[\u3400-\u9fff]))/u.test(answer)) {
+    throw new Error(`conversation leaked Markdown list/bold scaffolding for query=${query}: ${answer}`);
+  }
+  if (requireNoDuplicatePublicClauses === true) {
+    const clauses = answer
+      .split(/(?<=[.!?。！？])\s+/u)
+      .map((clause) => clause.replace(/\s+/g, '').toLowerCase())
+      .filter((clause) => clause.length >= 24);
+    const duplicateClause = clauses.find((clause, index) => clauses.indexOf(clause) !== index);
+    if (duplicateClause) {
+      throw new Error(`conversation repeated a public clause for query=${query}: ${answer}`);
+    }
+  }
   if (!summary.answerReleaseReview || typeof summary.answerReleaseReview !== 'object') {
     throw new Error(`conversation did not return answerReleaseReview for query=${query}: ${JSON.stringify(summary)}`);
   }
@@ -980,6 +995,8 @@ async function main() {
             'No scoped knowledge points matched',
             'retrieval_candidates_below_threshold',
           ],
+          requirePublicAnswerScaffoldingHygiene: String(target || '').trim().toLowerCase() === 'waterglass',
+          requireNoDuplicatePublicClauses: String(target || '').trim().toLowerCase() === 'waterglass',
         });
         conversations.push(summary);
       }

@@ -683,37 +683,6 @@ function removeLeadingEvidenceTitle(value: string, title: string): string {
     );
 }
 
-function isPublicEvidenceClauseBoundary(value: string, index: number): boolean {
-    const char = value[index];
-    if (char === '\n' || char === '\r' || char === ';' || char === '；') {
-        return true;
-    }
-    if (char === '.' && /\d/u.test(value[index - 1] || '') && /\d/u.test(value[index + 1] || '')) {
-        return false;
-    }
-    return /[.!?。！？]/u.test(char);
-}
-
-function splitPublicEvidenceClauses(value: string): string[] {
-    const source = String(value || '');
-    if (!source) {
-        return [];
-    }
-    const clauses: string[] = [];
-    let start = 0;
-    for (let index = 0; index < source.length; index += 1) {
-        if (!isPublicEvidenceClauseBoundary(source, index)) {
-            continue;
-        }
-        clauses.push(source.slice(start, index));
-        start = index + 1;
-    }
-    if (start < source.length) {
-        clauses.push(source.slice(start));
-    }
-    return clauses;
-}
-
 function selectPublicEvidenceClause(snippet: string, title: string): string {
     const cleaned = removeLeadingEvidenceTitle(stripMarkdownScaffolding(snippet), title);
     if (!cleaned) {
@@ -3702,9 +3671,17 @@ function preserveRequiredGraphAnswerClaims(
     }
     const normalizedAnswer = normalizeWhitespace(answer);
     const orderedPlanText = requiredStatements.join(' ');
-    const supplementalText = normalizedAnswer && normalizedAnswer !== orderedPlanText
-        ? naturalizeRagPublicEvidenceClause(normalizedAnswer)
-        : '';
+    const supplementalClauses = segmentRagEvidenceClauses(naturalizeRagPublicEvidenceClause(normalizedAnswer))
+        .map((clause) => normalizeWhitespace(clause))
+        .filter((clause) => clause && !shouldRejectPublicEvidenceClause(clause))
+        .filter((clause) => !requiredStatements.some((requiredStatement) => {
+            const clauseKey = clause.toLowerCase();
+            const requiredKey = requiredStatement.toLowerCase();
+            return clauseKey === requiredKey
+                || clauseKey.includes(requiredKey)
+                || requiredKey.includes(clauseKey);
+        }));
+    const supplementalText = supplementalClauses.join(' ');
     return normalizeWhitespace([orderedPlanText, supplementalText].filter(Boolean).join(' '));
 }
 

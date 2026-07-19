@@ -15,7 +15,7 @@ The dense-fragment phase is implemented. `ragEvidenceQuality.ts` owns determinis
 
 The important boundary is clause-local filtering. A fragment containing one authoring preamble and one valid equation is no longer discarded wholesale. If no safe clause remains, the claim is omitted rather than falling back to unsafe raw text. This preserves graph coverage without allowing source contamination to dominate the public answer.
 
-Verification evidence: full Jest passed 124/124 suites, 1,153 tests passed, and 26 skipped; the focused graph-plan/release/coverage matrix passes after final shaping, TypeScript production build passes, and the conversation-mode Water Glass verifier passes with complete required claim IDs and no missing IDs. The repository full verifier's `--full` restore mode exceeded five minutes in this environment, so conversation mode is the authoritative runtime check for this source-selection change.
+Verification evidence: full Jest passed 124/124 suites, 1,155 tests passed, and 26 skipped; the focused graph-plan/release/coverage matrix passes after final shaping, TypeScript production build passes, and the conversation-mode Water Glass verifier passes with complete required claim IDs, no duplicate long clauses, and no public Markdown scaffolding. The repository full verifier's `--full` restore mode exceeded five minutes in this environment, so conversation mode is the authoritative runtime check for this source-selection change.
 
 ### 中文
 
@@ -23,7 +23,7 @@ Verification evidence: full Jest passed 124/124 suites, 1,153 tests passed, and 
 
 关键边界是 clause-local filtering。一个 fragment 同时包含 authoring preamble 和有效公式时，不再整体丢弃；如果没有任何安全 clause，则直接省略该 claim，不回退到不安全的 raw text。这样既保持图 coverage，又避免污染源主导公开回答。
 
-验证证据：全量 Jest 124/124 个 suite、1,153 个测试通过、26 个跳过；最终 shaping 后的 graph-plan/release/coverage focused matrix 通过，TypeScript production build 通过，Water Glass conversation verifier 通过且 required claim ID 完整、无 missing ID。仓库 full verifier 的 `--full` restore 模式在当前环境超过 5 分钟，因此本次 source-selection 变更以 conversation mode 作为权威运行时验收。
+验证证据：全量 Jest 124/124 个 suite、1,155 个测试通过、26 个跳过；最终 shaping 后的 graph-plan/release/coverage focused matrix 通过，TypeScript production build 通过，Water Glass conversation verifier 通过且 required claim ID 完整、无重复长 clause、无公开 Markdown 脚手架。仓库 full verifier 的 `--full` restore 模式在当前环境超过 5 分钟，因此本次 source-selection 变更以 conversation mode 作为权威运行时验收。
 
 # Coverage-driven Graph Answer Planning
 

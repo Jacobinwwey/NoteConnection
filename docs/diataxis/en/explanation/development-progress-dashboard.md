@@ -1694,6 +1694,6 @@ The critical unresolved question is not “how do we add another agent layer?”
 | Source-quality scoring | balanced delimiters, terminal completeness, math density, documentary penalty | Complete | Scores are ranking signals, never relevance proof |
 | Plan shaping | `graphAnswerPlan.ts` selects one complete public clause and retains raw provenance | Complete | One fragment still represents one graph claim |
 | Supplemental deduplication | `conversationComposer.ts` semantic similarity threshold 0.86 | Complete | Threshold requires future multilingual calibration |
-| Coverage preservation | focused graph plan/release/coverage tests plus Water Glass required IDs/order | Complete | Runtime verifier full restore remains environment-sensitive |
+| Coverage preservation | focused graph plan/release/coverage tests plus Water Glass required IDs/order, duplicate-clause and scaffolding gates | Complete | Runtime verifier full restore remains environment-sensitive |
 
 The earlier critical question is now answered at the deterministic selection layer. The remaining architectural decision is conditional: extract orchestration from `KnowledgeLearningPlatform.ts` only if a new owner can execute the complete planned/reviewed-answer operation and remove caller knowledge.

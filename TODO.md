@@ -7662,7 +7662,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] Make RAG role coverage local to answer claims and accept citation-backed plan evidence.
 - [x] Preserve ordered required claims through release revision.
 - [x] Gate Water Glass runtime acceptance on final required-ID coverage, order, and scaffolding hygiene.
-- [ ] Calibrate clause-level selection for dense mathematical fragments without length ceilings.
+- [x] Calibrate clause-level selection for dense mathematical fragments without length ceilings.
 
 ### 中文
 
@@ -7672,7 +7672,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] RAG role coverage 改为局部匹配，并接受带 citation 的 plan evidence。
 - [x] release revision 保留 required claims 的计划顺序。
 - [x] Water Glass runtime 校验最终 required-ID 覆盖、顺序和脚手架卫生。
-- [ ] 在不恢复长度硬限制的前提下校准密集数学 fragment 的 clause 级选择。
+- [x] 在不恢复长度硬限制的前提下校准密集数学 fragment 的 clause 级选择。
 
 ## 2026-07-19 v1.8.0 Final Delivery Audit
 
@@ -7683,9 +7683,20 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] Verify bounded deep/research expansion, 24-case multilingual calibration, and Grounding Inspector projection.
 - [x] Complete repository-wide code-humanizer cleanup in isolated behavior-preserving commits.
 - [x] Update README, interface contracts, implementation plan, and EN/ZH progress dashboards from current code evidence.
-- [x] Final baseline: 123/123 Jest suites, 1,149 passed, 26 skipped; TypeScript, production/Vite build, Water Glass runtime acceptance, Diataxis, MkDocs, and diff hygiene passed.
-- [ ] Add clause-level evidence segmentation and source-quality scoring for dense mathematical fragments; prove improved readability without reducing required-claim coverage.
+- [x] Final baseline: 124/124 Jest suites, 1,155 passed, 26 skipped; TypeScript, production/Vite build, Water Glass runtime acceptance, Diataxis, MkDocs, and diff hygiene passed.
+- [x] Add clause-level evidence segmentation and source-quality scoring for dense mathematical fragments; verified readability and complete required-claim coverage through focused, full-suite, and runtime acceptance.
 - [ ] Extract planned/reviewed-answer orchestration only after a complete-operation boundary demonstrably reduces `KnowledgeLearningPlatform.ts` caller knowledge.
+
+### 中文
+
+- [x] 核验 graph assembly、planning、composition、release review 与最终 coverage 的可执行 owner 边界。
+- [x] 核验 RAG required claim 实现、同 role claim 保留、带 citation 的 plan evidence 与 release 顺序保持。
+- [x] 核验显式 deep/research 有界扩展、24-case 多语言校准与 Grounding Inspector 投影。
+- [x] 以独立、行为保持型提交完成全仓 code-humanizer 清理。
+- [x] 基于当前代码证据同步 README、接口契约、实施方案与中英文进度面板。
+- [x] 最终基线：Jest 124/124 个 suite、1,155 个测试通过、26 个跳过；TypeScript、production/Vite build、Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。
+- [x] 为密集数学 fragment 增加 clause-level evidence segmentation 与 source-quality scoring；已通过 focused、全量与运行时验收证明可读性提升且 required-claim coverage 不下降。
+- [ ] 只有完整 operation 边界能明确降低 `KnowledgeLearningPlatform.ts` 的 caller knowledge 时，才抽取 planned/reviewed-answer 编排。
 
 ## 2026-07-19 Clause-Level Source Quality Completion
 
@@ -7695,7 +7706,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] Applied source quality before `GraphAnswerPlan` public shaping while retaining the dense raw fragment in `evidenceRefs`.
 - [x] Added clause-local filtering so one authoring preamble no longer discards a valid equation in the same fragment.
 - [x] Added semantic duplicate suppression for supplemental clauses at the composer boundary; distinct graph claims remain eligible.
-- [x] Verified focused graph-plan/release/coverage tests, production TypeScript build, full 124/124 Jest suites (1,153 passed, 26 skipped), and Water Glass conversation-mode required-ID/order acceptance.
+- [x] Verified focused graph-plan/release/coverage tests, production TypeScript build, full 124/124 Jest suites (1,155 passed, 26 skipped), Water Glass required-ID/order coverage, duplicate-clause hygiene, and public Markdown scaffolding hygiene.
 - [ ] Keep `KnowledgeLearningPlatform.ts` orchestration extraction conditional on a complete operation boundary.
 
 ### 中文
@@ -7704,16 +7715,15 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] 在 `GraphAnswerPlan` public shaping 前应用 source quality，同时把 dense raw fragment 保留到 `evidenceRefs`。
 - [x] 增加 clause-local filtering，同一 fragment 中的 authoring preamble 不再导致有效公式整体丢弃。
 - [x] 在 composer 边界增加 supplemental clause 语义去重；不同 graph claim 仍可保留。
-- [x] 已验证 graph-plan/release/coverage focused tests、TypeScript production build、全量 Jest 124/124（1,153 通过、26 跳过）以及 Water Glass conversation-mode required-ID/order 验收。
+- [x] 已验证 graph-plan/release/coverage focused tests、TypeScript production build、全量 Jest 124/124（1,155 通过、26 跳过），以及 Water Glass required-ID/order、重复 clause 卫生和公开 Markdown 脚手架卫生验收。
 - [ ] `KnowledgeLearningPlatform.ts` 编排抽取仍必须以完整 operation 边界为前提。
+
+## 2026-07-19 Final Phase State
+
+### English
+
+The clause-level source-quality phase is complete. The remaining unchecked orchestration item is intentionally conditional: it must stay in `KnowledgeLearningPlatform.ts` until a complete planned/reviewed-answer operation reduces caller knowledge.
 
 ### 中文
 
-- [x] 核验 graph assembly、planning、composition、release review 与最终 coverage 的可执行 owner 边界。
-- [x] 核验 RAG required claim 实现、同 role claim 保留、带 citation 的 plan evidence 与 release 顺序保持。
-- [x] 核验显式 deep/research 有界扩展、24-case 多语言校准与 Grounding Inspector 投影。
-- [x] 以独立、行为保持型提交完成全仓 code-humanizer 清理。
-- [x] 基于当前代码证据同步 README、接口契约、实施方案与中英文进度面板。
-- [x] 最终基线：Jest 123/123 个 suite、1,149 个测试通过、26 个跳过；TypeScript、production/Vite build、Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。
-- [ ] 为密集数学 fragment 增加 clause-level evidence segmentation 与 source-quality scoring；必须证明可读性提升且 required-claim coverage 不下降。
-- [ ] 只有完整 operation 边界能明确降低 `KnowledgeLearningPlatform.ts` 的 caller knowledge 时，才抽取 planned/reviewed-answer 编排。
+Clause-level source-quality 阶段已完成。剩余 unchecked 的编排事项保持条件性：只有完整的 planned/reviewed-answer operation 能降低 caller knowledge 时，才应从 `KnowledgeLearningPlatform.ts` 抽取。

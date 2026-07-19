@@ -1723,6 +1723,6 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 | Source-quality scoring | delimiter 平衡、句末完整性、数学密度、文档元叙述惩罚 | 完成 | score 只是排序信号，不构成 relevance 证明 |
 | Plan shaping | `graphAnswerPlan.ts` 选择完整 public clause 并保留 raw provenance | 完成 | 一个 fragment 仍代表一个 graph claim |
 | Supplemental 去重 | `conversationComposer.ts` 语义相似度阈值 0.86 | 完成 | 阈值仍需未来多语言校准 |
-| Coverage 保持 | graph plan/release/coverage focused tests 与 Water Glass required ID/order | 完成 | runtime verifier full restore 仍受环境耗时影响 |
+| Coverage 保持 | graph plan/release/coverage focused tests 与 Water Glass required ID/order、重复 clause、脚手架门禁 | 完成 | runtime verifier full restore 仍受环境耗时影响 |
 
 先前的核心问题已经在确定性选择层得到解决。剩余架构决策仍是条件性的：只有新 owner 能执行完整 planned/reviewed-answer operation 并减少 caller knowledge 时，才从 `KnowledgeLearningPlatform.ts` 抽取编排。

@@ -288,4 +288,24 @@ describe('buildGraphAnswerPlan', () => {
         expect(plan.claims[0].statement).toBe('Thermal transfer is governed by q = kA(T1 - T2) / L.');
         expect(plan.claims[0].evidenceRefs[0].text).toBe(denseEvidence);
     });
+
+    test('removes structural CJK headings without removing an English subject phrase', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'explain optics in a water glass',
+            knowledgePoints: [{
+                ...knowledgePoint,
+                matchedSpans: [{
+                    atomId: 'optics_heading',
+                    title: '3. 光学：光与系统的相互作用',
+                    snippet: '3. 光学：光与系统的相互作用\n当光线穿过空气、玻璃和水时会发生折射。',
+                    sourcePath: 'Knowledge_Base/waterglass/optics.md',
+                    score: 0.94,
+                    citation: null,
+                }],
+            }],
+            graphContext,
+        });
+
+        expect(plan.claims[0].statement).toBe('当光线穿过空气、玻璃和水时会发生折射。');
+    });
 });
