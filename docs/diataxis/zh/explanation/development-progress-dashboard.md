@@ -1678,3 +1678,17 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 - [学习平台契约与工作台基线](../../../solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md)
 - [Agent Workspace 合同收敛与下一阶段方向要求（2026-04-14）](../../../brainstorms/2026-04-14-agent-workspace-contract-closure-next-direction-requirements.md)
 - [演进进度对齐需求](../../../brainstorms/2026-04-11-evolution-progress-alignment-requirements.md)
+
+## 2026-07-19 v1.8.0 图回答规划检查点
+
+状态：实现与全量验证均已完成。
+
+- 已关闭 RAG composer 提前返回绕过；有序 plan 现在驱动 public draft。
+- required 策略从“每 role 一条”改为“置信度 + 新颖性”。
+- public claim 整形前移到 planning 之前，同时保留原始 provenance。
+- 已修正丰富 plan-driven 回答下的 RAG completeness 与 citation gate。
+- release revision 保留 required claims，并在最终 answer 上重新计算 coverage。
+- Water Glass runtime 现在校验 required IDs、plan 顺序与泄漏卫生。
+- 最终仓库状态已验证：Jest 122/122 个 suite 通过（1,147 个通过、26 个跳过），`build:with-vite`、强化后的 Water Glass 运行时验收、Diataxis、MkDocs 与 `git diff --check` 均通过。
+
+此前检查点证明了 plan 构建与投影，但没有证明 RAG prose 真正执行 plan。本阶段已闭合这一因果缺口。剩余工作是密集源 clause 的质量校准，而不是再增加一层编排框架。

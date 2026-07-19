@@ -297,6 +297,14 @@ NoteMD is integrated additively and does not replace existing graph/path APIs.
 
 ---
 
+## 2026-07-19 v1.8.0 Executable Graph Answer Contract
+
+`AgentConversationTrace.graphAnswerPlan` and `graphAnswerCoverage` now describe executed behavior, not only diagnostics. In RAG turns, the composer realizes ordered required claims before supplemental RAG clauses. Final coverage is recalculated after release revision, and revision preserves required plan statements.
+
+Required claims are all nonredundant claims with confidence greater than `0.75`; a fallback lead claim is required when no claim crosses that boundary. Same-role cardinality is not a deduplication rule. Plan evidence with citation IDs participates in claim-level citation validation.
+
+Runtime expectations may set `requireCompleteGraphAnswerCoverage` and `requireGraphAnswerPlanOrder`. The verifier then requires every required claim ID in final coverage and requires normalized public statements to occur in plan order.
+
 ## 1. Runtime and Path Contracts
 
 ### 1.1 Runtime path resolution (`src/utils/RuntimePaths.ts`)

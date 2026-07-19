@@ -1402,6 +1402,8 @@ describe('conversationComposer', () => {
             ragSufficiencyReview,
         });
 
+        expect(reply.answerReleaseReview.originalAnswer).toContain('Water Glass Soda-Lime');
+        expect(reply.answerReleaseReview.gates.filter((gate) => !gate.passed)).toEqual([]);
         expect(reply.answer).toContain('Water Glass Soda-Lime');
         expect(reply.answer).toContain('Plastic Cup PET');
         expect(reply.answer).not.toContain('```');
@@ -1724,6 +1726,60 @@ describe('conversationComposer', () => {
                     sourceBoundary: 'direct_span_only',
                 },
                 {
+                    fragmentId: 'rag_direct_generic_optical_bench_drift_environment',
+                    role: 'direct_support',
+                    text: 'Ambient temperature changes shift the optical bench reference position.',
+                    atomId: 'atom_generic_optical_bench_drift_environment',
+                    documentId: 'doc_generic_optical_bench_drift',
+                    sourcePath: 'Knowledge_Base/test/optical-bench-drift.md',
+                    title: 'Optical Bench Drift Environment',
+                    headingPath: ['Optical Bench Drift', 'Environmental cause'],
+                    startLine: 14,
+                    endLine: 14,
+                    charCount: 71,
+                    tokenEstimate: 14,
+                    truncated: false,
+                    citationIds: ['evidence_generic_optical_bench_drift'],
+                    sourceBoundary: 'full_document',
+                    score: 0.93,
+                },
+                {
+                    fragmentId: 'rag_direct_generic_optical_bench_drift_mount',
+                    role: 'direct_support',
+                    text: 'Mount relaxation changes the beam angle while the detector remains stable.',
+                    atomId: 'atom_generic_optical_bench_drift_mount',
+                    documentId: 'doc_generic_optical_bench_drift',
+                    sourcePath: 'Knowledge_Base/test/optical-bench-drift.md',
+                    title: 'Optical Bench Drift Mount',
+                    headingPath: ['Optical Bench Drift', 'Mechanical cause'],
+                    startLine: 15,
+                    endLine: 15,
+                    charCount: 72,
+                    tokenEstimate: 14,
+                    truncated: false,
+                    citationIds: ['evidence_generic_optical_bench_drift'],
+                    sourceBoundary: 'full_document',
+                    score: 0.92,
+                },
+                {
+                    fragmentId: 'rag_direct_generic_optical_bench_drift_history',
+                    role: 'direct_support',
+                    text: 'A time-series baseline separates persistent bench drift from transient detector noise.',
+                    atomId: 'atom_generic_optical_bench_drift_history',
+                    documentId: 'doc_generic_optical_bench_drift',
+                    sourcePath: 'Knowledge_Base/test/optical-bench-drift.md',
+                    title: 'Optical Bench Drift History',
+                    headingPath: ['Optical Bench Drift', 'Historical baseline'],
+                    startLine: 16,
+                    endLine: 16,
+                    charCount: 83,
+                    tokenEstimate: 16,
+                    truncated: false,
+                    citationIds: ['evidence_generic_optical_bench_drift'],
+                    sourceBoundary: 'full_document',
+                    score: 0.91,
+                },
+                {
                     fragmentId: 'rag_parent_generic_optical_bench_drift',
                     role: 'parent_context',
                     text: 'The procedure context says stable baseline records distinguish drift from alignment noise.',
@@ -1788,10 +1844,16 @@ describe('conversationComposer', () => {
             ragSufficiencyReview,
         });
 
+        expect(reply.answerReleaseReview.originalAnswer).toContain('downstream calibration quality');
+        expect(reply.answerReleaseReview.gates.filter((gate) => !gate.passed)).toEqual([]);
         expect(reply.answer).toContain('reference beam against the current beam centroid');
         expect(reply.answer).toContain('centroid delta before changing hardware');
         expect(reply.answer).toContain('stable baseline records');
         expect(reply.answer).toContain('downstream calibration quality');
+        expect(reply.answer).toContain('Ambient temperature changes');
+        expect(reply.answer).toContain('Mount relaxation changes');
+        expect(reply.answer).toContain('time-series baseline separates');
+        expect(reply.graphAnswerCoverage.passed).toBe(true);
         expect(reply.answer).not.toContain('broad overview of laboratory documentation');
         expect(reply.answer).not.toContain('Graph caveat:');
     });

@@ -1649,3 +1649,17 @@ The plan identifies 6 blocking-level cross-platform issues (Linux asset://localh
 - [Learning Platform Contract and Workbench Baseline](../../../solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md)
 - [Agent Workspace Contract Closure Next Direction Requirements (2026-04-14)](../../../brainstorms/2026-04-14-agent-workspace-contract-closure-next-direction-requirements.md)
 - [Evolution Progress Alignment Requirements](../../../brainstorms/2026-04-11-evolution-progress-alignment-requirements.md)
+
+## 2026-07-19 v1.8.0 Graph Answer Planning Checkpoint
+
+Status: implementation and full verification complete.
+
+- Closed the RAG composer early-return bypass; the ordered plan now drives the public draft.
+- Replaced one-required-claim-per-role with confidence plus novelty semantics.
+- Moved public claim shaping before planning while retaining raw provenance.
+- Corrected RAG completeness and citation gates for rich plan-driven answers.
+- Preserved required claims through release revision and recalculated final coverage.
+- Upgraded Water Glass runtime acceptance to verify required IDs, plan order, and leakage hygiene.
+- Verified the final repository state: 122/122 Jest suites passed (1,147 passed, 26 skipped), `build:with-vite` passed, the strengthened Water Glass runtime acceptance passed, Diataxis and MkDocs validation passed, and `git diff --check` passed.
+
+The earlier checkpoint proved plan construction and projection, but did not prove that RAG prose executed the plan. This completed phase closes that causal gap. Residual work is quality calibration for dense source clauses, not another orchestration hierarchy.

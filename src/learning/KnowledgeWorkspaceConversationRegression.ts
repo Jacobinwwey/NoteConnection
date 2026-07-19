@@ -60,6 +60,8 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     expectedGraphUsedMisalignedSuccessorFallback?: boolean;
     requirePlannerTitleHitDocumentIds?: boolean;
     requireScopedDocumentIds?: boolean;
+    requireCompleteGraphAnswerCoverage?: boolean;
+    requireGraphAnswerPlanOrder?: boolean;
 }
 
 export interface KnowledgeWorkspaceConversationRegressionCase {
@@ -137,6 +139,8 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             ragSourceBoundary: 'full_document',
             requiredRagRoles: ['direct_support', 'parent_context', 'graph_neighbor_support'],
             acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            requireCompleteGraphAnswerCoverage: true,
+            requireGraphAnswerPlanOrder: true,
         },
     },
     {
@@ -172,6 +176,8 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             ragSourceBoundary: 'full_document',
             requiredRagRoles: ['direct_support', 'parent_context', 'graph_neighbor_support'],
             acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
+            requireCompleteGraphAnswerCoverage: true,
+            requireGraphAnswerPlanOrder: true,
         },
     },
     {

@@ -2701,11 +2701,8 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
 
     test('registers waterglass RAG claim-gate and preamble-leak runtime acceptance', () => {
         const expectedWaterglassReleaseAcceptance = expect.objectContaining({
-            runtimeAnswerReleaseDecision: 'revise',
-            runtimeRequiredFailedGateIds: expect.arrayContaining([
-                'query_intent_alignment',
-                'rag_claim_citation_support',
-            ]),
+            requireCompleteGraphAnswerCoverage: true,
+            requireGraphAnswerPlanOrder: true,
             answerMustNotContain: expect.arrayContaining([
                 '所有推理过程',
                 '最终输出',

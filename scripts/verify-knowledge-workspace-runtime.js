@@ -449,6 +449,8 @@ function validatePositiveConversationResult(summary, options) {
     expectedGraphUsedMisalignedPredecessorFallback,
     expectedGraphUsedMisalignedSuccessorFallback,
     requireScopedDocumentIds,
+    requireCompleteGraphAnswerCoverage,
+    requireGraphAnswerPlanOrder,
   } = options;
   const forbiddenFragments = Array.isArray(answerMustNotContain) && answerMustNotContain.length > 0
     ? answerMustNotContain
@@ -501,6 +503,39 @@ function validatePositiveConversationResult(summary, options) {
   }
   if (String(summary.answerReleaseReview.publicAnswer || '') !== answer) {
     throw new Error(`answerReleaseReview/public answer mismatch for query=${query}: review=${JSON.stringify(summary.answerReleaseReview)} answer=${answer}`);
+  }
+  if (requireCompleteGraphAnswerCoverage === true) {
+    const plan = summary.graphAnswerPlan;
+    const coverage = summary.graphAnswerCoverage;
+    const requiredClaimIds = Array.isArray(plan && plan.claims)
+      ? plan.claims.filter((claim) => claim && claim.required === true).map((claim) => String(claim.claimId || ''))
+      : [];
+    const coveredClaimIds = new Set(Array.isArray(coverage && coverage.coveredClaimIds)
+      ? coverage.coveredClaimIds.map((claimId) => String(claimId || ''))
+      : []);
+    const missingClaimIds = requiredClaimIds.filter((claimId) => !coveredClaimIds.has(claimId));
+    if (!plan || !coverage || coverage.passed !== true || missingClaimIds.length > 0) {
+      throw new Error(
+        `graph answer coverage incomplete for query=${query}: required=${JSON.stringify(requiredClaimIds)} missing=${JSON.stringify(missingClaimIds)} coverage=${JSON.stringify(coverage)} plan=${JSON.stringify(plan)} releaseReview=${JSON.stringify(summary.answerReleaseReview)}`
+      );
+    }
+  }
+  if (requireGraphAnswerPlanOrder === true) {
+    const requiredClaims = Array.isArray(summary.graphAnswerPlan && summary.graphAnswerPlan.claims)
+      ? summary.graphAnswerPlan.claims.filter((claim) => claim && claim.required === true)
+      : [];
+    const normalizedAnswer = answer.replace(/\s+/g, ' ').trim();
+    const positions = requiredClaims.map((claim) => ({
+      claimId: String(claim.claimId || ''),
+      position: normalizedAnswer.indexOf(String(claim.statement || '').replace(/\s+/g, ' ').trim()),
+    }));
+    const missingOrderedClaims = positions.filter((entry) => entry.position < 0);
+    const outOfOrder = positions.some((entry, index) => index > 0 && entry.position < positions[index - 1].position);
+    if (missingOrderedClaims.length > 0 || outOfOrder) {
+      throw new Error(
+        `graph answer plan order not realized for query=${query}: positions=${JSON.stringify(positions)} answer=${answer}`
+      );
+    }
   }
   if (
     expectedAnswerReleaseDecision
@@ -911,6 +946,8 @@ async function main() {
           ? result.trace.ragFailureClassifications
           : [];
         const graphContext = result.trace && result.trace.graphContext ? result.trace.graphContext : null;
+        const graphAnswerPlan = result.trace && result.trace.graphAnswerPlan ? result.trace.graphAnswerPlan : null;
+        const graphAnswerCoverage = result.trace && result.trace.graphAnswerCoverage ? result.trace.graphAnswerCoverage : null;
 
         const summary = {
           query,
@@ -928,6 +965,8 @@ async function main() {
           missDiagnostics,
           answerReleaseReview,
           graphContext,
+          graphAnswerPlan,
+          graphAnswerCoverage,
           ragContextPack,
           ragSufficiencyReview,
           ragRecovery,
@@ -1026,6 +1065,8 @@ async function main() {
           ? result.trace.ragFailureClassifications
           : [];
         const graphContext = result.trace && result.trace.graphContext ? result.trace.graphContext : null;
+        const graphAnswerPlan = result.trace && result.trace.graphAnswerPlan ? result.trace.graphAnswerPlan : null;
+        const graphAnswerCoverage = result.trace && result.trace.graphAnswerCoverage ? result.trace.graphAnswerCoverage : null;
 
         const summary = {
           id: regressionCase.id,
@@ -1047,6 +1088,8 @@ async function main() {
           missDiagnostics,
           answerReleaseReview,
           graphContext,
+          graphAnswerPlan,
+          graphAnswerCoverage,
           ragContextPack,
           ragSufficiencyReview,
           ragRecovery,
@@ -1098,6 +1141,8 @@ async function main() {
           minimumGraphIntentMisalignedSuccessorCandidates: regressionCase.expected.minimumGraphIntentMisalignedSuccessorCandidates,
           expectedGraphUsedMisalignedPredecessorFallback: regressionCase.expected.expectedGraphUsedMisalignedPredecessorFallback,
           expectedGraphUsedMisalignedSuccessorFallback: regressionCase.expected.expectedGraphUsedMisalignedSuccessorFallback,
+          requireCompleteGraphAnswerCoverage: regressionCase.expected.requireCompleteGraphAnswerCoverage,
+          requireGraphAnswerPlanOrder: regressionCase.expected.requireGraphAnswerPlanOrder,
           minimumRagFullDocumentFragmentCounts: regressionCase.expected.minimumRagFullDocumentFragmentCounts,
           requireScopedDocumentIds: regressionCase.expected.requireScopedDocumentIds,
         });

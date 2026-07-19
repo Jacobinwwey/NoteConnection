@@ -164,7 +164,10 @@ describe('buildGraphAnswerPlan', () => {
         const plan = buildGraphAnswerPlan({
             message: 'what is water glass',
             knowledgePoints: [knowledgePoint],
-            graphContext,
+            graphContext: {
+                ...graphContext,
+                supportingAtomIds: [...graphContext.supportingAtomIds, 'heat_transfer_duplicate'],
+            },
             ragContextPack: {
                 ...ragContextPack,
                 fragments: [
@@ -185,5 +188,78 @@ describe('buildGraphAnswerPlan', () => {
             atomId: 'heat_transfer_duplicate',
             reason: 'redundant',
         });
+    });
+
+    test('requires distinct high-confidence claims even when they share one semantic role', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'explain water glass in detail',
+            knowledgePoints: [knowledgePoint],
+            graphContext: {
+                ...graphContext,
+                supportingAtomIds: [
+                    ...graphContext.supportingAtomIds,
+                    'heat_conduction',
+                    'thermal_capacity',
+                ],
+            },
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'neighbor_heat_transfer_conduction',
+                        atomId: 'heat_conduction',
+                        text: 'The glass wall conducts thermal energy from the drink to the surrounding air.',
+                        score: 0.93,
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'neighbor_heat_transfer_capacity',
+                        atomId: 'thermal_capacity',
+                        text: 'The wall heat capacity delays how quickly the drink approaches ambient temperature.',
+                        score: 0.91,
+                    },
+                ],
+            },
+        });
+
+        const applicationClaims = plan.claims.filter((claim) => claim.role === 'application');
+        expect(applicationClaims).toHaveLength(2);
+        expect(applicationClaims.every((claim) => claim.required)).toBe(true);
+    });
+
+    test('plans public semantic statements instead of renderer and table payloads', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'explain water glass in detail',
+            knowledgePoints: [{
+                ...knowledgePoint,
+                matchedSpans: [
+                    ...(knowledgePoint.matchedSpans || []),
+                    {
+                        atomId: 'thermal_equation_diagram',
+                        title: 'Thermal Equation Diagram',
+                        snippet: 'Heat crosses the glass wall by conduction. ```mermaid\ngraph TD\nA --> B\n```',
+                        sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                        score: 0.89,
+                        citation: null,
+                    },
+                    {
+                        atomId: 'parameter_table',
+                        title: 'Parameter Table',
+                        snippet: 'The following table lists typical values. | Parameter | Unit | | :--- | :--- |',
+                        sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                        score: 0.88,
+                        citation: null,
+                    },
+                ],
+            }],
+            graphContext,
+        });
+
+        expect(plan.claims).toContainEqual(expect.objectContaining({
+            statement: 'Heat crosses the glass wall by conduction.',
+        }));
+        expect(plan.claims.some((claim) => claim.statement.includes('```'))).toBe(false);
+        expect(plan.claims.some((claim) => claim.statement.includes('| Parameter |'))).toBe(false);
     });
 });

@@ -8,7 +8,7 @@ import type {
     RagEvidenceFragment,
     RelationKind,
 } from './types';
-import { shouldRejectPublicEvidenceClause } from './ragPublicText';
+import { naturalizeRagPublicEvidenceClause, shouldRejectPublicEvidenceClause } from './ragPublicText';
 import { graphClaimSemanticSimilarity } from './graphClaimMatcher';
 
 export interface BuildGraphAnswerPlanParams {
@@ -24,6 +24,24 @@ function normalize(value: string): string {
 
 function isAuthoringScaffolding(value: string): boolean {
     return shouldRejectPublicEvidenceClause(value);
+}
+
+function selectPublicClaimStatement(value: string, title?: string): string {
+    let normalized = naturalizeRagPublicEvidenceClause(normalize(value));
+    if (!normalized) {
+        return '';
+    }
+    const normalizedTitle = normalize(String(title || '').replace(/\s*\((?:mermaid|code|diagram)\s+block\)\s*$/iu, ''));
+    if (normalizedTitle && normalized.toLowerCase().startsWith(`${normalizedTitle.toLowerCase()} `)) {
+        normalized = normalized.slice(normalizedTitle.length).trim();
+    }
+    return normalized
+        .split(/(?<=[.!?。！？])\s*/u)
+        .map((clause) => clause.trim())
+        .filter((clause) => clause && !shouldRejectPublicEvidenceClause(clause))
+        .join(' ')
+        .replace(/(\d)\.\s+(?=\d)/gu, '$1.')
+        .trim();
 }
 
 function classifyIntent(message: string): GraphAnswerPlan['intent'] {
@@ -60,6 +78,7 @@ function makeClaim(params: {
     index: number;
     role: GraphAnswerRole;
     statement: string;
+    title?: string;
     anchorAtomId: string;
     atomId?: string;
     sourcePath: string;
@@ -68,12 +87,14 @@ function makeClaim(params: {
     edgeIds?: string[];
     confidence: number;
 }): GraphAnswerClaimPlan {
+    const evidenceText = normalize(params.statement);
+    const publicStatement = selectPublicClaimStatement(evidenceText, params.title);
     return {
         claimId: `graph_claim_${params.index + 1}`,
         role: params.role,
         required: false,
         priority: params.role === 'definition' ? 100 : Math.round(params.confidence * 90),
-        statement: normalize(params.statement),
+        statement: publicStatement,
         subjectAtomId: params.anchorAtomId,
         supportingAtomIds: params.atomId && params.atomId !== params.anchorAtomId ? [params.atomId] : [],
         supportingEdgeIds: params.edgeIds || [],
@@ -82,7 +103,7 @@ function makeClaim(params: {
             atomId: params.atomId,
             sourcePath: params.sourcePath,
             citationIds: params.citationIds || [],
-            text: normalize(params.statement),
+            text: evidenceText,
         }],
         confidence: Number(Math.max(0, Math.min(1, params.confidence)).toFixed(4)),
     };
@@ -97,6 +118,10 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
     const append = (claim: GraphAnswerClaimPlan) => {
         const key = normalize(claim.statement).toLowerCase();
         if (!key || seen.has(key)) return;
+        const rawEvidence = claim.evidenceRefs[0]?.text || '';
+        if (/```(?:mermaid|graph)\b/iu.test(rawEvidence) && !/[.!?\u3002\uFF01\uFF1F]/u.test(claim.statement)) {
+            return;
+        }
         const redundantClaim = claims.find((existing) => (
             existing.role === claim.role
             && graphClaimSemanticSimilarity(existing.statement, claim.statement) >= 0.72
@@ -114,6 +139,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
         index: claims.length,
         role: spanIndex === 0 ? 'definition' : inferRole(span.title, span.snippet),
         statement: span.snippet,
+        title: span.title,
         anchorAtomId,
         atomId: span.atomId,
         sourcePath: span.sourcePath,
@@ -122,14 +148,21 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
         confidence: span.score,
     })));
 
+    const selectedSupportingAtomIds = new Set(params.graphContext?.supportingAtomIds || []);
     (params.ragContextPack?.fragments || [])
         .filter((fragment) => fragment.role !== 'background' && !isAuthoringScaffolding(fragment.text))
+        .filter((fragment) => (
+            fragment.role !== 'graph_neighbor_support'
+            || selectedSupportingAtomIds.size <= 0
+            || Boolean(fragment.atomId && selectedSupportingAtomIds.has(fragment.atomId))
+        ))
         .forEach((fragment) => {
             const relationKind = fragmentRelationKind(fragment, params.graphContext);
             append(makeClaim({
                 index: claims.length,
                 role: inferRole(fragment.title || '', fragment.text, relationKind),
                 statement: fragment.text,
+                title: fragment.title,
                 anchorAtomId,
                 atomId: fragment.atomId,
                 sourcePath: fragment.sourcePath,
@@ -145,6 +178,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
             index: 0,
             role: 'definition',
             statement: anchor.evidenceSnippet || anchor.summary,
+            title: anchor.title,
             anchorAtomId,
             atomId: anchor.atomId,
             sourcePath: anchor.sourcePath || anchor.citation?.sourcePath || '',
@@ -182,12 +216,14 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
         roleOrder[left.role] - roleOrder[right.role]
         || right.priority - left.priority
     ));
-    const requiredRoleClaims = new Set<string>();
     sortedClaims.forEach((claim) => {
-        if (claim.confidence < 0.75 || requiredRoleClaims.has(claim.role)) return;
-        requiredRoleClaims.add(claim.role);
-        claim.required = true;
+        // The upstream evidence pack is already bounded. At this boundary, novelty and
+        // confidence determine coverage; role cardinality does not imply redundancy.
+        claim.required = claim.confidence > 0.75;
     });
+    if (!sortedClaims.some((claim) => claim.required) && sortedClaims.length > 0) {
+        sortedClaims[0].required = true;
+    }
     return {
         intent: classifyIntent(params.message),
         depth: sortedClaims.length <= 2 ? 'compact' : sortedClaims.length <= 7 ? 'standard' : 'deep',

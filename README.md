@@ -411,3 +411,11 @@ NoteConnection has benefited from many open-source projects and local reference 
 ## License
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE) (`GPL-3.0-only`).
+
+## 2026-07-19 v1.8.0 Graph Answer Planning Correction
+
+The graph-answer pipeline is now executable end to end in both RAG and non-RAG conversations. The earlier implementation built and exported `GraphAnswerPlan`, but the RAG composer returned before consuming it; release diagnostics therefore overstated actual graph use. `conversationComposer.ts` now realizes ordered required claims first and uses ranked RAG clauses as bounded supplemental evidence.
+
+Distinct high-confidence claims are required by information value after semantic deduplication, not by a one-claim-per-role quota. Public claim statements are shaped before planning so authoring instructions, table scaffolding, and renderer payloads cannot become mandatory answer content. Release revision preserves the ordered required plan instead of replacing it with a shorter answer, and runtime acceptance verifies final required-ID coverage and claim order.
+
+Coverage remains deterministic concept, polarity, and normalized-text matching; it is not semantic entailment. Large source fragments can still produce dense prose, so the next quality increment is clause-level evidence shaping and multilingual calibration rather than restoring character or sentence ceilings.

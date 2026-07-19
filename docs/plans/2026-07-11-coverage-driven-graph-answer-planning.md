@@ -100,7 +100,7 @@ Final completion update:
 - Water Glass integration requires definition, material boundary, thermal mechanism, and complete required-claim coverage;
 - all residual public character/sentence ceiling constants and projections have been removed.
 
-Final verification: 118/118 suites passed, 1,124 tests passed, 26 skipped; TypeScript `--noEmit`, production build, and Water Glass runtime acceptance passed.
+Final verification: 122/122 suites passed, 1,147 tests passed, 26 skipped; `build:with-vite`, strengthened Water Glass runtime acceptance (required IDs and plan order), Diataxis validation, MkDocs build, and `git diff --check` passed.
 
 ### Post-completion robustness audit
 
@@ -246,7 +246,7 @@ Final verification after hardening the runtime acceptance: 122/122 Jest suites p
 - Water Glass 集成验收直接要求定义、材料边界、热机制和完整 required-claim coverage；
 - 所有残余的公开回答字符/句数 ceiling 常量与投影均已移除。
 
-最终验证：118/118 个 suite 通过，1,124 个测试通过，26 个跳过；TypeScript `--noEmit`、production build 和 Water Glass 运行时验收均通过。
+最终验证：122/122 个 suite 通过，1,147 个测试通过，26 个跳过；`build:with-vite`、强化后的 Water Glass 运行时验收（required IDs 与 plan 顺序）、Diataxis 校验、MkDocs 构建和 `git diff --check` 均通过。
 
 ### 完成后的稳健性复核
 
@@ -300,3 +300,19 @@ Final verification after hardening the runtime acceptance: 122/122 Jest suites p
 有意保持不变的是：answer-planning 编排仍留在 `KnowledgeLearningPlatform.ts`。当前抽取只会增加 pass-through owner，既不降低 caller knowledge，也不强化不变量。下一次架构抽取应等待完整 planned/reviewed-answer operation 边界成立。
 
 加固运行时验收后的最终验证：122/122 个 Jest suite 通过，1,145 个测试通过，26 个跳过；production/Vite build 通过；Water Glass 运行时用例通过，并拒绝扁平化表格引导/表行、`:---` 分隔符、创作指令与内部章节标签；Diataxis 与 MkDocs 文档门通过。
+
+## English - 2026-07-19 executable-plan correction
+
+The previous closure confused plan projection with plan execution. The causal defect was the RAG early return in `buildScopedConversationAnswer()`: the RAG answer returned before `GraphAnswerPlan.claims` were consumed. A second defect marked only one claim per role as required, so distinct graph facts could disappear without failing coverage.
+
+The corrected pipeline is: bounded evidence and subgraph assembly -> public claim shaping -> novelty-aware planning -> ordered required-claim realization -> supplemental RAG clauses -> release review -> required-plan-preserving revision -> final coverage review. RAG role completeness uses local claim-to-role matching, and citation validation accepts both RAG fragments and citation-backed plan evidence.
+
+Runtime acceptance now fails unless final required claim IDs are covered and their normalized statements preserve plan order. Emitting a plan in trace is no longer sufficient. Remaining risk is dense mathematical source clauses; the next increment is clause-level calibration and source-quality scoring, not character ceilings or a default iterative-agent framework.
+
+## 中文 - 2026-07-19 可执行 plan 纠偏
+
+此前的阶段闭合把 plan 投影误认为 plan 执行。直接原因是 `buildScopedConversationAnswer()` 的 RAG 提前返回：`GraphAnswerPlan.claims` 尚未消费，RAG answer 就已返回。第二个缺陷是每种 role 只标记一条 required，因此同 role 的不同图事实即使消失也不会触发 coverage 失败。
+
+修正链路为：有界 evidence/子图组装 -> 公开 claim 整形 -> 新颖性感知规划 -> 有序 required claim 实现 -> RAG clause 补充 -> release review -> 保留 required plan 的 revision -> 最终 coverage review。RAG role completeness 改为局部 claim-to-role 匹配，citation 校验同时接受 RAG fragment 与带 citation 的 plan evidence。
+
+运行时验收现在要求最终 required claim ID 全覆盖，并要求规范化 statement 保持 plan 顺序；仅在 trace 中输出 plan 不再算完成。剩余风险是密集数学源 clause，后续应推进 clause 级校准与 source-quality scoring，而不是恢复字符上限或默认迭代 Agent 框架。

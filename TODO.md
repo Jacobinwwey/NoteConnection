@@ -7651,3 +7651,25 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 
 - **无缝切换**: 在“图谱模式 (Force/DAG)”与“Path Mode (Orbital)”之间切换时保留数据上下文，同时切换渲染引擎/Worker。
 - **状态持久化**: 学习历史与已完成状态通过 `localStorage` 跨会话保存。
+
+## 2026-07-19 v1.8.0 Coverage-driven Graph Answer Planning Correction
+
+### English
+
+- [x] Remove the RAG early-return bypass so `GraphAnswerPlan` drives public prose.
+- [x] Require distinct high-confidence same-role claims after novelty deduplication.
+- [x] Shape public claim statements before planning and retain raw evidence in provenance.
+- [x] Make RAG role coverage local to answer claims and accept citation-backed plan evidence.
+- [x] Preserve ordered required claims through release revision.
+- [x] Gate Water Glass runtime acceptance on final required-ID coverage, order, and scaffolding hygiene.
+- [ ] Calibrate clause-level selection for dense mathematical fragments without length ceilings.
+
+### 中文
+
+- [x] 移除 RAG 提前返回，使 `GraphAnswerPlan` 真正驱动公开回答。
+- [x] 新颖性去重后，同 role 的不同高置信 claim 均进入 required 集合。
+- [x] 在规划前整形公开 claim，原始 evidence 保留在 provenance。
+- [x] RAG role coverage 改为局部匹配，并接受带 citation 的 plan evidence。
+- [x] release revision 保留 required claims 的计划顺序。
+- [x] Water Glass runtime 校验最终 required-ID 覆盖、顺序和脚手架卫生。
+- [ ] 在不恢复长度硬限制的前提下校准密集数学 fragment 的 clause 级选择。

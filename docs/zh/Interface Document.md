@@ -978,3 +978,11 @@ Signals：
 - `npm run test:migration` 通过（35 项）。
 - `npm run test:tauri` 通过（14 项）。
 - `npm run tauri:android:build` 通过。
+
+## 2026-07-19 v1.8.0 可执行图回答契约
+
+`AgentConversationTrace.graphAnswerPlan` 与 `graphAnswerCoverage` 现在描述实际执行行为，而不只是诊断信息。RAG turn 中，composer 先实现有序 required claims，再补充 RAG clause。release revision 后重新计算最终 coverage，且 revision 必须保留 required plan statement。
+
+所有置信度大于 `0.75` 且未被判定为冗余的 claim 均为 required；若没有 claim 越过该边界，则 lead claim 作为 fallback required。相同 role 的数量不再构成去重依据。带 citation ID 的 plan evidence 会参与 claim-level citation 校验。
+
+运行时期望可启用 `requireCompleteGraphAnswerCoverage` 与 `requireGraphAnswerPlanOrder`。验证器随后要求最终 coverage 包含全部 required claim ID，并要求规范化 public statement 按 plan 顺序出现。

@@ -17,7 +17,12 @@ export function reviewGraphAnswerCoverage(
         };
     }
     const coveredClaimIds = requiredClaims
-        .filter((claim) => matchGraphAnswerClaim(answer, claim.statement).covered)
+        .filter((claim) => {
+            const answerKey = String(answer || '').replace(/\s+/gu, '');
+            const statementKey = String(claim.statement || '').replace(/\s+/gu, '');
+            return Boolean(statementKey && answerKey.includes(statementKey))
+                || matchGraphAnswerClaim(answer, claim.statement).covered;
+        })
         .map((claim) => claim.claimId);
     const covered = new Set(coveredClaimIds);
     const missingRequiredClaimIds = requiredClaims

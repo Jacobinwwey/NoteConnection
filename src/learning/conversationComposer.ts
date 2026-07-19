@@ -962,9 +962,10 @@ function selectRagEvidenceSentences(
     return selected;
 }
 
-function buildRagAugmentedConversationAnswer(
+function buildPlanDrivenRagAnswer(
     params: ScopedConversationReplyParams,
     graphContext: AgentConversationGraphContext | null,
+    graphAnswerPlan: GraphAnswerPlan,
     useChinese: boolean
 ): string {
     const pack = params.ragContextPack;
@@ -985,6 +986,9 @@ function buildRagAugmentedConversationAnswer(
         )
         : rejectAnswerControlSentence;
     const answerSentences: string[] = [];
+    graphAnswerPlan.claims
+        .filter((claim) => claim.required)
+        .forEach((claim) => appendRagEvidenceSentence(answerSentences, claim.statement, useChinese));
     selectRagEvidenceSentences(
         pack.fragments,
         new Set(['direct_support']),
@@ -1067,7 +1071,7 @@ function buildScopedConversationAnswer(
         graphContext && graphContext.anchorTitle,
     ].filter(Boolean).join(' '));
     const answerSentences: string[] = [];
-    const ragAnswer = buildRagAugmentedConversationAnswer(params, graphContext, useChinese);
+    const ragAnswer = buildPlanDrivenRagAnswer(params, graphContext, graphAnswerPlan, useChinese);
     if (ragAnswer) {
         return ragAnswer;
     }

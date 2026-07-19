@@ -420,3 +420,11 @@ NoteConnection 受益于许多开源项目与本地参考镜像。以下致谢�
 ## 开源许可
 
 本项目采用 [GNU General Public License v3.0](LICENSE)（`GPL-3.0-only`）开源协议。
+
+## 2026-07-19 v1.8.0 图回答规划纠偏
+
+图回答链路现在已在 RAG 与非 RAG 会话中端到端执行。先前实现虽然构建并导出了 `GraphAnswerPlan`，但 RAG composer 在消费 plan 前提前返回，因此诊断面高估了真实的图信息利用率。`conversationComposer.ts` 现在先按顺序实现 required claims，再把经过排序的 RAG clause 作为有界补充证据。
+
+同一 role 下的不同高置信 claim 现在按信息价值进入 required 集合，不再受“一种 role 只能一条”的配额约束。claim 在进入 plan 前完成公开文本整形，作者指令、表格脚手架和 renderer payload 不会成为强制回答内容。release revision 保留 required claim 顺序；运行时验收直接检查最终公开回答的 required-ID 全覆盖与 claim 顺序。
+
+当前 coverage 仍是确定性的概念、极性和规范化文本匹配，不等同于 semantic entailment。长源 fragment 仍可能形成密集 prose，后续应继续做 clause 级 evidence shaping 和多语言校准，而不是恢复字符数或句子数硬上限。

@@ -3581,7 +3581,8 @@ function ragAnswerRoleIsCovered(
     if (!supportText) {
         return true;
     }
-    return computeGroundingAlignmentScore(context.draftAnswer, supportText) >= 0.22;
+    return splitDraftAnswerClaims(context.draftAnswer)
+        .some((claim) => computeGroundingAlignmentScore(claim, supportText) >= 0.22);
 }
 
 const HOW_TO_PROFILE_SIGNAL_RULES: RagProfileSignalRule[] = [
@@ -3712,6 +3713,29 @@ function buildRagAnswerCompletenessMessage(result: RagAnswerCompleteness): strin
     return `Draft answer missed required RAG evidence roles: ${result.missingRoles.join(', ') || 'none'}; missing profile signals: ${result.missingProfileSignals.join(', ') || 'none'}.`;
 }
 
+function preserveRequiredGraphAnswerClaims(
+    answer: string,
+    plan: GraphAnswerPlan | null | undefined,
+    preservePlan: boolean
+): string {
+    if (!preservePlan) {
+        return normalizeWhitespace(answer);
+    }
+    const requiredStatements = (plan?.claims || [])
+        .filter((claim) => claim.required)
+        .map((claim) => naturalizeRagPublicEvidenceClause(String(claim.statement || '')))
+        .filter((statement) => statement && !shouldRejectPublicEvidenceClause(statement));
+    if (requiredStatements.length <= 0) {
+        return normalizeWhitespace(answer);
+    }
+    const normalizedAnswer = normalizeWhitespace(answer);
+    const orderedPlanText = requiredStatements.join(' ');
+    const supplementalText = normalizedAnswer && normalizedAnswer !== orderedPlanText
+        ? naturalizeRagPublicEvidenceClause(normalizedAnswer)
+        : '';
+    return normalizeWhitespace([orderedPlanText, supplementalText].filter(Boolean).join(' '));
+}
+
 function collectCitationBackedRagFragments(context: AnswerReleaseReviewContext): RagEvidenceFragment[] {
     if (!hasUsableRagEvidenceContext(context)) {
         return [];
@@ -3833,6 +3857,14 @@ function evaluateRagClaimCitationSupport(context: AnswerReleaseReviewContext): R
         collectClaimSupportFeatures(claim).length >= RAG_CLAIM_CITATION_SUPPORT_MIN_FEATURES
     ));
     const citationBackedFragments = collectCitationBackedRagFragments(context);
+    const citationBackedPlanEvidence = (context.graphAnswerPlan?.claims || [])
+        .flatMap((claim) => claim.evidenceRefs || [])
+        .filter((evidence) => (
+            normalizeWhitespace(String(evidence.text || '')).length > 0
+            && Array.isArray(evidence.citationIds)
+            && evidence.citationIds.some((citationId) => normalizeWhitespace(String(citationId || '')).length > 0)
+        ));
+    const citationBackedEvidenceCount = citationBackedFragments.length + citationBackedPlanEvidence.length;
     if (claims.length <= 0) {
         return {
             passed: true,
@@ -3843,7 +3875,7 @@ function evaluateRagClaimCitationSupport(context: AnswerReleaseReviewContext): R
             citationBackedFragmentCount: citationBackedFragments.length,
         };
     }
-    if (citationBackedFragments.length <= 0) {
+    if (citationBackedEvidenceCount <= 0) {
         return {
             passed: false,
             applicable: true,
@@ -3858,6 +3890,7 @@ function evaluateRagClaimCitationSupport(context: AnswerReleaseReviewContext): R
             normalizeWhitespace(String(fragment.title || '').trim()),
             normalizeWhitespace(String(fragment.text || '').trim()),
         ].filter(Boolean).join(' '))
+        .concat(citationBackedPlanEvidence.map((evidence) => normalizeWhitespace(evidence.text)))
         .filter(Boolean)
         .join(' ');
     const supportFeatures = new Set(collectClaimSupportFeatures(supportText));
@@ -3882,7 +3915,7 @@ function evaluateRagClaimCitationSupport(context: AnswerReleaseReviewContext): R
         supportedClaimCount,
         weakClaims,
         unsupportedClaims,
-        citationBackedFragmentCount: citationBackedFragments.length,
+        citationBackedFragmentCount: citationBackedEvidenceCount,
     };
 }
 
@@ -5364,7 +5397,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     const primaryGraphComparisonConflict = graphComparisonConsistency.conflicts[0];
     const primaryStructuredComparisonConflict = structuredComparisonConsistency.conflicts[0];
     const primaryTemporalValidityConflict = temporalValidityConsistency.conflict;
-    const publicAnswer = normalizeWhitespace(
+    const revisedPublicAnswer = normalizeWhitespace(
         decision === 'abstain'
             ? buildAbstentionAnswer(context.message, context.usedScope)
             : decision === 'revise'
@@ -5384,6 +5417,11 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : buildGroundedRevisionAnswer(context)
                 )
                 : buildReleasedPublicAnswer(context, draftAnswer)
+    );
+    const publicAnswer = preserveRequiredGraphAnswerClaims(
+        revisedPublicAnswer,
+        context.graphAnswerPlan,
+        Boolean(context.ragContextPack && context.ragContextPack.fragments && context.ragContextPack.fragments.length > 0)
     );
     const abstentionHygienePassed = decision !== 'abstain'
         || (
