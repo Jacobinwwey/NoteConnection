@@ -1692,3 +1692,7 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 - 最终仓库状态已验证：Jest 122/122 个 suite 通过（1,147 个通过、26 个跳过），`build:with-vite`、强化后的 Water Glass 运行时验收、Diataxis、MkDocs 与 `git diff --check` 均通过。
 
 此前检查点证明了 plan 构建与投影，但没有证明 RAG prose 真正执行 plan。本阶段已闭合这一因果缺口。剩余工作是密集源 clause 的质量校准，而不是再增加一层编排框架。
+
+### Code-humanizer 后续复核
+
+首轮 code-humanizer 清理通过 `graphAnswerFacts.ts` 移除了重复的 graph-window 提取，并完成定向与全量验证。其余具有不同归一化或非有限值契约的相似 helper 有意保留；复核没有发现可安全删除的死代码或可直接移除的投机抽象。

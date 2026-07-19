@@ -301,6 +301,22 @@ Final verification after hardening the runtime acceptance: 122/122 Jest suites p
 
 加固运行时验收后的最终验证：122/122 个 Jest suite 通过，1,145 个测试通过，26 个跳过；production/Vite build 通过；Water Glass 运行时用例通过，并拒绝扁平化表格引导/表行、`:---` 分隔符、创作指令与内部章节标签；Diataxis 与 MkDocs 文档门通过。
 
+### 2026-07-19 code-humanizer audit
+
+The first structural cleanup pass used the current full Jest suite as its behavior oracle and removed duplicated graph-window extraction from `conversationComposer.ts` and `answerReleaseReview.ts`. `graphAnswerFacts.ts` now owns anchor exclusion, title deduplication, bounded predecessor/successor selection, and finite degree parsing; language-specific phrasing remains with its existing composer/release owner.
+
+The audit intentionally left similar-looking helpers with different contracts: `queryBackend.ts` and `vectorAccelerationAdapter.ts` normalize tokens at different boundaries, and the several `clamp` functions have different non-finite-value policies. The domain `*Platform` interfaces are documented progressive extraction seams, not speculative single-implementation abstractions. No broad exception, compatibility fallback, or dead export was changed because that would alter error timing or an established boundary contract.
+
+Verification: `tsc --noEmit` passed; focused graph/composer/release tests passed 76/76; full Jest passed 123/123 suites with 1,149 passed and 26 skipped.
+
+### 2026-07-19 code-humanizer 复核
+
+首轮结构清理以当前全量 Jest 作为行为 oracle，移除了 `conversationComposer.ts` 与 `answerReleaseReview.ts` 中重复的 graph-window 提取实现。现在由 `graphAnswerFacts.ts` 统一负责 anchor 排除、标题去重、有界前驱/后继选择和有限度数解析；语言相关的回答措辞仍由原有 composer/release owner 负责。
+
+复核有意保留了表面相似但契约不同的 helper：`queryBackend.ts` 与 `vectorAccelerationAdapter.ts` 在不同边界执行 token 归一化，各处 `clamp` 对非有限值也有不同策略。学习域的 `*Platform` 接口是已记录的渐进拆分 seam，不是投机性的单实现抽象。没有修改 broad exception、兼容 fallback 或 dead export，因为这会改变错误时序或既有边界契约。
+
+验证结果：`tsc --noEmit` 通过；graph/composer/release 定向测试 76/76 通过；全量 Jest 123/123 个 suite 通过，1,149 个测试通过，26 个跳过。
+
 ## English - 2026-07-19 executable-plan correction
 
 The previous closure confused plan projection with plan execution. The causal defect was the RAG early return in `buildScopedConversationAnswer()`: the RAG answer returned before `GraphAnswerPlan.claims` were consumed. A second defect marked only one claim per role as required, so distinct graph facts could disappear without failing coverage.

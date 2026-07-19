@@ -1663,3 +1663,7 @@ Status: implementation and full verification complete.
 - Verified the final repository state: 122/122 Jest suites passed (1,147 passed, 26 skipped), `build:with-vite` passed, the strengthened Water Glass runtime acceptance passed, Diataxis and MkDocs validation passed, and `git diff --check` passed.
 
 The earlier checkpoint proved plan construction and projection, but did not prove that RAG prose executed the plan. This completed phase closes that causal gap. Residual work is quality calibration for dense source clauses, not another orchestration hierarchy.
+
+### Code-humanizer follow-up
+
+The first code-humanizer pass removed duplicated graph-window extraction through `graphAnswerFacts.ts`, with focused and full-suite verification. Similar helpers with different normalization or non-finite-value contracts remain intentionally unchanged; the audit found no safe dead-code deletion or unjustified abstraction removal.
