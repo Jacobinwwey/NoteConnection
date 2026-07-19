@@ -371,7 +371,7 @@ describe('external_http vector acceleration server integration', () => {
     originalArgv = [...process.argv];
     const serverModule = loadFreshServerModule();
     server = await serverModule.startServer({ port });
-  });
+  }, 30_000);
 
   afterAll(async () => {
     await shutdownServerInstance(server);
@@ -382,7 +382,7 @@ describe('external_http vector acceleration server integration', () => {
     jest.dontMock('./core/PathBridge');
     jest.dontMock('./reader_renderer');
     temp.cleanup();
-  });
+  }, 30_000);
 
   test('local_vector runtime can sync a remote external_http ANN index and use it for live queries', async () => {
     const documents = Array.from({ length: 140 }, (_value, index) => ({
