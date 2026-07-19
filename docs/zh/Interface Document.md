@@ -986,3 +986,11 @@ Signals：
 所有置信度大于 `0.75` 且未被判定为冗余的 claim 均为 required；若没有 claim 越过该边界，则 lead claim 作为 fallback required。相同 role 的数量不再构成去重依据。带 citation ID 的 plan evidence 会参与 claim-level citation 校验。
 
 运行时期望可启用 `requireCompleteGraphAnswerCoverage` 与 `requireGraphAnswerPlanOrder`。验证器随后要求最终 coverage 包含全部 required claim ID，并要求规范化 public statement 按 plan 顺序出现。
+
+### 2026-07-19 最终 owner 与兼容性说明
+
+可执行链路依次由 `graphContextAssembler.ts`（有界子图）、`graphAnswerPlan.ts`（语义 claim 契约）、`conversationComposer.ts`（公开回答实现）和 `answerReleaseReview.ts`（最终发布不变量）负责。`graphAnswerFacts.ts` 是 composition 与 revision 共用的 fact-selection 策略，不生成 prose，也不新增编排层。
+
+`public_surface_contraction` 作为 `AnswerReleaseGateId` 为保持 wire compatibility 继续存在。其当前行为保护公开表面的结构与泄漏卫生，不得被解释或重新实现为 900 字符、固定句数或单条 `direct_support` 限制。
+
+当前验证契约：Water Glass 运行时验收要求 required claim ID 完整覆盖并保持 plan 顺序。code-humanizer 阶段后的全仓基线为 Jest 123/123 个 suite、1,149 个测试通过、26 个跳过，同时 TypeScript、production/Vite build、Diataxis、MkDocs 与 diff hygiene 均通过。

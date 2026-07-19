@@ -305,6 +305,14 @@ Required claims are all nonredundant claims with confidence greater than `0.75`;
 
 Runtime expectations may set `requireCompleteGraphAnswerCoverage` and `requireGraphAnswerPlanOrder`. The verifier then requires every required claim ID in final coverage and requires normalized public statements to occur in plan order.
 
+### 2026-07-19 final owner and compatibility clarification
+
+The executable path is owned in sequence by `graphContextAssembler.ts` (bounded subgraph), `graphAnswerPlan.ts` (semantic claim contract), `conversationComposer.ts` (public realization), and `answerReleaseReview.ts` (final release invariants). `graphAnswerFacts.ts` is a shared fact-selection policy used by composition and revision; it does not generate prose or add an orchestration layer.
+
+`public_surface_contraction` remains an `AnswerReleaseGateId` for wire compatibility. Its current behavior protects public-surface structure and leakage hygiene; it must not be interpreted or reimplemented as a 900-character, fixed-sentence, or single-`direct_support` limit.
+
+Current verification contract: the Water Glass runtime acceptance requires complete required-claim ID coverage and plan order. The repository-wide baseline after the code-humanizer pass is 123/123 Jest suites, 1,149 tests passed, and 26 skipped, with TypeScript, production/Vite build, Diataxis, MkDocs, and diff hygiene passing.
+
 ## 1. Runtime and Path Contracts
 
 ### 1.1 Runtime path resolution (`src/utils/RuntimePaths.ts`)

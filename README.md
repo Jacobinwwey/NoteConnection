@@ -52,6 +52,7 @@ Current state in brief:
 - **Coverage-driven graph answers** now use a typed `GraphAnswerPlan` and required-claim coverage review. Anchor spans, evidenced graph neighbors, relation edges, and omissions survive into response traces, knowledge-run artifacts, and export reports; public answers are no longer governed by a 900-character or six-sentence ceiling.
 - **Public evidence shaping** removes source authoring instructions, Markdown table scaffolding, and fenced renderer payloads without reducing semantic coverage. This is a content-quality boundary, not a length contraction mechanism.
 - **Coverage calibration and bounded expansion** now add polarity-aware multilingual claim matching, a versioned 24-case calibration corpus, novelty-aware claim ordering, and a replayable one-step graph expansion policy restricted to explicit deep/research requests. The Grounding Inspector exposes compact plan/coverage diagnostics without leaking planning scaffolding into the public answer.
+- **Graph-answer ownership is now explicit**: `graphContextAssembler.ts` selects the bounded subgraph, `graphAnswerPlan.ts` plans evidenced claims, `conversationComposer.ts` realizes them, and `answerReleaseReview.ts` enforces final grounding and coverage. Shared graph-window facts live in `graphAnswerFacts.ts`; this removes composer/reviewer policy drift without introducing another orchestration layer.
 
 Detailed progress tracking belongs in:
 
@@ -419,3 +420,11 @@ The graph-answer pipeline is now executable end to end in both RAG and non-RAG c
 Distinct high-confidence claims are required by information value after semantic deduplication, not by a one-claim-per-role quota. Public claim statements are shaped before planning so authoring instructions, table scaffolding, and renderer payloads cannot become mandatory answer content. Release revision preserves the ordered required plan instead of replacing it with a shorter answer, and runtime acceptance verifies final required-ID coverage and claim order.
 
 Coverage remains deterministic concept, polarity, and normalized-text matching; it is not semantic entailment. Large source fragments can still produce dense prose, so the next quality increment is clause-level evidence shaping and multilingual calibration rather than restoring character or sentence ceilings.
+
+## 2026-07-19 v1.8.0 Final Architecture and Progress Audit
+
+The current `main` implementation satisfies the completed Scheme B / Coverage-driven requirements: the graph plan executes in both RAG and non-RAG paths, distinct same-role claims remain coverable, release revision preserves required claim order, bounded graph expansion is restricted to explicit deep/research intent, and final runtime acceptance checks required claim IDs rather than answer length. The legacy gate name `public_surface_contraction` remains for compatibility, but it no longer imposes a 900-character or sentence-count ceiling.
+
+The code-humanizer follow-up consolidated graph-window fact selection and NoteMD no-op progress reporters, then removed backend comments that only narrated code. The latest verified baseline is 123/123 Jest suites, 1,149 tests passed, 26 skipped; TypeScript, production/Vite build, strengthened Water Glass runtime acceptance, Diataxis, MkDocs, and diff hygiene pass.
+
+Two directions remain deliberately open. First, dense mathematical source fragments need clause-level selection and source-quality scoring so answers become more fluent without losing graph coverage. Second, answer-planning orchestration should leave `KnowledgeLearningPlatform.ts` only when a new owner can perform the complete planned/reviewed-answer operation and reduce caller knowledge; a pass-through extraction would be architectural churn, not progress.

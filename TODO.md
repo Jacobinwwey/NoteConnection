@@ -12,7 +12,7 @@ Keep subsequent answer-quality work aligned with the completed coverage-driven g
 - [x] Public answers no longer have a 900-character or six-sentence hard ceiling.
 - [x] Shared public-evidence shaping filters authoring/control prose, Markdown table scaffolding, headings, and fenced renderer payloads.
 - [x] Water Glass integration requires definition, material boundary, thermal mechanism, and full required-claim coverage.
-- [x] Final verification passed 119/119 suites, 1,127 tests, TypeScript, production build, and runtime Water Glass acceptance.
+- [x] Historical closure checkpoint passed 119/119 suites, 1,127 tests, TypeScript, production build, and runtime Water Glass acceptance.
 
 ### Next direction
 - [x] Add a versioned 24-case EN/ZH calibration corpus spanning definition, causal, compare, procedure, temporal, and weak-evidence positive/negative cases.
@@ -21,7 +21,7 @@ Keep subsequent answer-quality work aligned with the completed coverage-driven g
 - [x] Add a replayable one-step graph-expansion policy for explicitly deep/research queries; ordinary definition/explain answers remain deterministic and bounded.
 - [ ] Extract answer-planning orchestration from `KnowledgeLearningPlatform.ts` only when the new owner can enforce a complete operation and reduce caller knowledge.
 - [x] Project compact plan/coverage/expansion diagnostics into the operator-only Grounding Inspector without exposing internal scaffolding in the main answer.
-- [x] Final verification passed 122/122 suites and 1,145 tests (26 skipped), production and Vite builds, documentation checks/build, and hardened Water Glass runtime acceptance.
+- [x] Follow-up phase checkpoint passed 122/122 suites and 1,145 tests (26 skipped), production and Vite builds, documentation checks/build, and hardened Water Glass runtime acceptance.
 
 ## 中文文档
 
@@ -35,7 +35,7 @@ Keep subsequent answer-quality work aligned with the completed coverage-driven g
 - [x] 公开回答不再具有 900 字符或六句硬上限。
 - [x] 共享 public-evidence shaping 会过滤 authoring/control prose、Markdown 表格脚手架、标题语法与 fenced renderer payload。
 - [x] Water Glass 集成验收要求定义、材料边界、热机制与完整 required-claim coverage。
-- [x] 最终验证为 119/119 个 suite、1,127 个测试、TypeScript、production build 和 Water Glass 运行时验收通过。
+- [x] 历史收口检查点验证为 119/119 个 suite、1,127 个测试、TypeScript、production build 和 Water Glass 运行时验收通过。
 
 ### 后续方向
 - [x] 建立版本化的 24-case 中英文校准语料，覆盖 definition、causal、compare、procedure、temporal 与 weak-evidence 正反例。
@@ -44,7 +44,7 @@ Keep subsequent answer-quality work aligned with the completed coverage-driven g
 - [x] 为显式 deep/research 查询增加可回放的一步图扩展策略；普通 definition/explain 回答继续保持确定性和有界性。
 - [ ] 只有新 owner 能强制完整操作并降低 caller knowledge 时，才从 `KnowledgeLearningPlatform.ts` 抽取 answer-planning 编排。
 - [x] 已在 operator-only Grounding Inspector 中投影紧凑 plan/coverage/expansion 诊断，不向主回答暴露内部脚手架。
-- [x] 最终验证通过 122/122 个 suite、1,145 个测试（26 个跳过）、production/Vite build、文档检查/构建与加固后的 Water Glass 运行时验收。
+- [x] 后续 Phase 检查点通过 122/122 个 suite、1,145 个测试（26 个跳过）、production/Vite build、文档检查/构建与加固后的 Water Glass 运行时验收。
 
 ---
 
@@ -7673,3 +7673,27 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] release revision 保留 required claims 的计划顺序。
 - [x] Water Glass runtime 校验最终 required-ID 覆盖、顺序和脚手架卫生。
 - [ ] 在不恢复长度硬限制的前提下校准密集数学 fragment 的 clause 级选择。
+
+## 2026-07-19 v1.8.0 Final Delivery Audit
+
+### English
+
+- [x] Verify executable plan ownership across graph assembly, planning, composition, release review, and final coverage.
+- [x] Verify RAG required-claim realization, same-role claim preservation, citation-backed plan evidence, and release-order preservation.
+- [x] Verify bounded deep/research expansion, 24-case multilingual calibration, and Grounding Inspector projection.
+- [x] Complete repository-wide code-humanizer cleanup in isolated behavior-preserving commits.
+- [x] Update README, interface contracts, implementation plan, and EN/ZH progress dashboards from current code evidence.
+- [x] Final baseline: 123/123 Jest suites, 1,149 passed, 26 skipped; TypeScript, production/Vite build, Water Glass runtime acceptance, Diataxis, MkDocs, and diff hygiene passed.
+- [ ] Add clause-level evidence segmentation and source-quality scoring for dense mathematical fragments; prove improved readability without reducing required-claim coverage.
+- [ ] Extract planned/reviewed-answer orchestration only after a complete-operation boundary demonstrably reduces `KnowledgeLearningPlatform.ts` caller knowledge.
+
+### 中文
+
+- [x] 核验 graph assembly、planning、composition、release review 与最终 coverage 的可执行 owner 边界。
+- [x] 核验 RAG required claim 实现、同 role claim 保留、带 citation 的 plan evidence 与 release 顺序保持。
+- [x] 核验显式 deep/research 有界扩展、24-case 多语言校准与 Grounding Inspector 投影。
+- [x] 以独立、行为保持型提交完成全仓 code-humanizer 清理。
+- [x] 基于当前代码证据同步 README、接口契约、实施方案与中英文进度面板。
+- [x] 最终基线：Jest 123/123 个 suite、1,149 个测试通过、26 个跳过；TypeScript、production/Vite build、Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。
+- [ ] 为密集数学 fragment 增加 clause-level evidence segmentation 与 source-quality scoring；必须证明可读性提升且 required-claim coverage 不下降。
+- [ ] 只有完整 operation 边界能明确降低 `KnowledgeLearningPlatform.ts` 的 caller knowledge 时，才抽取 planned/reviewed-answer 编排。

@@ -3,7 +3,7 @@ module: learning
 tags: [agent, augmented-rag, graph, answer-planning, coverage]
 problem_type: implementation-plan
 created: 2026-07-11
-updated: 2026-07-18
+updated: 2026-07-19
 status: completed
 ---
 
@@ -340,6 +340,38 @@ Final evidence: every code cleanup commit passed the full Jest oracle; the final
 最终扫描没有发现可安全删除的 `_v2`/`_new` clone、dead export、try-import fallback 或单实现抽象。脚本内部 CLI parser 与进程 helper 需要先补 characterization test 才能合并；前端 `.js`/`.mjs` 重复属于已记录的迁移兼容面。文件系统、网络、IPC、worker 与 WASM 边界的 broad catch 被视为边界行为，没有静默改变。
 
 最终证据：每个代码清理提交均通过全量 Jest oracle；最终状态为 123/123 个 suite、1,149 个测试通过、26 个跳过。TypeScript、production/Vite build、Diataxis、MkDocs 与 `git diff --check` 也均通过。
+
+## 2026-07-19 Final Delivery Audit
+
+### English
+
+| Prior requirement | Current code evidence | Status | Trade-off / remaining risk |
+|---|---|---|---|
+| Use graph structure as an answer contract | `graphContextAssembler.ts` selects a bounded subgraph; `graphAnswerPlan.ts` carries node/edge provenance and omissions | Complete | Degree remains a discovery signal, never relevance proof |
+| Make RAG execute the plan | `buildPlanDrivenRagAnswer()` realizes ordered required claims before supplemental fragments | Complete | Deterministic realization can still be dense when source clauses are dense |
+| Preserve multiple useful related nodes | Novelty deduplication plus confidence-based required status allows distinct same-role claims | Complete | Thresholds remain calibration policy, not semantic truth |
+| Remove conflicting length quotas | No 900-character, six-sentence, or one-`direct_support` correctness limit remains | Complete | `public_surface_contraction` remains for compatibility but now governs structure/leakage hygiene |
+| Enforce final coverage after revision | `preserveRequiredGraphAnswerClaims()` and `reviewGraphAnswerCoverage()` run across revision/final output | Complete | Matching is deterministic concept/polarity logic, not LLM entailment |
+| Bound graph expansion | `resolveGraphExpansionPolicy()` permits one replayable step only for explicit deep/research intent | Complete | Autonomous multi-step exploration remains intentionally out of scope |
+| Provide operator observability | Grounding Inspector projects plan, coverage, omissions, and expansion without exposing scaffolding in the answer | Complete | A separate inspector is preferable to polluting public prose |
+| Reduce duplicated policy | `graphAnswerFacts.ts` and `createNoopProgressReporter()` own formerly duplicated behavior | Complete | Script-local helpers await characterization before consolidation |
+
+The next implementation phase is not another orchestration hierarchy. It is clause-level evidence segmentation plus source-quality scoring for dense mathematical fragments, with an acceptance rule that readability improves while required-claim coverage and citation provenance do not regress. Orchestration extraction from `KnowledgeLearningPlatform.ts` remains conditional on a complete planned/reviewed-answer operation that removes caller knowledge; a pass-through owner is explicitly rejected.
+
+### 中文
+
+| 先前要求 | 当前代码证据 | 状态 | 权衡 / 剩余风险 |
+|---|---|---|---|
+| 把图结构作为回答契约 | `graphContextAssembler.ts` 选择有界子图；`graphAnswerPlan.ts` 保存节点/边 provenance 与 omission | 完成 | degree 仍只用于发现，不构成 relevance 证明 |
+| 让 RAG 真正执行 plan | `buildPlanDrivenRagAnswer()` 先按顺序实现 required claim，再补充 fragment | 完成 | 源 clause 密集时，确定性实现仍可能形成密集 prose |
+| 保留多个有价值关联节点 | 新颖性去重与基于置信度的 required 状态允许同 role 的不同 claim 共存 | 完成 | 阈值是校准策略，不是语义真值 |
+| 移除冲突的长度配额 | 不再存在 900 字符、六句或单条 `direct_support` 正确性限制 | 完成 | `public_surface_contraction` 名称为兼容保留，当前只治理结构/泄漏卫生 |
+| revision 后强制最终 coverage | `preserveRequiredGraphAnswerClaims()` 与 `reviewGraphAnswerCoverage()` 覆盖 revision/最终输出 | 完成 | matcher 是确定性的概念/极性逻辑，不是 LLM entailment |
+| 限制图扩展 | `resolveGraphExpansionPolicy()` 只对显式 deep/research 意图允许一步可回放扩展 | 完成 | 自主多步探索有意不在默认范围内 |
+| 提供 operator 可观测性 | Grounding Inspector 投影 plan、coverage、omission 与 expansion，不污染公开回答 | 完成 | 独立 inspector 优于把内部脚手架混入 prose |
+| 收敛重复策略 | `graphAnswerFacts.ts` 与 `createNoopProgressReporter()` 统一原重复行为 | 完成 | 脚本局部 helper 需 characterization 后才能合并 |
+
+下一实施阶段不是再加一层编排，而是针对密集数学 fragment 做 clause-level evidence segmentation 与 source-quality scoring；验收要求是可读性提升，同时 required-claim coverage 与 citation provenance 不回退。`KnowledgeLearningPlatform.ts` 的编排抽取继续以完整 planned/reviewed-answer operation 为前提，必须实际移除 caller knowledge；明确拒绝 pass-through owner。
 
 ## English - 2026-07-19 executable-plan correction
 

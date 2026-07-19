@@ -51,6 +51,7 @@ README 不再作为主线架构状态流水账。此前堆叠在首页的多段�
 - **图底座** 不是占位概念：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query、mastery path、session state 和 export bundle 都已落地。
 - **向前兼容** 通过 legacy `assistantMessage`、typed `assistantBlocks`、`app_config.toml` 迁移、Markdown reader fallback 和 runtime-first packaging 保持。
 - **架构压力** 仍集中在 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/workspace_panes.js` 和 `src/frontend/agent_workspace.js` 等大 owner。后续应围绕真实不变量做窄提取，而不是继续导入新的编排框架。
+- **图回答 owner 已明确**：`graphContextAssembler.ts` 选择有界子图，`graphAnswerPlan.ts` 规划有证据的 claim，`conversationComposer.ts` 实现回答，`answerReleaseReview.ts` 强制最终 grounding 与 coverage。共享 graph-window fact 已收敛到 `graphAnswerFacts.ts`，避免 composer/reviewer 策略漂移，同时没有新增编排层。
 
 详细进展见：
 
@@ -428,3 +429,11 @@ NoteConnection 受益于许多开源项目与本地参考镜像。以下致谢�
 同一 role 下的不同高置信 claim 现在按信息价值进入 required 集合，不再受“一种 role 只能一条”的配额约束。claim 在进入 plan 前完成公开文本整形，作者指令、表格脚手架和 renderer payload 不会成为强制回答内容。release revision 保留 required claim 顺序；运行时验收直接检查最终公开回答的 required-ID 全覆盖与 claim 顺序。
 
 当前 coverage 仍是确定性的概念、极性和规范化文本匹配，不等同于 semantic entailment。长源 fragment 仍可能形成密集 prose，后续应继续做 clause 级 evidence shaping 和多语言校准，而不是恢复字符数或句子数硬上限。
+
+## 2026-07-19 v1.8.0 最终架构与进度审计
+
+当前 `main` 已满足完成态的方案 B / Coverage-driven 要求：graph plan 在 RAG 与非 RAG 路径中实际执行，同 role 的不同 claim 可被完整覆盖，release revision 保留 required claim 顺序，有界图扩展只对显式 deep/research 意图启用，最终运行时验收检查 required claim ID 而不是回答长度。兼容 gate 名 `public_surface_contraction` 仍保留，但已不再施加 900 字符或句数上限。
+
+后续 code-humanizer 阶段收敛了 graph-window fact 选择和 NoteMD no-op progress reporter，并移除了只复述代码的 backend 注释。最新验证基线为 Jest 123/123 个 suite、1,149 个测试通过、26 个跳过；TypeScript、production/Vite build、强化后的 Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。
+
+仍有两个方向有意保持开放。第一，密集数学源 fragment 需要 clause-level selection 与 source-quality scoring，在不丢失图 coverage 的前提下提升流畅度。第二，只有新 owner 能完成完整的 planned/reviewed-answer operation 并降低 caller knowledge 时，才应把 answer-planning 编排移出 `KnowledgeLearningPlatform.ts`；单纯增加 pass-through 层属于架构扰动，不是推进。

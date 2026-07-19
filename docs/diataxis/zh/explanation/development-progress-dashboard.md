@@ -1698,3 +1698,19 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 首轮 code-humanizer 清理通过 `graphAnswerFacts.ts` 移除了重复的 graph-window 提取，并完成定向与全量验证。其余具有不同归一化或非有限值契约的相似 helper 有意保留；复核没有发现可安全删除的死代码或可直接移除的投机抽象。
 
 完成后的全仓复核还收敛了四份相同的 NoteMD no-op progress reporter，并删除 20 条 backend 叙述性注释。脚本局部 CLI helper 与前端 `.js`/`.mjs` 迁移双轨在 characterization 或迁移闭合前继续作为明确豁免项。最终 oracle：123/123 个 suite、1,149 个测试通过、26 个跳过；TypeScript、production/Vite build、Diataxis、MkDocs 与 diff hygiene 均通过。
+
+## 2026-07-19 最终交付对齐
+
+| 阶段 | 当前 owner / 证据 | 进度 | 下一决策 |
+|---|---|---|---|
+| 有界图上下文 | `graphContextAssembler.ts`、relation/path/temporal 测试 | 完成 | 继续按意图与证据限制图宽度 |
+| Coverage-driven planning | `graphAnswerPlan.ts`、校准语料、omission trace | 完成 | 校准 source clause，而不是回答长度 |
+| RAG/非 RAG 实现 | `conversationComposer.ts` 与 `buildPlanDrivenRagAnswer()` | 完成 | 不套模板地提升 discourse 流畅度 |
+| 最终发布不变量 | `answerReleaseReview.ts`、最终 coverage 重算、带 citation 的 plan evidence | 完成 | 保持确定性与可回放性 |
+| 运行时验收 | required IDs、plan 顺序、Water Glass 泄漏卫生 | 完成 | source-quality rollout 前增加可读性指标 |
+| Operator 投影 | Grounding Inspector 的 plan/coverage/expansion 视图 | 完成 | 内部脚手架不进入公开 prose |
+| 结构清理 | graph facts、NoteMD reporter owner、叙述性注释移除 | 完成 | 脚本 helper 在合并前先做 characterization |
+| Clause-level source quality | 当前尚无生产 scorer/segmenter | 未开始 | 增加 clause segmentation、quality feature 与非回退 gate |
+| 编排抽取 | 仍位于 `KnowledgeLearningPlatform.ts` | 条件性 | 只抽取完整 planned/reviewed-answer operation |
+
+尚未解决的核心问题不是“如何再加一层 Agent”，而是：**如何从密集源 fragment 中选择流畅、clause 粒度的证据，同时不削弱 required graph coverage、provenance 与确定性 release review？** 这才是下一工程阶段。

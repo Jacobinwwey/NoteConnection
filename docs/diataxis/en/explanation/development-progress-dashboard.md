@@ -1669,3 +1669,19 @@ The earlier checkpoint proved plan construction and projection, but did not prov
 The first code-humanizer pass removed duplicated graph-window extraction through `graphAnswerFacts.ts`, with focused and full-suite verification. Similar helpers with different normalization or non-finite-value contracts remain intentionally unchanged; the audit found no safe dead-code deletion or unjustified abstraction removal.
 
 The completed repository-wide pass also consolidated four identical NoteMD no-op progress reporters and removed 20 narrating backend comments. Script-local CLI helpers and frontend `.js`/`.mjs` migration pairs remain explicit exemptions pending characterization or migration closure. Final oracle: 123/123 suites, 1,149 passed, 26 skipped; TypeScript, production/Vite build, Diataxis, MkDocs, and diff hygiene passed.
+
+## 2026-07-19 Final Delivery Alignment
+
+| Stage | Current owner/evidence | Progress | Next decision |
+|---|---|---|---|
+| Bounded graph context | `graphContextAssembler.ts`, relation/path/temporal tests | Complete | Keep graph breadth bounded by intent and evidence |
+| Coverage-driven planning | `graphAnswerPlan.ts`, calibration corpus, omission trace | Complete | Calibrate source clauses, not answer length |
+| RAG/non-RAG realization | `conversationComposer.ts` and `buildPlanDrivenRagAnswer()` | Complete | Improve discourse fluency without templates |
+| Final release invariants | `answerReleaseReview.ts`, final coverage recalculation, citation-backed plan evidence | Complete | Preserve deterministic replayability |
+| Runtime acceptance | required IDs, plan order, Water Glass leakage hygiene | Complete | Add readability metrics before source-quality rollout |
+| Operator projection | Grounding Inspector plan/coverage/expansion view | Complete | Keep internal scaffolding out of public prose |
+| Structural cleanup | graph facts, NoteMD reporter owner, narrating-comment removal | Complete | Characterize script helpers before consolidation |
+| Clause-level source quality | no production scorer/segmenter exists yet | Not started | Add clause segmentation, quality features, and non-regression gates |
+| Orchestration extraction | remains inside `KnowledgeLearningPlatform.ts` | Conditional | Extract only a complete planned/reviewed-answer operation |
+
+The critical unresolved question is not “how do we add another agent layer?” It is: **how can the runtime select fluent, clause-sized evidence from dense source fragments without weakening required graph coverage, provenance, or deterministic release review?** That is the next engineering phase.
