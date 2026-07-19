@@ -39,7 +39,6 @@ export class GraphBuilder {
     // 1. 首先添加所有节点
     const fileMap = new Map<string, RawFile>();
     files.forEach(file => {
-      // Parse Metadata (Tags, Prerequisites, Next)
       const metadata = FrontmatterParser.parse(file.content);
 
       const node: NoteNode = {
@@ -65,7 +64,6 @@ export class GraphBuilder {
       graph.addNode(node);
       fileMap.set(file.filename, file);
 
-      // 1b. Add Tag Nodes
       if (config.enableTags) {
           metadata.tags.forEach(tag => {
               const tagId = `#${tag}`;
@@ -77,7 +75,6 @@ export class GraphBuilder {
                       clusterId: 'tags' // Group tags together
                   });
               }
-              // Edge: Note -> Tag
               graph.addEdge(node.id, tagId, 'tagged');
           });
       }
@@ -191,7 +188,6 @@ export class GraphBuilder {
                 const similar = sharedVectorSpace!.getSimilar(file.filename, 3); // Top 3 similar
                 similar.forEach(sim => {
                     if (sim.score > 0.3) { // Threshold
-                        // Add UNDIRECTED association
                         graph.addEdge(file.filename, sim.id, 'vector-association', sim.score);
                         similarityEdges++;
                     }

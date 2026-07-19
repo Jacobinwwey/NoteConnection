@@ -158,7 +158,6 @@ export class CycleDetector {
                     continue;
                 }
 
-                // Get next neighbor
                 const neighborId = frame.neighbors[frame.index];
                 frame.index++; // Advance for next time
 

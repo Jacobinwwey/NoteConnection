@@ -43,12 +43,10 @@ export class HybridEngine {
                 if (checkedPairs.has(pairKey)) return;
                 checkedPairs.add(pairKey);
 
-                // Get Reverse Metrics
                 const rowB = matrix.get(nodeB);
                 const metricsBtoA = rowB ? rowB.get(nodeA) : null;
                 if (!metricsBtoA) return;
 
-                // 1. Check Vector Similarity
                 const vecA = vectorSpace.getVector(nodeA);
                 const vecB = vectorSpace.getVector(nodeB);
                 if (!vecA || !vecB) return;
@@ -58,7 +56,6 @@ export class HybridEngine {
 
                 if (similarity < vectorThreshold) return;
 
-                // 2. Check Asymmetry
                 // P(B|A) = metricsAtoB.conditionalProb
                 // P(A|B) = metricsBtoA.conditionalProb
                 

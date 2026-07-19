@@ -21,7 +21,6 @@ export class FileLoader {
   static async loadFiles(dirPath: string, extensions: string[] = ['.md']): Promise<RawFile[]> {
     const filePaths: string[] = [];
     
-    // Check if directory exists
     if (!fs.existsSync(dirPath)) {
       console.warn(`Directory not found: ${dirPath}`);
       return [];

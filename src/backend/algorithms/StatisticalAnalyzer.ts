@@ -18,7 +18,6 @@ export class StatisticalAnalyzer {
      */
     static async analyzeAsync(files: RawFile[], terms: string[]): Promise<Map<string, Map<string, CooccurrenceMetrics>>> {
         const termDocCounts = new Map<string, number>();
-        // Initialize counts
         terms.forEach(term => termDocCounts.set(term, 0));
 
         // 1. Parallel Term Extraction
@@ -149,8 +148,6 @@ export class StatisticalAnalyzer {
         // 临时存储交集计数：源 -> 目标 -> 计数
         const intersectionCounts = new Map<string, Map<string, number>>();
 
-        // Iterate over files to find co-occurring pairs
-        // 遍历文件以查找共现对
         for (const termsInFile of Object.values(fileTermsMap)) {
             // Ensure unique terms per file to avoid self-loops or double counting within same file
             const uniqueTerms = Array.from(new Set(termsInFile));
@@ -158,7 +155,6 @@ export class StatisticalAnalyzer {
             for (let i = 0; i < uniqueTerms.length; i++) {
                 const source = uniqueTerms[i];
                 
-                // Initialize row if needed
                 if (!intersectionCounts.has(source)) {
                     intersectionCounts.set(source, new Map());
                 }

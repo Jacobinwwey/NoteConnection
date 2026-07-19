@@ -176,7 +176,6 @@ export class LayoutEngine {
             });
 
             worker.on('message', (positions: Map<string, {x: number, y: number}>) => {
-                // Update graph nodes with computed positions
                 positions.forEach((pos, id) => {
                     const node = graph.getNode(id);
                     if (node) {

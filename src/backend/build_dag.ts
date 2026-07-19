@@ -128,7 +128,6 @@ class StructureGenerator {
         const inDegreeMap = new Map<string, number>();
         const outDegreeMap = new Map<string, number>();
 
-        // Initialize maps
         notes.forEach(n => {
             inDegreeMap.set(n.id, 0);
             outDegreeMap.set(n.id, 0);

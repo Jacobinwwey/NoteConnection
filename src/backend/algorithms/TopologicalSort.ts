@@ -137,13 +137,11 @@ export class TopologicalSort {
             const neighbors = graph.getNeighbors(uId);
 
             for (const vId of neighbors) {
-                // Update rank of v
                 const currentVRank = ranks.get(vId) || 0;
                 if (uRank + 1 > currentVRank) {
                     ranks.set(vId, uRank + 1);
                 }
 
-                // Decrement in-degree
                 const d = (inDegrees.get(vId) as number) - 1;
                 inDegrees.set(vId, d);
 

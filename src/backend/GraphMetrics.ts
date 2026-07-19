@@ -281,8 +281,6 @@ export class GraphMetrics {
         try {
             const results = await Promise.all(workerPromises);
             
-            // Merge results
-            // 合并结果
             const totalCB = new Map<string, number>();
             nodes.forEach(n => totalCB.set(n.id, 0));
 
@@ -310,7 +308,6 @@ export class GraphMetrics {
         const nodes = graph.toJSON().nodes;
         const cb = new Map<string, number>();
         
-        // Initialize
         nodes.forEach(n => cb.set(n.id, 0));
 
         // For each node s, calculate dependencies
