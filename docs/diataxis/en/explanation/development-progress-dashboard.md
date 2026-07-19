@@ -1667,3 +1667,5 @@ The earlier checkpoint proved plan construction and projection, but did not prov
 ### Code-humanizer follow-up
 
 The first code-humanizer pass removed duplicated graph-window extraction through `graphAnswerFacts.ts`, with focused and full-suite verification. Similar helpers with different normalization or non-finite-value contracts remain intentionally unchanged; the audit found no safe dead-code deletion or unjustified abstraction removal.
+
+The completed repository-wide pass also consolidated four identical NoteMD no-op progress reporters and removed 20 narrating backend comments. Script-local CLI helpers and frontend `.js`/`.mjs` migration pairs remain explicit exemptions pending characterization or migration closure. Final oracle: 123/123 suites, 1,149 passed, 26 skipped; TypeScript, production/Vite build, Diataxis, MkDocs, and diff hygiene passed.

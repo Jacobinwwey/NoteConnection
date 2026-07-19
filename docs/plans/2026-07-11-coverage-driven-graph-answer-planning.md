@@ -317,6 +317,30 @@ Verification: `tsc --noEmit` passed; focused graph/composer/release tests passed
 
 验证结果：`tsc --noEmit` 通过；graph/composer/release 定向测试 76/76 通过；全量 Jest 123/123 个 suite 通过，1,149 个测试通过，26 个跳过。
 
+### 2026-07-19 repository-wide code-humanizer completion
+
+The repository-wide pass covered `src/learning`, backend/core algorithms, frontend JavaScript/ES-module migration surfaces, NoteMD, and build/verification scripts. Three behavior-preserving pattern classes were completed as separate commits:
+
+- Pattern #1: replaced two graph-window extraction implementations with one graph-fact owner;
+- Pattern #1: replaced four identical NoteMD no-op reporter factories with `createNoopProgressReporter()`;
+- Pattern #12: removed 20 backend comments that only narrated the following operation, while preserving relation-direction, probability, memory, fallback, mutation, and algorithm-invariant comments.
+
+The final scan found no safe `_v2`/`_new` clone, dead export, try-import fallback, or single-implementation abstraction to remove. Script-local CLI parsers and process helpers require characterization tests before consolidation; frontend `.js`/`.mjs` duplication is part of the documented migration compatibility surface. Broad catches at filesystem, network, IPC, worker, and WASM boundaries were treated as boundary behavior and not silently changed.
+
+Final evidence: every code cleanup commit passed the full Jest oracle; the final state is 123/123 suites, 1,149 passed, 26 skipped. TypeScript, production/Vite build, Diataxis, MkDocs, and `git diff --check` also passed.
+
+### 2026-07-19 全仓 code-humanizer 完成状态
+
+全仓复核覆盖 `src/learning`、backend/core 算法、前端 JavaScript/ES-module 迁移面、NoteMD 和构建/验证脚本，并以独立提交完成三种行为保持型清理：
+
+- Pattern #1：把两份 graph-window 提取收敛为单一 graph-fact owner；
+- Pattern #1：把四份相同的 NoteMD no-op reporter factory 收敛为 `createNoopProgressReporter()`；
+- Pattern #12：删除 20 条只复述下一行操作的 backend 注释，同时保留关系方向、概率、内存、fallback、mutation 与算法不变量说明。
+
+最终扫描没有发现可安全删除的 `_v2`/`_new` clone、dead export、try-import fallback 或单实现抽象。脚本内部 CLI parser 与进程 helper 需要先补 characterization test 才能合并；前端 `.js`/`.mjs` 重复属于已记录的迁移兼容面。文件系统、网络、IPC、worker 与 WASM 边界的 broad catch 被视为边界行为，没有静默改变。
+
+最终证据：每个代码清理提交均通过全量 Jest oracle；最终状态为 123/123 个 suite、1,149 个测试通过、26 个跳过。TypeScript、production/Vite build、Diataxis、MkDocs 与 `git diff --check` 也均通过。
+
 ## English - 2026-07-19 executable-plan correction
 
 The previous closure confused plan projection with plan execution. The causal defect was the RAG early return in `buildScopedConversationAnswer()`: the RAG answer returned before `GraphAnswerPlan.claims` were consumed. A second defect marked only one claim per role as required, so distinct graph facts could disappear without failing coverage.

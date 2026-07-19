@@ -1696,3 +1696,5 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 ### Code-humanizer 后续复核
 
 首轮 code-humanizer 清理通过 `graphAnswerFacts.ts` 移除了重复的 graph-window 提取，并完成定向与全量验证。其余具有不同归一化或非有限值契约的相似 helper 有意保留；复核没有发现可安全删除的死代码或可直接移除的投机抽象。
+
+完成后的全仓复核还收敛了四份相同的 NoteMD no-op progress reporter，并删除 20 条 backend 叙述性注释。脚本局部 CLI helper 与前端 `.js`/`.mjs` 迁移双轨在 characterization 或迁移闭合前继续作为明确豁免项。最终 oracle：123/123 个 suite、1,149 个测试通过、26 个跳过；TypeScript、production/Vite build、Diataxis、MkDocs 与 diff hygiene 均通过。
