@@ -34,6 +34,7 @@ import {
     shouldRejectPublicEvidenceClause,
     shouldRejectCompareProcedureEvidenceClause,
 } from './ragPublicText';
+import { graphClaimSemanticSimilarity } from './graphClaimMatcher';
 
 export type BuildAgentWorkspaceCapabilities = (atomId: string) => unknown[];
 
@@ -799,7 +800,8 @@ function appendRagEvidenceSentence(
         const existingKey = sentenceComparableKey(sentence);
         return existingKey === candidateKey
             || (candidateKey.length >= 32 && existingKey.includes(candidateKey))
-            || (existingKey.length >= 32 && candidateKey.includes(existingKey));
+            || (existingKey.length >= 32 && candidateKey.includes(existingKey))
+            || graphClaimSemanticSimilarity(existingKey, candidateKey) >= 0.86;
     });
     if (!alreadyCovered) {
         sentences.push(normalized);

@@ -1714,3 +1714,15 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 | 编排抽取 | 仍位于 `KnowledgeLearningPlatform.ts` | 条件性 | 只抽取完整 planned/reviewed-answer operation |
 
 尚未解决的核心问题不是“如何再加一层 Agent”，而是：**如何从密集源 fragment 中选择流畅、clause 粒度的证据，同时不削弱 required graph coverage、provenance 与确定性 release review？** 这才是下一工程阶段。
+
+## 2026-07-19 Clause-Level Source Quality 完成
+
+| 阶段 | 当前 owner / 证据 | 进度 | 剩余风险 |
+|---|---|---|---|
+| Clause segmentation | `src/learning/ragEvidenceQuality.ts`、decimal/math boundary 测试 | 完成 | delimiter heuristic 是确定性规则，不是 entailment |
+| Source-quality scoring | delimiter 平衡、句末完整性、数学密度、文档元叙述惩罚 | 完成 | score 只是排序信号，不构成 relevance 证明 |
+| Plan shaping | `graphAnswerPlan.ts` 选择完整 public clause 并保留 raw provenance | 完成 | 一个 fragment 仍代表一个 graph claim |
+| Supplemental 去重 | `conversationComposer.ts` 语义相似度阈值 0.86 | 完成 | 阈值仍需未来多语言校准 |
+| Coverage 保持 | graph plan/release/coverage focused tests 与 Water Glass required ID/order | 完成 | runtime verifier full restore 仍受环境耗时影响 |
+
+先前的核心问题已经在确定性选择层得到解决。剩余架构决策仍是条件性的：只有新 owner 能执行完整 planned/reviewed-answer operation 并减少 caller knowledge 时，才从 `KnowledgeLearningPlatform.ts` 抽取编排。

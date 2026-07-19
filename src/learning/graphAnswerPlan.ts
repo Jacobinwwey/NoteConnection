@@ -8,8 +8,13 @@ import type {
     RagEvidenceFragment,
     RelationKind,
 } from './types';
-import { naturalizeRagPublicEvidenceClause, shouldRejectPublicEvidenceClause } from './ragPublicText';
+import {
+    naturalizeRagPublicEvidenceClause,
+    shouldRejectCompareProcedureEvidenceClause,
+    shouldRejectPublicEvidenceClause,
+} from './ragPublicText';
 import { graphClaimSemanticSimilarity } from './graphClaimMatcher';
+import { scoreRagEvidenceClause, segmentRagEvidenceClauses } from './ragEvidenceQuality';
 
 export interface BuildGraphAnswerPlanParams {
     message: string;
@@ -20,10 +25,6 @@ export interface BuildGraphAnswerPlanParams {
 
 function normalize(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
-}
-
-function isAuthoringScaffolding(value: string): boolean {
-    return shouldRejectPublicEvidenceClause(value);
 }
 
 function selectPublicClaimStatement(value: string, title?: string): string {
@@ -42,6 +43,51 @@ function selectPublicClaimStatement(value: string, title?: string): string {
         .join(' ')
         .replace(/(\d)\.\s+(?=\d)/gu, '$1.')
         .trim();
+}
+
+function publicClaimAnchorTerms(message: string, title?: string): string[] {
+    const source = `${message} ${title || ''}`.toLowerCase();
+    return Array.from(new Set(source.match(/[a-z0-9][a-z0-9_-]{2,}|[\u3400-\u9fff]{2,}/gu) || []));
+}
+
+function selectQualityPublicClaimStatement(value: string, title: string | undefined, message: string): string {
+    const normalizedEvidence = naturalizeRagPublicEvidenceClause(normalize(value));
+    if (!normalizedEvidence) {
+        return '';
+    }
+    const normalizedTitle = normalize(String(title || '').replace(/\s*\((?:mermaid|code|diagram)\s+block\)\s*$/iu, ''));
+    const anchorTerms = publicClaimAnchorTerms(message, normalizedTitle);
+    const candidates = segmentRagEvidenceClauses(normalizedEvidence)
+        .map((clause) => naturalizeRagPublicEvidenceClause(clause))
+        .map((clause) => {
+            if (!normalizedTitle || !clause.toLowerCase().startsWith(`${normalizedTitle.toLowerCase()} `)) {
+                return clause;
+            }
+            const remainder = clause.slice(normalizedTitle.length).trim();
+            const repeatsTitle = remainder.toLowerCase().startsWith(`${normalizedTitle.toLowerCase()} `);
+            const titleWordCount = normalizedTitle.split(/\s+/u).filter(Boolean).length;
+            return repeatsTitle || (titleWordCount > 1 && /^(?:a|an|the)\s+/iu.test(remainder))
+                ? remainder
+                : clause;
+        })
+        .filter((clause) => (
+            clause
+            && !shouldRejectPublicEvidenceClause(clause)
+            && !shouldRejectCompareProcedureEvidenceClause(clause, message)
+        ))
+        .map((clause, order) => {
+            const lowerClause = clause.toLowerCase();
+            const anchorMatches = anchorTerms.filter((term) => lowerClause.includes(term)).length;
+            const incompleteEnding = /\b(?:and|or|with|at|in|between|is|are|from|to)$/iu.test(clause)
+                || /(?:以及|并且|其中|通常在|范围为|分别为|是|为)$/u.test(clause);
+            return {
+                clause,
+                score: scoreRagEvidenceClause(clause).score + Math.min(0.6, anchorMatches * 0.2) - (incompleteEnding ? 0.5 : 0),
+                order,
+            };
+        });
+    candidates.sort((left, right) => right.score - left.score || left.order - right.order);
+    return candidates[0]?.clause.replace(/(\d)\.\s+(?=\d)/gu, '$1.').trim() || '';
 }
 
 function classifyIntent(message: string): GraphAnswerPlan['intent'] {
@@ -86,9 +132,10 @@ function makeClaim(params: {
     citationIds?: string[];
     edgeIds?: string[];
     confidence: number;
+    message: string;
 }): GraphAnswerClaimPlan {
     const evidenceText = normalize(params.statement);
-    const publicStatement = selectPublicClaimStatement(evidenceText, params.title);
+    const publicStatement = selectQualityPublicClaimStatement(evidenceText, params.title, params.message);
     return {
         claimId: `graph_claim_${params.index + 1}`,
         role: params.role,
@@ -135,7 +182,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
         claims.push(claim);
     };
 
-    (anchor?.matchedSpans || []).filter((span) => !isAuthoringScaffolding(span.snippet)).forEach((span, spanIndex) => append(makeClaim({
+    (anchor?.matchedSpans || []).forEach((span, spanIndex) => append(makeClaim({
         index: claims.length,
         role: spanIndex === 0 ? 'definition' : inferRole(span.title, span.snippet),
         statement: span.snippet,
@@ -146,11 +193,12 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
         evidenceId: span.citation?.citationId || `span_${span.atomId}_${claims.length + 1}`,
         citationIds: span.citation ? [span.citation.citationId] : [],
         confidence: span.score,
+        message: params.message,
     })));
 
     const selectedSupportingAtomIds = new Set(params.graphContext?.supportingAtomIds || []);
     (params.ragContextPack?.fragments || [])
-        .filter((fragment) => fragment.role !== 'background' && !isAuthoringScaffolding(fragment.text))
+        .filter((fragment) => fragment.role !== 'background')
         .filter((fragment) => (
             fragment.role !== 'graph_neighbor_support'
             || selectedSupportingAtomIds.size <= 0
@@ -170,6 +218,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
                 citationIds: fragment.citationIds,
                 edgeIds: fragment.relationEdgeIds,
                 confidence: Number(fragment.score || 0.75),
+                message: params.message,
             }));
         });
 
@@ -185,6 +234,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
             evidenceId: anchor.citation?.citationId || `point_${anchor.atomId}`,
             citationIds: anchor.citation ? [anchor.citation.citationId] : [],
             confidence: anchor.score,
+            message: params.message,
         }));
     }
 

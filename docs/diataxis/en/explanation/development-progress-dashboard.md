@@ -1685,3 +1685,15 @@ The completed repository-wide pass also consolidated four identical NoteMD no-op
 | Orchestration extraction | remains inside `KnowledgeLearningPlatform.ts` | Conditional | Extract only a complete planned/reviewed-answer operation |
 
 The critical unresolved question is not “how do we add another agent layer?” It is: **how can the runtime select fluent, clause-sized evidence from dense source fragments without weakening required graph coverage, provenance, or deterministic release review?** That is the next engineering phase.
+
+## 2026-07-19 Clause-Level Source Quality Completion
+
+| Stage | Current owner/evidence | Progress | Remaining risk |
+|---|---|---|---|
+| Clause segmentation | `src/learning/ragEvidenceQuality.ts`, decimal/math boundary tests | Complete | Delimiter heuristics are deterministic, not entailment |
+| Source-quality scoring | balanced delimiters, terminal completeness, math density, documentary penalty | Complete | Scores are ranking signals, never relevance proof |
+| Plan shaping | `graphAnswerPlan.ts` selects one complete public clause and retains raw provenance | Complete | One fragment still represents one graph claim |
+| Supplemental deduplication | `conversationComposer.ts` semantic similarity threshold 0.86 | Complete | Threshold requires future multilingual calibration |
+| Coverage preservation | focused graph plan/release/coverage tests plus Water Glass required IDs/order | Complete | Runtime verifier full restore remains environment-sensitive |
+
+The earlier critical question is now answered at the deterministic selection layer. The remaining architectural decision is conditional: extract orchestration from `KnowledgeLearningPlatform.ts` only if a new owner can execute the complete planned/reviewed-answer operation and remove caller knowledge.

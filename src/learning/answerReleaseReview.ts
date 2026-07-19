@@ -22,6 +22,7 @@ import {
     shouldRejectPublicEvidenceClause,
     shouldRejectCompareProcedureEvidenceClause,
 } from './ragPublicText';
+import { scoreRagEvidenceClause, segmentRagEvidenceClauses } from './ragEvidenceQuality';
 
 export interface AnswerReleaseReviewContext {
     message: string;
@@ -718,7 +719,7 @@ function selectPublicEvidenceClause(snippet: string, title: string): string {
     if (!cleaned) {
         return '';
     }
-    const clauses = splitPublicEvidenceClauses(cleaned)
+    const clauses = segmentRagEvidenceClauses(cleaned)
         .map((clause) => normalizeWhitespace(clause))
         .map((clause) => naturalizeRagPublicEvidenceClause(clause))
         .filter((clause) => (
@@ -1024,6 +1025,7 @@ type RagPublicEvidenceClauseCandidate = {
     clause: string;
     queryTerms: Set<string>;
     headingQueryTerms: Set<string>;
+    qualityScore: number;
     order: number;
 };
 
@@ -1070,7 +1072,7 @@ function splitRagPublicEvidenceClauses(
     if (!cleaned) {
         return [];
     }
-    const clauses = splitPublicEvidenceClauses(cleaned)
+    const clauses = segmentRagEvidenceClauses(cleaned)
         .map((clause) => normalizeWhitespace(clause))
         .map((clause) => naturalizeRagPublicEvidenceClause(clause))
         .filter((clause) => (
@@ -1106,6 +1108,7 @@ function collectRagPublicEvidenceClauses(
                 clause,
                 queryTerms: collectRagPublicClauseQueryTerms(clause, queryTerms),
                 headingQueryTerms,
+                qualityScore: scoreRagEvidenceClause(clause).score,
                 order,
             });
             order += 1;
@@ -1130,6 +1133,9 @@ function collectRagPublicEvidenceClauses(
         const rightScore = right.queryTerms.size * 4 + rightHeadingScore * 6;
         if (rightScore !== leftScore) {
             return rightScore - leftScore;
+        }
+        if (right.qualityScore !== left.qualityScore) {
+            return right.qualityScore - left.qualityScore;
         }
         return left.order - right.order;
     });

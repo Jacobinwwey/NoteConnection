@@ -7687,6 +7687,26 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [ ] Add clause-level evidence segmentation and source-quality scoring for dense mathematical fragments; prove improved readability without reducing required-claim coverage.
 - [ ] Extract planned/reviewed-answer orchestration only after a complete-operation boundary demonstrably reduces `KnowledgeLearningPlatform.ts` caller knowledge.
 
+## 2026-07-19 Clause-Level Source Quality Completion
+
+### English
+
+- [x] Implemented clause-level segmentation and deterministic source-quality scoring in `src/learning/ragEvidenceQuality.ts` without restoring answer-length ceilings.
+- [x] Applied source quality before `GraphAnswerPlan` public shaping while retaining the dense raw fragment in `evidenceRefs`.
+- [x] Added clause-local filtering so one authoring preamble no longer discards a valid equation in the same fragment.
+- [x] Added semantic duplicate suppression for supplemental clauses at the composer boundary; distinct graph claims remain eligible.
+- [x] Verified focused graph-plan/release/coverage tests, production TypeScript build, full 124/124 Jest suites (1,153 passed, 26 skipped), and Water Glass conversation-mode required-ID/order acceptance.
+- [ ] Keep `KnowledgeLearningPlatform.ts` orchestration extraction conditional on a complete operation boundary.
+
+### 中文
+
+- [x] 在 `src/learning/ragEvidenceQuality.ts` 实现 clause-level segmentation 与确定性 source-quality scoring，不恢复回答长度硬上限。
+- [x] 在 `GraphAnswerPlan` public shaping 前应用 source quality，同时把 dense raw fragment 保留到 `evidenceRefs`。
+- [x] 增加 clause-local filtering，同一 fragment 中的 authoring preamble 不再导致有效公式整体丢弃。
+- [x] 在 composer 边界增加 supplemental clause 语义去重；不同 graph claim 仍可保留。
+- [x] 已验证 graph-plan/release/coverage focused tests、TypeScript production build、全量 Jest 124/124（1,153 通过、26 跳过）以及 Water Glass conversation-mode required-ID/order 验收。
+- [ ] `KnowledgeLearningPlatform.ts` 编排抽取仍必须以完整 operation 边界为前提。
+
 ### 中文
 
 - [x] 核验 graph assembly、planning、composition、release review 与最终 coverage 的可执行 owner 边界。

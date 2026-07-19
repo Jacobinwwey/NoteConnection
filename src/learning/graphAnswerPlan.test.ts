@@ -262,4 +262,30 @@ describe('buildGraphAnswerPlan', () => {
         expect(plan.claims.some((claim) => claim.statement.includes('```'))).toBe(false);
         expect(plan.claims.some((claim) => claim.statement.includes('| Parameter |'))).toBe(false);
     });
+
+    test('selects a complete clause from dense mathematical evidence while retaining provenance', () => {
+        const denseEvidence = [
+            'Thermal transfer is governed by q = kA(T1 - T2) / L.',
+            'This document will explain the following table as requested.',
+            'For soda-lime glass the coefficient is usually between',
+        ].join(' ');
+        const plan = buildGraphAnswerPlan({
+            message: 'explain thermal transfer in a water glass',
+            knowledgePoints: [{
+                ...knowledgePoint,
+                matchedSpans: [{
+                    atomId: 'thermal_transfer_dense',
+                    title: 'Thermal Transfer',
+                    snippet: denseEvidence,
+                    sourcePath: 'Knowledge_Base/waterglass/thermal-transfer.md',
+                    score: 0.94,
+                    citation: null,
+                }],
+            }],
+            graphContext,
+        });
+
+        expect(plan.claims[0].statement).toBe('Thermal transfer is governed by q = kA(T1 - T2) / L.');
+        expect(plan.claims[0].evidenceRefs[0].text).toBe(denseEvidence);
+    });
 });
