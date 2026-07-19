@@ -39,13 +39,7 @@ import {
     WorkflowResult,
     WorkflowStage,
 } from './types';
-
-function defaultReporter(): ProgressReporter {
-    return {
-        report: () => undefined,
-        isCancelled: () => false,
-    };
-}
+import { createNoopProgressReporter } from './progressReporter';
 
 export class NotemdService {
     private readonly fileProcessor: FileProcessor;
@@ -77,7 +71,7 @@ export class NotemdService {
     public processFile(
         request: ProcessFileRequest,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ) {
         return this.fileProcessor.processFile(request, settings, reporter, signal);
@@ -86,7 +80,7 @@ export class NotemdService {
     public processFolder(
         request: ProcessFolderRequest,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ) {
         return this.fileProcessor.processFolder(request, settings, reporter, signal);
@@ -95,7 +89,7 @@ export class NotemdService {
     public translateFile(
         request: TranslateFileRequest,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ) {
         return this.translator.translateFile(request, settings, reporter, signal);
@@ -105,7 +99,7 @@ export class NotemdService {
         folderPath: string,
         targetLanguage: string,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ) {
         return this.translator.translateFolder(folderPath, targetLanguage, settings, reporter, signal);
@@ -115,7 +109,7 @@ export class NotemdService {
         title: string,
         context: string | undefined,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ) {
         return this.contentGenerator.generateFromTitle({ title, context }, settings, reporter, signal);
@@ -124,7 +118,7 @@ export class NotemdService {
     public generateFolderContent(
         folderPath: string,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ) {
         return this.contentGenerator.generateFolderFromTitles(folderPath, settings, reporter, signal);
@@ -268,7 +262,7 @@ export class NotemdService {
     public async extractConcepts(
         filePath: string,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<{ filePath: string; concepts: string[] }> {
         const resolvedPath = path.resolve(String(filePath || '').trim());
@@ -288,7 +282,7 @@ export class NotemdService {
     public async runWorkflow(
         request: WorkflowRequest,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<WorkflowResult> {
         const resolvedPath = path.resolve(String(request.filePath || '').trim());
@@ -428,7 +422,7 @@ export class NotemdService {
     public async runBatchWorkflow(
         request: BatchWorkflowRequest,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<BatchWorkflowResult> {
         const resolvedFolderPath = path.resolve(String(request.folderPath || '').trim());
@@ -527,7 +521,7 @@ export class NotemdService {
     public async oneClickExtract(
         filePath: string,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<{
         sourceFilePath: string;
@@ -775,7 +769,7 @@ export class NotemdService {
     public async extractOriginalText(
         request: ExtractOriginalTextRequest,
         _settings: NotemdSettings,
-        _reporter: ProgressReporter = defaultReporter(),
+        _reporter: ProgressReporter = createNoopProgressReporter(),
         _signal?: AbortSignal
     ): Promise<ExtractOriginalTextResult> {
         const resolvedPath = path.resolve(String(request.filePath || '').trim());

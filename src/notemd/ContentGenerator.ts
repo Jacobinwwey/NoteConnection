@@ -10,13 +10,7 @@ import {
     ProgressReporter,
     ValidationError,
 } from './types';
-
-function defaultReporter(): ProgressReporter {
-    return {
-        report: () => undefined,
-        isCancelled: () => false,
-    };
-}
+import { createNoopProgressReporter } from './progressReporter';
 
 function isTextExtension(filePath: string): boolean {
     return NOTEMD_SUPPORTED_TEXT_EXTENSIONS.has(path.extname(filePath).toLowerCase());
@@ -40,7 +34,7 @@ export class ContentGenerator {
     public async generateFromTitle(
         request: GenerateContentRequest,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<string> {
         const title = String(request.title || '').trim();
@@ -83,7 +77,7 @@ export class ContentGenerator {
     public async generateForFile(
         filePath: string,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<{ filePath: string; outputPath: string; generated: boolean }> {
         const absoluteFilePath = path.resolve(String(filePath || '').trim());
@@ -120,7 +114,7 @@ export class ContentGenerator {
     public async generateFolderFromTitles(
         folderPath: string,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<{ totalFiles: number; generatedFiles: number; failedFiles: number; outputs: string[] }> {
         const absoluteFolder = path.resolve(String(folderPath || '').trim());
@@ -206,4 +200,3 @@ export class ContentGenerator {
         return path.join(parentDir, outputFolder, fileName);
     }
 }
-

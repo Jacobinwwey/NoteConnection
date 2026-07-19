@@ -12,13 +12,7 @@ import {
     TranslateFileResult,
     ValidationError,
 } from './types';
-
-function defaultReporter(): ProgressReporter {
-    return {
-        report: () => undefined,
-        isCancelled: () => false,
-    };
-}
+import { createNoopProgressReporter } from './progressReporter';
 
 function countWords(text: string): number {
     return text
@@ -69,7 +63,7 @@ export class Translator {
         content: string,
         targetLanguage: string,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<string> {
         const provider = selectProviderForTask(settings, 'translate');
@@ -116,7 +110,7 @@ export class Translator {
     public async translateFile(
         request: TranslateFileRequest,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<TranslateFileResult> {
         const filePath = path.resolve(String(request.filePath || '').trim());
@@ -154,7 +148,7 @@ export class Translator {
         folderPath: string,
         targetLanguage: string,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<{ totalFiles: number; translatedFiles: number; failedFiles: number; results: TranslateFileResult[] }> {
         const root = path.resolve(String(folderPath || '').trim());
@@ -268,4 +262,3 @@ export class Translator {
         }
     }
 }
-

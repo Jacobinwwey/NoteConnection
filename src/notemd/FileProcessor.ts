@@ -15,6 +15,7 @@ import {
     ValidationError,
 } from './types';
 import { NOTEMD_SUPPORTED_TEXT_EXTENSIONS } from './constants';
+import { createNoopProgressReporter } from './progressReporter';
 
 type LinkInjectionResult = {
     content: string;
@@ -52,13 +53,6 @@ function looksLikeConcept(raw: string): boolean {
         return false;
     }
     return true;
-}
-
-function defaultReporter(): ProgressReporter {
-    return {
-        report: () => undefined,
-        isCancelled: () => false,
-    };
 }
 
 export class FileProcessor {
@@ -107,7 +101,7 @@ export class FileProcessor {
     public async extractConceptsFromText(
         content: string,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<Set<string>> {
         const concepts = new Set<string>();
@@ -162,7 +156,7 @@ export class FileProcessor {
     public async processFile(
         request: ProcessFileRequest,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<ProcessFileResult> {
         const filePath = path.resolve(String(request.filePath || '').trim());
@@ -234,7 +228,7 @@ export class FileProcessor {
     public async processFolder(
         request: ProcessFolderRequest,
         settings: NotemdSettings,
-        reporter: ProgressReporter = defaultReporter(),
+        reporter: ProgressReporter = createNoopProgressReporter(),
         signal?: AbortSignal
     ): Promise<ProcessFolderResult> {
         const folderPath = path.resolve(String(request.folderPath || '').trim());
@@ -498,4 +492,3 @@ export class FileProcessor {
         return path.join(path.resolve(outputFolderPath), relative);
     }
 }
-
