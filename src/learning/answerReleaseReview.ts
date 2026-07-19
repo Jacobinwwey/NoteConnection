@@ -16,6 +16,7 @@ import type {
     GraphAnswerCoverageReview,
 } from './types';
 import { reviewGraphAnswerCoverage } from './graphAnswerCoverage';
+import { collectGraphAnswerFacts } from './graphAnswerFacts';
 import {
     naturalizeRagPublicEvidenceClause,
     shouldRejectPublicEvidenceClause,
@@ -814,45 +815,6 @@ function buildRevisionGraphConnectionSentence(
     return `The strongest graph path runs through ${pathTitles.join(' -> ')}`;
 }
 
-function normalizeRevisionGraphComparableTitle(value: unknown): string {
-    return normalizeDefinitionEvidenceTitle(value).toLowerCase();
-}
-
-function collectRevisionGraphWindowTitles(
-    graphContext: AgentConversationGraphContext | null,
-    windowKey: 'predecessorWindow' | 'successorWindow',
-    limit: number
-): string[] {
-    if (!graphContext || !Array.isArray(graphContext[windowKey])) {
-        return [];
-    }
-    const anchorProfile = graphContext.anchorGraphProfile && typeof graphContext.anchorGraphProfile === 'object'
-        ? graphContext.anchorGraphProfile
-        : null;
-    const anchorAtomId = normalizeWhitespace(String(graphContext.anchorAtomId || anchorProfile?.atomId || '').trim());
-    const anchorTitle = normalizeRevisionGraphComparableTitle(graphContext.anchorTitle || anchorProfile?.title || '');
-    const seen = new Set<string>();
-    const titles: string[] = [];
-    for (const node of graphContext[windowKey] || []) {
-        const atomId = normalizeWhitespace(String(node && node.atomId || '').trim());
-        const title = normalizeDefinitionEvidenceTitle(node && node.title);
-        const comparableTitle = normalizeRevisionGraphComparableTitle(title);
-        if (!title || (atomId && atomId === anchorAtomId) || (comparableTitle && comparableTitle === anchorTitle)) {
-            continue;
-        }
-        const key = comparableTitle || atomId;
-        if (seen.has(key)) {
-            continue;
-        }
-        seen.add(key);
-        titles.push(title);
-        if (titles.length >= limit) {
-            break;
-        }
-    }
-    return titles;
-}
-
 function buildRevisionGraphProfileSentence(
     context: AnswerReleaseReviewContext,
     useChinese: boolean
@@ -864,17 +826,21 @@ function buildRevisionGraphProfileSentence(
     const anchorProfile = graphContext.anchorGraphProfile && typeof graphContext.anchorGraphProfile === 'object'
         ? graphContext.anchorGraphProfile
         : null;
-    const anchorTitle = normalizeDefinitionEvidenceTitle(graphContext.anchorTitle || anchorProfile?.title || '');
-    const predecessorTitles = collectRevisionGraphWindowTitles(graphContext, 'predecessorWindow', 2);
-    const successorTitles = collectRevisionGraphWindowTitles(graphContext, 'successorWindow', 2);
-    const degreeParts: string[] = [];
-    const inDegree = anchorProfile ? Number(anchorProfile.inDegree) : NaN;
-    const outDegree = anchorProfile ? Number(anchorProfile.outDegree) : NaN;
-    if (Number.isFinite(inDegree)) {
-        degreeParts.push(useChinese ? `入度为 ${inDegree}` : `${inDegree} incoming`);
+    const facts = collectGraphAnswerFacts(graphContext, {
+        anchorAtomId: graphContext.anchorAtomId || anchorProfile?.atomId || '',
+        anchorTitle: graphContext.anchorTitle || anchorProfile?.title || '',
+        normalizeTitle: normalizeDefinitionEvidenceTitle,
+    });
+    if (!facts) {
+        return '';
     }
-    if (Number.isFinite(outDegree)) {
-        degreeParts.push(useChinese ? `出度为 ${outDegree}` : `${outDegree} outgoing`);
+    const { anchorTitle, predecessorTitles, successorTitles } = facts;
+    const degreeParts: string[] = [];
+    if (facts.inDegree !== null) {
+        degreeParts.push(useChinese ? `入度为 ${facts.inDegree}` : `${facts.inDegree} incoming`);
+    }
+    if (facts.outDegree !== null) {
+        degreeParts.push(useChinese ? `出度为 ${facts.outDegree}` : `${facts.outDegree} outgoing`);
     }
     if (degreeParts.length <= 0 && predecessorTitles.length <= 0 && successorTitles.length <= 0) {
         return '';

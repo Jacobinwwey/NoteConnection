@@ -28,6 +28,7 @@ import { reviewAnswerRelease } from './answerReleaseReview';
 import { buildAgentConversationGraphContextFromKnowledgePoints } from './graphContextAssembler';
 import { buildGraphAnswerPlan } from './graphAnswerPlan';
 import { reviewGraphAnswerCoverage } from './graphAnswerCoverage';
+import { collectGraphAnswerFacts, collectGraphAnswerWindowTitles } from './graphAnswerFacts';
 import {
     naturalizeRagPublicEvidenceClause,
     shouldRejectPublicEvidenceClause,
@@ -632,41 +633,6 @@ function normalizeGraphAnswerDisplayTitle(value: string): string {
     );
 }
 
-function normalizeGraphAnswerComparableTitle(value: string): string {
-    return normalizeGraphAnswerDisplayTitle(value).toLowerCase();
-}
-
-function collectGraphWindowTitles(
-    graphContext: AgentConversationGraphContext | null,
-    windowKey: 'predecessorWindow' | 'successorWindow',
-    limit: number
-): string[] {
-    if (!graphContext || !Array.isArray(graphContext[windowKey])) {
-        return [];
-    }
-    const anchorAtomId = normalizeWhitespace(String(graphContext.anchorAtomId || '').trim());
-    const anchorTitle = normalizeGraphAnswerComparableTitle(graphContext.anchorTitle);
-    const seen = new Set<string>();
-    const titles: string[] = [];
-    for (const node of graphContext[windowKey] || []) {
-        const atomId = normalizeWhitespace(String(node && node.atomId || '').trim());
-        const title = normalizeGraphAnswerDisplayTitle(String(node && node.title || ''));
-        const comparableTitle = normalizeGraphAnswerComparableTitle(title);
-        if (!title || (atomId && atomId === anchorAtomId) || (comparableTitle && comparableTitle === anchorTitle)) {
-            continue;
-        }
-        const key = comparableTitle || atomId;
-        if (seen.has(key)) {
-            continue;
-        }
-        seen.add(key);
-        titles.push(title);
-        if (titles.length >= limit) {
-            break;
-        }
-    }
-    return titles;
-}
 function buildGraphProfileAnswerSentence(
     graphContext: AgentConversationGraphContext | null,
     useChinese: boolean
@@ -674,20 +640,21 @@ function buildGraphProfileAnswerSentence(
     if (!graphContext) {
         return '';
     }
-    const anchorProfile = graphContext.anchorGraphProfile && typeof graphContext.anchorGraphProfile === 'object'
-        ? graphContext.anchorGraphProfile
-        : null;
-    const anchorTitle = normalizeWhitespace(String(graphContext.anchorTitle || anchorProfile?.title || '').trim());
-    const predecessorTitles = collectGraphWindowTitles(graphContext, 'predecessorWindow', 2);
-    const successorTitles = collectGraphWindowTitles(graphContext, 'successorWindow', 2);
-    const degreeParts: string[] = [];
-    const inDegree = anchorProfile ? Number(anchorProfile.inDegree) : NaN;
-    const outDegree = anchorProfile ? Number(anchorProfile.outDegree) : NaN;
-    if (Number.isFinite(inDegree)) {
-        degreeParts.push(useChinese ? `入度为 ${inDegree}` : `${inDegree} incoming`);
+    const facts = collectGraphAnswerFacts(graphContext, {
+        anchorAtomId: graphContext.anchorAtomId,
+        anchorTitle: graphContext.anchorTitle,
+        normalizeTitle: (value) => normalizeGraphAnswerDisplayTitle(String(value || '')),
+    });
+    if (!facts) {
+        return '';
     }
-    if (Number.isFinite(outDegree)) {
-        degreeParts.push(useChinese ? `出度为 ${outDegree}` : `${outDegree} outgoing`);
+    const { anchorTitle, predecessorTitles, successorTitles } = facts;
+    const degreeParts: string[] = [];
+    if (facts.inDegree !== null) {
+        degreeParts.push(useChinese ? `入度为 ${facts.inDegree}` : `${facts.inDegree} incoming`);
+    }
+    if (facts.outDegree !== null) {
+        degreeParts.push(useChinese ? `出度为 ${facts.outDegree}` : `${facts.outDegree} outgoing`);
     }
     if (degreeParts.length <= 0 && predecessorTitles.length <= 0 && successorTitles.length <= 0) {
         return '';
@@ -1223,13 +1190,21 @@ function buildScopedConversationExplanationMarkdown(
         );
     }
     if (graphContext) {
-        const predecessorTitles = collectGraphWindowTitles(graphContext, 'predecessorWindow', 3);
+        const predecessorTitles = collectGraphAnswerWindowTitles(graphContext, 'predecessorWindow', {
+            anchorAtomId: graphContext.anchorAtomId,
+            anchorTitle: graphContext.anchorTitle,
+            normalizeTitle: (value) => normalizeGraphAnswerDisplayTitle(String(value || '')),
+        }, 3);
         if (predecessorTitles.length > 0) {
             explanationLines.push('', 'Immediate predecessor window: ' + predecessorTitles.join(', ') + '.');
         }
     }
     if (graphContext) {
-        const successorTitles = collectGraphWindowTitles(graphContext, 'successorWindow', 3);
+        const successorTitles = collectGraphAnswerWindowTitles(graphContext, 'successorWindow', {
+            anchorAtomId: graphContext.anchorAtomId,
+            anchorTitle: graphContext.anchorTitle,
+            normalizeTitle: (value) => normalizeGraphAnswerDisplayTitle(String(value || '')),
+        }, 3);
         if (successorTitles.length > 0) {
             explanationLines.push('', 'Immediate successor window: ' + successorTitles.join(', ') + '.');
         }
@@ -1352,13 +1327,21 @@ function buildScopedConversationActionGuideMarkdown(
         }
     }
     if (graphContext) {
-        const predecessorTitles = collectGraphWindowTitles(graphContext, 'predecessorWindow', 2);
+        const predecessorTitles = collectGraphAnswerWindowTitles(graphContext, 'predecessorWindow', {
+            anchorAtomId: graphContext.anchorAtomId,
+            anchorTitle: graphContext.anchorTitle,
+            normalizeTitle: (value) => normalizeGraphAnswerDisplayTitle(String(value || '')),
+        }, 2);
         if (predecessorTitles.length > 0) {
             graphActionHints.push('- Inspect prerequisite context from ' + predecessorTitles.join(', ') + ' before expanding the answer.');
         }
     }
     if (graphContext) {
-        const successorTitles = collectGraphWindowTitles(graphContext, 'successorWindow', 2);
+        const successorTitles = collectGraphAnswerWindowTitles(graphContext, 'successorWindow', {
+            anchorAtomId: graphContext.anchorAtomId,
+            anchorTitle: graphContext.anchorTitle,
+            normalizeTitle: (value) => normalizeGraphAnswerDisplayTitle(String(value || '')),
+        }, 2);
         if (successorTitles.length > 0) {
             graphActionHints.push('- Use likely next-step nodes such as ' + successorTitles.join(', ') + ' to continue follow-through after this answer.');
         }
