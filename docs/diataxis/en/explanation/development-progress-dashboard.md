@@ -1681,10 +1681,10 @@ The completed repository-wide pass also consolidated four identical NoteMD no-op
 | Runtime acceptance | required IDs, plan order, Water Glass leakage hygiene | Complete | Add readability metrics before source-quality rollout |
 | Operator projection | Grounding Inspector plan/coverage/expansion view | Complete | Keep internal scaffolding out of public prose |
 | Structural cleanup | graph facts, NoteMD reporter owner, narrating-comment removal | Complete | Characterize script helpers before consolidation |
-| Clause-level source quality | no production scorer/segmenter exists yet | Not started | Add clause segmentation, quality features, and non-regression gates |
+| Clause-level source quality | `ragEvidenceQuality.ts`, plan clause selection, raw provenance retention | Complete | Calibrate deterministic features against multilingual readability/coverage corpus |
 | Orchestration extraction | remains inside `KnowledgeLearningPlatform.ts` | Conditional | Extract only a complete planned/reviewed-answer operation |
 
-The critical unresolved question is not “how do we add another agent layer?” It is: **how can the runtime select fluent, clause-sized evidence from dense source fragments without weakening required graph coverage, provenance, or deterministic release review?** That is the next engineering phase.
+This checkpoint's critical question has been resolved by the clause-quality phase below. It remains as causal history, not current work: the runtime now selects complete clauses before public claim shaping and retains raw evidence provenance.
 
 ## 2026-07-19 Clause-Level Source Quality Completion
 
@@ -1696,4 +1696,6 @@ The critical unresolved question is not “how do we add another agent layer?”
 | Supplemental deduplication | `conversationComposer.ts` semantic similarity threshold 0.86 | Complete | Threshold requires future multilingual calibration |
 | Coverage preservation | focused graph plan/release/coverage tests plus Water Glass required IDs/order, duplicate-clause and scaffolding gates | Complete | Runtime verifier full restore remains environment-sensitive |
 
-The earlier critical question is now answered at the deterministic selection layer. The remaining architectural decision is conditional: extract orchestration from `KnowledgeLearningPlatform.ts` only if a new owner can execute the complete planned/reviewed-answer operation and remove caller knowledge.
+The earlier critical question is now answered at the deterministic selection layer. The repository baseline is 124/124 Jest suites, 1,155 passed, and 26 skipped; focused graph/release/runtime tests passed 191/191, and TypeScript, production/Vite build, Water Glass runtime acceptance, Diataxis, MkDocs, and diff hygiene passed.
+
+The current critical question is narrower and measurable: **how should multilingual source-quality, semantic-deduplication, and readability thresholds be jointly calibrated so improved prose neither drops required graph claims nor collapses conflicting evidence?** Degree and similarity remain ranking signals, not truth. Orchestration extraction is a decision gate, not unfinished work: retain it in `KnowledgeLearningPlatform.ts` until a new owner can execute the complete planned/reviewed-answer operation and remove caller knowledge.

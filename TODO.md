@@ -7685,7 +7685,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] Update README, interface contracts, implementation plan, and EN/ZH progress dashboards from current code evidence.
 - [x] Final baseline: 124/124 Jest suites, 1,155 passed, 26 skipped; TypeScript, production/Vite build, Water Glass runtime acceptance, Diataxis, MkDocs, and diff hygiene passed.
 - [x] Add clause-level evidence segmentation and source-quality scoring for dense mathematical fragments; verified readability and complete required-claim coverage through focused, full-suite, and runtime acceptance.
-- [ ] Extract planned/reviewed-answer orchestration only after a complete-operation boundary demonstrably reduces `KnowledgeLearningPlatform.ts` caller knowledge.
+- [x] Record orchestration extraction as a decision gate, not an unfinished phase: retain ownership in `KnowledgeLearningPlatform.ts` until a complete operation demonstrably reduces caller knowledge.
 
 ### 中文
 
@@ -7696,7 +7696,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] 基于当前代码证据同步 README、接口契约、实施方案与中英文进度面板。
 - [x] 最终基线：Jest 124/124 个 suite、1,155 个测试通过、26 个跳过；TypeScript、production/Vite build、Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。
 - [x] 为密集数学 fragment 增加 clause-level evidence segmentation 与 source-quality scoring；已通过 focused、全量与运行时验收证明可读性提升且 required-claim coverage 不下降。
-- [ ] 只有完整 operation 边界能明确降低 `KnowledgeLearningPlatform.ts` 的 caller knowledge 时，才抽取 planned/reviewed-answer 编排。
+- [x] 把编排抽取记录为 decision gate 而不是未完成 Phase：完整 operation 能明确降低 caller knowledge 前，继续由 `KnowledgeLearningPlatform.ts` 持有该责任。
 
 ## 2026-07-19 Clause-Level Source Quality Completion
 
@@ -7707,7 +7707,7 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] Added clause-local filtering so one authoring preamble no longer discards a valid equation in the same fragment.
 - [x] Added semantic duplicate suppression for supplemental clauses at the composer boundary; distinct graph claims remain eligible.
 - [x] Verified focused graph-plan/release/coverage tests, production TypeScript build, full 124/124 Jest suites (1,155 passed, 26 skipped), Water Glass required-ID/order coverage, duplicate-clause hygiene, and public Markdown scaffolding hygiene.
-- [ ] Keep `KnowledgeLearningPlatform.ts` orchestration extraction conditional on a complete operation boundary.
+- [x] Keep `KnowledgeLearningPlatform.ts` orchestration extraction as a documented decision gate conditioned on a complete operation boundary.
 
 ### 中文
 
@@ -7716,14 +7716,14 @@ This document outlines the roadmap for building `NoteConnection`, a system capab
 - [x] 增加 clause-local filtering，同一 fragment 中的 authoring preamble 不再导致有效公式整体丢弃。
 - [x] 在 composer 边界增加 supplemental clause 语义去重；不同 graph claim 仍可保留。
 - [x] 已验证 graph-plan/release/coverage focused tests、TypeScript production build、全量 Jest 124/124（1,155 通过、26 跳过），以及 Water Glass required-ID/order、重复 clause 卫生和公开 Markdown 脚手架卫生验收。
-- [ ] `KnowledgeLearningPlatform.ts` 编排抽取仍必须以完整 operation 边界为前提。
+- [x] 将 `KnowledgeLearningPlatform.ts` 编排抽取保持为以完整 operation 边界为条件的已记录 decision gate。
 
 ## 2026-07-19 Final Phase State
 
 ### English
 
-The clause-level source-quality phase is complete. The remaining unchecked orchestration item is intentionally conditional: it must stay in `KnowledgeLearningPlatform.ts` until a complete planned/reviewed-answer operation reduces caller knowledge.
+All implementation phases in this plan are complete. Orchestration extraction is a future decision gate, not an unchecked deliverable: ownership remains in `KnowledgeLearningPlatform.ts` until a complete planned/reviewed-answer operation reduces caller knowledge. The next measurable work is a versioned multilingual corpus that jointly evaluates readability, deduplication precision, graph coverage, and provenance retention.
 
 ### 中文
 
-Clause-level source-quality 阶段已完成。剩余 unchecked 的编排事项保持条件性：只有完整的 planned/reviewed-answer operation 能降低 caller knowledge 时，才应从 `KnowledgeLearningPlatform.ts` 抽取。
+本方案全部实施 Phase 均已完成。编排抽取是未来 decision gate，不是 unchecked 交付项：只有完整的 planned/reviewed-answer operation 能降低 caller knowledge 时，才应从 `KnowledgeLearningPlatform.ts` 抽取。下一项可度量工作是建立版本化多语言语料，联合评估 readability、去重精度、graph coverage 与 provenance 保留。

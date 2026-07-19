@@ -1710,10 +1710,10 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 | 运行时验收 | required IDs、plan 顺序、Water Glass 泄漏卫生 | 完成 | source-quality rollout 前增加可读性指标 |
 | Operator 投影 | Grounding Inspector 的 plan/coverage/expansion 视图 | 完成 | 内部脚手架不进入公开 prose |
 | 结构清理 | graph facts、NoteMD reporter owner、叙述性注释移除 | 完成 | 脚本 helper 在合并前先做 characterization |
-| Clause-level source quality | 当前尚无生产 scorer/segmenter | 未开始 | 增加 clause segmentation、quality feature 与非回退 gate |
+| Clause-level source quality | `ragEvidenceQuality.ts`、plan clause 选择与 raw provenance 保留 | 完成 | 用多语言 readability/coverage 语料校准确定性 feature |
 | 编排抽取 | 仍位于 `KnowledgeLearningPlatform.ts` | 条件性 | 只抽取完整 planned/reviewed-answer operation |
 
-尚未解决的核心问题不是“如何再加一层 Agent”，而是：**如何从密集源 fragment 中选择流畅、clause 粒度的证据，同时不削弱 required graph coverage、provenance 与确定性 release review？** 这才是下一工程阶段。
+此检查点的核心问题已由下方 clause-quality 阶段解决。这里保留的是因果历史，不是当前工作：运行时现在会在 public claim shaping 前选择完整 clause，并保留 raw evidence provenance。
 
 ## 2026-07-19 Clause-Level Source Quality 完成
 
@@ -1725,4 +1725,6 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 | Supplemental 去重 | `conversationComposer.ts` 语义相似度阈值 0.86 | 完成 | 阈值仍需未来多语言校准 |
 | Coverage 保持 | graph plan/release/coverage focused tests 与 Water Glass required ID/order、重复 clause、脚手架门禁 | 完成 | runtime verifier full restore 仍受环境耗时影响 |
 
-先前的核心问题已经在确定性选择层得到解决。剩余架构决策仍是条件性的：只有新 owner 能执行完整 planned/reviewed-answer operation 并减少 caller knowledge 时，才从 `KnowledgeLearningPlatform.ts` 抽取编排。
+先前的核心问题已经在确定性选择层得到解决。当前仓库基线为 Jest 124/124 个 suite、1,155 个测试通过、26 个跳过；graph/release/runtime 定向测试 191/191 通过，TypeScript、production/Vite build、Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。
+
+当前核心问题更窄且可度量：**如何联合校准多语言 source-quality、semantic-deduplication 与 readability 阈值，使 prose 改善时既不丢失 required graph claim，也不错误折叠冲突证据？** degree 与 similarity 仍只是排序信号，不是真值。编排抽取是 decision gate，不是未完成工作：新 owner 能执行完整 planned/reviewed-answer operation 并移除 caller knowledge 前，责任继续保留在 `KnowledgeLearningPlatform.ts`。

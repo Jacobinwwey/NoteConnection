@@ -311,7 +311,9 @@ The executable path is owned in sequence by `graphContextAssembler.ts` (bounded 
 
 `public_surface_contraction` remains an `AnswerReleaseGateId` for wire compatibility. Its current behavior protects public-surface structure and leakage hygiene; it must not be interpreted or reimplemented as a 900-character, fixed-sentence, or single-`direct_support` limit.
 
-Current verification contract: the Water Glass runtime acceptance requires complete required-claim ID coverage and plan order. The repository-wide baseline after the code-humanizer pass is 123/123 Jest suites, 1,149 tests passed, and 26 skipped, with TypeScript, production/Vite build, Diataxis, MkDocs, and diff hygiene passing.
+Clause shaping is owned by `ragEvidenceQuality.ts` and `graphAnswerPlan.ts`. Segmentation preserves decimal points and mathematical notation; ranking uses terminal completeness, delimiter balance, math density, documentary penalty, and continuous length decay. The selected public clause may differ from the raw evidence text, but `evidenceRefs` retain that raw provenance. These scores rank already selected evidence; they do not prove relevance or entailment.
+
+Supplemental RAG clauses are semantically deduplicated at the composer boundary, while release review removes only literal-equivalent or contained duplicates so conflicting dates, quantities, endpoints, and locations are not silently collapsed. Current verification requires complete required-claim ID coverage, plan order, no repeated long clause, and no public Markdown list/bold scaffolding. The repository-wide baseline is 124/124 Jest suites, 1,155 tests passed, and 26 skipped, with TypeScript, production/Vite build, Water Glass runtime acceptance, Diataxis, MkDocs, and diff hygiene passing.
 
 ## 1. Runtime and Path Contracts
 

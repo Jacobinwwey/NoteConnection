@@ -428,12 +428,12 @@ NoteConnection 受益于许多开源项目与本地参考镜像。以下致谢�
 
 同一 role 下的不同高置信 claim 现在按信息价值进入 required 集合，不再受“一种 role 只能一条”的配额约束。claim 在进入 plan 前完成公开文本整形，作者指令、表格脚手架和 renderer payload 不会成为强制回答内容。release revision 保留 required claim 顺序；运行时验收直接检查最终公开回答的 required-ID 全覆盖与 claim 顺序。
 
-当前 coverage 仍是确定性的概念、极性和规范化文本匹配，不等同于 semantic entailment。长源 fragment 仍可能形成密集 prose，后续应继续做 clause 级 evidence shaping 和多语言校准，而不是恢复字符数或句子数硬上限。
+当前 coverage 仍是确定性的概念、极性和规范化文本匹配，不等同于 semantic entailment。Clause-level evidence shaping 已能切分密集 fragment、排序完整 clause，并把 raw fragment 保留为 provenance。剩余校准问题是多语言的：source-quality 与 semantic-dedup 阈值应由版本化 readability/coverage 语料约束，而不是恢复字符数或句子数硬上限。
 
 ## 2026-07-19 v1.8.0 最终架构与进度审计
 
 当前 `main` 已满足完成态的方案 B / Coverage-driven 要求：graph plan 在 RAG 与非 RAG 路径中实际执行，同 role 的不同 claim 可被完整覆盖，release revision 保留 required claim 顺序，有界图扩展只对显式 deep/research 意图启用，最终运行时验收检查 required claim ID 而不是回答长度。兼容 gate 名 `public_surface_contraction` 仍保留，但已不再施加 900 字符或句数上限。
 
-后续 code-humanizer 阶段收敛了 graph-window fact 选择和 NoteMD no-op progress reporter，并移除了只复述代码的 backend 注释。最新验证基线为 Jest 123/123 个 suite、1,149 个测试通过、26 个跳过；TypeScript、production/Vite build、强化后的 Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。
+后续 code-humanizer 阶段收敛了 graph-window fact 选择和 NoteMD no-op progress reporter，并移除了只复述代码的 backend 注释。source-quality 阶段增加了确定性 clause segmentation/scoring、clause-local filtering、supplemental semantic deduplication 与 release-safe duplicate removal。最新验证基线为 Jest 124/124 个 suite、1,155 个测试通过、26 个跳过；TypeScript、production/Vite build、强化后的 Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。
 
-仍有两个方向有意保持开放。第一，密集数学源 fragment 需要 clause-level selection 与 source-quality scoring，在不丢失图 coverage 的前提下提升流畅度。第二，只有新 owner 能完成完整的 planned/reviewed-answer operation 并降低 caller knowledge 时，才应把 answer-planning 编排移出 `KnowledgeLearningPlatform.ts`；单纯增加 pass-through 层属于架构扰动，不是推进。
+当前只剩一个校准方向和一个 decision gate。多语言 source-quality、semantic-dedup 与 readability 阈值需要联合回归证据，确保流畅度提升不会牺牲 required graph claim 或 provenance。只有新 owner 能完成完整的 planned/reviewed-answer operation 并降低 caller knowledge 时，才应把 answer-planning 编排移出 `KnowledgeLearningPlatform.ts`；这不是未完成 Phase，单纯增加 pass-through 层属于架构扰动，不是推进。

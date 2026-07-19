@@ -366,30 +366,34 @@ Final evidence: every code cleanup commit passed the full Jest oracle; the final
 | Prior requirement | Current code evidence | Status | Trade-off / remaining risk |
 |---|---|---|---|
 | Use graph structure as an answer contract | `graphContextAssembler.ts` selects a bounded subgraph; `graphAnswerPlan.ts` carries node/edge provenance and omissions | Complete | Degree remains a discovery signal, never relevance proof |
-| Make RAG execute the plan | `buildPlanDrivenRagAnswer()` realizes ordered required claims before supplemental fragments | Complete | Deterministic realization can still be dense when source clauses are dense |
+| Make RAG execute the plan | `buildPlanDrivenRagAnswer()` realizes ordered required claims before supplemental fragments | Complete | Discourse fluency remains a measured quality concern, not a template requirement |
 | Preserve multiple useful related nodes | Novelty deduplication plus confidence-based required status allows distinct same-role claims | Complete | Thresholds remain calibration policy, not semantic truth |
 | Remove conflicting length quotas | No 900-character, six-sentence, or one-`direct_support` correctness limit remains | Complete | `public_surface_contraction` remains for compatibility but now governs structure/leakage hygiene |
 | Enforce final coverage after revision | `preserveRequiredGraphAnswerClaims()` and `reviewGraphAnswerCoverage()` run across revision/final output | Complete | Matching is deterministic concept/polarity logic, not LLM entailment |
 | Bound graph expansion | `resolveGraphExpansionPolicy()` permits one replayable step only for explicit deep/research intent | Complete | Autonomous multi-step exploration remains intentionally out of scope |
 | Provide operator observability | Grounding Inspector projects plan, coverage, omissions, and expansion without exposing scaffolding in the answer | Complete | A separate inspector is preferable to polluting public prose |
 | Reduce duplicated policy | `graphAnswerFacts.ts` and `createNoopProgressReporter()` own formerly duplicated behavior | Complete | Script-local helpers await characterization before consolidation |
+| Shape dense source evidence | `ragEvidenceQuality.ts` segments and scores clauses; `graphAnswerPlan.ts` retains raw provenance | Complete | Deterministic heuristics require multilingual calibration and do not prove entailment |
+| Prevent answer duplication | composer semantic dedup plus release literal/containment dedup | Complete | The `0.86` supplemental threshold needs corpus-backed multilingual calibration |
 
-The next implementation phase is not another orchestration hierarchy. It is clause-level evidence segmentation plus source-quality scoring for dense mathematical fragments, with an acceptance rule that readability improves while required-claim coverage and citation provenance do not regress. Orchestration extraction from `KnowledgeLearningPlatform.ts` remains conditional on a complete planned/reviewed-answer operation that removes caller knowledge; a pass-through owner is explicitly rejected.
+All implementation phases in this plan are complete. The next measurable engineering question is: **how should multilingual source-quality, semantic-deduplication, and readability thresholds be calibrated together so prose improves without losing required graph claims, preserving contradictions as distinct evidence, or weakening provenance?** The answer requires a versioned corpus and joint metrics, not another orchestration hierarchy or a restored length quota. Orchestration extraction from `KnowledgeLearningPlatform.ts` remains a future decision gate conditioned on a complete planned/reviewed-answer operation that removes caller knowledge; a pass-through owner is explicitly rejected.
 
 ### 中文
 
 | 先前要求 | 当前代码证据 | 状态 | 权衡 / 剩余风险 |
 |---|---|---|---|
 | 把图结构作为回答契约 | `graphContextAssembler.ts` 选择有界子图；`graphAnswerPlan.ts` 保存节点/边 provenance 与 omission | 完成 | degree 仍只用于发现，不构成 relevance 证明 |
-| 让 RAG 真正执行 plan | `buildPlanDrivenRagAnswer()` 先按顺序实现 required claim，再补充 fragment | 完成 | 源 clause 密集时，确定性实现仍可能形成密集 prose |
+| 让 RAG 真正执行 plan | `buildPlanDrivenRagAnswer()` 先按顺序实现 required claim，再补充 fragment | 完成 | discourse 流畅度仍是可度量质量问题，不是模板要求 |
 | 保留多个有价值关联节点 | 新颖性去重与基于置信度的 required 状态允许同 role 的不同 claim 共存 | 完成 | 阈值是校准策略，不是语义真值 |
 | 移除冲突的长度配额 | 不再存在 900 字符、六句或单条 `direct_support` 正确性限制 | 完成 | `public_surface_contraction` 名称为兼容保留，当前只治理结构/泄漏卫生 |
 | revision 后强制最终 coverage | `preserveRequiredGraphAnswerClaims()` 与 `reviewGraphAnswerCoverage()` 覆盖 revision/最终输出 | 完成 | matcher 是确定性的概念/极性逻辑，不是 LLM entailment |
 | 限制图扩展 | `resolveGraphExpansionPolicy()` 只对显式 deep/research 意图允许一步可回放扩展 | 完成 | 自主多步探索有意不在默认范围内 |
 | 提供 operator 可观测性 | Grounding Inspector 投影 plan、coverage、omission 与 expansion，不污染公开回答 | 完成 | 独立 inspector 优于把内部脚手架混入 prose |
 | 收敛重复策略 | `graphAnswerFacts.ts` 与 `createNoopProgressReporter()` 统一原重复行为 | 完成 | 脚本局部 helper 需 characterization 后才能合并 |
+| 整形密集源证据 | `ragEvidenceQuality.ts` 分句并评分；`graphAnswerPlan.ts` 保留 raw provenance | 完成 | 确定性 heuristic 仍需多语言校准，且不证明 entailment |
+| 防止回答重复 | composer 语义去重加 release 字面/包含型去重 | 完成 | supplemental 的 `0.86` 阈值需要语料驱动的多语言校准 |
 
-下一实施阶段不是再加一层编排，而是针对密集数学 fragment 做 clause-level evidence segmentation 与 source-quality scoring；验收要求是可读性提升，同时 required-claim coverage 与 citation provenance 不回退。`KnowledgeLearningPlatform.ts` 的编排抽取继续以完整 planned/reviewed-answer operation 为前提，必须实际移除 caller knowledge；明确拒绝 pass-through owner。
+本方案全部实施 Phase 均已完成。下一项可度量的工程问题是：**如何联合校准多语言 source-quality、semantic-deduplication 与 readability 阈值，使 prose 改善，同时不丢失 required graph claim、不把冲突证据错误合并，并保持 provenance？** 这需要版本化语料和联合指标，而不是增加编排层或恢复长度配额。`KnowledgeLearningPlatform.ts` 的编排抽取是未来 decision gate，仍以完整 planned/reviewed-answer operation 能实际移除 caller knowledge 为前提；明确拒绝 pass-through owner。
 
 ## English - 2026-07-19 executable-plan correction
 
@@ -397,7 +401,7 @@ The previous closure confused plan projection with plan execution. The causal de
 
 The corrected pipeline is: bounded evidence and subgraph assembly -> public claim shaping -> novelty-aware planning -> ordered required-claim realization -> supplemental RAG clauses -> release review -> required-plan-preserving revision -> final coverage review. RAG role completeness uses local claim-to-role matching, and citation validation accepts both RAG fragments and citation-backed plan evidence.
 
-Runtime acceptance now fails unless final required claim IDs are covered and their normalized statements preserve plan order. Emitting a plan in trace is no longer sufficient. Remaining risk is dense mathematical source clauses; the next increment is clause-level calibration and source-quality scoring, not character ceilings or a default iterative-agent framework.
+Runtime acceptance now fails unless final required claim IDs are covered and their normalized statements preserve plan order. Emitting a plan in trace is no longer sufficient. Clause-level segmentation and source-quality scoring are now implemented; the remaining risk is multilingual threshold calibration across readability, duplicate suppression, contradiction preservation, and graph coverage, not character ceilings or a default iterative-agent framework.
 
 ## 中文 - 2026-07-19 可执行 plan 纠偏
 
@@ -405,4 +409,18 @@ Runtime acceptance now fails unless final required claim IDs are covered and the
 
 修正链路为：有界 evidence/子图组装 -> 公开 claim 整形 -> 新颖性感知规划 -> 有序 required claim 实现 -> RAG clause 补充 -> release review -> 保留 required plan 的 revision -> 最终 coverage review。RAG role completeness 改为局部 claim-to-role 匹配，citation 校验同时接受 RAG fragment 与带 citation 的 plan evidence。
 
-运行时验收现在要求最终 required claim ID 全覆盖，并要求规范化 statement 保持 plan 顺序；仅在 trace 中输出 plan 不再算完成。剩余风险是密集数学源 clause，后续应推进 clause 级校准与 source-quality scoring，而不是恢复字符上限或默认迭代 Agent 框架。
+运行时验收现在要求最终 required claim ID 全覆盖，并要求规范化 statement 保持 plan 顺序；仅在 trace 中输出 plan 不再算完成。Clause-level segmentation 与 source-quality scoring 已落地；剩余风险是跨 readability、重复抑制、冲突保留和 graph coverage 的多语言阈值校准，而不是恢复字符上限或默认迭代 Agent 框架。
+
+## 2026-07-19 Phase Closure
+
+### English
+
+The implementation plan is closed at 124/124 Jest suites, 1,155 passed, and 26 skipped. Focused graph/release/runtime tests passed 191/191; TypeScript, production/Vite build, Water Glass runtime acceptance, Diataxis, MkDocs, and diff hygiene passed. No planned Phase remains partially implemented.
+
+Future work is deliberately separated from this closure: build a multilingual joint-quality corpus, calibrate the `0.86` supplemental dedup threshold and source-quality features, and consider orchestration extraction only when a complete operation boundary removes caller knowledge.
+
+### 中文
+
+本实施方案以 Jest 124/124 个 suite、1,155 个测试通过、26 个跳过收口。graph/release/runtime 定向测试 191/191 通过；TypeScript、production/Vite build、Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。不存在部分实施的计划 Phase。
+
+后续工作与本轮收口明确分离：建立多语言联合质量语料，校准 supplemental 去重的 `0.86` 阈值和 source-quality feature；只有完整 operation 边界能移除 caller knowledge 时，才评估编排抽取。

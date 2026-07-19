@@ -993,4 +993,6 @@ Signals：
 
 `public_surface_contraction` 作为 `AnswerReleaseGateId` 为保持 wire compatibility 继续存在。其当前行为保护公开表面的结构与泄漏卫生，不得被解释或重新实现为 900 字符、固定句数或单条 `direct_support` 限制。
 
-当前验证契约：Water Glass 运行时验收要求 required claim ID 完整覆盖并保持 plan 顺序。code-humanizer 阶段后的全仓基线为 Jest 123/123 个 suite、1,149 个测试通过、26 个跳过，同时 TypeScript、production/Vite build、Diataxis、MkDocs 与 diff hygiene 均通过。
+Clause shaping 由 `ragEvidenceQuality.ts` 与 `graphAnswerPlan.ts` 负责。分句会保留小数点和数学记号；排序信号包括句末完整性、delimiter 平衡、数学密度、文档元叙述惩罚与连续长度衰减。最终公开 clause 可以不同于 raw evidence 文本，但 `evidenceRefs` 必须保留原始 provenance。这些 score 只排序已选证据，不证明 relevance 或 entailment。
+
+Supplemental RAG clause 在 composer 边界做语义去重；release review 只移除字面等价或包含型重复，避免冲突日期、数值、endpoint 或 location 被静默折叠。当前验证要求 required claim ID 完整覆盖、保持 plan 顺序、无重复长 clause，并且公开回答无 Markdown list/bold 脚手架。全仓基线为 Jest 124/124 个 suite、1,155 个测试通过、26 个跳过，同时 TypeScript、production/Vite build、Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。
