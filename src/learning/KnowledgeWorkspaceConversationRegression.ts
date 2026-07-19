@@ -1,6 +1,7 @@
 import type {
     AnswerReleaseDecision,
     AnswerReleaseGateId,
+    GraphAnswerRole,
     KnowledgeQueryResolvedScope,
     RagContextBudget,
     RagEvidenceRole,
@@ -23,6 +24,7 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     primarySourcePath: string;
     recoveredSourcePaths?: string[];
     answerMustContain?: string[];
+    answerMustCoverConcepts?: string[];
     answerMustNotContain?: string[];
     ragSourceBoundary?: RagSourceBoundary;
     requiredRagRoles?: RagEvidenceRole[];
@@ -62,6 +64,7 @@ export interface KnowledgeWorkspaceConversationRegressionExpectation {
     requireScopedDocumentIds?: boolean;
     requireCompleteGraphAnswerCoverage?: boolean;
     requireGraphAnswerPlanOrder?: boolean;
+    requiredGraphAnswerRoles?: GraphAnswerRole[];
 }
 
 export interface KnowledgeWorkspaceConversationRegressionCase {
@@ -192,15 +195,20 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
             acceptedAnswerReleaseDecisions: ['release', 'revise'],
             plannerTitleLikeQueries: ['water glass', 'plastic cup'],
             primarySourcePath: 'Knowledge_Base/waterglass/water glass.md',
-            answerMustContain: ['glass', 'plastic'],
+            answerMustCoverConcepts: ['glass_material', 'plastic'],
             answerMustNotContain: [
                 'No scoped knowledge points matched',
                 'retrieval_candidates_below_threshold',
+                '消色差透镜',
+                '数学优化',
             ],
             ragSourceBoundary: 'full_document',
             requiredRagRoles: ['direct_support', 'parent_context', 'graph_neighbor_support'],
             acceptedRagSufficiencyStatuses: ['sufficient', 'borderline'],
             requireScopedDocumentIds: false,
+            requireCompleteGraphAnswerCoverage: true,
+            requireGraphAnswerPlanOrder: true,
+            requiredGraphAnswerRoles: ['contrast'],
         },
     },
     {

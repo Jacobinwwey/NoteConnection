@@ -1721,10 +1721,20 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 |---|---|---|---|
 | Clause segmentation | `src/learning/ragEvidenceQuality.ts`、decimal/math boundary 测试 | 完成 | delimiter heuristic 是确定性规则，不是 entailment |
 | Source-quality scoring | delimiter 平衡、句末完整性、数学密度、文档元叙述惩罚 | 完成 | score 只是排序信号，不构成 relevance 证明 |
-| Plan shaping | `graphAnswerPlan.ts` 选择完整 public clause 并保留 raw provenance | 完成 | 一个 fragment 仍代表一个 graph claim |
+| Plan shaping | `graphAnswerPlan.ts` 选择完整且 query-relevant 的 clause，可从一个有界 fragment 保留多个不同 claim，并保留 raw provenance | 完成 | compare branch 解析仍是确定性规则，需要更大多语言语料校准 |
 | Supplemental 去重 | `conversationComposer.ts` 语义相似度阈值 0.86 | 完成 | 阈值仍需未来多语言校准 |
 | Coverage 保持 | graph plan/release/coverage focused tests 与 Water Glass required ID/order、重复 clause、脚手架门禁 | 完成 | runtime verifier full restore 仍受环境耗时影响 |
 
-先前的核心问题已经在确定性选择层得到解决。当前仓库基线为 Jest 124/124 个 suite、1,155 个测试通过、26 个跳过；graph/release/runtime 定向测试 191/191 通过，TypeScript、production/Vite build、Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。
+先前的核心问题已经在确定性选择层得到解决。当前仓库基线为 Jest 124/124 个 suite、1,160 个测试通过、26 个跳过；当前 graph/RAG/release focused matrix 238/238 通过，TypeScript、production/Vite build、完整 conversation runtime 验收、Diataxis、MkDocs 与 diff hygiene 均通过。
 
 当前核心问题更窄且可度量：**如何联合校准多语言 source-quality、semantic-deduplication 与 readability 阈值，使 prose 改善时既不丢失 required graph claim，也不错误折叠冲突证据？** degree 与 similarity 仍只是排序信号，不是真值。编排抽取是 decision gate，不是未完成工作：新 owner 能执行完整 planned/reviewed-answer operation 并移除 caller knowledge 前，责任继续保留在 `KnowledgeLearningPlatform.ts`。
+
+## 2026-07-19 多语言比较证据收口
+
+Water Glass compare 的剩余失败包含两个证据丢失边界。第一，固定 head/tail 截断可能保留 Mermaid block，却丢掉围栏外等价 prose。第二，plan shaping 对密集 section 只选择一个 clause，并可能按遍历边类型而不是 clause 的真实比较语义分类。
+
+当前链路已在检索、context window、plan shaping 与 runtime acceptance 之间复用 `semanticFeatures()`。Query-centered window 只有在既有 RAG 预算内提升语义覆盖时才替换基线，且评分前会移除 fenced payload。`graphAnswerPlan.ts` 会从有界 fragment 发射所有完整、新颖且 query-relevant 的 clause。compare intent 会动态推导查询两侧分支，只保留 branch coverage 最大的 clause，因此材料比较可以进入 required plan，而无关的消色差透镜和泛化“数学更复杂”描述会被排除。
+
+这纠正了“检索更多图上下文自然会产生更好回答”的旧假设。真正的不变量更严格：**每个公开 claim 都必须有证据、与意图一致；多 operand 查询还必须覆盖对应分支，并在最终 coverage review 后继续存在。** 运行时现在校验多语言概念（`glass_material`、`plastic`）、required `contrast` role、最终 coverage/order，以及明确的无关 clause 反例。
+
+后续方向不是增加层级或恢复计数配额，而是建立版本化多语言 query-branch 语料，联合测量 retrieval recall、branch coverage、claim novelty、语言一致性和最终可读性。尤其是“英文查询 + 中文来源”的回答仍需要明确的语言实现策略；应通过 grounded synthesis 解决，而不是降低语义验收或注入固定模板。

@@ -113,6 +113,35 @@ describe('query backend factory', () => {
         expect(result.trace?.modeWeights?.semantic).toBeGreaterThan(0);
     });
 
+    test('local hybrid backend reuses multilingual graph concepts for comparison retrieval', async () => {
+        const backend = createGraphQueryBackend({ backend: 'local_hybrid' });
+        const atoms: KnowledgeAtom[] = [
+            makeAtom('water_glass_definition', '水杯', '水杯是透明玻璃容器。', ['水杯', '玻璃'], 'zh'),
+            makeAtom(
+                'container_material_comparison',
+                '材料比较',
+                '塑料杯与玻璃水杯相比更轻、更有韧性，但刚度和透明度较低。',
+                ['塑料杯', '玻璃水杯', '比较'],
+                'zh'
+            ),
+        ];
+        const result = await backend.query({
+            request: {
+                query: 'compare water glass and plastic cup',
+                topK: 2,
+            },
+            query: 'compare water glass and plastic cup',
+            queryTokens: ['compare', 'water', 'glass', 'plastic', 'cup'],
+            queryVariants: ['water glass', 'plastic cup'],
+            asOf: '2026-01-01T00:00:00.000Z',
+            topK: 2,
+            atoms,
+            activeEdges: [],
+        });
+
+        expect(result.candidates.map((candidate) => candidate.atomId)).toContain('container_material_comparison');
+    });
+
     test('local vector backend includes vector similarity mode', async () => {
         const backend = createGraphQueryBackend({ backend: 'local_vector' });
         const atoms: KnowledgeAtom[] = [

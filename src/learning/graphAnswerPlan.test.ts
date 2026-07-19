@@ -308,4 +308,80 @@ describe('buildGraphAnswerPlan', () => {
 
         expect(plan.claims[0].statement).toBe('当光线穿过空气、玻璃和水时会发生折射。');
     });
+
+    test('turns multilingual comparison prose into a required contrast claim', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'compare water glass and plastic cup',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                query: 'compare water glass and plastic cup',
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'rag_parent_material_comparison',
+                        role: 'parent_context',
+                        atomId: 'water_glass',
+                        title: '相关技术与比较数学模型',
+                        text: [
+                            '光学系统比较模型: 水杯透镜 vs.',
+                            '热损失模型可写为 Q = kAΔT/d。',
+                            '这是一种远比水杯复杂的数学优化。',
+                            '玻璃水杯通常比PET塑料杯更透明。',
+                            '对于相同尺寸的杯子，PET塑料杯的热损失速率大约是玻璃杯的1/5。',
+                        ].join(' '),
+                        score: 0.88,
+                    },
+                ],
+            },
+        });
+
+        expect(plan.claims.map((claim) => ({
+            role: claim.role,
+            required: claim.required,
+            statement: claim.statement,
+        }))).toContainEqual(expect.objectContaining({
+            role: 'contrast',
+            required: true,
+            statement: '对于相同尺寸的杯子，PET塑料杯的热损失速率大约是玻璃杯的1/5。',
+        }));
+        expect(plan.requiredRoles).toContain('contrast');
+        expect(plan.claims).toContainEqual(expect.objectContaining({
+            role: 'contrast',
+            required: true,
+            statement: '玻璃水杯通常比PET塑料杯更透明。',
+        }));
+        expect(plan.claims.some((claim) => claim.statement.includes('数学优化'))).toBe(false);
+    });
+
+    test('does not spend compare-claim budget on a clause that covers only one requested branch', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'compare water glass and plastic cup',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                query: 'compare water glass and plastic cup',
+                fragments: [{
+                    ...ragContextPack.fragments[0],
+                    fragmentId: 'rag_parent_mixed_comparisons',
+                    role: 'parent_context',
+                    atomId: 'water_glass',
+                    title: '相关技术与比较数学模型',
+                    text: [
+                        'PET塑料杯的热损失速率大约是玻璃杯的1/5。',
+                        '消色差透镜使用两种不同色散特性的玻璃组合。',
+                    ].join(' '),
+                    score: 0.88,
+                }],
+            },
+        });
+
+        expect(plan.claims).toContainEqual(expect.objectContaining({
+            role: 'contrast',
+            statement: 'PET塑料杯的热损失速率大约是玻璃杯的1/5。',
+        }));
+        expect(plan.claims.some((claim) => claim.statement.includes('消色差透镜'))).toBe(false);
+    });
 });

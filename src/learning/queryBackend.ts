@@ -8,6 +8,7 @@ import type {
     RelationEdge,
     RelationKind,
 } from './types';
+import { semanticFeatures } from './graphClaimMatcher';
 
 type GraphQueryIntent = 'explain' | 'compare' | 'how_to' | 'generic';
 
@@ -612,7 +613,9 @@ function buildAtomSemanticTokens(atom: KnowledgeAtom): string[] {
     );
     const titleTokens = extractSemanticTokens(atom.title, SEMANTIC_TITLE_TOKEN_LIMIT);
     const contentTokens = extractSemanticTokens(atom.content, SEMANTIC_CONTENT_TOKEN_LIMIT);
-    return uniqueTokens([...keywordTokens, ...titleTokens, ...contentTokens]);
+    const conceptTokens = semanticFeatures(`${atom.title} ${atom.content}`)
+        .filter((feature) => feature.startsWith('concept:'));
+    return uniqueTokens([...keywordTokens, ...titleTokens, ...contentTokens, ...conceptTokens]);
 }
 
 function buildQuerySemanticTokens(context: GraphQueryBackendContext): string[] {
@@ -625,7 +628,9 @@ function buildQuerySemanticTokens(context: GraphQueryBackendContext): string[] {
         extractSemanticTokens(variant, SEMANTIC_QUERY_TOKEN_LIMIT)
     ));
     const fallbackTokens = extractSemanticTokens(context.query, SEMANTIC_QUERY_TOKEN_LIMIT);
-    return uniqueTokens([...directTokens, ...variantTokens, ...fallbackTokens]).slice(0, SEMANTIC_QUERY_TOKEN_LIMIT);
+    const conceptTokens = semanticFeatures(buildQueryTextVariants(context).join(' '))
+        .filter((feature) => feature.startsWith('concept:'));
+    return uniqueTokens([...directTokens, ...variantTokens, ...fallbackTokens, ...conceptTokens]).slice(0, SEMANTIC_QUERY_TOKEN_LIMIT);
 }
 
 function computeJaccard(left: string[], right: string[]): number {

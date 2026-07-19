@@ -19,7 +19,7 @@ Keep subsequent answer-quality work aligned with the completed coverage-driven g
 - [x] Replace raw lexical overlap with conservative concept-and-polarity matching; calibration reports precision, recall, and exact false-positive/false-negative case IDs.
 - [x] Add novelty-aware duplicate suppression and discourse dependency ordering before public composition.
 - [x] Add a replayable one-step graph-expansion policy for explicitly deep/research queries; ordinary definition/explain answers remain deterministic and bounded.
-- [ ] Extract answer-planning orchestration from `KnowledgeLearningPlatform.ts` only when the new owner can enforce a complete operation and reduce caller knowledge.
+- [x] Record answer-planning orchestration extraction as a decision gate: retain `KnowledgeLearningPlatform.ts` ownership until a new owner can enforce a complete operation and reduce caller knowledge.
 - [x] Project compact plan/coverage/expansion diagnostics into the operator-only Grounding Inspector without exposing internal scaffolding in the main answer.
 - [x] Follow-up phase checkpoint passed 122/122 suites and 1,145 tests (26 skipped), production and Vite builds, documentation checks/build, and hardened Water Glass runtime acceptance.
 
@@ -42,7 +42,7 @@ Keep subsequent answer-quality work aligned with the completed coverage-driven g
 - [x] 用保守的概念与否定极性匹配替代原始词法 overlap；校准报告会输出 precision、recall 和精确 FP/FN case ID。
 - [x] 在公开文本合成前执行 novelty-aware 重复抑制与 discourse dependency ordering。
 - [x] 为显式 deep/research 查询增加可回放的一步图扩展策略；普通 definition/explain 回答继续保持确定性和有界性。
-- [ ] 只有新 owner 能强制完整操作并降低 caller knowledge 时，才从 `KnowledgeLearningPlatform.ts` 抽取 answer-planning 编排。
+- [x] 将 answer-planning 编排抽取记录为 decision gate：新 owner 能强制完整操作并降低 caller knowledge 前，继续由 `KnowledgeLearningPlatform.ts` 持有责任。
 - [x] 已在 operator-only Grounding Inspector 中投影紧凑 plan/coverage/expansion 诊断，不向主回答暴露内部脚手架。
 - [x] 后续 Phase 检查点通过 122/122 个 suite、1,145 个测试（26 个跳过）、production/Vite build、文档检查/构建与加固后的 Water Glass 运行时验收。
 
@@ -7727,3 +7727,25 @@ All implementation phases in this plan are complete. Orchestration extraction is
 ### 中文
 
 本方案全部实施 Phase 均已完成。编排抽取是未来 decision gate，不是 unchecked 交付项：只有完整的 planned/reviewed-answer operation 能降低 caller knowledge 时，才应从 `KnowledgeLearningPlatform.ts` 抽取。下一项可度量工作是建立版本化多语言语料，联合评估 readability、去重精度、graph coverage 与 provenance 保留。
+
+## 2026-07-19 Multilingual Comparison Evidence Closure
+
+### English
+
+- [x] Reuse `graphClaimMatcher.semanticFeatures()` in local retrieval and context-window selection so EN queries can recover ZH graph evidence without a second synonym policy.
+- [x] Replace fixed head/tail-only truncation with a query-centered, fence-safe window only when it improves semantic coverage inside the existing RAG character budget.
+- [x] Recover fence-external comparison prose while keeping Mermaid renderer payload out of model-visible/public evidence.
+- [x] Allow one bounded RAG fragment to yield every complete, query-relevant claim that survives semantic novelty checks; no new per-fragment claim-count ceiling remains.
+- [x] For compare intent, derive both query branches and prefer clauses that cover both branches instead of unrelated same-section comparisons.
+- [x] Require runtime semantic coverage for `glass_material` and `plastic`, a required `contrast` role, final claim coverage, and plan order; reject unrelated achromatic-lens/math-optimization prose.
+- [x] Fresh verification: focused matrix 11/11 suites and 238/238 tests; full Jest 124/124 suites, 1,160 passed and 26 skipped; production/Vite build, complete conversation runtime, Diataxis, MkDocs, and diff hygiene passed.
+
+### 中文
+
+- [x] 在本地检索与 context window 选择中复用 `graphClaimMatcher.semanticFeatures()`，让英文查询能够召回中文图证据，不再维护第二套同义词策略。
+- [x] 将仅固定 head/tail 的截断改为 query-centered、fence-safe window；只有在既有 RAG 字符预算内提升语义覆盖时才替换基线。
+- [x] 恢复 Mermaid 围栏外的比较 prose，同时确保 renderer payload 不进入 model-visible / public evidence。
+- [x] 一个有界 RAG fragment 可产生所有通过完整句与语义新颖性检查的 query-relevant claim；不新增每 fragment claim 数量硬上限。
+- [x] compare intent 会动态推导查询两侧分支，优先选择同时覆盖两侧的 clause，排除同 section 中无关的比较内容。
+- [x] 运行时同时要求 `glass_material` / `plastic` 语义覆盖、required `contrast` role、最终 claim coverage 与 plan order，并拒绝无关的消色差透镜 / 数学优化 prose。
+- [x] 新鲜验证：focused matrix 11/11 suites、238/238 tests；全量 Jest 124/124 suites、1,160 passed、26 skipped；production/Vite build、完整 conversation runtime、Diataxis、MkDocs 与 diff hygiene 均通过。

@@ -424,3 +424,83 @@ Future work is deliberately separated from this closure: build a multilingual jo
 本实施方案以 Jest 124/124 个 suite、1,155 个测试通过、26 个跳过收口。graph/release/runtime 定向测试 191/191 通过；TypeScript、production/Vite build、Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。不存在部分实施的计划 Phase。
 
 后续工作与本轮收口明确分离：建立多语言联合质量语料，校准 supplemental 去重的 `0.86` 阈值和 source-quality feature；只有完整 operation 边界能移除 caller knowledge 时，才评估编排抽取。
+
+## 2026-07-19 Multilingual Comparison Evidence Closure
+
+### English
+
+#### Root cause and code-vs-plan correction
+
+The Water Glass compare runtime exposed that the earlier “phase complete” statement was too broad. The graph and RAG pack contained the material comparison, but the public planning path could still lose it through two mechanisms:
+
+1. `ragContextPack.ts` used fixed head/tail middle truncation. A high-overlap Mermaid payload could occupy the selected window while equivalent prose later in the same section was truncated.
+2. `graphAnswerPlan.ts` selected one public clause per fragment and inferred role from relation-edge context before the clause's explicit semantics. Dense comparison sections therefore allowed an unrelated optical comparison to consume the only claim slot, while a material comparison survived only as supplemental prose and was not protected by final coverage.
+
+#### Implemented architecture
+
+- `queryBackend.ts` and `ragContextPack.ts` reuse `graphClaimMatcher.semanticFeatures()`; multilingual retrieval and coverage no longer maintain divergent synonym tables.
+- `ragPublicText.ts` owns fenced Markdown payload omission. Query-centered context windows score fence-external text and replace the deterministic head/tail baseline only when semantic/lexical coverage strictly improves within the existing character budget.
+- `graphAnswerPlan.ts` ranks complete clauses, rejects dangling `vs.`/separator fragments, and can emit multiple distinct claims from one bounded source fragment. There is no new per-fragment claim-count quota; the existing evidence budget, relevance, completeness, and semantic novelty boundaries provide control.
+- Explicit comparison semantics override generic traversal-edge roles for the public claim role, while edge ids remain in provenance.
+- Compare planning derives both operands from the query, removes shared features, and measures candidate coverage of each branch. Clauses covering both requested branches outrank same-section clauses covering only the Water Glass/optics branch.
+- Runtime acceptance uses the shared semantic feature owner to require `glass_material` and `plastic`, plus a required `contrast` role, final required-claim coverage, plan order, and negative checks for unrelated achromatic-lens/math-optimization prose.
+
+#### Trade-offs and risks
+
+- The evidence pack remains bounded; this is a model-input resource invariant, not an answer-length quota.
+- Branch extraction is deterministic and currently strongest for explicit `compare X and/with/versus Y` and Chinese `比较/对比 X 与/和/跟 Y` forms. A versioned multilingual branch corpus is required before widening syntax heuristics.
+- Semantic features prove calibrated concept overlap, not entailment. Numeric direction, negation, and contradiction must continue to be checked separately.
+- English-query/Chinese-source answers can now pass semantically without renderer leakage, but language realization is still source-language dominant. A future synthesizer must preserve provenance and required claims rather than prepend canned bilingual labels.
+- `KnowledgeLearningPlatform.ts` ownership remains unchanged; this fix stays with the existing retrieval, pack, planning, and verifier owners and does not justify a pass-through orchestration layer.
+
+#### Verification checkpoint
+
+- Focused graph/RAG/release matrix: 11/11 suites, 238/238 tests.
+- Full Jest: 124/124 suites, 1,160 passed, 26 skipped (1,186 total).
+- `npm run build:with-vite`: passed; existing non-module script warnings remain unchanged.
+- Complete conversation runtime verifier: exited successfully; the focused `waterglass_compare_materials_en` probe also passed semantic concepts, required contrast, coverage/order, and irrelevant-clause negatives.
+- Diataxis: 18 entries, 36 paths, 64 canonical references; MkDocs build passed.
+- Full restore mode (`--full`) was not used as closure evidence because prior runs exceeded the environment timeout; it is not reported as passed.
+
+#### Next direction
+
+The remaining critical question is: **how should graph-branch coverage, multilingual language realization, claim novelty, and source-quality be calibrated together so completeness does not become evidence dumping?** The next implementation should introduce a versioned corpus and joint metrics before adding more heuristics, templates, or orchestration layers.
+
+### 中文
+
+#### 根因与代码-方案纠偏
+
+Water Glass compare runtime 证明此前“全部 Phase 完成”的表述仍过宽。图与 RAG pack 中已经存在材料比较，但公开 planning 路径仍可能通过两个机制丢失它：
+
+1. `ragContextPack.ts` 使用固定 head/tail middle truncation。高 overlap 的 Mermaid payload 可能占据窗口，而同 section 后面的等价 prose 被截断。
+2. `graphAnswerPlan.ts` 每个 fragment 只选择一个 public clause，并优先按 relation-edge context 推断 role，而不是 clause 的显式语义。密集比较 section 因而可能让无关光学比较占用唯一 claim 槽位；材料比较即使作为 supplemental prose 出现，也不受最终 coverage 保护。
+
+#### 已实施架构
+
+- `queryBackend.ts` 与 `ragContextPack.ts` 复用 `graphClaimMatcher.semanticFeatures()`；多语言 retrieval 与 coverage 不再维护分叉的同义词表。
+- `ragPublicText.ts` 统一负责 fenced Markdown payload omission。Query-centered context window 对围栏外文本评分，只有在既有字符预算内严格提升语义/词项覆盖时才替换确定性 head/tail 基线。
+- `graphAnswerPlan.ts` 对完整 clause 排序，拒绝悬空 `vs.` / separator fragment，并可从一个有界 source fragment 发射多个不同 claim。不新增每 fragment claim 数量配额；控制来自既有 evidence budget、相关性、完整句与语义新颖性边界。
+- 公开 claim role 优先服从显式比较语义，而 relation edge id 继续保留在 provenance。
+- Compare planning 从查询中推导两侧 operand，去掉共享 feature，并计算 candidate 对每个 branch 的覆盖。同一 section 中只覆盖 Water Glass / optics 一侧的 clause 不再压过同时覆盖两种容器材料的 clause。
+- Runtime acceptance 复用共享语义 feature owner，要求 `glass_material`、`plastic`、required `contrast` role、最终 required-claim coverage、plan order，并拒绝无关的消色差透镜 / 数学优化 prose。
+
+#### 权衡与风险
+
+- Evidence pack 继续有界；这是 model input 的资源不变量，不是回答长度配额。
+- Branch extraction 是确定性逻辑，目前最适合显式 `compare X and/with/versus Y` 与中文 `比较/对比 X 与/和/跟 Y`。扩大语法前需要版本化多语言 branch corpus。
+- Semantic feature 只能证明经校准的概念 overlap，不证明 entailment；数值方向、否定和矛盾仍需独立校验。
+- 英文查询 + 中文来源现在可以在不泄漏 renderer payload 的情况下通过语义验收，但 language realization 仍偏向来源语言。未来 synthesizer 必须保留 provenance 与 required claim，不能简单添加固定双语标签。
+- `KnowledgeLearningPlatform.ts` owner 保持不变；本次修复落在既有 retrieval、pack、planning 与 verifier owner 内，不构成增加 pass-through 编排层的理由。
+
+#### 验证检查点
+
+- graph/RAG/release focused matrix：11/11 suites，238/238 tests。
+- 全量 Jest：124/124 suites，1,160 passed，26 skipped（共 1,186）。
+- `npm run build:with-vite`：通过；既有 non-module script warning 未变化。
+- 完整 conversation runtime verifier：成功退出；定向 `waterglass_compare_materials_en` 同时通过语义概念、required contrast、coverage/order 与无关 clause 反例。
+- Diataxis：18 entries、36 paths、64 canonical references；MkDocs build 通过。
+- Full restore mode（`--full`）此前超过环境 timeout，本轮不作为收口证据，也不宣称通过。
+
+#### 后续方向
+
+剩余核心问题是：**如何联合校准 graph branch coverage、多语言 language realization、claim novelty 与 source-quality，使完整性不退化为 evidence dumping？** 下一步应先建立版本化语料与联合指标，再增加 heuristic、模板或编排层。

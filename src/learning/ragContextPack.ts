@@ -7,6 +7,8 @@ import type {
     RagSourceBoundary,
     RagSourceDecision,
 } from './types';
+import { semanticFeatures } from './graphClaimMatcher';
+import { omitFencedMarkdownPayload } from './ragPublicText';
 
 export interface BuildRagContextPackParams {
     query: string;
@@ -60,7 +62,104 @@ export function estimateRagTokenCount(text: string): number {
     return Math.max(1, Math.ceil(normalized.length / 4));
 }
 
-function truncateMiddle(text: string, maxChars: number): { text: string; truncated: boolean } {
+const QUERY_WINDOW_STOPWORDS = new Set([
+    'and', 'compare', 'contrast', 'difference', 'the', 'versus', 'with',
+]);
+
+function queryWindowTerms(query: string): string[] {
+    return Array.from(new Set(
+        (String(query || '').toLowerCase().match(/[a-z0-9][a-z0-9_-]{2,}|[\u3400-\u9fff]{2,}/gu) || [])
+            .filter((term) => !QUERY_WINDOW_STOPWORDS.has(term))
+    ));
+}
+
+function queryTermCoverage(text: string, terms: string[]): number {
+    const normalized = text.toLowerCase();
+    return terms.reduce((count, term) => count + (normalized.includes(term) ? 1 : 0), 0);
+}
+
+function queryFeatureCoverage(text: string, queryFeatures: Set<string>): number {
+    return semanticFeatures(text).reduce(
+        (count, feature) => count + (queryFeatures.has(feature) ? 1 : 0),
+        0
+    );
+}
+
+function queryWindowAnchors(source: string, terms: string[], queryFeatures: Set<string>): number[] {
+    const anchors = new Set<number>();
+    const normalizedSource = source.toLowerCase();
+    terms.forEach((term) => {
+        let matchIndex = normalizedSource.indexOf(term);
+        while (matchIndex >= 0) {
+            anchors.add(matchIndex);
+            matchIndex = normalizedSource.indexOf(term, matchIndex + term.length);
+        }
+    });
+    const clausePattern = /[^\n.!?。！？；;]+(?:[.!?。！？；;]+|$)/gu;
+    let clauseMatch: RegExpExecArray | null;
+    while ((clauseMatch = clausePattern.exec(source)) !== null) {
+        if (queryFeatureCoverage(clauseMatch[0], queryFeatures) > 0) {
+            anchors.add(clauseMatch.index + Math.floor(clauseMatch[0].length / 2));
+        }
+    }
+    return Array.from(anchors).sort((left, right) => left - right);
+}
+
+function queryCenteredWindow(source: string, maxChars: number, query: string, baseline: string): string | null {
+    const terms = queryWindowTerms(query);
+    const queryFeatures = new Set(semanticFeatures(query));
+    if (queryFeatures.size < 2) {
+        return null;
+    }
+    const visibleSource = omitFencedMarkdownPayload(source);
+    const markerLength = '\n[...]\n'.length;
+    const windowLength = Math.max(16, maxChars - markerLength * 2);
+    const visibleBaseline = omitFencedMarkdownPayload(baseline);
+    const baselineFeatureCoverage = queryFeatureCoverage(visibleBaseline, queryFeatures);
+    const baselineTermCoverage = queryTermCoverage(visibleBaseline, terms);
+    let selected: {
+        start: number;
+        text: string;
+        featureCoverage: number;
+        termCoverage: number;
+    } | null = null;
+
+    for (const anchor of queryWindowAnchors(visibleSource, terms, queryFeatures)) {
+        const start = Math.max(0, Math.min(
+            visibleSource.length - windowLength,
+            anchor - Math.floor(windowLength * 0.35)
+        ));
+        const candidate = visibleSource.slice(start, start + windowLength);
+        const featureCoverage = queryFeatureCoverage(candidate, queryFeatures);
+        const termCoverage = queryTermCoverage(candidate, terms);
+        if (
+            !selected
+            || featureCoverage > selected.featureCoverage
+            || (
+                featureCoverage === selected.featureCoverage
+                && termCoverage > selected.termCoverage
+            )
+        ) {
+            selected = { start, text: candidate, featureCoverage, termCoverage };
+        }
+    }
+
+    if (
+        !selected
+        || selected.featureCoverage < baselineFeatureCoverage
+        || (
+            selected.featureCoverage === baselineFeatureCoverage
+            && selected.termCoverage <= baselineTermCoverage
+        )
+    ) {
+        return null;
+    }
+    const prefix = selected.start > 0 ? '[...]\n' : '';
+    const suffix = selected.start + selected.text.length < visibleSource.length ? '\n[...]' : '';
+    return `${prefix}${selected.text.trim()}${suffix}`;
+}
+
+function truncateMiddle(text: string, maxChars: number, query: string): { text: string; truncated: boolean } {
     const source = String(text || '');
     if (source.length <= maxChars) {
         return { text: source, truncated: false };
@@ -72,8 +171,9 @@ function truncateMiddle(text: string, maxChars: number): { text: string; truncat
     const available = Math.max(0, maxChars - marker.length);
     const headLength = Math.ceil(available * 0.6);
     const tailLength = Math.floor(available * 0.4);
+    const baseline = `${source.slice(0, headLength).trimEnd()}${marker}${source.slice(source.length - tailLength).trimStart()}`;
     return {
-        text: `${source.slice(0, headLength).trimEnd()}${marker}${source.slice(source.length - tailLength).trimStart()}`,
+        text: queryCenteredWindow(source, maxChars, query, baseline) || baseline,
         truncated: true,
     };
 }
@@ -81,9 +181,10 @@ function truncateMiddle(text: string, maxChars: number): { text: string; truncat
 function withBudgetedText(
     fragment: RagEvidenceFragment,
     maxChars: number,
-    reason: string
+    reason: string,
+    query: string
 ): RagEvidenceFragment {
-    const truncated = truncateMiddle(fragment.text, maxChars);
+    const truncated = truncateMiddle(fragment.text, maxChars, query);
     const text = truncated.text;
     return {
         ...fragment,
@@ -119,7 +220,8 @@ function sortFragmentsForBudget(fragments: RagEvidenceFragment[]): RagEvidenceFr
 function applyContextBudget(
     fragments: RagEvidenceFragment[],
     budget: RagContextBudget,
-    decisions: RagSourceDecision[]
+    decisions: RagSourceDecision[],
+    query: string
 ): RagEvidenceFragment[] {
     const selected: RagEvidenceFragment[] = [];
     let usedChars = 0;
@@ -134,7 +236,7 @@ function applyContextBudget(
             });
             return;
         }
-        let candidate = withBudgetedText(fragment, budget.maxCharsPerFragment, 'max_chars_per_fragment_exceeded');
+        let candidate = withBudgetedText(fragment, budget.maxCharsPerFragment, 'max_chars_per_fragment_exceeded', query);
         const remainingChars = budget.maxTotalChars - usedChars;
         if (remainingChars <= 0) {
             decisions.push({
@@ -157,7 +259,7 @@ function applyContextBudget(
                 });
                 return;
             }
-            candidate = withBudgetedText(candidate, remainingChars, 'max_total_chars_exceeded');
+            candidate = withBudgetedText(candidate, remainingChars, 'max_total_chars_exceeded', query);
         }
         selected.push(candidate);
         usedChars += candidate.charCount;
@@ -279,7 +381,7 @@ export function buildRagContextPack(params: BuildRagContextPackParams): RagConte
         ? params.sourceDecisions.map((decision) => ({ ...decision }))
         : [];
     const fragments = Array.isArray(params.fragments) ? params.fragments.filter(Boolean) : [];
-    const selectedFragments = applyContextBudget(fragments, budget, decisions);
+    const selectedFragments = applyContextBudget(fragments, budget, decisions, params.query);
     annotateReadDecisions(decisions, selectedFragments);
     const totalCharCount = selectedFragments.reduce((sum, fragment) => sum + fragment.charCount, 0);
     const tokenEstimate = selectedFragments.reduce((sum, fragment) => sum + fragment.tokenEstimate, 0);

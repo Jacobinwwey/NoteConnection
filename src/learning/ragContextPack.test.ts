@@ -130,6 +130,67 @@ describe('buildRagContextPack', () => {
         ]));
     });
 
+    test('centers the bounded window on query terms when a later comparison clause would otherwise be dropped', () => {
+        const longText = [
+            'Opening definition: a water glass is a transparent vessel.',
+            'Background context '.repeat(28),
+            'Comparison: a plastic cup is lightweight and less rigid than a water glass.',
+            'Terminal qualifier: the comparison remains limited to the scoped note.',
+        ].join('\n');
+
+        const pack = buildRagContextPack({
+            query: 'compare water glass and plastic cup',
+            fragments: [
+                makeFragment({
+                    role: 'parent_context',
+                    text: longText,
+                    sourceBoundary: 'full_document',
+                }),
+            ],
+            sourceDecisions: [],
+            budget: {
+                maxFragments: 3,
+                maxCharsPerFragment: 180,
+                maxTotalChars: 220,
+            },
+            generatedAt: '2026-07-05T00:00:00.000Z',
+        });
+
+        expect(pack.fragments[0].text).toContain('plastic cup');
+        expect(pack.fragments[0].text).toContain('water glass');
+    });
+
+    test('prefers multilingual comparison prose outside fenced renderer payloads', () => {
+        const longText = [
+            'Opening definition: a water glass is a transparent vessel.',
+            'Background context '.repeat(20),
+            '```mermaid',
+            'graph LR',
+            'A[Water Glass] --> B[Plastic Cup PET]',
+            '```',
+            '相同尺寸下，PET塑料杯比玻璃水杯更轻、更有韧性，但刚度和透明度较低。',
+            'Terminal qualifier: the comparison remains limited to the scoped note.',
+        ].join('\n');
+
+        const pack = buildRagContextPack({
+            query: 'compare water glass and plastic cup',
+            fragments: [makeFragment({
+                role: 'parent_context',
+                text: longText,
+                sourceBoundary: 'full_document',
+            })],
+            sourceDecisions: [],
+            budget: {
+                maxFragments: 3,
+                maxCharsPerFragment: 180,
+                maxTotalChars: 220,
+            },
+        });
+
+        expect(pack.fragments[0].text).toContain('PET塑料杯');
+        expect(pack.fragments[0].text).not.toContain('graph LR');
+    });
+
     test('uses role priority so weak background cannot displace direct or graph evidence', () => {
         const pack = buildRagContextPack({
             query: 'what is water glass?',

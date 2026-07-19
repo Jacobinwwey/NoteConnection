@@ -1692,10 +1692,20 @@ This checkpoint's critical question has been resolved by the clause-quality phas
 |---|---|---|---|
 | Clause segmentation | `src/learning/ragEvidenceQuality.ts`, decimal/math boundary tests | Complete | Delimiter heuristics are deterministic, not entailment |
 | Source-quality scoring | balanced delimiters, terminal completeness, math density, documentary penalty | Complete | Scores are ranking signals, never relevance proof |
-| Plan shaping | `graphAnswerPlan.ts` selects one complete public clause and retains raw provenance | Complete | One fragment still represents one graph claim |
+| Plan shaping | `graphAnswerPlan.ts` selects complete query-relevant clauses, can retain multiple distinct claims from one bounded fragment, and keeps raw provenance | Complete | Compare-branch parsing is deterministic and needs broader multilingual calibration |
 | Supplemental deduplication | `conversationComposer.ts` semantic similarity threshold 0.86 | Complete | Threshold requires future multilingual calibration |
 | Coverage preservation | focused graph plan/release/coverage tests plus Water Glass required IDs/order, duplicate-clause and scaffolding gates | Complete | Runtime verifier full restore remains environment-sensitive |
 
-The earlier critical question is now answered at the deterministic selection layer. The repository baseline is 124/124 Jest suites, 1,155 passed, and 26 skipped; focused graph/release/runtime tests passed 191/191, and TypeScript, production/Vite build, Water Glass runtime acceptance, Diataxis, MkDocs, and diff hygiene passed.
+The earlier critical question is now answered at the deterministic selection layer. The repository baseline is 124/124 Jest suites, 1,160 passed, and 26 skipped; the current focused graph/RAG/release matrix passed 238/238, and TypeScript, production/Vite build, complete conversation runtime acceptance, Diataxis, MkDocs, and diff hygiene passed.
 
 The current critical question is narrower and measurable: **how should multilingual source-quality, semantic-deduplication, and readability thresholds be jointly calibrated so improved prose neither drops required graph claims nor collapses conflicting evidence?** Degree and similarity remain ranking signals, not truth. Orchestration extraction is a decision gate, not unfinished work: retain it in `KnowledgeLearningPlatform.ts` until a new owner can execute the complete planned/reviewed-answer operation and remove caller knowledge.
+
+## 2026-07-19 Multilingual Comparison Evidence Closure
+
+The remaining Water Glass compare failure had two evidence-loss boundaries. First, fixed head/tail truncation could retain a Mermaid block while dropping equivalent fence-external prose. Second, plan shaping selected only one clause from a dense section and could classify it by the traversal edge rather than the clause's actual comparison semantics.
+
+The current pipeline now reuses `semanticFeatures()` across retrieval, context-window selection, plan shaping, and runtime acceptance. Query-centered windows are selected only when they improve semantic coverage inside the existing RAG budget; fenced payload is omitted before window scoring. `graphAnswerPlan.ts` emits every complete and novel query-relevant clause from the bounded fragment. For compare intent, it derives the two query branches and keeps clauses with maximum branch coverage, so the material comparison survives while unrelated achromatic-lens and generic mathematical-complexity prose does not.
+
+This closes the old assumption that “more retrieved graph context” automatically produces a better answer. The actual invariant is stricter: **each public claim must be evidenced, intent-aligned, branch-complete where the query has multiple operands, and preserved through final coverage review.** Runtime acceptance now checks multilingual concepts (`glass_material`, `plastic`), a required `contrast` role, final coverage/order, and explicit irrelevant-clause negatives.
+
+The next direction is not another hierarchy or count quota. Build a versioned multilingual query-branch corpus and jointly measure retrieval recall, branch coverage, claim novelty, language consistency, and final readability. In particular, English-query/Chinese-source answers still need a deliberate language-realization policy; that should be solved as grounded synthesis, not by weakening semantic acceptance or injecting fixed templates.

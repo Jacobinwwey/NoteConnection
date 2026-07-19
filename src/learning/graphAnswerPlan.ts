@@ -13,7 +13,7 @@ import {
     shouldRejectCompareProcedureEvidenceClause,
     shouldRejectPublicEvidenceClause,
 } from './ragPublicText';
-import { graphClaimSemanticSimilarity } from './graphClaimMatcher';
+import { graphClaimSemanticSimilarity, semanticFeatures } from './graphClaimMatcher';
 import { scoreRagEvidenceClause, segmentRagEvidenceClauses } from './ragEvidenceQuality';
 
 export interface BuildGraphAnswerPlanParams {
@@ -27,22 +27,52 @@ function normalize(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
-function publicClaimAnchorTerms(message: string, title?: string): string[] {
-    const source = `${message} ${title || ''}`.toLowerCase();
-    return Array.from(new Set(source.match(/[a-z0-9][a-z0-9_-]{2,}|[\u3400-\u9fff]{2,}/gu) || []));
+function publicClaimAnchorFeatures(message: string, title?: string): Set<string> {
+    return new Set(semanticFeatures(`${message} ${title || ''}`));
 }
 
-function selectQualityPublicClaimStatement(value: string, title: string | undefined, message: string): string {
+function comparisonBranchFeatures(message: string): Array<Set<string>> {
+    const normalizedMessage = normalize(message)
+        .toLowerCase()
+        .replace(/^(?:compare|contrast|difference\s+between)\s+/u, '')
+        .replace(/^(?:比较|对比)\s*/u, '');
+    const branches = normalizedMessage
+        .split(/\s+(?:and|with|versus|vs\.?)\s+|\s*(?:与|和|跟)\s*/u)
+        .map((branch) => new Set(semanticFeatures(branch)))
+        .filter((features) => features.size > 0);
+    if (branches.length !== 2) {
+        return [];
+    }
+    const sharedFeatures = new Set(
+        Array.from(branches[0]).filter((feature) => branches[1].has(feature))
+    );
+    return branches.map((features) => {
+        const branchSpecificFeatures = new Set(
+            Array.from(features).filter((feature) => !sharedFeatures.has(feature))
+        );
+        return branchSpecificFeatures.size > 0 ? branchSpecificFeatures : features;
+    });
+}
+
+function rankQualityPublicClaimStatements(value: string, title: string | undefined, message: string): Array<{
+    clause: string;
+    score: number;
+    anchorMatches: number;
+    comparisonBranchCoverage: number;
+    incompleteEnding: boolean;
+    order: number;
+}> {
     const normalizedEvidence = naturalizeRagPublicEvidenceClause(value);
     if (!normalizedEvidence) {
-        return '';
+        return [];
     }
     const normalizedTitle = normalize(String(title || '').replace(/\s*\((?:mermaid|code|diagram)\s+block\)\s*$/iu, ''));
     const titleMatchVariants = Array.from(new Set([
         normalizedTitle,
         normalizedTitle.replace(/^\d+(?:\.\d+)*[.、)]?\s*/u, ''),
     ].filter(Boolean)));
-    const anchorTerms = publicClaimAnchorTerms(message, normalizedTitle);
+    const anchorFeatures = publicClaimAnchorFeatures(message, normalizedTitle);
+    const compareBranches = comparisonBranchFeatures(message);
     const candidates = segmentRagEvidenceClauses(normalizedEvidence)
         .map((clause) => naturalizeRagPublicEvidenceClause(clause))
         .map((clause) => {
@@ -70,18 +100,73 @@ function selectQualityPublicClaimStatement(value: string, title: string | undefi
             && !shouldRejectCompareProcedureEvidenceClause(clause, message)
         ))
         .map((clause, order) => {
-            const lowerClause = clause.toLowerCase();
-            const anchorMatches = anchorTerms.filter((term) => lowerClause.includes(term)).length;
+            const clauseFeatures = new Set(semanticFeatures(clause));
+            const anchorMatches = Array.from(clauseFeatures)
+                .filter((feature) => anchorFeatures.has(feature))
+                .length;
+            const comparisonBranchCoverage = compareBranches
+                .filter((branchFeatures) => (
+                    Array.from(branchFeatures).some((feature) => clauseFeatures.has(feature))
+                ))
+                .length;
             const incompleteEnding = /\b(?:and|or|with|at|in|between|is|are|from|to)$/iu.test(clause)
+                || /\b(?:vs|versus)\.?$/iu.test(clause)
+                || /[:：]$/u.test(clause)
                 || /(?:以及|并且|其中|通常在|范围为|分别为|是|为)$/u.test(clause);
             return {
                 clause,
-                score: scoreRagEvidenceClause(clause).score + Math.min(0.6, anchorMatches * 0.2) - (incompleteEnding ? 0.5 : 0),
+                score: scoreRagEvidenceClause(clause).score + Math.min(0.8, anchorMatches * 0.2) - (incompleteEnding ? 0.5 : 0),
+                anchorMatches,
+                comparisonBranchCoverage,
+                incompleteEnding,
                 order,
             };
         });
-    candidates.sort((left, right) => right.score - left.score || left.order - right.order);
-    return candidates[0]?.clause.replace(/(\d)\.\s+(?=\d)/gu, '$1.').trim() || '';
+    return candidates.sort((left, right) => (
+        Number(left.incompleteEnding) - Number(right.incompleteEnding)
+        || right.comparisonBranchCoverage - left.comparisonBranchCoverage
+        || right.anchorMatches - left.anchorMatches
+        || right.score - left.score
+        || left.order - right.order
+    ));
+}
+
+function normalizePublicClaimStatement(value: string): string {
+    return value.replace(/(\d)\.\s+(?=\d)/gu, '$1.').trim();
+}
+
+function selectQualityPublicClaimStatement(value: string, title: string | undefined, message: string): string {
+    const selected = rankQualityPublicClaimStatements(value, title, message)
+        .find((candidate) => !candidate.incompleteEnding);
+    return selected ? normalizePublicClaimStatement(selected.clause) : '';
+}
+
+function selectQualityPublicClaimStatements(value: string, title: string | undefined, message: string): string[] {
+    const completeCandidates = rankQualityPublicClaimStatements(value, title, message)
+        .filter((candidate) => !candidate.incompleteEnding);
+    let relevantCandidates = completeCandidates.slice(0, 1);
+    const maximumComparisonBranchCoverage = completeCandidates.reduce(
+        (maximum, candidate) => Math.max(maximum, candidate.comparisonBranchCoverage),
+        0
+    );
+    if (classifyIntent(message) === 'compare' && maximumComparisonBranchCoverage > 0) {
+        relevantCandidates = completeCandidates.filter(
+            (candidate) => candidate.comparisonBranchCoverage === maximumComparisonBranchCoverage
+        );
+    } else if (completeCandidates.some((candidate) => candidate.anchorMatches > 0)) {
+        relevantCandidates = completeCandidates.filter((candidate) => candidate.anchorMatches > 0);
+    }
+    const seen = new Set<string>();
+    return relevantCandidates
+        .map((candidate) => normalizePublicClaimStatement(candidate.clause))
+        .filter((clause) => {
+            const key = normalize(clause).toLowerCase();
+            if (!key || seen.has(key)) {
+                return false;
+            }
+            seen.add(key);
+            return true;
+        });
 }
 
 function classifyIntent(message: string): GraphAnswerPlan['intent'] {
@@ -95,6 +180,7 @@ function classifyIntent(message: string): GraphAnswerPlan['intent'] {
 
 function inferRole(title: string, text: string, relationKind?: RelationKind): GraphAnswerRole {
     const value = `${title} ${text}`.toLowerCase();
+    if (/\b(?:compare|comparison|compared|contrast|versus)\b|对比|比较|相比/u.test(value)) return 'contrast';
     if (relationKind === 'prerequisite') return 'prerequisite';
     if (relationKind === 'sequence') return 'sequence';
     if (relationKind === 'causal') return 'causal_consequence';
@@ -130,12 +216,40 @@ function makeClaim(params: {
 }): GraphAnswerClaimPlan {
     const evidenceText = String(params.statement || '').trim();
     const publicStatement = selectQualityPublicClaimStatement(evidenceText, params.title, params.message);
+    return makeClaimFromPublicStatement({
+        index: params.index,
+        role: params.role,
+        evidenceText,
+        publicStatement,
+        anchorAtomId: params.anchorAtomId,
+        atomId: params.atomId,
+        sourcePath: params.sourcePath,
+        evidenceId: params.evidenceId,
+        citationIds: params.citationIds,
+        edgeIds: params.edgeIds,
+        confidence: params.confidence,
+    });
+}
+
+function makeClaimFromPublicStatement(params: {
+    index: number;
+    role: GraphAnswerRole;
+    publicStatement: string;
+    evidenceText: string;
+    anchorAtomId: string;
+    atomId?: string;
+    sourcePath: string;
+    evidenceId: string;
+    citationIds?: string[];
+    edgeIds?: string[];
+    confidence: number;
+}): GraphAnswerClaimPlan {
     return {
         claimId: `graph_claim_${params.index + 1}`,
         role: params.role,
         required: false,
         priority: params.role === 'definition' ? 100 : Math.round(params.confidence * 90),
-        statement: publicStatement,
+        statement: params.publicStatement,
         subjectAtomId: params.anchorAtomId,
         supportingAtomIds: params.atomId && params.atomId !== params.anchorAtomId ? [params.atomId] : [],
         supportingEdgeIds: params.edgeIds || [],
@@ -144,10 +258,34 @@ function makeClaim(params: {
             atomId: params.atomId,
             sourcePath: params.sourcePath,
             citationIds: params.citationIds || [],
-            text: evidenceText,
+            text: params.evidenceText,
         }],
         confidence: Number(Math.max(0, Math.min(1, params.confidence)).toFixed(4)),
     };
+}
+
+function makeClaimsFromRagFragment(params: {
+    startIndex: number;
+    fragment: RagEvidenceFragment;
+    relationKind?: RelationKind;
+    anchorAtomId: string;
+    message: string;
+}): GraphAnswerClaimPlan[] {
+    const evidenceText = String(params.fragment.text || '').trim();
+    return selectQualityPublicClaimStatements(evidenceText, params.fragment.title, params.message)
+        .map((publicStatement, statementIndex) => makeClaimFromPublicStatement({
+            index: params.startIndex + statementIndex,
+            role: inferRole(params.fragment.title || '', publicStatement, params.relationKind),
+            publicStatement,
+            evidenceText,
+            anchorAtomId: params.anchorAtomId,
+            atomId: params.fragment.atomId,
+            sourcePath: params.fragment.sourcePath,
+            evidenceId: params.fragment.fragmentId,
+            citationIds: params.fragment.citationIds,
+            edgeIds: params.fragment.relationEdgeIds,
+            confidence: Number(params.fragment.score || 0.75),
+        }));
 }
 
 export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphAnswerPlan {
@@ -200,20 +338,13 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
         ))
         .forEach((fragment) => {
             const relationKind = fragmentRelationKind(fragment, params.graphContext);
-            append(makeClaim({
-                index: claims.length,
-                role: inferRole(fragment.title || '', fragment.text, relationKind),
-                statement: fragment.text,
-                title: fragment.title,
+            makeClaimsFromRagFragment({
+                startIndex: claims.length,
+                fragment,
+                relationKind,
                 anchorAtomId,
-                atomId: fragment.atomId,
-                sourcePath: fragment.sourcePath,
-                evidenceId: fragment.fragmentId,
-                citationIds: fragment.citationIds,
-                edgeIds: fragment.relationEdgeIds,
-                confidence: Number(fragment.score || 0.75),
                 message: params.message,
-            }));
+            }).forEach(append);
         });
 
     if (claims.length === 0 && anchor) {

@@ -421,6 +421,7 @@ function validatePositiveConversationResult(summary, options) {
     acceptedAnswerReleaseDecisions,
     requiredFailedGateIds,
     answerMustContain,
+    answerMustCoverConcepts,
     answerMustNotContain,
     expectedRagSourceBoundary,
     expectedRagBudget,
@@ -451,6 +452,7 @@ function validatePositiveConversationResult(summary, options) {
     requireScopedDocumentIds,
     requireCompleteGraphAnswerCoverage,
     requireGraphAnswerPlanOrder,
+    requiredGraphAnswerRoles,
     requirePublicAnswerScaffoldingHygiene,
     requireNoDuplicatePublicClauses,
   } = options;
@@ -486,12 +488,58 @@ function validatePositiveConversationResult(summary, options) {
     throw new Error(`used scope source mismatch for query=${query}: expected=${expectedScopeSource} actual=${JSON.stringify(summary.usedScope)}`);
   }
   const answer = String(summary.answer || '');
+  const answerDiagnostics = () => ({
+    knowledgePointTitles: Array.isArray(summary.knowledgePoints)
+      ? summary.knowledgePoints.map((point) => String(point && point.title || ''))
+      : [],
+    ragFragments: Array.isArray(summary.ragContextPack && summary.ragContextPack.fragments)
+      ? summary.ragContextPack.fragments.map((entry) => ({
+        role: entry && entry.role,
+        title: entry && entry.title,
+        score: entry && entry.score,
+        text: String(entry && entry.text || '').slice(0, 220),
+      }))
+      : [],
+    graphClaims: Array.isArray(summary.graphAnswerPlan && summary.graphAnswerPlan.claims)
+      ? summary.graphAnswerPlan.claims.map((claim) => ({
+        role: claim && claim.role,
+        required: claim && claim.required,
+        statement: claim && claim.statement,
+      }))
+      : [],
+  });
   if (Array.isArray(answerMustContain) && answerMustContain.length > 0) {
     const normalizedAnswer = answer.toLowerCase();
     answerMustContain.forEach((fragment) => {
       const expectedFragment = String(fragment || '');
       if (!answer.includes(expectedFragment) && !normalizedAnswer.includes(expectedFragment.toLowerCase())) {
-        throw new Error(`conversation answer missing "${fragment}" for query=${query}: ${answer}`);
+        throw new Error(`conversation answer missing "${fragment}" for query=${query}: ${answer}; diagnostics=${JSON.stringify(answerDiagnostics())}`);
+      }
+    });
+  }
+  if (Array.isArray(answerMustCoverConcepts) && answerMustCoverConcepts.length > 0) {
+    const { semanticFeatures } = require('../dist/src/learning/graphClaimMatcher.js');
+    const answerFeatures = new Set(semanticFeatures(answer));
+    answerMustCoverConcepts.forEach((concept) => {
+      const expectedFeature = String(concept || '').startsWith('concept:')
+        ? String(concept || '')
+        : `concept:${String(concept || '')}`;
+      if (!answerFeatures.has(expectedFeature)) {
+        throw new Error(`conversation answer missing semantic feature "${expectedFeature}" for query=${query}: ${answer}; diagnostics=${JSON.stringify(answerDiagnostics())}`);
+      }
+    });
+  }
+  if (Array.isArray(requiredGraphAnswerRoles) && requiredGraphAnswerRoles.length > 0) {
+    const plannedRequiredRoles = new Set(
+      Array.isArray(summary.graphAnswerPlan && summary.graphAnswerPlan.claims)
+        ? summary.graphAnswerPlan.claims
+          .filter((claim) => claim && claim.required)
+          .map((claim) => String(claim.role || ''))
+        : []
+    );
+    requiredGraphAnswerRoles.forEach((role) => {
+      if (!plannedRequiredRoles.has(String(role || ''))) {
+        throw new Error(`graph answer plan missing required role "${role}" for query=${query}: ${JSON.stringify(answerDiagnostics())}`);
       }
     });
   }
@@ -1128,6 +1176,7 @@ async function main() {
           acceptedAnswerReleaseDecisions: regressionCase.expected.acceptedAnswerReleaseDecisions,
           requiredFailedGateIds: regressionCase.expected.runtimeRequiredFailedGateIds,
           answerMustContain: regressionCase.expected.answerMustContain,
+          answerMustCoverConcepts: regressionCase.expected.answerMustCoverConcepts,
           answerMustNotContain: regressionCase.expected.answerMustNotContain,
           expectedRagSourceBoundary: regressionCase.expected.ragSourceBoundary,
           expectedRagBudget: regressionCase.expected.expectedRagBudget,
@@ -1160,6 +1209,7 @@ async function main() {
           expectedGraphUsedMisalignedSuccessorFallback: regressionCase.expected.expectedGraphUsedMisalignedSuccessorFallback,
           requireCompleteGraphAnswerCoverage: regressionCase.expected.requireCompleteGraphAnswerCoverage,
           requireGraphAnswerPlanOrder: regressionCase.expected.requireGraphAnswerPlanOrder,
+          requiredGraphAnswerRoles: regressionCase.expected.requiredGraphAnswerRoles,
           minimumRagFullDocumentFragmentCounts: regressionCase.expected.minimumRagFullDocumentFragmentCounts,
           requireScopedDocumentIds: regressionCase.expected.requireScopedDocumentIds,
         });

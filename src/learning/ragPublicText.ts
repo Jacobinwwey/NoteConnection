@@ -2,14 +2,18 @@ function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+export function omitFencedMarkdownPayload(value: string): string {
+    return String(value || '')
+        .replace(/```[\s\S]*?```/gu, ' ')
+        .replace(/```[\s\S]*$/u, ' ');
+}
+
 const LEADING_SOURCE_LABEL_PATTERN = /^(?:(?:prerequisites?|preconditions?|requirements?|background|context|mechanism|reasoning boundary|downstream checks?|downstream consequences?|failure modes?|mitigation(?: neighbor)?|graph caveat|caveat|evidence|summary|note|material science)\s*[:\uFF1A-]\s*|(?:核心概念(?:及其数学基础)?|材料科学|技术参数)(?:\s*[:\uFF1A-]\s*|\s+))/iu;
 const PRESERVED_LEADING_LABEL_PATTERN = /^(?:step|phase|stage|section)\s*\d+\s*[:\uFF1A-]/iu;
 
 export function naturalizeRagPublicEvidenceClause(value: string): string {
     let normalized = normalizeWhitespace(
-        String(value || '')
-            .replace(/```[\s\S]*?```/gu, ' ')
-            .replace(/```[\s\S]*$/u, ' ')
+        omitFencedMarkdownPayload(value)
             .replace(/^\s*[-+*]\s+/gmu, '')
             .replace(/\s+\*\s+(?=\$|\*\*|[\u3400-\u9fff])/gu, ' ')
             .replace(/\*\*([^*]+)\*\*/gu, '$1')
