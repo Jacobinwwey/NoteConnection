@@ -16,6 +16,45 @@ export interface GraphAnswerFacts {
     successorTitles: string[];
 }
 
+export function formatGraphAnswerProfileSentence(facts: GraphAnswerFacts, useChinese: boolean): string {
+    const { anchorTitle, predecessorTitles, successorTitles } = facts;
+    const degreeParts: string[] = [];
+    if (facts.inDegree !== null) {
+        degreeParts.push(useChinese ? `入度为 ${facts.inDegree}` : `${facts.inDegree} incoming`);
+    }
+    if (facts.outDegree !== null) {
+        degreeParts.push(useChinese ? `出度为 ${facts.outDegree}` : `${facts.outDegree} outgoing`);
+    }
+    if (degreeParts.length <= 0 && predecessorTitles.length <= 0 && successorTitles.length <= 0) {
+        return '';
+    }
+    if (useChinese) {
+        const fragments: string[] = [];
+        if (degreeParts.length > 0) {
+            fragments.push(`${anchorTitle || '当前锚点'}在当前图中的${degreeParts.join('，')}`);
+        }
+        if (predecessorTitles.length > 0) {
+            fragments.push(`紧邻前置节点包括 ${predecessorTitles.join('、')}`);
+        }
+        if (successorTitles.length > 0) {
+            fragments.push(`后续分支包括 ${successorTitles.join('、')}`);
+        }
+        return fragments.join('，');
+    }
+    const fragments: string[] = [];
+    if (degreeParts.length > 0) {
+        fragments.push(`${anchorTitle || 'The current anchor'} has ${degreeParts.join(' and ')} links in the current graph`);
+    }
+    if (predecessorTitles.length > 0 && successorTitles.length > 0) {
+        fragments.push(`The graph connects this topic to upstream evidence from ${predecessorTitles.join(', ')} and downstream evidence from ${successorTitles.join(', ')}`);
+    } else if (predecessorTitles.length > 0) {
+        fragments.push(`The graph connects this topic to upstream evidence from ${predecessorTitles.join(', ')}`);
+    } else if (successorTitles.length > 0) {
+        fragments.push(`The graph connects this topic to downstream evidence from ${successorTitles.join(', ')}`);
+    }
+    return fragments.join('; ');
+}
+
 function normalizeAtomId(value: unknown): string {
     return String(value || '').trim();
 }

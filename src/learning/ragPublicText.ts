@@ -8,6 +8,42 @@ export function omitFencedMarkdownPayload(value: string): string {
         .replace(/```[\s\S]*$/u, ' ');
 }
 
+function normalizeMermaidLabel(value: string): string {
+    return normalizeWhitespace(
+        String(value || '')
+            .replace(/<br\s*\/?>/giu, ' ')
+            .replace(/\\n/gu, ' ')
+            .replace(/["`*_~#|{}]/gu, ' ')
+    );
+}
+
+/**
+ * Converts diagram node labels into evidence text while keeping Mermaid syntax out of public answers.
+ */
+export function extractPublicMermaidEvidenceLabels(value: string): string[] {
+    const labels: string[] = [];
+    const append = (candidate: string): void => {
+        const label = normalizeMermaidLabel(candidate);
+        if (label && !labels.includes(label)) {
+            labels.push(label);
+        }
+    };
+    const source = String(value || '');
+    const fences = source.matchAll(/```mermaid\s*([\s\S]*?)(?:```|$)/giu);
+    for (const fence of fences) {
+        const body = String(fence[1] || '');
+        body.replace(/\[([^\]]+)\]/gu, (_match, label: string) => {
+            append(label);
+            return '';
+        });
+        body.replace(/"([^"]+)"/gu, (_match, label: string) => {
+            append(label);
+            return '';
+        });
+    }
+    return labels;
+}
+
 const LEADING_SOURCE_LABEL_PATTERN = /^(?:(?:prerequisites?|preconditions?|requirements?|background|context|mechanism|reasoning boundary|downstream checks?|downstream consequences?|failure modes?|mitigation(?: neighbor)?|graph caveat|caveat|evidence|summary|note|material science)\s*[:\uFF1A-]\s*|(?:核心概念(?:及其数学基础)?|材料科学|技术参数)(?:\s*[:\uFF1A-]\s*|\s+))/iu;
 const PRESERVED_LEADING_LABEL_PATTERN = /^(?:step|phase|stage|section)\s*\d+\s*[:\uFF1A-]/iu;
 
@@ -56,9 +92,11 @@ export function shouldRejectCompareProcedureEvidenceClause(value: string, query:
     if (!normalizedClause) {
         return false;
     }
-    if (/\b(?:procedure|procedural|workflow|runbook|steps?|step\s*\d+|sequence)\b/u.test(normalizedQuery)) {
+    if (/\b(?:how to|how do|procedure|procedural|workflow|runbook|steps?|step\s*\d+|sequence)\b/u.test(normalizedQuery)
+        || /(?:如何|怎么|怎样|步骤|流程)/u.test(normalizedQuery)) {
         return false;
     }
-    return /\b(?:procedure|workflow|runbook|steps?|step\s*\d+)\b/u.test(normalizedClause)
+    return /^(?:(?:procedure|workflow|runbook)\s*[:\uFF1A-]|(?:step\s*\d+|steps?|步骤\s*\d+)\b)/u.test(normalizedClause)
+        || /\b(?:follow|execute|perform)\s+(?:this|the following)\s+(?:procedure|workflow|steps?)\b/u.test(normalizedClause)
         || /\bprocedural\b.{0,80}\bsequence\b/u.test(normalizedClause);
 }

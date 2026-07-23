@@ -1293,6 +1293,12 @@ describe('conversationComposer', () => {
         });
 
         expect(reply.answer).toContain('transparent drinking vessel');
+        expect(reply.graphAnswerPlan.claims.map((claim) => claim.statement)).toContain(
+            'A plastic cup is an opaque polymer vessel that can deform under pressure.'
+        );
+        expect(reply.graphAnswerPlan.claims.map((claim) => claim.statement)).toContain(
+            'The graph marks the two nodes with a contrast relation, so the comparison should preserve their material and rigidity differences.'
+        );
         expect(reply.answer).toContain('opaque polymer vessel');
         expect(reply.answer).toContain('contrast relation');
         expect(reply.assistantBlocks.filter((block) => block.type === 'structured_answer')).toHaveLength(1);
@@ -1402,6 +1408,10 @@ describe('conversationComposer', () => {
             ragSufficiencyReview,
         });
 
+        expect(reply.graphAnswerPlan.claims.map((claim) => claim.statement)).toEqual(expect.arrayContaining([
+            'Water Glass Soda-Lime',
+            'Plastic Cup PET',
+        ]));
         expect(reply.answerReleaseReview.originalAnswer).toContain('Water Glass Soda-Lime');
         expect(reply.answerReleaseReview.gates.filter((gate) => !gate.passed)).toEqual([]);
         expect(reply.answer).toContain('Water Glass Soda-Lime');
@@ -1856,6 +1866,83 @@ describe('conversationComposer', () => {
         expect(reply.graphAnswerCoverage.passed).toBe(true);
         expect(reply.answer).not.toContain('broad overview of laboratory documentation');
         expect(reply.answer).not.toContain('Graph caveat:');
+    });
+
+    test('renders every planned direct-support claim without an intent profile quota', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_profile_free_beam_drift',
+                documentId: 'doc_profile_free_beam_drift',
+                sourcePath: 'Knowledge_Base/test/profile-free-beam-drift.md',
+                title: 'Beam Drift',
+                content: 'Beam drift is a displacement of the measured spot.',
+            },
+            evidence: {
+                id: 'evidence_profile_free_beam_drift',
+                snippet: 'Beam drift is a displacement of the measured spot.',
+                startLine: 3,
+                endLine: 6,
+            },
+            score: 0.93,
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const citations = knowledgePoints.flatMap((point) => point.citations || []);
+        let blockCounter = 0;
+
+        const reply = buildScopedConversationReply({
+            message: 'tell me about beam drift',
+            knowledgePoints,
+            citations,
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-07-22T00:00:00.000Z',
+            nextBlockId: () => `assistant_block_${++blockCounter}`,
+            ragSufficiencyReview: {
+                reviewedAt: '2026-07-22T00:00:00.000Z',
+                status: 'sufficient',
+                score: 0.9,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+            ragContextPack: {
+                query: 'tell me about beam drift',
+                generatedAt: '2026-07-22T00:00:00.000Z',
+                sourceBoundary: 'direct_span_only',
+                budget: { maxFragments: 1, maxCharsPerFragment: 1000, maxTotalChars: 1000 },
+                fragments: [{
+                    fragmentId: 'direct_profile_free_beam_drift',
+                    role: 'direct_support',
+                    text: [
+                        'Beam drift is a displacement of the measured spot.',
+                        'It can be measured against a fixed reference mark.',
+                        'Its correction requires recording the centroid shift before adjustment.',
+                    ].join(' '),
+                    atomId: 'atom_profile_free_beam_drift',
+                    documentId: 'doc_profile_free_beam_drift',
+                    sourcePath: 'Knowledge_Base/test/profile-free-beam-drift.md',
+                    title: 'Beam Drift',
+                    headingPath: ['Beam Drift'],
+                    startLine: 3,
+                    endLine: 6,
+                    charCount: 163,
+                    tokenEstimate: 39,
+                    truncated: false,
+                    citationIds: ['evidence_profile_free_beam_drift'],
+                    sourceBoundary: 'direct_span_only',
+                    score: 0.7,
+                }],
+                sourceDecisions: [],
+                totalCharCount: 163,
+                tokenEstimate: 39,
+            },
+        });
+
+        expect(reply.answer).toContain('It can be measured against a fixed reference mark');
+        expect(reply.answer).toContain('Its correction requires recording the centroid shift before adjustment');
     });
 
     test('fails graph comparison gate when compare intent only has reference context and no real branch signal', () => {

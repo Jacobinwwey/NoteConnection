@@ -1694,7 +1694,7 @@ This checkpoint's critical question has been resolved by the clause-quality phas
 | Source-quality scoring | balanced delimiters, terminal completeness, math density, documentary penalty | Complete | Scores are ranking signals, never relevance proof |
 | Plan shaping | `graphAnswerPlan.ts` selects complete query-relevant clauses, can retain multiple distinct claims from one bounded fragment, and keeps raw provenance | Complete | Compare-branch parsing is deterministic and needs broader multilingual calibration |
 | Supplemental deduplication | `conversationComposer.ts` semantic similarity threshold 0.86 | Complete | Threshold requires future multilingual calibration |
-| Coverage preservation | focused graph plan/release/coverage tests plus Water Glass required IDs/order, duplicate-clause and scaffolding gates | Complete | Runtime verifier full restore remains environment-sensitive |
+| Coverage preservation | focused graph plan/release/coverage tests plus the grouped full runtime verifier | Complete | Remaining risk is multilingual calibration, not restore completion |
 
 The earlier critical question is now answered at the deterministic selection layer. The repository baseline is 124/124 Jest suites, 1,160 passed, and 26 skipped; the current focused graph/RAG/release matrix passed 238/238, and TypeScript, production/Vite build, complete conversation runtime acceptance, Diataxis, MkDocs, and diff hygiene passed.
 
@@ -1709,3 +1709,17 @@ The current pipeline now reuses `semanticFeatures()` across retrieval, context-w
 This closes the old assumption that “more retrieved graph context” automatically produces a better answer. The actual invariant is stricter: **each public claim must be evidenced, intent-aligned, branch-complete where the query has multiple operands, and preserved through final coverage review.** Runtime acceptance now checks multilingual concepts (`glass_material`, `plastic`), a required `contrast` role, final coverage/order, and explicit irrelevant-clause negatives.
 
 The next direction is not another hierarchy or count quota. Build a versioned multilingual query-branch corpus and jointly measure retrieval recall, branch coverage, claim novelty, language consistency, and final readability. In particular, English-query/Chinese-source answers still need a deliberate language-realization policy; that should be solved as grounded synthesis, not by weakening semantic acceptance or injecting fixed templates.
+
+## 2026-07-23 Coverage-driven Runtime Closure
+
+| Concern | Current implementation/evidence | Status | Remaining risk |
+|---|---|---|---|
+| Public claim completeness | `GraphAnswerPlan.claims` is the single RAG realization input; release review preserves every planned claim and applies grounding, contradiction, direction, temporal, citation, leakage, and final-coverage gates | Complete | Deterministic semantic matching still requires multilingual calibration |
+| Public length policy | The 900-character, six-sentence, one-direct-support, and role-clause correctness quotas are absent | Complete | Dense evidence can still produce dense prose; solve through novelty and grounded synthesis, not truncation |
+| Graph visibility | Paths, relation evidence, and graph profile facts remain public when relevant; internal predecessor/successor diagnostics are rendered as upstream/downstream evidence | Complete | Degree is a discovery signal, never proof of relevance |
+| Large-target ingestion | Data routes validate `none`, `incremental`, and `full`; the default remains `incremental`, while the verifier selects `none` only for targets with at least 100 Markdown files | Complete | The threshold is a verifier resource policy, not a product quality policy |
+| Full runtime acceptance | `--full` executes 92 cases in 55 isolated preload-target groups, with build and restore-cache before the conversations | Complete | Group isolation must remain aligned with each case's declared preload scope |
+
+The full-mode runtime verification now covers build, restore-cache, and regression conversations. Its earlier timeout had two distinct mechanisms: large-target inferred-relation recomputation and cross-case workspace accumulation. Explicit recompute policy solved the first; process isolation by identical preload targets solved the second without extending timeouts or weakening assertions.
+
+The next implementation direction is a versioned joint-calibration corpus for source quality, semantic deduplication, branch coverage, response-language consistency, and readability. `KnowledgeLearningPlatform.ts` remains the orchestration owner until a complete planned/reviewed-answer operation can move without creating a pass-through layer.

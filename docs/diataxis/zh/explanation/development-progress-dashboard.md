@@ -1723,7 +1723,7 @@ npm run verify:agent-workspace:tauri:evidence:publish-release-notes -- --tag <re
 | Source-quality scoring | delimiter 平衡、句末完整性、数学密度、文档元叙述惩罚 | 完成 | score 只是排序信号，不构成 relevance 证明 |
 | Plan shaping | `graphAnswerPlan.ts` 选择完整且 query-relevant 的 clause，可从一个有界 fragment 保留多个不同 claim，并保留 raw provenance | 完成 | compare branch 解析仍是确定性规则，需要更大多语言语料校准 |
 | Supplemental 去重 | `conversationComposer.ts` 语义相似度阈值 0.86 | 完成 | 阈值仍需未来多语言校准 |
-| Coverage 保持 | graph plan/release/coverage focused tests 与 Water Glass required ID/order、重复 clause、脚手架门禁 | 完成 | runtime verifier full restore 仍受环境耗时影响 |
+| Coverage 保持 | graph plan/release/coverage focused tests 与分组隔离的完整运行时验证器 | 完成 | 剩余风险是多语言校准，而不是 restore 完成性 |
 
 先前的核心问题已经在确定性选择层得到解决。当前仓库基线为 Jest 124/124 个 suite、1,160 个测试通过、26 个跳过；当前 graph/RAG/release focused matrix 238/238 通过，TypeScript、production/Vite build、完整 conversation runtime 验收、Diataxis、MkDocs 与 diff hygiene 均通过。
 
@@ -1738,3 +1738,17 @@ Water Glass compare 的剩余失败包含两个证据丢失边界。第一，固
 这纠正了“检索更多图上下文自然会产生更好回答”的旧假设。真正的不变量更严格：**每个公开 claim 都必须有证据、与意图一致；多 operand 查询还必须覆盖对应分支，并在最终 coverage review 后继续存在。** 运行时现在校验多语言概念（`glass_material`、`plastic`）、required `contrast` role、最终 coverage/order，以及明确的无关 clause 反例。
 
 后续方向不是增加层级或恢复计数配额，而是建立版本化多语言 query-branch 语料，联合测量 retrieval recall、branch coverage、claim novelty、语言一致性和最终可读性。尤其是“英文查询 + 中文来源”的回答仍需要明确的语言实现策略；应通过 grounded synthesis 解决，而不是降低语义验收或注入固定模板。
+
+## 2026-07-23 Coverage-driven 运行时收口
+
+| 关注点 | 当前实现 / 证据 | 状态 | 剩余风险 |
+|---|---|---|---|
+| 公开 claim 完整性 | `GraphAnswerPlan.claims` 是 RAG realization 的唯一输入；release review 保留全部计划 claim，并执行 grounding、contradiction、direction、temporal、citation、leakage 与最终 coverage gate | 完成 | 确定性 semantic matching 仍需多语言校准 |
+| 公开长度策略 | 900 字符、六句、单条 direct support 与 role clause 正确性配额均已移除 | 完成 | 密集 evidence 仍可能形成密集 prose；应通过 novelty 与 grounded synthesis 解决，而不是截断 |
+| 图结构可见性 | 相关 path、relation evidence 与 graph profile 事实继续进入公开回答；内部 predecessor/successor 诊断词改写为 upstream/downstream evidence | 完成 | degree 只用于发现，不能证明 relevance |
+| 大 target ingestion | 数据路由校验 `none`、`incremental`、`full`；默认保持 `incremental`，验证器仅对至少 100 个 Markdown 文件的 target 使用 `none` | 完成 | 阈值是验证器资源策略，不是产品质量策略 |
+| 完整运行时验收 | `--full` 在 55 个隔离 preload-target 组中执行 92 个 case，会话前包含 build 与 restore-cache | 完成 | 分组隔离必须继续与 case 声明的 preload scope 对齐 |
+
+full 模式运行时验证现已覆盖 build、restore-cache 与回归会话。此前超时有两个不同机制：大 target 的 inferred relation 重算，以及跨 case 的 workspace 累积。显式 recompute policy 解决前者；按相同 preload target 做进程隔离解决后者，没有延长 timeout，也没有削弱断言。
+
+下一实现方向是建立版本化联合校准语料，同时测量 source quality、semantic deduplication、branch coverage、回答语言一致性和 readability。`KnowledgeLearningPlatform.ts` 继续持有编排责任，直到完整 planned/reviewed-answer operation 能迁移且不会形成 pass-through 层。

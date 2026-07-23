@@ -16,7 +16,7 @@ import type {
     GraphAnswerCoverageReview,
 } from './types';
 import { reviewGraphAnswerCoverage } from './graphAnswerCoverage';
-import { collectGraphAnswerFacts } from './graphAnswerFacts';
+import { collectGraphAnswerFacts, formatGraphAnswerProfileSentence } from './graphAnswerFacts';
 import {
     naturalizeRagPublicEvidenceClause,
     shouldRejectPublicEvidenceClause,
@@ -353,7 +353,6 @@ const RAG_CLAIM_CITATION_SUPPORT_MIN_FEATURES = 2;
 const RAG_CLAIM_CITATION_SUPPORT_MIN_COVERAGE = 0.78;
 const RAG_CLAIM_CITATION_SUPPORT_WEAK_COVERAGE = 0.45;
 const RAG_CLAIM_CITATION_SUPPORT_MAX_MISSING_FEATURES = 1;
-
 const YEAR_CONTEXT_PATTERN = /\b(?:year|years|dated|since|until|from|during|after|before|in|on)\b|年/iu;
 const ENGLISH_DEFINITION_QUERY_PATTERN = /\b(?:what\s+is|what'?s|what\s+are|who\s+is|define|definition\s+of|meaning\s+of)\b/iu;
 const CHINESE_DEFINITION_QUERY_PATTERN = /什么是|指的是什么|定义|是什么意思/u;
@@ -804,42 +803,7 @@ function buildRevisionGraphProfileSentence(
     if (!facts) {
         return '';
     }
-    const { anchorTitle, predecessorTitles, successorTitles } = facts;
-    const degreeParts: string[] = [];
-    if (facts.inDegree !== null) {
-        degreeParts.push(useChinese ? `入度为 ${facts.inDegree}` : `${facts.inDegree} incoming`);
-    }
-    if (facts.outDegree !== null) {
-        degreeParts.push(useChinese ? `出度为 ${facts.outDegree}` : `${facts.outDegree} outgoing`);
-    }
-    if (degreeParts.length <= 0 && predecessorTitles.length <= 0 && successorTitles.length <= 0) {
-        return '';
-    }
-    if (useChinese) {
-        const fragments: string[] = [];
-        if (degreeParts.length > 0) {
-            fragments.push(`${anchorTitle || '当前锚点'}在当前图中的${degreeParts.join('，')}`);
-        }
-        if (predecessorTitles.length > 0) {
-            fragments.push(`紧邻前置节点包括 ${predecessorTitles.join('、')}`);
-        }
-        if (successorTitles.length > 0) {
-            fragments.push(`后续分支包括 ${successorTitles.join('、')}`);
-        }
-        return fragments.join('，');
-    }
-    const fragments: string[] = [];
-    if (degreeParts.length > 0) {
-        fragments.push(`${anchorTitle || 'The current anchor'} has ${degreeParts.join(' and ')} links in the current graph`);
-    }
-    if (predecessorTitles.length > 0 && successorTitles.length > 0) {
-        fragments.push(`its immediate predecessors include ${predecessorTitles.join(', ')}, and likely next nodes include ${successorTitles.join(', ')}`);
-    } else if (predecessorTitles.length > 0) {
-        fragments.push(`its immediate predecessors include ${predecessorTitles.join(', ')}`);
-    } else if (successorTitles.length > 0) {
-        fragments.push(`its likely next nodes include ${successorTitles.join(', ')}`);
-    }
-    return fragments.join('; ');
+    return formatGraphAnswerProfileSentence(facts, useChinese);
 }
 
 function expandAnswerWithGraphContext(
@@ -1057,7 +1021,7 @@ function splitRagPublicEvidenceClauses(
 function collectRagPublicEvidenceClauses(
     context: AnswerReleaseReviewContext,
     roles: Set<RagEvidenceRole>,
-    limit: number,
+    limit: number | undefined,
     excludedClauses: string[] = [],
     options: RagPublicEvidenceClauseSelectionOptions = {}
 ): string[] {
@@ -1109,43 +1073,13 @@ function collectRagPublicEvidenceClauses(
         return left.order - right.order;
     });
     rankedCandidates.forEach((candidate) => {
-        if (clauses.length >= limit || ragClauseAlreadyCovered(candidate.clause, selected)) {
+        if ((limit !== undefined && clauses.length >= limit) || ragClauseAlreadyCovered(candidate.clause, selected)) {
             return;
         }
         selected.push(candidate.clause);
         clauses.push(candidate.clause);
     });
     return clauses;
-}
-
-function ragRevisionDirectClauseLimit(profile: RagPublicAnswerProfile): number {
-    if (profile === 'compare') {
-        return 1;
-    }
-    if (profile === 'how_to') {
-        return 3;
-    }
-    if (profile === 'causal') {
-        return 2;
-    }
-    return 4;
-}
-
-function ragRevisionDocumentClauseLimit(profile: RagPublicAnswerProfile): number {
-    if (profile === 'compare') {
-        return 2;
-    }
-    if (profile === 'how_to' || profile === 'causal') {
-        return 2;
-    }
-    return 6;
-}
-
-function ragRevisionGraphClauseLimit(profile: RagPublicAnswerProfile): number {
-    if (profile === 'compare' || profile === 'how_to' || profile === 'causal') {
-        return 2;
-    }
-    return 6;
 }
 
 function ragRevisionDocumentClauseOptions(
@@ -1195,8 +1129,14 @@ function ragRevisionGraphClauseOptions(
     };
 }
 
+function hasPlannedGraphAnswerClaims(context: AnswerReleaseReviewContext): boolean {
+    return (context.graphAnswerPlan?.claims || []).some((claim) => (
+        normalizeWhitespace(String(claim.statement || '')).length > 0
+    ));
+}
+
 function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): string {
-    if (!hasUsableRagEvidenceContext(context)) {
+    if (hasPlannedGraphAnswerClaims(context) || !hasUsableRagEvidenceContext(context)) {
         return '';
     }
     const useChinese = containsCjk([
@@ -1218,7 +1158,7 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
     const directClauses = collectRagPublicEvidenceClauses(
         context,
         new Set(['direct_support']),
-        ragRevisionDirectClauseLimit(profile),
+        undefined,
         [],
         {
             preserveLeadingHeading: isCompareQuery,
@@ -1228,7 +1168,7 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
     const documentClauses = collectRagPublicEvidenceClauses(
         context,
         new Set(['parent_context', 'adjacent_context']),
-        ragRevisionDocumentClauseLimit(profile),
+        undefined,
         directClauses,
         {
             ...ragRevisionDocumentClauseOptions(profile, queryTerms),
@@ -1241,14 +1181,14 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
         ? collectRagPublicEvidenceClauses(
             context,
             new Set(['conflict']),
-            3,
+            undefined,
             [...directClauses, ...documentClauses]
         )
         : [];
     const graphClauses = collectRagPublicEvidenceClauses(
         context,
         new Set(['graph_neighbor_support']),
-        ragRevisionGraphClauseLimit(profile),
+        undefined,
         [...directClauses, ...documentClauses, ...conflictClauses],
         {
             ...ragRevisionGraphClauseOptions(profile, queryTerms),
@@ -1265,11 +1205,8 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
     if (!baseAnswer) {
         return '';
     }
-    const additionalDirectClauses = profile === 'compare'
-        ? []
-        : directClauses.slice(1);
     const extraSentences = [
-        ...additionalDirectClauses,
+        ...directClauses.slice(1),
         ...conflictClauses,
         ...documentClauses,
         ...graphClauses,
@@ -3654,7 +3591,7 @@ function buildRagAnswerCompletenessMessage(result: RagAnswerCompleteness): strin
     return `Draft answer missed required RAG evidence roles: ${result.missingRoles.join(', ') || 'none'}; missing profile signals: ${result.missingProfileSignals.join(', ') || 'none'}.`;
 }
 
-function preserveRequiredGraphAnswerClaims(
+function preservePlannedGraphAnswerClaims(
     answer: string,
     plan: GraphAnswerPlan | null | undefined,
     preservePlan: boolean
@@ -3662,24 +3599,23 @@ function preserveRequiredGraphAnswerClaims(
     if (!preservePlan) {
         return normalizeWhitespace(answer);
     }
-    const requiredStatements = (plan?.claims || [])
-        .filter((claim) => claim.required)
+    const plannedStatements = (plan?.claims || [])
         .map((claim) => naturalizeRagPublicEvidenceClause(String(claim.statement || '')))
         .filter((statement) => statement && !shouldRejectPublicEvidenceClause(statement));
-    if (requiredStatements.length <= 0) {
+    if (plannedStatements.length <= 0) {
         return normalizeWhitespace(answer);
     }
     const normalizedAnswer = normalizeWhitespace(answer);
-    const orderedPlanText = requiredStatements.join(' ');
+    const orderedPlanText = plannedStatements.join(' ');
     const supplementalClauses = segmentRagEvidenceClauses(naturalizeRagPublicEvidenceClause(normalizedAnswer))
         .map((clause) => normalizeWhitespace(clause))
         .filter((clause) => clause && !shouldRejectPublicEvidenceClause(clause))
-        .filter((clause) => !requiredStatements.some((requiredStatement) => {
+        .filter((clause) => !plannedStatements.some((plannedStatement) => {
             const clauseKey = clause.toLowerCase();
-            const requiredKey = requiredStatement.toLowerCase();
-            return clauseKey === requiredKey
-                || clauseKey.includes(requiredKey)
-                || requiredKey.includes(clauseKey);
+            const plannedKey = plannedStatement.toLowerCase();
+            return clauseKey === plannedKey
+                || clauseKey.includes(plannedKey)
+                || plannedKey.includes(clauseKey);
         }));
     const supplementalText = supplementalClauses.join(' ');
     return normalizeWhitespace([orderedPlanText, supplementalText].filter(Boolean).join(' '));
@@ -5367,7 +5303,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                 )
                 : buildReleasedPublicAnswer(context, draftAnswer)
     );
-    const publicAnswer = preserveRequiredGraphAnswerClaims(
+    const publicAnswer = preservePlannedGraphAnswerClaims(
         revisedPublicAnswer,
         context.graphAnswerPlan,
         Boolean(context.ragContextPack && context.ragContextPack.fragments && context.ragContextPack.fragments.length > 0)

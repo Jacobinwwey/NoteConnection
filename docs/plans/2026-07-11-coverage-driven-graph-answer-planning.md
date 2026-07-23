@@ -3,7 +3,7 @@ module: learning
 tags: [agent, augmented-rag, graph, answer-planning, coverage]
 problem_type: implementation-plan
 created: 2026-07-11
-updated: 2026-07-19
+updated: 2026-07-23
 status: completed
 ---
 
@@ -15,7 +15,7 @@ The dense-fragment phase is implemented. `ragEvidenceQuality.ts` owns determinis
 
 The important boundary is clause-local filtering. A fragment containing one authoring preamble and one valid equation is no longer discarded wholesale. If no safe clause remains, the claim is omitted rather than falling back to unsafe raw text. This preserves graph coverage without allowing source contamination to dominate the public answer.
 
-Verification evidence: full Jest passed 124/124 suites, 1,155 tests passed, and 26 skipped; the focused graph-plan/release/coverage matrix passes after final shaping, TypeScript production build passes, and the conversation-mode Water Glass verifier passes with complete required claim IDs, no duplicate long clauses, and no public Markdown scaffolding. The repository full verifier's `--full` restore mode exceeded five minutes in this environment, so conversation mode is the authoritative runtime check for this source-selection change.
+Verification evidence at the time of this historical checkpoint: full Jest passed 124/124 suites, 1,155 tests passed, and 26 skipped; the focused graph-plan/release/coverage matrix passed after final shaping, TypeScript production build passed, and the conversation-mode Water Glass verifier passed with complete required claim IDs, no duplicate long clauses, and no public Markdown scaffolding. The later runtime closure below supersedes the earlier full-mode timeout note.
 
 ### 中文
 
@@ -23,7 +23,7 @@ Verification evidence: full Jest passed 124/124 suites, 1,155 tests passed, and 
 
 关键边界是 clause-local filtering。一个 fragment 同时包含 authoring preamble 和有效公式时，不再整体丢弃；如果没有任何安全 clause，则直接省略该 claim，不回退到不安全的 raw text。这样既保持图 coverage，又避免污染源主导公开回答。
 
-验证证据：全量 Jest 124/124 个 suite、1,155 个测试通过、26 个跳过；最终 shaping 后的 graph-plan/release/coverage focused matrix 通过，TypeScript production build 通过，Water Glass conversation verifier 通过且 required claim ID 完整、无重复长 clause、无公开 Markdown 脚手架。仓库 full verifier 的 `--full` restore 模式在当前环境超过 5 分钟，因此本次 source-selection 变更以 conversation mode 作为权威运行时验收。
+该历史检查点的验证证据为：全量 Jest 124/124 个 suite、1,155 个测试通过、26 个跳过；最终 shaping 后的 graph-plan/release/coverage focused matrix 通过，TypeScript production build 通过，Water Glass conversation verifier 通过且 required claim ID 完整、无重复长 clause、无公开 Markdown 脚手架。下方运行时收口已取代此前 full 模式超时记录。
 
 # Coverage-driven Graph Answer Planning
 
@@ -460,7 +460,7 @@ The Water Glass compare runtime exposed that the earlier “phase complete” st
 - `npm run build:with-vite`: passed; existing non-module script warnings remain unchanged.
 - Complete conversation runtime verifier: exited successfully; the focused `waterglass_compare_materials_en` probe also passed semantic concepts, required contrast, coverage/order, and irrelevant-clause negatives.
 - Diataxis: 18 entries, 36 paths, 64 canonical references; MkDocs build passed.
-- Full restore mode (`--full`) was not used as closure evidence because prior runs exceeded the environment timeout; it is not reported as passed.
+- At this historical checkpoint, full restore mode (`--full`) was not closure evidence because prior runs exceeded the environment timeout. The 2026-07-23 runtime closure below supersedes this limitation.
 
 #### Next direction
 
@@ -499,8 +499,44 @@ Water Glass compare runtime 证明此前“全部 Phase 完成”的表述仍过
 - `npm run build:with-vite`：通过；既有 non-module script warning 未变化。
 - 完整 conversation runtime verifier：成功退出；定向 `waterglass_compare_materials_en` 同时通过语义概念、required contrast、coverage/order 与无关 clause 反例。
 - Diataxis：18 entries、36 paths、64 canonical references；MkDocs build 通过。
-- Full restore mode（`--full`）此前超过环境 timeout，本轮不作为收口证据，也不宣称通过。
+- 在该历史检查点，Full restore mode（`--full`）因超过环境 timeout 未作为收口证据。下方 2026-07-23 运行时收口已取代此限制。
 
 #### 后续方向
 
 剩余核心问题是：**如何联合校准 graph branch coverage、多语言 language realization、claim novelty 与 source-quality，使完整性不退化为 evidence dumping？** 下一步应先建立版本化语料与联合指标，再增加 heuristic、模板或编排层。
+
+## 2026-07-23 Runtime Closure and Verifier Isolation
+
+### English
+
+The full runtime verifier is now closure evidence. `/api/build` and `/api/restore-cache` accept a validated `relationRecomputeMode` of `none`, `incremental`, or `full`; product routes default to `incremental`, while the verifier selects `none` for targets with at least 100 Markdown documents and keeps `incremental` for small graph fixtures. This avoids unbounded inferred-relation recomputation during stress verification without weakening ordinary product ingestion or small-target graph coverage.
+
+The verifier isolates cases by identical `preloadTargets`. Each group runs in a fresh Node/server process, reuses its target build inside the group, and preserves cross-target scope recovery where a case declares multiple preload targets. This closes a state-contamination failure mode in which 92 cases accumulated unrelated atoms in one platform instance, grew the heap beyond 1 GB, and caused a conversation timeout after build completion. A longer HTTP timeout would only hide that causal defect.
+
+The public graph profile formatter was tightened at the same boundary: degree and graph connectivity remain available, but internal diagnostic phrases such as `immediate predecessors` and `likely next nodes` are rendered as upstream/downstream evidence. The graph remains visible in the answer without leaking planner terminology.
+
+Closure evidence:
+
+- Full verifier: `node scripts/verify-knowledge-workspace-runtime.js --full` passed with 55 isolated preload-target groups and 92 conversation regression cases.
+- Large-target policy: `financial` (513 Markdown files) and `waterglass` (214 Markdown files) used `none`; six-document and smaller graph fixtures used `incremental`.
+- Route contract: default, explicit `none`, and invalid mode rejection are covered by `src/routes/data.test.ts`.
+- Final oracle: 125 Jest suites passed, 1,172 tests passed, and 26 skipped; TypeScript and `npm run build:with-vite` passed after the formatter and route changes. The full runtime verifier also passed with 55 isolated preload-target groups and 92 conversation cases.
+
+The remaining measurable question is unchanged: jointly calibrate multilingual source quality, semantic novelty, branch coverage, and readability without allowing completeness to become evidence dumping. No additional orchestration layer or public length quota is justified by this closure.
+
+### 中文
+
+完整运行时验证器现已成为收口证据。`/api/build` 与 `/api/restore-cache` 接受经过校验的 `relationRecomputeMode`：`none`、`incremental`、`full`；产品路由默认仍为 `incremental`，验证器对至少 100 个 Markdown 文件的大 target 选择 `none`，对小型图 fixture 继续使用 `incremental`。这避免压力验证期间无界的 inferred relation 重算，同时不削弱产品默认 ingestion 或小 target 的图关系覆盖。
+
+验证器按相同的 `preloadTargets` 隔离 case。每组在新的 Node/server 进程中运行，组内复用 target 构建；case 声明多个 preload target 时仍保留跨 scope 恢复语义。这样关闭了 92 个 case 在同一 platform 实例累积无关 atom、堆增长超过 1 GB、构建完成后会话超时的状态污染问题。单纯延长 HTTP timeout 只会掩盖因果缺陷。
+
+公开图 profile formatter 也在同一边界收紧：入度、出度与图连接事实继续可用，但 `immediate predecessors`、`likely next nodes` 等内部诊断措辞改为用户可读的 upstream/downstream evidence。图结构仍进入回答，但不泄漏 planner 术语。
+
+收口证据：
+
+- 完整验证器：`node scripts/verify-knowledge-workspace-runtime.js --full` 通过，共 55 个隔离 preload-target 组、92 个会话回归 case。
+- 大 target 策略：`financial`（513 个 Markdown 文件）与 `waterglass`（214 个 Markdown 文件）使用 `none`；六文件及更小的图 fixture 使用 `incremental`。
+- 路由契约：默认模式、显式 `none` 和非法模式拒绝由 `src/routes/data.test.ts` 覆盖。
+- 最终 oracle：125 个 Jest suite 通过、1,172 个测试通过、26 个跳过；formatter/路由修改后的 TypeScript 与 `npm run build:with-vite` 均通过。完整运行时验证器也通过，共 55 个隔离 preload-target 组、92 个会话 case。
+
+剩余可度量问题不变：联合校准多语言 source quality、semantic novelty、branch coverage 与 readability，避免完整性退化为 evidence dumping。此次收口不支持增加新的编排层，也不支持恢复公开回答长度配额。

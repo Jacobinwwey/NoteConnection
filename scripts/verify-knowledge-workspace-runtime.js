@@ -3,6 +3,9 @@ const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
+const { spawnSync } = require('child_process');
+
+const LARGE_TARGET_DOCUMENT_THRESHOLD = 100;
 
 function makeTempDir(prefix) {
   return fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), `${prefix}-`));
@@ -385,19 +388,99 @@ function loadConversationRegressionCases(caseIds) {
   return selector(caseIds);
 }
 
-async function buildTarget(port, target) {
-  const buildResponse = await requestJson(port, 'POST', '/api/build', { target }, 900000);
+function runIsolatedFullRegressionGroups(regressionCases) {
+  const groupsByPreloadTargets = new Map();
+  regressionCases.forEach((regressionCase) => {
+    const preloadTargets = Array.from(new Set(regressionCase.preloadTargets || [])).sort();
+    const groupKey = JSON.stringify(preloadTargets);
+    const group = groupsByPreloadTargets.get(groupKey) || {
+      preloadTargets,
+      caseIds: [],
+    };
+    group.caseIds.push(regressionCase.id);
+    groupsByPreloadTargets.set(groupKey, group);
+  });
+
+  const groups = Array.from(groupsByPreloadTargets.values());
+  groups.forEach((group, index) => {
+    console.log(
+      `[verify-knowledge-workspace-runtime] isolated-group=${index + 1}/${groups.length} targets=${group.preloadTargets.join(',')} cases=${group.caseIds.length}`
+    );
+    const childArguments = [
+      __filename,
+      '--full',
+      '--runtime-case-group',
+      ...group.caseIds.flatMap((caseId) => ['--case', caseId]),
+    ];
+    const child = spawnSync(process.execPath, childArguments, {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: 'inherit',
+    });
+    if (child.error) {
+      throw child.error;
+    }
+    if (child.status !== 0) {
+      throw new Error(
+        `isolated regression group failed: targets=${group.preloadTargets.join(',')} status=${child.status} signal=${child.signal || 'none'}`
+      );
+    }
+  });
+
+  console.log(JSON.stringify({
+    ok: true,
+    mode: 'full',
+    execution: 'isolated_preload_target_groups',
+    groupCount: groups.length,
+    caseCount: regressionCases.length,
+  }, null, 2));
+}
+
+async function countMarkdownFiles(directoryPath) {
+  const entries = await fs.promises.readdir(directoryPath, { withFileTypes: true });
+  let count = 0;
+  for (const entry of entries) {
+    const entryPath = path.join(directoryPath, entry.name);
+    if (entry.isDirectory()) {
+      count += await countMarkdownFiles(entryPath);
+    } else if (entry.isFile() && path.extname(entry.name).toLowerCase() === '.md') {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+async function selectRuntimeRelationRecomputeMode(kbRoot, target) {
+  const normalizedTarget = String(target || '').trim();
+  const targetPath = normalizedTarget && normalizedTarget !== 'ALL_FOLDERS'
+    ? path.join(kbRoot, normalizedTarget)
+    : kbRoot;
+  const documentCount = await countMarkdownFiles(targetPath);
+  return {
+    documentCount,
+    relationRecomputeMode: documentCount >= LARGE_TARGET_DOCUMENT_THRESHOLD ? 'none' : 'incremental',
+  };
+}
+
+async function buildTarget(port, target, relationRecomputeMode) {
+  const buildResponse = await requestJson(
+    port,
+    'POST',
+    '/api/build',
+    { target, relationRecomputeMode },
+    900000
+  );
   if (buildResponse.status !== 200 || !buildResponse.body || buildResponse.body.success !== true) {
     throw new Error(`build failed for target=${target}: status=${buildResponse.status} body=${JSON.stringify(buildResponse.body)}`);
   }
   return buildResponse.body;
 }
 
-async function restoreTarget(port, target) {
+async function restoreTarget(port, target, relationRecomputeMode) {
   const restoreResponse = await requestJson(
     port,
     'GET',
-    `/api/restore-cache?target=${encodeURIComponent(target)}`,
+    `/api/restore-cache?target=${encodeURIComponent(target)}&relationRecomputeMode=${encodeURIComponent(relationRecomputeMode)}`,
     undefined,
     900000
   );
@@ -936,6 +1019,17 @@ async function main() {
     ? String(args[targetArgIndex + 1]).trim()
     : 'waterglass';
   const explicitQueries = collectFlagValues(args, '--query');
+  const isRuntimeCaseGroup = args.includes('--runtime-case-group');
+  if (
+    mode === 'full'
+    && requestedCaseIds.length === 0
+    && !hasExplicitTarget
+    && explicitQueries.length === 0
+    && !isRuntimeCaseGroup
+  ) {
+    runIsolatedFullRegressionGroups(loadConversationRegressionCases([]));
+    return;
+  }
   const projectRoot = process.cwd();
   const frontendDir = path.join(projectRoot, 'dist', 'src', 'frontend');
   const kbRoot = path.join(projectRoot, 'Knowledge_Base');
@@ -973,10 +1067,11 @@ async function main() {
       let buildResponse = null;
       let restoreResponse = null;
       if (mode === 'full') {
-        console.log('[verify-knowledge-workspace-runtime] step=build');
-        buildResponse = await buildTarget(port, target);
-        console.log('[verify-knowledge-workspace-runtime] step=restore-cache');
-        restoreResponse = await restoreTarget(port, target);
+        const relationPolicy = await selectRuntimeRelationRecomputeMode(kbRoot, target);
+        console.log(`[verify-knowledge-workspace-runtime] step=build relationRecomputeMode=${relationPolicy.relationRecomputeMode} markdownFiles=${relationPolicy.documentCount}`);
+        buildResponse = await buildTarget(port, target, relationPolicy.relationRecomputeMode);
+        console.log(`[verify-knowledge-workspace-runtime] step=restore-cache relationRecomputeMode=${relationPolicy.relationRecomputeMode}`);
+        restoreResponse = await restoreTarget(port, target, relationPolicy.relationRecomputeMode);
       }
 
       const conversations = [];
@@ -1070,10 +1165,17 @@ async function main() {
       regressionCases.flatMap((entry) => Array.isArray(entry.preloadTargets) ? entry.preloadTargets : [])
     ));
     const buildResults = {};
+    const relationPolicies = {};
     if (mode === 'full') {
       for (const preloadTarget of preloadTargets) {
-        console.log(`[verify-knowledge-workspace-runtime] step=build target=${preloadTarget}`);
-        buildResults[preloadTarget] = await buildTarget(port, preloadTarget);
+        const relationPolicy = await selectRuntimeRelationRecomputeMode(kbRoot, preloadTarget);
+        relationPolicies[preloadTarget] = relationPolicy;
+        console.log(`[verify-knowledge-workspace-runtime] step=build target=${preloadTarget} relationRecomputeMode=${relationPolicy.relationRecomputeMode} markdownFiles=${relationPolicy.documentCount}`);
+        buildResults[preloadTarget] = await buildTarget(
+          port,
+          preloadTarget,
+          relationPolicy.relationRecomputeMode
+        );
       }
     }
 
@@ -1081,8 +1183,14 @@ async function main() {
     const restoreResults = {};
     for (const regressionCase of regressionCases) {
       if (mode === 'full') {
-        console.log(`[verify-knowledge-workspace-runtime] step=restore-cache target=${regressionCase.activeTarget}`);
-        restoreResults[regressionCase.id] = await restoreTarget(port, regressionCase.activeTarget);
+        const relationPolicy = relationPolicies[regressionCase.activeTarget]
+          || await selectRuntimeRelationRecomputeMode(kbRoot, regressionCase.activeTarget);
+        console.log(`[verify-knowledge-workspace-runtime] step=restore-cache target=${regressionCase.activeTarget} relationRecomputeMode=${relationPolicy.relationRecomputeMode}`);
+        restoreResults[regressionCase.id] = await restoreTarget(
+          port,
+          regressionCase.activeTarget,
+          relationPolicy.relationRecomputeMode
+        );
       }
       let runtimeProviderFixture = null;
       let previousNotemdSettings = null;
@@ -1242,6 +1350,7 @@ async function main() {
       bridgePort,
       runtimeDataDir,
       preloadTargets,
+      relationPolicies,
       build: buildResults,
       restore: restoreResults,
       conversation: caseResults[0] || null,

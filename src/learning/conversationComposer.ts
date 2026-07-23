@@ -20,7 +20,6 @@ import type {
     KnowledgeRunReviewCard,
     KnowledgeRunReviewState,
     RagContextPack,
-    RagEvidenceFragment,
     RagSufficiencyReview,
     GraphAnswerPlan,
 } from './types';
@@ -28,11 +27,13 @@ import { reviewAnswerRelease } from './answerReleaseReview';
 import { buildAgentConversationGraphContextFromKnowledgePoints } from './graphContextAssembler';
 import { buildGraphAnswerPlan } from './graphAnswerPlan';
 import { reviewGraphAnswerCoverage } from './graphAnswerCoverage';
-import { collectGraphAnswerFacts, collectGraphAnswerWindowTitles } from './graphAnswerFacts';
+import {
+    collectGraphAnswerFacts,
+    collectGraphAnswerWindowTitles,
+    formatGraphAnswerProfileSentence,
+} from './graphAnswerFacts';
 import {
     naturalizeRagPublicEvidenceClause,
-    shouldRejectPublicEvidenceClause,
-    shouldRejectCompareProcedureEvidenceClause,
 } from './ragPublicText';
 import { graphClaimSemanticSimilarity } from './graphClaimMatcher';
 
@@ -51,12 +52,6 @@ export type ScopedConversationReplyParams = {
     graphContext?: AgentConversationGraphContext | null;
     ragContextPack?: RagContextPack;
     ragSufficiencyReview?: RagSufficiencyReview;
-};
-
-type RagAnswerProfile = {
-    directSupportSentenceCount: number;
-    documentContextSentenceCount: number;
-    graphNeighborSentenceCount: number;
 };
 
 function normalizeWhitespace(value: string): string {
@@ -535,43 +530,6 @@ function classifyScopedConversationIntent(message: string): 'explain' | 'compare
     return 'generic';
 }
 
-function resolveRagAnswerProfile(message: string): RagAnswerProfile {
-    const intent = classifyScopedConversationIntent(message);
-    if (intent === 'compare') {
-        return {
-            directSupportSentenceCount: 8,
-            documentContextSentenceCount: 4,
-            graphNeighborSentenceCount: 6,
-        };
-    }
-    if (intent === 'how_to') {
-        return {
-            directSupportSentenceCount: 8,
-            documentContextSentenceCount: 6,
-            graphNeighborSentenceCount: 6,
-        };
-    }
-    if (intent === 'causal_explain') {
-        return {
-            directSupportSentenceCount: 8,
-            documentContextSentenceCount: 6,
-            graphNeighborSentenceCount: 6,
-        };
-    }
-    if (intent === 'generic') {
-        return {
-            directSupportSentenceCount: 2,
-            documentContextSentenceCount: 2,
-            graphNeighborSentenceCount: 6,
-        };
-    }
-    return {
-        directSupportSentenceCount: 8,
-        documentContextSentenceCount: 2,
-        graphNeighborSentenceCount: 6,
-    };
-}
-
 function containsCjk(value: string): boolean {
     return /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/u.test(String(value || ''));
 }
@@ -649,141 +607,14 @@ function buildGraphProfileAnswerSentence(
     if (!facts) {
         return '';
     }
-    const { anchorTitle, predecessorTitles, successorTitles } = facts;
-    const degreeParts: string[] = [];
-    if (facts.inDegree !== null) {
-        degreeParts.push(useChinese ? `入度为 ${facts.inDegree}` : `${facts.inDegree} incoming`);
-    }
-    if (facts.outDegree !== null) {
-        degreeParts.push(useChinese ? `出度为 ${facts.outDegree}` : `${facts.outDegree} outgoing`);
-    }
-    if (degreeParts.length <= 0 && predecessorTitles.length <= 0 && successorTitles.length <= 0) {
-        return '';
-    }
-    if (useChinese) {
-        const fragments: string[] = [];
-        if (degreeParts.length > 0) {
-            fragments.push(`${anchorTitle || '当前锚点'}在当前图中的${degreeParts.join('，')}`);
-        }
-        if (predecessorTitles.length > 0) {
-            fragments.push(`紧邻前置节点包括 ${predecessorTitles.join('、')}`);
-        }
-        if (successorTitles.length > 0) {
-            fragments.push(`后续分支包括 ${successorTitles.join('、')}`);
-        }
-        return fragments.join('，');
-    }
-    const fragments: string[] = [];
-    if (degreeParts.length > 0) {
-        fragments.push(`${anchorTitle || 'The current anchor'} has ${degreeParts.join(' and ')} links in the current graph`);
-    }
-    if (predecessorTitles.length > 0 && successorTitles.length > 0) {
-        fragments.push(`its immediate predecessors include ${predecessorTitles.join(', ')}, and likely next nodes include ${successorTitles.join(', ')}`);
-    } else if (predecessorTitles.length > 0) {
-        fragments.push(`its immediate predecessors include ${predecessorTitles.join(', ')}`);
-    } else if (successorTitles.length > 0) {
-        fragments.push(`its likely next nodes include ${successorTitles.join(', ')}`);
-    }
-    return fragments.join('; ');
-}
-
-const RAG_ANSWER_QUERY_STOPWORDS = new Set([
-    'a', 'about', 'an', 'and', 'are', 'as', 'at', 'be', 'between', 'by', 'compare',
-    'contrast', 'difference', 'differences', 'do', 'does', 'from', 'how',
-    'in', 'is', 'it', 'me', 'of', 'on', 'or', 'plan', 'step', 'steps', 'tell', 'the', 'to', 'versus', 'vs', 'what',
-    'which', 'with',
-]);
-
-function extractRagAnswerQueryTerms(message: string): string[] {
-    const terms = (String(message || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || [])
-        .map((term) => term.trim())
-        .filter((term) => term.length >= 2 && !RAG_ANSWER_QUERY_STOPWORDS.has(term));
-    return Array.from(new Set(terms));
-}
-
-function normalizeMermaidEvidenceLabel(value: string): string {
-    return normalizeWhitespace(
-        String(value || '')
-            .replace(/<br\s*\/?>/giu, ' ')
-            .replace(/\\n/gu, ' ')
-            .replace(/[`*_~#|{}]/gu, ' ')
-            .replace(/\s{2,}/gu, ' ')
-            .trim()
-    );
-}
-
-function extractMermaidEvidenceLabels(fenceText: string): string {
-    const normalizedFence = String(fenceText || '').trim();
-    if (!/^mermaid\b/iu.test(normalizedFence)) {
-        return '';
-    }
-    const mermaidBody = normalizedFence.replace(/^mermaid\b/iu, '').trim();
-    const labels: string[] = [];
-    const appendLabel = (value: string): void => {
-        const label = normalizeMermaidEvidenceLabel(value);
-        if (label && !labels.includes(label)) {
-            labels.push(label);
-        }
-    };
-    mermaidBody.replace(/\[([^\]]+)\]/gu, (_match, label: string) => {
-        appendLabel(label);
-        return '';
-    });
-    mermaidBody.replace(/"([^"]+)"/gu, (_match, label: string) => {
-        appendLabel(label);
-        return '';
-    });
-    return labels.join('. ');
-}
-
-function cleanRagEvidenceText(value: string): string {
-    return normalizeWhitespace(
-        String(value || '')
-            .replace(/```([\s\S]*?)(?:```|$)/gu, (_match, fenceText: string) => (
-                ` ${extractMermaidEvidenceLabels(fenceText)} `
-            ))
-            .split(/\r?\n/u)
-            .filter((line) => !/^#{1,6}\s+/u.test(line.trim()))
-            .join(' ')
-            .replace(/\[[^\]]+\]\([^)]*\)/gu, ' ')
-            .replace(/!\[[^\]]*\]\([^)]*\)/gu, ' ')
-            .replace(/[*_~`>#|]/gu, ' ')
-            .replace(/\s{2,}/gu, ' ')
-    );
-}
-
-function splitRagEvidenceSentences(fragment: RagEvidenceFragment): string[] {
-    const cleaned = cleanRagEvidenceText(fragment.text);
-    if (!cleaned) {
-        return [];
-    }
-    const sentences: string[] = [];
-    let start = 0;
-    for (let index = 0; index < cleaned.length; index += 1) {
-        const char = cleaned[index];
-        const isDecimalPoint = char === '.'
-            && /\d/u.test(cleaned[index - 1] || '')
-            && /\d/u.test(cleaned[index + 1] || '');
-        const isBoundary = !isDecimalPoint && /[.!?\u3002\uFF01\uFF1F]/u.test(char);
-        if (!isBoundary) {
-            continue;
-        }
-        sentences.push(cleaned.slice(start, index + 1));
-        start = index + 1;
-    }
-    if (start < cleaned.length) {
-        sentences.push(cleaned.slice(start));
-    }
-    return (sentences.length > 0 ? sentences : [cleaned])
-        .map((sentence) => normalizeWhitespace(sentence))
-        .filter((sentence) => sentence.length >= 16);
+    return formatGraphAnswerProfileSentence(facts, useChinese);
 }
 
 function sentenceComparableKey(value: string): string {
     return stripConversationAnswerTerminalPunctuation(value).toLowerCase();
 }
 
-function appendRagEvidenceSentence(
+function appendPlannedEvidenceSentence(
     sentences: string[],
     candidate: string,
     useChinese: boolean
@@ -808,130 +639,7 @@ function appendRagEvidenceSentence(
     }
 }
 
-type RagEvidenceSentenceCandidate = {
-    sentence: string;
-    queryTerms: Set<string>;
-    headingQueryTerms: Set<string>;
-    fragmentQueryTermCount: number;
-    order: number;
-};
-
-type RagEvidenceSentenceSelectionOptions = {
-    useLeafHeadingScore?: boolean;
-    preferBestLeafHeadingMatch?: boolean;
-    rejectSentence?: (sentence: string) => boolean;
-};
-
-function collectSentenceQueryTerms(sentence: string, queryTerms: string[]): Set<string> {
-    const lower = sentence.toLowerCase();
-    return new Set(queryTerms.filter((term) => lower.includes(term)));
-}
-
-function collectFragmentLeafHeadingQueryTerms(fragment: RagEvidenceFragment, queryTerms: string[]): Set<string> {
-    const headingPath = Array.isArray(fragment.headingPath) ? fragment.headingPath : [];
-    const leafHeading = normalizeWhitespace(String(headingPath[headingPath.length - 1] || ''));
-    if (!leafHeading) {
-        return new Set();
-    }
-    return collectSentenceQueryTerms(leafHeading, queryTerms);
-}
-
-function rankRagEvidenceSentenceCandidates(
-    candidates: RagEvidenceSentenceCandidate[],
-    limit: number,
-    options: RagEvidenceSentenceSelectionOptions = {}
-): RagEvidenceSentenceCandidate[] {
-    const remaining = candidates.slice();
-    const ranked: RagEvidenceSentenceCandidate[] = [];
-    const coveredTerms = new Set<string>();
-    while (remaining.length > 0 && ranked.length < limit) {
-        let bestIndex = 0;
-        let bestScore = Number.NEGATIVE_INFINITY;
-        remaining.forEach((candidate, index) => {
-            const totalTermCount = candidate.queryTerms.size;
-            const headingTermCount = options.useLeafHeadingScore ? candidate.headingQueryTerms.size : 0;
-            const uncoveredTermCount = Array.from(candidate.queryTerms)
-                .filter((term) => !coveredTerms.has(term))
-                .length;
-            const score = uncoveredTermCount * 4
-                + (uncoveredTermCount > 0 ? totalTermCount : 0)
-                + (totalTermCount > 0 ? candidate.fragmentQueryTermCount / 2 : 0)
-                + headingTermCount * 6
-                - candidate.order / 10000;
-            if (score > bestScore) {
-                bestScore = score;
-                bestIndex = index;
-            }
-        });
-        const [selected] = remaining.splice(bestIndex, 1);
-        ranked.push(selected);
-        selected.queryTerms.forEach((term) => coveredTerms.add(term));
-    }
-    return ranked;
-}
-
-function selectRagEvidenceSentences(
-    fragments: RagEvidenceFragment[],
-    roles: Set<RagEvidenceFragment['role']>,
-    limit: number,
-    queryTerms: string[] = [],
-    options: RagEvidenceSentenceSelectionOptions = {}
-): string[] {
-    const selected: string[] = [];
-    const candidates: RagEvidenceSentenceCandidate[] = [];
-    let sentenceOrder = 0;
-    fragments
-        .filter((fragment) => roles.has(fragment.role))
-        .forEach((fragment) => {
-            const sentences = splitRagEvidenceSentences(fragment);
-            const headingQueryTerms = collectFragmentLeafHeadingQueryTerms(fragment, queryTerms);
-            const fragmentQueryTerms = new Set(
-                sentences.flatMap((sentence) => Array.from(collectSentenceQueryTerms(sentence, queryTerms)))
-            );
-            sentences.forEach((sentence) => {
-                if (options.rejectSentence?.(sentence)) {
-                    sentenceOrder += 1;
-                    return;
-                }
-                const comparable = sentenceComparableKey(sentence);
-                if (!candidates.some((existing) => sentenceComparableKey(existing.sentence) === comparable)) {
-                    candidates.push({
-                        sentence,
-                        queryTerms: collectSentenceQueryTerms(sentence, queryTerms),
-                        headingQueryTerms,
-                        fragmentQueryTermCount: fragmentQueryTerms.size,
-                        order: sentenceOrder,
-                    });
-                }
-                sentenceOrder += 1;
-            });
-        });
-    const maxHeadingTermCount = candidates.reduce(
-        (max, candidate) => Math.max(max, candidate.headingQueryTerms.size),
-        0
-    );
-    const selectionCandidates = options.preferBestLeafHeadingMatch && maxHeadingTermCount > 0
-        ? candidates.filter((candidate) => candidate.headingQueryTerms.size === maxHeadingTermCount)
-        : candidates;
-    const hasQuerySignal = queryTerms.length > 0 && selectionCandidates.some((candidate) => (
-        candidate.queryTerms.size > 0 || candidate.headingQueryTerms.size > 0
-    ));
-    const orderedCandidates = hasQuerySignal
-        ? rankRagEvidenceSentenceCandidates(selectionCandidates, limit, options)
-        : selectionCandidates;
-    orderedCandidates.forEach((candidate) => {
-        if (selected.length >= limit) {
-            return;
-        }
-        const comparable = sentenceComparableKey(candidate.sentence);
-        if (!selected.some((existing) => sentenceComparableKey(existing) === comparable)) {
-            selected.push(candidate.sentence);
-        }
-    });
-    return selected;
-}
-
-function buildPlanDrivenRagAnswer(
+function buildCoverageDrivenRagAnswer(
     params: ScopedConversationReplyParams,
     graphContext: AgentConversationGraphContext | null,
     graphAnswerPlan: GraphAnswerPlan,
@@ -944,60 +652,14 @@ function buildPlanDrivenRagAnswer(
     if (params.ragSufficiencyReview?.status === 'insufficient') {
         return '';
     }
-    const profile = resolveRagAnswerProfile(params.message);
-    const intent = classifyScopedConversationIntent(params.message);
-    const answerQueryTerms = extractRagAnswerQueryTerms(params.message);
-    const rejectAnswerControlSentence = shouldRejectPublicEvidenceClause;
-    const rejectCompareProcedureSentence = intent === 'compare'
-        ? (sentence: string) => (
-            rejectAnswerControlSentence(sentence)
-            || shouldRejectCompareProcedureEvidenceClause(sentence, params.message)
-        )
-        : rejectAnswerControlSentence;
     const answerSentences: string[] = [];
     graphAnswerPlan.claims
-        .filter((claim) => claim.required)
-        .forEach((claim) => appendRagEvidenceSentence(answerSentences, claim.statement, useChinese));
-    selectRagEvidenceSentences(
-        pack.fragments,
-        new Set(['direct_support']),
-        profile.directSupportSentenceCount,
-        answerQueryTerms,
-        {
-            rejectSentence: rejectCompareProcedureSentence,
-        }
-    )
-        .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
-    const hasConflictEvidence = params.ragSufficiencyReview?.degradationState === 'conflict'
-        || (params.ragSufficiencyReview?.reasons || []).some((reason) => String(reason || '').includes('conflict_evidence_present'));
-    if (hasConflictEvidence) {
-        selectRagEvidenceSentences(pack.fragments, new Set(['conflict']), 3, answerQueryTerms)
-            .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
+        .forEach((claim) => appendPlannedEvidenceSentence(answerSentences, claim.statement, useChinese));
+    if (answerSentences.length <= 0) {
+        return '';
     }
-    selectRagEvidenceSentences(
-        pack.fragments,
-        new Set(['parent_context', 'adjacent_context']),
-        profile.documentContextSentenceCount,
-        answerQueryTerms,
-        {
-            useLeafHeadingScore: intent !== 'compare',
-            preferBestLeafHeadingMatch: intent !== 'compare',
-            rejectSentence: rejectCompareProcedureSentence,
-        }
-    )
-        .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
-    selectRagEvidenceSentences(
-        pack.fragments,
-        new Set(['graph_neighbor_support']),
-        profile.graphNeighborSentenceCount,
-        answerQueryTerms,
-        {
-            rejectSentence: rejectCompareProcedureSentence,
-        }
-    )
-        .forEach((sentence) => appendRagEvidenceSentence(answerSentences, sentence, useChinese));
     if (params.ragSufficiencyReview?.status === 'borderline') {
-        appendRagEvidenceSentence(
+        appendPlannedEvidenceSentence(
             answerSentences,
             useChinese
                 ? '当前证据覆盖仍然有限，因此这只能作为基于已命中材料的部分回答'
@@ -1040,7 +702,7 @@ function buildScopedConversationAnswer(
         graphContext && graphContext.anchorTitle,
     ].filter(Boolean).join(' '));
     const answerSentences: string[] = [];
-    const ragAnswer = buildPlanDrivenRagAnswer(params, graphContext, graphAnswerPlan, useChinese);
+    const ragAnswer = buildCoverageDrivenRagAnswer(params, graphContext, graphAnswerPlan, useChinese);
     if (ragAnswer) {
         return ragAnswer;
     }
@@ -1099,7 +761,7 @@ function buildScopedConversationAnswer(
             useChinese
         );
     }
-    return answerSentences.slice(0, 3).join(useChinese ? '' : ' ');
+    return answerSentences.join(useChinese ? '' : ' ');
 }
 
 function buildScopedConversationOverviewMarkdown(

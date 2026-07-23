@@ -7749,3 +7749,35 @@ All implementation phases in this plan are complete. Orchestration extraction is
 - [x] compare intent 会动态推导查询两侧分支，优先选择同时覆盖两侧的 clause，排除同 section 中无关的比较内容。
 - [x] 运行时同时要求 `glass_material` / `plastic` 语义覆盖、required `contrast` role、最终 claim coverage 与 plan order，并拒绝无关的消色差透镜 / 数学优化 prose。
 - [x] 新鲜验证：focused matrix 11/11 suites、238/238 tests；全量 Jest 124/124 suites、1,160 passed、26 skipped；production/Vite build、完整 conversation runtime、Diataxis、MkDocs 与 diff hygiene 均通过。
+
+## 2026-07-23 Coverage-driven Full Runtime Closure
+
+### English
+
+- [x] Remove the remaining multi-claim loss in ordinary evidence planning; complete, relevant, semantically distinct claims now survive without a one-claim-per-fragment ceiling.
+- [x] Make `GraphAnswerPlan.claims` the single public RAG realization source and remove secondary composer/release clause quotas.
+- [x] Preserve conflict branches, comparison operands, graph relation evidence, Mermaid labels, and title context without admitting unrelated same-section noise.
+- [x] Optimize incremental inferred-edge candidate discovery through a keyword inverted index while preserving the positive-Jaccard candidate set.
+- [x] Add validated `none|incremental|full` relation recompute modes to build/restore routes; retain `incremental` as the product default.
+- [x] Make the runtime verifier use `none` for targets with at least 100 Markdown documents and `incremental` for small graph fixtures.
+- [x] Isolate full runtime cases by identical preload-target sets, preventing cross-case atom accumulation while preserving declared cross-scope recovery.
+- [x] Replace public graph diagnostic phrases with natural upstream/downstream evidence language while retaining graph connectivity.
+- [x] Full verifier passed: 55 isolated preload-target groups and 92 conversation cases, including build and restore-cache execution.
+- [x] Final oracle: 125 Jest suites passed, 1,172 tests passed, and 26 skipped; route, graph-plan, composer, release-review, TypeScript, `npm run build:with-vite`, and full runtime verification passed.
+
+Next direction: build a versioned joint-calibration corpus for multilingual source quality, semantic deduplication, comparison-branch coverage, response-language consistency, and readability. Do not restore public length quotas or add another orchestration owner without a complete operation boundary.
+
+### 中文
+
+- [x] 移除普通 evidence planning 中剩余的多 claim 丢失；完整、相关且语义不同的 claim 不再受每 fragment 一条上限约束。
+- [x] 将 `GraphAnswerPlan.claims` 作为公开 RAG realization 的唯一来源，删除 composer/release 的第二套 clause 配额。
+- [x] 保留冲突分支、比较 operand、图关系证据、Mermaid label 与标题语境，同时拒绝同 section 的无关噪声。
+- [x] 通过关键词倒排索引优化 incremental inferred-edge 候选发现，同时保持正 Jaccard 候选集合等价。
+- [x] 为 build/restore 路由增加经过校验的 `none|incremental|full` 关系重算模式；产品默认继续使用 `incremental`。
+- [x] 运行时验证器对至少 100 个 Markdown 文档的 target 使用 `none`，对小型图 fixture 使用 `incremental`。
+- [x] 按相同 preload-target 集隔离 full runtime case，防止跨 case atom 累积，同时保留声明的跨 scope 恢复。
+- [x] 将公开图诊断短语改为自然的 upstream/downstream evidence 表述，同时保留图连接事实。
+- [x] 完整验证器通过：55 个隔离 preload-target 组、92 个会话 case，包含 build 与 restore-cache。
+- [x] 最终 oracle：125 个 Jest suite 通过、1,172 个测试通过、26 个跳过；路由、graph plan、composer、release review、TypeScript、`npm run build:with-vite` 与完整运行时验证均通过。
+
+后续方向：建立版本化联合校准语料，覆盖多语言 source quality、semantic deduplication、比较分支 coverage、回答语言一致性与 readability。不得恢复公开长度配额；没有完整 operation 边界时，不新增编排 owner。

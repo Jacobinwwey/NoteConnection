@@ -7154,13 +7154,30 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private createInferredEdges(newAtomIds: string[], nowIso: string): RelationEdge[] {
         const created: RelationEdge[] = [];
-        const candidateTargetIds = Array.from(this.activeAtomIds);
+        const candidateAtomIdsByKeyword = new Map<string, Set<string>>();
+        this.activeAtomIds.forEach((candidateAtomId) => {
+            const candidateAtom = this.atoms.get(candidateAtomId);
+            if (!candidateAtom) {
+                return;
+            }
+            new Set(candidateAtom.keywords).forEach((keyword) => {
+                const candidateAtomIds = candidateAtomIdsByKeyword.get(keyword) || new Set<string>();
+                candidateAtomIds.add(candidateAtomId);
+                candidateAtomIdsByKeyword.set(keyword, candidateAtomIds);
+            });
+        });
         for (const sourceAtomId of newAtomIds) {
             const sourceAtom = this.atoms.get(sourceAtomId);
             if (!sourceAtom || sourceAtom.keywords.length === 0) {
                 continue;
             }
-            for (const targetAtomId of candidateTargetIds) {
+            const overlappingCandidateAtomIds = new Set<string>();
+            new Set(sourceAtom.keywords).forEach((keyword) => {
+                candidateAtomIdsByKeyword.get(keyword)?.forEach((candidateAtomId) => {
+                    overlappingCandidateAtomIds.add(candidateAtomId);
+                });
+            });
+            for (const targetAtomId of overlappingCandidateAtomIds) {
                 if (targetAtomId === sourceAtomId) {
                     continue;
                 }

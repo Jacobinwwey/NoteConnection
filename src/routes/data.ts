@@ -5,6 +5,26 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { buildGraph } from '../index';
 import { FileLoader } from '../backend/FileLoader';
+import type { RelationRecomputeMode } from '../learning/types';
+
+type RouteRelationRecomputeMode = Exclude<RelationRecomputeMode, 'auto'>;
+
+const ROUTE_RELATION_RECOMPUTE_MODES: readonly RouteRelationRecomputeMode[] = [
+    'none',
+    'incremental',
+    'full',
+];
+
+function parseRouteRelationRecomputeMode(rawValue: unknown): RouteRelationRecomputeMode | undefined {
+    const normalized = String(rawValue ?? '').trim().toLowerCase();
+    if (!normalized) {
+        return undefined;
+    }
+    if ((ROUTE_RELATION_RECOMPUTE_MODES as readonly string[]).includes(normalized)) {
+        return normalized as RouteRelationRecomputeMode;
+    }
+    return undefined;
+}
 
 export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
     const { LOOPBACK_HOST, finalPort, kbRoot, runtimeDataDir, knowledgeLearningPlatform } = ctx;
@@ -42,13 +62,17 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
             };
         });
     };
-    const syncKnowledgeWorkspaceForTarget = async (target: string, reason: string) => {
+    const syncKnowledgeWorkspaceForTarget = async (
+        target: string,
+        reason: string,
+        relationRecomputeMode: RouteRelationRecomputeMode = 'incremental',
+    ) => {
         const documents = await buildKnowledgeDocumentPayloads(target);
         const result = await knowledgeLearningPlatform.ingestKnowledge({
             incremental: true,
             documents,
             ingestedAt: new Date().toISOString(),
-            relationRecomputeMode: 'incremental',
+            relationRecomputeMode,
         });
         return {
             target,
@@ -96,11 +120,24 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
             try {
                 const urlObj = new URL(req.url || '/', `http://${LOOPBACK_HOST}:${finalPort}`);
                 const target = urlObj.searchParams.get('target');
+                const requestedMode = urlObj.searchParams.get('relationRecomputeMode');
+                const relationRecomputeMode = parseRouteRelationRecomputeMode(requestedMode);
+                if (requestedMode && !relationRecomputeMode) {
+                    json(res, 400, {
+                        success: false,
+                        error: 'relationRecomputeMode must be one of: none, incremental, full',
+                    });
+                    return;
+                }
                 if (!target) { json(res, 400, { success: false, error: 'Missing target' }); return; }
                 if (target === 'ALL_FOLDERS') {
                     const activeJsPath = await readGeneratedAssetIfExists('data.js');
                     if (!activeJsPath) { json(res, 200, { success: false, error: 'No active cache found' }); return; }
-                    const sync = await syncKnowledgeWorkspaceForTarget('ALL_FOLDERS', 'restore_cache');
+                    const sync = await syncKnowledgeWorkspaceForTarget(
+                        'ALL_FOLDERS',
+                        'restore_cache',
+                        relationRecomputeMode || 'incremental',
+                    );
                     json(res, 200, { success: true, sync });
                     return;
                 }
@@ -113,7 +150,11 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
                 if (cacheJson) {
                     await fs.promises.copyFile(cacheJson, generatedAssetPath('graph_data.json'));
                 }
-                const sync = await syncKnowledgeWorkspaceForTarget(target, 'restore_cache');
+                const sync = await syncKnowledgeWorkspaceForTarget(
+                    target,
+                    'restore_cache',
+                    relationRecomputeMode || 'incremental',
+                );
                 json(res, 200, { success: true, sync });
             } catch (e) { fail(res, e, 'GET /api/restore-cache'); }
         }},
@@ -146,6 +187,15 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
                 const body = await readBody(req);
                 const payload = JSON.parse(body);
                 const target = String(payload?.target || 'ALL_FOLDERS').trim() || 'ALL_FOLDERS';
+                const requestedMode = payload?.relationRecomputeMode;
+                const relationRecomputeMode = parseRouteRelationRecomputeMode(requestedMode);
+                if (requestedMode !== undefined && !relationRecomputeMode) {
+                    json(res, 400, {
+                        success: false,
+                        error: 'relationRecomputeMode must be one of: none, incremental, full',
+                    });
+                    return;
+                }
                 const targetPath = target !== 'ALL_FOLDERS'
                     ? path.join(kbRoot, target)
                     : kbRoot;
@@ -157,7 +207,11 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
                     memorySavingMode: payload?.memorySavingMode,
                     deepDebug: payload?.deepDebug,
                 });
-                const sync = await syncKnowledgeWorkspaceForTarget(target, 'build_graph');
+                const sync = await syncKnowledgeWorkspaceForTarget(
+                    target,
+                    'build_graph',
+                    relationRecomputeMode || 'incremental',
+                );
                 json(res, 200, { success: true, target, requestedAt: new Date().toISOString(), sync });
             } catch (e) { fail(res, e, 'POST /api/build'); }
         }},

@@ -289,6 +289,307 @@ describe('buildGraphAnswerPlan', () => {
         expect(plan.claims[0].evidenceRefs[0].text).toBe(denseEvidence);
     });
 
+    test('retains every query-connected clause from dense direct evidence without a claim-count quota', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'what is water glass',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: [{
+                    ...ragContextPack.fragments[0],
+                    fragmentId: 'direct_water_glass_dense_evidence',
+                    role: 'direct_support',
+                    atomId: 'water_glass',
+                    title: 'Water Glass',
+                    text: [
+                        'A water glass is a transparent vessel used to hold water.',
+                        'It separates the liquid from the surrounding environment.',
+                        'Its wall conducts heat between the drink and the air.',
+                        'Mars has two moons.',
+                    ].join(' '),
+                    score: 0.9,
+                }],
+            },
+        });
+
+        const directClaims = plan.claims
+            .filter((claim) => claim.evidenceRefs.some((reference) => reference.evidenceId === 'direct_water_glass_dense_evidence'))
+            .map((claim) => claim.statement);
+
+        expect(directClaims).toEqual(expect.arrayContaining([
+            'A water glass is a transparent vessel used to hold water.',
+            'It separates the liquid from the surrounding environment.',
+            'Its wall conducts heat between the drink and the air.',
+        ]));
+        expect(directClaims).not.toContain('Mars has two moons.');
+    });
+
+    test('retains distinct fact values from semantically similar conflict evidence', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'what is release date conflict probe?',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'announced_release_date',
+                        role: 'direct_support',
+                        atomId: 'release_date_probe',
+                        title: 'Release Date Conflict Probe',
+                        text: 'The migration release date is 2026-07-01.',
+                        score: 0.92,
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'revised_release_date',
+                        role: 'conflict',
+                        atomId: 'release_date_probe',
+                        title: 'Release Date Conflict Probe',
+                        text: 'The migration release date is 2026-08-15.',
+                        score: 0.92,
+                    },
+                ],
+            },
+        });
+
+        expect(plan.claims.map((claim) => claim.statement)).toEqual(expect.arrayContaining([
+            'The migration release date is 2026-07-01.',
+            'The migration release date is 2026-08-15.',
+        ]));
+    });
+
+    test('retains distinct values when equivalent fact subjects use different word order', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'what is release date conflict probe?',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'announced_release_date_reordered',
+                        role: 'direct_support',
+                        atomId: 'release_date_probe',
+                        title: 'Release Date Conflict Probe',
+                        text: 'The migration release date is 2026-07-01.',
+                        score: 0.92,
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'revised_release_date_reordered',
+                        role: 'conflict',
+                        atomId: 'release_date_probe',
+                        title: 'Release Date Conflict Probe',
+                        text: 'The release date for migration is 2026-08-15.',
+                        score: 0.92,
+                    },
+                ],
+            },
+        });
+
+        expect(plan.claims.map((claim) => claim.statement)).toEqual(expect.arrayContaining([
+            'The migration release date is 2026-07-01.',
+            'The release date for migration is 2026-08-15.',
+        ]));
+    });
+
+    test('retains comparison evidence that completes separate requested branches', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'compare cross version one state source with cross version two state source',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'version_one_state',
+                        role: 'direct_support',
+                        atomId: 'version_one_state',
+                        sourcePath: 'Knowledge_Base/test/cross version one state source.md',
+                        title: 'Cross Version One State Source',
+                        text: 'Cross version one state source records that the migration gate status is enabled in version 1.0.',
+                        score: 0.92,
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'version_two_state',
+                        role: 'direct_support',
+                        atomId: 'version_two_state',
+                        sourcePath: 'Knowledge_Base/test/cross version two state source.md',
+                        title: 'Cross Version Two State Source',
+                        text: 'Cross version two state source records that the migration gate status is disabled in version 2.0.',
+                        score: 0.92,
+                    },
+                ],
+            },
+        });
+
+        expect(plan.claims.map((claim) => claim.statement)).toEqual(expect.arrayContaining([
+            'Cross version one state source records that the migration gate status is enabled in version 1.0.',
+            'Cross version two state source records that the migration gate status is disabled in version 2.0.',
+        ]));
+    });
+
+    test('labels comparison claims when otherwise identical evidence is distinguished only by node title', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'compare basalt with granite',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'basalt_density',
+                        role: 'direct_support',
+                        atomId: 'basalt',
+                        sourcePath: 'Knowledge_Base/test/source-a.md',
+                        title: 'Basalt',
+                        text: 'Its density is high.',
+                        score: 0.92,
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'granite_density',
+                        role: 'direct_support',
+                        atomId: 'granite',
+                        sourcePath: 'Knowledge_Base/test/source-b.md',
+                        title: 'Granite',
+                        text: 'Its density is high.',
+                        score: 0.92,
+                    },
+                ],
+            },
+        });
+
+        expect(plan.claims.map((claim) => claim.statement)).toEqual(expect.arrayContaining([
+            'Basalt: Its density is high.',
+            'Granite: Its density is high.',
+        ]));
+    });
+
+    test('retains comparison branches whose only distinct token is a short version number', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'compare iOS 17 with iOS 18',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'ios_17_status',
+                        role: 'direct_support',
+                        atomId: 'ios_17',
+                        sourcePath: 'Knowledge_Base/test/opaque-a.md',
+                        title: 'iOS 17',
+                        text: 'Its response status is stable.',
+                        score: 0.92,
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'ios_18_status',
+                        role: 'direct_support',
+                        atomId: 'ios_18',
+                        sourcePath: 'Knowledge_Base/test/opaque-b.md',
+                        title: 'iOS 18',
+                        text: 'Its response status is stable.',
+                        score: 0.92,
+                    },
+                ],
+            },
+        });
+
+        expect(plan.claims.map((claim) => claim.statement)).toEqual(expect.arrayContaining([
+            'iOS 17: Its response status is stable.',
+            'iOS 18: Its response status is stable.',
+        ]));
+    });
+
+    test('retains comparison branches made only of one-character labels', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'compare A with B',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'label_a_status',
+                        role: 'direct_support',
+                        atomId: 'label_a',
+                        sourcePath: 'Knowledge_Base/test/opaque-a.md',
+                        title: 'A',
+                        text: 'Its response status is stable.',
+                        score: 0.92,
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'label_b_status',
+                        role: 'direct_support',
+                        atomId: 'label_b',
+                        sourcePath: 'Knowledge_Base/test/opaque-b.md',
+                        title: 'B',
+                        text: 'Its response status is stable.',
+                        score: 0.92,
+                    },
+                ],
+            },
+        });
+
+        expect(plan.claims.map((claim) => claim.statement)).toEqual(expect.arrayContaining([
+            'A: Its response status is stable.',
+            'B: Its response status is stable.',
+        ]));
+    });
+
+    test('does not treat unrelated clauses as comparison evidence solely because their fragment title matches a branch', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'compare basalt with granite',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'basalt_density_with_noise',
+                        role: 'direct_support',
+                        atomId: 'basalt',
+                        sourcePath: 'Knowledge_Base/test/basalt.md',
+                        title: 'Basalt',
+                        text: 'Its density is high. Mars has two moons.',
+                        score: 0.92,
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'granite_density_with_noise',
+                        role: 'direct_support',
+                        atomId: 'granite',
+                        sourcePath: 'Knowledge_Base/test/granite.md',
+                        title: 'Granite',
+                        text: 'Its density is high. Mars has two moons.',
+                        score: 0.92,
+                    },
+                ],
+            },
+        });
+
+        const statements = plan.claims.map((claim) => claim.statement);
+        expect(statements).toEqual(expect.arrayContaining([
+            'Basalt: Its density is high.',
+            'Granite: Its density is high.',
+        ]));
+        expect(statements).not.toContain('Basalt: Mars has two moons.');
+        expect(statements).not.toContain('Granite: Mars has two moons.');
+    });
+
     test('removes structural CJK headings without removing an English subject phrase', () => {
         const plan = buildGraphAnswerPlan({
             message: 'explain optics in a water glass',
