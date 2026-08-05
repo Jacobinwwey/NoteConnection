@@ -190,6 +190,50 @@ describe('buildGraphAnswerPlan', () => {
         });
     });
 
+    test('preserves polarity-opposed claims instead of semantic-deduplicating them', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'explain glass wall heat transfer',
+            knowledgePoints: [{
+                ...knowledgePoint,
+                matchedSpans: knowledgePoint.matchedSpans ? [knowledgePoint.matchedSpans[0]] : [],
+            }],
+            graphContext: {
+                ...graphContext,
+                supportingAtomIds: [],
+                supportingTitles: [],
+                knowledgePointRelations: [],
+            },
+            ragContextPack: {
+                ...ragContextPack,
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'positive_heat_transfer',
+                        role: 'direct_support',
+                        atomId: 'positive_heat_transfer',
+                        title: 'Heat Transfer',
+                        text: 'The glass wall conducts heat through the liquid boundary.',
+                        relationEdgeIds: [],
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'negative_heat_transfer',
+                        role: 'direct_support',
+                        atomId: 'negative_heat_transfer',
+                        title: 'Heat Transfer',
+                        text: 'The glass wall does not conduct heat through the liquid boundary.',
+                        relationEdgeIds: [],
+                    },
+                ],
+            },
+        });
+
+        expect(plan.claims.map((claim) => claim.statement)).toEqual(expect.arrayContaining([
+            'The glass wall conducts heat through the liquid boundary.',
+            'The glass wall does not conduct heat through the liquid boundary.',
+        ]));
+    });
+
     test('requires distinct high-confidence claims even when they share one semantic role', () => {
         const plan = buildGraphAnswerPlan({
             message: 'explain water glass in detail',

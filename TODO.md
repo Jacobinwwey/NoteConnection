@@ -7781,3 +7781,37 @@ Next direction: build a versioned joint-calibration corpus for multilingual sour
 - [x] 最终 oracle：125 个 Jest suite 通过、1,172 个测试通过、26 个跳过；路由、graph plan、composer、release review、TypeScript、`npm run build:with-vite` 与完整运行时验证均通过。
 
 后续方向：建立版本化联合校准语料，覆盖多语言 source quality、semantic deduplication、比较分支 coverage、回答语言一致性与 readability。不得恢复公开长度配额；没有完整 operation 边界时，不新增编排 owner。
+
+## 2026-07-23 Joint Graph Answer Quality Calibration
+
+### English
+
+- [x] Add a versioned production policy owner for supplemental semantic deduplication.
+- [x] Preserve polarity-opposed and changed numeric facts before any semantic-similarity threshold can merge coverage.
+- [x] Preserve signed values, common English/Chinese measurement units, and date components in the numeric-fact guard; bump the policy version when this invariant changes.
+- [x] Fail closed for empty calibration dimensions instead of returning optimistic 1.0 accuracy/recall.
+- [x] Keep plan redundancy (`0.72`) and supplemental prose deduplication (`0.86`) as distinct relevance thresholds while sharing safety invariants.
+- [x] Add a versioned joint corpus covering claim coverage, source-quality ranking, semantic deduplication, comparison branch recall, query/answer language consistency, and readability.
+- [x] Report exact failed case IDs per dimension; aggregate success cannot hide a local regression.
+- [x] Fail closed when corpus and production policy versions drift.
+- [x] Report minimum source-quality margin, active dedup threshold, branch recall, readability floor, and minimum observed readability score.
+- [x] Add graph-plan regression coverage proving polarity-opposed claims survive planning.
+- [x] Final oracle: focused graph-plan/calibration/composer/release verification passed 105 tests; full Jest passed 126 suites, 1,179 tests, with 26 skipped; TypeScript, production/Vite build, and the 55-group/92-case full runtime verifier passed.
+
+Remaining direction: add human-rated multilingual examples, implicit and multi-operand comparisons, mixed-language source/query cases, entity and unit conflicts, and confidence intervals. Do not treat a deterministic perfect score as generalization evidence.
+
+### 中文
+
+- [x] 为 supplemental semantic deduplication 增加版本化 production policy owner。
+- [x] 在任何 semantic-similarity threshold 合并 coverage 前，保留 polarity 相反和数值变化事实。
+- [x] 在 numeric-fact guard 中保留带符号数值、常见中英文测量单位和日期分量；不变量变化时升级 policy version。
+- [x] calibration dimension 为空时 fail closed，不再返回乐观的 1.0 accuracy/recall。
+- [x] Plan redundancy（`0.72`）与 supplemental prose dedup（`0.86`）继续使用不同 relevance threshold，但共享安全不变量。
+- [x] 增加版本化联合 corpus，覆盖 claim coverage、source-quality ranking、semantic deduplication、comparison branch recall、query/answer language consistency 与 readability。
+- [x] 分维度报告精确失败 case ID；aggregate success 不能掩盖局部 regression。
+- [x] corpus 与 production policy version 漂移时 fail closed。
+- [x] 报告最小 source-quality margin、当前 dedup threshold、branch recall、readability floor 与最小观测 readability score。
+- [x] 增加 graph-plan regression，证明 polarity 相反的 claim 能通过 planning。
+- [x] 最终 oracle：graph-plan/calibration/composer/release 定向验证 105 个测试通过；全量 Jest 126 个 suite、1,179 个测试通过、26 个跳过；TypeScript、production/Vite build 与 55 组/92 case 完整 runtime verifier 均通过。
+
+剩余方向：增加人工评分多语言样本、隐式和多 operand 比较、混合语言 source/query、entity/unit conflict 与置信区间。不得把确定性语料满分当成泛化证据。

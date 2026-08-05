@@ -35,6 +35,10 @@ const CONCEPT_PATTERNS: ReadonlyArray<readonly [string, RegExp]> = [
 
 const NEGATION_PATTERN = /\b(?:not|no|never|neither|without|cannot|can't|doesn't|does\s+not|isn't|is\s+not|has\s+no)\b|不(?:会|能|是|再|把|影响|改变|导致|造成|传递|穿过|隔开|分隔)?|并非|没有|无法|不能|不会|无关/u;
 
+export function isGraphClaimNegated(value: string): boolean {
+    return NEGATION_PATTERN.test(String(value || ''));
+}
+
 function normalize(value: string): string {
     return String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -79,7 +83,7 @@ function matchClause(statementFeatures: string[], statementNegated: boolean, cla
     const missingConcepts = statementFeatures.filter((feature) => !clauseFeatures.has(feature));
     const score = statementFeatures.length > 0 ? matchedConcepts.length / statementFeatures.length : 0;
     const minimumMatches = Math.min(statementFeatures.length, Math.max(2, Math.ceil(statementFeatures.length * 0.55)));
-    const polarityConflict = matchedConcepts.length >= minimumMatches && statementNegated !== NEGATION_PATTERN.test(clause);
+    const polarityConflict = matchedConcepts.length >= minimumMatches && statementNegated !== isGraphClaimNegated(clause);
     return {
         covered: !polarityConflict && matchedConcepts.length >= minimumMatches && score >= 0.55,
         score: Number(score.toFixed(4)),
@@ -96,7 +100,7 @@ export function matchGraphAnswerClaim(answer: string, statement: string): GraphC
     }
     const normalizedAnswer = normalize(answer);
     const statementNegated = NEGATION_PATTERN.test(statement);
-    if (normalizedAnswer.includes(normalizedStatement) && statementNegated === NEGATION_PATTERN.test(answer)) {
+    if (normalizedAnswer.includes(normalizedStatement) && statementNegated === isGraphClaimNegated(answer)) {
         const features = semanticFeatures(statement);
         return { covered: true, score: 1, matchedConcepts: features, missingConcepts: [], polarityConflict: false };
     }

@@ -1723,3 +1723,21 @@ The next direction is not another hierarchy or count quota. Build a versioned mu
 The full-mode runtime verification now covers build, restore-cache, and regression conversations. Its earlier timeout had two distinct mechanisms: large-target inferred-relation recomputation and cross-case workspace accumulation. Explicit recompute policy solved the first; process isolation by identical preload targets solved the second without extending timeouts or weakening assertions.
 
 The next implementation direction is a versioned joint-calibration corpus for source quality, semantic deduplication, branch coverage, response-language consistency, and readability. `KnowledgeLearningPlatform.ts` remains the orchestration owner until a complete planned/reviewed-answer operation can move without creating a pass-through layer.
+
+## 2026-07-23 Joint Graph Answer Quality Calibration
+
+| Dimension | Executable owner/evidence | Status | Remaining risk |
+|---|---|---|---|
+| Policy version | `graphAnswerQualityPolicy.ts`, corpus-policy compatibility gate | Complete | Every threshold change must bump and recalibrate the corpus version |
+| Coverage | Existing 24-case multilingual claim corpus included in the joint report | Complete | Deterministic matching is not entailment |
+| Source quality | Pairwise preferred/rejected clauses plus minimum observed score margin | Complete | Broader documentary styles and languages still need samples |
+| Semantic deduplication | Polarity-safe and numeric-fact-safe policy; active `0.86` threshold reported | Complete | Entity resolution and units remain deterministic |
+| Comparison branch coverage | Required branch statements and aggregate branch recall | Complete | Implicit and multi-operand comparison syntax needs a larger corpus |
+| Language consistency | Dominant query language compared with final answer language | Complete as measurement | Runtime language realization remains source-language dominant in mixed-language retrieval |
+| Readability | Clause-quality floor, balanced delimiters, public-text rejection, minimum observed score | Complete | Fluency and discourse coherence need human-rated calibration, not a length ceiling |
+
+The production correction is narrow: graph-plan redundancy and composer supplemental dedup now share polarity/numeric compatibility, while retaining their distinct relevance thresholds. This prevents contradictory or changed numeric facts from being collapsed without turning calibration into another orchestration layer.
+
+Policy v2 also retains signs, common measurement units, and date components in numeric fact keys. Empty calibration dimensions fail closed with an explicit `corpus_empty:<dimension>` case instead of producing an optimistic perfect score.
+
+The next direction is to expand this versioned corpus with human-rated multilingual examples and confidence intervals. Do not tune thresholds from one Water Glass fixture or treat a perfect deterministic corpus score as proof of generalization.

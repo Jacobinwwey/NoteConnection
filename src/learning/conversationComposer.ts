@@ -35,7 +35,7 @@ import {
 import {
     naturalizeRagPublicEvidenceClause,
 } from './ragPublicText';
-import { graphClaimSemanticSimilarity } from './graphClaimMatcher';
+import { isPolaritySafeSemanticDuplicate } from './graphAnswerQualityPolicy';
 
 export type BuildAgentWorkspaceCapabilities = (atomId: string) => unknown[];
 
@@ -632,7 +632,7 @@ function appendPlannedEvidenceSentence(
         return existingKey === candidateKey
             || (candidateKey.length >= 32 && existingKey.includes(candidateKey))
             || (existingKey.length >= 32 && candidateKey.includes(existingKey))
-            || graphClaimSemanticSimilarity(existingKey, candidateKey) >= 0.86;
+            || isPolaritySafeSemanticDuplicate(existingKey, candidateKey);
     });
     if (!alreadyCovered) {
         sentences.push(normalized);

@@ -3,7 +3,7 @@ module: learning
 tags: [agent, augmented-rag, graph, answer-planning, coverage]
 problem_type: implementation-plan
 created: 2026-07-11
-updated: 2026-07-23
+updated: 2026-08-05
 status: completed
 ---
 
@@ -540,3 +540,43 @@ The remaining measurable question is unchanged: jointly calibrate multilingual s
 - 最终 oracle：125 个 Jest suite 通过、1,172 个测试通过、26 个跳过；formatter/路由修改后的 TypeScript 与 `npm run build:with-vite` 均通过。完整运行时验证器也通过，共 55 个隔离 preload-target 组、92 个会话 case。
 
 剩余可度量问题不变：联合校准多语言 source quality、semantic novelty、branch coverage 与 readability，避免完整性退化为 evidence dumping。此次收口不支持增加新的编排层，也不支持恢复公开回答长度配额。
+
+## 2026-07-23 Joint Quality Calibration Phase
+
+### English
+
+The next measurable phase is now implemented as a versioned, deterministic calibration contract rather than an informal future task.
+
+- `graphAnswerQualityPolicy.ts` is the single owner of `GRAPH_ANSWER_QUALITY_POLICY_VERSION`, the `0.86` supplemental dedup threshold, polarity compatibility, and numeric-fact compatibility. Both composer supplemental deduplication and graph-plan same-role redundancy use the same safety invariant; their relevance thresholds remain intentionally separate (`0.86` versus the existing `0.72` plan threshold).
+- The policy's v2 numeric guard preserves signed values, common English/Chinese measurement units, and date components before semantic similarity can merge claims. An empty calibration dimension now reports `corpus_empty:<dimension>` and fails the joint gate instead of treating missing evidence as 100% accuracy.
+- `graphAnswerQualityCalibration.ts` owns `DEFAULT_GRAPH_ANSWER_QUALITY_CORPUS` and `evaluateGraphAnswerQualityCalibration()`. The corpus reports coverage, source-quality pairwise ranking, semantic deduplication, comparison branch recall, query/answer language consistency, and readability as separate metrics with exact failed case IDs.
+- Source-quality calibration reports the minimum preferred-vs-rejected score margin. Deduplication reports the active similarity threshold and preserves contradictions or changed numeric facts. Readability reports its accepted score floor and minimum observed score.
+- The report fails closed when the corpus version drifts from the production policy. A green aggregate cannot hide a dimension-specific failure.
+- `graphAnswerPlan.ts` now retains polarity-opposed claims instead of dropping them through generic same-role semantic deduplication.
+
+The calibration corpus is intentionally a measurement owner, not a runtime synthesizer. Language consistency currently measures query/answer alignment and exposes source-language dominance; it does not silently rewrite answers or introduce canned bilingual labels. Likewise, source-quality scores and semantic similarity are ranking signals, not entailment proofs.
+
+Verification for this phase:
+
+- Red-green TDD covered policy polarity/numeric guards, version drift, six calibration metrics, and graph-plan contradiction preservation.
+- Focused graph-plan, calibration, composer, and release suites: 105 tests passed.
+- Final repository oracle: 126 Jest suites passed, 1,179 tests passed, and 26 skipped; TypeScript and `npm run build:with-vite` passed; the full runtime verifier passed 55 isolated preload-target groups and 92 conversation cases. No new orchestration hierarchy or public length quota is part of this phase.
+
+### 中文
+
+下一项可度量阶段现已实现为版本化、确定性的校准契约，而不是停留在 future task 描述。
+
+- `graphAnswerQualityPolicy.ts` 是 `GRAPH_ANSWER_QUALITY_POLICY_VERSION`、`0.86` supplemental dedup threshold、polarity compatibility 与 numeric-fact compatibility 的唯一 owner。composer supplemental dedup 与 graph-plan 同 role redundancy 共用同一安全不变量；两者 relevance threshold 仍有意分离（`0.86` 与既有 plan `0.72`）。
+- Policy v2 的 numeric guard 会在 semantic similarity 合并 claim 前保留带符号数值、常见中英文测量单位和日期分量。空 calibration dimension 会报告 `corpus_empty:<dimension>` 并使联合门禁失败，不再把缺失证据当成 100% accuracy。
+- `graphAnswerQualityCalibration.ts` 持有 `DEFAULT_GRAPH_ANSWER_QUALITY_CORPUS` 与 `evaluateGraphAnswerQualityCalibration()`。语料分别报告 coverage、source-quality pairwise ranking、semantic deduplication、comparison branch recall、query/answer language consistency 和 readability，并给出精确失败 case ID。
+- Source-quality calibration 报告 preferred 与 rejected 的最小 score margin；deduplication 报告当前 similarity threshold，并保留冲突或数值变化事实；readability 报告 accepted score floor 与最小观测分。
+- 当 corpus version 与 production policy 漂移时，报告 fail closed；aggregate green 不能掩盖某个维度的失败。
+- `graphAnswerPlan.ts` 现在保留 polarity 相反的 claim，不再通过通用同 role semantic dedup 静默丢弃。
+
+校准语料是 measurement owner，不是 runtime synthesizer。Language consistency 当前测量 query/answer 对齐，并显式暴露来源语言主导问题；它不会静默改写回答，也不会注入固定双语标签。同样，source-quality score 与 semantic similarity 只是排序信号，不是 entailment 证明。
+
+本阶段验证：
+
+- 红-绿 TDD 覆盖 policy polarity/numeric guard、version drift、六项 calibration metric 与 graph-plan contradiction preservation。
+- graph-plan、calibration、composer、release 定向 suite：105 个测试通过。
+- 最终仓库 oracle：126 个 Jest suite 通过、1,179 个测试通过、26 个跳过；TypeScript 与 `npm run build:with-vite` 通过；完整 runtime verifier 通过 55 个隔离 preload-target 组和 92 个会话 case。本阶段不增加新的编排层，也不恢复公开回答长度配额。

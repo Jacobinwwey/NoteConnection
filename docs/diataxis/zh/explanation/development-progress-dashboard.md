@@ -1752,3 +1752,21 @@ Water Glass compare 的剩余失败包含两个证据丢失边界。第一，固
 full 模式运行时验证现已覆盖 build、restore-cache 与回归会话。此前超时有两个不同机制：大 target 的 inferred relation 重算，以及跨 case 的 workspace 累积。显式 recompute policy 解决前者；按相同 preload target 做进程隔离解决后者，没有延长 timeout，也没有削弱断言。
 
 下一实现方向是建立版本化联合校准语料，同时测量 source quality、semantic deduplication、branch coverage、回答语言一致性和 readability。`KnowledgeLearningPlatform.ts` 继续持有编排责任，直到完整 planned/reviewed-answer operation 能迁移且不会形成 pass-through 层。
+
+## 2026-07-23 图回答联合质量校准
+
+| 维度 | 可执行 owner / 证据 | 状态 | 剩余风险 |
+|---|---|---|---|
+| Policy version | `graphAnswerQualityPolicy.ts`、corpus-policy compatibility gate | 完成 | 每次 threshold 变化都必须升级并重新校准 corpus version |
+| Coverage | 既有 24-case 多语言 claim corpus 已纳入联合报告 | 完成 | 确定性 matching 不等于 entailment |
+| Source quality | preferred/rejected clause pairwise 语料与最小观测 score margin | 完成 | 仍需扩展文档写作风格与语言样本 |
+| Semantic deduplication | polarity-safe、numeric-fact-safe policy，并报告当前 `0.86` threshold | 完成 | entity resolution 与单位仍是确定性逻辑 |
+| Comparison branch coverage | required branch statement 与 aggregate branch recall | 完成 | 隐式和多 operand 比较语法需要更大语料 |
+| Language consistency | 比较 query 主语言与最终 answer 主语言 | 测量已完成 | 混合语言 retrieval 的 runtime language realization 仍偏向来源语言 |
+| Readability | clause-quality floor、delimiter balance、public-text rejection 与最小观测分 | 完成 | fluency 与 discourse coherence 需要人工评分校准，不应恢复长度 ceiling |
+
+生产修正保持窄边界：graph-plan redundancy 与 composer supplemental dedup 共享 polarity/numeric compatibility，同时保留各自不同的 relevance threshold。这会阻止冲突或数值变化事实被折叠，但不会把 calibration 变成新的编排层。
+
+Policy v2 还会在 numeric fact key 中保留符号、常见中英文测量单位和日期分量。空 calibration dimension 会以明确的 `corpus_empty:<dimension>` case fail closed，不再产生乐观的满分结果。
+
+下一方向是用人工评分的多语言样本和置信区间扩展该版本化 corpus。不得根据单个 Water Glass fixture 调阈值，也不能把确定性语料满分当成泛化证明。

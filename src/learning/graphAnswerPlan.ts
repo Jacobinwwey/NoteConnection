@@ -15,6 +15,7 @@ import {
     shouldRejectPublicEvidenceClause,
 } from './ragPublicText';
 import { graphClaimSemanticSimilarity, semanticFeatures } from './graphClaimMatcher';
+import { graphClaimsCanShareCoverage } from './graphAnswerQualityPolicy';
 import { scoreRagEvidenceClause, segmentRagEvidenceClauses } from './ragEvidenceQuality';
 
 export interface BuildGraphAnswerPlanParams {
@@ -600,6 +601,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
         const redundantClaim = claims.find((existing) => (
             existing.role === claim.role
             && graphClaimSemanticSimilarity(existing.statement, claim.statement) >= 0.72
+            && graphClaimsCanShareCoverage(existing.statement, claim.statement)
             && !claimsRequireSeparateCoverage(existing, claim, comparisonBranches, comparisonBranchIdentities)
         ));
         if (redundantClaim) {
