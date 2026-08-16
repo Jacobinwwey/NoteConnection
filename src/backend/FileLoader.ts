@@ -1,10 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { normalizeResourceRelativePath } from './ResourceIdentity';
 
 export interface RawFile {
   filepath: string;
   filename: string;
   content: string;
+  /** Workspace-relative source path; legacy filename remains the graph identity for now. */
+  relativePath?: string;
 }
 
 /**
@@ -20,6 +23,7 @@ export class FileLoader {
    */
   static async loadFiles(dirPath: string, extensions: string[] = ['.md']): Promise<RawFile[]> {
     const filePaths: string[] = [];
+    const workspaceRoot = path.resolve(dirPath);
     
     if (!fs.existsSync(dirPath)) {
       console.warn(`Directory not found: ${dirPath}`);
@@ -63,7 +67,8 @@ export class FileLoader {
                 return {
                     filepath: fullPath,
                     filename: filename,
-                    content: content
+                    content: content,
+                    relativePath: normalizeResourceRelativePath(workspaceRoot, fullPath),
                 };
             } catch (e) {
                 console.warn(`Failed to read file: ${fullPath}`, e);

@@ -18,6 +18,7 @@ import { HybridEngine } from './algorithms/HybridEngine';
 import { PerformanceLogger } from './utils/PerformanceLogger';
 import { LayoutEngine } from './algorithms/LayoutEngine';
 import { resolveWorkerRuntimePath } from './utils/WorkerRuntime';
+import { assertUniqueLegacyResourceIds } from './ResourceIdentity';
 
 /**
  * Service to build the graph from raw files.
@@ -32,6 +33,7 @@ export class GraphBuilder {
    */
   static async build(files: RawFile[], layout?: Map<string, {x: number, y: number}>): Promise<Graph> {
     PerformanceLogger.logSystemInfo();
+    assertUniqueLegacyResourceIds(files);
     const graph = new Graph();
 
     // 1. Add all nodes first
