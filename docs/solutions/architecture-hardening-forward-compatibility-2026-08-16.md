@@ -99,6 +99,8 @@ Mobile bundles must exclude `server-*`, `godot-*`, desktop-only renderer bundles
 
 - Implemented and tested: resource collision guard (`src/backend/ResourceIdentity.ts`), normalized `RawFile.relativePath`, shared strict auth (`src/middleware/auth.ts` + `src/server.ts`), unique atomic snapshot temp files and cache refresh (`src/learning/store.ts`).
 - Existing targeted verification: identity/graph suites 13/13, auth/server/registry suites 30 passed with 13 existing skips, store/persistence suites 23/23.
+- Fresh full verification: 129/129 Jest suites passed, 1,192 tests passed, 26 were skipped; `npm run build` and `npm run docs:diataxis:check` passed.
+- Known repository-wide gate debt: `npm run verify:markdown:mermaid:fence` still reports 588 pre-existing inline-fence findings under `Knowledge_Base`; this slice did not rewrite unrelated corpus files.
 - Not implemented yet: mobile local analysis runtime, mobile byte/RSS verifier, stable `sourceUri` migration, strict registry default, complete use-case extraction, indexed graph projection and Bridge protocol v2. These remain explicit next gates, not implied by the current tests.
 
 ## 中文
@@ -156,4 +158,6 @@ Mobile bundles must exclude `server-*`, `godot-*`, desktop-only renderer bundles
 
 - 已实现并测试：资源冲突 guard、规范化 `RawFile.relativePath`、共享严格 auth、唯一原子快照临时文件与 cache refresh。
 - 当前定向证据：identity/graph 13/13，auth/server/registry 30 passed（既有 13 skip），store/persistence 23/23。
+- 当前全量证据：129/129 Jest suites 通过，1,192 tests 通过，26 skip；`npm run build` 与 `npm run docs:diataxis:check` 通过。
+- 已知全库门禁债务：`npm run verify:markdown:mermaid:fence` 仍报告 `Knowledge_Base` 下 588 条历史 inline-fence；本轮没有借机改写无关语料。
 - 尚未实现：移动端本地分析 runtime、mobile byte/RSS verifier、稳定 `sourceUri` 迁移、strict registry 默认、完整 use-case 抽取、indexed graph projection、Bridge v2；这些是明确后续门禁，不应从现有测试推导为已完成。

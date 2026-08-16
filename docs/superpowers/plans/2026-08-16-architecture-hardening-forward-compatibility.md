@@ -211,21 +211,21 @@ rtk git commit -m "docs(architecture): record forward-compatible hardening progr
 
 **Files:** No additional source files; verify the complete diff and generated outputs.
 
-- [ ] **Step 1: Run targeted regression tests.**
-- [ ] **Step 2: Run the full Jest suite.**
+- [x] **Step 1: Run targeted regression tests.**
+- [x] **Step 2: Run the full Jest suite.**
 
 ```powershell
 rtk proxy npm.cmd test -- --runInBand
 ```
 
-- [ ] **Step 3: Run the TypeScript/build and documentation gates.**
+- [x] **Step 3: Run the TypeScript/build and documentation gates.**
 
 ```powershell
 rtk proxy npm.cmd run build
 rtk proxy npm.cmd run docs:diataxis:check
 ```
 
-- [ ] **Step 4: Inspect the diff, status, and generated-file policy.** Do not stage runtime caches, logs, or build products unless already tracked and required by the repository.
+- [x] **Step 4: Inspect the diff, status, and generated-file policy.** Do not stage runtime caches, logs, or build products unless already tracked and required by the repository.
 - [ ] **Step 5: Push the verified commits to `origin/main` without force.** Confirm the remote tip after push and re-run `git status --short --branch`.
 
 ### Acceptance Criteria
@@ -318,8 +318,8 @@ rtk proxy npm.cmd run docs:diataxis:check
 
 ### 任务 6：完整验证并推进 main
 
-- [ ] 运行定向回归、完整 `rtk proxy npm.cmd test -- --runInBand`、`rtk proxy npm.cmd run build`、`rtk proxy npm.cmd run docs:diataxis:check`。
-- [ ] 检查 diff、生成物和状态，仅提交源码/测试/文档，不带入日志、缓存和临时构建产物。
+- [x] 运行定向回归、完整 `rtk proxy npm.cmd test -- --runInBand`、`rtk proxy npm.cmd run build`、`rtk proxy npm.cmd run docs:diataxis:check`。
+- [x] 检查 diff、生成物和状态，仅提交源码/测试/文档，不带入日志、缓存和临时构建产物。
 - [ ] 非强制推送到 `origin/main`，确认远程 tip，并再次检查工作区 clean。
 
 ### 验收标准
