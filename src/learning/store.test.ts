@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import {
     createGraphDbSnapshotAdapter,
+    createFileBackedKnowledgeGraphStore,
     createFileGraphDbSnapshotAdapter,
     createKnowledgeGraphStore,
     isOpsAdapter,
@@ -428,6 +429,50 @@ describe('Knowledge graph store backend factory', () => {
             expect(diagnostics.exists).toBe(true);
             expect(fs.existsSync(filePath)).toBe(true);
         } finally {
+            fs.rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
+
+    test('refreshes the in-process snapshot cache after a save', async () => {
+        const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-store-cache-coherence-'));
+        const filePath = path.join(tempRoot, 'runtime_data', 'knowledge_graph_store.v1.json');
+
+        try {
+            const store = createFileBackedKnowledgeGraphStore({ filePath });
+            const first = createSnapshot('cache_first');
+            first.atoms = [createAtom('atom_first', 'First')];
+            const second = createSnapshot('cache_second');
+            second.atoms = [createAtom('atom_second', 'Second')];
+
+            await store.saveSnapshot(first);
+            expect(await store.getNode('atom_first')).toEqual(first.atoms[0]);
+
+            await store.saveSnapshot(second);
+
+            expect(await store.getNode('atom_first')).toBeNull();
+            expect(await store.getNode('atom_second')).toEqual(second.atoms[0]);
+        } finally {
+            fs.rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
+
+    test('uses a unique sibling temporary path for each save', async () => {
+        const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-store-atomic-save-'));
+        const filePath = path.join(tempRoot, 'runtime_data', 'knowledge_graph_store.v1.json');
+        const renameSpy = jest.spyOn(fs.promises, 'rename');
+
+        try {
+            const store = createKnowledgeGraphStore({ backend: 'file', filePath });
+            await store.saveSnapshot(createSnapshot('atomic_first'));
+            await store.saveSnapshot(createSnapshot('atomic_second'));
+
+            const temporaryPaths = renameSpy.mock.calls
+                .map(([sourcePath]) => String(sourcePath));
+            expect(new Set(temporaryPaths).size).toBe(2);
+            expect(fs.existsSync(filePath)).toBe(true);
+            expect(fs.readdirSync(path.dirname(filePath)).filter((name) => name.includes('.tmp'))).toHaveLength(0);
+        } finally {
+            renameSpy.mockRestore();
             fs.rmSync(tempRoot, { recursive: true, force: true });
         }
     });

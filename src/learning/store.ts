@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { randomUUID } from 'crypto';
 import type {
     AgentConversationInvocationRecord,
     AgentConversationSessionRecord,
@@ -335,13 +336,16 @@ export class FileBackedKnowledgeGraphStore implements KnowledgeGraphOpsAdapter {
             if ((parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2) || !Array.isArray(parsed.atoms) || !Array.isArray(parsed.documents)) {
                 throw new Error('Invalid knowledge graph snapshot schema.');
             }
+            const snapshot = parsed as KnowledgeGraphSnapshot;
+            this.cachedSnapshot = snapshot;
             this.loaded = true;
             this.lastLoadAt = new Date().toISOString();
-            return parsed as KnowledgeGraphSnapshot;
+            return snapshot;
         } catch (error) {
             const code = (error as NodeJS.ErrnoException | undefined)?.code;
             if (code === 'ENOENT' || code === 'ENOTDIR') {
                 this.loaded = false;
+                this.cachedSnapshot = null;
                 this.lastError = undefined;
                 return null;
             }
@@ -354,12 +358,13 @@ export class FileBackedKnowledgeGraphStore implements KnowledgeGraphOpsAdapter {
     public async saveSnapshot(snapshot: KnowledgeGraphSnapshot): Promise<void> {
         const filePath = path.resolve(this.options.filePath);
         const directory = path.dirname(filePath);
-        const tempPath = `${filePath}.tmp`;
+        const tempPath = `${filePath}.${process.pid}.${Date.now().toString(36)}.${randomUUID()}.tmp`;
         await fs.promises.mkdir(directory, { recursive: true });
         const serialized = JSON.stringify(snapshot, null, 2);
         try {
             await fs.promises.writeFile(tempPath, serialized, 'utf8');
             await fs.promises.rename(tempPath, filePath);
+            this.cachedSnapshot = snapshot;
             this.lastSaveAt = new Date().toISOString();
             this.lastError = undefined;
         } catch (error) {
