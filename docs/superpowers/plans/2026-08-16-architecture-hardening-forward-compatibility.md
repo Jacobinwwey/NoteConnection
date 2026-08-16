@@ -226,7 +226,7 @@ rtk proxy npm.cmd run docs:diataxis:check
 ```
 
 - [x] **Step 4: Inspect the diff, status, and generated-file policy.** Do not stage runtime caches, logs, or build products unless already tracked and required by the repository.
-- [ ] **Step 5: Push the verified commits to `origin/main` without force.** Confirm the remote tip after push and re-run `git status --short --branch`.
+- [x] **Step 5: Push the verified commits to `origin/main` without force.** Confirm the remote tip after push and re-run `git status --short --branch`.
 
 ### Acceptance Criteria
 
@@ -320,7 +320,7 @@ rtk proxy npm.cmd run docs:diataxis:check
 
 - [x] 运行定向回归、完整 `rtk proxy npm.cmd test -- --runInBand`、`rtk proxy npm.cmd run build`、`rtk proxy npm.cmd run docs:diataxis:check`。
 - [x] 检查 diff、生成物和状态，仅提交源码/测试/文档，不带入日志、缓存和临时构建产物。
-- [ ] 非强制推送到 `origin/main`，确认远程 tip，并再次检查工作区 clean。
+- [x] 非强制推送到 `origin/main`，确认远程 tip，并再次检查工作区 clean。
 
 ### 验收标准
 
