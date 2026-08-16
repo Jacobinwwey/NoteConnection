@@ -725,3 +725,50 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 3. 折叠"微积分" → 验证脊柱节点返回（规则6）
 4. 切换粘性认领 → 验证非脊柱节点还原/保持（规则7）
 5. 检查 Hull 边界不与节点重叠
+# 2026-08-16 Architecture Hardening and Forward-Compatible Mobile Plan
+
+## English Document
+
+### Executed slice
+
+1. Resource identity boundary: normalize workspace-relative paths and fail-fast on duplicate legacy basenames (`src/backend/ResourceIdentity.ts`, `FileLoader.ts`, `GraphBuilder.ts`).
+2. Authentication boundary: one strict shared token decision for middleware and server; missing credentials no longer pass when a token is configured.
+3. Persistence boundary: unique atomic snapshot temp paths and post-commit cache refresh (`src/learning/store.ts`).
+
+### Multi-platform direction
+
+- Keep `mobile-slim` as a sidecar-free export profile, but do not call it a complete mobile analysis runtime yet.
+- Build the next mobile slice around a host-neutral SQLite/WASM exact-analysis core and versioned bridge operations (`analyze`, `query`, `readEvidence`, `exportBundle`).
+- Enforce signed artifact budgets: mobile-low <= 25 MiB app-owned compressed payload / <= 256 MiB RSS for 5k documents and 50k atoms; mobile-standard <= 35 MiB / <= 384 MiB for 20k documents and 200k atoms.
+- Never ship Godot, desktop server binaries, full desktop renderer bundles, or local model weights in mobile artifacts. Remote ANN/LLM is optional and cancellable.
+
+### Next gates
+
+1. Add mobile staging + byte/RSS verifier and capability fields.
+2. Prove on-device local ingest/query continuity across Tauri Android and Capacitor.
+3. Add stable `sourceUri` dual-read before changing graph IDs.
+4. Shadow route-registry parity, then switch default only after legacy URL coverage is complete.
+5. Replace pairwise inferred matching with explicit/indexed projections before increasing worker/GPU budgets.
+
+## 中文文档
+
+### 已执行切片
+
+1. 资源身份边界：规范化 workspace-relative path，并在 legacy basename 重复时 fail-fast（`src/backend/ResourceIdentity.ts`、`FileLoader.ts`、`GraphBuilder.ts`）。
+2. 认证边界：middleware 与 server 共用严格 token 判定，配置 token 时不再放行缺失凭证。
+3. 持久化边界：唯一原子快照临时文件与提交后 cache refresh（`src/learning/store.ts`）。
+
+### 多端方向
+
+- 保留 `mobile-slim` sidecar-free export profile，但当前不能宣称移动端分析 runtime 已闭环。
+- 下一切片以 host-neutral SQLite/WASM exact-analysis core 为中心，通过版本化 bridge 提供 `analyze`、`query`、`readEvidence`、`exportBundle`。
+- signed artifact 门禁：mobile-low <= 25 MiB 应用自有压缩 payload / 5k documents、50k atoms 下 <= 256 MiB RSS；mobile-standard <= 35 MiB / 20k documents、200k atoms 下 <= 384 MiB。
+- 移动包绝不携带 Godot、桌面 server、完整桌面 renderer 或本地模型权重；远端 ANN/LLM 只能是可选、可取消能力。
+
+### 后续门禁
+
+1. 增加 mobile staging + byte/RSS verifier 与 capability 字段。
+2. 在 Tauri Android 与 Capacitor 上证明本地 ingest/query 连续性。
+3. 改变 graph ID 前先完成稳定 `sourceUri` 双读。
+4. 先做 route-registry shadow parity，旧 URL 覆盖完整后再切默认。
+5. 在增加 worker/GPU 预算前，先用 explicit/indexed projection 替代 pairwise inferred matching。

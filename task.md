@@ -297,3 +297,42 @@
   - [ ] 测试规则 6（脊柱始终可见）
   - [ ] 测试规则 7（粘性认领开关）
   - [ ] 测试 hull-节点碰撞避让
+# 2026-08-16 Architecture Hardening and Mobile Compatibility Addendum
+
+## English Document
+
+### Current progress
+
+- [x] Duplicate legacy basename identities now fail before graph construction; `RawFile.relativePath` is recorded with POSIX separators for future stable `sourceUri` migration.
+- [x] Sidecar and HTTP authorization now share one strict token decision while preserving `Authorization: Bearer` and `X-NoteConnection-Token`.
+- [x] File-backed graph snapshots use unique sibling temp files and refresh the in-process cache only after atomic rename.
+- [x] The full code-vs-plan and reference comparison is recorded in `docs/solutions/architecture-hardening-forward-compatibility-2026-08-16.md`.
+- [~] `mobile-slim` currently provides deterministic slim export/readiness and PNG-first materialization, but on-device ingest/query execution is not yet proven as a complete loop.
+- [ ] Add the portable SQLite/WASM exact-analysis runtime and a signed APK/AAB byte/RSS budget gate; exclude desktop server, Godot, and model weights from mobile artifacts.
+- [ ] Complete stable `sourceUri` dual-read migration, route-registry shadow parity, indexed exact/inferred projections, and Bridge capability negotiation before changing public IDs or default routing.
+
+### Acceptance targets
+
+1. Existing `NoteNode.id`, layouts, route paths, `assistantMessage`, and snapshot schemas remain readable.
+2. Mobile-low (4-core ARM64, 5,000 docs / 50,000 atoms) stays within 25 MiB app-owned compressed assets and 256 MiB peak RSS; standard mobile uses 35 MiB / 384 MiB for 20,000 docs / 200,000 atoms.
+3. Local mobile analysis works without Node/Godot/model dependencies; remote inference is optional, cancellable, timeout-bounded, and explainably unavailable offline.
+4. Every future identity, registry, graph, and Bridge migration has replay/rollback evidence before a default switch.
+
+## 中文文档
+
+### 当前进度
+
+- [x] 重复 legacy basename 会在建图前失败；`RawFile.relativePath` 使用 `/` 记录，为后续稳定 `sourceUri` 迁移提供输入。
+- [x] Sidecar 与 HTTP 共用严格 token 判定，同时兼容 `Authorization: Bearer` 与 `X-NoteConnection-Token`。
+- [x] 文件图快照使用唯一同目录临时文件，并仅在原子 rename 成功后刷新进程内缓存。
+- [x] 完整代码/方案/参考仓库对账已落盘于 `docs/solutions/architecture-hardening-forward-compatibility-2026-08-16.md`。
+- [~] `mobile-slim` 当前具备 deterministic slim export/readiness 与 PNG-first materialization，但端上 ingest/query 的完整闭环尚未证明。
+- [ ] 增加 portable SQLite/WASM exact-analysis runtime 与签名 APK/AAB 字节/RSS 门禁；移动产物必须排除桌面 server、Godot 与模型权重。
+- [ ] 在改变公开 ID 或默认路由前，完成稳定 `sourceUri` 双读迁移、route-registry shadow parity、indexed exact/inferred projection 与 Bridge capability negotiation。
+
+### 验收目标
+
+1. 既有 `NoteNode.id`、布局、route path、`assistantMessage` 与 snapshot schema 继续可读。
+2. mobile-low（4 核 ARM64、5,000 docs / 50,000 atoms）应用自有压缩资产不超过 25 MiB、峰值 RSS 不超过 256 MiB；standard mobile 对应 35 MiB / 384 MiB、20,000 docs / 200,000 atoms。
+3. 移动端无需 Node/Godot/模型依赖即可完成本地分析；远端推理仅作为可取消、带 timeout、离线可解释降级的可选能力。
+4. 后续 identity、registry、graph、Bridge 迁移必须先有 replay/rollback 证据再切默认。

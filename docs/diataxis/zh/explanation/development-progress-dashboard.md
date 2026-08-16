@@ -17,6 +17,18 @@
 本页是“知识彻底掌握演进方案”的实现侧进度看板。
 它用于回答三件事：哪些能力已落地、哪些关键缺口仍在、如何用代码与运行时证据验证推进结果。
 
+## 2026-08-16 向前兼容架构加固
+
+本切片在不改变公开 graph ID 与 snapshot schema 的前提下，关闭了三个正确性边界：
+
+- `src/backend/ResourceIdentity.ts` 与 `FileLoader.ts` 现在记录 `/` 归一化 workspace-relative path，并在建图前拒绝重复 legacy basename。
+- `src/middleware/auth.ts` 与 `src/server.ts` 共用严格 token 判定；配置凭证后缺失或畸形授权不再放行，同时保留旧 token header。
+- `src/learning/store.ts` 使用唯一同目录临时文件，并只在原子替换后刷新进程内 snapshot cache。
+
+多端复核发现一个必须明确的缺口：`mobile-slim` 目前是 deterministic、sidecar-free 的导出/就绪 profile，不能等同于“端上完整分析闭环”。下一项移动门禁是 host-neutral SQLite/WASM exact-analysis runtime 与签名 APK/AAB 字节/RSS verifier。移动产物必须排除桌面 server、Godot、完整 renderer bundle 和模型权重。初始预算为：4 核 ARM64 low-memory profile 在 5,000 documents / 50,000 atoms 下应用自有压缩 payload 25 MiB、峰值 RSS 256 MiB；standard profile 对应 20,000 documents / 200,000 atoms、35 MiB / 384 MiB。
+
+参考对比采用选择性吸收：LearnGraph 提供 typed boundary 与 scoped capability 纪律；textbooks 提供 validated content package/compiler 方向。Docker-only、SaaS RBAC/PostgreSQL 假设以及 Mathigon runtime DSL 耦合不带入本地/Tauri/mobile core。权威对账见 [向前兼容架构加固与多端推进方案](../../../solutions/architecture-hardening-forward-compatibility-2026-08-16.md)。
+
 ## 2026-07-05 RSE + document augmentation 图谱 RAG 实践计划
 
 本切片现在记录更充分 Knowledge Workspace 回答的实现进展。具体方案仍以 [RSE document-augmented graph RAG answer pipeline](../../../plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md) 为准，但当前分支已经不只是规划：确定性的 RSE / document augmentation 链路、完整文档感知的图邻居 augmentation、query-intent 图邻居排序、intent-aware graph connection-path 排序、intent-aligned graph-window ambiguity filtering、有界 context pack、稳定 RAG context replay id、接入 provider 的充分性 trace、有界一次性 recovery、RAG failure-stage classification、RAG-aware 单消息 release review、claim-level citation-backed RAG release gate、public RAG clause 的 prompt / preamble artifact 过滤、answer claim-to-citation trace / export 映射、基于 operand 的 compare answer-profile 预算、how-to answer-profile 预算、causal answer-profile 预算、generic answer-profile 排序、how-to 与 causal 回答的 profile-specific release-completeness signals、Mermaid label evidence 抽取、public RAG clause 的 source-label stripping、runtime verifier 字段、graph successor-window 与 graph-diagnostics verifier 断言、context-budget truncation/drop/malformed-provider/timeout-provider/graphintent 探针覆盖、相邻 / 同节非相邻 / 跨文档 structured measurement / date / location / quantity conflicting evidence 与 full-document remote-scan hard-negative 覆盖、受控 endpoint / dependency / semantic-version / service-port / response-status-code conflict、受控 current-vs-historical、environment-qualified、version-qualified 和 platform-qualified false-positive guard（包括 condition-scoped ownership identity、跨文档条件限定 endpoint/format/protocol interface facts、dependency facts、semantic-version facts、service-port facts 与 response-status-code facts）、scoped graph-neighbor RAG evidence 过滤、单邻居与多邻居 graph source-unavailable hard-negative 覆盖、前端本地化 RAG 状态，以及导出 RAG trace 保留已经落地。图置信阈值校准、大语料上的更完整 replay tooling、超出确定性 source-label stripping 的更深 synthesis、继续细化的 profile / corpus-specific release-budget 校准、更广语义 conflict 类和更大的 runtime probe 语料仍是后续工作。

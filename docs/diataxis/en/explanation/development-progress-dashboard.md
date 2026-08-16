@@ -3,6 +3,18 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-08-16 Forward-Compatible Architecture Hardening
+
+This slice closes three correctness boundaries without changing public graph IDs or snapshot schemas:
+
+- `src/backend/ResourceIdentity.ts` and `FileLoader.ts` now record normalized workspace-relative paths and reject duplicate legacy basenames before graph construction.
+- `src/middleware/auth.ts` and `src/server.ts` share one strict token decision; configured credentials no longer allow missing or malformed authorization, while the legacy token header remains supported.
+- `src/learning/store.ts` now uses unique sibling temp files and refreshes the in-process snapshot cache only after atomic replacement.
+
+The multi-platform review found an important gap: `mobile-slim` is currently a deterministic, sidecar-free export/readiness profile, not proof of a complete on-device analysis loop. The next mobile gate is a host-neutral SQLite/WASM exact-analysis runtime plus a signed APK/AAB byte/RSS verifier. Mobile artifacts must exclude desktop server binaries, Godot, full renderer bundles and model weights. Initial budgets are 25 MiB app-owned compressed payload / 256 MiB peak RSS for 5,000 documents and 50,000 atoms on a 4-core ARM64 low-memory profile, and 35 MiB / 384 MiB for the standard 20,000-document / 200,000-atom profile.
+
+Reference comparison remains selective: LearnGraph contributes typed boundary and scoped-capability discipline; textbooks contributes validated content-package/compiler direction. Docker-only execution, SaaS RBAC/PostgreSQL assumptions, and Mathigon runtime DSL coupling are explicitly rejected for the local/Tauri/mobile core. The authoritative reconciliation is [Architecture Hardening and Forward-Compatible Multi-Platform Plan](../../../solutions/architecture-hardening-forward-compatibility-2026-08-16.md).
+
 ## 2026-07-18 Coverage-driven Follow-up Phase Closure
 
 The remaining answer-planning risks now have executable owners: multilingual concept/polarity matching plus a 24-case calibration report, novelty-aware same-role suppression and discourse ordering, an explicit-only one-step graph expansion policy with replay trace, and an operator-only Grounding Inspector projection. Ordinary `explain` requests no longer silently activate the deep profile.

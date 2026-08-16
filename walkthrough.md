@@ -287,3 +287,54 @@ Implementation of 13 steps across 4 components (Core Algorithm, Frontend Bridge,
 ### 后续步骤
 
 跨 4 个组件（核心算法、前端桥接、Godot 渲染器、Worker 通信）实施 13 个步骤。
+# 2026-08-16 Architecture Hardening Walkthrough Addendum
+
+## English Document
+
+### Current boundary flow
+
+1. `FileLoader` resolves every source under a workspace root and records a normalized relative path.
+2. `GraphBuilder` rejects ambiguous legacy basenames before adding any node; existing basename IDs remain the compatibility key for non-ambiguous workspaces.
+3. Protected HTTP/sidecar requests pass through the same token decision, with both existing credential header forms accepted.
+4. File-backed snapshots write a unique sibling temp file, atomically rename it, then update the in-process cache.
+5. Desktop continues to use the sidecar/full profile; mobile continues to consume deterministic `mobile-slim` bundles while the portable local-analysis runtime remains the next gated implementation.
+
+### Mobile target flow
+
+```text
+scoped source package
+-> streaming parser
+-> stable resource/revision validation
+-> embedded SQLite + compact exact graph/index
+-> bounded Worker/WASM query
+-> evidence/result projection
+-> Tauri/Capacitor UI
+-> optional cancellable remote synthesis
+```
+
+The mobile flow must never require the desktop Node sidecar or Godot process. Large source text is paged by reference, inferred edges are Top-K bounded, and signed APK/AAB + RSS evidence determines release readiness.
+
+## 中文文档
+
+### 当前边界链路
+
+1. `FileLoader` 在 workspace root 下解析每个 source，并记录规范化相对路径。
+2. `GraphBuilder` 在加入任何 node 前拒绝歧义 legacy basename；无冲突 workspace 继续用 basename ID 兼容旧布局。
+3. 受保护 HTTP/sidecar 请求使用同一 token 判定，并兼容已有两种凭证头。
+4. 文件快照先写唯一同目录临时文件，原子 rename 后再刷新进程内缓存。
+5. Desktop 继续使用 sidecar/full profile；mobile 继续消费 deterministic `mobile-slim` bundle，portable 本地分析 runtime 是下一项有门禁实现。
+
+### 移动端目标链路
+
+```text
+scoped source package
+-> streaming parser
+-> stable resource/revision validation
+-> embedded SQLite + compact exact graph/index
+-> bounded Worker/WASM query
+-> evidence/result projection
+-> Tauri/Capacitor UI
+-> optional cancellable remote synthesis
+```
+
+移动链路不得依赖桌面 Node sidecar 或 Godot 进程；大文本按 reference 分页，inferred edge 必须 Top-K 有界，签名 APK/AAB 与 RSS 证据决定 release readiness。
