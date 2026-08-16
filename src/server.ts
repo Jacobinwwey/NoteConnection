@@ -115,6 +115,7 @@ import {
 } from './learning';
 import { registerAllRoutes, type ServerContext, type RouteEntry } from './routes';
 import { createRuntimeRunbookRouteOps } from './routes/runtimeRunbookRouteOps';
+import { isRequestTokenAuthorized } from './middleware/auth';
 import {
     KnowledgeIngestor, KnowledgeQuerier, ConversationManager,
     MasteryEngine, QualityEvaluator, TutorRouter, MemoryPolicyManager,
@@ -9547,22 +9548,6 @@ function getRawRequestPathname(rawUrl: string | undefined): string {
     return requestTarget || '/';
 }
 
-function extractRequestToken(req: http.IncomingMessage): string {
-    const headerToken = typeof req.headers['x-noteconnection-token'] === 'string'
-        ? req.headers['x-noteconnection-token'].trim()
-        : '';
-    if (headerToken) {
-        return headerToken;
-    }
-
-    const authHeader = typeof req.headers.authorization === 'string' ? req.headers.authorization.trim() : '';
-    if (authHeader.toLowerCase().startsWith('bearer ')) {
-        return authHeader.slice(7).trim();
-    }
-
-    return '';
-}
-
 function createRequestId(): string {
     return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -9597,7 +9582,7 @@ function isAuthorizedRequest(req: http.IncomingMessage): boolean {
         return true;
     }
 
-    return extractRequestToken(req) === AUTH_TOKEN;
+    return isRequestTokenAuthorized(req, AUTH_TOKEN);
 }
 
 function isGeneratedGraphAsset(filename: string): boolean {

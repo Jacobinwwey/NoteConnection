@@ -1,5 +1,5 @@
 export { applyCorsHeaders } from './cors';
-export { isAuthorizedRequest, setSidecarAuthToken } from './auth';
+export { isAuthorizedRequest, isRequestTokenAuthorized, setSidecarAuthToken } from './auth';
 export {
     resolveRequestId,
     startRequestTraceHandler,
