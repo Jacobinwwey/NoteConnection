@@ -477,6 +477,30 @@ describe('Knowledge graph store backend factory', () => {
         }
     });
 
+    test('keeps the target parseable when saves overlap', async () => {
+        const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-store-concurrent-save-'));
+        const filePath = path.join(tempRoot, 'runtime_data', 'knowledge_graph_store.v1.json');
+
+        try {
+            const store = createFileBackedKnowledgeGraphStore({ filePath });
+            const first = createSnapshot('concurrent_first');
+            first.atoms = [createAtom('atom_concurrent_first', 'Concurrent First')];
+            const second = createSnapshot('concurrent_second');
+            second.atoms = [createAtom('atom_concurrent_second', 'Concurrent Second')];
+
+            await Promise.all([
+                store.saveSnapshot(first),
+                store.saveSnapshot(second),
+            ]);
+
+            const persisted = JSON.parse(fs.readFileSync(filePath, 'utf8')) as KnowledgeGraphSnapshot;
+            expect(['atom_concurrent_first', 'atom_concurrent_second']).toContain(persisted.atoms[0]?.id);
+            expect(fs.readdirSync(path.dirname(filePath)).filter((name) => name.endsWith('.tmp'))).toHaveLength(0);
+        } finally {
+            fs.rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
+
     test('normalizes graphdb adapter provider aliases', () => {
         expect(normalizeGraphDbSnapshotAdapterProvider('file')).toBe('file');
         expect(normalizeGraphDbSnapshotAdapterProvider('local-file')).toBe('file');

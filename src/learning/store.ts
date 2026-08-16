@@ -282,6 +282,9 @@ export class FileBackedKnowledgeGraphStore implements KnowledgeGraphOpsAdapter {
     /** Cached snapshot for operation-level queries without re-reading from disk. */
     private cachedSnapshot: KnowledgeGraphSnapshot | null = null;
 
+    /** Serializes complete replace transactions; concurrent rename is not portable on Windows. */
+    private pendingSave: Promise<void> = Promise.resolve();
+
     constructor(private readonly options: FileBackedKnowledgeGraphStoreOptions) {
     }
 
@@ -355,7 +358,13 @@ export class FileBackedKnowledgeGraphStore implements KnowledgeGraphOpsAdapter {
         }
     }
 
-    public async saveSnapshot(snapshot: KnowledgeGraphSnapshot): Promise<void> {
+    public saveSnapshot(snapshot: KnowledgeGraphSnapshot): Promise<void> {
+        const saveOperation = this.pendingSave.then(() => this.persistSnapshot(snapshot));
+        this.pendingSave = saveOperation.catch(() => undefined);
+        return saveOperation;
+    }
+
+    private async persistSnapshot(snapshot: KnowledgeGraphSnapshot): Promise<void> {
         const filePath = path.resolve(this.options.filePath);
         const directory = path.dirname(filePath);
         const tempPath = `${filePath}.${process.pid}.${Date.now().toString(36)}.${randomUUID()}.tmp`;
