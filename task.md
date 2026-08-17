@@ -556,3 +556,26 @@
 - [ ] 仍需新鲜构建的签名 arm64 APK/AAB 解包结果和低于 256 MiB 的真机 RSS JSON；`not-measured` 不是 release 证据。
 - [x] Tauri Android 已实现 Storage Access Framework 文件夹选择/导入：Markdown 在单文档 16 MiB、总输入 64 MiB、5,000 文档和深度 64 限制内流式复制到 app-local `Knowledge_Base`，失败时保留旧知识库。
 - [ ] Web/Tauri/Capacitor/Android 跨 host projection replay、旧 snapshot、move/rename 语料与 canonical 公共 ID 迁移，在身份和持久化证据完成前继续冻结。
+## 2026-08-18 Phase 13 Native Import Recovery and Cross-Host Closure
+
+### English
+
+- [x] Android SAF import now persists an internal v1 journal, recovers interrupted staging/backup activation on activity startup, and atomically writes result markers.
+- [x] Contract suites, TypeScript no-emit, and arm64 Kotlin compilation pass.
+- [~] G2 remains static-only: unsigned slim payload passes, but no signing keystore, online device, AVD, or RSS JSON is available.
+- [~] G3 has code-level recovery and fixture replay; real Android process death, storage failure, and permission failure evidence remain open.
+- [ ] G4 public-ID migration remains frozen until identity/edge parity and old snapshot, move/rename, collision, rollback, and alias-continuity corpora pass.
+
+### 中文
+
+- [x] Android SAF 导入现在持久化内部 v1 journal，在 activity 启动时恢复中断的 staging/backup 激活，并原子写入 result marker。
+- [x] 契约测试、TypeScript no-emit 与 arm64 Kotlin 编译已通过。
+- [~] G2 仍为静态证据：未签名 slim payload 通过，但当前没有签名 keystore、在线设备、AVD 或 RSS JSON。
+- [~] G3 已有代码级恢复与 fixture replay；真实 Android 进程死亡、存储失败与权限失败证据仍未完成。
+- [ ] G4 公共 ID 迁移继续冻结，直到 identity/edge parity 与旧 snapshot、move/rename、collision、rollback、alias continuity 语料全部通过。
+
+### Next / 后续
+
+1. Signed arm64 device workload and peak RSS evidence / 签名 arm64 真机 workload 与 peak RSS 证据。
+2. Native Tauri/Capacitor/Android adapter replay / 原生 Tauri/Capacitor/Android adapter replay。
+3. Android body-free draft proof and transient RSS measurement before any budget increase / 提高预算前证明 Android draft 无正文并测量瞬时 RSS。

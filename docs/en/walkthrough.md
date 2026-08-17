@@ -180,8 +180,20 @@ npm run verify:mobile:projection-replay
 
 It performs an atomic save in a temporary app-local directory, drops the first store instance, recreates a read-through store for Web/Tauri/Capacitor/Android, and compares metadata, exact search, neighbors, and shortest path. It then writes `output/verification/mobile-projection-replay/report-latest.json` and verifies truncated JSON and unknown schema fail closed. The output directory is ignored and is not a source artifact.
 
-After this change, `mobile:prepare:slim` stages 120 files (4,253,837 uncompressed; 1,546,201 estimated compressed). The rebuilt unsigned arm64 APK/AAB static payloads are 9,434,062 and 6,978,525 bytes; both remain below the 25 MiB budget and neither measurement includes device RSS.
+After this change, `mobile:prepare:slim` stages 120 files (4,253,837 uncompressed; 1,546,201 estimated compressed). The rebuilt unsigned arm64 APK/AAB static payloads are 9,436,196 and 6,983,880 bytes; both remain below the 25 MiB budget and neither measurement includes device RSS.
 
 The route-shadow gate also waits for three consecutive stable runtime-directory manifests after readiness. This is required because the registry backend may finish its first SQLite initialization asynchronously after `/api/knowledge/state` returns; without the wait, a slow host can produce a false read-only side-effect failure.
 
 This closes code-level G3 replay evidence, not the device gate. A signed arm64 artifact, physical Android process-death/SAF import/query/path run, and peak RSS <= 256 MiB are still required. SQLite/WASM remains an opt-in future adapter because the current bounded exact workload does not justify its mobile size, startup, and heap costs.
+
+## 2026-08-18 Phase 13 Native Import Recovery Walkthrough
+
+The Android SAF import now has a restart-safe transaction boundary:
+
+`ACTION_OPEN_DOCUMENT_TREE` -> bounded staging tree -> import journal -> backup/activate -> atomic result marker.
+
+`KnowledgeBasePickerBridge` writes `knowledge_base_import_journal.v1.json` beside the app-local knowledge base. The journal records only app-local transaction names and an explicit phase. `MainActivity.onCreate()` calls recovery before the picker is exposed. A target that already exists wins cleanup; a missing target with a backup restores the previous knowledge base; abandoned staging is deleted. Invalid schema or path-escaping journal data fails closed.
+
+The result marker keeps the existing Rust request/poll contract, but now uses a sibling temporary file, `fsync`, and rename. This prevents a process death from turning a partially written marker into a false `completed` state. The journal is an internal durability mechanism, not a projection-schema change, so older clients and public IDs remain compatible.
+
+Verification for this increment: the Android picker contract suite, mobile profile/artifact contract suites, TypeScript no-emit, the 57-suite migration matrix (307 passed, 13 skipped), and `app:compileArm64ReleaseKotlin` pass. The current host has no online Android device, configured AVD, signing keystore, or RSS capture; G2/G3 native device evidence remains open.

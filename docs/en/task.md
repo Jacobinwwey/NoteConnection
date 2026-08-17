@@ -323,3 +323,20 @@ Primary references:
 - [~] G2 has fresh unsigned arm64 APK/AAB static evidence under the 25 MiB payload budget, but still lacks signing, physical-device workload, and RSS JSON. Kotlin compilation now succeeds with the available Android toolchain.
 - [~] G3 fixture replay passes, but real Android storage replay and SQLite/WASM adapter promotion remain pending.
 - [ ] G4 canonical-ID migration remains blocked by old-snapshot rollback and move-journal restart evidence.
+
+## 2026-08-18 Phase 13 Native Import Recovery and Cross-Host Closure
+
+- [x] Add an app-local `knowledge_base_import_journal.v1.json` with atomic writes and explicit `staging`, `target-backed-up`, and `target-activated` phases.
+- [x] Recover interrupted SAF activation on `MainActivity` startup; preserve the previous tree, remove abandoned staging, and fail closed on corrupt or unsafe journal paths.
+- [x] Make picker result markers atomic without changing the Rust request/poll contract or existing result fields.
+- [x] Verify the Android picker/mobile artifact contracts, TypeScript no-emit, and `app:compileArm64ReleaseKotlin`.
+- [~] G2 remains static-only: the current environment has no online Android device, configured AVD, signing keystore, or RSS JSON.
+- [~] G3 now has a native recovery implementation plus fixture replay; real process-death, storage-failure, and permission-failure evidence remain open.
+- [ ] G4 remains frozen until cross-host identity/edge parity, old snapshots, move journals, same-content/NFC collisions, and rollback corpora replay successfully.
+
+### Phase 13 acceptance targets
+
+1. A signed arm64 build must execute SAF import, graph build, exact query, neighbors/path, force-stop, reopen, and projection replay on a real device/emulator.
+2. The evidence record must include artifact SHA-256, bounded workload metadata, import result status, and peak `VmRSS`; `not-measured` is a release failure.
+3. New identity evidence must use a workspace namespace, NFC normalization, SHA-256 revision, one edge orientation, and additive aliases; legacy public IDs remain unchanged.
+4. Android Rust ingestion must preserve body-free intermediate drafts and capture transient-read/RSS evidence before any mobile corpus-budget increase is considered.

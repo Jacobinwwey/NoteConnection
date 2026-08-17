@@ -533,3 +533,19 @@
 - [~] G2 已有新鲜未签名 arm64 APK/AAB 静态证据并通过 25 MiB payload budget，但仍缺签名、真机 workload 与 RSS JSON；当前 Android 工具链 Kotlin 编译已通过。
 - [~] G3 fixture replay 已通过，但真实 Android storage replay 与 SQLite/WASM adapter 提升仍待完成。
 - [ ] G4 canonical-ID 迁移仍被旧 snapshot rollback 与 move-journal 重启证据阻塞。
+## 2026-08-18 第 13 阶段 原生导入恢复与跨 Host 闭环
+
+- [x] 增加 app-local `knowledge_base_import_journal.v1.json`，使用原子写入并记录 `staging`、`target-backed-up`、`target-activated` 三个阶段。
+- [x] `MainActivity` 启动时恢复被中断的 SAF 激活；保留旧目录、清理 abandoned staging，对损坏或不安全 journal fail closed。
+- [x] picker result marker 原子化，不改变 Rust request/poll 契约与现有结构字段。
+- [x] 已通过 Android picker/mobile artifact contract、TypeScript no-emit 与 `app:compileArm64ReleaseKotlin`。
+- [~] G2 仍为静态证据：当前环境无在线 Android 设备、已配置 AVD、签名 keystore 或 RSS JSON。
+- [~] G3 现在有原生恢复实现与 fixture replay；真实进程死亡、存储失败与权限失败证据仍未完成。
+- [ ] G4 仍冻结，直到跨 host identity/edge parity、旧 snapshot、move journal、same-content/NFC collision 与 rollback corpus replay 全部通过。
+
+### 第 13 阶段验收目标
+
+1. 签名 arm64 构建必须在真实设备/emulator 上完成 SAF import、graph build、exact query、neighbors/path、force-stop、reopen 与 projection replay。
+2. 证据必须包含 artifact SHA-256、有界 workload 元数据、import result status 与 peak `VmRSS`；`not-measured` 应视为 release 失败。
+3. 新 identity 证据统一使用 workspace namespace、NFC normalization、SHA-256 revision、单一边方向与 additive alias；旧 public ID 不变。
+4. 在考虑扩大 mobile corpus budget 前，Android Rust ingestion 必须保持中间 draft 无正文，并取得瞬时读取/RSS 证据。

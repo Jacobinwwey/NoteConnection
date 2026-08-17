@@ -422,7 +422,7 @@
 - `src-tauri/src/lib.rs` 已经通过同目录临时文件与 rename 写入 graph projection。Android 持久化 lite projection，并在 projection 前释放解析正文。因此 JavaScript adapter 消费 host-owned atomic primitive，不重复实现 Rust/Kotlin 文件策略。
 - `scripts/verify-mobile-projection-replay.js` 在真实临时目录中执行 save/reopen，并写出结构化报告。四个 host label 使用同一 fixture，验证 schema、metadata、exact search、neighbor、shortest path，而不只是 JSON 相等。
 - `verify-route-registry-shadow.js` 现在在 readiness 后等待三次连续稳定的 runtime manifest，修复异步 SQLite 初始化被误判为 read-only route side effect 的 verifier race。
-- adapter 变更后的 mobile-slim staging 仍在预算内：120 个文件、未压缩 4,253,837 字节、估算压缩 1,546,201 字节；新鲜未签名 arm64 APK/AAB 的压缩 payload 分别为 9,434,062 与 6,978,525 字节。这些是静态 artifact 测量，不是 RSS 证据。
+- adapter 变更后的 mobile-slim staging 仍在预算内：120 个文件、未压缩 4,253,837 字节、估算压缩 1,546,201 字节；新鲜未签名 arm64 APK/AAB 的压缩 payload 分别为 9,436,196 与 6,983,880 字节。这些是静态 artifact 测量，不是 RSS 证据。
 
 ### 修正后的失败语义
 
@@ -1113,3 +1113,29 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 ### 2026-08-18 验证追记
 
 `mobile:prepare:slim` 当前 staging 为 120 个文件（未压缩 4,251,345 字节；估算压缩 1,545,813 字节）。新鲜 arm64 APK/AAB 已通过 ZIP 检查和 25 MiB payload budget 下的 mobile artifact verifier。这里只关闭静态打包证据；签名、真机 SAF replay 与峰值 RSS 仍是 release 门禁。
+## 2026-08-18 第 13 阶段：原生导入恢复与跨 Host 闭环
+
+### 架构增量
+
+1. 继续把原始 schema-1 projection 作为移动持久化格式并保留 memory fallback；没有实测包体、启动与 heap 收益时，不提升 SQLite/WASM。
+2. 增加 Android 内部 import journal，使用同目录临时文件原子写入。journal 不进入公共 projection contract，只记录 app-local staging/backup 名称与阶段。
+3. 在 activity 启动时恢复：新 target 已存在时安全清理；若停在旧 target 已移走阶段则恢复 backup；只有 staging 时清理并报告 failed/recovered import；损坏或路径逃逸 journal fail closed。
+4. Phase 12 的四 host replay 只计作契约证据。canonical-ID 迁移前，必须统一 Tauri、Capacitor、Android 与 TypeScript identity boundary 的 namespace、NFC、SHA-256 revision、边方向与 alias 历史。
+5. 移动预算继续作为 admission guard：5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 边、depth 64。下一轮 Android 证据必须证明中间 draft 无正文并测量瞬时读取/RSS，之后才可提高预算。
+
+### 门禁状态
+
+- **G2：** 当前静态 slim 证据为 120 个文件 / 未压缩 4,253,837 字节 / 估算压缩 1,546,201 字节；未签名 APK/AAB 压缩 payload 为 9,436,196 / 6,983,880 字节。签名、真机 SAF workload、进程死亡 replay 与 RSS `<= 256 MiB` 仍开放。
+- **G3：** 原生 journal/recovery、原子 marker、fixture replay 与 arm64 Kotlin 编译属于代码级证据；真实 Android 进程死亡、存储损坏与权限失败仍未验证。
+- **G4：** 公共 ID 继续冻结。必需语料包括旧 snapshot restore、move-journal restart、rollback、same-content/NFC collision、cross-root load 与 delete/restore alias continuity。
+
+### 后续顺序
+
+1. 增加只从 CI secret 注入的签名流程与设备 RSS/workload 记录器；缺设备或缺 RSS 必须让 release verifier 失败。
+2. 增加 Tauri/Capacitor/Android 原生 adapter replay，对比 graph metadata、exact search、neighbors、path、edge provenance 与 import status。
+3. 验证 Android ingest 在读取时提取 link candidate、保持 draft 无正文，并记录瞬时读取/RSS 证据。
+4. 关闭 identity corpus 与 registry response/status shadow parity；之后才评估数据库 adapter 或 canonical public-ID 切换。
+
+### 本轮验证
+
+`src/android.knowledgebase.picker.contract.test.ts`、mobile profile/artifact contract、TypeScript no-emit、57 suite migration matrix（307 passed、13 skipped）与 `app:compileArm64ReleaseKotlin` 已通过。当前宿主没有在线 Android 设备、已配置 AVD、签名 keystore 或 RSS JSON。

@@ -1072,3 +1072,20 @@ The size gate is now reproducible: `mobile:prepare:slim` stages 120 files (4,251
 1. 为新鲜 arm64 产物签名，安装到代表性 Android 真机/模拟器，经 SAF 导入有界外部目录，执行本地 exact query/path，采集峰值 RSS 与导入 metadata。
 2. 在 Android app-local boundary 增加 projection store 重启/reopen replay，与现有 Node SQLite snapshot adapter 对比，但不复制 graph domain rule。
 3. 补齐旧 snapshot/rollback/move journal corpus，再基于证据决定是否迁移 public ID，不按 URI 外观做切换。
+## 2026-08-18 Phase 13 Native Import Recovery and Cross-Host Closure
+
+### English
+
+The mobile forward-compatibility plan keeps schema-1 body-free projection JSON and host-owned storage adapters. Android now records an atomic import journal with `staging`, `target-backed-up`, and `target-activated` phases; startup recovery restores the previous tree when activation was interrupted and fails closed for corrupt/path-escaping journals. The result marker contract and legacy public IDs remain unchanged.
+
+Current gates are deliberately split. Static slim evidence is 120 files, 4,253,837 uncompressed bytes, 1,546,201 estimated compressed bytes, and 9,436,196 / 6,983,880 APK/AAB compressed payload bytes. G2 still lacks signing, device SAF import/query/path, process-death replay, and RSS <= 256 MiB. G3 has code-level journal/replay evidence but no native device proof. G4 remains frozen until identity namespace/NFC/SHA-256/edge orientation/alias corpora pass.
+
+Execution order: (1) CI-secret-only signing plus a device RSS recorder; (2) native Tauri/Capacitor/Android replay matrix; (3) prove Android body-free drafts and measure transient reads/RSS; (4) identity and registry shadow parity; (5) only then evaluate SQLite/WASM or public-ID cutover. This increment's migration matrix remains 57 suites with 307 passed and 13 skipped.
+
+### 中文
+
+移动端向前兼容计划继续使用 schema-1 无正文 projection JSON 与 host-owned storage adapter。Android 现在记录带 `staging`、`target-backed-up`、`target-activated` 阶段的原子 import journal；启动恢复会在激活中断时恢复旧目录，对损坏/路径逃逸 journal fail closed。result marker 契约与旧 public ID 不变。
+
+当前门禁分层记录：静态 slim 证据为 120 个文件、未压缩 4,253,837、估算压缩 1,546,201 字节，APK/AAB 压缩 payload 为 9,436,196 / 6,983,880。G2 仍缺签名、设备 SAF import/query/path、进程死亡 replay 与 RSS <= 256 MiB。G3 只有代码级 journal/replay 证据，没有原生设备证明。G4 在 identity namespace/NFC/SHA-256/边方向/alias 语料通过前继续冻结。
+
+执行顺序： (1) 只从 CI secret 注入签名并增加设备 RSS 记录器；(2) Tauri/Capacitor/Android 原生 replay matrix；(3) 证明 Android draft 无正文并测量瞬时读取/RSS；(4) identity 与 registry shadow parity；(5) 之后再评估 SQLite/WASM 或公共 ID 切换。本轮 migration matrix 为 57 suite，307 passed、13 skipped。

@@ -19,6 +19,18 @@ describe('Android knowledge-base picker contract', () => {
         expect(template).toContain('input.copyTo(output, 32 * 1024)');
         expect(template).toContain('replaceImportedTree');
         expect(template).toContain('Duplicate import path');
+        expect(template).toContain('knowledge_base_import_journal.v1.json');
+        expect(template).toContain('recoverImportTransaction(activity.applicationContext)');
+        expect(template).toContain('target-backed-up');
+        expect(template).toContain('target-activated');
+        expect(template).toContain('invalid_import_journal');
+        expect(template).toContain('output.fd.sync()');
+        expect(template).toContain('isSafeTransactionPath');
+        expect(template).toContain('isKnownJournalPhase');
+        expect(template).toContain('recovered_previous');
+        expect(template).toContain('importInFlight');
+        expect(template).toContain('import_in_progress');
+        expect(template).toContain('synchronized(importLock)');
         expect(template).not.toContain('readText()');
     });
 

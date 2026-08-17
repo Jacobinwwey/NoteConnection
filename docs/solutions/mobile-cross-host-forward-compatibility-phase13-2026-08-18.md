@@ -1,0 +1,95 @@
+---
+title: Mobile Cross-Host Forward Compatibility Phase 13
+updated: 2026-08-18
+status: active
+---
+
+# Mobile Cross-Host Forward Compatibility Phase 13
+
+## English
+
+### Decision
+
+Keep the mobile runtime body-free and adapter-led. Web, Tauri, Capacitor, and Android must consume the same versioned projection and query semantics, while each host owns only storage, lifecycle, and cancellation primitives. Do not promote SQLite/WASM, Godot, a sidecar, or an embedded model to the default mobile profile until measured evidence proves that the bounded exact workload needs it.
+
+### Current architectural truth
+
+The Phase 12 projection replay is a contract test, not native parity evidence. The current code still has material host drift:
+
+| Surface | Current behavior | Required direction |
+|---|---|---|
+| Node identity | Tauri uses workspace-relative paths; Capacitor can fall back to basenames; TypeScript uses NFC and SHA-256 | One namespaced manifest with NFC, canonical relative path, SHA-256 revision, and additive aliases |
+| Revision | Tauri/Capacitor have FNV-1a fallbacks; the canonical backend uses SHA-256 | FNV remains legacy read-only compatibility; new evidence must use SHA-256 |
+| Edge direction | Capacitor and Rust currently disagree for wiki-link orientation | Define `source -> target` once and carry provenance (`explicit`, `inferred`, `runtime`) |
+| Import transaction | SAF staging/rename has in-call rollback only | Persist a small journal and recover on the next process start |
+| Memory | Android admission is bounded and the draft clears `content`, but the single-document read and native RSS are not measured | Preserve body-free drafts, measure transient allocation/RSS, and never raise budgets without device evidence |
+
+### Phase 13 implementation
+
+1. **Native import recovery (implemented).** `KnowledgeBasePickerBridge` now writes `knowledge_base_import_journal.v1.json` atomically. The journal records `staging`, `target-backed-up`, and `target-activated` phases using app-local names only. `MainActivity` recovery scans the journal and orphan transaction directories before exposing the picker. Recovery preserves the previous tree when activation was interrupted, removes abandoned staging data, and emits the existing result-marker shape. Corrupt or unsafe journals fail closed.
+2. **Atomic result markers (implemented).** Picker results and journal writes use a sibling temporary file, `fsync`, and rename. The public Rust request/poll API and result JSON fields are unchanged; this is an additive durability improvement.
+3. **Device evidence harness (next).** Add CI-secret-only signing, install a fresh arm64 artifact, execute SAF import -> graph build -> exact query -> neighbors/path, force-stop, reopen, and replay the same projection. Capture artifact SHA-256, sanitized device identity, workload bounds, import status, and peak `VmRSS` in one JSON record. A missing device or missing RSS must fail the release job, not downgrade to pass.
+4. **Portable identity corpus (next).** Replay old snapshots, move/rename journals, same-content documents, NFC collisions, cross-root loads, and delete/restore operations through each host adapter. Keep `NoteNode.id` and old layouts as compatibility keys until the corpus proves alias continuity.
+5. **Android memory closure (next).** Keep the existing 5,000-document, 16 MiB/document, 64 MiB input, 250,000-edge, and depth-64 admission contract, prove that Android drafts remain body-free, and measure the transient single-document read plus native RSS. The bound is an admission guard, not a substitute for device RSS.
+
+### Gates and trade-offs
+
+- **G2 mobile release:** static slim staging is currently 120 files / 4,253,837 uncompressed bytes / 1,546,201 estimated compressed bytes. The latest unsigned APK/AAB compressed payloads are 9,436,196 and 6,983,880 bytes. This is below the 25 MiB budget, but signature, SAF workload, process-death replay, and RSS `<= 256 MiB` remain open.
+- **G3 persistence:** fixture replay and the journal implementation are code evidence. They do not prove a real Android process death, filesystem corruption, or storage-permission failure. Native evidence is required before claiming durable mobile persistence.
+- **G4 identity:** public IDs remain frozen. A path-derived URI is not a rename-proof identity; a move journal or persisted alias record is required before canonical-ID migration.
+- **SQLite/WASM:** keep it opt-in. It may reduce query startup cost for larger corpora, but it adds binary size, initialization work, heap pressure, and a migration surface. Promote only after a measured comparison against the body-free JSON projection.
+
+### Acceptance order
+
+1. Produce a signed arm64 artifact and a real device/emulator workload record with peak RSS.
+2. Add the Tauri/Capacitor/Android native adapter matrix and process-death replay evidence.
+3. Close identity corpus and edge-orientation parity; do not change public IDs before this step.
+4. Only then evaluate a persistent database adapter or a larger mobile corpus budget.
+
+### Verification baseline
+
+The implementation increment was checked with the Android picker contract suite, mobile artifact/profile contract suites, TypeScript no-emit, the 57-suite migration matrix (307 passed, 13 skipped), and `app:compileArm64ReleaseKotlin`. The environment has no online Android device, no configured AVD, and no signing keystore, so G2 remains explicitly incomplete.
+
+## 中文
+
+### 决策
+
+移动端继续采用无正文 projection 与 adapter 主导的架构。Web、Tauri、Capacitor、Android 必须消费同一份版本化 projection 与 query 语义；host 只负责存储、生命周期和取消原语。除非实测证明有界 exact workload 确实需要，否则不把 SQLite/WASM、Godot、sidecar 或内置模型提升为默认移动配置。
+
+### 当前架构事实
+
+Phase 12 的 projection replay 是契约测试，不是原生端对等证明。现有代码仍存在实质 host 漂移：
+
+| 面 | 当前行为 | 目标方向 |
+|---|---|---|
+| 节点身份 | Tauri 使用 workspace-relative path；Capacitor 可能回退 basename；TypeScript 使用 NFC 与 SHA-256 | 统一带 namespace 的 manifest，使用 NFC、canonical relative path、SHA-256 revision 与 additive alias |
+| revision | Tauri/Capacitor 有 FNV-1a 回退；canonical backend 使用 SHA-256 | FNV 仅保留旧数据只读兼容；新证据统一 SHA-256 |
+| 边方向 | Capacitor 与 Rust 当前对 wiki-link 方向不一致 | 统一为 `source -> target`，并携带 `explicit`、`inferred`、`runtime` provenance |
+| 导入事务 | SAF staging/rename 只有调用栈内回滚 | 持久化轻量 journal，在下次进程启动时恢复 |
+| 内存 | Rust 有文件预算校验，但中间暂存仍可能保留正文 | Android 读取时提取 link candidate，只保留有界 draft/projection 字段 |
+
+### Phase 13 实施
+
+1. **原生导入恢复（已实现）。** `KnowledgeBasePickerBridge` 现在以原子方式写入 `knowledge_base_import_journal.v1.json`。journal 仅保存 app-local 名称，并记录 `staging`、`target-backed-up`、`target-activated` 阶段。`MainActivity` 在暴露 picker 前扫描 journal 与孤儿事务目录；如果激活被中断则恢复旧目录，清理 abandoned staging，并继续输出原有 result marker 结构。损坏或不安全 journal 直接 fail closed。
+2. **结果 marker 原子化（已实现）。** picker 结果与 journal 都使用同目录临时文件、`fsync` 和 rename；Rust request/poll API 与结果 JSON 字段不变，只增加耐久性。
+3. **真机证据 harness（下一步）。** 只从 CI secret 注入签名配置；安装新鲜 arm64 产物，执行 SAF import -> graph build -> exact query -> neighbors/path，force-stop 后重开并重放同一 projection。统一记录 artifact SHA-256、脱敏设备标识、工作负载边界、导入状态与 peak `VmRSS`。没有设备或没有 RSS 必须让 release job 失败，不能降级成 pass。
+4. **可移植身份语料（下一步）。** 让旧 snapshot、move/rename journal、同内容文档、NFC collision、跨 root 加载、删除/恢复操作经过各 host adapter replay。公共 `NoteNode.id` 与旧 layout 在 alias continuity 证据完成前继续作为兼容 key。
+5. **Android 内存闭环（下一步）。** 保持现有 5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 边、depth-64 admission contract，证明 Android draft 持续无正文，并测量单文档瞬时读取与 native RSS。预算只是 admission guard，不能替代真机 RSS。
+
+### 门禁与权衡
+
+- **G2 移动发布：** 当前 slim staging 为 120 个文件 / 未压缩 4,253,837 字节 / 估算压缩 1,546,201 字节。最新未签名 APK/AAB 压缩 payload 为 9,436,196 与 6,983,880 字节，低于 25 MiB；但签名、SAF workload、进程死亡 replay 与 RSS `<= 256 MiB` 仍未完成。
+- **G3 持久化：** fixture replay 与 journal 实现是代码证据，不能证明真实 Android 进程死亡、文件损坏或存储权限失败。关闭 durable mobile persistence 前必须有原生证据。
+- **G4 身份：** 公共 ID 继续冻结。路径派生 URI 不能证明 rename 后身份不变；切换 canonical ID 前必须有 move journal 或持久化 alias 记录。
+- **SQLite/WASM：** 继续 opt-in。它可能降低大语料 query 启动成本，但会增加包体、初始化、heap 与迁移面；只有与无正文 JSON projection 的实测对比完成后才允许提升。
+
+### 验收顺序
+
+1. 生成签名 arm64 产物，并在真实设备/可复现 emulator 上取得包含 peak RSS 的 workload 记录。
+2. 增加 Tauri/Capacitor/Android 原生 adapter matrix 与进程死亡 replay 证据。
+3. 关闭 identity corpus 与边方向 parity；在此之前不得改变公共 ID。
+4. 之后再评估数据库 adapter 或扩大移动语料预算。
+
+### 本轮验证基线
+
+本轮已通过 Android picker contract、mobile artifact/profile contract、TypeScript no-emit、57 suite migration matrix（307 passed、13 skipped）与 `app:compileArm64ReleaseKotlin`。当前环境没有在线 Android 设备、没有已配置 AVD、也没有签名 keystore，因此 G2 仍明确未完成。

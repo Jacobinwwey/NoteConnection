@@ -280,7 +280,7 @@ The failure contract is now explicit. Read/I/O errors may reuse the last success
 
 `verify-mobile-projection-replay.js` provides a durable code-level evidence path. It performs save -> fresh-store reopen in a temporary app-local directory, checks Web/Tauri/Capacitor/Android parity for metadata, exact search, neighbors, and shortest path, and records truncated/unknown-schema rejection in `output/verification/mobile-projection-replay/report-latest.json`. This closes the code/fixture portion of G3; it does not claim physical Android process-death replay, signed artifact validity, or RSS compliance.
 
-The post-change static packaging measurement is 120 staged files, 4,253,837 uncompressed bytes, and 1,546,201 estimated compressed bytes. The rebuilt unsigned arm64 APK/AAB compressed payloads are 9,434,062 and 6,978,525 bytes. Both remain under the 25 MiB budget; neither is signed-device or RSS evidence.
+The post-change static packaging measurement is 120 staged files, 4,253,837 uncompressed bytes, and 1,546,201 estimated compressed bytes. The rebuilt unsigned arm64 APK/AAB compressed payloads are 9,436,196 and 6,983,880 bytes. Both remain under the 25 MiB budget; neither is signed-device or RSS evidence.
 
 The route-shadow verifier also gained condition-based runtime-manifest stabilization. It waits for three equal snapshots after readiness, preventing asynchronous first-use SQLite initialization from being reported as a route-induced read-only side effect on slower hosts.
 
@@ -294,7 +294,7 @@ The mobile trade-off remains deliberate: raw versioned JSON plus a bounded body-
 
 `verify-mobile-projection-replay.js` 提供可落盘的代码级证据路径：在临时 app-local 目录执行 save -> 新建 store -> reopen，验证 Web/Tauri/Capacitor/Android 的 metadata、exact search、neighbor、shortest path 等价，并把截断/未知 schema 拒绝写入 `output/verification/mobile-projection-replay/report-latest.json`。这关闭了 G3 的代码/fixture 部分，但不宣称真实 Android 进程死亡 replay、签名产物有效性或 RSS 合规。
 
-变更后的静态 packaging 测量为 120 个 staging 文件、未压缩 4,253,837 字节、估算压缩 1,546,201 字节。重新构建的未签名 arm64 APK/AAB 压缩 payload 分别为 9,434,062 与 6,978,525 字节，均低于 25 MiB；两者都不是签名真机或 RSS 证据。
+变更后的静态 packaging 测量为 120 个 staging 文件、未压缩 4,253,837 字节、估算压缩 1,546,201 字节。重新构建的未签名 arm64 APK/AAB 压缩 payload 分别为 9,436,196 与 6,983,880 字节，均低于 25 MiB；两者都不是签名真机或 RSS 证据。
 
 route-shadow verifier 也增加了基于条件的 runtime manifest 稳定等待：readiness 后连续取得三次相同快照，避免慢宿主上的首次 SQLite 异步初始化被误报为 route 触发的 read-only side effect。
 

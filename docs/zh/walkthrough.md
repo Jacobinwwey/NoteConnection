@@ -173,8 +173,19 @@ npm run verify:mobile:projection-replay
 
 命令会在临时 app-local 目录执行 atomic save，释放首个 store 实例，再分别以 Web/Tauri/Capacitor/Android 的 read-through store 重开，并比较 metadata、exact search、neighbor 与 shortest path。随后写入 `output/verification/mobile-projection-replay/report-latest.json`，同时验证截断 JSON 与未知 schema fail closed。该 output 目录被 gitignore，不是源码产物。
 
-本次变更后 `mobile:prepare:slim` staging 为 120 个文件（未压缩 4,253,837；估算压缩 1,546,201 字节）。重新构建的未签名 arm64 APK/AAB 静态 payload 分别为 9,434,062 与 6,978,525 字节，均低于 25 MiB；两项测量都不包含真机 RSS。
+本次变更后 `mobile:prepare:slim` staging 为 120 个文件（未压缩 4,253,837；估算压缩 1,546,201 字节）。重新构建的未签名 arm64 APK/AAB 静态 payload 分别为 9,436,196 与 6,983,880 字节，均低于 25 MiB；两项测量都不包含真机 RSS。
 
 route-shadow 门禁也在 readiness 后等待三次连续稳定的 runtime directory manifest。这是必要的，因为 registry backend 可能在 `/api/knowledge/state` 返回之后才异步完成首次 SQLite 初始化；没有该等待，慢宿主会产生假的 read-only side-effect 失败。
 
 这关闭了代码级 G3 replay 证据，但没有关闭真机门禁。仍需签名 arm64 产物、Android 进程死亡后的 SAF import/query/path workload，以及 peak RSS <= 256 MiB。SQLite/WASM 仍是未来 opt-in adapter，因为当前有界 exact workload 不足以证明其移动端体积、启动和 heap 成本值得默认引入。
+## 2026-08-18 第 13 阶段 原生导入恢复 Walkthrough
+
+Android SAF 导入现在具有可重启的事务边界：
+
+`ACTION_OPEN_DOCUMENT_TREE` -> 有界 staging tree -> import journal -> backup/activate -> 原子 result marker。
+
+`KnowledgeBasePickerBridge` 在 app-local knowledge base 同目录写入 `knowledge_base_import_journal.v1.json`。journal 只保存 app-local transaction 名称与明确阶段。`MainActivity.onCreate()` 在暴露 picker 前执行 recovery：target 已存在时优先清理；target 缺失但存在 backup 时恢复旧知识库；abandoned staging 直接删除。未知 schema 或路径逃逸的 journal fail closed。
+
+result marker 保持原有 Rust request/poll 契约，但现在使用同目录临时文件、`fsync` 与 rename，避免进程死亡把半写 marker 误判为 `completed`。journal 是内部耐久机制，不改变 projection schema，因此旧客户端与公共 ID 继续兼容。
+
+本轮验证：Android picker contract、mobile profile/artifact contract、TypeScript no-emit、57 suite migration matrix（307 passed、13 skipped）与 `app:compileArm64ReleaseKotlin` 已通过。当前宿主没有在线 Android 设备、已配置 AVD、签名 keystore 或 RSS 采集，G2/G3 原生设备证据仍未关闭。

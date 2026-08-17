@@ -423,7 +423,7 @@ The earlier plan correctly separated canonical graph identity from mobile projec
 - `src-tauri/src/lib.rs` already writes graph projections through sibling temporary files and rename. Android persists the lite projection and releases parsed bodies before projection. The JavaScript adapter therefore consumes a host-owned atomic primitive instead of reimplementing Rust/Kotlin filesystem policy.
 - `scripts/verify-mobile-projection-replay.js` writes a structured report after a real temporary-directory save/reopen cycle. Four host labels consume the same fixture, so parity is checked at schema, metadata, exact search, neighbors, and shortest path rather than only at JSON equality.
 - `verify-route-registry-shadow.js` now waits for three stable runtime-manifest samples after readiness, closing a verifier race where asynchronous SQLite initialization could be misclassified as a read-only route side effect.
-- The post-change mobile-slim staging remains within budget at 120 files, 4,253,837 uncompressed bytes, and 1,546,201 estimated compressed bytes; a fresh unsigned arm64 APK/AAB measures 9,434,062 and 6,978,525 compressed payload bytes respectively. These are static artifact measurements, not RSS evidence.
+- The post-change mobile-slim staging remains within budget at 120 files, 4,253,837 uncompressed bytes, and 1,546,201 estimated compressed bytes; the fresh unsigned arm64 APK/AAB measures 9,436,196 and 6,983,880 compressed payload bytes respectively. These are static artifact measurements, not RSS evidence.
 
 ### Corrected failure semantics
 
@@ -631,3 +631,30 @@ This update aligns the implementation plan with the current Electron-to-Tauri mi
 ### 2026-08-18 verification follow-up
 
 `mobile:prepare:slim` now stages 120 files (4,251,345 uncompressed bytes; 1,545,813 estimated compressed bytes). The fresh arm64 APK/AAB pass ZIP inspection and the mobile artifact verifier under the 25 MiB payload budget. This closes static packaging evidence only; signing, device SAF replay, and peak RSS remain release gates.
+
+## 2026-08-18 Phase 13: Native Import Recovery and Cross-Host Closure
+
+### Architecture delta
+
+1. Keep the raw schema-1 projection as the mobile persistence format and preserve the memory fallback; no SQLite/WASM promotion is allowed without measured package/startup/heap benefit.
+2. Add an internal Android import journal with atomic sibling-file writes. The journal is intentionally not part of the public projection contract and records only app-local staging/backup names and a phase.
+3. Recover on activity startup. If the new target exists, cleanup is safe; if activation stopped after the old target was moved, restore the backup; if only staging remains, delete it and report a failed/recovered import. Corrupt or path-escaping journals fail closed.
+4. Treat the Phase 12 four-host replay as contract evidence only. Before canonical-ID migration, align namespace, NFC normalization, SHA-256 revision, edge orientation, and alias history across Tauri, Capacitor, Android, and the TypeScript identity boundary.
+5. Keep mobile budgets as admission guards: 5,000 documents, 16 MiB/document, 64 MiB total input, 250,000 edges, and depth 64. The next Android evidence pass must prove body-free intermediate drafts and measure transient reads/RSS before any budget increase.
+
+### Gate status
+
+- **G2:** static slim evidence is current at 120 files / 4,253,837 uncompressed bytes / 1,546,201 estimated compressed bytes; unsigned APK/AAB compressed payload is 9,436,196 / 6,983,880 bytes. Signing, device SAF workload, process-death replay, and RSS `<= 256 MiB` are open.
+- **G3:** native journal/recovery, atomic marker writes, fixture replay, and arm64 Kotlin compilation are code-level evidence. Real Android process death, storage corruption, and permission failure remain unverified.
+- **G4:** public IDs remain frozen. Required corpus: old snapshot restore, move-journal restart, rollback, same-content and NFC collision, cross-root load, and delete/restore alias continuity.
+
+### Ordered next work
+
+1. Add CI-secret-only signing and a device RSS/workload evidence recorder; missing device/RSS must fail release verification.
+2. Add native adapter replay for Tauri/Capacitor/Android and compare graph metadata, exact search, neighbors, path, edge provenance, and import status.
+3. Verify Android ingest extracts link candidates while reading, keeps drafts body-free, and records transient read/RSS evidence.
+4. Close identity corpus and registry response/status shadow parity; only then evaluate a database adapter or canonical public-ID cutover.
+
+### Verification for this increment
+
+`src/android.knowledgebase.picker.contract.test.ts`, mobile profile/artifact contract suites, TypeScript no-emit, the 57-suite migration matrix (307 passed, 13 skipped), and `app:compileArm64ReleaseKotlin` pass. No online Android device, configured AVD, signing keystore, or RSS JSON is available on the current host.

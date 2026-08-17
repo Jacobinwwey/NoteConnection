@@ -510,3 +510,16 @@ Verification for this increment: 24 focused Jest tests, TypeScript no-emit, and 
 Android 链路刻意采用异步状态机：Rust 请求 `ACTION_OPEN_DOCUMENT_TREE`，生成的 Kotlin bridge 在单文档/总字节预算内把 Markdown 流式复制到 app-local workspace，再写入短结果 marker；Rust 轮询并只持久化 app-local path。外部 URI 只是 provenance，不是永久 graph identity。这样移动包仍不包含 Node、Godot、模型、SVG 或桌面二进制，同时允许用户选择知识库。
 
 本轮验证：24 项 Jest 聚焦测试、TypeScript no-emit 与 Rust 26 项测试通过。Android 生成工程 patch 已幂等；新鲜 arm64 slim 构建生成未签名 APK（9,555,787 字节）与 AAB（7,179,228 字节），静态 artifact 检查通过且没有禁入条目。尚无签名 arm64 产物、真机导入运行或 RSS JSON。
+## 2026-08-18 Phase 13 Native Import Recovery Walkthrough
+
+### English
+
+The Android path is now `ACTION_OPEN_DOCUMENT_TREE -> bounded staging -> v1 import journal -> backup/activate -> atomic result marker`. Startup recovery is idempotent: an active target wins cleanup, a missing target with a backup restores the previous knowledge base, and abandoned staging is removed. Journal schema/path violations fail closed. This is an internal durability change; it does not change projection schema, Rust request/poll fields, or public IDs.
+
+Verification passed: Android picker/mobile contract suites, TypeScript no-emit, and `app:compileArm64ReleaseKotlin`. Device signing, SAF workload, process-death replay, and RSS evidence are not available on the current host and remain release gates.
+
+### 中文
+
+Android 链路现在是 `ACTION_OPEN_DOCUMENT_TREE -> 有界 staging -> v1 import journal -> backup/activate -> 原子 result marker`。启动恢复具有幂等性：已有 active target 时清理，target 缺失但有 backup 时恢复旧知识库，abandoned staging 被删除；journal schema/路径违规直接 fail closed。它是内部耐久性变更，不改变 projection schema、Rust request/poll 字段或公共 ID。
+
+本轮已通过 Android picker/mobile 契约测试、TypeScript no-emit 与 `app:compileArm64ReleaseKotlin`。当前宿主无法取得设备签名、SAF workload、进程死亡 replay 与 RSS 证据，这些仍是 release 门禁。

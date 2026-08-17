@@ -1,25 +1,27 @@
-# 2026-04-11 v1.7.0 - Bilingual Docs Pair Index
+# 2026-08-18 - Bilingual Docs Pair Index
 
 ## English Document
 
 ### Scope
 
 - Canonical pairing index for `docs/en` and `docs/zh`.
-- Updated against the current repository state after the `v1.7.0` migration-plan doc sync.
+- Updated against the current repository state after the Phase 13 mobile import-recovery and cross-host plan sync.
 - Working-doc archives under `docs/brainstorms/` and `docs/solutions/` are tracked separately from `docs/en` and `docs/zh` pairing.
 
 ### Summary
 
 - English files: `24`
 - Chinese files: `24`
-- Bilingual pairs: `23`
-- English-only files: `1` (brainstorms/ individual files — index.md is bilingual)
+- Bilingual pairs: `24`
+- English-only files: `0`
 - Chinese-only files: `0`
 - Archived: `TODO.en.md` + `TODO.zh.md` (moved to `docs/archive/`)
 
 > Updated 2026-05-05: Route migration 91.3% complete (73 modular + 7 terminal inline). All 7 domain classes with method body migration. Vite build 430ms. 7 ES modules extracted. 15 commits.
 >
 > Updated 2026-05-10: Added cross-doc unresolved-goal baseline page `docs/open_goal_audit_2026-05-10.md` and linked it into docs-site navigation.
+
+> Updated 2026-08-18: Phase 13 progress is tracked in the paired `task.md`, `implementation_plan.md`, and `walkthrough.md` documents. The active cross-host solution note is `docs/solutions/mobile-cross-host-forward-compatibility-phase13-2026-08-18.md`.
 
 ### Bilingual Pairs
 
@@ -62,15 +64,17 @@
 ### 范围
 
 - `docs/en` 与 `docs/zh` 的当前双语配对索引。
-- 已根据 `v1.7.0` 迁移方案文档同步后的仓库现状更新。
+- 已根据 Phase 13 移动端导入恢复与跨 host 方案同步后的仓库现状更新。
 - `docs/brainstorms/` 与 `docs/solutions/` 作为工作归档目录，不计入 `docs/en` 与 `docs/zh` 双语配对统计。
+
+> 更新 2026-08-18：Phase 13 进度记录在配对的 `task.md`、`implementation_plan.md` 与 `walkthrough.md` 中；活跃跨 host 方案见 `docs/solutions/mobile-cross-host-forward-compatibility-phase13-2026-08-18.md`。
 
 ### 汇总
 
-- 英文文件数：`22`
-- 中文文件数：`21`
-- 中英配对数：`21`
-- 仅英文文件数：`1`
+- 英文文件数：`24`
+- 中文文件数：`24`
+- 中英配对数：`24`
+- 仅英文文件数：`0`
 - 仅中文文件数：`0`
 
 ### 双语配对清单
