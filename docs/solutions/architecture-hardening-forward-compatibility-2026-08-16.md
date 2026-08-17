@@ -299,3 +299,16 @@ The mobile trade-off remains deliberate: raw versioned JSON plus a bounded body-
 route-shadow verifier 也增加了基于条件的 runtime manifest 稳定等待：readiness 后连续取得三次相同快照，避免慢宿主上的首次 SQLite 异步初始化被误报为 route 触发的 read-only side effect。
 
 移动端权衡仍是有意为之：默认使用原始版本化 JSON 与无正文有界 exact analyzer，以保持包体、启动和 heap 成本低，并满足当前 workload。SQLite/WASM 继续作为未来 opt-in adapter，必须先在 startup、RSS、query p95 与 package budget 上证明实测收益。G4 的 old-snapshot、move-journal restart、rollback、collision 与 cross-root 语料完成 replay 前，公共 ID 继续冻结。
+## 2026-08-18 Phase 14 Signed Device Evidence
+
+### English
+
+The release boundary now separates static artifact integrity, native device execution, and projection semantics. `verify-mobile-artifact.js` can require APK/AAB signatures (`apksigner` for APK, `jarsigner` for AAB) alongside arm64, payload, and RSS gates. `capture-tauri-android-rss-evidence.js` is a fail-closed recorder for the ordered `saf-import -> graph-build -> exact-query -> path -> continuity` workload, force-stop/reopen observation, `/proc/<pid>/status:VmRSS`, artifact SHA-256, masked device metadata, and a standalone `rss.json`.
+
+This does not create device evidence by itself. The current host still lacks a signing keystore, online device/AVD, and workload execution. The design accepts explicit `adbArgs` rather than arbitrary host shell commands; that reduces convenience but prevents host-side ambiguity and makes the evidence reproducible. Static mobile-slim payload and fixture replay remain lower-level gates. Native replay, G4 identity/edge corpora, and registry shadow parity must close before canonical IDs or SQLite/WASM are promoted.
+
+### 中文
+
+release 边界现在分离为静态 artifact 完整性、原生设备执行和 projection 语义三层。`verify-mobile-artifact.js` 可要求 APK/AAB 签名（APK 使用 `apksigner`，AAB 使用 `jarsigner`），并同时检查 arm64、payload 与 RSS。`capture-tauri-android-rss-evidence.js` 以 fail-closed 方式记录有序 `saf-import -> graph-build -> exact-query -> path -> continuity` workload、force-stop/reopen、`/proc/<pid>/status:VmRSS`、artifact SHA-256、脱敏设备信息和独立 `rss.json`。
+
+该脚本本身不等于设备证据。当前主机仍没有 signing keystore、在线设备/AVD 或 workload 执行结果。设计只接受显式 `adbArgs`，不接受任意宿主 shell；便利性较低，但可以避免宿主命令歧义并让证据可复现。静态 mobile-slim payload 与 fixture replay 仍只是低层门禁；原生 replay、G4 identity/edge corpus 与 registry shadow parity 完成前，不提升 canonical ID 或 SQLite/WASM。

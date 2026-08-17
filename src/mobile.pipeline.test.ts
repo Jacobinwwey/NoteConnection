@@ -75,6 +75,8 @@ describe('dual mobile pipeline configuration', () => {
     expect(scripts['verify:mobile:artifact']).toContain('verify-mobile-artifact.js');
     expect(scripts['verify:mobile:artifact:release']).toContain('--require-rss');
     expect(scripts['verify:mobile:artifact:release']).toContain('--require-arm64');
+    expect(scripts['verify:mobile:artifact:release']).toContain('--require-signed');
+    expect(scripts['capture:tauri:android:evidence']).toContain('capture-tauri-android-rss-evidence.js');
     expect(fs.existsSync(path.join(repoRoot, 'scripts', 'verify-mobile-artifact.js'))).toBe(true);
   });
 

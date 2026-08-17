@@ -658,3 +658,29 @@ This update aligns the implementation plan with the current Electron-to-Tauri mi
 ### Verification for this increment
 
 `src/android.knowledgebase.picker.contract.test.ts`, mobile profile/artifact contract suites, TypeScript no-emit, the 57-suite migration matrix (307 passed, 13 skipped), and `app:compileArm64ReleaseKotlin` pass. No online Android device, configured AVD, signing keystore, or RSS JSON is available on the current host.
+
+## 2026-08-18 Phase 14 Signed Device Evidence and Native Replay
+
+### Architecture delta
+
+The release boundary now has three independently verifiable layers:
+
+1. **Artifact integrity**: `verify-mobile-artifact.js` checks ZIP entries, arm64 payload, profile budget, optional RSS, and (in release mode) APK/AAB signatures. A static unsigned payload can pass only the static layer.
+2. **Device execution**: `capture-tauri-android-rss-evidence.js` installs one explicit artifact on one selected device, launches the Tauri package, executes a bounded workload spec, observes process death and restart, and samples `/proc/<pid>/status:VmRSS`.
+3. **Projection semantics**: the workload must prove SAF import, graph build, exact query, path, and post-restart continuity. The recorder stores this separately from artifact size so a green size gate cannot mask a failed native projection path.
+
+The workload spec is declarative and shell-free. It requires ordered `saf-import`, `graph-build`, `exact-query`, `path`, and `continuity` steps with explicit `adbArgs`. Duplicate/missing names, host command interpolation, missing RSS samples, and unobserved process death fail closed. A standalone `rss.json` is emitted for reuse by the artifact verifier.
+
+### Current truth and trade-offs
+
+- Identity-contract changes produced 121 staged files / 4,263,740 uncompressed bytes / 1,548,695 estimated compressed bytes. The rebuilt unsigned arm64 APK/AAB currently measures 9,570,708 / 7,052,404 compressed payload bytes; these are static measurements only.
+- Signature verification is implemented but not evidenced here because no signing keystore is present. The release script now rejects unsigned output instead of treating it as a release candidate.
+- The recorder and contract tests exist, but no online device/AVD or workload spec has run. G2 and native G3 therefore remain pending; the harness itself is not device acceptance.
+- The explicit `adbArgs` boundary is less convenient than arbitrary scripts, but it makes evidence reviewable and prevents accidental host filesystem access. SAF UI driving remains a device-lab responsibility.
+
+### Ordered next work
+
+1. Produce CI-signed arm64 APK/AAB without committing keystores; run `--require-signed --require-arm64 --require-rss`.
+2. Run the harness on low-memory arm64 hardware and archive manifest, RSS JSON, logcat tail, and artifact hash; reject emulator-only evidence for release.
+3. Replay the same projection corpus through Tauri, Capacitor, and Android native adapters, including force-stop/reopen and permission/storage failure paths.
+4. Close G4 identity/edge corpora and registry response/status shadow parity. Only then reconsider canonical IDs, indexed `contentRef`, or SQLite/WASM.

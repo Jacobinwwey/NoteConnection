@@ -197,3 +197,21 @@ The Android SAF import now has a restart-safe transaction boundary:
 The result marker keeps the existing Rust request/poll contract, but now uses a sibling temporary file, `fsync`, and rename. This prevents a process death from turning a partially written marker into a false `completed` state. The journal is an internal durability mechanism, not a projection-schema change, so older clients and public IDs remain compatible.
 
 Verification for this increment: the Android picker contract suite, mobile profile/artifact contract suites, TypeScript no-emit, the 57-suite migration matrix (307 passed, 13 skipped), and `app:compileArm64ReleaseKotlin` pass. The current host has no online Android device, configured AVD, signing keystore, or RSS capture; G2/G3 native device evidence remains open.
+
+## 2026-08-18 Phase 14 Signed Device Evidence Walkthrough
+
+The release path is now explicit:
+
+```text
+signed arm64 APK
+-> verify ZIP/arm64/signature/budget
+-> install on selected Android device
+-> SAF import -> graph build -> exact query -> path
+-> force-stop -> relaunch -> continuity query
+-> sample /proc/<pid>/status:VmRSS
+-> write manifest + rss.json + logcat tail
+```
+
+`capture-tauri-android-rss-evidence.js` accepts only a schema-1 workload spec with explicit `adbArgs`. It requires the five ordered phases, rejects duplicate or missing steps, masks serials, records artifact SHA-256 and signature metadata, and fails without an observed process death or RSS sample. The recorder is an evidence boundary, not a UI automation claim: SAF taps and continuity assertions must be supplied by the device-lab workload.
+
+The current host can run the parser and contract tests, but has no signing keystore, online device, configured AVD, or workload spec. Therefore no `latest.json` is produced and G2/G3 remain pending. Static slim size and unsigned arm64 checks continue to be reported separately.

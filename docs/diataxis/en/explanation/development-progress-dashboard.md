@@ -1825,3 +1825,9 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - Picker result markers are atomic without changing the Rust request/poll contract. The Android picker/mobile contract suites, TypeScript no-emit, and arm64 Kotlin compilation pass.
 - G2 remains static-only: the current host has no signing keystore, online Android device, configured AVD, or RSS JSON. G3 has code-level recovery and fixture evidence, but no native process-death proof. G4 public IDs remain frozen pending identity/edge parity corpora.
 - Next order: signed device workload/RSS evidence, native Tauri/Capacitor/Android replay matrix, proof of body-free Android drafts plus transient-read measurement, then identity and registry shadow parity. SQLite/WASM remains opt-in.
+## 2026-08-18 Phase 14 Evidence Boundary
+
+- **Delivered:** release artifact verification now has an explicit APK/AAB signature gate; `capture-tauri-android-rss-evidence.js` records signed-arm64 install, ordered SAF/import/query/path/continuity workload, force-stop/reopen, artifact hash, masked device metadata, peak `VmRSS`, RSS JSON, and logcat.
+- **Verified locally:** parser/contract tests, JavaScript syntax, and TypeScript no-emit. No device evidence is generated without an online target and a schema-1 workload spec.
+- **Still open:** this host has no signing keystore, online device/AVD, or native workload run. G2/G3 remain pending; unsigned static APK/AAB payload and Node fixture replay are not substitutes.
+- **Direction:** execute on low-memory arm64 hardware, replay the same corpus across Tauri/Capacitor/Android, then close identity/edge and registry shadow corpora before canonical-ID or SQLite/WASM decisions.

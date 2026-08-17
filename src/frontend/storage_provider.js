@@ -170,54 +170,14 @@
             .pop() || '';
     }
 
-    async function createContentRevision(content) {
-        const text = String(content || '');
-        const cryptoApi = typeof globalThis !== 'undefined' ? globalThis.crypto : null;
-        if (cryptoApi && cryptoApi.subtle && typeof TextEncoder === 'function') {
-            const digest = await cryptoApi.subtle.digest('SHA-256', new TextEncoder().encode(text));
-            const bytes = new Uint8Array(digest);
-            return `sha256:${Array.from(bytes).map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
-        }
-
-        // Older WebViews may not expose Web Crypto; keep a deterministic fallback
-        // so replay identity remains stable without shipping a hash library.
-        let hash = 2166136261;
-        for (let index = 0; index < text.length; index += 1) {
-            hash ^= text.charCodeAt(index);
-            hash = Math.imul(hash, 16777619);
-        }
-        return `fnv1a:${(hash >>> 0).toString(16).padStart(8, '0')}`;
-    }
-
     async function createMobileResourceIdentity(relativePath, legacyId, content) {
-        const normalizedLegacyId = String(legacyId || '').trim();
-        const displayPath = String(relativePath || '')
-            .trim()
-            .replace(/\\/g, '/')
-            .normalize('NFC');
-        const segments = displayPath.split('/').filter(Boolean);
-        if (segments.length > 0 && segments[0].toLowerCase() === 'knowledge_base') {
-            segments.shift();
+        const identityContract = typeof globalThis !== 'undefined'
+            ? globalThis.NoteConnectionMobileIdentity
+            : null;
+        if (!identityContract || typeof identityContract.createResourceIdentity !== 'function') {
+            throw new Error('Mobile identity contract is unavailable.');
         }
-        const canonicalPath = segments.map((segment) => segment.toLowerCase()).join('/');
-        const sourceUri = canonicalPath
-            ? `note://workspace/v1/${canonicalPath.split('/').map((segment) => encodeURIComponent(segment)).join('/')}`
-            : '';
-        const aliases = Array.from(new Set([
-            normalizedLegacyId,
-            normalizedLegacyId
-                ? (normalizedLegacyId.toLowerCase().endsWith('.md')
-                    ? normalizedLegacyId
-                    : `${normalizedLegacyId}.md`)
-                : '',
-            displayPath,
-            canonicalPath,
-        ].filter(Boolean)));
-        return {
-            sourceUri,
-            revision: await createContentRevision(content),
-            identityAliases: aliases
-        };
+        return await identityContract.createResourceIdentity(relativePath, legacyId, content);
     }
 
     function extractWikiLinks(content) {
@@ -227,6 +187,20 @@
         let match;
         while ((match = regex.exec(text)) !== null) {
             const linked = stripMarkdownExtension(match[1]);
+            if (linked) {
+                links.add(linked);
+            }
+        }
+        return Array.from(links);
+    }
+
+    function extractMarkdownLinks(content) {
+        const links = new Set();
+        const regex = /\]\(([^)]+)\)/g;
+        const text = String(content || '');
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            const linked = stripMarkdownExtension(String(match[1] || '').split('#')[0].split('?')[0]);
             if (linked) {
                 links.add(linked);
             }
@@ -844,10 +818,16 @@
             if (edgeMap.has(key)) {
                 return;
             }
+            const sourceNode = nodeMap.get(source);
+            const targetNode = nodeMap.get(target);
             edgeMap.set(key, {
                 source,
                 target,
                 type: type || 'association',
+                kind: 'explicit',
+                provenance: type || 'association',
+                sourceUri: sourceNode && sourceNode.sourceUri ? sourceNode.sourceUri : '',
+                targetUri: targetNode && targetNode.sourceUri ? targetNode.sourceUri : '',
                 weight: 1
             });
         };
@@ -902,7 +882,11 @@
             });
 
             extractWikiLinks(file.content).forEach((linkedId) => {
-                addEdge(linkedId, sourceId, 'wiki-link');
+                addEdge(sourceId, linkedId, 'wiki-link');
+            });
+
+            extractMarkdownLinks(file.content).forEach((linkedId) => {
+                addEdge(sourceId, linkedId, 'markdown-link');
             });
         });
 
@@ -972,6 +956,21 @@
             '      return Array.from(links);',
             '    }',
             '',
+            '    function extractMarkdownLinks(content) {',
+            '      var links = new Set();',
+            '      var regex = /\\]\\(([^)]+)\\)/g;',
+            "      var text = String(content || '');",
+            '      var match;',
+            '      while ((match = regex.exec(text)) !== null) {',
+            "        var raw = String(match[1] || '').split('#')[0].split('?')[0];",
+            '        var linked = stripMarkdownExtension(raw);',
+            '        if (linked) {',
+            '          links.add(linked);',
+            '        }',
+            '      }',
+            '      return Array.from(links);',
+            '    }',
+            '',
             '    var nodeMap = new Map();',
             '    var edgeMap = new Map();',
             '',
@@ -986,7 +985,18 @@
             '      if (edgeMap.has(key)) {',
             '        return;',
             '      }',
-            '      edgeMap.set(key, { source: source, target: target, type: type || "association", weight: 1 });',
+            '      var sourceNode = nodeMap.get(source);',
+            '      var targetNode = nodeMap.get(target);',
+            '      edgeMap.set(key, {',
+            '        source: source,',
+            '        target: target,',
+            '        type: type || "association",',
+            '        kind: "explicit",',
+            '        provenance: type || "association",',
+            '        sourceUri: sourceNode && sourceNode.sourceUri ? sourceNode.sourceUri : "",',
+            '        targetUri: targetNode && targetNode.sourceUri ? targetNode.sourceUri : "",',
+            '        weight: 1',
+            '      });',
             '    }',
             '',
             '    files.forEach(function(file) {',
@@ -1036,7 +1046,11 @@
             '      });',
             '',
             '      extractWikiLinks(file.content).forEach(function(linkedId) {',
-            '        addEdge(linkedId, sourceId, "wiki-link");',
+            '        addEdge(sourceId, linkedId, "wiki-link");',
+            '      });',
+            '',
+            '      extractMarkdownLinks(file.content).forEach(function(linkedId) {',
+            '        addEdge(sourceId, linkedId, "markdown-link");',
             '      });',
             '    });',
             '',
@@ -1819,4 +1833,12 @@
     window.NoteConnectionStorage = {
         createProvider
     };
+
+    if (typeof module === 'object' && module.exports) {
+        module.exports = {
+            createProvider,
+            buildCapacitorGraphData,
+            createMobileResourceIdentity,
+        };
+    }
 }());

@@ -1139,3 +1139,20 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 ### 本轮验证
 
 `src/android.knowledgebase.picker.contract.test.ts`、mobile profile/artifact contract、TypeScript no-emit、57 suite migration matrix（307 passed、13 skipped）与 `app:compileArm64ReleaseKotlin` 已通过。当前宿主没有在线 Android 设备、已配置 AVD、签名 keystore 或 RSS JSON。
+## 2026-08-18 第 14 阶段：签名设备证据与原生 Replay
+### 架构增量
+release 边界现在拆成三层、分别验收：
+1. **产物完整性**：`verify-mobile-artifact.js` 检查 ZIP entry、arm64 payload、profile budget、可选 RSS，以及 release 模式下的 APK/AAB 签名。未签名 payload 只能通过静态层。
+2. **设备执行**：`capture-tauri-android-rss-evidence.js` 在指定设备安装一个明确产物，启动 Tauri package，执行有界 workload spec，观察进程死亡与重启，并采样 `/proc/<pid>/status:VmRSS`。
+3. **Projection 语义**：workload 必须证明 SAF 导入、构图、exact query、path 与重启后的连续性。采集器把这些结果与产物体积分开记录，避免 size gate 通过掩盖原生 projection 失败。
+workload spec 采用声明式、禁止 host shell 的契约，固定为有序的 `saf-import`、`graph-build`、`exact-query`、`path`、`continuity` 步骤，并只接受显式 `adbArgs`。重复/缺失步骤、宿主命令插值、RSS 缺失或进程死亡不可观测时全部 fail closed；同时写出可被 artifact verifier 复用的独立 `rss.json`。
+### 当前真实进展与权衡
+- identity contract 改动后的 staging 为 121 个文件 / 未压缩 4,263,740 字节 / 估算压缩 1,548,695 字节；重新构建的未签名 arm64 APK/AAB 当前压缩 payload 为 9,570,708 / 7,052,404 字节，这些只是静态测量。
+- 签名校验已经实现，但当前主机没有 signing keystore，因此没有签名证据；release 脚本现在拒绝未签名产物，不再把它当作 release candidate。
+- 采集器与契约测试已落盘，但当前没有在线设备/AVD，也没有执行 workload spec。因此 G2 与原生 G3 仍为 pending，harness 本身不等于设备验收。
+- 显式 `adbArgs` 比任意脚本不方便，但证据可审阅，也避免误读宿主机文件；SAF UI 驱动继续由设备实验室负责。
+### 后续执行顺序
+1. 通过 CI secret 生成签名 arm64 APK/AAB，不提交 keystore；执行 `--require-signed --require-arm64 --require-rss`。
+2. 在低内存 arm64 硬件运行 harness，归档 manifest、RSS JSON、logcat 尾部与 artifact hash；release 不接受仅 emulator 证据。
+3. 用同一 projection corpus 执行 Tauri、Capacitor、Android 原生 adapter matrix，覆盖 force-stop/reopen 与权限/存储故障路径。
+4. 完成 G4 identity/edge corpus 与 registry response/status shadow parity；之后再评估 canonical ID、带 `contentRef` 的 indexed projection 或 SQLite/WASM。

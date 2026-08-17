@@ -189,3 +189,20 @@ Android SAF 导入现在具有可重启的事务边界：
 result marker 保持原有 Rust request/poll 契约，但现在使用同目录临时文件、`fsync` 与 rename，避免进程死亡把半写 marker 误判为 `completed`。journal 是内部耐久机制，不改变 projection schema，因此旧客户端与公共 ID 继续兼容。
 
 本轮验证：Android picker contract、mobile profile/artifact contract、TypeScript no-emit、57 suite migration matrix（307 passed、13 skipped）与 `app:compileArm64ReleaseKotlin` 已通过。当前宿主没有在线 Android 设备、已配置 AVD、签名 keystore 或 RSS 采集，G2/G3 原生设备证据仍未关闭。
+## 2026-08-18 第 14 阶段 签名设备证据 Walkthrough
+
+release 链路现在明确为：
+
+```text
+签名 arm64 APK
+-> 校验 ZIP/arm64/签名/budget
+-> 安装到指定 Android 设备
+-> SAF import -> graph build -> exact query -> path
+-> force-stop -> relaunch -> continuity query
+-> 采样 /proc/<pid>/status:VmRSS
+-> 写入 manifest + rss.json + logcat 尾部
+```
+
+`capture-tauri-android-rss-evidence.js` 只接受带显式 `adbArgs` 的 schema-1 workload spec。它强制五个有序阶段、拒绝重复或缺失步骤、脱敏序列号、记录 artifact SHA-256 与签名元数据，并在无法观察进程死亡或没有 RSS 样本时失败。采集器只是证据边界，不是假定 UI 自动化已经完成；SAF 点击和 continuity 断言必须由设备实验室 workload 提供。
+
+当前主机可以运行 parser 与契约测试，但没有 signing keystore、在线设备、已配置 AVD 或 workload spec，因此不会生成 `latest.json`，G2/G3 继续 pending。静态 slim 体积与未签名 arm64 检查仍然单独记录。

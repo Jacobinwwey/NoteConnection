@@ -42,6 +42,8 @@ describe('versioned knowledge projection contract', () => {
         expect(projection.edges[0]).toEqual(expect.objectContaining({
             kind: 'explicit',
             provenance: 'explicit-prerequisite',
+            sourceUri: 'note://workspace/v1/a.md',
+            targetUri: '',
             evidenceRefs: ['span:2'],
         }));
         expect(projection.adjacency).toEqual(expect.arrayContaining([

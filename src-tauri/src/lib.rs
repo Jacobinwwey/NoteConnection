@@ -3,6 +3,7 @@ use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -17,6 +18,7 @@ use std::net::TcpListener;
 use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
+use unicode_normalization::UnicodeNormalization;
 #[cfg(not(target_os = "android"))]
 use tauri::Emitter;
 #[cfg(not(target_os = "android"))]
@@ -913,11 +915,17 @@ struct RuntimeNodeDraft {
     relative_no_ext: String,
     cluster_id: String,
     content: String,
-    link_targets: Vec<String>,
+    link_targets: Vec<RuntimeLinkTarget>,
     filepath: String,
     source_uri: String,
     revision: String,
     identity_aliases: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+struct RuntimeLinkTarget {
+    target: String,
+    edge_type: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -993,10 +1001,12 @@ fn validate_mobile_edge_budget(edge_count: usize) -> Result<(), String> {
 }
 
 fn normalize_path_key(raw: &str) -> String {
-    raw.replace('\\', "/")
+    raw.nfc()
+        .collect::<String>()
+        .replace('\\', "/")
         .trim()
         .trim_matches('/')
-        .to_ascii_lowercase()
+        .to_lowercase()
 }
 
 fn encode_uri_segment(segment: &str) -> String {
@@ -1029,12 +1039,15 @@ fn create_mobile_source_uri(relative_path: &str) -> String {
 }
 
 fn create_mobile_content_revision(content: &str) -> String {
-    let mut hash: u32 = 2_166_136_261;
-    for byte in content.as_bytes() {
-        hash ^= u32::from(*byte);
-        hash = hash.wrapping_mul(16_777_619);
-    }
-    format!("fnv1a:{:08x}", hash)
+    let normalized_content = content.nfc().collect::<String>();
+    let digest = Sha256::digest(normalized_content.as_bytes());
+    format!(
+        "sha256:{}",
+        digest
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect::<String>()
+    )
 }
 
 fn normalize_relative_like_path(raw: &str) -> String {
@@ -1158,6 +1171,62 @@ fn extract_markdown_link_targets(content: &str) -> Vec<String> {
     targets
 }
 
+fn parse_frontmatter_link_value(raw: &str) -> Vec<String> {
+    let mut value = raw.trim();
+    if value.is_empty() || value.starts_with('#') {
+        return Vec::new();
+    }
+    if value.starts_with('[') && value.ends_with(']') {
+        value = value[1..value.len() - 1].trim();
+        return value
+            .split(',')
+            .flat_map(parse_frontmatter_link_value)
+            .collect();
+    }
+    let unquoted = value.trim_matches(['"', '\''].as_ref()).trim();
+    let unwrapped = unquoted
+        .strip_prefix("[[")
+        .and_then(|item| item.strip_suffix("]]"))
+        .unwrap_or(unquoted)
+        .trim();
+    if unwrapped.is_empty() {
+        Vec::new()
+    } else {
+        vec![unwrapped.to_string()]
+    }
+}
+
+fn extract_frontmatter_link_targets(content: &str, field: &str) -> Vec<String> {
+    let mut lines = content.lines();
+    if lines.next().map(str::trim) != Some("---") {
+        return Vec::new();
+    }
+
+    let mut active_list = false;
+    let mut targets = Vec::new();
+    for line in lines {
+        let trimmed = line.trim();
+        if trimmed == "---" {
+            break;
+        }
+        if let Some(value) = trimmed.strip_prefix(format!("{}:", field).as_str()) {
+            targets.extend(parse_frontmatter_link_value(value));
+            active_list = value.trim().is_empty();
+            continue;
+        }
+        if active_list {
+            if let Some(value) = trimmed.strip_prefix('-') {
+                targets.extend(parse_frontmatter_link_value(value));
+                continue;
+            }
+            if !trimmed.is_empty() {
+                active_list = false;
+            }
+        }
+    }
+    targets
+}
+
 fn sanitize_reference_target(raw: &str) -> Option<String> {
     let mut target = raw.trim();
     if target.is_empty() {
@@ -1259,12 +1328,8 @@ fn build_graph_runtime_for_target(
             .map_err(|err| format!("Failed to normalize file path '{}': {}", file_path.to_string_lossy(), err))?
             .to_path_buf();
 
-        let relative_without_ext = strip_markdown_extension(
-            relative_from_kb
-                .to_string_lossy()
-                .replace('\\', "/")
-                .as_str(),
-        );
+        let relative_path = relative_from_kb.to_string_lossy().replace('\\', "/");
+        let relative_without_ext = strip_markdown_extension(relative_path.as_str());
         let relative_key = normalize_path_key(&relative_without_ext);
         let id = relative_without_ext.clone();
         let label = file_path
@@ -1287,9 +1352,36 @@ fn build_graph_runtime_for_target(
             .or_default()
             .push(id.clone());
 
-        let mut link_targets = extract_wiki_link_targets(&content);
-        link_targets.extend(extract_markdown_link_targets(&content));
-        let source_uri = create_mobile_source_uri(&relative_without_ext);
+        let mut link_targets: Vec<RuntimeLinkTarget> = extract_wiki_link_targets(&content)
+            .into_iter()
+            .map(|target| RuntimeLinkTarget {
+                target,
+                edge_type: "wiki-link".to_string(),
+            })
+            .collect();
+        link_targets.extend(extract_markdown_link_targets(&content).into_iter().map(|target| {
+            RuntimeLinkTarget {
+                target,
+                edge_type: "markdown-link".to_string(),
+            }
+        }));
+        link_targets.extend(
+            extract_frontmatter_link_targets(&content, "prerequisites")
+                .into_iter()
+                .map(|target| RuntimeLinkTarget {
+                    target,
+                    edge_type: "explicit-prerequisite".to_string(),
+                }),
+        );
+        link_targets.extend(
+            extract_frontmatter_link_targets(&content, "next")
+                .into_iter()
+                .map(|target| RuntimeLinkTarget {
+                    target,
+                    edge_type: "explicit-next".to_string(),
+                }),
+        );
+        let source_uri = create_mobile_source_uri(relative_path.as_str());
         let revision = create_mobile_content_revision(&content);
         let mut identity_aliases = Vec::new();
         for alias in [
@@ -1332,10 +1424,10 @@ fn build_graph_runtime_for_target(
         }
     }
 
-    let mut unique_edges: BTreeSet<(String, String)> = BTreeSet::new();
+    let mut unique_edges: BTreeSet<(String, String, String)> = BTreeSet::new();
     for node in &node_drafts {
-        for raw_ref in &node.link_targets {
-            let Some(reference) = sanitize_reference_target(raw_ref) else {
+        for link_target in &node.link_targets {
+            let Some(reference) = sanitize_reference_target(&link_target.target) else {
                 continue;
             };
 
@@ -1348,8 +1440,13 @@ fn build_graph_runtime_for_target(
                 continue;
             };
 
-            if target_id != node.id {
-                unique_edges.insert((node.id.clone(), target_id));
+            let (edge_source, edge_target) = if link_target.edge_type == "explicit-prerequisite" {
+                (target_id, node.id.clone())
+            } else {
+                (node.id.clone(), target_id)
+            };
+            if edge_source != edge_target {
+                unique_edges.insert((edge_source, edge_target, link_target.edge_type.clone()));
                 #[cfg(target_os = "android")]
                 validate_mobile_edge_budget(unique_edges.len())?;
             }
@@ -1358,7 +1455,11 @@ fn build_graph_runtime_for_target(
 
     let mut in_degree: HashMap<String, usize> = HashMap::new();
     let mut out_degree: HashMap<String, usize> = HashMap::new();
-    for (source, target) in &unique_edges {
+    let source_uri_by_id: HashMap<String, String> = node_drafts
+        .iter()
+        .map(|node| (node.id.clone(), node.source_uri.clone()))
+        .collect();
+    for (source, target, _) in &unique_edges {
         *out_degree.entry(source.clone()).or_insert(0) += 1;
         *in_degree.entry(target.clone()).or_insert(0) += 1;
     }
@@ -1413,13 +1514,15 @@ fn build_graph_runtime_for_target(
 
     let edges: Vec<Value> = unique_edges
         .iter()
-        .map(|(source, target)| {
+        .map(|(source, target, edge_type)| {
             json!({
                 "source": source,
                 "target": target,
-                "type": "wiki-link",
+                "sourceUri": source_uri_by_id.get(source).cloned().unwrap_or_default(),
+                "targetUri": source_uri_by_id.get(target).cloned().unwrap_or_default(),
+                "type": edge_type,
                 "kind": "explicit",
-                "provenance": "wiki-link",
+                "provenance": edge_type,
                 "evidenceRefs": Vec::<String>::new(),
                 "weight": 1.0
             })
@@ -1430,7 +1533,7 @@ fn build_graph_runtime_for_target(
         .iter()
         .map(|node| (node.id.clone(), (Vec::new(), Vec::new())))
         .collect();
-    for (source, target) in &unique_edges {
+    for (source, target, _) in &unique_edges {
         if let Some((outgoing, _)) = adjacency_by_id.get_mut(source) {
             if outgoing.len() < 64 && !outgoing.contains(target) {
                 outgoing.push(target.clone());
@@ -3587,16 +3690,24 @@ reader_media_scale = 1.5
             .trim_end_matches(';');
         let lite_graph: Value =
             serde_json::from_str(payload).expect("failed to parse data.js payload JSON");
+        let intro_node = lite_graph["nodes"]
+            .as_array()
+            .and_then(|nodes| nodes.iter().find(|node| node["id"] == "financial/intro"))
+            .expect("intro node should be present");
         assert_eq!(lite_graph["schemaVersion"].as_u64(), Some(1));
         assert_eq!(lite_graph["projectionVersion"].as_u64(), Some(1));
-        assert!(lite_graph["nodes"][0]["sourceUri"]
+        assert!(intro_node["sourceUri"]
             .as_str()
             .unwrap_or_default()
-            .starts_with("note://workspace/v1/"));
-        assert!(lite_graph["nodes"][0]["revision"]
+            .ends_with("/intro.md"));
+        assert!(intro_node["revision"]
             .as_str()
             .unwrap_or_default()
-            .starts_with("fnv1a:"));
+            .starts_with("sha256:"));
+        assert_eq!(lite_graph["edges"][0]["source"].as_str(), Some("financial/intro"));
+        assert_eq!(lite_graph["edges"][0]["target"].as_str(), Some("financial/advanced"));
+        assert_eq!(lite_graph["edges"][0]["sourceUri"].as_str(), Some("note://workspace/v1/financial/intro.md"));
+        assert_eq!(lite_graph["edges"][0]["targetUri"].as_str(), Some("note://workspace/v1/financial/advanced.md"));
         assert!(lite_graph["adjacency"].is_array());
         assert!(lite_graph["nodes"][0].get("content").is_none());
 
@@ -3620,5 +3731,52 @@ reader_media_scale = 1.5
         let err = build_graph_runtime_for_target(&kb_root, &runtime_temp.path, "does_not_exist")
             .expect_err("missing target should fail");
         assert!(err.contains("Target directory does not exist"));
+    }
+
+    #[test]
+    fn mobile_identity_and_frontmatter_edges_match_portable_contract() {
+        let kb_temp = TempDir::new("runtime_identity_contract_kb");
+        let runtime_temp = TempDir::new("runtime_identity_contract_output");
+        let kb_root = kb_temp.child("Knowledge_Base");
+        let target_dir = kb_root.join("financial");
+        fs::create_dir_all(&target_dir).expect("failed to create target directory");
+        fs::write(target_dir.join("base.md"), "# Base").expect("failed to write base.md");
+        fs::write(
+            target_dir.join("intro.md"),
+            "---\nprerequisites:\n  - [[base]]\n---\n# Intro\n[[advanced]]",
+        )
+        .expect("failed to write intro.md");
+        fs::write(target_dir.join("advanced.md"), "# Advanced")
+            .expect("failed to write advanced.md");
+
+        build_graph_runtime_for_target(&kb_root, &runtime_temp.path, "financial")
+            .expect("identity contract graph build should succeed");
+        let data_js = fs::read_to_string(runtime_temp.child("data.js"))
+            .expect("failed to read identity contract data");
+        let payload = data_js
+            .strip_prefix("const graphData = ")
+            .expect("data.js should start with graphData assignment")
+            .trim_end_matches(';');
+        let graph: Value = serde_json::from_str(payload).expect("failed to parse graph payload");
+        let edges = graph["edges"].as_array().expect("edges should be an array");
+        assert!(edges.iter().any(|edge| {
+            edge["source"].as_str() == Some("financial/base")
+                && edge["target"].as_str() == Some("financial/intro")
+                && edge["type"].as_str() == Some("explicit-prerequisite")
+        }));
+        assert!(edges.iter().any(|edge| {
+            edge["source"].as_str() == Some("financial/intro")
+                && edge["target"].as_str() == Some("financial/advanced")
+                && edge["type"].as_str() == Some("wiki-link")
+        }));
+        assert_eq!(
+            create_mobile_source_uri("Cafe\u{301}.md"),
+            "note://workspace/v1/caf%C3%A9.md"
+        );
+        assert_eq!(
+            create_mobile_content_revision("Cafe\u{301}"),
+            create_mobile_content_revision("Caf\u{e9}")
+        );
+        assert!(create_mobile_content_revision("Caf\u{e9}").starts_with("sha256:"));
     }
 }

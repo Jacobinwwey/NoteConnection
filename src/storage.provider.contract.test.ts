@@ -22,6 +22,8 @@ describe('storage provider abstraction contract', () => {
     expect(source).toContain('ensureCapacitorFilesystemPermission');
     expect(source).toContain('normalizeCapacitorPath');
     expect(source).toContain('createMobileResourceIdentity');
+    expect(source).toContain('NoteConnectionMobileIdentity');
+    expect(source).toContain('extractMarkdownLinks');
     expect(source).toContain('sourceUri: file.sourceUri ||');
     expect(source).toContain('identityAliases: Array.isArray(file.identityAliases)');
     expect(source).toContain('Capacitor graph contains duplicate legacy node id');
@@ -36,6 +38,8 @@ describe('storage provider abstraction contract', () => {
     expect(source).toContain('CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS');
     expect(source).toContain("buildMode: 'single-thread-fallback'");
     expect(source).toContain("buildMode: 'worker'");
+    expect(source).toContain('addEdge(sourceId, linkedId, \'wiki-link\')');
+    expect(source).toContain('sourceUri: sourceNode && sourceNode.sourceUri');
     expect(source).toContain("const result = await capacitorBuildGraph(requestPayload || {}, this.runtimeCaps || {});");
     expect(source).toContain('buildModeDetail: resolveCapacitorBuildModeDetail(buildResult.buildMode, runtimeCaps || {})');
     expect(source).toContain('supportsMobileWasmCompute');

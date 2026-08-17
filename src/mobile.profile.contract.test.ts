@@ -151,12 +151,15 @@ describe('mobile-slim profile contract', () => {
     );
     const indexHtml = fs.readFileSync(path.join(repoRoot, 'src', 'frontend', 'index.html'), 'utf8');
     const analyzerScriptOffset = indexHtml.indexOf('<script src="mobile_exact_analyzer.js"></script>');
+    const identityScriptOffset = indexHtml.indexOf('<script src="mobile_identity_contract.js"></script>');
     const storageScriptOffset = indexHtml.indexOf('<script src="storage_provider.js"></script>');
 
     expect(storageProvider).toContain('async queryKnowledgeBaseExact(request)');
     expect(storageProvider).toContain('async findKnowledgePath(request)');
     expect(storageProvider).toContain("this.readGeneratedAsset('graph_data.json')");
     expect(analyzerScriptOffset).toBeGreaterThan(-1);
+    expect(identityScriptOffset).toBeGreaterThan(analyzerScriptOffset);
+    expect(identityScriptOffset).toBeLessThan(storageScriptOffset);
     expect(analyzerScriptOffset).toBeLessThan(storageScriptOffset);
   });
 

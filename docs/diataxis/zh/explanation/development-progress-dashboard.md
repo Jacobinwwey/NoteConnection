@@ -1853,3 +1853,9 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - picker result marker 已原子化且不改变 Rust request/poll 契约；Android picker/mobile 契约、TypeScript no-emit 与 arm64 Kotlin 编译通过。
 - G2 仍为静态证据：当前宿主没有签名 keystore、在线 Android 设备、已配置 AVD 或 RSS JSON。G3 有代码级恢复与 fixture 证据，但没有原生进程死亡证明。G4 公共 ID 继续冻结，等待 identity/edge parity 语料。
 - 后续顺序：签名真机 workload/RSS、Tauri/Capacitor/Android 原生 replay matrix、证明 Android draft 无正文并测量瞬时读取，再关闭 identity 与 registry shadow parity；SQLite/WASM 继续 opt-in。
+## 2026-08-18 第 14 阶段 证据边界
+
+- **已交付：** release artifact 校验增加显式 APK/AAB 签名门禁；`capture-tauri-android-rss-evidence.js` 记录签名 arm64 安装、有序 SAF/import/query/path/continuity workload、force-stop/reopen、artifact hash、脱敏设备元数据、峰值 `VmRSS`、RSS JSON 与 logcat。
+- **本机已验证：** parser/契约测试、JavaScript 语法与 TypeScript no-emit。没有在线目标设备和 schema-1 workload spec 时不会生成设备证据。
+- **仍未闭环：** 当前主机没有签名 keystore、在线设备/AVD 或原生 workload 执行结果。G2/G3 继续 pending；未签名 APK/AAB 静态 payload 与 Node fixture replay 不能替代真机证据。
+- **后续方向：** 在低内存 arm64 硬件执行，使用同一 corpus 回放 Tauri/Capacitor/Android，再关闭 identity/edge 与 registry shadow corpus，之后才评估 canonical-ID 或 SQLite/WASM。

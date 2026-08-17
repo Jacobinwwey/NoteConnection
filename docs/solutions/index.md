@@ -6,6 +6,7 @@ This page indexes repository solution notes that capture durable implementation 
 ## Architecture & Cross-Platform / 架构与跨平台
 
 - [Mobile Cross-Host Forward Compatibility Phase 13 (2026-08-18)](mobile-cross-host-forward-compatibility-phase13-2026-08-18.md) — 移动端跨 host 向前兼容、导入事务恢复与证据门禁方案
+- [Architecture Hardening and Forward Compatibility (2026-08-16)](architecture-hardening-forward-compatibility-2026-08-16.md) — 多端边界、低体积移动 profile、身份兼容与证据门禁
 - [Agent Knowledge Workspace Graph Preview and Review Closure (2026-06-20)](agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) — Agent 知识工作区图预览与回答审核收口方案
 - [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](agent-knowledge-dag-answer-contract-plan-2026-06-17.md) — Agent knowledge DAG 回答契约方案
 - [Knowledge Workspace and DAG Alignment Plan (2026-06-10)](knowledge-workspace-dag-alignment-2026-06-10.md) — 知识工作区与 DAG 对齐推进方案

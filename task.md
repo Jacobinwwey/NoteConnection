@@ -579,3 +579,10 @@
 1. Signed arm64 device workload and peak RSS evidence / 签名 arm64 真机 workload 与 peak RSS 证据。
 2. Native Tauri/Capacitor/Android adapter replay / 原生 Tauri/Capacitor/Android adapter replay。
 3. Android body-free draft proof and transient RSS measurement before any budget increase / 提高预算前证明 Android draft 无正文并测量瞬时 RSS。
+## 2026-08-18 Phase 14 Signed Device Evidence Harness
+
+- [x] Add APK/AAB signature verification to the release artifact gate; unsigned output is no longer release evidence.
+- [x] Add a fail-closed Tauri Android recorder for signed arm64 install, SAF/import/query/path workload, force-stop/reopen continuity, and `/proc/<pid>/status:VmRSS` capture.
+- [x] Keep the workload declarative (`adbArgs`) and record artifact hash, masked device, step results, peak RSS, standalone RSS JSON, and logcat.
+- [~] No signing keystore, online device/AVD, or workload execution is available on this host; G2/G3 remain open.
+- [ ] Run the harness on low-memory arm64 hardware, then complete native adapter and identity-corpus replay before public-ID or SQLite/WASM promotion.

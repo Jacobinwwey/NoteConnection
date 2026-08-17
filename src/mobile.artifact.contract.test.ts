@@ -4,9 +4,10 @@ import * as path from 'path';
 type ArtifactVerifier = {
     verifyMobileArtifact: (options: {
         artifactPath: string;
-        profile?: string;
-        rssEvidencePath?: string;
-        requireRss?: boolean;
+    profile?: string;
+    rssEvidencePath?: string;
+    requireRss?: boolean;
+    requireSigned?: boolean;
     }) => {
         artifactKind: string;
         rssStatus: string;
@@ -117,10 +118,16 @@ describe('mobile APK/AAB artifact verifier contract', () => {
         fs.writeFileSync(cleanArtifactPath, createStoredZip([
             { name: 'assets/index.html', content: Buffer.from('<html />') },
         ]));
-        expect(() => verifier.verifyMobileArtifact({
-            artifactPath: cleanArtifactPath,
-            profile: 'mobile-standard',
-            requireRss: true,
-        })).toThrow(/RSS evidence is required/);
-    });
+    expect(() => verifier.verifyMobileArtifact({
+      artifactPath: cleanArtifactPath,
+      profile: 'mobile-standard',
+      requireRss: true,
+    })).toThrow(/RSS evidence is required/);
+
+    expect(() => verifier.verifyMobileArtifact({
+      artifactPath: cleanArtifactPath,
+      profile: 'mobile-standard',
+      requireSigned: true,
+    })).toThrow(/signature/i);
+  });
 });

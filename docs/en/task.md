@@ -340,3 +340,16 @@ Primary references:
 2. The evidence record must include artifact SHA-256, bounded workload metadata, import result status, and peak `VmRSS`; `not-measured` is a release failure.
 3. New identity evidence must use a workspace namespace, NFC normalization, SHA-256 revision, one edge orientation, and additive aliases; legacy public IDs remain unchanged.
 4. Android Rust ingestion must preserve body-free intermediate drafts and capture transient-read/RSS evidence before any mobile corpus-budget increase is considered.
+
+## 2026-08-18 Phase 14 Signed Device Evidence Harness
+
+- [x] Extend `verify-mobile-artifact.js` with explicit APK/AAB signature verification. APKs use `apksigner verify --verbose`; AABs use `jarsigner -verify -strict`; release verification now requires `--require-signed` in addition to arm64 and RSS.
+- [x] Add `capture-tauri-android-rss-evidence.js`. It refuses missing signed artifacts, missing online devices, emulator evidence without an explicit opt-in, missing workload specs, failed SAF/import/query/path steps, unobservable force-stop, missing post-restart PID, or missing `VmRSS` samples.
+- [x] Define the workload contract as ordered `saf-import -> graph-build -> exact-query -> path -> continuity` steps executed through explicit `adbArgs`; no host shell interpolation is accepted.
+- [x] Record artifact SHA-256, compressed payload, signature tool/digest, masked device data, process IDs, force-stop observation, per-step results, `/proc/<pid>/status:VmRSS` samples, peak RSS, and a standalone RSS JSON consumable by the artifact verifier.
+- [~] G2 remains unproven on this host: no signing keystore, online device/AVD, workload spec execution, or RSS report is available. Static staging and unsigned arm64 payload checks are not release evidence.
+- [ ] Execute the harness on a low-memory arm64 device, then add native Tauri/Capacitor/Android replay and identity corpus evidence before changing public IDs or promoting SQLite/WASM.
+
+### Phase 14 trade-offs
+
+The harness deliberately executes only explicit `adbArgs` from a checked workload spec. This is less convenient than an arbitrary shell script, but it makes evidence reproducible, auditable, and resistant to accidental host-side data access. SAF UI automation remains device-lab work; the repository now records the exact boundary and fails closed when that proof is absent.

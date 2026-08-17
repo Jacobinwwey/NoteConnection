@@ -549,3 +549,16 @@
 2. 证据必须包含 artifact SHA-256、有界 workload 元数据、import result status 与 peak `VmRSS`；`not-measured` 应视为 release 失败。
 3. 新 identity 证据统一使用 workspace namespace、NFC normalization、SHA-256 revision、单一边方向与 additive alias；旧 public ID 不变。
 4. 在考虑扩大 mobile corpus budget 前，Android Rust ingestion 必须保持中间 draft 无正文，并取得瞬时读取/RSS 证据。
+
+## 2026-08-18 第 14 阶段：签名真机证据链
+
+- [x] `verify-mobile-artifact.js` 增加显式 APK/AAB 签名校验：APK 使用 `apksigner verify --verbose`，AAB 使用 `jarsigner -verify -strict`；release 校验现在同时要求 `--require-signed`、arm64 与 RSS。
+- [x] 新增 `capture-tauri-android-rss-evidence.js`：缺少签名产物、在线设备、显式 emulator opt-in、workload spec、SAF/import/query/path 步骤、可观测 force-stop、重启后 PID 或 `VmRSS` 样本时直接失败。
+- [x] workload 契约固定为 `saf-import -> graph-build -> exact-query -> path -> continuity`，通过显式 `adbArgs` 执行，不接受 host shell 拼接。
+- [x] 证据记录 artifact SHA-256、压缩 payload、签名工具/摘要、脱敏设备信息、进程 ID、force-stop 事实、逐步结果、`/proc/<pid>/status:VmRSS` 样本、峰值 RSS，以及可被 artifact verifier 复用的独立 RSS JSON。
+- [~] G2 在当前主机仍未证明：没有签名 keystore、在线设备/AVD、workload spec 执行结果或 RSS 报告。静态 staging 与未签名 arm64 payload 不能作为 release 证据。
+- [ ] 在低内存 arm64 设备上执行 harness，再补齐 Tauri/Capacitor/Android 原生 replay 与 identity corpus 证据；在此之前不切换 public ID，也不提升 SQLite/WASM 为默认实现。
+
+### 第 14 阶段权衡
+
+harness 只执行 workload spec 中明确列出的 `adbArgs`。这比任意 shell 脚本不方便，但证据更可复现、可审计，也避免误读宿主机数据。SAF UI 自动化仍属于设备实验室工作；仓库现在固化了边界，并在证据缺失时 fail closed。

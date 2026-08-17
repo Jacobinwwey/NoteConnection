@@ -79,20 +79,24 @@
         };
     }
 
-    function normalizeEdge(rawEdge, nodeIds, maxEvidenceRefs) {
+    function normalizeEdge(rawEdge, nodeById, maxEvidenceRefs) {
         if (!isRecord(rawEdge)) {
             throw new Error('Knowledge projection edges must be objects.');
         }
         const source = cleanString(rawEdge.source || rawEdge.from);
         const target = cleanString(rawEdge.target || rawEdge.to);
-        if (!source || !target || source === target || !nodeIds.has(source) || !nodeIds.has(target)) {
+        if (!source || !target || source === target || !nodeById.has(source) || !nodeById.has(target)) {
             throw new Error(`Knowledge projection edge references an invalid node: ${source || '?'} -> ${target || '?'}.`);
         }
         const type = cleanString(rawEdge.type) || 'association';
         const confidence = Number(rawEdge.confidence ?? rawEdge.weight);
+        const sourceNode = nodeById.get(source);
+        const targetNode = nodeById.get(target);
         return {
             source,
             target,
+            sourceUri: cleanString(rawEdge.sourceUri) || sourceNode.sourceUri,
+            targetUri: cleanString(rawEdge.targetUri) || targetNode.sourceUri,
             type,
             kind: classifyEdgeKind(type, rawEdge.kind),
             provenance: cleanString(rawEdge.provenance) || type,
@@ -147,7 +151,8 @@
         });
 
         const edgeKeys = new Set();
-        const edges = rawEdges.map((edge) => normalizeEdge(edge, nodeIds, maxEvidenceRefs))
+        const nodeById = new Map(nodes.map((node) => [node.id, node]));
+        const edges = rawEdges.map((edge) => normalizeEdge(edge, nodeById, maxEvidenceRefs))
             .filter((edge) => {
                 const key = `${edge.source}->${edge.target}:${edge.kind}`;
                 if (edgeKeys.has(key)) {

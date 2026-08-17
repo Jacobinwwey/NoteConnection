@@ -1089,3 +1089,8 @@ Execution order: (1) CI-secret-only signing plus a device RSS recorder; (2) nati
 当前门禁分层记录：静态 slim 证据为 120 个文件、未压缩 4,253,837、估算压缩 1,546,201 字节，APK/AAB 压缩 payload 为 9,436,196 / 6,983,880。G2 仍缺签名、设备 SAF import/query/path、进程死亡 replay 与 RSS <= 256 MiB。G3 只有代码级 journal/replay 证据，没有原生设备证明。G4 在 identity namespace/NFC/SHA-256/边方向/alias 语料通过前继续冻结。
 
 执行顺序： (1) 只从 CI secret 注入签名并增加设备 RSS 记录器；(2) Tauri/Capacitor/Android 原生 replay matrix；(3) 证明 Android draft 无正文并测量瞬时读取/RSS；(4) identity 与 registry shadow parity；(5) 之后再评估 SQLite/WASM 或公共 ID 切换。本轮 migration matrix 为 57 suite，307 passed、13 skipped。
+## 2026-08-18 Phase 14 Signed Device Evidence and Native Replay
+
+The release boundary is now split into artifact integrity, device execution, and projection semantics. `verify-mobile-artifact.js` owns ZIP/arm64/budget/signature checks; `capture-tauri-android-rss-evidence.js` owns install, explicit workload steps, process-death observation, restart, and VmRSS sampling; the workload itself must prove SAF import, graph build, exact query, path, and continuity. This avoids treating static slim size or a Node fixture replay as Android acceptance.
+
+The harness intentionally accepts only ordered schema-1 `adbArgs` and fails closed for missing signatures, devices, steps, process death, or RSS. This is less ergonomic than arbitrary scripts but prevents host-side command ambiguity and makes evidence reviewable. Next order: CI-secret signing, low-memory arm64 execution, native Tauri/Capacitor/Android replay, then G4 identity/edge corpora and registry shadow parity.

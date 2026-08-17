@@ -523,3 +523,12 @@ Verification passed: Android picker/mobile contract suites, TypeScript no-emit, 
 Android 链路现在是 `ACTION_OPEN_DOCUMENT_TREE -> 有界 staging -> v1 import journal -> backup/activate -> 原子 result marker`。启动恢复具有幂等性：已有 active target 时清理，target 缺失但有 backup 时恢复旧知识库，abandoned staging 被删除；journal schema/路径违规直接 fail closed。它是内部耐久性变更，不改变 projection schema、Rust request/poll 字段或公共 ID。
 
 本轮已通过 Android picker/mobile 契约测试、TypeScript no-emit 与 `app:compileArm64ReleaseKotlin`。当前宿主无法取得设备签名、SAF workload、进程死亡 replay 与 RSS 证据，这些仍是 release 门禁。
+## 2026-08-18 Phase 14 Signed Device Evidence Walkthrough
+
+```text
+signed arm64 APK -> artifact signature/arm64/budget gate
+-> device install -> SAF import -> graph build -> exact query -> path
+-> force-stop/reopen -> continuity -> VmRSS samples -> evidence manifest
+```
+
+The new recorder is present and contract-tested, but this host has no signing keystore, online device/AVD, or workload spec. No device evidence is claimed; static payload and fixture replay remain separate lower-level gates.
