@@ -70,6 +70,7 @@
         }
         return {
             id,
+            canonicalId: cleanString(rawNode.canonicalId),
             label: cleanString(rawNode.label) || id,
             sourceUri: cleanString(rawNode.sourceUri),
             revision: cleanString(rawNode.revision),
@@ -141,6 +142,7 @@
         const nodes = rawNodes.map((node) => normalizeNode(node, maxEvidenceRefs));
         const nodeIds = new Set();
         const normalizedIds = new Set();
+        const canonicalIds = new Set();
         nodes.forEach((node) => {
             const normalizedId = node.id.normalize ? node.id.normalize('NFC').toLowerCase() : node.id.toLowerCase();
             if (nodeIds.has(node.id) || normalizedIds.has(normalizedId)) {
@@ -148,6 +150,16 @@
             }
             nodeIds.add(node.id);
             normalizedIds.add(normalizedId);
+            if (node.canonicalId) {
+                const normalizedCanonicalId = node.canonicalId.normalize
+                    ? node.canonicalId.normalize('NFC').toLowerCase()
+                    : node.canonicalId.toLowerCase();
+                if (canonicalIds.has(normalizedCanonicalId)
+                    || (normalizedCanonicalId !== normalizedId && normalizedIds.has(normalizedCanonicalId))) {
+                    throw new Error(`Knowledge projection contains a duplicate canonical node id: ${node.canonicalId}.`);
+                }
+                canonicalIds.add(normalizedCanonicalId);
+            }
         });
 
         const edgeKeys = new Set();

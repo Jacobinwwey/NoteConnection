@@ -78,4 +78,24 @@ describe('Capacitor mobile graph edge contract', () => {
             expect.objectContaining({ source: 'advanced', target: 'intro', type: 'wiki-link' }),
         ]));
     });
+
+    test('retains a path-derived canonical id alongside the legacy public id', () => {
+        const graph = graphBuilder([
+            {
+                id: 'Index',
+                canonicalId: 'algebra/index',
+                label: 'Index',
+                path: 'algebra/index.md',
+                sourceUri: 'note://workspace/v1/algebra/index.md',
+                identityAliases: ['Index', 'algebra/index.md'],
+                metadata: { tags: [], prerequisites: [], next: [] },
+                content: '# Index',
+            },
+        ]);
+
+        expect(graph.nodes[0]).toEqual(expect.objectContaining({
+            id: 'Index',
+            canonicalId: 'algebra/index',
+        }));
+    });
 });

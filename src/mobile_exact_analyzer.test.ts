@@ -56,4 +56,15 @@ describe('mobile exact projection contract', () => {
             10,
         )).toEqual(['A', 'B']);
     });
+
+    test('resolves a path-derived canonical id without changing the legacy node id', () => {
+        const index = analyzer.createMobileExactIndex({
+            nodes: [{ id: 'Index', canonicalId: 'algebra/index', label: 'Index' }],
+            edges: [],
+        });
+
+        expect(index.searchExact('algebra/index', 5)).toEqual([
+            expect.objectContaining({ id: 'Index', canonicalId: 'algebra/index' }),
+        ]);
+    });
 });

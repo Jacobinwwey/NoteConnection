@@ -532,3 +532,19 @@ signed arm64 APK -> artifact signature/arm64/budget gate
 ```
 
 The new recorder is present and contract-tested, but this host has no signing keystore, online device/AVD, or workload spec. No device evidence is claimed; static payload and fixture replay remain separate lower-level gates.
+
+## 2026-08-18 Phase 15 Native Boundary and Identity Corpus Walkthrough
+
+The replay verifier now runs separate Web storage, Tauri atomic-file, Capacitor chunked-file, and Android journaled-file paths. Reports carry `host-boundary-contract`; this is intentionally not device acceptance.
+
+Projection nodes carry additive URI-derived `canonicalId` while retaining legacy `id`. The exact analyzer resolves both keys and the schema rejects duplicate canonical identities before analysis. No public-ID cutover occurs. Route shadow now covers 17 equivalent probes, including invalid JSON and invalid build defaults. Android graph reads are capped before full UTF-8 allocation, and the G4 corpus covers same-content, NFC/cross-root identity, legacy snapshots, and rollback.
+
+Current slim staging is 121 files / 4,263,740 uncompressed bytes / 1,548,695 estimated compressed bytes. Existing APK/AAB outputs are older unsigned builds and require a fresh rebuild before source attribution.
+
+## 2026-08-18 第 15 阶段 原生边界与身份语料 Walkthrough
+
+Replay verifier 现在分别运行 Web storage、Tauri atomic-file、Capacitor chunked-file 与 Android journaled-file 路径，报告携带 `host-boundary-contract`，明确不等于真机验收。
+
+Projection node 增加由 URI 派生的 additive `canonicalId`，同时保留 legacy `id`；exact analyzer 两者均可解析，schema 在分析前拒绝重复 canonical identity，本轮不切 public ID。Route shadow 现在覆盖 17 条等价 probe，包括 invalid JSON 与非法 build default。Android graph read 在完整 UTF-8 分配前有上限，G4 corpus 覆盖同内容、NFC/跨 root identity、legacy snapshot 与 rollback。
+
+当前 slim staging 为 121 个文件 / 未压缩 4,263,740 字节 / 估算压缩 1,548,695 字节。已有 APK/AAB 属于更早的未签名构建，必须重新构建后才能归因到本轮源码。

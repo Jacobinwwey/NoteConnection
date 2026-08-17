@@ -12,6 +12,8 @@ use std::sync::Mutex;
 use jni::objects::{JObject, JString, JValue};
 #[cfg(target_os = "android")]
 use jni::JavaVM;
+#[cfg(target_os = "android")]
+use std::io::Read;
 #[cfg(not(target_os = "android"))]
 use std::net::TcpListener;
 #[cfg(not(target_os = "android"))]
@@ -1000,6 +1002,21 @@ fn validate_mobile_edge_budget(edge_count: usize) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(target_os = "android")]
+fn read_mobile_markdown_content(path: &Path) -> Result<String, String> {
+    let file = fs::File::open(path)
+        .map_err(|err| format!("Failed to read '{}': {}", path.to_string_lossy(), err))?;
+    let mut bytes = Vec::new();
+    file.take(MOBILE_MAX_DOCUMENT_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|err| format!("Failed to read '{}': {}", path.to_string_lossy(), err))?;
+    validate_mobile_document_size(bytes.len() as u64).map_err(|error| {
+        format!("{}: {}", error, path.to_string_lossy())
+    })?;
+    String::from_utf8(bytes)
+        .map_err(|err| format!("Markdown file '{}' is not valid UTF-8: {}", path.to_string_lossy(), err))
+}
+
 fn normalize_path_key(raw: &str) -> String {
     raw.nfc()
         .collect::<String>()
@@ -1319,10 +1336,22 @@ fn build_graph_runtime_for_target(
     let mut node_drafts: Vec<RuntimeNodeDraft> = Vec::with_capacity(markdown_files.len());
     let mut id_by_relative_key: HashMap<String, String> = HashMap::new();
     let mut stem_to_ids: HashMap<String, Vec<String>> = HashMap::new();
+    #[cfg(target_os = "android")]
+    let mut actual_total_input_bytes = 0u64;
 
     for file_path in markdown_files {
+        #[cfg(target_os = "android")]
+        let content = read_mobile_markdown_content(&file_path)?;
+        #[cfg(not(target_os = "android"))]
         let content = fs::read_to_string(&file_path)
             .map_err(|err| format!("Failed to read '{}': {}", file_path.to_string_lossy(), err))?;
+        #[cfg(target_os = "android")]
+        {
+            actual_total_input_bytes = actual_total_input_bytes
+                .checked_add(content.as_bytes().len() as u64)
+                .ok_or_else(|| "Mobile knowledge base input size overflowed while reading".to_string())?;
+            validate_mobile_corpus_budget(node_drafts.len() + 1, actual_total_input_bytes)?;
+        }
         let relative_from_kb = file_path
             .strip_prefix(kb_root)
             .map_err(|err| format!("Failed to normalize file path '{}': {}", file_path.to_string_lossy(), err))?

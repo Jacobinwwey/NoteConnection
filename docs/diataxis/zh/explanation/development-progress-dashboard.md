@@ -1416,6 +1416,17 @@ Tauri-first reply rendering 基线已交付：
 
 运行约束：
 
+## 2026-08-18 第 15 阶段 向前兼容移动边界更新
+
+- Projection replay 现在使用明确的 Web、Tauri、Capacitor、Android boundary adapter；报告标记 `host-boundary-contract`，不宣称真机验收。
+- URI 派生的 additive `canonicalId` 与 legacy `id` 并存；重复 canonical identity fail closed，移动 exact lookup 支持两种 key。
+- Route shadow 扩展到 17 条等价 probe，覆盖 malformed JSON 与非法 build default；Android graph read 在完整 UTF-8 分配前受上限保护。
+- G4 corpus 现在覆盖同内容隔离、NFC/大小写 collision、跨 root 规范化、legacy snapshot replay 与原子 rollback。
+- G2/G3 仍等待签名 arm64、SAF workload、进程死亡 continuity 与真实硬件 RSS <= 256 MiB。
+- 验证快照：Jest 144 suites / 1,263 passed / 26 skipped；TypeScript、Rust host/Android arm64、projection replay、route shadow、slim budget 与 Diataxis 均通过。
+
+运行约束：
+
 - 实时服务页面来自 `dist/src/frontend`，因此 `src/frontend/*` 的修改只有在执行一次新的 `npm run build` 之后才会进入真实运行时验证。
 - 现在已有专用 smoke 命令 `npm run verify:agent-workspace:runtime`，它会把当前前端复制到临时运行目录，启动真实 sidecar/server，并校验服务端实际提供的根页面与 locale 资源是否包含 agent workspace 壳层。
 - 现在也已有浏览器驱动的 smoke 命令 `npm run verify:agent-workspace:browser`，它会先通过真实 ingest API 预热最小知识文档，并写入最小 `data.js` 以启动真实 graph/path runtime，再在真实 Chromium 会话中打开页面，驱动 agent workspace 的对话与动作流，命中真实 `conversation/path/query-compare/quality/session/runbook` 后端切片，验证本地化动作/消息重渲（含 runbook checks/action-queue 卡片），检查 graph focus promotion 的进入/退出状态，并输出 screenshot / console / network-summary 证据路径以便排查失败。

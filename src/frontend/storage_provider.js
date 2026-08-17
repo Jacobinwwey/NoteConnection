@@ -170,6 +170,23 @@
             .pop() || '';
     }
 
+    function canonicalMobileNodeIdFromIdentity(identity) {
+        const sourceUri = identity && typeof identity.sourceUri === 'string'
+            ? identity.sourceUri
+            : '';
+        const prefix = 'note://workspace/v1/';
+        if (!sourceUri.startsWith(prefix)) {
+            return '';
+        }
+        try {
+            return decodeURIComponent(sourceUri.slice(prefix.length))
+                .replace(/\.(?:md|markdown)$/i, '')
+                .trim();
+        } catch (_error) {
+            return '';
+        }
+    }
+
     async function createMobileResourceIdentity(relativePath, legacyId, content) {
         const identityContract = typeof globalThis !== 'undefined'
             ? globalThis.NoteConnectionMobileIdentity
@@ -781,6 +798,7 @@
 
                 files.push({
                     id: filename,
+                    canonicalId: canonicalMobileNodeIdFromIdentity(identity),
                     label: filename,
                     path: relativePath,
                     sourceUri: identity.sourceUri,
@@ -841,6 +859,7 @@
             }
             nodeMap.set(file.id, {
                 id: file.id,
+                canonicalId: file.canonicalId || '',
                 label: file.label || file.id,
                 sourceUri: file.sourceUri || '',
                 revision: file.revision || '',
@@ -1009,6 +1028,7 @@
             '      var metadata = file.metadata || {};',
             '      nodeMap.set(file.id, {',
             '        id: file.id,',
+            '        canonicalId: file.canonicalId || "",',
             '        label: file.label || file.id,',
             '        sourceUri: file.sourceUri || "",',
             '        revision: file.revision || "",',

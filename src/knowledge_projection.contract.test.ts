@@ -85,5 +85,12 @@ describe('versioned knowledge projection contract', () => {
             nodes: [{ id: 'A' }],
             edges: [{ source: 'A', target: 'missing', type: 'explicit-next' }],
         })).toThrow(/invalid node/i);
+        expect(() => contract.createKnowledgeProjection({
+            nodes: [
+                { id: 'A', canonicalId: 'notes/a' },
+                { id: 'B', canonicalId: 'NOTES/A' },
+            ],
+            edges: [],
+        })).toThrow(/duplicate canonical node id/i);
     });
 });

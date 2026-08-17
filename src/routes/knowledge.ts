@@ -33,11 +33,33 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
     const fail = (res: any, error: unknown, label: string) => {
         console.error(error);
         CrashLogger.log(error, label);
+        if (error instanceof InvalidJsonPayloadError) {
+            res.setHeader?.('X-Error-Code', error.code);
+            json(res, 400, { error: error.message, errorCode: error.code, success: false });
+            return;
+        }
         if (error instanceof KnowledgePayloadError) {
             json(res, error.statusCode, { success: false, error: error.message, code: error.code });
             return;
         }
         json(res, 500, { success: false, error: String(error) });
+    };
+
+    class InvalidJsonPayloadError extends Error {
+        readonly code = 'invalid_json';
+
+        constructor() {
+            super('Invalid JSON body.');
+            this.name = 'InvalidJsonPayloadError';
+        }
+    }
+
+    const parseJsonBody = (body: string): unknown => {
+        try {
+            return JSON.parse(body);
+        } catch {
+            throw new InvalidJsonPayloadError();
+        }
     };
 
     const readBody = (req: any): Promise<string> =>
@@ -505,7 +527,7 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
                     // Keep the migration boundary on the legacy platform facade so
                     // registry dispatch preserves the established response contract.
                     const result = await knowledgeLearningPlatform.queryKnowledge(
-                        normalizeKnowledgeQueryRequestPayload(JSON.parse(body))
+                        normalizeKnowledgeQueryRequestPayload(parseJsonBody(body))
                     );
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/query'); }

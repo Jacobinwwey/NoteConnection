@@ -22,9 +22,11 @@ describe('storage provider abstraction contract', () => {
     expect(source).toContain('ensureCapacitorFilesystemPermission');
     expect(source).toContain('normalizeCapacitorPath');
     expect(source).toContain('createMobileResourceIdentity');
+    expect(source).toContain('canonicalMobileNodeIdFromIdentity');
     expect(source).toContain('NoteConnectionMobileIdentity');
     expect(source).toContain('extractMarkdownLinks');
     expect(source).toContain('sourceUri: file.sourceUri ||');
+    expect(source).toContain('canonicalId: file.canonicalId ||');
     expect(source).toContain('identityAliases: Array.isArray(file.identityAliases)');
     expect(source).toContain('Capacitor graph contains duplicate legacy node id');
     expect(source).toContain('extractRelativePathFromKbMarker');

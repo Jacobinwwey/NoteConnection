@@ -458,6 +458,28 @@ The adapter must not own platform filesystem policy. Android SAF import remains 
 - Full Jest, TypeScript no-emit, Rust tests, mobile slim budget, artifact inspection, route shadow, and Diataxis remain green.
 - Signed-device RSS and SAF workload evidence are reported separately from static APK/AAB size evidence.
 - The worktree is clean and `main` is pushed only after the above checks complete.
+
+## 2026-08-18 Phase 15 Native Boundary and Identity Corpus Hardening
+
+### Implemented in this increment
+
+1. `verify-mobile-projection-replay.js` now executes four explicit host boundaries rather than relabeling one Node file adapter. Reports mark this as contract evidence, not Android process-death or RSS acceptance.
+2. `canonicalId` is additive metadata derived from the portable URI. Legacy `id` remains the compatibility key; duplicate canonical IDs fail closed, and the exact analyzer accepts canonical IDs for lookup and path input.
+3. Route shadow covers malformed JSON and invalid build defaults. Inline `/api/build` validates `relationRecomputeMode` before graph mutation, and the registry route emits the same status, body, and `X-Error-Code` for invalid JSON. The run now covers 17 equivalent plus 6 registry-only probes.
+4. G4 tests cover same-content isolation, NFC/case collisions, cross-root normalization, legacy snapshot replay, and atomic rollback. Android graph reads are capped before allocating a full document string.
+
+The current post-change mobile-slim staging is 121 files / 4,263,740 uncompressed bytes / 1,548,695 estimated compressed bytes. The checked-in/generated APK/AAB outputs are unsigned artifacts from an earlier build and must be rebuilt after this source change; they are not release evidence for this increment.
+
+### Trade-off
+
+The additive `canonicalId` avoids a flag-driven public-ID switch and keeps old layout/local-storage keys valid. Host-specific persistence remains explicit at the boundary while the serialized projection stays schema-1. The migration cost is carrying both IDs until real cross-host corpus evidence exists.
+
+### Next gates
+
+- **G2:** signed arm64 APK/AAB, SAF import -> graph -> exact query -> path, process-death continuity, and measured RSS <= 256 MiB.
+- **G3:** execute the same corpus through actual Tauri, Capacitor, and Android native adapters; host-boundary reports are necessary but insufficient.
+- **G4:** replay move journals after restart, old snapshots, rollback failures, same-content/NFC collisions, and cross-root paths before any public-ID cutover.
+- **Default switches:** keep legacy IDs, in-memory projection fallback, and opt-in SQLite/WASM until those gates are recorded.
   - modular knowledge-route wiring for `runtime-capability-runbook/*` is now backed by live server-side runbook ops instead of KLP placeholder payloads, and the route layer now preserves `checkId` / `sinceMinutes` / queue-filter query params rather than dropping them.
   - the real browser smoke gate now proves those verify/checks/action-queue surfaces end to end: strict browser evidence must show the ANN sync-health verify card, the new verify/checks ANN circuit/traceability/prefilter drilldowns, the first-check ANN sync metric, and the index-sync action-queue drilldown instead of only proving that the cards can open.
   - agent-workspace locale hardening now covers the currently surfaced diagnostics cards/messages: source-referenced `agentWorkspace.*` keys are guarded by `src/agent_workspace.locale.contract.test.ts`, bilingual locale bundles now back the query/quality/runbook card labels that strict browser smoke actually exercises, and startup-time translate helpers defer `window.i18n.t()` until locale init to avoid false missing-key warnings before locales hydrate.

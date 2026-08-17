@@ -176,6 +176,21 @@
 2. 旧 cache 不得掩盖损坏或未来 schema；只有 transport/storage 读取失败可以使用最近一次成功 projection。
 3. 移动包继续排除 sidecar/Godot/model/SVG，既有 25 MiB 压缩资源和 256 MiB 常驻内存预算保持不变。
 4. 发布声明继续分层：静态 artifact 证据不能替代签名真机 SAF 与 RSS 证据。
+
+## 2026-08-18 第 15 阶段 原生边界与身份语料加固
+
+- [x] 将 projection replay verifier 拆成独立 host boundary：Web storage、Tauri atomic file、Capacitor chunked filesystem、Android journaled file；报告逐项记录 `adapterKind` 与 `evidenceLevel: host-boundary-contract`。
+- [x] 增加由 portable `sourceUri` 派生的 additive `canonicalId`，保留 legacy 公共 `id`；projection contract 拒绝重复 canonical ID，exact analyzer 将 canonical ID 作为 alias 解析。
+- [x] route shadow 扩展到 17 条 legacy-equivalent probe，覆盖 malformed JSON、缺失 Markdown 输入和不支持的 build recompute mode；inline `/api/build` 现在会在图变更前拒绝非法 mode，并与 registry 路径保持 invalid-JSON 错误体/header 契约一致。
+- [x] 增加 G4 corpus：同内容隔离、NFC/大小写 collision 拒绝、跨 root identity 等价、legacy snapshot replay 与 graph 原子 rollback。
+- [x] Android graph content 在 UTF-8 materialize 前受有界读取限制；目录 admission 后文件若增长也不能绕过单文件或总输入预算。
+- [x] 重新测量本轮变更后的 mobile-slim staging：121 个文件 / 未压缩 4,263,740 字节 / 估算压缩 1,548,695 字节；已有未签名 APK/AAB 必须重建后才能归因到本轮源码。
+- [~] G2/G3 真机证据仍开放：当前宿主没有 signing keystore、在线 Android 设备/AVD、SAF UI workload、进程死亡 replay 或 RSS 报告。
+- [ ] 在签名真机证据与跨 host identity replay 记录完成前，不把 `canonicalId` 提升为公开 graph ID，不默认提升 SQLite/WASM，也不提高移动端发布结论。
+
+### 第 15 阶段决策
+
+采用 additive canonical identity 与 host-owned persistence boundary。这样不破坏旧 layout 或公共 ID 即可关闭确定性契约缺口，代价是迁移期间同时携带两类 ID。设备门禁继续显式保持 pending，不能把 host simulation 当作 Android 验收。
 - [x] runtime runbook 的 modular-route composition 已不再只以内联形式存在于 `src/server.ts`；`src/routes/runtimeRunbookRouteOps.ts` 现在负责 `/api/knowledge/runtime-capability-runbook/*` 的 route-op 组装，并保持当前响应契约不变。
 - [x] graph-focus 右侧 pane 现在会通过共享 markdown runtime 渲染原始知识点正文，并在原文内高亮命中段落，而不再只显示摘录列表。
 - [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、当前 Windows 宿主 strict 3/3 证据、以及 opt-in 多宿主审计工具都已自动化，但实际多宿主证据与阈值校准仍待补齐。

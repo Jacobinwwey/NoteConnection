@@ -206,3 +206,26 @@ release 链路现在明确为：
 `capture-tauri-android-rss-evidence.js` 只接受带显式 `adbArgs` 的 schema-1 workload spec。它强制五个有序阶段、拒绝重复或缺失步骤、脱敏序列号、记录 artifact SHA-256 与签名元数据，并在无法观察进程死亡或没有 RSS 样本时失败。采集器只是证据边界，不是假定 UI 自动化已经完成；SAF 点击和 continuity 断言必须由设备实验室 workload 提供。
 
 当前主机可以运行 parser 与契约测试，但没有 signing keystore、在线设备、已配置 AVD 或 workload spec，因此不会生成 `latest.json`，G2/G3 继续 pending。静态 slim 体积与未签名 arm64 检查仍然单独记录。
+
+## 2026-08-18 第 15 阶段 原生边界与身份语料 Walkthrough
+
+projection replay 报告现在执行四种不同的 host boundary：
+
+```text
+Web storage -> projection store
+Tauri atomic file -> temporary file + rename
+Capacitor filesystem -> 有界 chunk writer + rename
+Android app-local file -> journaled backup/activation
+```
+
+每个 host entry 都记录 adapter kind 与 `host-boundary-contract` evidence level。这样关闭了此前“四个标签实际复用同一个 Node `fs` adapter”的假信号，同时继续明确保留真机结论 pending。
+
+graph projection 现在以 additive 元数据携带由 `sourceUri` 派生的 `canonicalId`。legacy `id` 不变，旧 layout 仍可读取，exact analyzer 同时解析两类 ID。重复 canonical ID 在分析前拒绝；本轮不执行 public-ID 切换。
+
+route shadow 扩展到 17 条等价 probe。Malformed JSON 在两种 dispatch 路径都返回相同的 400 body 与 `X-Error-Code: invalid_json`，inline `/api/build` 在图变更前拒绝不支持的 recompute mode。G4 corpus 覆盖同内容隔离、NFC/大小写 collision、跨 root 规范化、legacy snapshot replay 与原子 rollback。
+
+Android graph load 现在在完整 UTF-8 materialize 前限制单文件读取，因此目录枚举后文件增长也不能绕过移动端内存预算。验证仍分层：host contract 测试可在本机通过，但 G2/G3 仍需签名真机 SAF、进程死亡 continuity 与 RSS <= 256 MiB。
+
+本轮源码变更后的 slim staging 实测为 121 个文件、未压缩 4,263,740 字节、估算压缩 1,548,695 字节。现有 APK/AAB 是更早构建的未签名产物，必须重建后才能归因到本次源码版本。
+
+验证快照：全量 Jest 144 suites / 1,263 passed / 26 skipped；TypeScript no-emit、Rust host 与 Android arm64 check、projection replay、route shadow（17 + 6 probes）、slim budget、Diataxis 均通过。真实签名真机证据仍不可用。

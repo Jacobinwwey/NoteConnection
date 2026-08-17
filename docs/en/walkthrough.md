@@ -215,3 +215,26 @@ signed arm64 APK
 `capture-tauri-android-rss-evidence.js` accepts only a schema-1 workload spec with explicit `adbArgs`. It requires the five ordered phases, rejects duplicate or missing steps, masks serials, records artifact SHA-256 and signature metadata, and fails without an observed process death or RSS sample. The recorder is an evidence boundary, not a UI automation claim: SAF taps and continuity assertions must be supplied by the device-lab workload.
 
 The current host can run the parser and contract tests, but has no signing keystore, online device, configured AVD, or workload spec. Therefore no `latest.json` is produced and G2/G3 remain pending. Static slim size and unsigned arm64 checks continue to be reported separately.
+
+## 2026-08-18 Phase 15 Native Boundary and Identity Corpus Walkthrough
+
+The projection replay report now exercises four distinct host boundaries:
+
+```text
+Web storage -> projection store
+Tauri atomic file -> temporary file + rename
+Capacitor filesystem -> bounded chunk writer + rename
+Android app-local file -> journaled backup/activation
+```
+
+Each host entry records its adapter kind and `host-boundary-contract` evidence level. This closes the previous false signal where four labels all called the same Node `fs` adapter, while keeping device-only claims pending.
+
+The graph projection now carries `canonicalId` as additive metadata derived from `sourceUri`. Legacy `id` remains unchanged, old layouts remain readable, and the exact analyzer resolves both IDs. Duplicate canonical IDs are rejected before analysis; no public-ID cutover is performed.
+
+Route shadow expanded to 17 equivalent probes. Malformed JSON now yields the same 400 body and `X-Error-Code: invalid_json` on both dispatch paths, and inline `/api/build` rejects unsupported recompute modes before graph mutation. The G4 corpus covers same-content isolation, NFC/case collision, cross-root normalization, legacy snapshot replay, and atomic rollback.
+
+Android graph loading now caps each file before full UTF-8 materialization, so a file changed after directory enumeration cannot bypass the mobile memory budget. Verification remains split: host contract tests may pass locally, but signed-device SAF, process-death continuity, and RSS <= 256 MiB are still required for G2/G3.
+
+The current post-change slim staging measures 121 files, 4,263,740 uncompressed bytes, and 1,548,695 estimated compressed bytes. Existing APK/AAB files are older unsigned outputs and must be rebuilt before they can be attributed to this source revision.
+
+Verification snapshot: full Jest 144 suites / 1,263 passed / 26 skipped; TypeScript no-emit, Rust host and Android arm64 checks, projection replay, route shadow (17 + 6 probes), slim budget, and Diataxis all pass. Real signed-device evidence remains unavailable.

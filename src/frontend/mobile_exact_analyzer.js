@@ -90,6 +90,7 @@
 
         return Object.freeze({
             id,
+            canonicalId: typeof rawNode.canonicalId === 'string' ? rawNode.canonicalId.trim() : '',
             label: typeof rawNode.label === 'string' && rawNode.label.trim()
                 ? rawNode.label.trim()
                 : id,
@@ -151,6 +152,7 @@
             outgoing.set(node.id, new Map());
             incoming.set(node.id, new Map());
             addLookupReference(lookup, node.id, node.id);
+            addLookupReference(lookup, node.canonicalId, node.id);
             addLookupReference(lookup, node.label, node.id);
             addLookupReference(lookup, node.sourceUri, node.id);
             addLookupReference(lookup, node.revision, node.id);

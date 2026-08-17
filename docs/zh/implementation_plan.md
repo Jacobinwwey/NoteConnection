@@ -457,6 +457,28 @@ Adapter 不拥有平台文件策略。Android SAF 继续由 Kotlin/Rust 持有�
 - Full Jest、TypeScript no-emit、Rust tests、mobile slim budget、artifact inspection、route shadow、Diataxis 均保持通过。
 - 签名真机 RSS 与 SAF workload 证据必须与静态 APK/AAB 体积证据分开报告。
 - 所有检查完成后才允许保持 `main` clean 并 push。
+
+## 2026-08-18 第 15 阶段 原生边界与身份语料加固
+
+### 本轮已实现
+
+1. `verify-mobile-projection-replay.js` 现在执行四种明确 host boundary，不再用一个 Node 文件 adapter 换四个标签。报告标记为 contract evidence，不宣称 Android 进程死亡或 RSS 验收。
+2. `canonicalId` 是由 portable URI 派生的 additive 元数据。legacy `id` 继续作为兼容 key；重复 canonical ID fail closed，exact analyzer 支持 canonical ID 作为 lookup/path 输入。
+3. route shadow 覆盖 malformed JSON 与非法 build default。inline `/api/build` 在图变更前校验 `relationRecomputeMode`，registry 路径对 invalid JSON 输出一致的 status、body 与 `X-Error-Code`。当前为 17 条等价 probe 加 6 条 registry-only probe。
+4. G4 测试覆盖同内容隔离、NFC/大小写 collision、跨 root 规范化、legacy snapshot replay 与原子 rollback。Android graph read 在完整正文 materialize 前被限制上限。
+
+本次变更后的 mobile-slim staging 为 121 个文件 / 未压缩 4,263,740 字节 / 估算压缩 1,548,695 字节。仓库中已有的 APK/AAB 是更早构建生成的未签名产物，必须在本次源码变更后重新构建；它们不能作为本轮 release evidence。
+
+### 权衡
+
+Additive `canonicalId` 避免用 flag 驱动公开 ID 切换，并保持旧 layout/local-storage key 有效。Host-specific persistence 仍在边界处显式实现，序列化 projection 保持 schema-1；在真实跨 host corpus 证据完成前，迁移成本是同时携带两种 ID。
+
+### 后续门禁
+
+- **G2：** 签名 arm64 APK/AAB、SAF import -> graph -> exact query -> path、进程死亡 continuity 与 RSS <= 256 MiB 实测。
+- **G3：** 使用真实 Tauri、Capacitor、Android native adapter 回放同一语料；host-boundary 报告是必要条件但不是充分证据。
+- **G4：** 在任何 public-ID 切换前完成 move journal 重启、旧 snapshot、rollback failure、同内容/NFC collision 与 cross-root 回放。
+- **默认开关：** 在门禁记录完成前保持 legacy ID、内存 projection fallback 与 opt-in SQLite/WASM。
   - `runtime-capability-runbook/*` 这组 modular knowledge route 现已改为接入真实 server 侧 runbook ops，而不再返回 KLP placeholder payload；route 层现在也会保留 `checkId` / `sinceMinutes` / queue-filter 这类 query 参数，不再静默丢弃。
   - 真实浏览器 smoke 门禁现在也会端到端证明这三条链路：严格浏览器证据必须能看到 ANN sync-health verify 卡、新增的 verify/checks ANN 熔断/可追踪性/预筛选钻取、首个检查的 ANN sync 指标，以及 index-sync action-queue 钻取，而不再只是证明卡片“能打开”。
   - agent-workspace 的 locale 加固现在也覆盖了当前真实暴露出来的诊断卡片/消息空间：源码里引用到的 `agentWorkspace.*` key 已由 `src/agent_workspace.locale.contract.test.ts` 做门禁，双语 locale bundle 现已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片标签，并且启动期 `translate()` 会等 locale 完成初始化后再调用 `window.i18n.t()`，避免在 locale hydrate 前产生误报式 missing-key warning。

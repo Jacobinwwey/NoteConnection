@@ -1088,6 +1088,24 @@ Execution order: (1) CI-secret-only signing plus a device RSS recorder; (2) nati
 
 当前门禁分层记录：静态 slim 证据为 120 个文件、未压缩 4,253,837、估算压缩 1,546,201 字节，APK/AAB 压缩 payload 为 9,436,196 / 6,983,880。G2 仍缺签名、设备 SAF import/query/path、进程死亡 replay 与 RSS <= 256 MiB。G3 只有代码级 journal/replay 证据，没有原生设备证明。G4 在 identity namespace/NFC/SHA-256/边方向/alias 语料通过前继续冻结。
 
+## 2026-08-18 Phase 15 Native Boundary and Identity Corpus Hardening
+
+1. Replay verifier now uses four explicit host boundary implementations and reports `host-boundary-contract`; it no longer treats one Node adapter as Web/Tauri/Capacitor/Android parity.
+2. `canonicalId` is additive and URI-derived; legacy `id` remains public and duplicate canonical IDs fail closed. Exact lookup accepts either key.
+3. Route shadow now has 17 equivalent probes, including malformed JSON and invalid build defaults. Inline `/api/build` rejects unsupported recompute modes before graph mutation and matches the registry invalid-JSON status/body/header contract.
+4. G4 corpus covers same-content isolation, NFC/case collisions, cross-root identity, legacy snapshots, and graph rollback. Android Rust caps file reads before UTF-8 materialization.
+5. Signed-device SAF/query/path, process-death continuity, and RSS remain explicit release gates; no host simulation upgrades their status.
+
+## 2026-08-18 第 15 阶段 原生边界与身份语料加固
+
+1. Replay verifier 现在使用四种明确的 host boundary 实现，并标记 `host-boundary-contract`；不再把同一个 Node adapter 当作 Web/Tauri/Capacitor/Android parity。
+2. `canonicalId` 为 additive 且由 URI 派生；legacy `id` 继续作为公开 key，重复 canonical ID fail closed，exact lookup 支持两类 key。
+3. Route shadow 现在包含 17 条等价 probe，覆盖 malformed JSON 与非法 build default。Inline `/api/build` 在图变更前拒绝不支持的 recompute mode，并与 registry invalid-JSON 的 status/body/header 契约一致。
+4. G4 corpus 覆盖同内容隔离、NFC/大小写 collision、跨 root identity、legacy snapshot 与 graph rollback；Android Rust 在 UTF-8 materialize 前限制文件读取。
+5. 签名真机 SAF/query/path、进程死亡 continuity 与 RSS 继续作为显式 release gate；host simulation 不提升其状态。
+
+当前源码变更后的 mobile-slim staging 为 121 个文件、未压缩 4,263,740、估算压缩 1,548,695 字节。现有 APK/AAB 是更早构建的未签名产物，必须重建后才能与本轮源码关联，不能直接作为 release 证据。
+
 执行顺序： (1) 只从 CI secret 注入签名并增加设备 RSS 记录器；(2) Tauri/Capacitor/Android 原生 replay matrix；(3) 证明 Android draft 无正文并测量瞬时读取/RSS；(4) identity 与 registry shadow parity；(5) 之后再评估 SQLite/WASM 或公共 ID 切换。本轮 migration matrix 为 57 suite，307 passed、13 skipped。
 ## 2026-08-18 Phase 14 Signed Device Evidence and Native Replay
 

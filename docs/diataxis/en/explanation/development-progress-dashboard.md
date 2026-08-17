@@ -1398,6 +1398,17 @@ Current branch status for this slice:
 
 Operational note:
 
+## 2026-08-18 Phase 15 Forward-Compatible Mobile Boundary Update
+
+- Projection replay now uses explicit Web, Tauri, Capacitor, and Android boundary adapters; reports identify `host-boundary-contract` evidence and do not claim device acceptance.
+- Additive URI-derived `canonicalId` is carried beside legacy `id`; duplicate canonical identities fail closed and exact mobile lookup resolves both keys.
+- Route shadow now covers 17 equivalent probes, including malformed JSON and invalid build defaults. Android graph reads are capped before full UTF-8 allocation.
+- G4 corpus coverage now includes same-content isolation, NFC/case collision, cross-root normalization, legacy snapshot replay, and atomic rollback.
+- G2/G3 remain open for signed arm64 artifacts, SAF workload, process-death continuity, and RSS <= 256 MiB on real hardware.
+- Verification snapshot: Jest 144 suites / 1,263 passed / 26 skipped; TypeScript, Rust host/Android arm64, projection replay, route shadow, slim budget, and Diataxis checks pass.
+
+Operational note:
+
 - the live server serves frontend assets from `dist/src/frontend`, so `src/frontend/*` changes do not reach runtime verification until a fresh `npm run build` copies them into the dist tree.
 - there is now a dedicated smoke command, `npm run verify:agent-workspace:runtime`, which copies the current frontend into a temporary runtime tree, boots a real sidecar/server, and verifies that the served root HTML and locale payload expose the agent workspace shell.
 - there is also a browser-driven smoke command, `npm run verify:agent-workspace:browser`, which seeds a minimal knowledge document through the real ingest API, writes a minimal `data.js` seed so the page boots real graph/path runtimes, opens the served shell in a real Chromium session, drives the agent-workspace conversation/action flow against the real `conversation/path/query-compare/quality/session/runbook` backend slice, verifies localized action/message re-rendering (including runbook checks/action-queue cards), checks graph-focus promotion enter/exit state, and emits screenshot/console/network-summary evidence paths for failure diagnosis.

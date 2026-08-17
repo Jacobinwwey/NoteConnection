@@ -312,3 +312,23 @@ This does not create device evidence by itself. The current host still lacks a s
 release 边界现在分离为静态 artifact 完整性、原生设备执行和 projection 语义三层。`verify-mobile-artifact.js` 可要求 APK/AAB 签名（APK 使用 `apksigner`，AAB 使用 `jarsigner`），并同时检查 arm64、payload 与 RSS。`capture-tauri-android-rss-evidence.js` 以 fail-closed 方式记录有序 `saf-import -> graph-build -> exact-query -> path -> continuity` workload、force-stop/reopen、`/proc/<pid>/status:VmRSS`、artifact SHA-256、脱敏设备信息和独立 `rss.json`。
 
 该脚本本身不等于设备证据。当前主机仍没有 signing keystore、在线设备/AVD 或 workload 执行结果。设计只接受显式 `adbArgs`，不接受任意宿主 shell；便利性较低，但可以避免宿主命令歧义并让证据可复现。静态 mobile-slim payload 与 fixture replay 仍只是低层门禁；原生 replay、G4 identity/edge corpus 与 registry shadow parity 完成前，不提升 canonical ID 或 SQLite/WASM。
+
+## 2026-08-18 Phase 15 Native Boundary and Identity Corpus
+
+### English
+
+The replay verifier now exercises four explicit host boundaries: browser storage, Tauri atomic file replacement, Capacitor chunked filesystem writes, and an Android-style journaled app-local file. Each report entry records `adapterKind` and `evidenceLevel: host-boundary-contract`; this removes the previous false parity caused by four labels over one Node `fs` adapter, but it still does not prove a native process restart.
+
+Projection nodes now carry additive `canonicalId` metadata derived from `sourceUri`. Legacy `id` remains the public compatibility key, old layouts remain readable, and the exact analyzer resolves either key. Duplicate canonical IDs fail closed. Route shadow expanded to 17 equivalent probes and now aligns malformed JSON status/body/header behavior plus invalid build-mode rejection before graph mutation. The G4 corpus covers same-content isolation, NFC/case collisions, cross-root normalization, legacy snapshot replay, and graph rollback. Android Rust caps file reads before full UTF-8 materialization to prevent a post-admission file growth from bypassing the mobile budget.
+
+The migration remains deliberately staged: signed-device SAF/query/path, process-death continuity, and RSS <= 256 MiB are still release gates; canonical public IDs, default SQLite/WASM, and stronger mobile claims remain frozen.
+
+### 中文
+
+Replay verifier 现在执行四种明确 host boundary：浏览器 storage、Tauri 原子文件替换、Capacitor 分块 filesystem 写入以及 Android 风格的 journaled app-local file。每个报告条目记录 `adapterKind` 与 `evidenceLevel: host-boundary-contract`；这消除了“四个标签复用一个 Node `fs` adapter”造成的假 parity，但仍不能证明原生进程重启。
+
+Projection node 现在携带由 `sourceUri` 派生的 additive `canonicalId`。Legacy `id` 继续作为公开兼容 key，旧 layout 仍可读取，exact analyzer 支持两类 key；重复 canonical ID 直接 fail closed。Route shadow 扩展到 17 条等价 probe，并对 malformed JSON 的 status/body/header 以及图变更前的非法 build mode 拒绝保持一致。G4 corpus 覆盖同内容隔离、NFC/大小写 collision、跨 root 规范化、legacy snapshot replay 与 graph rollback。Android Rust 在完整 UTF-8 materialize 前限制文件读取，避免 admission 后文件增长绕过移动预算。
+
+迁移仍按阶段推进：签名真机 SAF/query/path、进程死亡 continuity 与 RSS <= 256 MiB 继续作为 release gate；canonical 公共 ID、SQLite/WASM 默认化和更强移动端结论继续冻结。
+
+本轮源码变更后的 mobile-slim staging 实测为 121 个文件、未压缩 4,263,740、估算压缩 1,548,695 字节。已有 APK/AAB 是更早构建的未签名产物，必须重建后才能与本轮源码关联。

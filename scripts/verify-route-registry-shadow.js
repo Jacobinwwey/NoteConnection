@@ -18,6 +18,7 @@ const LEGACY_EQUIVALENT_PROBES = [
     { method: 'GET', path: '/api/kb-path' },
     { method: 'POST', path: '/api/knowledge/ingest', body: '{}' },
     { method: 'POST', path: '/api/knowledge/query', body: '{}' },
+    { method: 'POST', path: '/api/knowledge/query', body: '{' },
     {
         method: 'POST',
         path: '/api/knowledge/ingest',
@@ -33,6 +34,8 @@ const LEGACY_EQUIVALENT_PROBES = [
     },
     { method: 'POST', path: '/api/knowledge/query-backend-config', body: '{}' },
     { method: 'POST', path: '/api/markdown/index', body: '{}' },
+    { method: 'POST', path: '/api/markdown/index', body: '{"forceRebuild":true}' },
+    { method: 'POST', path: '/api/build', body: '{"relationRecomputeMode":"unsupported"}' },
     { method: 'POST', path: '/api/render/math', body: '{}' },
     { method: 'POST', path: '/api/render/mermaid', body: '{}' },
     { method: 'POST', path: '/api/render/graphviz', body: '{}' },

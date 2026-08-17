@@ -55,16 +55,89 @@ function writeAtomicFile(fileName, serialized) {
   }
 }
 
-function createFileStore(fileName, includeWriter) {
+function createFileStore(fileName, writeAtomic) {
   const options = {
     fileName,
     maxBytes: MAX_PROJECTION_BYTES,
     readFile: (target) => fs.readFileSync(target, 'utf8'),
   };
-  if (includeWriter) {
-    options.writeAtomic = writeAtomicFile;
+  if (typeof writeAtomic === 'function') {
+    options.writeAtomic = writeAtomic;
   }
   return projectionStore.createFileProjectionStore(options);
+}
+
+function createChunkedAtomicWriter(chunkBytes) {
+  return (fileName, serialized) => {
+    const temporaryPath = `${fileName}.tmp-${process.pid}-${Date.now()}`;
+    const chunks = [];
+    for (let offset = 0; offset < serialized.length; offset += chunkBytes) {
+      chunks.push(serialized.slice(offset, offset + chunkBytes));
+    }
+    fs.writeFileSync(temporaryPath, chunks.join(''), 'utf8');
+    fs.renameSync(temporaryPath, fileName);
+  };
+}
+
+function createJournaledAtomicWriter(journalPath) {
+  return (fileName, serialized) => {
+    const temporaryPath = `${fileName}.tmp-${process.pid}-${Date.now()}`;
+    const backupPath = `${fileName}.previous-${process.pid}-${Date.now()}`;
+    fs.writeFileSync(journalPath, JSON.stringify({ schemaVersion: 1, phase: 'staging' }), 'utf8');
+    try {
+      fs.writeFileSync(temporaryPath, serialized, 'utf8');
+      if (fs.existsSync(fileName)) {
+        fs.renameSync(fileName, backupPath);
+      }
+      fs.renameSync(temporaryPath, fileName);
+      if (fs.existsSync(backupPath)) {
+        fs.rmSync(backupPath, { force: true });
+      }
+      fs.rmSync(journalPath, { force: true });
+    } catch (error) {
+      if (!fs.existsSync(fileName) && fs.existsSync(backupPath)) {
+        fs.renameSync(backupPath, fileName);
+      }
+      throw error;
+    } finally {
+      fs.rmSync(temporaryPath, { force: true });
+      if (fs.existsSync(fileName) && fs.existsSync(backupPath)) {
+        fs.rmSync(backupPath, { force: true });
+      }
+    }
+  };
+}
+
+function createHostAdapter(host, root) {
+  if (host === 'web') {
+    let serialized = '';
+    return {
+      adapterKind: 'web-storage',
+      store: projectionStore.createProjectionStore({
+        maxBytes: MAX_PROJECTION_BYTES,
+        read: async () => serialized,
+        write: async (next) => {
+          serialized = next;
+        },
+      }),
+      reopen: () => projectionStore.createProjectionStore({
+        maxBytes: MAX_PROJECTION_BYTES,
+        read: async () => serialized,
+      }),
+    };
+  }
+
+  const fileName = path.join(root, `${host}-graph_data.json`);
+  const writer = host === 'capacitor'
+    ? createChunkedAtomicWriter(64 * 1024)
+    : host === 'android'
+      ? createJournaledAtomicWriter(path.join(root, `${host}-import-journal.v1.json`))
+      : writeAtomicFile;
+  return {
+    adapterKind: host === 'capacitor' ? 'capacitor-filesystem-chunked' : `${host}-atomic-file`,
+    store: createFileStore(fileName, writer),
+    reopen: () => createFileStore(fileName),
+  };
 }
 
 function analysisSnapshot(projection) {
@@ -88,27 +161,33 @@ async function main() {
   const fixture = createFixture();
   const expected = analysisSnapshot(fixture);
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'noteconnection-mobile-replay-'));
-  const projectionPath = path.join(tempRoot, 'graph_data.json');
   const evidence = {
     schemaVersion: projectionStore.storeVersion,
     generatedAt: new Date().toISOString(),
     maxProjectionBytes: MAX_PROJECTION_BYTES,
     hosts: [],
     failureModes: {},
+    notes: [
+      'Host adapters exercise separate boundary implementations in a deterministic host process.',
+      'This report is not evidence of a signed artifact, Android process death, SAF UI execution, or RSS compliance.',
+    ],
   };
 
   try {
-    const writer = createFileStore(projectionPath, true);
-    await writer.save(fixture);
-
     for (const host of HOSTS) {
-      const reopened = createFileStore(projectionPath, false);
+      const hostRoot = path.join(tempRoot, host);
+      fs.mkdirSync(hostRoot, { recursive: true });
+      const adapter = createHostAdapter(host, hostRoot);
+      await adapter.store.save(fixture);
+      const reopened = adapter.reopen();
       const replayed = await reopened.load();
       const actual = analysisSnapshot(replayed);
       assert.deepStrictEqual(replayed, fixture, `${host}: projection mismatch after reopen`);
       assert.deepStrictEqual(actual, expected, `${host}: analysis mismatch after reopen`);
       evidence.hosts.push({
         host,
+        adapterKind: adapter.adapterKind,
+        evidenceLevel: 'host-boundary-contract',
         storeKind: reopened.kind,
         metadata: actual.metadata,
         searchCount: actual.search.length,
@@ -118,16 +197,17 @@ async function main() {
       });
     }
 
-    fs.writeFileSync(projectionPath, '{"schemaVersion":1,"nodes":[', 'utf8');
-    const truncatedStore = createFileStore(projectionPath, false);
+    const failurePath = path.join(tempRoot, 'failure-graph_data.json');
+    fs.writeFileSync(failurePath, '{"schemaVersion":1,"nodes":[', 'utf8');
+    const truncatedStore = createFileStore(failurePath);
     await assert.rejects(
       () => truncatedStore.load(),
       /Knowledge projection JSON is invalid/
     );
     evidence.failureModes.truncatedJson = 'fail-closed';
 
-    fs.writeFileSync(projectionPath, JSON.stringify({ schemaVersion: 2, nodes: [], edges: [] }), 'utf8');
-    const futureStore = createFileStore(projectionPath, false);
+    fs.writeFileSync(failurePath, JSON.stringify({ schemaVersion: 2, nodes: [], edges: [] }), 'utf8');
+    const futureStore = createFileStore(failurePath);
     await assert.rejects(
       () => futureStore.load(),
       /Unsupported knowledge projection schema version/

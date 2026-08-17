@@ -586,3 +586,21 @@
 - [x] Keep the workload declarative (`adbArgs`) and record artifact hash, masked device, step results, peak RSS, standalone RSS JSON, and logcat.
 - [~] No signing keystore, online device/AVD, or workload execution is available on this host; G2/G3 remain open.
 - [ ] Run the harness on low-memory arm64 hardware, then complete native adapter and identity-corpus replay before public-ID or SQLite/WASM promotion.
+
+## 2026-08-18 Phase 15 Native Boundary and Identity Corpus Hardening
+
+- [x] Projection replay now uses independent Web, Tauri, Capacitor, and Android host-boundary adapters and labels the report as contract evidence.
+- [x] Added additive `canonicalId` metadata and duplicate-canonical collision rejection while preserving legacy public IDs and layouts.
+- [x] Expanded route shadow to 17 equivalent probes; malformed JSON and invalid build modes now have matching status/body/header behavior before mutation.
+- [x] Added same-content, NFC/case, cross-root, legacy-snapshot, and graph-rollback corpus coverage; Android graph reads are capped before full string allocation.
+- [~] Signed device SAF/query/path, process-death continuity, and RSS evidence remain unavailable on this host.
+- [ ] Keep public-ID and SQLite/WASM default switches frozen until native evidence is recorded.
+
+## 2026-08-18 第 15 阶段 原生边界与身份语料加固
+
+- [x] Projection replay 改用独立的 Web、Tauri、Capacitor、Android host-boundary adapter，并在报告中标记为 contract evidence。
+- [x] 增加 additive `canonicalId` 与重复 canonical collision 拒绝，同时保留 legacy 公共 ID 与旧 layout。
+- [x] route shadow 扩展为 17 条等价 probe；malformed JSON 与非法 build mode 在变更状态前具有一致的 status/body/header 行为。
+- [x] 增加同内容、NFC/大小写、跨 root、legacy snapshot 与 graph rollback 语料；Android graph read 在完整字符串分配前受上限约束。
+- [~] 当前宿主仍无法提供签名真机 SAF/query/path、进程死亡 continuity 与 RSS 证据。
+- [ ] 在原生证据记录前继续冻结 public-ID 与 SQLite/WASM 默认开关。

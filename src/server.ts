@@ -16616,6 +16616,19 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 try {
                     const payload = await readJsonBody(req);
                     const { target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug } = payload;
+                    const requestedRelationRecomputeMode = payload?.relationRecomputeMode;
+                    const relationRecomputeMode = normalizeRelationRecomputeModeValue(requestedRelationRecomputeMode);
+                    if (
+                        requestedRelationRecomputeMode !== undefined
+                        && (!relationRecomputeMode || relationRecomputeMode === 'auto')
+                    ) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            success: false,
+                            error: 'relationRecomputeMode must be one of: none, incremental, full',
+                        }));
+                        return;
+                    }
                     logDiagnostic('Received build request for:', target, 'maxWorkers:', maxWorkers, 'enableGPU:', enableGPU, 'enableGPULayout:', enableGPULayout, 'memorySavingMode:', memorySavingMode, 'deepDebug:', deepDebug);
                     const buildKey = JSON.stringify({
                         target,
