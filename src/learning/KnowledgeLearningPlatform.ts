@@ -23,6 +23,7 @@ import type {
     KnowledgeAtom,
     KnowledgeDocumentDeleteInput,
     KnowledgeDocumentInput,
+    KnowledgeDocumentMoveInput,
     KnowledgeIngestRequest,
     KnowledgeIngestOperation,
     KnowledgeIngestResponse,
@@ -102,6 +103,7 @@ import type {
     KnowledgeGraphStore,
     KnowledgeGraphStoreDiagnostics,
     SerializedDocumentSnapshot,
+    IdentityTransitionRecord,
 } from './store';
 import type { TutorAdapter } from './tutorAdapter';
 import {
@@ -117,6 +119,7 @@ import type {
 import { isOpsAdapter } from './store';
 import { ResourceRegistry } from '../resources/ResourceRegistry';
 import type { CanonicalResourceRecord, ResourceProjectionRecord } from '../resources/types';
+import { normalizeResourceReference } from '../core/ResourceReference';
 import { WorkspaceRegistry } from '../workspace/WorkspaceRegistry';
 import type { WorkspaceBindingRecord, WorkspaceRecord } from '../workspace/types';
 import { IndexLifecycle } from '../indexing/IndexLifecycle';
@@ -641,6 +644,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private readonly documents = new Map<string, DocumentSnapshot>();
 
+    private readonly identityJournal: IdentityTransitionRecord[] = [];
+
     private readonly activeStableKeyToAtomId = new Map<string, string>();
 
     private readonly activeAtomIds = new Set<string>();
@@ -835,6 +840,20 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             const currentVersion = previousVersion + 1;
 
             if (incremental && previousSnapshot && previousSnapshot.sourceHash === sourceHash) {
+                if (this.hasIdentityChanged(previousSnapshot, normalizedInput)) {
+                    this.applyDocumentIdentityTransition(
+                        previousSnapshot.documentId,
+                        {
+                            toSourcePath: normalizedInput.sourcePath,
+                            toSourceUri: normalizedInput.sourceUri,
+                            toIdentityAliases: normalizedInput.identityAliases,
+                            revision: normalizedInput.revision,
+                            updatedAt: ingestedAt,
+                        },
+                        ingestedAt,
+                        'upsert_identity_change',
+                    );
+                }
                 staleness.push({
                     documentId: normalizedInput.documentId,
                     sourcePath: normalizedInput.sourcePath,
@@ -997,6 +1016,27 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             this.documents.set(normalizedInput.documentId, snapshot);
         };
 
+        const processMove = (moveInput: KnowledgeDocumentMoveInput): void => {
+            const documentId = this.resolveDocumentIdForMove(moveInput);
+            if (!documentId) {
+                throw new Error('Move operation could not resolve its source document.');
+            }
+            const previousSnapshot = this.documents.get(documentId);
+            if (!previousSnapshot) {
+                throw new Error(`Move operation references an unknown document: ${documentId}.`);
+            }
+            this.applyDocumentIdentityTransition(documentId, moveInput, ingestedAt, 'move');
+            staleness.push({
+                documentId,
+                sourcePath: this.documents.get(documentId)?.sourcePath || moveInput.toSourcePath,
+                status: 'updated',
+                previousHash: previousSnapshot.sourceHash,
+                currentHash: previousSnapshot.sourceHash,
+                previousVersion: previousSnapshot.version,
+                currentVersion: previousSnapshot.version,
+            });
+        };
+
         const processDelete = (deleteInput: KnowledgeDocumentDeleteInput): void => {
             const deleted = this.deleteDocumentSnapshot(deleteInput, ingestedAt, responseTemporals);
             if (!deleted.deleted || !deleted.documentId || !deleted.sourcePath) {
@@ -1025,6 +1065,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     processUpsert(operation.document);
                 } else if (operation.op === 'delete') {
                     processDelete(operation.document);
+                } else if (operation.op === 'move') {
+                    processMove(operation.document);
                 }
             });
         } else {
@@ -5398,6 +5440,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             relationEdges: Array.from(this.relationEdges.values()),
             temporalEdges: Array.from(this.temporalEdges.values()),
             documents,
+            identityJournal: this.identityJournal.map((record) => ({ ...record })),
             activeStableKeyToAtomId: Array.from(this.activeStableKeyToAtomId.entries()),
             activeAtomIds: Array.from(this.activeAtomIds.values()),
             learnerStates: Array.from(this.learnerStates.values()),
@@ -5533,6 +5576,29 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private restoreFromSnapshot(snapshot: KnowledgeGraphSnapshot): void {
         this.idCounter = Number(snapshot.idCounter || 0);
+        this.identityJournal.length = 0;
+        (snapshot.identityJournal || []).forEach((record) => {
+            if (!record || typeof record !== 'object' || !isNonEmptyString(record.documentId)) {
+                return;
+            }
+            const toSourcePath = String(record.toSourcePath || '').replace(/\\/g, '/').trim();
+            if (!toSourcePath) {
+                return;
+            }
+            this.identityJournal.push({
+                documentId: record.documentId.trim(),
+                fromSourcePath: isNonEmptyString(record.fromSourcePath) ? record.fromSourcePath.replace(/\\/g, '/') : undefined,
+                toSourcePath,
+                fromSourceUri: isNonEmptyString(record.fromSourceUri) ? record.fromSourceUri.trim() : undefined,
+                toSourceUri: isNonEmptyString(record.toSourceUri) ? record.toSourceUri.trim() : undefined,
+                revision: isNonEmptyString(record.revision) ? record.revision.trim() : undefined,
+                recordedAt: this.resolveOptionalTimestamp(record.recordedAt) || this.resolveTimestamp(undefined),
+                reason: record.reason === 'move' ? 'move' : 'upsert_identity_change',
+            });
+        });
+        if (this.identityJournal.length > 2048) {
+            this.identityJournal.splice(0, this.identityJournal.length - 2048);
+        }
         this.latestIngestSummary = snapshot.latestIngestSummary
             ? {
                 ...snapshot.latestIngestSummary,
@@ -6174,6 +6240,94 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    private hasIdentityChanged(
+        previous: DocumentSnapshot,
+        next: NormalizedKnowledgeDocumentInput,
+    ): boolean {
+        return previous.sourcePath !== next.sourcePath
+            || (next.sourceUri !== undefined && previous.sourceUri !== next.sourceUri)
+            || (next.revision !== undefined && previous.revision !== next.revision)
+            || (next.identityAliases.length > 0
+                && next.identityAliases.some((alias) => !previous.identityAliases.includes(alias)));
+    }
+
+    private resolveDocumentIdForMove(input: KnowledgeDocumentMoveInput): string | null {
+        if (isNonEmptyString(input.documentId)) {
+            return input.documentId.trim();
+        }
+        const aliases = [input.fromSourcePath, input.fromSourceUri, ...(input.fromIdentityAliases || [])]
+            .filter(isNonEmptyString)
+            .map((alias) => normalizeResourceReference(alias.trim()));
+        const match = Array.from(this.documents.values()).find((snapshot) => {
+            const snapshotAliases = [snapshot.sourcePath, snapshot.sourceUri, ...snapshot.identityAliases]
+                .filter(isNonEmptyString);
+            const normalizedSnapshotAliases = snapshotAliases.map((alias) => normalizeResourceReference(alias));
+            return aliases.some((alias) => normalizedSnapshotAliases.includes(alias));
+        });
+        return match?.documentId || null;
+    }
+
+    private applyDocumentIdentityTransition(
+        documentId: string,
+        input: Pick<KnowledgeDocumentMoveInput, 'toSourcePath' | 'toSourceUri' | 'toIdentityAliases' | 'revision' | 'updatedAt'>,
+        recordedAt: string,
+        reason: IdentityTransitionRecord['reason'],
+    ): void {
+        const snapshot = this.documents.get(documentId);
+        if (!snapshot) {
+            throw new Error(`Identity transition references an unknown document: ${documentId}.`);
+        }
+        const toSourcePath = String(input.toSourcePath || '').replace(/\\/g, '/').trim();
+        if (!toSourcePath) {
+            throw new Error('Identity transition requires a non-empty toSourcePath.');
+        }
+        const previousSourcePath = snapshot.sourcePath;
+        const previousSourceUri = snapshot.sourceUri;
+        const historicalAliases = [
+            ...snapshot.identityAliases,
+            previousSourcePath,
+            previousSourceUri,
+        ].filter(isNonEmptyString);
+        const nextAliases = Array.from(new Set([
+            ...historicalAliases,
+            ...(input.toIdentityAliases || []).filter(isNonEmptyString),
+        ]));
+        snapshot.sourcePath = toSourcePath;
+        snapshot.sourceUri = isNonEmptyString(input.toSourceUri)
+            ? input.toSourceUri.trim()
+            : snapshot.sourceUri;
+        snapshot.revision = isNonEmptyString(input.revision) ? input.revision.trim() : snapshot.revision;
+        snapshot.identityAliases = nextAliases;
+        snapshot.updatedAt = isNonEmptyString(input.updatedAt) ? input.updatedAt : recordedAt;
+
+        snapshot.atomIds.forEach((atomId) => {
+            const atom = this.atoms.get(atomId);
+            if (atom) {
+                atom.sourcePath = toSourcePath;
+            }
+        });
+        snapshot.evidenceSpanIds.forEach((evidenceId) => {
+            const evidence = this.evidenceSpans.get(evidenceId);
+            if (evidence) {
+                evidence.sourcePath = toSourcePath;
+            }
+        });
+
+        this.identityJournal.push({
+            documentId,
+            fromSourcePath: previousSourcePath,
+            toSourcePath,
+            fromSourceUri: previousSourceUri,
+            toSourceUri: snapshot.sourceUri,
+            revision: snapshot.revision,
+            recordedAt,
+            reason,
+        });
+        if (this.identityJournal.length > 2048) {
+            this.identityJournal.splice(0, this.identityJournal.length - 2048);
+        }
+    }
+
     private parseDocument(documentInput: NormalizedKnowledgeDocumentInput): ParsedDocument {
         const content = documentInput.content || '';
         const rawLines = content.length > 0 ? content.split('\n') : [''];
@@ -6376,24 +6530,25 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (isNonEmptyString(input.documentId)) {
             return input.documentId.trim();
         }
-        const aliases = [input.sourceUri, ...(input.identityAliases || [])]
+        const aliases = [input.sourcePath, input.sourceUri, ...(input.identityAliases || [])]
             .filter(isNonEmptyString)
-            .map((alias) => alias.trim());
+            .map((alias) => normalizeResourceReference(alias.trim()));
         if (aliases.length > 0) {
             const aliasMatch = Array.from(this.documents.values()).find((snapshot) => {
-                const snapshotAliases = [snapshot.sourceUri, ...snapshot.identityAliases]
+                const snapshotAliases = [snapshot.sourcePath, snapshot.sourceUri, ...snapshot.identityAliases]
                     .filter(isNonEmptyString);
-                return aliases.some((alias) => snapshotAliases.includes(alias));
+                const normalizedSnapshotAliases = snapshotAliases.map((alias) => normalizeResourceReference(alias));
+                return aliases.some((alias) => normalizedSnapshotAliases.includes(alias));
             });
             if (aliasMatch) {
                 return aliasMatch.documentId;
             }
         }
         if (isNonEmptyString(input.sourcePath)) {
-            const normalizedSourcePath = input.sourcePath.replace(/\\/g, '/');
+            const normalizedSourcePath = input.sourcePath.replace(/\\/g, '/').trim();
             const pathMatch = Array.from(this.documents.values()).find((snapshot) => (
-                snapshot.sourcePath === normalizedSourcePath
-                || snapshot.identityAliases.includes(normalizedSourcePath)
+                normalizeResourceReference(snapshot.sourcePath) === normalizeResourceReference(normalizedSourcePath)
+                || snapshot.identityAliases.some((alias) => normalizeResourceReference(alias) === normalizeResourceReference(normalizedSourcePath))
             ));
             return pathMatch?.documentId || normalizeIdentifier(normalizedSourcePath);
         }

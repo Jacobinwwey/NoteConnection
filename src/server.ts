@@ -10936,6 +10936,39 @@ function normalizeKnowledgeIngestOperationPayload(
     const documentRaw = readFirstPresentValue(record, ['document', 'payload', 'item']);
     const operationPayload = typeof documentRaw !== 'undefined' ? documentRaw : payload;
     if (
+        normalizedOp === 'move'
+        || normalizedOp === 'rename'
+    ) {
+        const moveRecord = isObjectRecord(operationPayload) ? operationPayload : {};
+        const toSourcePath = readFirstNonEmptyString(moveRecord, [
+            'toSourcePath',
+            'to_source_path',
+            'destinationPath',
+            'destination_path',
+        ]);
+        if (!toSourcePath) {
+            return null;
+        }
+        return {
+            op: 'move',
+            document: {
+                documentId: readFirstNonEmptyString(moveRecord, ['documentId', 'docId', 'id']),
+                fromSourcePath: readFirstNonEmptyString(moveRecord, ['fromSourcePath', 'from_source_path', 'sourcePath', 'source_path']),
+                fromSourceUri: readFirstNonEmptyString(moveRecord, ['fromSourceUri', 'from_source_uri', 'sourceUri', 'source_uri']),
+                fromIdentityAliases: normalizeStringArrayValue(
+                    readFirstPresentValue(moveRecord, ['fromIdentityAliases', 'from_identity_aliases', 'fromAliases'])
+                ),
+                toSourcePath,
+                toSourceUri: readFirstNonEmptyString(moveRecord, ['toSourceUri', 'to_source_uri', 'destinationUri', 'destination_uri']),
+                toIdentityAliases: normalizeStringArrayValue(
+                    readFirstPresentValue(moveRecord, ['toIdentityAliases', 'to_identity_aliases', 'aliases'])
+                ),
+                revision: readFirstNonEmptyString(moveRecord, ['revision', 'sourceRevision', 'source_revision']),
+                updatedAt: readFirstNonEmptyString(moveRecord, ['updatedAt', 'updated_at', 'timestamp', 'now']),
+            },
+        };
+    }
+    if (
         normalizedOp === 'delete'
         || normalizedOp === 'remove'
         || normalizedOp === 'del'

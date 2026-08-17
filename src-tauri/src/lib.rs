@@ -795,6 +795,7 @@ struct RuntimeNodeDraft {
     relative_no_ext: String,
     cluster_id: String,
     content: String,
+    link_targets: Vec<String>,
     filepath: String,
 }
 
@@ -1106,12 +1107,24 @@ fn build_graph_runtime_for_target(
             .or_default()
             .push(id.clone());
 
+        let mut link_targets = extract_wiki_link_targets(&content);
+        link_targets.extend(extract_markdown_link_targets(&content));
+
+        // Android emits a body-free graph, so do not retain the corpus in the
+        // intermediate draft while the link index is being resolved.
+        let retained_content = if cfg!(target_os = "android") {
+            String::new()
+        } else {
+            content
+        };
+
         node_drafts.push(RuntimeNodeDraft {
             id,
             label,
             relative_no_ext: relative_without_ext,
             cluster_id,
-            content,
+            content: retained_content,
+            link_targets,
             filepath,
         });
     }
@@ -1125,11 +1138,8 @@ fn build_graph_runtime_for_target(
 
     let mut unique_edges: BTreeSet<(String, String)> = BTreeSet::new();
     for node in &node_drafts {
-        let mut link_candidates = extract_wiki_link_targets(&node.content);
-        link_candidates.extend(extract_markdown_link_targets(&node.content));
-
-        for raw_ref in link_candidates {
-            let Some(reference) = sanitize_reference_target(&raw_ref) else {
+        for raw_ref in &node.link_targets {
+            let Some(reference) = sanitize_reference_target(raw_ref) else {
                 continue;
             };
 
@@ -1156,15 +1166,6 @@ fn build_graph_runtime_for_target(
         *out_degree.entry(source.clone()).or_insert(0) += 1;
         *in_degree.entry(target.clone()).or_insert(0) += 1;
     }
-
-    #[cfg(target_os = "android")]
-    let node_drafts: Vec<NodeDraft> = node_drafts
-        .into_iter()
-        .map(|mut node| {
-            node.content = String::new();
-            node
-        })
-        .collect();
 
     #[cfg(not(target_os = "android"))]
     let full_nodes: Vec<Value> = node_drafts

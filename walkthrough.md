@@ -312,6 +312,28 @@ scoped source package
 -> optional cancellable remote synthesis
 ```
 
+# 2026-08-17 Phase 8 Replay and Cross-Platform Contract Walkthrough
+
+## English
+
+The new replay path is deliberately additive. A graph snapshot is parsed into a temporary `Graph`, validated for duplicate IDs, alias collisions, and undeclared edge endpoints, then swapped into the target instance. Learning move events update the existing document and its evidence paths, append old identities to the alias set, and persist a bounded journal; a restart can therefore delete the pre-move path without guessing from content hashes.
+
+The modular ingest endpoint now rejects malformed JSON, oversized bodies/documents, invalid alias arrays, and unsupported operation names at the HTTP boundary. Legacy field spellings still normalize to the same domain contract. Keyword matching builds a token anchor index once, while `checkMatch` remains the final predicate, so exact phrase behavior is unchanged.
+
+On mobile, the exact analyzer projects only identity, labels, tags, degrees, and bounded adjacency. URI/alias lookup uses NFC normalization. Edge provenance is classified for filtering and diagnostics, but no full document body, Node sidecar, Godot runtime, or model weight is introduced into `mobile-slim`. PathBridge `2.0` envelopes let hosts advertise the same analysis/cancellation contract; the host, not the client, owns policy and persistence.
+
+Verification for this increment: TypeScript build passed; 6 replay/identity suites / 35 tests passed, plus 12 core/route suites / 70 tests, 24 learning suites / 501 tests, 9 mobile suites / 51 tests, PathBridge strict, Diataxis, and Rust / 26 tests. Slim staging measured 118 files, 4,231,472 uncompressed bytes, and 1,540,865 estimated compressed bytes. Signed APK/RSS and registry response parity are not inferred from these tests.
+
+## 中文
+
+本次 replay 路径保持 additive：graph snapshot 先解析到临时 `Graph`，校验重复 ID、alias 冲突和未声明 edge endpoint 后，再原子替换目标实例。learning move 事件更新原文档及其 evidence 路径，把旧身份加入 alias 集合并持久化有界 journal；重启后可以按重命名前路径删除，而不是从内容 hash 猜测身份。
+
+模块化 ingest endpoint 现在在 HTTP 边界拒绝非法 JSON、超大 body/document、错误 alias 数组和未知 operation；旧字段拼写仍归一化到相同 domain 契约。keyword matching 只建立一次 token 锚点索引，最终仍由 `checkMatch` 判定，因此 exact phrase 语义不变。
+
+移动端 exact analyzer 只投影身份、标签、tags、度数和有界邻接，URI/alias 查询使用 NFC 归一化。边 provenance 可用于过滤和诊断，但 `mobile-slim` 不增加正文、Node sidecar、Godot runtime 或模型权重。PathBridge `2.0` envelope 让各 host 声明统一分析/取消契约；策略与持久化仍由 host 掌握。
+
+本增量验证：TypeScript build 通过；6 个 replay/identity suite / 35 个测试、core/route 12 suite / 70 个测试、learning 24 suite / 501 个测试、mobile 9 suite / 51 个测试、PathBridge strict、Diataxis 与 Rust / 26 个测试通过。slim staging 为 118 个文件、未压缩 4,231,472 字节、估算压缩 1,540,865 字节。不能从这些测试推断签名 APK/RSS 或 registry response parity 已完成。
+
 The mobile flow must never require the desktop Node sidecar or Godot process. Large source text is paged by reference, inferred edges are Top-K bounded, and signed APK/AAB + RSS evidence determines release readiness.
 
 ## 中文文档
@@ -409,7 +431,7 @@ On Android, corpus admission checks metadata sizes before reading bodies and bou
 
 学习摄入 payload 以可选字段保留 `sourceUri`、`revision` 与 `identityAliases`。按 URI/alias 删除时先查持久化文档，再回退到旧 path normalizer。这是用于 replay 与迁移的 additive bridge，并不声称路径派生 URI 能抵抗重命名。
 
-Android 在读取正文前检查文件元数据大小，并限制文档数、总输入字节数与边数，避免超大导入在低内存 projection 中形成无界分配；它不能替代真机 RSS 证据。
+Android 在读取正文前检查文件元数据大小，并限制文档数、总输入字节数与边数；读取时直接提取 link candidate，中间 projection 不保留语料正文，避免超大导入在低内存 projection 中形成无界分配；它不能替代真机 RSS 证据。
 
 ## 中文
 

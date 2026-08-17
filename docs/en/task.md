@@ -259,7 +259,10 @@ Primary references:
 
 ## 2026-08-17 Identity Boundary and Mobile Memory Guardrails
 
-- [x] Explicit workspace roots keep `sourceUri` stable across full-workspace and subdirectory scans.
+- [x] Target/data sync and `NoteConnection` pass explicit workspace roots, keeping `sourceUri` stable across full-workspace and subdirectory scans. Legacy callers that omit the root remain compatibility-only.
 - [x] Learning ingest and snapshots retain optional `sourceUri`, `revision`, and `identityAliases`; deletes resolve URI/alias before legacy path fallback.
-- [x] Android low-memory graph builds enforce 5,000 documents, 16 MiB per document, 64 MiB total input, and 250,000 edges before reading unbounded content.
-- [ ] Move/rename replay, Android folder picking, signed APK/AAB extraction, device RSS, SQLite persistence, registry parity, indexed projection, and Bridge v2 remain explicit gates.
+- [x] Android low-memory graph builds enforce 5,000 documents, 16 MiB per document, 64 MiB total input, and 250,000 edges before reading unbounded content; link candidates are extracted at read time so the intermediate projection does not retain document bodies.
+- [x] Move/rename replay preserves the legacy document ID and historical aliases; path-only moves retain optional URI/revision fields.
+- [ ] Android folder picking, signed APK/AAB extraction, device RSS, SQLite persistence, registry parity, indexed projection, and complete Bridge host adapters remain explicit gates.
+- [x] Phase 8 replay, bounded ingest validation, indexed keyword matching, mobile identity projection, and additive Bridge 2.0 capability/cancellation envelopes are implemented and covered by focused tests.
+- [ ] Registry response/status shadow parity, signed Android APK/RSS evidence, SQLite persistence, and canonical public-ID cutover remain evidence-gated.

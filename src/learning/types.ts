@@ -198,11 +198,25 @@ export interface KnowledgeDocumentDeleteInput {
     identityAliases?: string[];
 }
 
+/** Explicit rename/move event used by replay and workspace synchronization. */
+export interface KnowledgeDocumentMoveInput {
+    documentId?: string;
+    fromSourcePath?: string;
+    fromSourceUri?: string;
+    fromIdentityAliases?: string[];
+    toSourcePath: string;
+    toSourceUri?: string;
+    toIdentityAliases?: string[];
+    revision?: string;
+    updatedAt?: string;
+}
+
 export type RelationRecomputeMode = 'auto' | 'none' | 'incremental' | 'full';
 
 export type KnowledgeIngestOperation =
     | { op: 'upsert'; document: KnowledgeDocumentInput }
-    | { op: 'delete'; document: KnowledgeDocumentDeleteInput };
+    | { op: 'delete'; document: KnowledgeDocumentDeleteInput }
+    | { op: 'move'; document: KnowledgeDocumentMoveInput };
 
 export interface StalenessRecord {
     documentId: string;

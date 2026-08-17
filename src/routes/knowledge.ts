@@ -4,6 +4,7 @@ import {
     normalizeKnowledgeQueryRequestPayload,
     normalizeWorkflowArtifactReviewFollowUpRequestPayload,
 } from '../learning/requestNormalization';
+import { KnowledgePayloadError, parseKnowledgeIngestBody } from './knowledgePayload';
 
 export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
     const {
@@ -32,13 +33,26 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
     const fail = (res: any, error: unknown, label: string) => {
         console.error(error);
         CrashLogger.log(error, label);
+        if (error instanceof KnowledgePayloadError) {
+            json(res, error.statusCode, { success: false, error: error.message, code: error.code });
+            return;
+        }
         json(res, 500, { success: false, error: String(error) });
     };
 
     const readBody = (req: any): Promise<string> =>
         new Promise((resolve, reject) => {
             const chunks: Buffer[] = [];
-            req.on('data', (c: Buffer) => chunks.push(c));
+            let totalBytes = 0;
+            req.on('data', (c: Buffer) => {
+                totalBytes += c.length;
+                if (totalBytes > 128 * 1024 * 1024) {
+                    reject(new KnowledgePayloadError('Request body exceeds 128 MiB.'));
+                    req.destroy?.();
+                    return;
+                }
+                chunks.push(c);
+            });
             req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
             req.on('error', reject);
         });
@@ -476,7 +490,7 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await knowledgeIngestor.ingestKnowledge(JSON.parse(body));
+                    const result = await knowledgeIngestor.ingestKnowledge(parseKnowledgeIngestBody(body));
                     ok(res, { result, ingestStats: { avgLatencyMs: knowledgeIngestor.averageIngestLatencyMs(20) } });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/ingest'); }
             },

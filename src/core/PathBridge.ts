@@ -41,6 +41,17 @@ type MermaidRenderRequestPayload = {
     includeSvg?: boolean;
 };
 
+/** Versioned, host-neutral contract shared by Web, Tauri, Capacitor, and Godot. */
+export const PATH_BRIDGE_PROTOCOL_VERSION = '2.0';
+export const PATH_BRIDGE_CAPABILITIES = Object.freeze([
+    'path.transport',
+    'knowledge.analyze',
+    'knowledge.query',
+    'knowledge.readEvidence',
+    'knowledge.exportBundle',
+    'request.cancel',
+]);
+
 type MermaidRenderStagePayload = {
     stage: string;
     svg: string;
@@ -71,6 +82,9 @@ type BridgeInboundEnvelope = {
     payload?: unknown;
     token?: unknown;
     client?: unknown;
+    version?: unknown;
+    requestId?: unknown;
+    correlationId?: unknown;
 };
 
 type BridgeInboundEnvelopeValidationResult = {
@@ -282,6 +296,12 @@ const PATH_MUTATION_TYPES = new Set([
 const KNOWN_BRIDGE_MESSAGE_TYPES = new Set([
     'authenticate',
     'identify',
+    'capabilities',
+    'analyze',
+    'query',
+    'readEvidence',
+    'exportBundle',
+    'cancel',
     'requestPath',
     'pathResult',
     'pathStatus',
@@ -407,6 +427,79 @@ function validateRequestPathPayload(payload: Record<string, unknown>): string | 
         return 'requestPath payload.requestedAt must be a finite number when provided.';
     }
     return null;
+}
+
+const BRIDGE_CORRELATION_ID_MAX_LENGTH = 128;
+const BRIDGE_CAPABILITY_MAX_COUNT = 32;
+
+function validateCorrelationId(value: unknown, field: string): string | null {
+    if (value === undefined) {
+        return null;
+    }
+    if (!isNonEmptyString(value)) {
+        return `${field} must be a non-empty string when provided.`;
+    }
+    if (value.trim().length > BRIDGE_CORRELATION_ID_MAX_LENGTH) {
+        return `${field} must be at most ${BRIDGE_CORRELATION_ID_MAX_LENGTH} characters.`;
+    }
+    if (/[\u0000-\u001f\u007f]/.test(value)) {
+        return `${field} must not contain control characters.`;
+    }
+    return null;
+}
+
+function validateCapabilitiesPayload(payload: Record<string, unknown>): string | null {
+    if (payload.protocolVersion !== undefined && !isNonEmptyString(payload.protocolVersion)) {
+        return 'capabilities payload.protocolVersion must be a non-empty string when provided.';
+    }
+    if (payload.client !== undefined && !isNonEmptyString(payload.client)) {
+        return 'capabilities payload.client must be a non-empty string when provided.';
+    }
+    if (!Array.isArray(payload.capabilities)) {
+        return 'capabilities payload.capabilities must be an array.';
+    }
+    if (payload.capabilities.length > BRIDGE_CAPABILITY_MAX_COUNT) {
+        return `capabilities payload.capabilities must contain at most ${BRIDGE_CAPABILITY_MAX_COUNT} entries.`;
+    }
+    if (payload.capabilities.some((capability) => !isNonEmptyString(capability))) {
+        return 'capabilities payload.capabilities must contain only non-empty strings.';
+    }
+    if (payload.maxPayloadBytes !== undefined && !isFiniteNumberValue(payload.maxPayloadBytes)) {
+        return 'capabilities payload.maxPayloadBytes must be a finite number when provided.';
+    }
+    return null;
+}
+
+function validateAnalysisRequestPayload(type: string, payload: unknown): string | null {
+    if (!isRecord(payload)) {
+        return `${type} payload must be an object.`;
+    }
+    const requestIdError = validateCorrelationId(payload.requestId, `${type} payload.requestId`);
+    if (requestIdError) {
+        return requestIdError;
+    }
+    if (type !== 'cancel' && !isNonEmptyString(payload.requestId)) {
+        return `${type} payload.requestId must be a non-empty string.`;
+    }
+    if (payload.workspaceId !== undefined && !isNonEmptyString(payload.workspaceId)) {
+        return `${type} payload.workspaceId must be a non-empty string when provided.`;
+    }
+    if (payload.sourceUri !== undefined && !isNonEmptyString(payload.sourceUri)) {
+        return `${type} payload.sourceUri must be a non-empty string when provided.`;
+    }
+    return null;
+}
+
+function identifyPayloadCapabilitiesInvalid(payload: Record<string, unknown>): string | null {
+    if (payload.capabilities === undefined) {
+        return null;
+    }
+    return validateCapabilitiesPayload({
+        protocolVersion: payload.protocolVersion,
+        client: payload.client ?? payload.tag,
+        capabilities: payload.capabilities,
+        maxPayloadBytes: payload.maxPayloadBytes,
+    });
 }
 
 function validatePathStatusPayload(payload: Record<string, unknown>): string | null {
@@ -668,8 +761,24 @@ function validateKnownEnvelopePayload(
                 if (client !== undefined && typeof client !== 'string') {
                     return `${type} client/tag must be a string when provided.`;
                 }
+                if (identifyPayloadCapabilitiesInvalid(payload)) {
+                    return identifyPayloadCapabilitiesInvalid(payload);
+                }
             }
             return null;
+
+        case 'capabilities':
+            if (!isRecord(payload)) {
+                return 'capabilities payload must be an object.';
+            }
+            return validateCapabilitiesPayload(payload);
+
+        case 'analyze':
+        case 'query':
+        case 'readEvidence':
+        case 'exportBundle':
+        case 'cancel':
+            return validateAnalysisRequestPayload(type, payload);
 
         case 'requestPath':
             if (payload !== undefined && !isRecord(payload)) {
@@ -792,6 +901,9 @@ export function parseBridgeInboundEnvelope(
         payload: data.payload,
         token: data.token,
         client: data.client,
+        version: data.version,
+        requestId: data.requestId,
+        correlationId: data.correlationId,
     };
     if (envelope.token !== undefined && typeof envelope.token !== 'string') {
         return {
@@ -804,6 +916,18 @@ export function parseBridgeInboundEnvelope(
             ok: false,
             reason: 'Bridge message client must be a string when provided.',
         };
+    }
+    const versionError = validateCorrelationId(envelope.version, 'Bridge message version');
+    if (versionError) {
+        return { ok: false, reason: versionError };
+    }
+    const requestIdError = validateCorrelationId(envelope.requestId, 'Bridge message requestId');
+    if (requestIdError) {
+        return { ok: false, reason: requestIdError };
+    }
+    const correlationIdError = validateCorrelationId(envelope.correlationId, 'Bridge message correlationId');
+    if (correlationIdError) {
+        return { ok: false, reason: correlationIdError };
     }
 
     const isKnownType = KNOWN_BRIDGE_MESSAGE_TYPES.has(type);
@@ -1508,7 +1632,11 @@ export class PathBridge {
 
         let serialized = '';
         try {
-            serialized = JSON.stringify({ type, payload });
+            serialized = JSON.stringify({
+                type,
+                payload,
+                version: PATH_BRIDGE_PROTOCOL_VERSION,
+            });
         } catch (error) {
             const meta = this.clientMeta.get(client);
             console.error(
@@ -1553,6 +1681,14 @@ export class PathBridge {
 
     private sendStatus(client: WebSocket, payload: PathStatusPayload): void {
         this.sendMessage(client, 'pathStatus', payload);
+    }
+
+    private sendCapabilities(client: WebSocket): void {
+        this.sendMessage(client, 'capabilities', {
+            protocolVersion: PATH_BRIDGE_PROTOCOL_VERSION,
+            capabilities: [...PATH_BRIDGE_CAPABILITIES],
+            maxPayloadBytes: MAX_INBOUND_MESSAGE_BYTES,
+        });
     }
 
     private notifyPendingPathRequests(payload: PathStatusPayload): void {
@@ -1892,8 +2028,26 @@ export class PathBridge {
                 const identifyPayload = isRecord(payload) ? payload : {};
                 const requestedTag = identifyPayload.client ?? identifyPayload.tag ?? client ?? 'unknown';
                 this.setClientTag(sender, String(requestedTag));
+                this.sendCapabilities(sender);
                 break;
             }
+
+            case 'capabilities':
+                // Capability advertisements are relayed so a Web/Tauri client
+                // can negotiate the same contract with Godot or a mobile peer.
+                this.broadcast('capabilities', payload || {});
+                break;
+
+            case 'analyze':
+            case 'query':
+            case 'readEvidence':
+            case 'exportBundle':
+            case 'cancel':
+                // The bridge owns transport, correlation, and cancellation
+                // semantics. Domain execution remains in the host adapter and
+                // receives the request unchanged for platform-specific policy.
+                this.broadcast(type, payload || {});
+                break;
 
             case 'requestPath':
                 this.handlePathRequest(sender);

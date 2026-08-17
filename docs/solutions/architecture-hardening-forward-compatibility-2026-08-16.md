@@ -99,9 +99,10 @@ Mobile bundles must exclude `server-*`, `godot-*`, desktop-only renderer bundles
 
 - Implemented and tested: resource collision guard (`src/backend/ResourceIdentity.ts`), normalized `RawFile.relativePath`, shared strict auth (`src/middleware/auth.ts` + `src/server.ts`), unique atomic snapshot temp files and cache refresh (`src/learning/store.ts`).
 - Existing targeted verification: identity/graph suites 13/13, auth/server/registry suites 30 passed with 13 existing skips, store/persistence suites 23/23.
-- Fresh full verification: 132/132 Jest suites passed, 1,211 tests passed, 26 were skipped (1,237 total); `npm run build`, Rust (26/26), `npm run docs:diataxis:check`, and the mobile-slim budget gate passed.
+- A prior repository baseline recorded 132/132 Jest suites and 1,211 tests, but that full run was not re-established in this slice; do not use it as current release evidence.
+- Current phase evidence: TypeScript build, 6 replay/identity suites (35 tests), 12 core/route suites (70 tests), 24 learning suites (501 tests), 9 mobile contract suites (51 tests), Rust (26 tests), `npm run docs:diataxis:check`, PathBridge strict, and the mobile-slim budget gate passed.
 - Known repository-wide gate debt: `npm run verify:markdown:mermaid:fence` still reports 588 pre-existing inline-fence findings under `Knowledge_Base`; this slice did not rewrite unrelated corpus files.
-- Previously open mobile local analysis/verifier work is now implemented at the callable/static-contract level; device RSS/APK evidence and SQLite persistence remain open. Stable `sourceUri` migration, strict registry default, complete use-case extraction, indexed graph projection and Bridge protocol v2 remain explicit next gates.
+- Previously open mobile local analysis/verifier work is now implemented at the callable/static-contract level; device RSS/APK evidence and SQLite persistence remain open. Stable `sourceUri` migration, strict registry default, complete use-case extraction, indexed graph projection, and Bridge host-adapter integration remain explicit next gates; the transport-only Bridge 2.0 envelope is delivered.
 
 ## 2026-08-17 Identity Boundary and Mobile Admission Delta
 
@@ -164,9 +165,10 @@ The remaining architectural blocker is intentional: a path-derived URI is not a 
 
 - 已实现并测试：资源冲突 guard、规范化 `RawFile.relativePath`、共享严格 auth、唯一原子快照临时文件与 cache refresh。
 - 当前定向证据：identity/graph 13/13，auth/server/registry 30 passed（既有 13 skip），store/persistence 23/23。
-- 当前全量证据：132/132 Jest suites 通过，1,211 tests 通过，26 skip（1,237 total）；`npm run build`、Rust（26/26）、`npm run docs:diataxis:check` 与 mobile-slim budget gate 通过。
+- 旧仓库基线曾记录 132/132 Jest suites、1,211 tests，但本切片未重新建立该全量结果，不能把它当作当前 release 证据。
+- 当前阶段证据：TypeScript build、replay/identity 6 suite（35 tests）、core/route 12 suite（70 tests）、learning 24 suite（501 tests）、mobile contract 9 suite（51 tests）、Rust（26 tests）、`npm run docs:diataxis:check`、PathBridge strict 与 mobile-slim budget gate 通过。
 - 已知全库门禁债务：`npm run verify:markdown:mermaid:fence` 仍报告 `Knowledge_Base` 下 588 条历史 inline-fence；本轮没有借机改写无关语料。
-- 此前未完成的移动端本地分析/verifier 已在可调用与静态契约层面落地；真机 RSS/APK 证据与 SQLite 持久化仍待完成。稳定 `sourceUri` 迁移、strict registry 默认、完整 use-case 抽取、indexed graph projection 与 Bridge v2 仍是明确后续门禁。
+- 此前未完成的移动端本地分析/verifier 已在可调用与静态契约层面落地；真机 RSS/APK 证据与 SQLite 持久化仍待完成。稳定 `sourceUri` 迁移、strict registry 默认、完整 use-case 抽取、indexed graph projection 与 Bridge host adapter 仍是明确后续门禁；transport-only Bridge 2.0 envelope 已交付。
 
 ## 2026-08-17 身份边界与移动端准入增量
 
@@ -213,7 +215,7 @@ The previously open mobile runtime/verifier gap is now closed at the static and 
 - Capacitor and Tauri Android now consume that staging directory. Tauri Android no longer builds a sidecar on the default mobile path; Godot Pathmode is an explicit extended profile and stale generated Godot files/assets are removed by the default runner.
 - Android Rust graph persistence uses the lite projection on `target_os = android`, releases parsed document bodies before projection, and never constructs `full_nodes/full_graph` in the low-memory runtime. Desktop retains the full graph contract.
 
-This is intentionally narrower than the original SQLite/WASM aspiration. The shipped implementation is an exact in-memory graph/index projection over the existing local builders. SQLite persistence, true device RSS/APK evidence, full agent conversation parity, and remote cancellation remain open gates. The static measurement on this Windows host is 118 staged files, 4,223,135 uncompressed bytes, and 1,539,168 estimated compressed bytes; it is not a signed artifact or device-memory result.
+This is intentionally narrower than the original SQLite/WASM aspiration. The shipped implementation is an exact in-memory graph/index projection over the existing local builders. SQLite persistence, true device RSS/APK evidence, full agent conversation parity, and remote cancellation integration remain open gates. The current static measurement on this Windows host is 118 staged files, 4,231,472 uncompressed bytes, and 1,540,865 estimated compressed bytes; it is not a signed artifact or device-memory result.
 
 The reference comparison remains unchanged: LearnGraph contributes typed boundary/workspace validation patterns, and textbooks contributes content-package/compiler discipline. Neither justifies a Docker-only mobile runtime, a SaaS database dependency, Mathigon DSL adoption, or Godot/LLM inclusion in the slim profile.
 
@@ -228,6 +230,15 @@ The reference comparison remains unchanged: LearnGraph contributes typed boundar
 - Capacitor 与 Tauri Android 现在消费同一 staging 目录。默认 Android 移动路径不再构建 sidecar；Godot Pathmode 变成显式扩展档，默认 runner 会删除旧生成的 Godot 文件和资源。
 - Android Rust 在 `target_os = android` 下持久化 lite projection，会在 projection 前释放已解析正文，并且低内存运行时不会构造 `full_nodes/full_graph`；桌面仍保持 full graph 契约。
 
-这比最初的 SQLite/WASM 目标更窄，但更诚实。当前交付的是基于现有本地构建器的 exact 内存 graph/index projection；SQLite 持久化、真实设备 RSS/APK 证据、完整 agent conversation parity 和远程取消仍是开放门禁。本机静态测量为 118 个 staging 文件、未压缩 4,223,135 字节、估算压缩 1,539,168 字节；它不是签名产物或设备内存结果。
+这比最初的 SQLite/WASM 目标更窄，但更诚实。当前交付的是基于现有本地构建器的 exact 内存 graph/index projection；SQLite 持久化、真实设备 RSS/APK 证据、完整 agent conversation parity 和远程取消接线仍是开放门禁。本机静态测量为 118 个 staging 文件、未压缩 4,231,472 字节、估算压缩 1,540,865 字节；它不是签名产物或设备内存结果。
 
 参考仓库的取舍没有改变：LearnGraph 提供类型化边界/工作区校验模式，textbooks 提供内容包/compiler 纪律；二者都不足以证明应把 Docker-only 移动运行时、SaaS 数据库依赖、Mathigon DSL 或 Godot/LLM 带入 slim profile。
+## 2026-08-17 Phase 8 Follow-up
+
+### English
+
+The follow-up closes the first replay and projection gaps without changing public IDs: graph snapshots now have an atomic validated restore path; learning has explicit move/rename journal events (including path-only moves that retain URI/revision); modular ingest applies a bounded identity-preserving schema; keyword matching uses indexed candidates; mobile exact analysis carries URI aliases and edge provenance; Android extracts link candidates while reading instead of retaining the corpus in intermediate drafts; and PathBridge exposes an additive 2.0 capability/cancellation contract. Current verification includes the TypeScript build, 35 replay/identity tests, 70 core/route tests, 501 learning tests, 51 mobile contract tests, 26 Rust tests, PathBridge strict, Diataxis, and slim staging at 118 files / 4,231,472 uncompressed bytes / 1,540,865 estimated compressed bytes. The remaining release claims are intentionally unproven until registry shadow parity, signed arm64 APK extraction, device RSS, and restart-backed persistence evidence exist.
+
+### 中文
+
+本次跟进在不改变公共 ID 的前提下补齐首批 replay 与 projection 缺口：graph snapshot 增加原子校验恢复路径；learning 增加显式 move/rename journal（只提供新路径时仍保留 URI/revision）；模块化 ingest 使用保留身份的有界 schema；keyword matching 使用索引候选；移动 exact analysis 携带 URI alias 与边 provenance；Android 读取时提取 link candidate，不在中间 draft 保留整库正文；PathBridge 提供 additive 2.0 capability/cancellation 契约。当前已验证 TypeScript build、replay/identity 35 个测试、core/route 70 个测试、learning 501 个测试、mobile contract 51 个测试、Rust 26 个测试、PathBridge strict、Diataxis 与 slim staging（118 个文件、未压缩 4,231,472 字节、估算压缩 1,540,865 字节）。registry shadow parity、签名 arm64 APK 解包、真机 RSS 与重启持久化证据尚未获得前，不宣称 release 已闭环。

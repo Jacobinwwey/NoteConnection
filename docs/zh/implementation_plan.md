@@ -1030,5 +1030,7 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 
 1. 通过 `FileLoader` 传递显式 workspace root；保留可选参数，保证旧调用方源码兼容。
 2. 在学习摄入与快照中传播可选 `sourceUri`、`revision`、`identityAliases`；删除先按 URI/alias 解析，再回退旧 path。
-3. 在读取正文前执行 Android admission limit：5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 条边。
+3. 在读取正文前执行 Android admission limit：5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 条边；读取时提取 link candidate，中间 draft 不保留文档正文。
 4. 在完成 move/rename replay、旧 snapshot fixture、HTTP schema parity 与跨端 Bridge replay 前，保持 canonical-ID 切换冻结。
+- 2026-08-17 第 8 阶段已交付原子 graph replay 入口、显式 learning move/rename journal、有界模块化 ingest 校验、indexed keyword candidate、带身份的移动 exact projection，以及 additive Bridge 2.0 capability/cancellation envelope。
+- 后续门禁是 registry response/status shadow parity、新鲜 arm64 APK/RSS 证据、置于 export 契约后的版本化 SQLite/WASM 持久化，最后才允许 canonical 公共 ID 迁移。

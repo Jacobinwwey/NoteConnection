@@ -4,6 +4,8 @@ import {
   BRIDGE_BACKPRESSURE_LIMITS,
   BRIDGE_INBOUND_LIMITS,
   BRIDGE_INBOUND_SCHEMA_LIMITS,
+  PATH_BRIDGE_CAPABILITIES,
+  PATH_BRIDGE_PROTOCOL_VERSION,
   buildBridgePathTransportSummary,
   computeBridgePathFingerprint,
   parseBridgeInboundEnvelope,
@@ -72,6 +74,39 @@ describe('path bridge handshake and transport verification contracts', () => {
     });
     expect(validIdentify.ok).toBe(true);
     expect(validIdentify.envelope?.type).toBe('identify');
+
+    const validQuery = parseBridgeInboundEnvelope({
+      type: 'query',
+      version: PATH_BRIDGE_PROTOCOL_VERSION,
+      payload: {
+        requestId: 'query-1',
+        workspaceId: 'mobile-workspace',
+        sourceUri: 'note://workspace/v1/algebra/index.md',
+      },
+    });
+    expect(validQuery.ok).toBe(true);
+
+    const invalidQuery = parseBridgeInboundEnvelope({
+      type: 'query',
+      payload: { requestId: '' },
+    });
+    expect(invalidQuery.ok).toBe(false);
+    expect(invalidQuery.reason).toContain('requestId');
+
+    const invalidCapabilities = parseBridgeInboundEnvelope({
+      type: 'capabilities',
+      payload: { protocolVersion: PATH_BRIDGE_PROTOCOL_VERSION, capabilities: [''] },
+    });
+    expect(invalidCapabilities.ok).toBe(false);
+    expect(invalidCapabilities.reason).toContain('non-empty strings');
+
+    expect(PATH_BRIDGE_CAPABILITIES).toEqual(expect.arrayContaining([
+      'knowledge.analyze',
+      'knowledge.query',
+      'knowledge.readEvidence',
+      'knowledge.exportBundle',
+      'request.cancel',
+    ]));
 
     const invalidSwitchCenter = parseBridgeInboundEnvelope({
       type: 'switchCenter',

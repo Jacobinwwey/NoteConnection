@@ -86,4 +86,36 @@ describe('Graph Core', () => {
       identityAliases: ['shared/path.md'],
     })).toThrow(/alias/i);
   });
+
+  test('replays legacy snapshots without identity metadata and preserves alias-aware edges', () => {
+    const restored = Graph.fromJSON({
+      nodes: [
+        { id: 'A', label: 'A', inDegree: 0, outDegree: 1 },
+        { id: 'B', label: 'B', inDegree: 1, outDegree: 0 },
+      ],
+      edges: [{ source: 'A', target: 'B', type: 'legacy-link', weight: 0.5 }],
+    });
+
+    expect(restored.getNode('A')).toEqual(expect.objectContaining({ id: 'A', inDegree: 0, outDegree: 1 }));
+    expect(restored.getOutgoingEdges('A')).toEqual([
+      { source: 'A', target: 'B', type: 'legacy-link', weight: 0.5 },
+    ]);
+  });
+
+  test('rejects an edge that references a missing node before restoring', () => {
+    expect(() => Graph.fromJSON({
+      nodes: [{ id: 'A', label: 'A' }],
+      edges: [{ source: 'A', target: 'missing' }],
+    })).toThrow(/undeclared node/i);
+  });
+
+  test('restores an existing instance atomically', () => {
+    graph.addNode({ id: 'old', label: 'old', inDegree: 0, outDegree: 0 });
+    expect(() => graph.restore({
+      nodes: [{ id: 'new', label: 'new' }],
+      edges: [],
+    })).not.toThrow();
+    expect(graph.hasNode('old')).toBe(false);
+    expect(graph.hasNode('new')).toBe(true);
+  });
 });

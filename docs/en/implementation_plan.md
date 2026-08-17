@@ -551,5 +551,7 @@ This update aligns the implementation plan with the current Electron-to-Tauri mi
 
 1. Pass an explicit workspace root through `FileLoader`; retain the optional parameter so legacy callers remain source-compatible.
 2. Propagate optional `sourceUri`, `revision`, and `identityAliases` through learning ingest and snapshots; resolve deletes by URI/alias before legacy path fallback.
-3. Enforce Android admission limits before body reads: 5,000 documents, 16 MiB per document, 64 MiB total input, and 250,000 edges.
+3. Enforce Android admission limits before body reads: 5,000 documents, 16 MiB per document, 64 MiB total input, and 250,000 edges; extract link candidates while reading so the intermediate draft does not retain document bodies.
 4. Keep canonical-ID cutover blocked on move/rename replay, old-snapshot fixtures, HTTP schema parity, and cross-client Bridge replay.
+- 2026-08-17 Phase 8 delivered an atomic graph replay entry, explicit learning move/rename journal, bounded modular ingest validation, indexed keyword candidates, identity-aware mobile exact projection, and additive Bridge 2.0 capability/cancellation envelopes.
+- The next gates are registry response/status shadow parity, fresh arm64 APK/RSS evidence, versioned SQLite/WASM persistence behind the export contract, and only then canonical public-ID migration.

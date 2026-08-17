@@ -469,7 +469,10 @@
 
 ## 2026-08-17 身份边界与移动端内存门禁
 
-- [x] 显式 workspace root 让全库与子目录扫描生成稳定一致的 `sourceUri`。
+- [x] target/data sync 与 `NoteConnection` 传入显式 workspace root，使全库与子目录扫描生成稳定一致的 `sourceUri`；省略 root 的旧调用仅作为兼容路径，不计入迁移证据。
 - [x] 学习摄入与快照保留可选 `sourceUri`、`revision`、`identityAliases`；删除先按 URI/alias 解析，再回退旧 path。
-- [x] Android 低内存建图在读取无界正文前限制 5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 条边。
-- [ ] 文件移动/重命名 replay、Android 文件夹选择、签名 APK/AAB 解包、真机 RSS、SQLite、registry parity、indexed projection 与 Bridge v2 仍是明确门禁。
+- [x] Android 低内存建图在读取无界正文前限制 5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 条边；读取时先提取 link candidate，中间 projection 不保留正文。
+- [x] 文件移动/重命名 replay 保留旧 document ID 与历史 alias；只提供新路径时不清空已有 URI/revision。
+- [ ] Android 文件夹选择、签名 APK/AAB 解包、真机 RSS、SQLite、registry parity、indexed projection 与完整 Bridge host adapter 仍是明确门禁。
+- [x] 第 8 阶段已落地 replay、有界 ingest 校验、indexed keyword matching、移动身份 projection，以及 additive Bridge 2.0 capability/cancellation envelope，并有聚焦回归覆盖。
+- [ ] registry response/status shadow parity、签名 Android APK/RSS 证据、SQLite 持久化与 canonical 公共 ID 切换仍受证据门禁约束。

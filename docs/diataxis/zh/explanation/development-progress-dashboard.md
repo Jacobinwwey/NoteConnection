@@ -1794,7 +1794,7 @@ Policy v2 还会在 numeric fact key 中保留符号、常见中英文测量单�
 
 ### 证据与边界
 
-四个聚焦 suite 共 15 个测试通过，`npx tsc --noEmit` 通过。文件移动/重命名 replay、canonical-ID 切换、route-registry shadow parity、indexed projection、Bridge v2 及真机 APK/RSS 证据仍未完成。权威细节见[架构加固 solution note](../../../solutions/architecture-hardening-forward-compatibility-2026-08-16.md)。
+基础阶段曾通过四个聚焦 suite 共 15 个测试与 `npx tsc --noEmit`；第 8 阶段随后补齐 move/rename replay、有界 ingest、移动 projection 与 additive Bridge 2.0 transport contract。canonical-ID 切换、route-registry shadow parity、indexed projection 与真机 APK/RSS 证据仍未完成。权威细节见[架构加固 solution note](../../../solutions/architecture-hardening-forward-compatibility-2026-08-16.md)。
 
 ## 2026-08-17 架构与移动端进度增量
 
@@ -1802,16 +1802,33 @@ Policy v2 还会在 numeric fact key 中保留符号、常见中英文测量单�
 
 - 资源身份冲突保护、共享严格 auth 判定、原子且 cache-coherent 的 snapshot 写入仍已在 `main` 验证。
 - `mobile-slim` 已成为可执行 profile：本地 exact ingest/query 能力明确，远程推理为可选，SVG 禁用，并携带 25 MiB 估算压缩资源 / 256 MiB 常驻内存预算。
-- `mobile_exact_analyzer.js` 与 storage-provider adapter 从本地图资源提供有界 exact lookup、邻居查询和有向路径，不依赖 sidecar。analyzer 构建复杂度为 O(V + E)，不保留节点正文；Android Rust 会释放已解析正文并跳过 full-content graph 分配。
+- `mobile_exact_analyzer.js` 与 storage-provider adapter 从本地图资源提供有界 exact lookup、邻居查询和有向路径，不依赖 sidecar。analyzer 构建复杂度为 O(V + E)，不保留节点正文；Android Rust 在读取时提取 link candidate，随后释放正文并跳过 full-content graph 分配。
 - Capacitor 与 Tauri Android 共用 deterministic staging 和 manifest。默认 Tauri Android 路径不构建 sidecar、不注入 Godot；Godot Pathmode 仅能通过显式扩展档启用。
 
 ### 证据与缺口
 
-- 本机静态证据：移动/平台定向 34 个测试通过；118 个 staging 文件测得未压缩 4,223,135 字节、估算压缩 1,539,168 字节。
+- 当前本机证据：core/route 12 suite（70 tests）、learning 24 suite（501 tests）、mobile contract 9 suite（51 tests）、replay/identity 6 suite（35 tests）、Rust（26 tests）、PathBridge strict、Diataxis 与 TypeScript build 通过；118 个 staging 文件测得未压缩 4,231,472 字节、估算压缩 1,540,865 字节。
 - RSS 与签名 APK/AAB 解包结果尚未测量。缺少 RSS evidence 时状态保持 `not-measured`，因此看板不宣称设备验收通过。
-- SQLite 持久化、完整 agent conversation parity、`sourceUri` 完整迁移（additive 双读基础已交付）、strict route-registry 默认切换、indexed explicit/inferred projection、Bridge v2 与 domain 抽取仍待完成。
+- SQLite 持久化、完整 agent conversation parity、`sourceUri` 完整迁移（additive 双读基础与显式 move journal 已交付）、strict route-registry 默认切换、indexed explicit/inferred projection、Bridge host adapter 与 domain 抽取仍待完成。
 - workspace root 传播现已让全库与子目录身份保持一致；学习摄入/快照保留可选 URI/revision/alias，Android 在读取正文前拒绝超预算语料（5,000 文档 / 单文档 16 MiB / 总输入 64 MiB / 250,000 条边）。
 
 ### 后续方向
 
-后续顺序为：真机证据与移动 workload runner；带大小写折叠/Unicode 策略的稳定 identity 双读；HTTP schema 校验；route-registry shadow parity；带 `contentRef` 的 explicit/inferred indexed graph projection；最后推进 versioned Bridge negotiation 与完整 use-case 抽取。这样保留 LearnGraph 的类型化边界经验和 textbooks 的内容包/compiler 经验，同时拒绝把 Docker-only、SaaS 数据库、Godot 和本地 LLM 假设带入 slim 产品。
+后续顺序为：真机证据与移动 workload runner；旧 snapshot/collision/rollback 与跨 root identity 语料；HTTP schema parity；route-registry shadow parity；带 `contentRef` 的 explicit/inferred indexed graph projection；最后接入 Bridge host adapter 与完整 use-case 抽取。这样保留 LearnGraph 的类型化边界经验和 textbooks 的内容包/compiler 经验，同时拒绝把 Docker-only、SaaS 数据库、Godot 和本地 LLM 假设带入 slim 产品。
+## 2026-08-17 第 8 阶段 Replay 与契约增量
+
+### 已交付
+
+- `Graph.fromJSON()` / `Graph.restore()` 会在替换实例前校验临时 graph，保持旧 snapshot 可读，并拒绝未声明 edge endpoint。
+- learning `move`/`rename` 持久化有界 identity journal 与历史 alias；重命名后旧 document ID 与旧删除路径仍可用。
+- 模块化 ingest route 在进入 domain 前执行 JSON、document、alias、content 与 operation 限制，并继续兼容旧字段。
+- 顺序 keyword matching 使用倒排锚点索引，最终 exact/fuzzy 判定不变；mobile exact projection 增加 URI/alias 查询、NFC 归一化和 explicit/inferred/runtime 边统计，不携带正文。
+- PathBridge protocol `2.0` 增加 additive capability、correlation ID、分析请求类型与取消语义，仅负责 transport，不把 graph/memory policy 下放到 client。
+
+### 证据边界
+
+TypeScript build 与 replay/identity 6 suite / 35 个测试通过，同时 core/route 12 suite / 70 个测试、learning 24 suite / 501 个测试、mobile 9 suite / 51 个测试、Rust / 26 个测试、PathBridge strict、Diataxis 与 slim staging 通过。staging 为 118 个文件、未压缩 4,231,472 字节、估算压缩 1,540,865 字节；registry response/status shadow parity、签名 arm64 APK 解包、真机 RSS、SQLite 重启 replay 与 canonical 公共 ID 切换仍未闭环，`not-measured` 不视为通过。
+
+### 后续方向
+
+按 G1 registry shadow parity、G2 移动产物/RSS 证据、G3 export 契约后的版本化 SQLite/WASM projection、G4 canonical-ID 迁移推进；G4 前必须完成旧 snapshot/collision/跨 root replay 语料与 rollback 证据。

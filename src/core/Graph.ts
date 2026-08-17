@@ -48,6 +48,74 @@ export class Graph {
     });
   }
 
+  /**
+   * Rehydrates a graph from either a current or legacy JSON snapshot.
+   *
+   * The snapshot is validated before mutating the returned graph. Edges must
+   * reference declared nodes so a corrupt or partially-written snapshot cannot
+   * silently create synthetic nodes and change graph semantics during replay.
+   */
+  static fromJSON(data: unknown): Graph {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw new Error('Graph snapshot must be an object.');
+    }
+
+    const snapshot = data as { nodes?: unknown; edges?: unknown };
+    if (!Array.isArray(snapshot.nodes) || !Array.isArray(snapshot.edges)) {
+      throw new Error('Graph snapshot must contain nodes and edges arrays.');
+    }
+
+    const graph = new Graph();
+    const nodeIds = new Set<string>();
+    snapshot.nodes.forEach((rawNode, index) => {
+      if (!rawNode || typeof rawNode !== 'object' || Array.isArray(rawNode)) {
+        throw new Error(`Graph snapshot node at index ${index} must be an object.`);
+      }
+      const node = rawNode as Partial<NoteNode>;
+      if (typeof node.id !== 'string' || node.id.trim().length === 0) {
+        throw new Error(`Graph snapshot node at index ${index} requires a non-empty id.`);
+      }
+      if (nodeIds.has(node.id)) {
+        throw new Error(`Graph snapshot contains duplicate node id: ${node.id}.`);
+      }
+      nodeIds.add(node.id);
+      graph.addNode({
+        ...node,
+        id: node.id,
+        label: typeof node.label === 'string' && node.label.length > 0 ? node.label : node.id,
+        inDegree: 0,
+        outDegree: 0,
+      } as NoteNode);
+    });
+
+    snapshot.edges.forEach((rawEdge, index) => {
+      if (!rawEdge || typeof rawEdge !== 'object' || Array.isArray(rawEdge)) {
+        throw new Error(`Graph snapshot edge at index ${index} must be an object.`);
+      }
+      const edge = rawEdge as Partial<NoteEdge>;
+      if (typeof edge.source !== 'string' || typeof edge.target !== 'string') {
+        throw new Error(`Graph snapshot edge at index ${index} requires source and target ids.`);
+      }
+      if (!graph.hasNode(edge.source) || !graph.hasNode(edge.target)) {
+        throw new Error(
+          `Graph snapshot edge at index ${index} references an undeclared node: ${edge.source} -> ${edge.target}.`,
+        );
+      }
+      graph.addEdge(edge.source, edge.target, edge.type, edge.weight);
+    });
+
+    return graph;
+  }
+
+  /** Restore this instance atomically from a legacy or current JSON snapshot. */
+  restore(data: unknown): void {
+    const restored = Graph.fromJSON(data);
+    this.nodes = restored.nodes;
+    this.adjacencyList = restored.adjacencyList;
+    this.reverseAdjacencyList = restored.reverseAdjacencyList;
+    this.aliases = restored.aliases;
+  }
+
   private resolveNodeId(reference: string): string | undefined {
     if (this.nodes.has(reference)) {
       return reference;

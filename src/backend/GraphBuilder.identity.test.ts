@@ -60,4 +60,32 @@ describe('GraphBuilder identity compatibility', () => {
             expect.objectContaining({ source: 'A', target: 'B', type: 'explicit-prerequisite' }),
         ]));
     });
+
+    test('uses indexed keyword candidates without changing exact-match semantics', async () => {
+        const files: RawFile[] = [
+            {
+                filepath: 'workspace/alpha.md',
+                filename: 'Alpha',
+                content: 'Alpha is a prerequisite concept.',
+            },
+            {
+                filepath: 'workspace/context.md',
+                filename: 'Context',
+                content: 'This context mentions Alpha as an explicit phrase.',
+            },
+            {
+                filepath: 'workspace/beta.md',
+                filename: 'Beta',
+                content: 'This context mentions alphabet but not the standalone concept.',
+            },
+        ];
+
+        const graph = await GraphBuilder.build(files);
+        expect(graph.getOutgoingEdges('Alpha')).toEqual(expect.arrayContaining([
+            expect.objectContaining({ target: 'Context', type: 'keyword-match' }),
+        ]));
+        expect(graph.getOutgoingEdges('Alpha')).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ target: 'Beta', type: 'keyword-match' }),
+        ]));
+    });
 });

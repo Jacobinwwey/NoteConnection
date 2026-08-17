@@ -746,9 +746,9 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 
 1. Add mobile staging + byte/RSS verifier and capability fields.
 2. Prove on-device local ingest/query continuity across Tauri Android and Capacitor.
-3. Add stable `sourceUri` dual-read before changing graph IDs.
+3. Keep stable `sourceUri` dual-read additive: only callers with an explicit canonical workspace root are migration evidence; legacy basename IDs remain unchanged.
 4. Shadow route-registry parity, then switch default only after legacy URL coverage is complete.
-5. Replace pairwise inferred matching with explicit/indexed projections before increasing worker/GPU budgets.
+5. Replace pairwise inferred matching with explicit/indexed projections before increasing worker/GPU budgets; the current inverted anchor index is an intermediate optimization, not the final projection.
 
 ## 中文文档
 
@@ -769,9 +769,59 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 
 1. 增加 mobile staging + byte/RSS verifier 与 capability 字段。
 2. 在 Tauri Android 与 Capacitor 上证明本地 ingest/query 连续性。
-3. 改变 graph ID 前先完成稳定 `sourceUri` 双读。
+3. stable `sourceUri` 继续 additive；只有传入显式 canonical workspace root 的调用才计入迁移证据，graph ID 继续保持兼容。
 4. 先做 route-registry shadow parity，旧 URL 覆盖完整后再切默认。
-5. 在增加 worker/GPU 预算前，先用 explicit/indexed projection 替代 pairwise inferred matching。
+5. 在增加 worker/GPU 预算前，先用 explicit/indexed projection 替代 pairwise inferred matching；当前倒排锚点索引只是中间优化，不是最终 projection。
+
+# 2026-08-17 Phase 8: Replay-Safe Boundaries and Mobile Analysis Contract
+
+## English
+
+### Delivered
+
+1. Graph snapshots have an atomic, fail-closed replay entry (`Graph.fromJSON`/`restore`). Legacy nodes remain valid; undeclared edge endpoints are rejected instead of creating implicit nodes.
+2. Identity transitions are explicit. Learning ingest accepts `move`/`rename`, persists a bounded journal, keeps historical aliases, and updates atom/evidence source paths without changing legacy document IDs.
+3. The modular ingest route is now an edge contract. It caps request/document/alias sizes, accepts legacy field spellings, preserves identity metadata, and returns a 400 contract error before domain execution.
+4. The normal keyword path uses an inverted anchor index. This is a bounded optimization with a semantic fallback for punctuation-only titles; worker/GPU budgets are not raised by this change.
+5. Mobile exact projection carries identity aliases and edge provenance (`explicit`, `inferred`, `runtime`), resolves URI references, and exposes projection statistics. It remains body-free and sidecar/Godot/model-free; Android Rust extracts link candidates while reading and does not retain document bodies in the intermediate draft.
+6. PathBridge protocol `2.0` adds optional version/correlation fields, capability advertisement, `analyze/query/readEvidence/exportBundle`, and `cancel`. The bridge relays transport envelopes; host adapters retain graph, memory, and authorization policy.
+
+### Next execution gates
+
+- **G1 registry parity:** execute legacy and registry handlers in a shadow harness and compare status, error code/body, headers, and side effects before changing the default dispatch switch.
+- **G2 mobile evidence:** fresh arm64 slim APK/AAB extraction must prove no Godot/sidecar/model artifacts; device runs must record RSS under 256 MiB for mobile-low. `not-measured` is not a pass.
+- **G3 persistent projection:** introduce a versioned SQLite/WASM adapter only behind the existing export contract; keep the in-memory projection as the fallback until restart/replay fixtures pass on Web, Tauri, Capacitor, and Android.
+- **G4 canonical ID:** switch public IDs only after move journal replay, old snapshot/collision/rollback corpora, and cross-root identity fixtures have been recorded. Until then `NoteNode.id` and old layouts remain canonical compatibility keys.
+
+### Trade-offs and rejected shortcuts
+
+- A path-derived URI is a locator, not a permanent file identity. The journal is intentionally explicit; content hashes alone cannot disambiguate same-content notes.
+- Protocol capability advertisement is additive and transport-only. Letting a mobile client choose graph or memory policy would create cross-host divergence.
+- The inverted index reduces the normal keyword path but cannot make arbitrary fuzzy inference sublinear without a token/ANN policy. That policy is a separate projection milestone, not hidden behind a larger worker pool.
+
+## 中文
+
+### 已交付
+
+1. graph snapshot 增加原子、fail-closed replay 入口（`Graph.fromJSON`/`restore`）。旧节点继续有效；未声明的 edge endpoint 会被拒绝，不会隐式造节点。
+2. 身份迁移变为显式语义。learning ingest 接受 `move`/`rename`，持久化有界 journal，保留历史 alias，并更新 atom/evidence 路径而不改旧 document ID。
+3. 模块化 ingest 路由成为真正的边界契约：限制 request/document/alias 大小，兼容旧字段拼写，保留身份元数据，并在进入 domain 前以 400 返回契约错误。
+4. 正常 keyword 路径使用倒排锚点索引；标点标题保留语义 fallback，且不借此提高 worker/GPU 预算。
+5. mobile exact projection 携带身份 alias 与边 provenance（`explicit`、`inferred`、`runtime`），可解析 URI 并暴露 projection 统计；仍不保留正文，也不依赖 sidecar/Godot/本地模型；Android Rust 在读取时提取 link candidate，中间 draft 不保留文档正文。
+6. PathBridge protocol `2.0` 增加可选 version/correlation 字段、能力声明、`analyze/query/readEvidence/exportBundle` 与 `cancel`；Bridge 只转发 transport，graph、memory 和授权策略仍由 host adapter 持有。
+
+### 后续门禁
+
+- **G1 registry parity：** 用 shadow harness 同时执行 legacy 与 registry handler，对比状态码、error code/body、headers 和副作用后才能切默认 dispatch。
+- **G2 移动证据：** 新鲜 arm64 slim APK/AAB 解包必须证明无 Godot/sidecar/model；真机需记录 mobile-low 峰值 RSS <=256 MiB。`not-measured` 不是通过。
+- **G3 持久化 projection：** 仅在既有 export 契约后增加版本化 SQLite/WASM adapter；Web、Tauri、Capacitor、Android 的重启/replay fixture 通过前，保留内存 projection fallback。
+- **G4 canonical ID：** 完成 move journal replay、旧 snapshot/collision/rollback corpus 与跨 root identity fixture 后才切公共 ID；此前 `NoteNode.id` 与旧布局继续作为兼容 canonical key。
+
+### 权衡与拒绝的捷径
+
+- 路径派生 URI 是 locator，不是永久文件身份；只靠内容 hash 无法区分同内容笔记，所以 journal 必须显式记录。
+- capability advertisement 只增加 transport 能力，不允许移动端决定 graph/memory policy，避免多 host 漂移。
+- 倒排索引只优化常见 keyword 路径；任意 fuzzy inference 要做到次线性仍需独立 token/ANN projection，不能用扩大 worker 池掩盖。
 
 # 2026-08-17 Task 7: Stable sourceUri Dual-Read Foundation
 
@@ -787,17 +837,17 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 
 ### Verification and rollback
 
-- [x] Four focused suites: 15 tests passed.
-- [x] `npx tsc --noEmit` passed.
-- [ ] Full Jest/build/mobile/docs/Rust matrix still gates the commit.
+- [x] Focused replay/identity suites now cover 35 tests; core/route, learning, and mobile contract partitions also pass.
+- [x] TypeScript build, mobile slim staging/budget, PathBridge strict, Diataxis, and Rust (26 tests) passed on 2026-08-17.
+- [ ] Signed arm64 artifact extraction, device RSS, registry shadow parity, and restart-backed SQLite remain release gates.
 - Rollback is additive-field removal; old IDs, layouts, route paths, and snapshot JSON remain the compatibility surface.
 
 ### Next gates
 
-1. Add move/rename replay and old-snapshot corpus tests before any canonical ID cutover.
+1. Add old-snapshot, collision, rollback, and cross-root replay corpora before any canonical ID cutover.
 2. Validate HTTP payload schemas at route edges, then run route-registry shadow parity.
 3. Split explicit/inferred graph projections and bound indexed matching before raising worker/GPU budgets.
-4. Negotiate Bridge capabilities and cancellation only after the portable exact contract is replayable on Web, Tauri, Capacitor, and Android.
+4. Replay the additive Bridge 2.0 capability/cancellation envelope across Web, Tauri, Capacitor, and Android before wiring host adapters.
 
 ## 中文
 
@@ -811,17 +861,17 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 
 ### 验证与回滚
 
-- [x] 四个聚焦 suite 共 15 个测试通过。
-- [x] `npx tsc --noEmit` 通过。
-- [ ] 全量 Jest/build/mobile/docs/Rust 矩阵仍是提交门禁。
+- [x] replay/identity 聚焦验证现覆盖 35 个测试；core/route、learning 与 mobile contract 分片也已通过。
+- [x] 2026-08-17 TypeScript build、mobile slim staging/budget、PathBridge strict、Diataxis 与 Rust（26 tests）通过。
+- [ ] 签名 arm64 产物解包、真机 RSS、registry shadow parity 与重启 SQLite 仍是 release 门禁。
 - 回滚只需移除 additive 字段；旧 ID、布局、route path 和 snapshot JSON 继续作为兼容面。
 
 ### 后续门禁
 
-1. 在切换 canonical ID 前增加文件移动/重命名 replay 与旧 snapshot 语料测试。
+1. 在切换 canonical ID 前增加旧 snapshot、collision、rollback 与跨 root replay 语料测试。
 2. 在 HTTP 边界完成 schema 校验，再执行 route-registry shadow parity。
 3. 拆分 explicit/inferred graph projection，并在提高 worker/GPU 预算前完成索引化匹配。
-4. 只有 portable exact 契约能在 Web、Tauri、Capacitor、Android replay 后，才推进 Bridge capability negotiation 与取消语义。
+4. 先在 Web、Tauri、Capacitor、Android replay additive Bridge 2.0 capability/cancellation envelope，再接入各 host adapter。
 
 # 2026-08-17 Mobile Slim Implementation Reconciliation
 

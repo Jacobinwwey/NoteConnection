@@ -318,4 +318,103 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(restoredQuery.items.length).toBeGreaterThan(0);
         expect(platformB.getKnowledgeState().documents).toBe(1);
     });
+
+    test('replays an explicit move journal without changing the legacy document id', async () => {
+        const platform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store: createFileBackedKnowledgeGraphStore({ filePath: snapshotPath }),
+        });
+
+        await platform.ingestKnowledge({
+            documents: [{
+                documentId: 'doc_move',
+                sourcePath: 'Knowledge_Base/old-name.md',
+                sourceUri: 'note://workspace/v1/old-name.md',
+                language: 'en',
+                content: '# Move target\nThe document keeps its legacy id during a rename.',
+            }],
+        });
+        await platform.ingestKnowledge({
+            operations: [{
+                op: 'move',
+                document: {
+                    documentId: 'doc_move',
+                    toSourcePath: 'Knowledge_Base/new-name.md',
+                    toSourceUri: 'note://workspace/v1/new-name.md',
+                    toIdentityAliases: ['new-name'],
+                },
+            }],
+        });
+
+        const persisted = JSON.parse(fs.readFileSync(snapshotPath, 'utf8')) as any;
+        expect(persisted.documents).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: 'doc_move',
+                sourcePath: 'Knowledge_Base/new-name.md',
+                sourceUri: 'note://workspace/v1/new-name.md',
+                identityAliases: expect.arrayContaining(['Knowledge_Base/old-name.md']),
+            }),
+        ]));
+        expect(persisted.identityJournal).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: 'doc_move',
+                fromSourcePath: 'Knowledge_Base/old-name.md',
+                toSourcePath: 'Knowledge_Base/new-name.md',
+                reason: 'move',
+            }),
+        ]));
+
+        const restored = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store: createFileBackedKnowledgeGraphStore({ filePath: snapshotPath }),
+        });
+        await restored.ensureReady();
+        const deleteResult = await restored.ingestKnowledge({
+            deletedDocuments: [{ sourcePath: 'Knowledge_Base/old-name.md' }],
+        });
+        expect(deleteResult.summary.deletedDocuments).toBe(1);
+        expect(restored.getKnowledgeState().documents).toBe(0);
+    });
+
+    test('keeps optional identity fields during a path-only move and resolves case-folded aliases', async () => {
+        const platform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store: createFileBackedKnowledgeGraphStore({ filePath: snapshotPath }),
+        });
+
+        await platform.ingestKnowledge({
+            documents: [{
+                documentId: 'doc_optional_move',
+                sourcePath: 'Knowledge_Base/Old-Name.md',
+                sourceUri: 'note://workspace/v1/old-name.md',
+                revision: 'sha256:stable',
+                language: 'en',
+                content: '# Optional identity fields\nA path-only move must not erase the URI.',
+            }],
+        });
+        await platform.ingestKnowledge({
+            operations: [{
+                op: 'move',
+                document: {
+                    fromSourcePath: 'knowledge_base/old-name.md',
+                    toSourcePath: 'Knowledge_Base/New-Name.md',
+                },
+            }],
+        });
+
+        const persisted = JSON.parse(fs.readFileSync(snapshotPath, 'utf8')) as any;
+        expect(persisted.documents).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: 'doc_optional_move',
+                sourceUri: 'note://workspace/v1/old-name.md',
+                revision: 'sha256:stable',
+                sourcePath: 'Knowledge_Base/New-Name.md',
+            }),
+        ]));
+
+        const deleteResult = await platform.ingestKnowledge({
+            deletedDocuments: [{ sourceUri: 'NOTE://WORKSPACE/V1/OLD-NAME.MD' }],
+        });
+        expect(deleteResult.summary.deletedDocuments).toBe(1);
+    });
 });

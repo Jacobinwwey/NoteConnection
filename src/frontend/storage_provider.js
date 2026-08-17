@@ -170,6 +170,33 @@
             .pop() || '';
     }
 
+    function createMobileResourceIdentity(relativePath, legacyId) {
+        const normalizedLegacyId = String(legacyId || '').trim();
+        const displayPath = String(relativePath || '')
+            .trim()
+            .replace(/\\/g, '/')
+            .normalize('NFC');
+        const segments = displayPath.split('/').filter(Boolean);
+        if (segments.length > 0 && segments[0].toLowerCase() === 'knowledge_base') {
+            segments.shift();
+        }
+        const canonicalPath = segments.map((segment) => segment.toLowerCase()).join('/');
+        const sourceUri = canonicalPath
+            ? `note://workspace/v1/${canonicalPath.split('/').map((segment) => encodeURIComponent(segment)).join('/')}`
+            : '';
+        const aliases = Array.from(new Set([
+            normalizedLegacyId,
+            normalizedLegacyId
+                ? (normalizedLegacyId.toLowerCase().endsWith('.md')
+                    ? normalizedLegacyId
+                    : `${normalizedLegacyId}.md`)
+                : '',
+            displayPath,
+            canonicalPath,
+        ].filter(Boolean)));
+        return { sourceUri, identityAliases: aliases };
+    }
+
     function extractWikiLinks(content) {
         const links = new Set();
         const regex = /\[\[(.*?)(?:\|.*?)?\]\]/g;
@@ -753,11 +780,14 @@
                 const relativePath = entry.path;
                 const segments = relativePath.split('/').filter(Boolean);
                 const clusterId = segments.length > 1 ? segments[segments.length - 2] : 'root';
+                const identity = createMobileResourceIdentity(relativePath, filename);
 
                 files.push({
                     id: filename,
                     label: filename,
                     path: relativePath,
+                    sourceUri: identity.sourceUri,
+                    identityAliases: identity.identityAliases,
                     content: rawText,
                     metadata,
                     clusterId
@@ -799,12 +829,17 @@
         };
 
         files.forEach((file) => {
-            if (!file || !file.id || nodeMap.has(file.id)) {
+            if (!file || !file.id) {
                 return;
+            }
+            if (nodeMap.has(file.id)) {
+                throw new Error(`Capacitor graph contains duplicate legacy node id: ${file.id}`);
             }
             nodeMap.set(file.id, {
                 id: file.id,
                 label: file.label || file.id,
+                sourceUri: file.sourceUri || '',
+                identityAliases: Array.isArray(file.identityAliases) ? file.identityAliases : [],
                 inDegree: 0,
                 outDegree: 0,
                 metadata: {
@@ -930,13 +965,18 @@
             '    }',
             '',
             '    files.forEach(function(file) {',
-            '      if (!file || !file.id || nodeMap.has(file.id)) {',
+            '      if (!file || !file.id) {',
             '        return;',
+            '      }',
+            '      if (nodeMap.has(file.id)) {',
+            '        throw new Error("Capacitor graph contains duplicate legacy node id: " + file.id);',
             '      }',
             '      var metadata = file.metadata || {};',
             '      nodeMap.set(file.id, {',
             '        id: file.id,',
             '        label: file.label || file.id,',
+            '        sourceUri: file.sourceUri || "",',
+            '        identityAliases: Array.isArray(file.identityAliases) ? file.identityAliases : [],',
             '        inDegree: 0,',
             '        outDegree: 0,',
             '        metadata: {',
@@ -1604,9 +1644,13 @@
                 query,
                 matches: matches.map((node) => ({
                     ...node,
-                    neighbors: index.neighbors(node.id, payload.maxNeighborsPerMatch)
+                    neighbors: index.neighbors(
+                        node.id,
+                        payload.maxNeighborsPerMatch,
+                        payload.edgeKinds
+                    )
                 })),
-                statistics: index.statistics(),
+                statistics: index.statistics({ includeProvenance: true }),
                 execution: 'local-exact',
                 remoteInferenceUsed: false
             };

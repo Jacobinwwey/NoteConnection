@@ -1765,7 +1765,7 @@ The next direction is to expand this versioned corpus with human-rated multiling
 
 ### Evidence and limits
 
-Four focused suites passed (15 tests) and `npx tsc --noEmit` passed. Move/rename replay, canonical-ID cutover, route-registry shadow parity, indexed projections, Bridge v2, and real-device APK/RSS evidence remain open. The authoritative detail is in [the architecture hardening solution note](../../../solutions/architecture-hardening-forward-compatibility-2026-08-16.md).
+The foundation checkpoint passed four focused suites (15 tests) and `npx tsc --noEmit`; Phase 8 subsequently added move/rename replay, bounded ingest, mobile projection, and the additive Bridge 2.0 transport contract. Canonical-ID cutover, route-registry shadow parity, indexed projections, and real-device APK/RSS evidence remain open. The authoritative detail is in [the architecture hardening solution note](../../../solutions/architecture-hardening-forward-compatibility-2026-08-16.md).
 
 ## 2026-08-17 Architecture and Mobile Progress Delta
 
@@ -1773,16 +1773,34 @@ Four focused suites passed (15 tests) and `npx tsc --noEmit` passed. Move/rename
 
 - Resource identity collision guard, shared strict auth decision, and atomic/cache-coherent snapshot writes remain verified on `main`.
 - `mobile-slim` is now an executable profile: local exact ingest/query capability is explicit, remote inference is optional, SVG is disabled, and the profile carries 25 MiB estimated compressed asset / 256 MiB resident-memory budgets.
-- `mobile_exact_analyzer.js` and the storage-provider adapter provide bounded exact lookup, neighbors, and directed paths from the local graph asset without a sidecar. The analyzer is O(V + E) to build and does not retain node bodies; Android Rust releases parsed document bodies and skips full-content graph allocation.
+- `mobile_exact_analyzer.js` and the storage-provider adapter provide bounded exact lookup, neighbors, and directed paths from the local graph asset without a sidecar. The analyzer is O(V + E) to build and does not retain node bodies; Android Rust extracts link candidates while reading, then releases document bodies and skips full-content graph allocation.
 - Capacitor and Tauri Android share deterministic staging and manifest generation. The default Tauri Android path does not build sidecars or inject Godot; Godot Pathmode is an explicit extended profile.
 
 ### Evidence and gaps
 
-- Static host evidence: 34 focused mobile/platform tests passed; 118 staged files measured 4,223,135 bytes uncompressed and 1,539,168 estimated compressed bytes.
+- Current host evidence: 12 core/route suites (70 tests), 24 learning suites (501 tests), 9 mobile contract suites (51 tests), 6 replay/identity suites (35 tests), Rust (26 tests), PathBridge strict, Diataxis, and TypeScript build passed; 118 staged files measured 4,231,472 bytes uncompressed and 1,540,865 estimated compressed bytes.
 - RSS and signed APK/AAB extraction are not yet measured. A missing RSS evidence file remains `not-measured`, so this dashboard does not claim device acceptance.
-- SQLite persistence, full agent conversation parity, complete `sourceUri` migration (the additive dual-read foundation is shipped), strict route-registry defaulting, indexed explicit/inferred projections, Bridge v2, and domain extraction remain pending.
+- SQLite persistence, full agent conversation parity, complete `sourceUri` migration (the additive dual-read foundation and explicit move journal are shipped), strict route-registry defaulting, indexed explicit/inferred projections, Bridge host adapters, and domain extraction remain pending.
 - Workspace-root propagation now keeps full-workspace and subdirectory identities aligned; learning ingest/snapshots retain optional URI/revision/aliases, and Android admission rejects over-budget corpora before body reads (5,000 docs / 16 MiB per doc / 64 MiB total / 250,000 edges).
 
 ### Direction
 
-The next order is: device evidence and mobile workload runner; stable identity dual-read with case-folding/Unicode policy; HTTP schema validation; route-registry shadow parity; explicit/inferred indexed graph projections with `contentRef`; then versioned Bridge negotiation and complete use-case extraction. This keeps the LearnGraph typed-boundary lesson and textbooks content-package/compiler lesson while rejecting Docker-only, SaaS-database, Godot, and local-LLM assumptions for the slim product.
+The next order is: device evidence and mobile workload runner; old-snapshot/collision/rollback and cross-root identity corpora; HTTP schema parity; route-registry shadow parity; explicit/inferred indexed graph projections with `contentRef`; then Bridge host adapters and complete use-case extraction. This keeps the LearnGraph typed-boundary lesson and textbooks content-package/compiler lesson while rejecting Docker-only, SaaS-database, Godot, and local-LLM assumptions for the slim product.
+
+## 2026-08-17 Phase 8 Replay and Contract Delta
+
+### Shipped
+
+- `Graph.fromJSON()` / `Graph.restore()` validate a temporary graph before swapping it into a live instance, preserving old snapshots while rejecting undeclared edge endpoints.
+- Learning `move`/`rename` operations persist a bounded identity journal and historical aliases; old document IDs and delete paths remain usable after a rename.
+- The modular ingest route now enforces JSON, document, alias, content, and operation bounds before domain execution and keeps legacy field aliases.
+- Sequential keyword matching uses an inverted anchor index; the final exact/fuzzy predicate remains unchanged. Mobile exact projection now includes URI/alias lookup, NFC normalization, and explicit/inferred/runtime edge statistics without document bodies.
+- PathBridge protocol `2.0` adds additive capabilities, correlation IDs, analysis request types, and cancellation. It is transport-only and does not move graph/memory policy into clients.
+
+### Evidence boundary
+
+TypeScript build and 6 replay/identity suites / 35 tests passed, alongside 12 core/route suites / 70 tests, 24 learning suites / 501 tests, 9 mobile suites / 51 tests, Rust / 26 tests, PathBridge strict, Diataxis, and slim staging. The staged profile is 118 files, 4,231,472 uncompressed bytes, and 1,540,865 estimated compressed bytes. Registry response/status shadow parity, signed arm64 APK extraction, device RSS, SQLite restart replay, and canonical public-ID cutover remain open; `not-measured` is not a pass.
+
+### Direction
+
+Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 versioned SQLite/WASM projection behind the export contract, and G4 canonical-ID migration only after old-snapshot/collision/cross-root replay corpora and rollback evidence are complete.

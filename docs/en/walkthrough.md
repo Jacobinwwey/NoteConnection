@@ -137,6 +137,7 @@ Implementation of 13 steps across 4 components (Core Algorithm, Frontend Bridge,
 
 ## 2026-08-17 Identity and Mobile Guardrail Walkthrough
 
-The target build passes `kbRoot` into `FileLoader`, so full-workspace and subdirectory scans emit the same `relativePath` and `sourceUri`. Learning ingest keeps identity fields optional and resolves URI/alias deletes before the legacy path normalizer. Android checks metadata sizes before reading bodies and rejects over-budget document, byte, or edge counts; this is an admission guard, not device RSS evidence.
+The target/data build and `NoteConnection` pass `kbRoot` into `FileLoader`, so full-workspace and subdirectory scans emit the same `relativePath` and `sourceUri`; callers that omit the root remain compatibility-only. Learning ingest keeps identity fields optional, path-only moves retain URI/revision, and URI/alias deletes resolve before the legacy path normalizer. Android checks metadata sizes before reading bodies and rejects over-budget document, byte, or edge counts; link candidates are extracted at read time so the intermediate projection does not retain document bodies. This is an admission guard, not device RSS evidence.
 
 ---
+- Phase 8 replay validates a temporary graph before swapping it in, records explicit document moves, and preserves aliases for old layouts and deletes. Mobile exact analysis now resolves URI/alias references and reports explicit versus inferred edge provenance without document bodies. Bridge 2.0 capability and cancellation fields are additive; full device/APK and registry-parity evidence remains open. Current evidence is 35 replay/identity tests, 70 core/route tests, 501 learning tests, 51 mobile contract tests, and 26 Rust tests.

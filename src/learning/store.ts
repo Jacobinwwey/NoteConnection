@@ -40,6 +40,22 @@ export interface SerializedDocumentSnapshot {
     temporalEdgeIds: string[];
 }
 
+/**
+ * Explicit identity transition recorded by a workspace sync or replay.
+ * A URI is path-derived, so keeping the transition is the only reliable way
+ * to connect a rename to the existing document without changing its ID.
+ */
+export interface IdentityTransitionRecord {
+    documentId: string;
+    fromSourcePath?: string;
+    toSourcePath: string;
+    fromSourceUri?: string;
+    toSourceUri?: string;
+    revision?: string;
+    recordedAt: string;
+    reason: 'move' | 'upsert_identity_change';
+}
+
 export interface KnowledgeGraphSnapshot {
     schemaVersion: 1 | 2;
     savedAt: string;
@@ -49,6 +65,7 @@ export interface KnowledgeGraphSnapshot {
     relationEdges: RelationEdge[];
     temporalEdges: TemporalEdge[];
     documents: SerializedDocumentSnapshot[];
+    identityJournal?: IdentityTransitionRecord[];
     activeStableKeyToAtomId: Array<[string, string]>;
     activeAtomIds: string[];
     learnerStates: LearnerConceptState[];

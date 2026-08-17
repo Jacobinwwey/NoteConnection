@@ -132,4 +132,5 @@
 
 ## 2026-08-17 身份与移动端门禁演练
 
-target 构建会把 `kbRoot` 传入 `FileLoader`，因此全库与子目录扫描生成一致的 `relativePath` 与 `sourceUri`。学习摄入保留可选身份字段，并在旧 path normalizer 之前解析 URI/alias 删除。Android 在读取正文前检查元数据大小，拒绝超出文档数、字节数或边数预算的导入；这是 admission guard，不是真机 RSS 证据。
+target/data 构建与 `NoteConnection` 会把 `kbRoot` 传入 `FileLoader`，因此全库与子目录扫描生成一致的 `relativePath` 与 `sourceUri`；省略 root 的旧调用仅作为兼容路径。学习摄入保留可选身份字段，只提供新路径的 move 不清空 URI/revision，并在旧 path normalizer 之前解析 URI/alias 删除。Android 在读取正文前检查元数据大小，拒绝超出文档数、字节数或边数预算的导入；读取时直接提取 link candidate，中间 projection 不保留语料正文。这是 admission guard，不是真机 RSS 证据。
+- 第 8 阶段 replay 会先校验临时 graph 再原子替换，记录显式文档移动，并为旧布局/删除保留 alias。移动 exact analysis 现在可解析 URI/alias 并报告 explicit/inferred 边 provenance，同时不携带正文。Bridge 2.0 的 capability/cancellation 字段是 additive；真机/APK 与 registry parity 证据仍待补齐。当前证据为 replay/identity 35 个测试、core/route 70 个测试、learning 501 个测试、mobile contract 51 个测试与 Rust 26 个测试。

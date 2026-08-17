@@ -16,13 +16,40 @@
     const MAX_NEIGHBORS = 64;
     const MAX_PATH_DEPTH = 8;
     const MAX_VISITED_NODES = 10000;
+    const PROJECTION_VERSION = 1;
 
     function normalizeLookupKey(value) {
         const text = String(value || '').trim();
         const normalizedText = typeof text.normalize === 'function'
-            ? text.normalize('NFKC')
+            ? text.normalize('NFC')
             : text;
         return normalizedText.toLowerCase();
+    }
+
+    function classifyEdgeType(edgeType) {
+        const normalized = String(edgeType || '').trim().toLowerCase();
+        if (normalized.startsWith('explicit-') || normalized === 'tagged' || normalized === 'sequence') {
+            return 'explicit';
+        }
+        if (
+            normalized.includes('inferred')
+            || normalized.includes('keyword')
+            || normalized.includes('vector')
+            || normalized.includes('statistical')
+            || normalized.includes('similarity')
+        ) {
+            return 'inferred';
+        }
+        return 'runtime';
+    }
+
+    function normalizeEdgeKinds(value) {
+        if (!Array.isArray(value)) {
+            return null;
+        }
+        const allowed = new Set(['explicit', 'inferred', 'runtime']);
+        const kinds = value.map((kind) => String(kind || '').trim().toLowerCase()).filter((kind) => allowed.has(kind));
+        return kinds.length > 0 ? new Set(kinds) : null;
     }
 
     function boundedPositiveInteger(value, fallback, ceiling) {
@@ -57,6 +84,9 @@
         const tags = Array.isArray(metadata.tags)
             ? metadata.tags.map((tag) => String(tag || '').trim()).filter(Boolean)
             : [];
+        const identityAliases = Array.isArray(rawNode.identityAliases)
+            ? rawNode.identityAliases.map((alias) => String(alias || '').trim()).filter(Boolean)
+            : [];
 
         return Object.freeze({
             id,
@@ -67,6 +97,9 @@
             inDegree: Number.isFinite(rawNode.inDegree) ? Number(rawNode.inDegree) : 0,
             outDegree: Number.isFinite(rawNode.outDegree) ? Number(rawNode.outDegree) : 0,
             tags: Object.freeze(tags),
+            sourceUri: typeof rawNode.sourceUri === 'string' ? rawNode.sourceUri.trim() : '',
+            revision: typeof rawNode.revision === 'string' ? rawNode.revision.trim() : '',
+            identityAliases: Object.freeze(identityAliases),
         });
     }
 
@@ -112,10 +145,16 @@
             incoming.set(node.id, new Map());
             addLookupReference(lookup, node.id, node.id);
             addLookupReference(lookup, node.label, node.id);
+            addLookupReference(lookup, node.sourceUri, node.id);
+            addLookupReference(lookup, node.revision, node.id);
+            node.identityAliases.forEach((alias) => addLookupReference(lookup, alias, node.id));
             node.tags.forEach((tag) => addLookupReference(lookup, tag, node.id));
         });
 
         let edgeCount = 0;
+        let explicitEdgeCount = 0;
+        let inferredEdgeCount = 0;
+        let runtimeEdgeCount = 0;
         rawEdges.forEach((rawEdge) => {
             if (!rawEdge || typeof rawEdge !== 'object') {
                 throw new Error('Mobile exact index requires every edge to be an object.');
@@ -135,9 +174,13 @@
             const edgeType = typeof rawEdge.type === 'string' && rawEdge.type.trim()
                 ? rawEdge.type.trim()
                 : 'association';
+            const edgeKind = classifyEdgeType(edgeType);
             sourceEdges.set(target, edgeType);
             incoming.get(target).set(source, edgeType);
             edgeCount += 1;
+            if (edgeKind === 'explicit') explicitEdgeCount += 1;
+            else if (edgeKind === 'inferred') inferredEdgeCount += 1;
+            else runtimeEdgeCount += 1;
         });
 
         function searchExact(term, requestedLimit) {
@@ -153,17 +196,32 @@
                 .map((id) => nodeById.get(id));
         }
 
-        function neighbors(nodeId, requestedLimit) {
-            if (!nodeById.has(nodeId)) {
+        function resolveNodeReference(reference) {
+            const direct = typeof reference === 'string' ? reference.trim() : '';
+            if (direct && nodeById.has(direct)) {
+                return direct;
+            }
+            const matches = lookup.get(normalizeLookupKey(reference));
+            return matches && matches.size === 1 ? Array.from(matches)[0] : '';
+        }
+
+        function neighbors(nodeId, requestedLimit, requestedKinds) {
+            const resolvedNodeId = resolveNodeReference(nodeId);
+            if (!resolvedNodeId) {
                 return [];
             }
             const limit = boundedPositiveInteger(requestedLimit, 16, MAX_NEIGHBORS);
+            const edgeKinds = normalizeEdgeKinds(requestedKinds);
             const adjacent = [];
-            outgoing.get(nodeId).forEach((edgeType, id) => {
-                adjacent.push({ ...nodeById.get(id), direction: 'outgoing', edgeType });
+            outgoing.get(resolvedNodeId).forEach((edgeType, id) => {
+                if (!edgeKinds || edgeKinds.has(classifyEdgeType(edgeType))) {
+                    adjacent.push({ ...nodeById.get(id), direction: 'outgoing', edgeType, edgeKind: classifyEdgeType(edgeType) });
+                }
             });
-            incoming.get(nodeId).forEach((edgeType, id) => {
-                adjacent.push({ ...nodeById.get(id), direction: 'incoming', edgeType });
+            incoming.get(resolvedNodeId).forEach((edgeType, id) => {
+                if (!edgeKinds || edgeKinds.has(classifyEdgeType(edgeType))) {
+                    adjacent.push({ ...nodeById.get(id), direction: 'incoming', edgeType, edgeKind: classifyEdgeType(edgeType) });
+                }
             });
             return adjacent
                 .sort((left, right) => {
@@ -176,11 +234,13 @@
         }
 
         function shortestPath(sourceNodeId, targetNodeId, requestedMaxDepth, requestedMaxVisitedNodes) {
-            if (!nodeById.has(sourceNodeId) || !nodeById.has(targetNodeId)) {
+            const resolvedSourceId = resolveNodeReference(sourceNodeId);
+            const resolvedTargetId = resolveNodeReference(targetNodeId);
+            if (!resolvedSourceId || !resolvedTargetId) {
                 return null;
             }
-            if (sourceNodeId === targetNodeId) {
-                return [sourceNodeId];
+            if (resolvedSourceId === resolvedTargetId) {
+                return [resolvedSourceId];
             }
             const maxDepth = boundedPositiveInteger(requestedMaxDepth, 4, MAX_PATH_DEPTH);
             const maxVisitedNodes = boundedPositiveInteger(
@@ -188,8 +248,8 @@
                 2000,
                 MAX_VISITED_NODES
             );
-            const queue = [{ id: sourceNodeId, depth: 0 }];
-            const parentById = new Map([[sourceNodeId, null]]);
+            const queue = [{ id: resolvedSourceId, depth: 0 }];
+            const parentById = new Map([[resolvedSourceId, null]]);
 
             for (let cursor = 0; cursor < queue.length; cursor += 1) {
                 const current = queue[cursor];
@@ -204,8 +264,8 @@
                         return null;
                     }
                     parentById.set(nextId, current.id);
-                    if (nextId === targetNodeId) {
-                        const path = [targetNodeId];
+                    if (nextId === resolvedTargetId) {
+                        const path = [resolvedTargetId];
                         let parentId = current.id;
                         while (parentId) {
                             path.push(parentId);
@@ -219,14 +279,25 @@
             return null;
         }
 
-        function statistics() {
-                return {
-                    nodeCount: nodeById.size,
-                    edgeCount,
-                };
+        function statistics(options) {
+            const base = {
+                nodeCount: nodeById.size,
+                edgeCount,
+            };
+            if (!options || options.includeProvenance !== true) {
+                return base;
+            }
+            return {
+                ...base,
+                projectionVersion: PROJECTION_VERSION,
+                explicitEdgeCount,
+                inferredEdgeCount,
+                runtimeEdgeCount,
+            };
         }
 
         return Object.freeze({
+            projectionVersion: PROJECTION_VERSION,
             searchExact,
             neighbors,
             shortestPath,

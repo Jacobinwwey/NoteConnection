@@ -384,9 +384,9 @@
 
 ### Evidence boundary
 
-- [x] Focused mobile/platform matrix: 34 tests passed; staged build measured 118 files, 4,223,135 uncompressed bytes, and 1,539,168 estimated compressed bytes.
+- [x] Focused mobile/platform matrix: 51 tests passed; current staged build measured 118 files, 4,231,472 uncompressed bytes, and 1,540,865 estimated compressed bytes.
 - [ ] Real-device RSS evidence and signed APK/AAB extraction evidence remain open. `not-measured` is a deliberate state, not a pass.
-- [ ] SQLite persistence, full agent conversation parity, complete `sourceUri` migration beyond additive dual-read, strict route-registry default, indexed explicit/inferred projections, Bridge v2, and domain extraction remain pending.
+- [ ] SQLite persistence, full agent conversation parity, complete `sourceUri` migration beyond additive dual-read, strict route-registry default, indexed explicit/inferred projections, Bridge host adapters, and domain extraction remain pending; the transport-only Bridge 2.0 contract is delivered.
 
 ## 中文
 
@@ -399,9 +399,9 @@
 
 ### 证据边界
 
-- [x] 移动/平台定向矩阵通过 34 个测试；本机 staging 测得 118 个文件、未压缩 4,223,135 字节、估算压缩 1,539,168 字节。
+- [x] 移动/平台定向矩阵通过 51 个测试；本机 staging 测得 118 个文件、未压缩 4,231,472 字节、估算压缩 1,540,865 字节。
 - [ ] 真机 RSS 证据和签名 APK/AAB 解包证据仍未完成。`not-measured` 是诚实的未测状态，不是通过状态。
-- [ ] SQLite 持久化、完整 agent conversation parity、稳定 `sourceUri` 双读、strict route-registry 默认切换、indexed explicit/inferred projection、Bridge v2 与 domain 抽取仍待后续阶段。
+- [ ] SQLite 持久化、完整 agent conversation parity、strict route-registry 默认切换、indexed explicit/inferred projection 与 domain 抽取仍待后续阶段；Bridge 2.0 transport contract 已交付。
 
 # 2026-08-17 Workspace Identity and Mobile Memory Guardrails
 
@@ -409,16 +409,38 @@
 
 ### Implemented in this increment
 
-- [x] `FileLoader.loadFiles()` accepts an explicit workspace root; full-workspace and subdirectory builds now emit the same relative path and `sourceUri`.
+- [x] `FileLoader.loadFiles()` accepts an explicit workspace root; the target/data sync and `NoteConnection` pass the configured root so full-workspace and subdirectory builds emit the same relative path and `sourceUri`. Legacy callers that omit the root remain compatibility-only and are not migration evidence.
 - [x] Learning ingest accepts additive `sourceUri`, `revision`, and `identityAliases`; snapshots retain them and deletes can resolve by URI/alias without changing legacy `documentId` behavior.
 - [x] Server and modular data sync propagate identity metadata from the filesystem boundary instead of rebuilding IDs from lossy basename/path normalization.
-- [x] Android graph builds reject corpora above 5,000 documents, 16 MiB per document, 64 MiB total input, or 250,000 edges before low-memory projection is persisted.
+- [x] Android graph builds reject corpora above 5,000 documents, 16 MiB per document, 64 MiB total input, or 250,000 edges before low-memory projection is persisted; link candidates are extracted at read time so the intermediate projection does not retain document bodies.
 
 ### Explicit non-goals and gates
 
-- [ ] URI-derived identity is still workspace-scoped, not a rename-proof permanent identity. Move/rename journal replay and old snapshot corpus tests are required before canonical-ID cutover.
+- [x] URI-derived identity remains workspace-scoped, while explicit move/rename journal replay now preserves the legacy ID and historical aliases. Old-snapshot, collision, rollback, and cross-root corpus fixtures are still required before canonical-ID cutover.
 - [ ] Android folder picking, signed APK/AAB extraction, and device RSS remain unverified; `not-measured` must remain visible until evidence exists.
-- [ ] SQLite persistence, route-registry shadow parity, indexed explicit/inferred projection, and Bridge v2 remain separate milestones.
+- [ ] SQLite persistence, route-registry shadow parity, indexed explicit/inferred projection, and complete Bridge host adapters remain separate milestones; the transport-only Bridge 2.0 envelope is delivered.
+
+# 2026-08-17 Phase 8 Replay, Projection, and Bridge Contract Update
+
+## English
+
+- [x] `Graph.fromJSON()` and `Graph.restore()` now validate nodes/edges before atomic replay; legacy snapshots without identity fields remain readable.
+- [x] Learning ingest accepts an explicit `move`/`rename` operation, persists a bounded identity journal, preserves old aliases, and keeps the legacy `documentId` stable.
+- [x] Modular `/api/knowledge/ingest` now applies a bounded edge normalizer (JSON, document/alias/content limits, legacy field aliases, and move operations) instead of passing arbitrary JSON into the domain.
+- [x] Sequential keyword matching uses an inverted anchor index; exact matching semantics remain unchanged while the normal path avoids the previous O(V^2) pair scan.
+- [x] Mobile exact projection now carries `sourceUri`/revision/aliases, resolves URI references, uses NFC normalization, and reports explicit/inferred/runtime edge counts without retaining document bodies.
+- [x] PathBridge advertises protocol `2.0`, capabilities, request/correlation IDs, analysis request types, and cancellation as additive envelopes; existing clients remain valid.
+- [ ] Registry response/status shadow parity, real Android APK/RSS evidence, SQLite persistence, and canonical public-ID cutover remain blocked by evidence gates.
+
+## 中文
+
+- [x] `Graph.fromJSON()` 与 `Graph.restore()` 在原子回放前校验 nodes/edges；不含身份字段的旧快照继续可读。
+- [x] learning ingest 支持显式 `move`/`rename` 操作，持久化有界 identity journal，保留旧 alias，并保持旧 `documentId` 不变。
+- [x] 模块化 `/api/knowledge/ingest` 现在经过有界边界规范化（JSON、文档/alias/正文上限、旧字段别名与 move），不再把任意 JSON 直接交给 domain。
+- [x] 顺序 keyword matching 使用倒排锚点索引；exact 语义不变，正常路径避免原先 O(V^2) 全对扫描。
+- [x] mobile exact projection 携带 `sourceUri`/revision/alias，可解析 URI，统一 NFC，并报告 explicit/inferred/runtime 边统计，不保留文档正文。
+- [x] PathBridge 以 additive envelope 宣布 protocol `2.0`、capability、request/correlation ID、分析请求类型与取消语义；旧客户端仍可用。
+- [ ] registry response/status shadow parity、真机 APK/RSS 证据、SQLite 持久化和 canonical 公共 ID 切换仍受证据门禁约束。
 
 ## 中文
 
@@ -427,10 +449,10 @@
 - [x] `FileLoader.loadFiles()` 接受显式 workspace root；全库与子目录构建现在生成一致的 relative path 与 `sourceUri`。
 - [x] 学习摄入契约接受 additive `sourceUri`、`revision`、`identityAliases`；快照保留这些字段，删除操作可按 URI/alias 解析，同时不改变旧 `documentId` 行为。
 - [x] Server 与 modular data sync 从文件系统边界直接传播身份元数据，不再依赖有损 basename/path 归一化重新推导 ID。
-- [x] Android 建图在低内存 projection 持久化前拒绝超过 5,000 文档、单文档 16 MiB、总输入 64 MiB 或 250,000 条边的语料。
+- [x] Android 建图在低内存 projection 持久化前拒绝超过 5,000 文档、单文档 16 MiB、总输入 64 MiB 或 250,000 条边的语料；读取时先提取 link candidate，中间 projection 不保留正文。
 
 ### 明确非目标与门禁
 
-- [ ] URI 派生身份仍是 workspace-scoped，并非可抵抗重命名的永久身份；切换 canonical ID 前必须完成 move/rename journal replay 与旧 snapshot 语料测试。
+- [x] URI 派生身份仍是 workspace-scoped；显式 move/rename journal replay 已保留旧 document ID 与历史 alias。切换 canonical ID 前仍必须完成旧 snapshot、collision、rollback 与跨 root 语料测试。
 - [ ] Android 文件夹选择、签名 APK/AAB 解包和真机 RSS 仍未验证；在获得证据前必须保留 `not-measured` 状态。
-- [ ] SQLite 持久化、route-registry shadow parity、indexed explicit/inferred projection 与 Bridge v2 仍是独立里程碑。
+- [ ] SQLite 持久化、route-registry shadow parity、indexed explicit/inferred projection 与完整 Bridge host adapter 仍是独立里程碑；transport-only Bridge 2.0 已交付。

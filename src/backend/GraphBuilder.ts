@@ -481,25 +481,39 @@ export class GraphBuilder {
   }
 
   private static runSequentialMatching(files: RawFile[], graph: Graph) {
-      files.forEach(sourceFile => {
-        const sourceId = sourceFile.filename;
-        const content = sourceFile.content;
-  
-        files.forEach(targetFile => {
+      // Index the first semantic token of every document once. The previous
+      // implementation tested every source/target pair (O(V^2)); candidate
+      // filtering keeps exact semantics while making the common case close to
+      // O(total content + matching candidates). Punctuation-only titles retain
+      // the old full-scan behavior because they have no safe anchor token.
+      const candidatesByAnchor = new Map<string, RawFile[]>();
+      files.forEach((sourceFile) => {
+          const tokens = sourceFile.content.toLowerCase().match(/[A-Za-z0-9\u4e00-\u9fff]+/gu) || [];
+          const seenTokens = new Set(tokens);
+          seenTokens.forEach((token) => {
+              const candidates = candidatesByAnchor.get(token) || [];
+              candidates.push(sourceFile);
+              candidatesByAnchor.set(token, candidates);
+          });
+      });
+
+      files.forEach((targetFile) => {
           const targetId = targetFile.filename;
-          if (sourceId === targetId) return; // Skip self | 跳过自身
-  
-          // Exclusion Check
           if (config.exclusionList.includes(targetId)) {
               return;
           }
-  
-          if (checkMatch(content, targetId, config.matchingStrategy)) {
-               // Found a reference!
-               // Target (Concept) -> Source (Context)
-               graph.addEdge(targetId, sourceId, 'keyword-match');
-          }
-        });
+          const anchor = targetId.toLowerCase().match(/[A-Za-z0-9\u4e00-\u9fff]+/u)?.[0] || '';
+          const candidateSources = anchor ? (candidatesByAnchor.get(anchor) || []) : files;
+          candidateSources.forEach((sourceFile) => {
+              const sourceId = sourceFile.filename;
+              if (sourceId === targetId) {
+                  return;
+              }
+              if (checkMatch(sourceFile.content, targetId, config.matchingStrategy)) {
+                  // Target (Concept) -> Source (Context)
+                  graph.addEdge(targetId, sourceId, 'keyword-match');
+              }
+          });
       });
   }
 }
