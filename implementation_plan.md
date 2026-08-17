@@ -1016,3 +1016,59 @@ Completed gates: capability fields, local exact query/path calls, deterministic 
 本轮移动切片落地的是紧凑 exact graph projection，并没有冒充 SQLite runtime 已经存在。复用现有 Tauri Rust 与 Capacitor 本地构建器作为平台 adapter，由浏览器兼容 analyzer 提供共同 query projection，在保持多端优势的同时避免各 UI 各自复制图规则。
 
 已完成门禁：capability 字段、本地 exact query/path 调用、deterministic staging 与 manifest、禁入物/估算压缩字节 verifier、Capacitor web-dir override、Tauri Android slim frontend override、默认 Android 构建移除 sidecar、Godot 显式 opt-in。待完成门禁：真机 RSS/APK 证据、SQLite 持久化、远程取消接线，以及更大范围的 identity/registry/graph/Bridge 迁移。
+
+# 2026-08-18 Phase 11 Projection Store and Android SAF Execution
+
+## English
+
+### Delivered in this increment
+
+1. `knowledge_projection_store.js` now owns the host-neutral persistence boundary. It normalizes through the existing projection contract, supports persistent/read-through and memory adapters, exposes bounded metadata, and retains a last-known projection when a previously successful adapter read becomes temporarily unavailable.
+2. `storage_provider.js` consumes the store instead of parsing `graph_data.json` directly. Web, Tauri, Capacitor, and Android fixture adapters replay the same schema, metadata, exact lookup, neighbor, and path results; the store still fails closed on unknown future schemas.
+3. Tauri graph assets use sibling temporary files plus rename, so readers never observe a partially serialized projection. Windows replacement is handled explicitly without changing the public graph schema.
+4. Android slim builds now have an additive Storage Access Framework bridge. `ACTION_OPEN_DOCUMENT_TREE` grants persisted URI access, streams only Markdown files into a staging tree under app-local `filesDir`, enforces 5,000 documents / depth 64 / 16 MiB per document / 64 MiB total budgets, and atomically activates the imported tree without deleting the previous corpus on failure. Completion is reported through `request_kb_path_change` / `poll_kb_path_change`; external absolute paths never become identity keys.
+5. Identity corpus coverage now includes same-content multi-document separation, move/rename alias transitions, and NFC collision rejection. Public `NoteNode.id` remains unchanged.
+
+### Gate status and rationale
+
+- **G1 route parity:** pass; no new work is hidden here.
+- **G2 mobile release evidence:** partially evidenced. A fresh arm64 slim build produced an unsigned APK (9,555,787 bytes) and AAB (7,179,228 bytes); central-directory verification measured 9,433,678 and 6,978,122 compressed payload bytes and found only the arm64 native library, with no Godot/sidecar/model/SVG entries. Signed artifacts, device workload, and RSS JSON remain open. Kotlin compilation now succeeds with the available Android toolchain.
+- **G3 projection persistence/replay:** fixture-level cross-host replay passes and memory fallback is implemented. This does not yet prove a real Android storage replay or promote SQLite/WASM as the default adapter.
+- **G4 canonical IDs:** still guarded. The new corpus strengthens the pre-cutover evidence, but move journal replay, old snapshot rollback, and cross-root restart fixtures remain required.
+
+### Next execution order
+
+1. Sign the fresh arm64 artifacts, install on a representative Android device/emulator, import a bounded external tree through SAF, execute local exact query/path, and capture peak RSS plus import metadata.
+2. Add restart/reopen replay around the projection store at the Android app-local boundary; compare it with the existing Node SQLite snapshot adapter without copying graph-domain rules.
+3. Finish the old-snapshot/rollback/move journal corpus, then make any public-ID migration decision from evidence rather than URI aesthetics.
+
+## 2026-08-18 Verification Follow-up
+
+The size gate is now reproducible: `mobile:prepare:slim` stages 120 files (4,251,345 uncompressed; 1,545,813 estimated compressed), and the fresh arm64 APK/AAB pass the static artifact verifier under the 25 MiB payload budget. This closes the stale-output and static packaging gap only; unsigned artifacts, real SAF replay, and device RSS remain explicit release gates.
+
+### 中文验证追记
+
+本次验证已闭合可复现的体积门禁：`mobile:prepare:slim` staging 为 120 个文件（未压缩 4,251,345；估算压缩 1,545,813），新鲜 arm64 APK/AAB 通过 25 MiB payload budget 下的静态 artifact verifier。这里只关闭 stale output 与静态打包缺口；未签名产物、真实 SAF replay 和真机 RSS 仍是明确的 release 门禁。
+
+## 中文
+
+### 本轮已落地
+
+1. `knowledge_projection_store.js` 现在拥有 host-neutral 持久化边界：复用现有 projection contract，提供 persistent/read-through 与 memory adapter、有限 metadata，并在 adapter 临时不可用时保留最近一次成功 projection。
+2. `storage_provider.js` 不再直接解析 `graph_data.json`，而是经 store 读取。Web、Tauri、Capacitor、Android fixture 对同一 schema、metadata、exact lookup、neighbor、path 结果进行 replay；未知未来 schema 继续 fail closed。
+3. Tauri 图资产改为同目录临时文件 + rename，读取者不会看到半个 projection；Windows 覆盖替换单独处理，公共 graph schema 不变。
+4. Android slim 增加 additive Storage Access Framework bridge：`ACTION_OPEN_DOCUMENT_TREE` 持久化 URI 权限，在 app-local staging tree 中流式复制 Markdown，执行 5,000 文档、深度 64、单文档 16 MiB、总输入 64 MiB 门禁，成功后原子切换并在失败时保留旧知识库；通过 `request_kb_path_change` / `poll_kb_path_change` 回报异步完成，外部绝对路径不参与 identity。
+5. identity corpus 增加同内容多文档区分、move/rename alias 过渡与 NFC collision 拒绝；公开 `NoteNode.id` 保持不变。
+
+### 门禁状态与理由
+
+- **G1 route parity：** 已通过，本轮没有把新工作伪装成 route 未完成。
+- **G2 移动发布证据：** 部分已闭合。新鲜未签名 arm64 APK/AAB 已通过中央目录检查与 25 MiB payload budget（APK 9,433,678；AAB 6,978,122 压缩字节），仅含 arm64 native library 且无 Godot/sidecar/model/SVG。签名产物、在线设备和 RSS JSON 仍缺失；当前 Android 工具链 Kotlin 编译已通过，这些静态证据不能替代发布验收。
+- **G3 projection 持久化/replay：** fixture 级跨 host replay 已通过，memory fallback 已实现；尚不能证明真实 Android storage replay，也不把 SQLite/WASM 提升为默认 adapter。
+- **G4 canonical ID：** 继续保护中。新增 corpus 加强了切换前证据，但仍需 move journal replay、旧 snapshot rollback 与跨 root 重启 fixture。
+
+### 后续执行顺序
+
+1. 为新鲜 arm64 产物签名，安装到代表性 Android 真机/模拟器，经 SAF 导入有界外部目录，执行本地 exact query/path，采集峰值 RSS 与导入 metadata。
+2. 在 Android app-local boundary 增加 projection store 重启/reopen replay，与现有 Node SQLite snapshot adapter 对比，但不复制 graph domain rule。
+3. 补齐旧 snapshot/rollback/move journal corpus，再基于证据决定是否迁移 public ID，不按 URI 外观做切换。

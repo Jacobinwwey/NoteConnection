@@ -152,4 +152,12 @@ The APK/AAB verifier is static and tooling-light: it reads ZIP central-directory
 - `knowledge_projection_contract.js` is loaded before the mobile analyzer and storage provider, so Capacitor and browser replay use the same body-free schema.
 - Tauri Rust writes schema `1` identity metadata and bounded adjacency; Android continues to clear document bodies after link extraction.
 - `PathBridgeHostAdapter` is opt-in and preserves legacy relay semantics when absent. Adapter execution returns correlated results and handles timeout, disconnect, abort, and cancel propagation.
-- Verification passed: `build:mini`, mobile-slim staging (119 files / 4,242,970 uncompressed / 1,543,913 estimated compressed), migration matrix (57 suites / 307 tests), focused projection/Bridge tests, `cargo check`, and targeted Rust tests. `rustfmt` is unavailable locally; signed arm64 APK/AAB and device RSS remain open.
+- Verification passed: `build:mini`, mobile-slim staging (120 files / 4,251,345 uncompressed / 1,545,813 estimated compressed), migration matrix (57 suites / 307 tests), focused projection/Bridge tests, `cargo check`, and targeted Rust tests. `rustfmt` is unavailable locally; signed arm64 APK/AAB and device RSS remain open.
+
+## 2026-08-18 Projection Store and SAF Walkthrough
+
+The runtime path is now `graph_data.json` -> `knowledge_projection_store.js` -> versioned projection contract -> `mobile_exact_analyzer`. Persistent hosts can provide `read/write`; a memory adapter preserves the last successful projection during a transient storage failure and still rejects unknown future schemas.
+
+Android uses an asynchronous SAF state machine: Rust requests `ACTION_OPEN_DOCUMENT_TREE`, Kotlin streams Markdown files into app-local `filesDir/Knowledge_Base` within the existing 16 MiB/document and 64 MiB/total budgets, then Rust polls a short result marker and persists only the app-local path. The external URI remains provenance, not identity. This keeps mobile packages sidecar/Godot/model/SVG free while supporting user-selected knowledge bases.
+
+Verification: 24 focused Jest tests, TypeScript no-emit, and 26 Rust tests pass. Generated Android patching is idempotent; a fresh arm64 slim build produced an unsigned APK (9,555,787 bytes) and AAB (7,179,228 bytes), and static artifact verification passed with no forbidden entries. Signed arm64, device import, and RSS evidence remain open.

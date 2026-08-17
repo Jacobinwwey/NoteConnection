@@ -65,4 +65,31 @@ describe('Resource identity boundary', () => {
             { filename: 'index', filepath: 'Physics/index.md' },
         ])).toThrow(/case-insensitive|ambiguous/i);
     });
+
+    test('keeps same-content documents distinct by source URI while sharing the revision', () => {
+        const first = createResourceIdentity('notes/first.md', 'First', 'same body');
+        const second = createResourceIdentity('notes/second.md', 'Second', 'same body');
+
+        expect(first.revision).toBe(second.revision);
+        expect(first.sourceUri).not.toBe(second.sourceUri);
+        expect(first.identityAliases).toEqual(expect.arrayContaining(['First', 'notes/first.md']));
+        expect(second.identityAliases).toEqual(expect.arrayContaining(['Second', 'notes/second.md']));
+    });
+
+    test('treats move and rename as an additive alias transition before any canonical cutover', () => {
+        const before = createResourceIdentity('algebra/intro.md', 'Intro', 'body');
+        const after = createResourceIdentity('foundations/start.md', 'Intro', 'body');
+
+        expect(after.revision).toBe(before.revision);
+        expect(after.sourceUri).not.toBe(before.sourceUri);
+        expect(before.identityAliases).toContain('algebra/intro.md');
+        expect(after.identityAliases).toContain('foundations/start.md');
+    });
+
+    test('rejects Unicode-normalized collisions before graph mutation', () => {
+        expect(() => assertUniqueLegacyResourceIds([
+            { filename: 'Cafe\u0301', filepath: 'one/Cafe\u0301.md' },
+            { filename: 'Caf\u00e9', filepath: 'two/Caf\u00e9.md' },
+        ])).toThrow(/ambiguous|duplicate/i);
+    });
 });

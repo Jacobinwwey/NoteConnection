@@ -281,12 +281,22 @@ Primary references:
 - [x] Added a browser-compatible versioned projection contract with body-free nodes, source URI/revision/aliases, edge provenance, bounded evidence references, and bounded adjacency.
 - [x] Capacitor and Tauri Rust graph outputs now emit schema `1` and the same identity fields; Android still avoids retaining document bodies.
 - [x] Added an optional `PathBridgeHostAdapter` with correlated operation results, timeout, disconnect cleanup, `AbortSignal`, and explicit cancellation; legacy broadcast remains the fallback.
-- [x] Fresh slim staging measures 119 files, 4,242,970 uncompressed bytes, and 1,543,913 estimated compressed bytes.
+- [x] Fresh slim staging measures 120 files, 4,251,345 uncompressed bytes, and 1,545,813 estimated compressed bytes.
 
 ## Evidence gates
 
 - [ ] Fresh signed arm64 APK/AAB extraction and physical-device RSS under 256 MiB.
-- [ ] Tauri Android Storage Access Framework folder import for external knowledge trees.
+- [x] Tauri Android Storage Access Framework folder import for external knowledge trees is implemented; device replay evidence remains open.
 - [ ] Cross-host projection replay and old-snapshot/move/rename/collision corpora before canonical-ID migration.
 - [x] Phase 8 replay, bounded ingest validation, indexed keyword matching, mobile identity projection, and additive Bridge 2.0 capability/cancellation envelopes are implemented and covered by focused tests.
 - [ ] Registry response/status shadow parity, signed Android APK/RSS evidence, SQLite persistence, and canonical public-ID cutover remain evidence-gated.
+
+# 2026-08-18 Phase 11 Projection Store and Android SAF
+
+- [x] Add the host-neutral projection store with persistent/read-through and memory adapters; exact mobile analysis now loads through it.
+- [x] Add Web/Tauri/Capacitor/Android fixture replay for schema, metadata, exact search, neighbors, and paths; unknown versions fail closed.
+- [x] Make Tauri projection writes atomic and add Android SAF tree import into app-local storage with bounded streaming and request/poll IPC.
+- [x] Extend identity corpus coverage for same-content documents, move/rename aliases, and NFC collisions without changing public IDs.
+- [~] G2 has fresh unsigned arm64 APK/AAB static evidence under the 25 MiB payload budget, but still lacks signing, physical-device workload, and RSS JSON. Kotlin compilation now succeeds with the available Android toolchain.
+- [~] G3 fixture replay passes, but real Android storage replay and SQLite/WASM adapter promotion remain pending.
+- [ ] G4 canonical-ID migration remains blocked by old-snapshot rollback and move-journal restart evidence.

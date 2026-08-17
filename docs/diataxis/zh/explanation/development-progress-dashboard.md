@@ -1807,9 +1807,9 @@ Policy v2 还会在 numeric fact key 中保留符号、常见中英文测量单�
 
 ### 证据与缺口
 
-- 当前本机证据：migration matrix 57 suite（307 tests）、projection/Bridge 定向测试、Rust graph-runtime、PathBridge strict、Diataxis 与 TypeScript build 通过；最新 119 个 staging 文件测得未压缩 4,242,970 字节、估算压缩 1,543,913 字节。
+- 当前本机证据：migration matrix 57 suite（307 tests）、projection/Bridge 定向测试、Rust graph-runtime、PathBridge strict、Diataxis 与 TypeScript build 通过；最新 120 个 staging 文件测得未压缩 4,251,345 字节、估算压缩 1,545,813 字节。
 - RSS 与签名 APK/AAB 解包结果尚未测量。缺少 RSS evidence 时状态保持 `not-measured`，因此看板不宣称设备验收通过。
-- SQLite 持久化、完整 agent conversation parity、`sourceUri` 完整迁移、strict route-registry 默认切换、Android 文件夹导入、跨 host replay 与 domain 抽取仍待完成；版本化 projection 与可选 Bridge host 执行已交付。
+- SQLite 持久化、完整 agent conversation parity、`sourceUri` 完整迁移、strict route-registry 默认切换、跨 host replay 与 domain 抽取仍待完成；版本化 projection、Android SAF 导入与可选 Bridge host 执行已交付。新鲜未签名 arm64 APK/AAB 已通过静态检查和 25 MiB artifact budget，但签名、真机 workload 与 RSS 仍待完成。
 - workspace root 传播现已让全库与子目录身份保持一致；学习摄入/快照保留可选 URI/revision/alias，Android 在读取正文前拒绝超预算语料（5,000 文档 / 单文档 16 MiB / 总输入 64 MiB / 250,000 条边）。
 
 ### 后续方向
@@ -1827,7 +1827,7 @@ Policy v2 还会在 numeric fact key 中保留符号、常见中英文测量单�
 
 ### 证据边界
 
-Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定向测试、Rust graph-runtime、PathBridge strict、Diataxis 与 slim staging 通过。staging 为 119 个文件、未压缩 4,242,970 字节、估算压缩 1,543,913 字节；registry response/status shadow parity、签名 arm64 APK 解包、真机 RSS、Android 文件夹导入、跨 host replay 与 canonical 公共 ID 切换仍未闭环，`not-measured` 不视为通过。
+Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定向测试、Rust graph-runtime、PathBridge strict、Diataxis 与 slim staging 通过。staging 为 120 个文件、未压缩 4,251,345 字节、估算压缩 1,545,813 字节；registry response/status shadow parity、签名 arm64 APK 解包、真机 RSS、Android 文件夹导入、跨 host replay 与 canonical 公共 ID 切换仍未闭环，`not-measured` 不视为通过。
 
 ### 后续方向
 
@@ -1837,4 +1837,12 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - `knowledge_projection_contract.js` 定义 schema `1` 的无正文移动 projection：身份元数据、边 provenance、有界 evidence reference 与有界 adjacency。
 - Capacitor 与 Tauri Rust 输出同一组 projection 字段；exact analyzer 对未知 schema 版本 fail closed。
 - `PathBridgeHostAdapter` 为可选能力，保留旧广播 fallback，并增加 host 执行、correlation、timeout、abort、断连清理与 cancel 传播。
-- 最新 mobile-slim 证据为 119 个文件 / 未压缩 4,242,970 / 估算压缩 1,543,913 字节。签名 arm64 APK/AAB、真机 RSS、Android 文件夹导入与跨 host replay 仍是开放门禁。
+- 最新 mobile-slim 证据为 120 个文件 / 未压缩 4,251,345 / 估算压缩 1,545,813 字节。签名 arm64 APK/AAB、真机 RSS、Android 文件夹导入与跨 host replay 仍是开放门禁。
+
+## 2026-08-18 第 11 阶段 Projection Store 与 Android SAF
+
+- `knowledge_projection_store.js` 成为共享持久化边界，提供 persistent/read-through 与 memory adapter、有界 metadata 和 fail-closed schema replay。
+- `storage_provider.js` 的 exact mobile analysis 经 store 读取；fixture matrix 已确认 Web、Tauri、Capacitor、Android adapter 的 schema、metadata、lookup、neighbor、path 一致。
+- Tauri projection 写入原子化。Android slim 增加 additive SAF bridge，在低内存预算内把 Markdown 流式导入 app-local storage，通过 request/poll IPC，不把外部绝对路径作为 identity。
+- identity corpus 覆盖同内容文档、move/rename alias 与 NFC collision；public ID 保持不变。
+- G2 已有新鲜未签名 arm64 APK/AAB 的静态证据并通过 25 MiB payload budget，但仍缺签名、真机 workload 与 RSS JSON；G3 fixture replay 已通过但真实 Android storage replay 未完成；G4 canonical-ID 迁移仍被 rollback 与 move-journal 重启证据阻塞。

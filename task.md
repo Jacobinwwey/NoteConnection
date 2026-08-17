@@ -503,13 +503,43 @@
 - [x] Capacitor graph writes normalize through the contract before `graph_data.json`/`data.js`; the exact analyzer rejects unknown projection versions and preserves local exact query/path limits.
 - [x] Tauri Rust graph output now emits the same versioned projection metadata and identity fields without retaining Android document bodies; Rust runtime tests cover replayable identity fields and adjacency.
 - [x] Added `PathBridgeHostAdapter`: host-owned execution for `analyze`, `query`, `readEvidence`, and `exportBundle`; correlation IDs, timeout, disconnect cleanup, `AbortSignal`, and explicit cancel propagation are covered by WebSocket tests. Without an adapter, legacy broadcast behavior remains unchanged.
-- [x] Fresh slim staging: 119 files, 4,242,970 uncompressed bytes, 1,543,913 estimated compressed bytes; no Godot, desktop sidecar, model, SVG, or forbidden binary payloads.
+- [x] Fresh slim staging: 120 files, 4,251,345 uncompressed bytes, 1,545,813 estimated compressed bytes; no Godot, desktop sidecar, model, SVG, or forbidden binary payloads.
 
 ### Open evidence gates
 
 - [ ] A signed arm64 APK/AAB extracted from a fresh build and a physical-device RSS JSON under 256 MiB are still required. `not-measured` is not release evidence.
-- [ ] Android folder selection/import is still unavailable in the Tauri path; the default app-local `Knowledge_Base` path works, but user-selected external trees need a Storage Access Framework adapter.
+- [x] Android folder selection/import is implemented through an additive Storage Access Framework adapter; device replay evidence is still pending.
 - [ ] Cross-host projection replay (Web/Tauri/Capacitor/Android), old-snapshot corpus, move/rename corpus, and canonical public-ID migration remain blocked until identity and persistence evidence is complete.
+
+# 2026-08-18 Phase 11 Projection Store and Android SAF
+
+## English
+
+- [x] Added `knowledge_projection_store.js` with persistent/read-through and memory adapters; mobile exact analysis now reads through the store rather than parsing a host asset directly.
+- [x] Added fixture replay for Web/Tauri/Capacitor/Android covering schema, metadata, exact search, neighbors, and directed paths; unknown schemas fail closed.
+- [x] Made Tauri projection writes atomic with sibling temp files and rename, including Windows replacement handling.
+- [x] Added Android SAF tree selection, persisted URI permission, bounded streaming copy into app-local `Knowledge_Base`, and additive request/poll IPC commands.
+- [x] Added identity corpus cases for same-content documents, move/rename aliases, and NFC collisions; public IDs remain compatibility keys.
+- [~] G2 is partially evidenced: a fresh arm64 slim build produced an unsigned APK (9,555,787 bytes) and AAB (7,179,228 bytes); artifact verification measured 9,433,678 and 6,978,122 compressed payload bytes, with only `arm64-v8a/libnpm_lib.so` and no Godot/sidecar/model/SVG entries. Signed artifacts, device import/query workload, and RSS JSON remain open. Kotlin compilation now succeeds with the available Android toolchain.
+- [~] G3 fixture replay passes, but Android storage replay and SQLite/WASM promotion remain pending.
+- [ ] G4 canonical-ID cutover remains blocked by old-snapshot rollback and move-journal restart evidence.
+
+### 2026-08-18 verification follow-up
+
+- [x] `mobile:prepare:slim` now stages 120 files (4,251,345 uncompressed bytes; 1,545,813 estimated compressed bytes) under the 25 MiB asset budget.
+- [x] `tauri:android:build` completes for arm64 after clearing stale generated outputs; ZIP inspection and the mobile artifact verifier both pass.
+- [ ] Do not promote this to release acceptance until the unsigned artifacts are signed, installed on a representative device, exercised through SAF import plus exact query/path, and accompanied by peak RSS evidence under 256 MiB.
+
+## 中文
+
+- [x] 新增 `knowledge_projection_store.js`，提供 persistent/read-through 与 memory adapter；移动 exact analysis 经 store 读取，不再直接解析 host asset。
+- [x] 新增 Web/Tauri/Capacitor/Android fixture replay，覆盖 schema、metadata、exact search、neighbor 与 directed path；未知 schema fail closed。
+- [x] Tauri projection 写入改为同目录临时文件 + rename，并处理 Windows 替换语义。
+- [x] 增加 Android SAF tree 选择、持久化 URI 权限、有界流式复制到 app-local `Knowledge_Base`，以及 additive request/poll IPC。
+- [x] 增加同内容文档、move/rename alias、NFC collision identity corpus；public ID 仍是兼容 key。
+- [~] G2 已有部分证据：新鲜未签名 arm64 APK/AAB 已通过 ZIP 检查与 25 MiB payload budget（APK 9,433,678；AAB 6,978,122 压缩字节），仅含 `arm64-v8a/libnpm_lib.so` 且无 Godot/sidecar/model/SVG。签名产物、真机导入/query workload 与 RSS JSON 仍缺失；当前 Android 工具链 Kotlin 编译已通过。
+- [~] G3 fixture replay 已通过，但 Android storage replay 与 SQLite/WASM 提升仍待完成。
+- [ ] G4 canonical-ID 切换仍被旧 snapshot rollback 与 move-journal 重启证据阻塞。
 
 ## 中文
 
@@ -519,10 +549,10 @@
 - [x] Capacitor 在写入 `graph_data.json`/`data.js` 前统一归一化；exact analyzer 拒绝未知 projection 版本，并继续执行本地 exact query/path 上限。
 - [x] Tauri Rust 图输出改为同一版本化 projection 元数据与身份字段；Android 仍不保留正文，Rust 测试覆盖可 replay 的身份字段和 adjacency。
 - [x] 新增 `PathBridgeHostAdapter`：`analyze`、`query`、`readEvidence`、`exportBundle` 由 host 执行；correlation ID、超时、断连清理、`AbortSignal` 与显式 cancel 传播均有 WebSocket 测试。未配置 adapter 时保持旧广播行为。
-- [x] 最新 slim staging：119 个文件、未压缩 4,242,970 字节、估算压缩 1,543,913 字节；不含 Godot、桌面 sidecar、模型、SVG 或禁用二进制。
+- [x] 最新 slim staging：120 个文件、未压缩 4,251,345 字节、估算压缩 1,545,813 字节；不含 Godot、桌面 sidecar、模型、SVG 或禁用二进制。
 
 ### 尚未闭合的证据门禁
 
 - [ ] 仍需新鲜构建的签名 arm64 APK/AAB 解包结果和低于 256 MiB 的真机 RSS JSON；`not-measured` 不是 release 证据。
-- [ ] Tauri Android 路径仍未实现文件夹选择/导入；默认 app-local `Knowledge_Base` 可用，但外部知识库需要 Storage Access Framework adapter。
+- [x] Tauri Android 已实现 Storage Access Framework 文件夹选择/导入：Markdown 在单文档 16 MiB、总输入 64 MiB、5,000 文档和深度 64 限制内流式复制到 app-local `Knowledge_Base`，失败时保留旧知识库。
 - [ ] Web/Tauri/Capacitor/Android 跨 host projection replay、旧 snapshot、move/rename 语料与 canonical 公共 ID 迁移，在身份和持久化证据完成前继续冻结。

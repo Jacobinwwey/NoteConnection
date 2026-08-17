@@ -1053,3 +1053,15 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 ### 证据边界
 
 静态 staging 不能替代签名产物与真机 RSS；`not-measured` 继续保持未测状态，canonical 公共 ID 迁移继续冻结。
+
+## 2026-08-18 第 11 阶段：Projection Store 与 Android SAF
+
+1. `knowledge_projection_store.js` 成为 host-neutral 持久化边界，提供 persistent/read-through 与 memory adapter、有界 metadata，以及成功读取后的 last-known fallback。
+2. 移动 exact analysis 经 store 读取；同一 fixture 已对 Web、Tauri、Capacitor、Android adapter replay schema、metadata、exact lookup、neighbor 与 path。
+3. Tauri projection 写入使用同目录临时文件 + rename。Android slim 增加 additive SAF bridge，在 app-local staging tree 中流式导入 Markdown，执行文档数/深度/单文档/总字节预算，成功后原子切换知识库，失败保留旧目录，并通过 request/poll IPC 回报完成。
+4. identity corpus 增加同内容文档、move/rename alias 与 NFC collision；public ID 不变。
+5. G2 已有部分证据：新鲜 arm64 slim 构建生成未签名 APK（9,555,787 字节）与 AAB（7,179,228 字节）；静态 verifier 测得压缩 payload 分别为 9,433,678 与 6,978,122 字节，且没有 Godot/sidecar/model/SVG 条目。签名产物、在线设备导入/query 与 RSS JSON 仍待完成；当前 Android 工具链 Kotlin 编译已通过。G3 fixture replay 已通过，真实 Android storage replay 与 G4 canonical-ID 切换仍冻结。
+
+### 2026-08-18 验证追记
+
+`mobile:prepare:slim` 当前 staging 为 120 个文件（未压缩 4,251,345 字节；估算压缩 1,545,813 字节）。新鲜 arm64 APK/AAB 已通过 ZIP 检查和 25 MiB payload budget 下的 mobile artifact verifier。这里只关闭静态打包证据；签名、真机 SAF replay 与峰值 RSS 仍是 release 门禁。

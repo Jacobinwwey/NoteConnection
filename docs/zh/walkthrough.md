@@ -145,4 +145,12 @@ APK/AAB verifier 是静态且轻量的：读取 ZIP central-directory metadata�
 - `knowledge_projection_contract.js` 在 mobile analyzer 与 storage provider 之前加载，因此 Capacitor 和 browser replay 使用同一份无正文 schema。
 - Tauri Rust 输出 schema `1`、身份元数据与有界 adjacency；Android 在提取 link 后继续清除正文。
 - `PathBridgeHostAdapter` 为可选能力，未配置时保留旧 relay 语义；配置后返回 correlated result，并处理 timeout、断连、abort 与 cancel 传播。
-- 已通过 `build:mini`、mobile-slim staging（119 个文件 / 未压缩 4,242,970 / 估算压缩 1,543,913 字节）、migration matrix（57 suite / 307 个测试）、projection/Bridge 定向测试、`cargo check` 与 Rust 定向测试。本机未安装 `rustfmt`；签名 arm64 APK/AAB 与真机 RSS 仍未完成。
+- 已通过 `build:mini`、mobile-slim staging（120 个文件 / 未压缩 4,251,345 / 估算压缩 1,545,813 字节）、migration matrix（57 suite / 307 个测试）、projection/Bridge 定向测试、`cargo check` 与 Rust 定向测试。本机未安装 `rustfmt`；签名 arm64 APK/AAB 与真机 RSS 仍未完成。
+
+## 2026-08-18 Projection Store 与 SAF Walkthrough
+
+运行链路现在是 `graph_data.json` -> `knowledge_projection_store.js` -> 版本化 projection contract -> `mobile_exact_analyzer`。Persistent host 提供 `read/write`；memory adapter 在存储短暂故障时保留最近一次成功 projection，同时拒绝未知未来 schema。
+
+Android 采用异步 SAF 状态机：Rust 请求 `ACTION_OPEN_DOCUMENT_TREE`，Kotlin 在单文档 16 MiB、总输入 64 MiB 限制内把 Markdown 流式复制到 app-local `filesDir/Knowledge_Base`，随后 Rust 轮询短结果 marker，只持久化 app-local path。外部 URI 只是 provenance，不是 identity；移动包继续排除 sidecar/Godot/model/SVG。
+
+验证：24 项 Jest 聚焦测试、TypeScript no-emit 与 Rust 26 项测试通过。Android 生成 patch 已幂等；新鲜 arm64 slim 构建生成未签名 APK（9,555,787 字节）与 AAB（7,179,228 字节），静态 artifact 检查通过且没有禁入条目。签名 arm64、真机导入与 RSS 证据仍待补齐。

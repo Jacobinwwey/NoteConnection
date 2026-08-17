@@ -8,7 +8,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 #[cfg(target_os = "android")]
-use jni::objects::{JObject, JValue};
+use jni::objects::{JObject, JString, JValue};
 #[cfg(target_os = "android")]
 use jni::JavaVM;
 #[cfg(not(target_os = "android"))]
@@ -45,6 +45,61 @@ fn ensure_directory(path: &Path) {
     if let Err(err) = fs::create_dir_all(path) {
         eprintln!("[Rust] Failed to create directory '{}': {}", path.to_string_lossy(), err);
     }
+}
+
+fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        ensure_directory(parent);
+    }
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let temporary_path = path.with_extension(format!(
+        "{}.tmp-{}-{}",
+        path.extension().and_then(|value| value.to_str()).unwrap_or("payload"),
+        std::process::id(),
+        nonce
+    ));
+
+    fs::write(&temporary_path, content).map_err(|err| {
+        format!(
+            "Failed to write temporary projection '{}': {}",
+            temporary_path.to_string_lossy(),
+            err
+        )
+    })?;
+
+    if let Err(rename_error) = fs::rename(&temporary_path, path) {
+        // Windows cannot replace an existing file with rename. Remove only the
+        // validated destination and retry; readers never observe a partial file.
+        if path.exists() {
+            fs::remove_file(path).map_err(|remove_error| {
+                format!(
+                    "Failed to replace projection '{}': {} (initial rename: {})",
+                    path.to_string_lossy(),
+                    remove_error,
+                    rename_error
+                )
+            })?;
+            fs::rename(&temporary_path, path).map_err(|err| {
+                format!(
+                    "Failed to finalize projection '{}': {}",
+                    path.to_string_lossy(),
+                    err
+                )
+            })?;
+        } else {
+            let _ = fs::remove_file(&temporary_path);
+            return Err(format!(
+                "Failed to finalize projection '{}': {}",
+                path.to_string_lossy(),
+                rename_error
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 fn normalize_display_path(path: PathBuf) -> PathBuf {
@@ -389,6 +444,69 @@ fn pick_knowledge_base_folder(_default_dir: &str, _title: &str) -> Option<PathBu
         "[Rust] Folder picker is not available on Android. Falling back to configured/default KB path."
     );
     None
+}
+
+#[cfg(target_os = "android")]
+fn request_android_knowledge_base_picker() -> Result<bool, String> {
+    let android_context = ndk_context::android_context();
+    if android_context.vm().is_null() || android_context.context().is_null() {
+        return Err("Android context is unavailable".to_string());
+    }
+    let vm = unsafe { JavaVM::from_raw(android_context.vm() as *mut jni::sys::JavaVM) }
+        .map_err(|err| format!("Failed to access Android JavaVM: {}", err))?;
+    let mut env = vm
+        .attach_current_thread()
+        .map_err(|err| format!("Failed to attach JNI thread: {}", err))?;
+    let bridge_class = env
+        .find_class("com/jacobinwwey/noteconnection/KnowledgeBasePickerBridge")
+        .map_err(|err| format!("KnowledgeBasePickerBridge class is unavailable: {}", err))?;
+    let context_obj = unsafe { JObject::from_raw(android_context.context() as jni::sys::jobject) };
+    env.call_static_method(
+        bridge_class,
+        "requestPick",
+        "(Landroid/content/Context;)Z",
+        &[JValue::Object(&context_obj)],
+    )
+    .map_err(|err| format!("Failed to launch Android folder picker: {}", err))?
+    .z()
+    .map_err(|err| format!("Failed to decode Android folder picker result: {}", err))
+}
+
+#[cfg(target_os = "android")]
+fn consume_android_knowledge_base_picker_result() -> Result<Option<String>, String> {
+    let android_context = ndk_context::android_context();
+    if android_context.vm().is_null() || android_context.context().is_null() {
+        return Err("Android context is unavailable".to_string());
+    }
+    let vm = unsafe { JavaVM::from_raw(android_context.vm() as *mut jni::sys::JavaVM) }
+        .map_err(|err| format!("Failed to access Android JavaVM: {}", err))?;
+    let mut env = vm
+        .attach_current_thread()
+        .map_err(|err| format!("Failed to attach JNI thread: {}", err))?;
+    let bridge_class = env
+        .find_class("com/jacobinwwey/noteconnection/KnowledgeBasePickerBridge")
+        .map_err(|err| format!("KnowledgeBasePickerBridge class is unavailable: {}", err))?;
+    let context_obj = unsafe { JObject::from_raw(android_context.context() as jni::sys::jobject) };
+    let result = env
+        .call_static_method(
+            bridge_class,
+            "consumeResult",
+            "(Landroid/content/Context;)Ljava/lang/String;",
+            &[JValue::Object(&context_obj)],
+        )
+        .map_err(|err| format!("Failed to consume Android folder picker result: {}", err))?;
+    let result_obj = result
+        .l()
+        .map_err(|err| format!("Failed to decode Android folder picker payload: {}", err))?;
+    if result_obj.is_null() {
+        return Ok(None);
+    }
+    let result_string = env
+        .get_string(&JString::from(result_obj))
+        .map_err(|err| format!("Failed to read Android folder picker payload: {}", err))?
+        .to_string_lossy()
+        .into_owned();
+    Ok(Some(result_string))
 }
 
 #[cfg(not(target_os = "android"))]
@@ -832,6 +950,8 @@ const MOBILE_MAX_DOCUMENT_BYTES: u64 = 16 * 1024 * 1024;
 const MOBILE_MAX_TOTAL_INPUT_BYTES: u64 = 64 * 1024 * 1024;
 #[cfg(any(target_os = "android", test))]
 const MOBILE_MAX_EDGES: usize = 250_000;
+#[cfg(any(target_os = "android", test))]
+const MOBILE_MAX_DEPTH: usize = 64;
 
 #[cfg(any(target_os = "android", test))]
 fn validate_mobile_corpus_budget(document_count: usize, total_bytes: u64) -> Result<(), String> {
@@ -956,9 +1076,11 @@ fn is_markdown_file(path: &Path) -> bool {
 
 fn collect_markdown_files(root: &Path) -> Result<Vec<PathBuf>, String> {
     let mut files: Vec<PathBuf> = Vec::new();
-    let mut stack: Vec<PathBuf> = vec![root.to_path_buf()];
+    let mut stack: Vec<(PathBuf, usize)> = vec![(root.to_path_buf(), 0)];
+    #[cfg(target_os = "android")]
+    let mut total_input_bytes = 0u64;
 
-    while let Some(dir) = stack.pop() {
+    while let Some((dir, depth)) = stack.pop() {
         let entries = fs::read_dir(&dir)
             .map_err(|err| format!("Failed to scan directory '{}': {}", dir.to_string_lossy(), err))?;
 
@@ -969,8 +1091,34 @@ fn collect_markdown_files(root: &Path) -> Result<Vec<PathBuf>, String> {
                 .map_err(|err| format!("Failed to inspect '{}': {}", path.to_string_lossy(), err))?;
 
             if file_type.is_dir() {
-                stack.push(path);
+                #[cfg(target_os = "android")]
+                if depth >= MOBILE_MAX_DEPTH {
+                    return Err(format!(
+                        "Mobile knowledge base exceeds the directory depth limit ({})",
+                        MOBILE_MAX_DEPTH
+                    ));
+                }
+                stack.push((path, depth + 1));
             } else if file_type.is_file() && is_markdown_file(&path) {
+                #[cfg(target_os = "android")]
+                {
+                    if files.len() >= MOBILE_MAX_DOCUMENTS {
+                        return Err(format!(
+                            "Mobile knowledge base exceeds the document limit ({})",
+                            MOBILE_MAX_DOCUMENTS
+                        ));
+                    }
+                    let file_bytes = fs::metadata(&path)
+                        .map_err(|err| format!("Failed to inspect '{}': {}", path.to_string_lossy(), err))?
+                        .len();
+                    validate_mobile_document_size(file_bytes).map_err(|error| {
+                        format!("{}: {}", error, path.to_string_lossy())
+                    })?;
+                    total_input_bytes = total_input_bytes
+                        .checked_add(file_bytes)
+                        .ok_or_else(|| "Mobile knowledge base input size overflowed".to_string())?;
+                    validate_mobile_corpus_budget(files.len() + 1, total_input_bytes)?;
+                }
                 files.push(path);
             }
         }
@@ -1099,22 +1247,6 @@ fn build_graph_runtime_for_target(
     }
 
     let markdown_files = collect_markdown_files(&source_root)?;
-    #[cfg(target_os = "android")]
-    {
-        let mut total_input_bytes = 0u64;
-        for file_path in &markdown_files {
-            let file_bytes = fs::metadata(file_path)
-                .map_err(|err| format!("Failed to inspect '{}': {}", file_path.to_string_lossy(), err))?
-                .len();
-            validate_mobile_document_size(file_bytes).map_err(|error| {
-                format!("{}: {}", error, file_path.to_string_lossy())
-            })?;
-            total_input_bytes = total_input_bytes
-                .checked_add(file_bytes)
-                .ok_or_else(|| "Mobile knowledge base input size overflowed".to_string())?;
-        }
-        validate_mobile_corpus_budget(markdown_files.len(), total_input_bytes)?;
-    }
     let mut node_drafts: Vec<RuntimeNodeDraft> = Vec::with_capacity(markdown_files.len());
     let mut id_by_relative_key: HashMap<String, String> = HashMap::new();
     let mut stem_to_ids: HashMap<String, Vec<String>> = HashMap::new();
@@ -1346,42 +1478,33 @@ fn build_graph_runtime_for_target(
     let graph_json_path = runtime_data_dir.join("graph_data.json");
     let data_js_path = runtime_data_dir.join("data.js");
 
-    fs::write(
+    write_atomic(
         &graph_json_path,
         serde_json::to_string_pretty(persisted_graph)
-            .map_err(|err| format!("Failed to serialize graph_data.json: {}", err))?,
-    )
-    .map_err(|err| format!("Failed to write '{}': {}", graph_json_path.to_string_lossy(), err))?;
-    fs::write(
-        &data_js_path,
-        format!(
-            "const graphData = {};",
-            serde_json::to_string(&lite_graph)
-                .map_err(|err| format!("Failed to serialize data.js payload: {}", err))?
-        ),
-    )
-    .map_err(|err| format!("Failed to write '{}': {}", data_js_path.to_string_lossy(), err))?;
+            .map_err(|err| format!("Failed to serialize graph_data.json: {}", err))?
+            .as_str(),
+    )?;
+    let data_js = format!(
+        "const graphData = {};",
+        serde_json::to_string(&lite_graph)
+            .map_err(|err| format!("Failed to serialize data.js payload: {}", err))?
+    );
+    write_atomic(&data_js_path, data_js.as_str())?;
 
     if !is_all_targets {
         let sanitized = sanitize_target_name(target_trimmed);
         let cache_js_path = runtime_data_dir.join(format!("data_{}.js", sanitized));
         let cache_json_path = runtime_data_dir.join(format!("graph_data_{}.json", sanitized));
 
-        fs::write(
-            &cache_js_path,
-            format!(
-                "const graphData = {};",
-                serde_json::to_string(&lite_graph)
-                    .map_err(|err| format!("Failed to serialize cache data payload: {}", err))?
-            ),
-        )
-        .map_err(|err| format!("Failed to write '{}': {}", cache_js_path.to_string_lossy(), err))?;
-        fs::write(
-            &cache_json_path,
-            serde_json::to_string_pretty(persisted_graph)
-                .map_err(|err| format!("Failed to serialize cache graph payload: {}", err))?,
-        )
-        .map_err(|err| format!("Failed to write '{}': {}", cache_json_path.to_string_lossy(), err))?;
+        let cache_js = format!(
+            "const graphData = {};",
+            serde_json::to_string(&lite_graph)
+                .map_err(|err| format!("Failed to serialize cache data payload: {}", err))?
+        );
+        write_atomic(&cache_js_path, cache_js.as_str())?;
+        let cache_json = serde_json::to_string_pretty(persisted_graph)
+            .map_err(|err| format!("Failed to serialize cache graph payload: {}", err))?;
+        write_atomic(&cache_json_path, cache_json.as_str())?;
     }
 
     Ok(RuntimeBuildResult {
@@ -1417,6 +1540,89 @@ fn choose_kb_path() -> Result<Option<String>, String> {
     }
 
     Ok(None)
+}
+
+#[tauri::command]
+fn request_kb_path_change() -> Result<KnowledgeBasePathChangeResult, String> {
+    #[cfg(target_os = "android")]
+    {
+        let launched = request_android_knowledge_base_picker()?;
+        return Ok(KnowledgeBasePathChangeResult {
+            status: if launched { "pending" } else { "unavailable" }.to_string(),
+            path: None,
+            detail: if launched { None } else { Some("Android folder picker did not launch".to_string()) },
+        });
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        let current_kb = resolve_kb_path_from_config();
+        if let Some(folder) = pick_knowledge_base_folder(&current_kb, "Select Knowledge Base Folder") {
+            let selected = folder.to_string_lossy().to_string();
+            let persisted = persist_kb_path(selected.as_str())?;
+            return Ok(KnowledgeBasePathChangeResult {
+                status: "completed".to_string(),
+                path: Some(persisted),
+                detail: None,
+            });
+        }
+        Ok(KnowledgeBasePathChangeResult {
+            status: "cancelled".to_string(),
+            path: None,
+            detail: None,
+        })
+    }
+}
+
+#[tauri::command]
+fn poll_kb_path_change() -> Result<KnowledgeBasePathChangeResult, String> {
+    #[cfg(target_os = "android")]
+    {
+        let Some(serialized) = consume_android_knowledge_base_picker_result()? else {
+            return Ok(KnowledgeBasePathChangeResult {
+                status: "pending".to_string(),
+                path: None,
+                detail: None,
+            });
+        };
+        let payload: Value = serde_json::from_str(&serialized)
+            .map_err(|err| format!("Invalid Android folder picker result: {}", err))?;
+        let status = payload
+            .get("status")
+            .and_then(Value::as_str)
+            .unwrap_or("failed")
+            .to_string();
+        let detail = payload
+            .get("detail")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        if status == "completed" {
+            let path = payload
+                .get("path")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "Android folder picker completed without an app-local path".to_string())?;
+            let persisted = persist_kb_path(path)?;
+            return Ok(KnowledgeBasePathChangeResult {
+                status,
+                path: Some(persisted),
+                detail,
+            });
+        }
+        return Ok(KnowledgeBasePathChangeResult {
+            status,
+            path: None,
+            detail,
+        });
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        Ok(KnowledgeBasePathChangeResult {
+            status: "unsupported".to_string(),
+            path: None,
+            detail: None,
+        })
+    }
 }
 
 #[cfg(not(target_os = "android"))]
@@ -1723,6 +1929,9 @@ struct RuntimeCapabilities {
     supports_build: bool,
     supports_content_api: bool,
     supports_kb_runtime_change: bool,
+    supports_kb_import: bool,
+    kb_import_mode: String,
+    supports_projection_store: bool,
     supports_native_pathmode: bool,
 }
 
@@ -1741,6 +1950,14 @@ struct NativePathmodeLaunchResult {
     reason: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct KnowledgeBasePathChangeResult {
+    status: String,
+    path: Option<String>,
+    detail: Option<String>,
+}
+
 #[tauri::command]
 fn get_runtime_capabilities() -> RuntimeCapabilities {
     #[cfg(target_os = "android")]
@@ -1750,7 +1967,10 @@ fn get_runtime_capabilities() -> RuntimeCapabilities {
             supports_sidecar: false,
             supports_build: true,
             supports_content_api: true,
-            supports_kb_runtime_change: false,
+            supports_kb_runtime_change: true,
+            supports_kb_import: true,
+            kb_import_mode: "android-saf-copy".to_string(),
+            supports_projection_store: true,
             supports_native_pathmode: option_env!("NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE") == Some("1"),
         };
     }
@@ -1763,6 +1983,9 @@ fn get_runtime_capabilities() -> RuntimeCapabilities {
             supports_build: true,
             supports_content_api: true,
             supports_kb_runtime_change: true,
+            supports_kb_import: true,
+            kb_import_mode: "native-folder".to_string(),
+            supports_projection_store: true,
             supports_native_pathmode: false,
         }
     }
@@ -2280,6 +2503,8 @@ pub fn run() {
             get_kb_path,
             set_kb_path,
             choose_kb_path,
+            request_kb_path_change,
+            poll_kb_path_change,
             pick_notemd_file,
             save_notemd_file,
             pick_notemd_folder,
@@ -2806,7 +3031,10 @@ mod tests {
             assert!(!caps.supports_sidecar);
             assert!(caps.supports_build);
             assert!(caps.supports_content_api);
-            assert!(!caps.supports_kb_runtime_change);
+            assert!(caps.supports_kb_runtime_change);
+            assert!(caps.supports_kb_import);
+            assert_eq!(caps.kb_import_mode, "android-saf-copy");
+            assert!(caps.supports_projection_store);
             assert_eq!(
                 caps.supports_native_pathmode,
                 option_env!("NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE") == Some("1")

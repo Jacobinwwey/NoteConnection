@@ -571,3 +571,15 @@ This update aligns the implementation plan with the current Electron-to-Tauri mi
 2. Capacitor normalizes generated graphs through the contract; Tauri Rust emits the same schema and identity fields while preserving Android body-free memory behavior.
 3. `PathBridgeHostAdapter` keeps execution and policy in the host while the Bridge owns correlation, timeout, abort, disconnect cleanup, and legacy transport fallback.
 4. Remaining gates are fresh signed arm64 artifact/RSS evidence, Android Storage Access Framework import, cross-host replay, and old-snapshot/move/rename/collision evidence.
+
+## 2026-08-18 Phase 11: Projection Store and Android SAF Execution
+
+1. `knowledge_projection_store.js` is now the host-neutral persistence boundary, with persistent/read-through and memory adapters, bounded metadata, and last-known fallback after a successful load.
+2. Mobile exact analysis reads through the store; a shared fixture replays the same schema, metadata, exact lookup, neighbors, and paths for Web, Tauri, Capacitor, and Android adapters.
+3. Tauri projection writes use sibling temporary files plus rename. Android slim receives an additive SAF bridge that streams Markdown into a staging tree under app-local storage, enforces document/depth/byte budgets, atomically activates the imported tree, and reports completion through request/poll IPC.
+4. Identity corpus coverage now includes same-content documents, move/rename aliases, and NFC collisions. Public IDs remain unchanged.
+5. G2 is partially evidenced: a fresh arm64 slim build produced an unsigned APK (9,555,787 bytes) and AAB (7,179,228 bytes); static verification measured 9,433,678 and 6,978,122 compressed payload bytes, with no Godot/sidecar/model/SVG entries. Signed artifacts, online device import/query, and RSS JSON remain open. Kotlin compilation now succeeds with the available Android toolchain. G3 fixture replay passes; real Android storage replay and G4 canonical-ID cutover remain blocked.
+
+### 2026-08-18 verification follow-up
+
+`mobile:prepare:slim` now stages 120 files (4,251,345 uncompressed bytes; 1,545,813 estimated compressed bytes). The fresh arm64 APK/AAB pass ZIP inspection and the mobile artifact verifier under the 25 MiB payload budget. This closes static packaging evidence only; signing, device SAF replay, and peak RSS remain release gates.

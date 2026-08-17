@@ -97,6 +97,66 @@ function patchBuildGradle(appGradlePath) {
   return changed;
 }
 
+function patchKnowledgeBasePicker(appGradlePath) {
+  const original = readText(appGradlePath);
+  let gradle = original.replace(/\r/g, '');
+  const dependency = 'implementation("androidx.documentfile:documentfile:1.0.1")';
+  gradle = gradle.replace(
+    /\)implementation\("androidx\.documentfile:documentfile:1\.0\.1"\)/g,
+    `)\n    ${dependency}`
+  );
+  if (gradle.includes(dependency)) {
+    if (gradle !== original) {
+      writeText(appGradlePath, gradle);
+      return true;
+    }
+    return false;
+  }
+  const dependenciesRegex = /dependencies\s*\{([\s\S]*?)\n\}/m;
+  const match = gradle.match(dependenciesRegex);
+  if (!match) {
+    throw new Error(`Could not find dependencies block in ${appGradlePath}`);
+  }
+  gradle = gradle.replace(match[0], `dependencies {${match[1]}\n    ${dependency}\n}`);
+  writeText(appGradlePath, gradle);
+  return true;
+}
+
+function patchKnowledgeBaseActivity(mainActivityPath) {
+  let source = readText(mainActivityPath).replace(/\r\n/g, '\n');
+  let changed = false;
+  if (!source.includes('import android.content.Intent')) {
+    source = source.replace(
+      /import android\.os\.Bundle\n/,
+      'import android.content.Intent\nimport android.os.Bundle\n'
+    );
+    changed = true;
+  }
+  const callback = [
+    '',
+    '  override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {',
+    '    super.onActivityResult(requestCode, resultCode, data)',
+    '    KnowledgeBasePickerBridge.handleActivityResult(this, requestCode, resultCode, data)',
+    '  }',
+    ''
+  ].join('\n');
+  if (!source.includes('KnowledgeBasePickerBridge.handleActivityResult')) {
+    source = source.replace(/\n}\s*$/, `${callback}}\n`);
+    changed = true;
+  }
+  if (!source.includes('KnowledgeBasePickerBridge.bindActivity(this)')) {
+    source = source.replace(
+      '    super.onCreate(savedInstanceState)\n',
+      '    super.onCreate(savedInstanceState)\n    KnowledgeBasePickerBridge.bindActivity(this)\n'
+    );
+    changed = true;
+  }
+  if (changed) {
+    writeText(mainActivityPath, source);
+  }
+  return changed;
+}
+
 function patchRootBuildGradle(rootGradlePath) {
   let gradle = readText(rootGradlePath);
   let changed = false;
@@ -211,10 +271,19 @@ function main() {
   const rootGradlePath = path.join(repoRoot, 'src-tauri', 'gen', 'android', 'build.gradle.kts');
   const packageDir = path.join(androidAppDir, 'src', 'main', 'java', ...packageName.split('.'));
   const manifestPath = path.join(androidAppDir, 'src', 'main', 'AndroidManifest.xml');
+  const mainActivityPath = path.join(packageDir, 'MainActivity.kt');
 
   const templateDir = path.join(repoRoot, 'src-tauri', 'mobile', 'android');
   const bridgeTemplatePath = path.join(templateDir, 'PathmodeBridge.kt');
   const activityTemplatePath = path.join(templateDir, 'PathmodeGodotActivity.kt');
+  const pickerTemplatePath = path.join(templateDir, 'KnowledgeBasePickerBridge.kt');
+
+  writeText(
+    path.join(packageDir, 'KnowledgeBasePickerBridge.kt'),
+    renderTemplate(pickerTemplatePath, packageName)
+  );
+  const pickerGradleChanged = patchKnowledgeBasePicker(appGradlePath);
+  const pickerActivityChanged = patchKnowledgeBaseActivity(mainActivityPath);
 
   if (disable) {
     removeFileIfPresent(path.join(packageDir, 'PathmodeBridge.kt'));
@@ -223,6 +292,7 @@ function main() {
     unpatchBuildGradle(appGradlePath);
     removePathmodeAssets(androidAppDir);
     console.log('[Pathmode Android Patch] Godot dependency, bridge, activity, and assets disabled for mobile-slim.');
+    console.log(`[Pathmode Android Patch] Knowledge-base picker synced: ${pickerActivityChanged ? 'yes' : 'already patched'}`);
     return;
   }
 
@@ -245,6 +315,8 @@ function main() {
   console.log(`[Pathmode Android Patch] Manifest updated: ${manifestChanged ? 'yes' : 'already patched'}`);
   console.log(`[Pathmode Android Patch] Gradle updated: ${gradleChanged ? 'yes' : 'already patched'}`);
   console.log(`[Pathmode Android Patch] Root Gradle updated: ${rootGradleChanged ? 'yes' : 'already patched'}`);
+  console.log(`[Pathmode Android Patch] Knowledge-base picker Gradle updated: ${pickerGradleChanged ? 'yes' : 'already patched'}`);
+  console.log(`[Pathmode Android Patch] Knowledge-base picker activity updated: ${pickerActivityChanged ? 'yes' : 'already patched'}`);
   console.log('[Pathmode Android Patch] Pathmode assets copied to Android assets/path_mode');
 }
 

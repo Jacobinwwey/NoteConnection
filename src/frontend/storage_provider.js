@@ -1641,18 +1641,15 @@
                 if (!analyzer || typeof analyzer.createMobileExactIndex !== 'function') {
                     throw unsupportedOperationError('mobileExactAnalysis');
                 }
-                const graphText = await this.readGeneratedAsset('graph_data.json');
-                if (measureUtf8Bytes(graphText) > CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES) {
-                    throw new Error(
-                        `Local exact graph payload exceeds ${CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES} bytes.`
-                    );
+                const storeApi = window.NoteConnectionKnowledgeProjectionStore;
+                if (!storeApi || typeof storeApi.createProjectionStore !== 'function') {
+                    throw unsupportedOperationError('projectionStore');
                 }
-                let graph;
-                try {
-                    graph = JSON.parse(graphText);
-                } catch (error) {
-                    throw new Error(`Local exact graph payload is invalid JSON: ${String(error && error.message || error)}`);
-                }
+                const projectionStore = storeApi.createProjectionStore({
+                    maxBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+                    read: async () => await this.readGeneratedAsset('graph_data.json')
+                });
+                const graph = await projectionStore.load();
                 return analyzer.createMobileExactIndex(graph);
             })();
 

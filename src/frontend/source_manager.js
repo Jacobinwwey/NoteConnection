@@ -52,6 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
         supports_build: canUseBrowserRuntimeBackend(),
         supports_content_api: canUseBrowserRuntimeBackend(),
         supports_kb_runtime_change: false,
+        supports_kb_import: false,
+        kb_import_mode: 'none',
+        supports_projection_store: true,
         supports_native_pathmode: false,
         supports_mobile_wasm_compute: false,
         mobile_wasm_reason: 'non-mobile-runtime'
@@ -231,6 +234,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     supports_build: canBuildGraph,
                     supports_content_api: canReadContent,
                     supports_kb_runtime_change: false,
+                    supports_kb_import: false,
+                    kb_import_mode: 'app-local-only',
+                    supports_projection_store: true,
                     supports_native_pathmode: false,
                     supports_mobile_wasm_compute: mobileWasm.supported,
                     mobile_wasm_reason: mobileWasm.reason,
@@ -251,6 +257,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     supports_build: browserRuntimeBackend,
                     supports_content_api: browserRuntimeBackend,
                     supports_kb_runtime_change: false,
+                    supports_kb_import: false,
+                    kb_import_mode: 'none',
+                    supports_projection_store: true,
                     supports_native_pathmode: false
                 };
                 if (!browserRuntimeBackend) {
@@ -1125,6 +1134,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const requestKnowledgeBasePathChange = async () => {
+        try {
+            const request = await window.__TAURI__.core.invoke('request_kb_path_change');
+            if (typeof request === 'string') {
+                return request;
+            }
+            const status = String(request && request.status || '').trim().toLowerCase();
+            if (status === 'completed') {
+                return String(request.path || '').trim();
+            }
+            if (status !== 'pending') {
+                return '';
+            }
+
+            const deadline = Date.now() + 120000;
+            while (Date.now() < deadline) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                const result = await window.__TAURI__.core.invoke('poll_kb_path_change');
+                const resultStatus = String(result && result.status || '').trim().toLowerCase();
+                if (resultStatus === 'completed') {
+                    return String(result.path || '').trim();
+                }
+                if (resultStatus === 'cancelled') {
+                    return '';
+                }
+                if (resultStatus === 'failed' || resultStatus === 'unavailable') {
+                    const detail = String(result && result.detail || '').trim();
+                    throw new Error(detail || `Knowledge base picker ${resultStatus}.`);
+                }
+            }
+            throw new Error('Timed out waiting for Android knowledge base import.');
+        } catch (error) {
+            // Older Tauri builds do not expose the additive request/poll commands.
+            // Preserve their synchronous desktop picker contract as a fallback.
+            if (/unknown command|not found|invalid command/i.test(String(error && error.message || error))) {
+                return await window.__TAURI__.core.invoke('choose_kb_path');
+            }
+            throw error;
+        }
+    };
+
     if (changeKbPathBtn && window.__TAURI__) {
         changeKbPathBtn.addEventListener('click', async () => {
             if (!runtimeCaps.supports_kb_runtime_change) {
@@ -1136,7 +1186,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (resetKbPathBtn) resetKbPathBtn.disabled = true;
 
             try {
-                const selectedPath = await window.__TAURI__.core.invoke('choose_kb_path');
+                const selectedPath = await requestKnowledgeBasePathChange();
                 if (!selectedPath) {
                     return;
                 }

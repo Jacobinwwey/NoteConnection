@@ -322,7 +322,7 @@ The modular ingest endpoint now rejects malformed JSON, oversized bodies/documen
 
 On mobile, the exact analyzer projects only identity, labels, tags, degrees, and bounded adjacency. URI/alias lookup uses NFC normalization. Edge provenance is classified for filtering and diagnostics, but no full document body, Node sidecar, Godot runtime, or model weight is introduced into `mobile-slim`. PathBridge `2.0` envelopes let hosts advertise the same analysis/cancellation contract; the host, not the client, owns policy and persistence.
 
-Verification for this increment: TypeScript build passed; the migration matrix passed 57 suites / 307 tests, focused projection/Bridge suites passed, Diataxis passed, and Rust graph-runtime tests passed. Fresh slim staging measured 119 files, 4,242,970 uncompressed bytes, and 1,543,913 estimated compressed bytes. Signed APK/RSS and registry response parity are not inferred from these tests.
+Verification for this increment: TypeScript build passed; the migration matrix passed 57 suites / 307 tests, focused projection/Bridge suites passed, Diataxis passed, and Rust graph-runtime tests passed. The latest slim staging measures 120 files, 4,251,345 uncompressed bytes, and 1,545,813 estimated compressed bytes. Signed APK/RSS and registry response parity are not inferred from these tests.
 
 ## 中文
 
@@ -488,3 +488,25 @@ runtime-first build
 ```
 
 staging 前端会主动排除 Mermaid/GPU 桌面 payload、生成图缓存、SVG、二进制和模型路径。默认 Android runner 还会移除旧生成工程中的 Godot bridge/asset；只有 `NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE=1` 才能启用扩展档。RSS 只有在提供真机 evidence 后才会测量。
+
+# 2026-08-18 Projection Store and SAF Walkthrough
+
+## English
+
+The persistence path is now explicit: `graph_data.json` -> `knowledge_projection_store.js` -> versioned projection contract -> `mobile_exact_analyzer`. A host can provide a persistent `read/write` adapter, or fall back to an in-memory projection. The fallback is deliberately narrow: it preserves the last successful projection during transient adapter failure; it does not accept an unknown future schema.
+
+The Android path is asynchronous by design. Rust requests `ACTION_OPEN_DOCUMENT_TREE`; the generated Kotlin bridge copies Markdown streams into the app-local workspace under bounded document/total byte budgets, then writes a short result marker. Rust polls and persists only the app-local path. The selected external URI is provenance, not a permanent graph identity. This keeps the mobile package free of Node, Godot, models, SVG, and desktop binaries while still allowing user-selected knowledge bases.
+
+Verification for this increment: 24 focused Jest tests, TypeScript no-emit, and 26 Rust tests pass. Generated Android patching is idempotent; a fresh arm64 slim build produced an unsigned APK (9,555,787 bytes) and AAB (7,179,228 bytes), and static artifact verification passed with no forbidden entries. No signed artifact, physical-device import run, or RSS JSON exists yet.
+
+## 中文验证追记
+
+本轮新鲜 arm64 slim 构建生成未签名 APK（9,555,787 字节）与 AAB（7,179,228 字节），静态 artifact 检查通过且没有禁入条目。当前仍缺少签名发布产物、真机导入运行和 RSS JSON；这些证据不能由静态打包结果推断。
+
+## 中文
+
+持久化链路现在明确为：`graph_data.json` -> `knowledge_projection_store.js` -> 版本化 projection contract -> `mobile_exact_analyzer`。Host 可以提供 persistent `read/write` adapter，也可以回退到内存 projection。这个 fallback 只保留最近一次成功 projection 用于短暂 adapter 故障，不接受未知未来 schema。
+
+Android 链路刻意采用异步状态机：Rust 请求 `ACTION_OPEN_DOCUMENT_TREE`，生成的 Kotlin bridge 在单文档/总字节预算内把 Markdown 流式复制到 app-local workspace，再写入短结果 marker；Rust 轮询并只持久化 app-local path。外部 URI 只是 provenance，不是永久 graph identity。这样移动包仍不包含 Node、Godot、模型、SVG 或桌面二进制，同时允许用户选择知识库。
+
+本轮验证：24 项 Jest 聚焦测试、TypeScript no-emit 与 Rust 26 项测试通过。Android 生成工程 patch 已幂等；新鲜 arm64 slim 构建生成未签名 APK（9,555,787 字节）与 AAB（7,179,228 字节），静态 artifact 检查通过且没有禁入条目。尚无签名 arm64 产物、真机导入运行或 RSS JSON。

@@ -3,9 +3,9 @@ module: architecture
 tags: [architecture, forward-compatibility, mobile, tauri, capacitor, sqlite, wasm, graph, security]
 problem_type: tracking
 created: 2026-08-16
-updated: 2026-08-16
+updated: 2026-08-18
 status: active
-version: 2026.08.16
+version: 2026.08.18
 ---
 
 # 2026-08-16 Architecture Hardening and Forward-Compatible Multi-Platform Plan
@@ -215,7 +215,7 @@ The previously open mobile runtime/verifier gap is now closed at the static and 
 - Capacitor and Tauri Android now consume that staging directory. Tauri Android no longer builds a sidecar on the default mobile path; Godot Pathmode is an explicit extended profile and stale generated Godot files/assets are removed by the default runner.
 - Android Rust graph persistence uses the lite projection on `target_os = android`, releases parsed document bodies before projection, and never constructs `full_nodes/full_graph` in the low-memory runtime. Desktop retains the full graph contract.
 
-This is intentionally narrower than the original SQLite/WASM aspiration. The shipped implementation is a versioned, body-free graph/index projection over the existing local builders. SQLite persistence, true device RSS/APK evidence, full agent conversation parity, Android folder import, and cross-host replay remain open gates. The current static measurement on this Windows host is 119 staged files, 4,242,970 uncompressed bytes, and 1,543,913 estimated compressed bytes; it is not a signed artifact or device-memory result.
+This is intentionally narrower than the original SQLite/WASM aspiration. The shipped implementation is a versioned, body-free graph/index projection over the existing local builders. SQLite persistence, true device RSS/APK evidence, full agent conversation parity, and cross-host replay remain open gates. Android folder import is now implemented through the additive SAF bridge but still lacks device replay evidence. The current static measurement on this Windows host is 120 staged files, 4,251,345 uncompressed bytes, and 1,545,813 estimated compressed bytes; it is not a signed artifact or device-memory result.
 
 The reference comparison remains unchanged: LearnGraph contributes typed boundary/workspace validation patterns, and textbooks contributes content-package/compiler discipline. Neither justifies a Docker-only mobile runtime, a SaaS database dependency, Mathigon DSL adoption, or Godot/LLM inclusion in the slim profile.
 
@@ -230,7 +230,7 @@ The reference comparison remains unchanged: LearnGraph contributes typed boundar
 - Capacitor 与 Tauri Android 现在消费同一 staging 目录。默认 Android 移动路径不再构建 sidecar；Godot Pathmode 变成显式扩展档，默认 runner 会删除旧生成的 Godot 文件和资源。
 - Android Rust 在 `target_os = android` 下持久化 lite projection，会在 projection 前释放已解析正文，并且低内存运行时不会构造 `full_nodes/full_graph`；桌面仍保持 full graph 契约。
 
-这比最初的 SQLite/WASM 目标更窄，但更诚实。当前交付的是基于现有本地构建器的版本化、无正文 exact graph/index projection；SQLite 持久化、真实设备 RSS/APK 证据、完整 agent conversation parity、Android 文件夹导入与跨 host replay 仍是开放门禁。本机静态测量为 119 个 staging 文件、未压缩 4,242,970 字节、估算压缩 1,543,913 字节；它不是签名产物或设备内存结果。
+这比最初的 SQLite/WASM 目标更窄，但更诚实。当前交付的是基于现有本地构建器的版本化、无正文 exact graph/index projection；SQLite 持久化、真实设备 RSS/APK 证据、完整 agent conversation parity 与跨 host replay 仍是开放门禁。Android 文件夹导入已通过 additive SAF bridge 实现，但仍缺真机 replay 证据。本机静态测量为 120 个 staging 文件、未压缩 4,251,345 字节、估算压缩 1,545,813 字节；它不是签名产物或设备内存结果。
 
 参考仓库的取舍没有改变：LearnGraph 提供类型化边界/工作区校验模式，textbooks 提供内容包/compiler 纪律；二者都不足以证明应把 Docker-only 移动运行时、SaaS 数据库依赖、Mathigon DSL 或 Godot/LLM 带入 slim profile。
 ## 2026-08-17 Phase 8 Follow-up
@@ -246,8 +246,26 @@ The follow-up closes the first replay and projection gaps without changing publi
 
 ### English
 
-The follow-up now ships a browser-compatible versioned projection contract and uses it from both Capacitor and Tauri Rust graph writers. Nodes are body-free and carry source URI, revision, aliases, and bounded evidence references; edges carry explicit/inferred/runtime provenance; adjacency is capped at 64 neighbors per direction. `PathBridgeHostAdapter` is optional and keeps host policy/execution separate from transport correlation, timeout, abort, and cancel handling. Fresh staging is 119 files / 4,242,970 uncompressed bytes / 1,543,913 estimated compressed bytes. Signed arm64 artifact extraction, device RSS, Android folder import, SQLite cross-host replay, and canonical-ID migration remain unproven.
+The follow-up now ships a browser-compatible versioned projection contract and uses it from both Capacitor and Tauri Rust graph writers. Nodes are body-free and carry source URI, revision, aliases, and bounded evidence references; edges carry explicit/inferred/runtime provenance; adjacency is capped at 64 neighbors per direction. `PathBridgeHostAdapter` is optional and keeps host policy/execution separate from transport correlation, timeout, abort, and cancel handling. Fresh staging is 120 files / 4,251,345 uncompressed bytes / 1,545,813 estimated compressed bytes. Signed arm64 artifact extraction, device RSS, Android folder import, SQLite cross-host replay, and canonical-ID migration remain unproven.
 
 ### 中文
 
-本次跟进已交付浏览器兼容的版本化 projection 契约，并由 Capacitor 与 Tauri Rust graph writer 共用。节点不保存正文，携带 source URI、revision、alias 和有界 evidence reference；边携带 explicit/inferred/runtime provenance；每方向 adjacency 上限为 64。`PathBridgeHostAdapter` 为可选能力，将 host policy/执行与 transport correlation、timeout、abort、cancel 分离。最新 staging 为 119 个文件 / 未压缩 4,242,970 / 估算压缩 1,543,913 字节。签名 arm64 产物解包、真机 RSS、Android 文件夹导入、SQLite 跨 host replay 与 canonical-ID 迁移仍未获得证据。
+本次跟进已交付浏览器兼容的版本化 projection 契约，并由 Capacitor 与 Tauri Rust graph writer 共用。节点不保存正文，携带 source URI、revision、alias 和有界 evidence reference；边携带 explicit/inferred/runtime provenance；每方向 adjacency 上限为 64。`PathBridgeHostAdapter` 为可选能力，将 host policy/执行与 transport correlation、timeout、abort、cancel 分离。最新 staging 为 120 个文件 / 未压缩 4,251,345 / 估算压缩 1,545,813 字节。签名 arm64 产物解包、真机 RSS、Android 文件夹导入、SQLite 跨 host replay 与 canonical-ID 迁移仍未获得证据。
+
+## 2026-08-18 Phase 11 Follow-up: Projection Store and Android SAF
+
+### English
+
+The persistence boundary is now explicit instead of being repeated in each host: `knowledge_projection_store.js` wraps the existing versioned contract and offers persistent/read-through plus memory adapters. `storage_provider.js` uses that boundary for exact mobile analysis, and a fixture matrix confirms identical schema, metadata, exact lookup, neighbor, and path results across Web, Tauri, Capacitor, and Android adapters. Unknown future schemas still fail closed.
+
+Tauri projection files are written through sibling temporary files and rename. Android slim now includes an additive SAF bridge: Rust requests a tree, generated Kotlin streams Markdown into app-local `filesDir/Knowledge_Base` under the existing low-memory budgets, and Rust polls a short result marker. The external URI is retained as provenance only; the persisted graph identity remains workspace-scoped. This preserves the low-size/mobile-low contract without shipping Node, Godot, models, SVG, or desktop binaries.
+
+Evidence is intentionally split. Code and fixture gates pass; a fresh unsigned arm64 APK/AAB now passes central-directory inspection and the mobile artifact verifier under the 25 MiB payload budget (APK 9,433,678 compressed payload bytes; AAB 6,978,122). G2 still lacks signing, online device workload, and RSS JSON. G3 fixture replay passes but real Android storage replay is pending. G4 identity corpus coverage is stronger, yet old-snapshot rollback and move-journal restart evidence still block canonical public-ID migration.
+
+### 中文
+
+持久化边界不再由各 host 重复实现：`knowledge_projection_store.js` 包装既有版本化契约，提供 persistent/read-through 与 memory adapter。`storage_provider.js` 的移动 exact analysis 经由该边界读取；fixture matrix 已确认 Web、Tauri、Capacitor、Android adapter 的 schema、metadata、exact lookup、neighbor、path 一致，未知未来 schema 继续 fail closed。
+
+Tauri projection 文件经同目录临时文件 + rename 写入。Android slim 增加 additive SAF bridge：Rust 请求 tree，生成的 Kotlin 在既有低内存预算内把 Markdown 流式复制到 app-local `filesDir/Knowledge_Base`，Rust 轮询短结果 marker。外部 URI 只作为 provenance，持久化 graph identity 仍是 workspace-scoped；移动包继续不包含 Node、Godot、模型、SVG 或桌面二进制。
+
+证据必须分层表达：代码与 fixture gate 已通过；新鲜未签名 arm64 APK/AAB 已通过 central-directory 检查和 25 MiB payload budget 下的 mobile artifact verifier（APK 压缩 payload 9,433,678 字节；AAB 6,978,122 字节）。G2 仍缺签名、在线设备 workload 与 RSS JSON；G3 fixture replay 已通过，真实 Android storage replay 待补；G4 identity corpus 已加强，但旧 snapshot rollback 与 move-journal 重启证据仍阻塞 canonical 公共 ID 迁移。

@@ -145,6 +145,14 @@ function ensureAndroidProjectScaffold(envOverrides) {
   return true;
 }
 
+function cleanAndroidSlimOutputs(androidAppDir) {
+  const buildDir = path.join(androidAppDir, 'build');
+  if (fs.existsSync(buildDir)) {
+    fs.rmSync(buildDir, { recursive: true, force: true });
+    console.log('[Tauri Android Runner] Cleared generated Android build outputs before slim release packaging.');
+  }
+}
+
 function main() {
   const mode = process.argv[2];
   const cliTarget = process.argv[3];
@@ -171,13 +179,15 @@ function main() {
     tauriArgs.push('--target', target);
   }
   const cargoBuildJobs = String(parsePositiveInt(process.env.CARGO_BUILD_JOBS, 1));
-  const cargoReleaseOptLevel = String(process.env.CARGO_PROFILE_RELEASE_OPT_LEVEL || '0');
+  // Android slim is size-constrained; desktop builds keep their own profile.
+  const cargoReleaseOptLevel = String(process.env.CARGO_PROFILE_RELEASE_OPT_LEVEL || 'z');
   const cargoReleaseCodegenUnits = String(
-    parsePositiveInt(process.env.CARGO_PROFILE_RELEASE_CODEGEN_UNITS, 256)
+    parsePositiveInt(process.env.CARGO_PROFILE_RELEASE_CODEGEN_UNITS, 1)
   );
   const cargoReleaseDebug = String(process.env.CARGO_PROFILE_RELEASE_DEBUG || '0');
-  const cargoReleaseLto = String(process.env.CARGO_PROFILE_RELEASE_LTO || 'off');
+  const cargoReleaseLto = String(process.env.CARGO_PROFILE_RELEASE_LTO || 'thin');
   const cargoReleasePanic = String(process.env.CARGO_PROFILE_RELEASE_PANIC || 'abort');
+  const cargoReleaseStrip = String(process.env.CARGO_PROFILE_RELEASE_STRIP || 'symbols');
   const cargoIncremental = String(process.env.CARGO_INCREMENTAL || '0');
   const rustflags = appendRustflag(process.env.RUSTFLAGS, '-C debuginfo=0');
   const includeGodotPathmode = process.env.NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE === '1';
@@ -193,6 +203,7 @@ function main() {
     CARGO_PROFILE_RELEASE_DEBUG: cargoReleaseDebug,
     CARGO_PROFILE_RELEASE_LTO: cargoReleaseLto,
     CARGO_PROFILE_RELEASE_PANIC: cargoReleasePanic,
+    CARGO_PROFILE_RELEASE_STRIP: cargoReleaseStrip,
     CARGO_INCREMENTAL: cargoIncremental,
     RUSTFLAGS: rustflags,
     NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE: includeGodotPathmode ? '1' : '0'
@@ -203,6 +214,10 @@ function main() {
     if (!ensureAndroidProjectScaffold(tauriEnv)) {
       console.error('[Tauri Android Runner] Failed to prepare Android scaffold before build/dev.');
       process.exit(1);
+    }
+
+    if (mode === 'build' && !includeGodotPathmode) {
+      cleanAndroidSlimOutputs(path.resolve(__dirname, '..', 'src-tauri', 'gen', 'android', 'app'));
     }
 
     if (!syncPathmodeIntegration({ includeGodotPathmode, allowMissing: false })) {
@@ -222,6 +237,7 @@ function main() {
   console.log(`[Tauri Android Runner] Cargo release debug: ${cargoReleaseDebug}`);
   console.log(`[Tauri Android Runner] Cargo release lto: ${cargoReleaseLto}`);
   console.log(`[Tauri Android Runner] Cargo release panic: ${cargoReleasePanic}`);
+  console.log(`[Tauri Android Runner] Cargo release strip: ${cargoReleaseStrip}`);
   console.log(`[Tauri Android Runner] Cargo incremental: ${cargoIncremental}`);
   console.log(`[Tauri Android Runner] RUSTFLAGS: ${rustflags || '(empty)'}`);
   console.log(`[Tauri Android Runner] Godot Pathmode: ${includeGodotPathmode ? 'enabled (extended profile)' : 'disabled (mobile-slim)'}`);

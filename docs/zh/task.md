@@ -491,12 +491,22 @@
 - [x] 新增浏览器兼容的版本化 projection 契约：无正文节点、source URI/revision/alias、边 provenance、有界 evidence reference 与有界 adjacency。
 - [x] Capacitor 与 Tauri Rust graph 输出现在使用 schema `1` 和同一身份字段；Android 仍不保留正文。
 - [x] 新增可选 `PathBridgeHostAdapter`，支持 correlated operation result、timeout、断连清理、`AbortSignal` 和显式 cancel；旧广播行为仍为 fallback。
-- [x] 最新 slim staging 为 119 个文件、未压缩 4,242,970 字节、估算压缩 1,543,913 字节。
+- [x] 最新 slim staging 为 120 个文件、未压缩 4,251,345 字节、估算压缩 1,545,813 字节。
 
 ## 证据门禁
 
 - [ ] 新鲜签名 arm64 APK/AAB 解包与低于 256 MiB 的真机 RSS。
-- [ ] Tauri Android 面向外部知识库的 Storage Access Framework 文件夹导入。
+- [x] Tauri Android 面向外部知识库的 Storage Access Framework 文件夹导入已实现；真机 replay 证据仍待补齐。
 - [ ] canonical-ID 迁移前完成跨 host projection replay 以及旧 snapshot/move/rename/collision 语料。
 - [x] 第 8 阶段已落地 replay、有界 ingest 校验、indexed keyword matching、移动身份 projection，以及 additive Bridge 2.0 capability/cancellation envelope，并有聚焦回归覆盖。
 - [ ] registry response/status shadow parity、签名 Android APK/RSS 证据、SQLite 持久化与 canonical 公共 ID 切换仍受证据门禁约束。
+
+# 2026-08-18 第 11 阶段 Projection Store 与 Android SAF
+
+- [x] 增加 host-neutral projection store，提供 persistent/read-through 与 memory adapter；移动 exact analysis 经 store 加载。
+- [x] 增加 Web/Tauri/Capacitor/Android fixture replay，覆盖 schema、metadata、exact search、neighbor、path；未知版本 fail closed。
+- [x] Tauri projection 写入原子化，并增加 Android SAF tree 导入到 app-local storage 的有界流式路径与 request/poll IPC。
+- [x] 增加同内容文档、move/rename alias、NFC collision identity corpus，public ID 不变。
+- [~] G2 已有新鲜未签名 arm64 APK/AAB 静态证据并通过 25 MiB payload budget，但仍缺签名、真机 workload 与 RSS JSON；当前 Android 工具链 Kotlin 编译已通过。
+- [~] G3 fixture replay 已通过，但真实 Android storage replay 与 SQLite/WASM adapter 提升仍待完成。
+- [ ] G4 canonical-ID 迁移仍被旧 snapshot rollback 与 move-journal 重启证据阻塞。

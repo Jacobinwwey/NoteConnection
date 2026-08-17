@@ -52,12 +52,17 @@ describe('runtime capability gating contract', () => {
     expect(tauriLib).toContain('fn get_runtime_capabilities()');
     expect(tauriLib).toContain('get_runtime_capabilities,');
     expect(tauriLib).toContain('choose_kb_path,');
+    expect(tauriLib).toContain('request_kb_path_change,');
+    expect(tauriLib).toContain('poll_kb_path_change,');
     expect(tauriLib).toContain('reset_kb_path,');
     expect(tauriLib).toContain('open_native_pathmode,');
     expect(tauriLib).toContain('build_graph_runtime,');
     expect(tauriLib).toContain('supports_sidecar: false');
     expect(tauriLib).toContain('supports_build: true');
     expect(tauriLib).toContain('supports_content_api: true');
+    expect(tauriLib).toContain('supports_kb_import: true');
+    expect(tauriLib).toContain('kb_import_mode: "android-saf-copy"');
+    expect(tauriLib).toContain('supports_projection_store: true');
     expect(tauriLib).toContain('supports_native_pathmode: option_env!("NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE")');
     expect(tauriLib).toContain('read_node_content');
   });
