@@ -159,6 +159,14 @@ export function registerMarkdownRoutes(_ctx: ServerContext): RouteEntry[] {
                     const body = await readBody(req);
                     const payload = JSON.parse(body);
                     const filePath = payload.filePath || payload.path || '';
+                    if (!filePath) {
+                        json(res, 400, {
+                            success: false,
+                            error: 'Missing filePath for /api/markdown/index',
+                            markdownProtocolVersion: PROTOCOL_VERSION,
+                        });
+                        return;
+                    }
                     if (ctx.markdownGateway) {
                         const runtimeConfig = await resolveRuntimeConfig();
                         const result = await ctx.markdownGateway.buildIndex(

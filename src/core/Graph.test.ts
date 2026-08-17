@@ -118,4 +118,16 @@ describe('Graph Core', () => {
     expect(graph.hasNode('old')).toBe(false);
     expect(graph.hasNode('new')).toBe(true);
   });
+
+  test('keeps the previous graph when an incoming snapshot fails validation', () => {
+    graph.addNode({ id: 'stable', label: 'stable', inDegree: 0, outDegree: 0 });
+
+    expect(() => graph.restore({
+      nodes: [{ id: 'candidate', label: 'candidate' }],
+      edges: [{ source: 'candidate', target: 'missing' }],
+    })).toThrow(/undeclared node/i);
+
+    expect(graph.hasNode('stable')).toBe(true);
+    expect(graph.hasNode('candidate')).toBe(false);
+  });
 });

@@ -148,6 +148,15 @@
 - [~] Architecture reduction is the next structural pressure point: `src/server.ts`, `KnowledgeLearningPlatform.ts`, and large frontend hosts still need ownership cuts.
 - [x] Agent conversation reply composition is no longer required to live permanently inline inside `KnowledgeLearningPlatform.ts`; the current `conversationComposer` boundary is the first ownership cut on the reply-synthesis path.
 - [x] The grouped knowledge-point and scoped reply-section composition path now has a dedicated module owner in `src/learning/conversationComposer.ts`, while preserving the existing `AgentConversationResponse` contract and Tauri/browser rendering behavior.
+
+## 2026-08-17 Phase 9 Route and Mobile Evidence Update
+
+- [x] Route dispatch now supports explicit `legacy|registry` modes; registry remains the default.
+- [x] Shadow verification passes with 14 legacy-equivalent probes and 6 registry-only migration probes, including response and side-effect checks.
+- [x] Added APK/AAB entry and profile-budget verification with a release-only `--require-rss` gate.
+- [x] Added SQLite close/reopen replay and graph atomic-rollback tests.
+- [~] Fresh signed arm64 artifact extraction and device RSS remain required; `not-measured` is not release evidence.
+- [ ] Canonical public-ID cutover remains blocked until old-snapshot, collision, rollback, and cross-root corpus replay is recorded.
 - [x] Runtime runbook modular-route composition is no longer inline-only inside `src/server.ts`; `src/routes/runtimeRunbookRouteOps.ts` now owns `/api/knowledge/runtime-capability-runbook/*` route-op assembly while preserving the current response contract.
 - [x] Graph-focus now renders the original markdown knowledge point through the shared markdown runtime and highlights matched passages in-place, instead of showing only a snippet list in the right pane.
 - [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness, readiness-exposed strict history auditing, current Windows-host strict 3/3 evidence, and opt-in multi-host audit tooling are now automated, while actual multi-host evidence and threshold calibration remain pending.

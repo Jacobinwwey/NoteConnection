@@ -72,6 +72,10 @@ describe('dual mobile pipeline configuration', () => {
     expect(scripts['mobile:build:tauri-android']).toBe('npm run tauri:android:build');
     expect(scripts['mobile:build:both']).toContain('mobile:build:capacitor');
     expect(scripts['mobile:build:both']).toContain('mobile:build:tauri-android');
+    expect(scripts['verify:mobile:artifact']).toContain('verify-mobile-artifact.js');
+    expect(scripts['verify:mobile:artifact:release']).toContain('--require-rss');
+    expect(scripts['verify:mobile:artifact:release']).toContain('--require-arm64');
+    expect(fs.existsSync(path.join(repoRoot, 'scripts', 'verify-mobile-artifact.js'))).toBe(true);
   });
 
   test('defaults tauri android build/dev to arm64 target with override support', () => {

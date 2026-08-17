@@ -401,6 +401,15 @@ Bring code truth, active progress docs, and next execution order back into align
   - `server.ts` now closes the runbook loop for that new gate: ANN index-sync health is included in verification escalation, remediation action-queue generation, and per-check history summaries.
   - runtime capability governance now also has an explicit ANN calibration prerequisite gate: `query_vector_acceleration_calibration_readiness` blocks release-grade threshold tuning until sync telemetry, stable connector state, prefilter sample readiness, evaluable candidate ratios, and external traceability signals are all present in the same runtime window.
   - the agent workspace runtime runbook surfaces now expose ANN sync-health metrics across verify/checks/action-queue flows, and the verify/checks cards now also surface ANN circuit-budget, traceability, and prefilter summaries plus threshold/signal drilldowns, calibration-readiness state, and the explicit `query_vector_acceleration_calibration_readiness` gate, so operator-facing governance no longer stops at `index_sync_health`.
+
+## 2026-08-17 Phase 9 Execution Status
+
+- **G1 route parity: pass.** `verify:route:shadow` compares 14 legacy-equivalent probes and 6 registry-only probes across status, body, headers, and persistence side effects.
+- **G2 mobile artifact/RSS: static pass, device pending.** `verify-mobile-artifact.js` inspects APK/AAB entries, requires arm64 in release mode, and enforces profile budgets; release mode also requires RSS JSON.
+- **G3 persistent projection: local replay pass.** SQLite close/reopen/load/query/metadata fixtures pass; cross-host replay remains pending and the in-memory projection stays as fallback.
+- **G4 canonical ID: guarded.** Atomic restore, aliases, and move journal foundations pass; public IDs remain unchanged until corpus replay is recorded.
+
+Next order: CI matrix for both dispatch modes, versioned projection-store contract, host-owned PathBridge adapters, one staging directory for both mobile packaging paths, then evidence-backed identity cutover.
   - modular knowledge-route wiring for `runtime-capability-runbook/*` is now backed by live server-side runbook ops instead of KLP placeholder payloads, and the route layer now preserves `checkId` / `sinceMinutes` / queue-filter query params rather than dropping them.
   - the real browser smoke gate now proves those verify/checks/action-queue surfaces end to end: strict browser evidence must show the ANN sync-health verify card, the new verify/checks ANN circuit/traceability/prefilter drilldowns, the first-check ANN sync metric, and the index-sync action-queue drilldown instead of only proving that the cards can open.
   - agent-workspace locale hardening now covers the currently surfaced diagnostics cards/messages: source-referenced `agentWorkspace.*` keys are guarded by `src/agent_workspace.locale.contract.test.ts`, bilingual locale bundles now back the query/quality/runbook card labels that strict browser smoke actually exercises, and startup-time translate helpers defer `window.i18n.t()` until locale init to avoid false missing-key warnings before locales hydrate.

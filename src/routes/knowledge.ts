@@ -491,7 +491,8 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
                 try {
                     const body = await readBody(req);
                     const result = await knowledgeIngestor.ingestKnowledge(parseKnowledgeIngestBody(body));
-                    ok(res, { result, ingestStats: { avgLatencyMs: knowledgeIngestor.averageIngestLatencyMs(20) } });
+                    // Preserve the legacy response shape; diagnostics remain available via runtime metrics.
+                    ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/ingest'); }
             },
         },
@@ -501,10 +502,12 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
-                    const result = await knowledgeQuerier.queryKnowledge(
+                    // Keep the migration boundary on the legacy platform facade so
+                    // registry dispatch preserves the established response contract.
+                    const result = await knowledgeLearningPlatform.queryKnowledge(
                         normalizeKnowledgeQueryRequestPayload(JSON.parse(body))
                     );
-                    ok(res, { result, queryStats: knowledgeQuerier.getDiagnosticsSummary() });
+                    ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/query'); }
             },
         },
@@ -707,6 +710,10 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
+                    if (ctx.executeQueryBackendConfigUpdate) {
+                        ok(res, await ctx.executeQueryBackendConfigUpdate(JSON.parse(body)));
+                        return;
+                    }
                     const result = await knowledgeLearningPlatform.updateQueryBackendConfig(JSON.parse(body));
                     ok(res, { result });
                 } catch (e) { fail(res, e, 'POST /api/knowledge/query-backend-config'); }

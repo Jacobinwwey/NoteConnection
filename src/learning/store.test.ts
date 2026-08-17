@@ -1205,6 +1205,58 @@ describe('Knowledge graph store backend factory', () => {
         }
     });
 
+    test('sqlite graphdb adapter reopens after close and replays the last committed snapshot', async () => {
+        const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-store-sqlite-replay-'));
+        const sqlitePath = path.join(tempRoot, 'runtime_data', 'knowledge_graph_store.graphdb.v1.sqlite');
+        let firstAdapter: ReturnType<typeof createGraphDbSnapshotAdapter> | null = null;
+        let secondAdapter: ReturnType<typeof createGraphDbSnapshotAdapter> | null = null;
+
+        try {
+            firstAdapter = createGraphDbSnapshotAdapter({
+                provider: 'sqlite',
+                sqlitePath,
+                adapterId: 'embedded-sqlite-replay-before-close',
+            });
+            expect(firstAdapter).not.toBeNull();
+            const snapshot = createSnapshot('sqlite_restart_user');
+            snapshot.atoms = [createAtom('restart_atom', 'Restart Alpha')];
+            snapshot.documents = [{
+                documentId: 'restart_doc',
+                sourcePath: 'restart.md',
+                sourceHash: 'restart_hash',
+                version: 1,
+                updatedAt: '2026-01-01T00:00:00.000Z',
+                atomStableKeyToId: [['restart_stable', 'restart_atom']],
+                atomIds: ['restart_atom'],
+                evidenceSpanIds: [],
+                relationEdgeIds: [],
+                temporalEdgeIds: [],
+            }];
+            await firstAdapter!.saveSnapshot!(snapshot);
+            firstAdapter!.close?.();
+
+            secondAdapter = createGraphDbSnapshotAdapter({
+                provider: 'sqlite',
+                sqlitePath,
+                adapterId: 'embedded-sqlite-replay-after-close',
+            });
+            expect(secondAdapter).not.toBeNull();
+            await expect(secondAdapter!.loadSnapshot!()).resolves.toEqual(snapshot);
+            await expect(secondAdapter!.getNodeByOps?.('restart_atom')).resolves.toEqual(snapshot.atoms[0]);
+            await expect(secondAdapter!.probeSnapshotMetadata?.()).resolves.toEqual(expect.objectContaining({
+                atomCount: 1,
+                documentCount: 1,
+            }));
+        } finally {
+            try {
+                firstAdapter?.close?.();
+                secondAdapter?.close?.();
+            } catch {
+            }
+            fs.rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
+
     test('built-in http graphdb adapter surfaces circuit-open telemetry after repeated transient failures', async () => {
         const server = http.createServer((req, res) => {
             const method = String(req.method || 'GET').toUpperCase();

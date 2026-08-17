@@ -144,6 +144,15 @@
 - [~] 架构缩减是下一阶段结构性压力点：`src/server.ts`、`KnowledgeLearningPlatform.ts` 与大型前端宿主仍需要所有权切分。
 - [x] agent conversation 的 reply composition 已不再要求永久内联在 `KnowledgeLearningPlatform.ts` 中；当前 `conversationComposer` 边界是 reply-synthesis 路径上的第一刀所有权切分。
 - [x] grouped knowledge point 与 scoped reply section 的组装路径现在已经有独立模块 owner：`src/learning/conversationComposer.ts`，并保持现有 `AgentConversationResponse` 契约与 Tauri/browser 渲染行为不变。
+
+## 2026-08-17 第 9 阶段路由与移动证据更新
+
+- [x] route dispatch 支持显式 `legacy|registry` 模式；默认仍是 registry。
+- [x] shadow verification 已通过 14 条 legacy-equivalent probe 与 6 条 registry-only migration probe，包含 response 和 side-effect 对比。
+- [x] 增加 APK/AAB entry 与 profile budget 校验，并增加只在 release 启用的 `--require-rss` 门禁。
+- [x] 增加 SQLite close/reopen replay 与 graph 原子回滚测试。
+- [~] 仍需新鲜签名 arm64 产物解包和真机 RSS；`not-measured` 不是 release evidence。
+- [ ] old-snapshot、collision、rollback、cross-root corpus replay 记录完成前，不切换公开 canonical ID。
 - [x] runtime runbook 的 modular-route composition 已不再只以内联形式存在于 `src/server.ts`；`src/routes/runtimeRunbookRouteOps.ts` 现在负责 `/api/knowledge/runtime-capability-runbook/*` 的 route-op 组装，并保持当前响应契约不变。
 - [x] graph-focus 右侧 pane 现在会通过共享 markdown runtime 渲染原始知识点正文，并在原文内高亮命中段落，而不再只显示摘录列表。
 - [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、当前 Windows 宿主 strict 3/3 证据、以及 opt-in 多宿主审计工具都已自动化，但实际多宿主证据与阈值校准仍待补齐。

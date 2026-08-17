@@ -361,6 +361,28 @@ scoped source package
 
 移动链路不得依赖桌面 Node sidecar 或 Godot 进程；大文本按 reference 分页，inferred edge 必须 Top-K 有界，签名 APK/AAB 与 RSS 证据决定 release readiness。
 
+# 2026-08-17 Phase 9 Verification Walkthrough
+
+## English
+
+The route shadow harness now separates legacy-equivalent URLs from registry-only URLs. The equivalent set starts isolated `legacy` and `registry` servers against the same knowledge-base fixture, compares normalized status/body/headers, and checks that read-only or invalid probes do not mutate runtime files. Valid ingest is the only declared write boundary. The registry-only set expects a legacy miss and a registry success, so newly extracted routes are visible without being misreported as regressions.
+
+The parity run passed with 14 equivalent probes and 6 registry-only probes. During implementation it exposed and fixed response-shape drift (`operationSummary`, ingest/query payloads, query-backend diagnostics) and several error-status mismatches. The default dispatch remains registry, while `NOTE_CONNECTION_ROUTE_DISPATCH_MODE=legacy` is available for rollback diagnosis.
+
+`verify-mobile-artifact.js` parses APK/AAB ZIP central-directory entries without requiring Android tooling. It requires an `arm64-v8a` payload in release mode, rejects desktop sidecars, Godot/model payloads, SVG/binary leakage, and profile budget overruns. A release invocation must pass `--require-rss --require-arm64` with a device-generated JSON file; staging measurements alone remain non-release evidence.
+
+The SQLite fixture now closes an adapter, creates a fresh adapter for the same file, replays the committed snapshot, and verifies node/metadata reads. Graph restore tests also prove that a rejected snapshot leaves the previous graph intact. Cross-host replay, signed arm64 artifacts, and device RSS are still open gates.
+
+## 中文
+
+route shadow harness 现在把 legacy-equivalent URL 与 registry-only URL 分开。等价集合会针对同一知识库 fixture 启动隔离的 `legacy` 与 `registry` server，对比归一化后的 status/body/headers，并确认只读或非法 probe 不会修改 runtime 文件；只有显式标记的 ingest 是写边界。registry-only 集合要求 legacy miss、registry success，因此新抽取路由可见但不会被误报为回归。
+
+本次 parity 通过 14 条 equivalent probe 与 6 条 registry-only probe。实现过程中真实暴露并修复了 response shape 漂移（`operationSummary`、ingest/query payload、query-backend diagnostics）和多个错误状态码差异。默认 dispatch 仍是 registry，同时保留 `NOTE_CONNECTION_ROUTE_DISPATCH_MODE=legacy` 作为回滚诊断入口。
+
+`verify-mobile-artifact.js` 不依赖 Android tooling，直接解析 APK/AAB ZIP central-directory entry；release 模式要求 `arm64-v8a` payload，并拒绝 desktop sidecar、Godot/model payload、SVG/二进制泄漏和 profile 超预算。release 调用必须带 `--require-rss --require-arm64` 与真机生成的 JSON；staging 测量本身仍不是 release evidence。
+
+SQLite fixture 会关闭 adapter，再用同一文件创建新 adapter，回放已提交 snapshot 并校验 node/metadata 读取。Graph restore 测试也证明被拒绝的 snapshot 不会破坏旧 graph。跨 host replay、签名 arm64 产物和真机 RSS 仍是开放门禁。
+
 # 2026-08-17 Stable sourceUri Dual-Read Walkthrough
 
 ## English

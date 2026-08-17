@@ -400,6 +400,15 @@
   - `server.ts` 现已把这条新门禁接入完整 runbook 闭环：ANN index-sync health 已进入 verification escalation、remediation action queue、以及 per-check history summary。
   - runtime capability 治理现在也有了显式的 ANN 校准前提门禁：`query_vector_acceleration_calibration_readiness` 会在同一运行时窗口内缺少 sync telemetry、稳定 connector、prefilter 样本就绪、可评估 candidate ratio、或外部 traceability 信号时阻断发布级阈值校准。
   - agent workspace 的 runtime runbook 界面现已在 verify/checks/action-queue 三条链路中展示 ANN sync-health 指标，而且 verify/checks 卡片还进一步前推了 ANN 熔断预算、可追踪性、预筛选摘要以及阈值/信号钻取、校准就绪态和显式门禁 `query_vector_acceleration_calibration_readiness`，运维侧的 ANN 治理视图已不再停留在 `index_sync_health`。
+
+## 2026-08-17 第 9 阶段推进状态
+
+- **G1 route parity：通过。** `verify:route:shadow` 对 14 条 legacy-equivalent probe 与 6 条 registry-only probe 比较 status、body、headers 和持久化副作用。
+- **G2 移动产物/RSS：静态通过，真机待补。** `verify-mobile-artifact.js` 检查 APK/AAB entry，release 模式要求 arm64，并执行 profile budget；同时要求 RSS JSON。
+- **G3 持久化 projection：本机 replay 通过。** SQLite close/reopen/load/query/metadata fixture 已通过；跨 host replay 仍待补，内存 projection 继续作为 fallback。
+- **G4 canonical ID：保护中。** 原子 restore、alias、move journal 基础已通过；corpus replay 记录完成前保持公开 ID 不变。
+
+后续顺序：为两种 dispatch 模式建立 CI 矩阵，固化版本化 projection-store 契约，实现 host-owned PathBridge adapter，两条移动 packaging 共用一份 staging，最后再以证据驱动 identity cutover。
   - `runtime-capability-runbook/*` 这组 modular knowledge route 现已改为接入真实 server 侧 runbook ops，而不再返回 KLP placeholder payload；route 层现在也会保留 `checkId` / `sinceMinutes` / queue-filter 这类 query 参数，不再静默丢弃。
   - 真实浏览器 smoke 门禁现在也会端到端证明这三条链路：严格浏览器证据必须能看到 ANN sync-health verify 卡、新增的 verify/checks ANN 熔断/可追踪性/预筛选钻取、首个检查的 ANN sync 指标，以及 index-sync action-queue 钻取，而不再只是证明卡片“能打开”。
   - agent-workspace 的 locale 加固现在也覆盖了当前真实暴露出来的诊断卡片/消息空间：源码里引用到的 `agentWorkspace.*` key 已由 `src/agent_workspace.locale.contract.test.ts` 做门禁，双语 locale bundle 现已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片标签，并且启动期 `translate()` 会等 locale 完成初始化后再调用 `window.i18n.t()`，避免在 locale hydrate 前产生误报式 missing-key warning。

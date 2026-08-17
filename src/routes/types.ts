@@ -61,6 +61,8 @@ export interface ServerContext {
     memoryPolicyManager: any;
     notemdService: any;
     loadNotemdSettings: () => Promise<any>;
+    getNotemdOperationSummary?: () => { total: number; running: number };
+    executeQueryBackendConfigUpdate?: (payload: unknown) => Promise<Record<string, unknown>>;
     persistNotemdSettings?: (settingsLike: unknown) => Promise<any>;
     loadFrontendSettings?: () => Promise<any>;
     markdownGateway?: any;

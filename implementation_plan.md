@@ -904,6 +904,58 @@ Completed gates: capability fields, local exact query/path calls, deterministic 
 - Rejecting oversized Android corpora is preferable to partial indexing or silent OOM; the UI must expose the limit and offer a smaller target/export.
 - URI aliases are not a rename journal. Treating them as permanent identity would merge same-content files or resurrect stale documents.
 
+# 2026-08-17 Phase 9 Execution Status and Forward Plan
+
+## English
+
+### Gate status
+
+| Gate | Current state | Evidence | Decision |
+| --- | --- | --- | --- |
+| G1 route parity | pass | 14 equivalent + 6 registry-only probes; status/body/header/side-effect comparison | keep registry default, preserve legacy switch for rollback |
+| G2 mobile artifact/RSS | static pass, device pending | ZIP/APK/AAB verifier, arm64 check, and `--require-rss --require-arm64` contract | no release claim until fresh arm64 artifact + device JSON |
+| G3 persistent projection | local SQLite replay pass | close -> reopen -> load/query/metadata fixture | keep in-memory fallback; add cross-host fixtures before promotion |
+| G4 canonical ID | guarded | alias collision, atomic restore, move journal foundations | do not change public IDs |
+
+### Forward-compatible execution order
+
+1. **Route promotion:** keep `legacy` as an emergency rollback mode; add CI matrix runs for both modes, then delete inline handlers only after the registry-only inventory reaches zero for intended public URLs.
+2. **Projection ownership:** define a versioned `ProjectionStore` contract (`schemaVersion`, `sourceUri`, `revision`, bounded adjacency, evidence references). SQLite/WASM is an adapter, not a second domain model; the memory projection remains the fallback.
+3. **Host adapters:** implement Web/Tauri/Capacitor/Android adapters behind PathBridge 2.0. The bridge transports correlation/cancellation only; authorization, graph policy, and memory policy stay host-owned.
+4. **Mobile release:** stage once, package twice. APK/AAB checks must reject Godot, sidecar, model, SVG, and unbounded binary payloads; release jobs require arm64 artifact metadata plus device RSS evidence. Remote ANN/LLM remains optional and cancellable.
+5. **Identity cutover:** replay old snapshots, move journals, collisions, rollback failures, and cross-root fixtures on every host before introducing a new public ID. Keep `NoteNode.id` and old layouts as compatibility keys until then.
+
+### Explicit trade-offs
+
+- Exact parity is stricter than additive response evolution here because legacy clients may deserialize fixed shapes; new telemetry belongs in diagnostics or versioned routes.
+- A static payload budget catches accidental desktop/runtime leakage but cannot predict WebView/native RSS; the release gate therefore requires both static and device evidence.
+- A shared projection schema avoids per-host algorithm drift, while host adapters still allow platform-specific I/O and cancellation without duplicating graph semantics.
+
+## 中文
+
+### 门禁状态
+
+| 门禁 | 当前状态 | 证据 | 决策 |
+| --- | --- | --- | --- |
+| G1 route parity | 通过 | 14 条等价 + 6 条 registry-only probe；对比 status/body/header/side-effect | 保持 registry 默认，保留 legacy 回滚开关 |
+| G2 移动产物/RSS | 静态通过，真机待补 | ZIP/APK/AAB verifier、arm64 检查与 `--require-rss --require-arm64` 契约 | 没有新鲜 arm64 产物和真机 JSON 不得宣称发布通过 |
+| G3 持久化 projection | 本机 SQLite replay 通过 | close -> reopen -> load/query/metadata fixture | 保留内存 fallback；补齐跨 host fixture 后再提升 |
+| G4 canonical ID | 保护中 | alias collision、原子 restore、move journal 基础 | 不改变公开 ID |
+
+### 向前兼容推进顺序
+
+1. **路由提升：** 保留 `legacy` 作为紧急回滚模式；先在 CI 对两种模式执行矩阵，再在目标 public URL 的 registry-only inventory 清零后删除内联 handler。
+2. **Projection 所有权：** 定义版本化 `ProjectionStore` 契约（`schemaVersion`、`sourceUri`、`revision`、有界邻接、evidence reference）。SQLite/WASM 是 adapter，不是第二套 domain model；内存 projection 继续作为 fallback。
+3. **Host adapter：** 在 PathBridge 2.0 后实现 Web/Tauri/Capacitor/Android adapter。Bridge 只负责 correlation/cancellation transport；授权、graph policy、memory policy 仍由 host 持有。
+4. **移动发布：** 一次 staging、两条 packaging。APK/AAB 必须拒绝 Godot、sidecar、model、SVG 和无界二进制 payload；release job 必须同时具备 arm64 产物 metadata 与真机 RSS 证据。远端 ANN/LLM 保持可选、可取消。
+5. **身份切换：** 在每个 host 上回放旧 snapshot、move journal、collision、rollback failure 与 cross-root fixture 后，才能引入新的 public ID；此前 `NoteNode.id` 与旧布局继续作为兼容 key。
+
+### 明确权衡
+
+- 这里的 exact parity 比 additive response evolution 更严格，因为旧客户端可能按固定 shape 反序列化；新 telemetry 应进入 diagnostics 或版本化 route。
+- 静态 payload 预算能拦截桌面运行时泄漏，但不能预测 WebView/native RSS；发布门禁必须同时要求静态和真机证据。
+- 共享 projection schema 避免各 host 算法漂移，host adapter 仍可承载平台 I/O 与 cancellation，而不复制 graph 语义。
+
 ## 中文
 
 ### 决策记录

@@ -420,6 +420,42 @@
 - [ ] Android folder picking, signed APK/AAB extraction, and device RSS remain unverified; `not-measured` must remain visible until evidence exists.
 - [ ] SQLite persistence, route-registry shadow parity, indexed explicit/inferred projection, and complete Bridge host adapters remain separate milestones; the transport-only Bridge 2.0 envelope is delivered.
 
+# 2026-08-17 Phase 9 Route Shadow and Mobile Artifact Evidence Update
+
+## English
+
+### Completed in this increment
+
+- [x] Added `NOTE_CONNECTION_ROUTE_DISPATCH_MODE=legacy|registry`; registry remains the default and diagnostics expose the active mode.
+- [x] Added `verify:route:shadow`: 14 legacy-equivalent probes compare status, body, headers, and persistence side effects; 6 registry-only probes verify expected legacy misses and registry hits.
+- [x] Restored compatibility fields for modular settings/config routes and legacy error contracts for knowledge, Markdown, render, and clipboard boundaries.
+- [x] Added `verify-mobile-artifact.js` for APK/AAB central-directory inspection, arm64 payload detection, forbidden runtime detection, profile budgets, and release RSS evidence. `--require-rss --require-arm64` rejects incomplete release evidence.
+- [x] Added SQLite close/reopen replay coverage and atomic graph rollback coverage.
+
+### Evidence boundary
+
+- [x] G1 passes locally: `npm run verify:route:shadow` reports `equivalent=14 registryOnly=6`.
+- [x] G3 local adapter replay passes; this does not prove Web/Tauri/Capacitor/Android cross-host replay.
+- [~] G2 still needs a fresh arm64 APK/AAB and device RSS JSON; static staging size is not an artifact or device-memory measurement.
+- [ ] G4 still requires a recorded old-snapshot/collision/rollback/cross-root corpus before any public canonical-ID cutover.
+
+## 中文
+
+### 本次增量已完成
+
+- [x] 增加 `NOTE_CONNECTION_ROUTE_DISPATCH_MODE=legacy|registry`；默认仍为 registry，diagnostics 暴露实际模式。
+- [x] 增加 `verify:route:shadow`：14 条 legacy-equivalent probe 对比状态、body、headers 与持久化副作用；6 条 registry-only probe 验证 legacy miss 与 registry hit 预期。
+- [x] 为模块化 settings/config 路由恢复兼容字段，并统一 knowledge、Markdown、render、clipboard 边界的旧错误契约。
+- [x] 增加 `verify-mobile-artifact.js`，执行 APK/AAB 中央目录检查、arm64 payload 检测、禁入运行时检测、profile 预算和 release RSS 证据校验；`--require-rss --require-arm64` 会拒绝不完整的 release evidence。
+- [x] 增加 SQLite close/reopen replay 覆盖和 graph 原子回滚覆盖。
+
+### 证据边界
+
+- [x] G1 已在本机通过：`npm run verify:route:shadow` 输出 `equivalent=14 registryOnly=6`。
+- [x] G3 本机 adapter replay 已通过；这不等于 Web/Tauri/Capacitor/Android 跨 host replay 已证明。
+- [~] G2 仍需要新鲜 arm64 APK/AAB 与真机 RSS JSON；静态 staging 大小不是真实产物或设备内存测量。
+- [ ] G4 仍需记录 old-snapshot/collision/rollback/cross-root corpus，之后才能切换公开 canonical ID。
+
 # 2026-08-17 Phase 8 Replay, Projection, and Bridge Contract Update
 
 ## English

@@ -6,7 +6,12 @@ import { listOperationDefinitions } from '../notemd/operations/registry';
 import type { NotemdAgentManifest, NotemdAgentOperation } from '../shared/types';
 
 export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
-    const { notemdService, loadNotemdSettings, persistNotemdSettings } = ctx;
+    const {
+        notemdService,
+        loadNotemdSettings,
+        getNotemdOperationSummary,
+        persistNotemdSettings,
+    } = ctx;
 
     const api = (path: string) => `/api/notemd${path}`;
 
@@ -37,7 +42,12 @@ export function registerNotemdRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (_req, res) => {
                 try {
                     const settings = await loadNotemdSettings();
-                    ok(res, { settings });
+                    ok(res, {
+                        settings,
+                        operationSummary: getNotemdOperationSummary
+                            ? getNotemdOperationSummary()
+                            : { total: 0, running: 0 },
+                    });
                 } catch (e) { fail(res, e, 'API:GET /api/notemd/settings'); }
             },
         },

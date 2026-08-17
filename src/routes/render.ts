@@ -3,6 +3,17 @@
  * Uses dynamic import() to avoid tsc resolution issues with jsdom-dependent modules.
  */
 import type { RouteEntry, ServerContext } from './types';
+
+const isPngBuffer = (value: Buffer): boolean =>
+    value.length >= 8
+    && value[0] === 0x89
+    && value[1] === 0x50
+    && value[2] === 0x4e
+    && value[3] === 0x47
+    && value[4] === 0x0d
+    && value[5] === 0x0a
+    && value[6] === 0x1a
+    && value[7] === 0x0a;
 import { CrashLogger } from '../backend/utils/CrashLogger';
 import { resolveRenderMaterializationDecision } from '../platform/RenderMaterializer';
 
@@ -151,7 +162,10 @@ export function registerRenderRoutes(ctx: ServerContext): RouteEntry[] {
                         ? payload.expression
                         : (typeof payload?.source === 'string' ? payload.source : '');
                     if (!expression.trim()) {
-                        json(res, 400, { success: false, error: 'Missing expression' });
+                        const hasExpressionField = Object.prototype.hasOwnProperty.call(payload || {}, 'expression');
+                        json(res, 400, hasExpressionField
+                            ? { success: false, error: 'Missing expression' }
+                            : { error: 'Missing source' });
                         return;
                     }
                     const { renderMathPng } = await import('../reader_renderer');
@@ -187,7 +201,7 @@ export function registerRenderRoutes(ctx: ServerContext): RouteEntry[] {
                         ? payload.source
                         : (typeof payload?.diagram === 'string' ? payload.diagram : '');
                     if (!source.trim()) {
-                        json(res, 400, { success: false, error: 'Missing source' });
+                        json(res, 400, { error: 'Missing source' });
                         return;
                     }
 
@@ -230,6 +244,12 @@ export function registerRenderRoutes(ctx: ServerContext): RouteEntry[] {
             handler: async (req, res) => {
                 try {
                     const body = await readBody(req);
+                    const payload = JSON.parse(body);
+                    const source = typeof payload?.source === 'string' ? payload.source : '';
+                    if (!source.trim()) {
+                        json(res, 400, { error: 'Missing source' });
+                        return;
+                    }
                     json(res, 200, { success: true, message: 'graphviz render route' });
                 } catch (e) { fail(res, e, 'POST /api/render/graphviz'); }
             },
@@ -241,9 +261,19 @@ export function registerRenderRoutes(ctx: ServerContext): RouteEntry[] {
                 try {
                     const body = await readBody(req);
                     const { pngBase64 } = JSON.parse(body);
+                    const normalizedPngBase64 = typeof pngBase64 === 'string' ? pngBase64.trim() : '';
+                    if (!normalizedPngBase64) {
+                        json(res, 400, { error: 'Missing pngBase64' });
+                        return;
+                    }
                     const { copyPngToClipboard } = await import('../native_clipboard');
-                    await copyPngToClipboard(Buffer.from(pngBase64 || '', 'base64'));
-                    json(res, 200, { success: true });
+                    const pngBuffer = Buffer.from(normalizedPngBase64, 'base64');
+                    if (!isPngBuffer(pngBuffer)) {
+                        json(res, 400, { error: 'Invalid PNG payload' });
+                        return;
+                    }
+                    await copyPngToClipboard(pngBuffer);
+                    json(res, 200, { ok: true });
                 } catch (e) { fail(res, e, 'POST /api/clipboard/image'); }
             },
         },
@@ -258,9 +288,14 @@ export function registerRenderRoutes(ctx: ServerContext): RouteEntry[] {
                         req.on('end', resolve);
                         req.on('error', reject);
                     });
+                    const pngBuffer = Buffer.concat(chunks);
+                    if (!isPngBuffer(pngBuffer)) {
+                        json(res, 400, { error: 'Invalid PNG payload' });
+                        return;
+                    }
                     const { copyPngToClipboard } = await import('../native_clipboard');
-                    await copyPngToClipboard(Buffer.concat(chunks));
-                    json(res, 200, { success: true });
+                    await copyPngToClipboard(pngBuffer);
+                    json(res, 200, { ok: true });
                 } catch (e) { fail(res, e, 'POST /api/clipboard/image-binary'); }
             },
         },

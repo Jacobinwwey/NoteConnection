@@ -13999,6 +13999,12 @@ export const startServer = async (options: { port?: number, targetPath?: string 
     // full registry init and depend on the inline fallback. Once all tests use
     // the registry, this becomes default and inline handlers can be deleted.
     const STRICT_REGISTRY = process.env.NOTE_CONNECTION_STRICT_REGISTRY === '1';
+    const ROUTE_DISPATCH_MODE = String(process.env.NOTE_CONNECTION_ROUTE_DISPATCH_MODE || 'registry')
+        .trim()
+        .toLowerCase() === 'legacy'
+        ? 'legacy'
+        : 'registry';
+    const USE_REGISTRY_DISPATCH = ROUTE_DISPATCH_MODE === 'registry';
 
     // --- Route Registry (modular dispatch for extracted route groups) ---
     const runtimeRunbookOps = createRuntimeRunbookRouteOps({
@@ -14048,6 +14054,32 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         memoryPolicyManager,
         notemdService,
         loadNotemdSettings,
+        getNotemdOperationSummary: () => ({
+            total: NOTEMD_ACTIVE_OPERATIONS.size,
+            running: Array.from(NOTEMD_ACTIVE_OPERATIONS.values()).filter(
+                (operation) => operation.status === 'running'
+            ).length,
+        }),
+        executeQueryBackendConfigUpdate: async (payload: unknown) => {
+            const requestPayload = normalizeQueryBackendConfigRequestPayload(payload);
+            const result = await knowledgeLearningPlatform.updateQueryBackendConfig(requestPayload);
+            ACTIVE_KNOWLEDGE_QUERY_BACKEND = result.configuredBackend;
+            const baseDiagnostics = knowledgeLearningPlatform.getQueryBackendDiagnostics();
+            const graphvizRuntimeAvailability = await getGraphvizDotRuntimeAvailability();
+            const diagnostics = enrichQueryBackendDiagnosticsWithRendererRuntime(
+                baseDiagnostics,
+                graphvizRuntimeAvailability
+            );
+            return {
+                result,
+                diagnostics,
+                configuredVectorAccelerationProvider: QUERY_VECTOR_ACCELERATION_PROVIDER,
+                configuredVectorAccelerationFailureMode: QUERY_VECTOR_ACCELERATION_FAILURE_MODE,
+                configuredVectorAccelerationRepresentationStrict: QUERY_VECTOR_ACCELERATION_REPRESENTATION_STRICT_ENABLED,
+                queryVectorAnnPrefilterEnabled: QUERY_VECTOR_ANN_PREFILTER_ENABLED,
+                rolloutProfile: buildKnowledgeRuntimeRolloutProfile(),
+            };
+        },
         persistNotemdSettings,
         loadFrontendSettings,
         markdownGateway,
@@ -14085,6 +14117,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
     const routeMigrationStats = {
         totalModularRoutes: allRoutes.length,
         totalInlineRoutes: 7, // terminal routes (meta/diagnostics/static-serve) — intentionally kept inline
+        dispatchMode: ROUTE_DISPATCH_MODE,
         // notemd inline block (~1,147 lines) is 100% registry-covered (30 registry routes > 16 inline).
         // Pending safe deletion after integration test; set NOTE_CONNECTION_STRICT_REGISTRY=1 to skip inline.
         registryHits: () => routeRegistryHits,
@@ -14162,7 +14195,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
         // Route Registry Dispatch: try modular routes first, fall through to legacy inline chain
         const methodMap = routeMap.get(req.method || 'GET');
-        if (methodMap) {
+        if (USE_REGISTRY_DISPATCH && methodMap) {
             const exactRoute = methodMap.get(requestPath);
             if (exactRoute) {
                 routeRegistryHits++;
@@ -14415,6 +14448,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             migrationProgress: routeMigrationStats.migrationProgress(),
                             modularRoutes: routeMigrationStats.totalModularRoutes,
                             inlineOnlyRoutes: routeMigrationStats.totalInlineRoutes,
+                            dispatchMode: routeMigrationStats.dispatchMode,
                         },
                         domains: {
                             ingest: knowledgeIngestor.getDiagnostics(),
@@ -14939,29 +14973,12 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             if (postPathname === '/api/knowledge/query-backend-config') {
                 try {
                     const payload = await readJsonBody(req);
-                    const requestPayload = normalizeQueryBackendConfigRequestPayload(payload);
-                    const result = await knowledgeLearningPlatform.updateQueryBackendConfig(requestPayload);
-                    ACTIVE_KNOWLEDGE_QUERY_BACKEND = result.configuredBackend;
-                    const baseDiagnostics = knowledgeLearningPlatform.getQueryBackendDiagnostics();
-                    const graphvizRuntimeAvailability = await getGraphvizDotRuntimeAvailability();
-                    const diagnostics = enrichQueryBackendDiagnosticsWithRendererRuntime(
-                        baseDiagnostics,
-                        graphvizRuntimeAvailability
-                    );
-                    const rolloutProfile = buildKnowledgeRuntimeRolloutProfile();
+                    const responsePayload = await routeContext.executeQueryBackendConfigUpdate?.(payload);
+                    if (!responsePayload) {
+                        throw new Error('Query backend config operation is unavailable.');
+                    }
                     res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(
-                        JSON.stringify({
-                            success: true,
-                            result,
-                            diagnostics,
-                            configuredVectorAccelerationProvider: QUERY_VECTOR_ACCELERATION_PROVIDER,
-                            configuredVectorAccelerationFailureMode: QUERY_VECTOR_ACCELERATION_FAILURE_MODE,
-                            configuredVectorAccelerationRepresentationStrict: QUERY_VECTOR_ACCELERATION_REPRESENTATION_STRICT_ENABLED,
-                            queryVectorAnnPrefilterEnabled: QUERY_VECTOR_ANN_PREFILTER_ENABLED,
-                            rolloutProfile,
-                        })
-                    );
+                    res.end(JSON.stringify({ success: true, ...responsePayload }));
                 } catch (error) {
                     writeApiErrorResponse(res, error, {
                         context: 'API:POST /api/knowledge/query-backend-config',
