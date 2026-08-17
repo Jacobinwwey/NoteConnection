@@ -1098,6 +1098,16 @@ fn build_graph_runtime_for_target(
         *in_degree.entry(target.clone()).or_insert(0) += 1;
     }
 
+    #[cfg(target_os = "android")]
+    let node_drafts: Vec<NodeDraft> = node_drafts
+        .into_iter()
+        .map(|mut node| {
+            node.content = String::new();
+            node
+        })
+        .collect();
+
+    #[cfg(not(target_os = "android"))]
     let full_nodes: Vec<Value> = node_drafts
         .iter()
         .map(|node| {
@@ -1148,6 +1158,7 @@ fn build_graph_runtime_for_target(
         })
         .collect();
 
+    #[cfg(not(target_os = "android"))]
     let full_graph = json!({
         "nodes": full_nodes,
         "edges": edges.clone()

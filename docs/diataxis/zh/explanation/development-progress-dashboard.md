@@ -1789,12 +1789,12 @@ Policy v2 还会在 numeric fact key 中保留符号、常见中英文测量单�
 
 - 资源身份冲突保护、共享严格 auth 判定、原子且 cache-coherent 的 snapshot 写入仍已在 `main` 验证。
 - `mobile-slim` 已成为可执行 profile：本地 exact ingest/query 能力明确，远程推理为可选，SVG 禁用，并携带 25 MiB 估算压缩资源 / 256 MiB 常驻内存预算。
-- `mobile_exact_analyzer.js` 与 storage-provider adapter 从本地图资源提供有界 exact lookup、邻居查询和有向路径，不依赖 sidecar。analyzer 构建复杂度为 O(V + E)，不保留节点正文。
+- `mobile_exact_analyzer.js` 与 storage-provider adapter 从本地图资源提供有界 exact lookup、邻居查询和有向路径，不依赖 sidecar。analyzer 构建复杂度为 O(V + E)，不保留节点正文；Android Rust 会释放已解析正文并跳过 full-content graph 分配。
 - Capacitor 与 Tauri Android 共用 deterministic staging 和 manifest。默认 Tauri Android 路径不构建 sidecar、不注入 Godot；Godot Pathmode 仅能通过显式扩展档启用。
 
 ### 证据与缺口
 
-- 本机静态证据：移动/平台定向 33 个测试通过；118 个 staging 文件测得未压缩 4,220,607 字节、估算压缩 1,538,529 字节。
+- 本机静态证据：移动/平台定向 34 个测试通过；118 个 staging 文件测得未压缩 4,220,607 字节、估算压缩 1,538,529 字节。
 - RSS 与签名 APK/AAB 解包结果尚未测量。缺少 RSS evidence 时状态保持 `not-measured`，因此看板不宣称设备验收通过。
 - SQLite 持久化、完整 agent conversation parity、稳定 `sourceUri` 双读、strict route-registry 默认切换、indexed explicit/inferred projection、Bridge v2 与 domain 抽取仍待完成。
 

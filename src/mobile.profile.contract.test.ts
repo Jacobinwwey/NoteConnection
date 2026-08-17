@@ -228,4 +228,14 @@ describe('mobile-slim profile contract', () => {
     expect(patcher).toContain("process.argv.includes('--disable')");
     expect(patcher).toContain('removePathmodeAssets');
   });
+
+  test('does not allocate the full-content graph on Android runtime builds', () => {
+    const rustSource = fs.readFileSync(
+      path.join(repoRoot, 'src-tauri', 'src', 'lib.rs'),
+      'utf8'
+    );
+
+    expect(rustSource).toContain('#[cfg(not(target_os = "android"))]\n    let full_nodes');
+    expect(rustSource).toContain('#[cfg(not(target_os = "android"))]\n    let full_graph');
+  });
 });

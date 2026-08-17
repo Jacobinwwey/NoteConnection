@@ -1760,12 +1760,12 @@ The next direction is to expand this versioned corpus with human-rated multiling
 
 - Resource identity collision guard, shared strict auth decision, and atomic/cache-coherent snapshot writes remain verified on `main`.
 - `mobile-slim` is now an executable profile: local exact ingest/query capability is explicit, remote inference is optional, SVG is disabled, and the profile carries 25 MiB estimated compressed asset / 256 MiB resident-memory budgets.
-- `mobile_exact_analyzer.js` and the storage-provider adapter provide bounded exact lookup, neighbors, and directed paths from the local graph asset without a sidecar. The analyzer is O(V + E) to build and does not retain node bodies.
+- `mobile_exact_analyzer.js` and the storage-provider adapter provide bounded exact lookup, neighbors, and directed paths from the local graph asset without a sidecar. The analyzer is O(V + E) to build and does not retain node bodies; Android Rust releases parsed document bodies and skips full-content graph allocation.
 - Capacitor and Tauri Android share deterministic staging and manifest generation. The default Tauri Android path does not build sidecars or inject Godot; Godot Pathmode is an explicit extended profile.
 
 ### Evidence and gaps
 
-- Static host evidence: 33 focused mobile/platform tests passed; 118 staged files measured 4,220,607 bytes uncompressed and 1,538,529 estimated compressed bytes.
+- Static host evidence: 34 focused mobile/platform tests passed; 118 staged files measured 4,220,607 bytes uncompressed and 1,538,529 estimated compressed bytes.
 - RSS and signed APK/AAB extraction are not yet measured. A missing RSS evidence file remains `not-measured`, so this dashboard does not claim device acceptance.
 - SQLite persistence, full agent conversation parity, stable `sourceUri` dual-read, strict route-registry defaulting, indexed explicit/inferred projections, Bridge v2, and domain extraction remain pending.
 

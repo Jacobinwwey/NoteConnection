@@ -350,7 +350,7 @@
 
 ### Evidence boundary
 
-- [x] Focused mobile/platform matrix: 33 tests passed; staged build measured 118 files, 4,220,607 uncompressed bytes, and 1,538,529 estimated compressed bytes.
+- [x] Focused mobile/platform matrix: 34 tests passed; staged build measured 118 files, 4,220,607 uncompressed bytes, and 1,538,529 estimated compressed bytes.
 - [ ] Real-device RSS evidence and signed APK/AAB extraction evidence remain open. `not-measured` is a deliberate state, not a pass.
 - [ ] SQLite persistence, full agent conversation parity, stable `sourceUri` dual-read, strict route-registry default, indexed explicit/inferred projections, Bridge v2, and domain extraction remain pending.
 
@@ -365,6 +365,6 @@
 
 ### 证据边界
 
-- [x] 移动/平台定向矩阵通过 33 个测试；本机 staging 测得 118 个文件、未压缩 4,220,607 字节、估算压缩 1,538,529 字节。
+- [x] 移动/平台定向矩阵通过 34 个测试；本机 staging 测得 118 个文件、未压缩 4,220,607 字节、估算压缩 1,538,529 字节。
 - [ ] 真机 RSS 证据和签名 APK/AAB 解包证据仍未完成。`not-measured` 是诚实的未测状态，不是通过状态。
 - [ ] SQLite 持久化、完整 agent conversation parity、稳定 `sourceUri` 双读、strict route-registry 默认切换、indexed explicit/inferred projection、Bridge v2 与 domain 抽取仍待后续阶段。
