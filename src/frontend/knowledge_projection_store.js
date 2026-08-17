@@ -78,36 +78,43 @@
         let cached = normalizedOptions.initialProjection === undefined || normalizedOptions.initialProjection === null
             ? null
             : normalizeProjection(normalizedOptions.initialProjection, normalizedOptions);
+        let hasLoaded = false;
         let loadPromise = null;
 
         const load = async () => {
-            if (cached) {
+            if (hasLoaded && cached) {
                 return cached;
             }
             if (loadPromise) {
                 return await loadPromise;
             }
             loadPromise = (async () => {
+                let payload;
                 try {
-                    const payload = await read();
-                    const serialized = typeof payload === 'string' ? payload : JSON.stringify(payload);
-                    if (measureBytes(serialized) > maxBytes) {
-                        throw new Error(`Knowledge projection payload exceeds ${maxBytes} bytes.`);
-                    }
-                    cached = normalizeProjection(payload, normalizedOptions);
-                    return cached;
+                    payload = await read();
                 } catch (error) {
-                    // A prior successful write remains a valid local fallback when a host
-                    // storage adapter is temporarily unavailable after a restart.
                     if (cached) {
                         return cached;
                     }
                     throw error;
-                } finally {
-                    loadPromise = null;
                 }
+                const serialized = typeof payload === 'string' ? payload : JSON.stringify(payload);
+                if (typeof serialized !== 'string') {
+                    throw new Error('Knowledge projection payload is not serializable.');
+                }
+                if (measureBytes(serialized) > maxBytes) {
+                    throw new Error(`Knowledge projection payload exceeds ${maxBytes} bytes.`);
+                }
+                // Validation errors must not be hidden by a stale in-memory value.
+                cached = normalizeProjection(payload, normalizedOptions);
+                hasLoaded = true;
+                return cached;
             })();
-            return await loadPromise;
+            try {
+                return await loadPromise;
+            } finally {
+                loadPromise = null;
+            }
         };
 
         return Object.freeze({
@@ -124,12 +131,58 @@
                 }
                 await write(serialized, next);
                 cached = next;
+                hasLoaded = true;
                 return next;
             },
             async metadata() {
                 const projection = await load();
                 return projection ? metadataFor(projection) : null;
             },
+        });
+    }
+
+    function createFileProjectionStore(options) {
+        const normalizedOptions = options && typeof options === 'object' ? options : {};
+        const fileName = typeof normalizedOptions.fileName === 'string'
+            ? normalizedOptions.fileName.trim()
+            : '';
+        const readFile = normalizedOptions.readFile;
+        const writeAtomic = normalizedOptions.writeAtomic;
+
+        if (!fileName) {
+            throw new Error('App-local projection file name is required.');
+        }
+        if (typeof readFile !== 'function') {
+            throw new Error('App-local projection readFile adapter is required.');
+        }
+        if (writeAtomic !== undefined && typeof writeAtomic !== 'function') {
+            throw new Error('App-local projection writeAtomic adapter must be callable.');
+        }
+        if (normalizedOptions.write !== undefined) {
+            throw new Error('App-local projection writes must use the writeAtomic adapter.');
+        }
+
+        const persistentOptions = {
+            ...Object.fromEntries(Object.entries(normalizedOptions).filter(([key]) => (
+                key !== 'fileName'
+                && key !== 'readFile'
+                && key !== 'writeAtomic'
+                && key !== 'read'
+                && key !== 'write'
+            ))),
+            read: async () => await readFile(fileName),
+        };
+        if (typeof writeAtomic === 'function') {
+            persistentOptions.write = async (serialized, projection) => {
+                await writeAtomic(fileName, serialized, projection);
+            };
+        }
+
+        const store = createPersistentProjectionStore(persistentOptions);
+        return Object.freeze({
+            ...store,
+            kind: typeof writeAtomic === 'function' ? 'file-persistent' : 'file-read-through',
+            fileName,
         });
     }
 
@@ -147,6 +200,7 @@
         createProjectionStore,
         createMemoryProjectionStore,
         createPersistentProjectionStore,
+        createFileProjectionStore,
         metadataFor,
     });
 }));

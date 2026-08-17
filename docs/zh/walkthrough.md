@@ -154,3 +154,27 @@ APK/AAB verifier 是静态且轻量的：读取 ZIP central-directory metadata�
 Android 采用异步 SAF 状态机：Rust 请求 `ACTION_OPEN_DOCUMENT_TREE`，Kotlin 在单文档 16 MiB、总输入 64 MiB 限制内把 Markdown 流式复制到 app-local `filesDir/Knowledge_Base`，随后 Rust 轮询短结果 marker，只持久化 app-local path。外部 URI 只是 provenance，不是 identity；移动包继续排除 sidecar/Godot/model/SVG。
 
 验证：24 项 Jest 聚焦测试、TypeScript no-emit 与 Rust 26 项测试通过。Android 生成 patch 已幂等；新鲜 arm64 slim 构建生成未签名 APK（9,555,787 字节）与 AAB（7,179,228 字节），静态 artifact 检查通过且没有禁入条目。签名 arm64、真机导入与 RSS 证据仍待补齐。
+
+## 2026-08-18 第 12 阶段 App-Local Replay Walkthrough
+
+移动 load path 现在有明确的文件边界：
+
+`graph_data.json` -> `createFileProjectionStore()` -> 版本化 projection contract -> `mobile_exact_analyzer`。
+
+`createFileProjectionStore()` 接收 host-owned 的 `readFile(fileName)`，需要写入时接收可选的 `writeAtomic(fileName, serialized, projection)`。它继续保存原始 schema-1 projection，而不是引入新的 envelope，因此 Tauri/Rust 与 Android/Kotlin writer 保持兼容。`storage_provider.js` 在 factory 存在时选择该路径，旧 runtime 仍回退到 legacy generic store。
+
+Store 会区分 I/O 故障与数据不兼容：读取失败可以复用最近一次成功值；非法 JSON、未来 schema、非法 node/edge identity 或大小超限会直接暴露并阻止分析。即使提供 initial projection，首次 load 仍会读取文件，避免过期 bootstrap 值遮蔽更新后的 app-local projection。
+
+运行确定性证据命令：
+
+```text
+npm run verify:mobile:projection-replay
+```
+
+命令会在临时 app-local 目录执行 atomic save，释放首个 store 实例，再分别以 Web/Tauri/Capacitor/Android 的 read-through store 重开，并比较 metadata、exact search、neighbor 与 shortest path。随后写入 `output/verification/mobile-projection-replay/report-latest.json`，同时验证截断 JSON 与未知 schema fail closed。该 output 目录被 gitignore，不是源码产物。
+
+本次变更后 `mobile:prepare:slim` staging 为 120 个文件（未压缩 4,253,837；估算压缩 1,546,201 字节）。重新构建的未签名 arm64 APK/AAB 静态 payload 分别为 9,434,062 与 6,978,525 字节，均低于 25 MiB；两项测量都不包含真机 RSS。
+
+route-shadow 门禁也在 readiness 后等待三次连续稳定的 runtime directory manifest。这是必要的，因为 registry backend 可能在 `/api/knowledge/state` 返回之后才异步完成首次 SQLite 初始化；没有该等待，慢宿主会产生假的 read-only side-effect 失败。
+
+这关闭了代码级 G3 replay 证据，但没有关闭真机门禁。仍需签名 arm64 产物、Android 进程死亡后的 SAF import/query/path workload，以及 peak RSS <= 256 MiB。SQLite/WASM 仍是未来 opt-in adapter，因为当前有界 exact workload 不足以证明其移动端体积、启动和 heap 成本值得默认引入。

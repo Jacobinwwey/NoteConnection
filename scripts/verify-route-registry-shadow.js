@@ -117,6 +117,30 @@ function snapshotDirectory(root) {
     return entries;
 }
 
+async function waitForStableRuntimeFiles(root) {
+    const deadline = Date.now() + 5000;
+    const pollIntervalMs = 75;
+    const requiredStableSamples = 3;
+    let previous = JSON.stringify(snapshotDirectory(root));
+    let stableSamples = 0;
+
+    while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+        const current = JSON.stringify(snapshotDirectory(root));
+        if (current === previous) {
+            stableSamples += 1;
+            if (stableSamples >= requiredStableSamples) {
+                return JSON.parse(current);
+            }
+        } else {
+            previous = current;
+            stableSamples = 0;
+        }
+    }
+
+    return snapshotDirectory(root);
+}
+
 function getFreePort() {
     return new Promise((resolve, reject) => {
         const server = net.createServer();
@@ -232,6 +256,9 @@ async function runMode(mode, fixtureRoot, probes) {
     const server = await startMode(mode, fixtureRoot);
     try {
         await request(server.port, { method: 'GET', path: '/api/knowledge/state' });
+        // Readiness may precede the async SQLite initialization flush. Wait for
+        // a stable manifest so a timing difference is not reported as a route side effect.
+        await waitForStableRuntimeFiles(server.runtimeDataDir);
         const before = snapshotDirectory(server.runtimeDataDir);
         let beforeWrite = null;
         const responses = [];

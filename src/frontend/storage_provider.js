@@ -1645,10 +1645,16 @@
                 if (!storeApi || typeof storeApi.createProjectionStore !== 'function') {
                     throw unsupportedOperationError('projectionStore');
                 }
-                const projectionStore = storeApi.createProjectionStore({
-                    maxBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
-                    read: async () => await this.readGeneratedAsset('graph_data.json')
-                });
+                const projectionStore = typeof storeApi.createFileProjectionStore === 'function'
+                    ? storeApi.createFileProjectionStore({
+                        fileName: 'graph_data.json',
+                        maxBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+                        readFile: async (filename) => await this.readGeneratedAsset(filename),
+                    })
+                    : storeApi.createProjectionStore({
+                        maxBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+                        read: async () => await this.readGeneratedAsset('graph_data.json'),
+                    });
                 const graph = await projectionStore.load();
                 return analyzer.createMobileExactIndex(graph);
             })();

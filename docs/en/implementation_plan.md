@@ -410,6 +410,54 @@ Bring code truth, active progress docs, and next execution order back into align
 - **G4 canonical ID: guarded.** Atomic restore, aliases, and move journal foundations pass; public IDs remain unchanged until corpus replay is recorded.
 
 Next order: CI matrix for both dispatch modes, versioned projection-store contract, host-owned PathBridge adapters, one staging directory for both mobile packaging paths, then evidence-backed identity cutover.
+
+## 2026-08-18 Phase 12 Forward-Compatible Mobile Persistence Plan
+
+### Current code truth after Phase 11
+
+The earlier plan correctly separated canonical graph identity from mobile projections, but its G3 wording was too broad: a fixture replay was treated as if it proved Android process restart. The current code now has a narrower, testable contract:
+
+- `knowledge_projection_contract.js` remains the schema owner. It bounds nodes, edges, evidence references, adjacency, and identity metadata; it does not retain document bodies.
+- `knowledge_projection_store.js` is the persistence boundary. `createProjectionStore()` remains the compatibility entry point; `createFileProjectionStore()` makes app-local file semantics explicit without changing the serialized projection shape.
+- `storage_provider.js` uses the file boundary for `graph_data.json`, with the old generic store path retained for runtimes that have not shipped the new factory yet.
+- `src-tauri/src/lib.rs` already writes graph projections through sibling temporary files and rename. Android persists the lite projection and releases parsed bodies before projection. The JavaScript adapter therefore consumes a host-owned atomic primitive instead of reimplementing Rust/Kotlin filesystem policy.
+- `scripts/verify-mobile-projection-replay.js` writes a structured report after a real temporary-directory save/reopen cycle. Four host labels consume the same fixture, so parity is checked at schema, metadata, exact search, neighbors, and shortest path rather than only at JSON equality.
+- `verify-route-registry-shadow.js` now waits for three stable runtime-manifest samples after readiness, closing a verifier race where asynchronous SQLite initialization could be misclassified as a read-only route side effect.
+- The post-change mobile-slim staging remains within budget at 120 files, 4,253,837 uncompressed bytes, and 1,546,201 estimated compressed bytes; a fresh unsigned arm64 APK/AAB measures 9,434,062 and 6,978,525 compressed payload bytes respectively. These are static artifact measurements, not RSS evidence.
+
+### Corrected failure semantics
+
+The previous store implementation could return an initial/stale projection for any exception, including malformed JSON or an unknown future schema. That is unsafe for forward compatibility: a schema incompatibility must be visible so the host can migrate or abstain. The new rule is:
+
+| Boundary failure | Behavior | Rationale |
+| --- | --- | --- |
+| app-local read/I/O error | use the last successful projection when one exists | transient storage failures should not blank an active session |
+| truncated/invalid JSON | fail closed | never run analysis on partial state |
+| unknown schema or invalid identity/edge | fail closed | do not silently downgrade future data |
+| atomic write error | keep the previous committed file and cached projection | save is commit-or-no-change |
+
+This preserves the existing memory fallback while removing the stale-cache masking bug. Initial data is now a fallback candidate, not proof that disk state is current; the first load still attempts the host read.
+
+### Mobile architecture and trade-offs
+
+The default mobile path remains a body-free JSON projection plus bounded exact analyzer. It is deliberately below the SQLite/WASM option in abstraction level because the current workload is local exact lookup, bounded neighbors, and bounded shortest path. Promoting SQLite/WASM now would increase APK/AAB size, cold-start work, heap residency, and migration surface without improving the release gates that are still missing. The decision is reversible because the store contract is versioned and host-neutral; a future SQLite/WASM adapter can implement the same `load/save/metadata` operations without changing `storage_provider.js` or public IDs.
+
+The adapter must not own platform filesystem policy. Android SAF import remains Kotlin/Rust-owned, Tauri remains Rust-owned, and Web/Capacitor may supply a native atomic writer later. This avoids a leaky cross-platform path abstraction, but it implies a single-writer rule and requires device evidence for process death, URI permission persistence, and import/query/path continuity.
+
+### Execution order from this point
+
+1. **G2 device evidence**: produce signed arm64 APK/AAB, run SAF import -> graph build -> exact query -> path on low-memory hardware, capture peak RSS, and reject any result marked `not-measured`.
+2. **G3 host matrix**: run the replay script and native adapters in CI for both Tauri and Capacitor packaging paths; add process-death/reopen evidence on at least one Android API/ABI target.
+3. **G4 identity corpus**: replay old snapshots, move journals, rollback, same-content/NFC collision, and cross-root cases after restart. Keep public IDs frozen until all results are deterministic.
+4. **Only after evidence**: evaluate SQLite/WASM as an opt-in large-corpus adapter. It must demonstrate a measured benefit against JSON on startup, RSS, query p95, and package budget before promotion.
+5. **Architecture reduction**: continue extracting ownership from `server.ts` and `KnowledgeLearningPlatform.ts` only where the new module owns state/invariants; do not add pass-through facades around the projection store.
+
+### Acceptance gates
+
+- `npm run verify:mobile:projection-replay` produces a fresh report with four host passes and fail-closed failure modes.
+- Full Jest, TypeScript no-emit, Rust tests, mobile slim budget, artifact inspection, route shadow, and Diataxis remain green.
+- Signed-device RSS and SAF workload evidence are reported separately from static APK/AAB size evidence.
+- The worktree is clean and `main` is pushed only after the above checks complete.
   - modular knowledge-route wiring for `runtime-capability-runbook/*` is now backed by live server-side runbook ops instead of KLP placeholder payloads, and the route layer now preserves `checkId` / `sinceMinutes` / queue-filter query params rather than dropping them.
   - the real browser smoke gate now proves those verify/checks/action-queue surfaces end to end: strict browser evidence must show the ANN sync-health verify card, the new verify/checks ANN circuit/traceability/prefilter drilldowns, the first-check ANN sync metric, and the index-sync action-queue drilldown instead of only proving that the cards can open.
   - agent-workspace locale hardening now covers the currently surfaced diagnostics cards/messages: source-referenced `agentWorkspace.*` keys are guarded by `src/agent_workspace.locale.contract.test.ts`, bilingual locale bundles now back the query/quality/runbook card labels that strict browser smoke actually exercises, and startup-time translate helpers defer `window.i18n.t()` until locale init to avoid false missing-key warnings before locales hydrate.

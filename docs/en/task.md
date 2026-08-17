@@ -157,6 +157,29 @@
 - [x] Added SQLite close/reopen replay and graph atomic-rollback tests.
 - [~] Fresh signed arm64 artifact extraction and device RSS remain required; `not-measured` is not release evidence.
 - [ ] Canonical public-ID cutover remains blocked until old-snapshot, collision, rollback, and cross-root corpus replay is recorded.
+
+## 2026-08-18 Phase 12 App-Local Projection Replay
+
+- [x] Add `createFileProjectionStore()` as the host-neutral app-local file boundary. Hosts provide `readFile(fileName)` and, when writes are allowed, `writeAtomic(fileName, serialized, projection)`; the persisted payload remains schema-1 projection JSON.
+- [x] Make fallback semantics explicit: an initial projection is used only after a host I/O read failure; truncated JSON, size violations, duplicate identities, and unknown future schemas fail closed even when a stale cache exists.
+- [x] Route mobile exact analysis through the file boundary with a legacy `createProjectionStore()` fallback, preserving Web/Tauri/Capacitor compatibility while keeping the runtime payload body-free.
+- [x] Add `scripts/verify-mobile-projection-replay.js` and `npm run verify:mobile:projection-replay`. The report proves save -> fresh store -> load -> metadata/search/neighbors/path parity for Web, Tauri, Capacitor, and Android adapters, plus truncated/unknown-schema rejection.
+- [x] Harden the route-shadow verifier with condition-based runtime-manifest stabilization so asynchronous SQLite initialization cannot create a false read-only side-effect failure.
+- [x] Rebuilt the mobile-slim staging after the adapter change: 120 files, 4,253,837 uncompressed bytes, and 1,546,201 estimated compressed bytes; the existing 25 MiB payload budget still passes.
+- [~] G2 remains static-only: unsigned arm64 APK/AAB and the 25 MiB compressed payload gate pass, but signed artifacts, physical-device SAF import/query/path workload, and RSS <= 256 MiB are still release gates.
+- [~] G3 now has code-level app-local restart replay and four-host fixture evidence; real Android process-death replay and SQLite/WASM adapter promotion remain open.
+- [ ] G4 still blocks canonical public-ID migration until old snapshots, move-journal restart, rollback, same-content collisions, and cross-root identity corpora are replayed.
+
+### Phase 12 architectural decision
+
+Keep raw versioned projection JSON as the mobile persistence format. SQLite/WASM is not promoted by default because it adds binary size, startup, heap, and migration cost without being required for the bounded exact-search/path workload. The adapter boundary is intentionally host-owned: Android/Tauri can provide an atomic writer, while Web/Capacitor can remain read-through or provide their native atomic primitive later. A single-writer policy is required before concurrent background imports are enabled.
+
+### Phase 12 acceptance targets
+
+1. Reopening an app-local projection produces byte/schema/metadata/search/neighbors/path equivalence across all four host contracts.
+2. A stale cache never masks a corrupt or future schema; only a transport/storage read failure may use the last successful projection.
+3. Mobile packaging remains sidecar/Godot/model/SVG free, with the existing 25 MiB compressed asset and 256 MiB resident-memory budgets unchanged.
+4. Release claims remain split: static artifact evidence is not a substitute for signed-device SAF and RSS evidence.
 - [x] Runtime runbook modular-route composition is no longer inline-only inside `src/server.ts`; `src/routes/runtimeRunbookRouteOps.ts` now owns `/api/knowledge/runtime-capability-runbook/*` route-op assembly while preserving the current response contract.
 - [x] Graph-focus now renders the original markdown knowledge point through the shared markdown runtime and highlights matched passages in-place, instead of showing only a snippet list in the right pane.
 - [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness, readiness-exposed strict history auditing, current Windows-host strict 3/3 evidence, and opt-in multi-host audit tooling are now automated, while actual multi-host evidence and threshold calibration remain pending.

@@ -172,6 +172,8 @@ describe('mobile-slim profile contract', () => {
     expect(projectionContract).toContain('MAX_NEIGHBORS');
     expect(storageProvider).toContain('window.NoteConnectionKnowledgeProjection');
     expect(storageProvider).toContain('createKnowledgeProjection');
+    expect(storageProvider).toContain('createFileProjectionStore');
+    expect(storageProvider).toContain("fileName: 'graph_data.json'");
     expect(projectionScriptOffset).toBeGreaterThan(-1);
     expect(projectionScriptOffset).toBeLessThan(indexHtml.indexOf('<script src="mobile_exact_analyzer.js"></script>'));
     expect(projectionScriptOffset).toBeLessThan(indexHtml.indexOf('<script src="storage_provider.js"></script>'));

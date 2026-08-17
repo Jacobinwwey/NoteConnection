@@ -269,3 +269,33 @@ Evidence is intentionally split. Code and fixture gates pass; a fresh unsigned a
 Tauri projection 文件经同目录临时文件 + rename 写入。Android slim 增加 additive SAF bridge：Rust 请求 tree，生成的 Kotlin 在既有低内存预算内把 Markdown 流式复制到 app-local `filesDir/Knowledge_Base`，Rust 轮询短结果 marker。外部 URI 只作为 provenance，持久化 graph identity 仍是 workspace-scoped；移动包继续不包含 Node、Godot、模型、SVG 或桌面二进制。
 
 证据必须分层表达：代码与 fixture gate 已通过；新鲜未签名 arm64 APK/AAB 已通过 central-directory 检查和 25 MiB payload budget 下的 mobile artifact verifier（APK 压缩 payload 9,433,678 字节；AAB 6,978,122 字节）。G2 仍缺签名、在线设备 workload 与 RSS JSON；G3 fixture replay 已通过，真实 Android storage replay 待补；G4 identity corpus 已加强，但旧 snapshot rollback 与 move-journal 重启证据仍阻塞 canonical 公共 ID 迁移。
+
+## 2026-08-18 Phase 12 Follow-up: App-Local Projection Replay
+
+### English
+
+The Phase 11 persistence boundary is now restartable at the app-local file level without changing the projection wire shape. `knowledge_projection_store.js` adds `createFileProjectionStore()`, which accepts a host-owned `readFile(fileName)` and optional `writeAtomic(fileName, serialized, projection)`. Tauri/Rust and Android/Kotlin continue to own filesystem policy and atomic activation; the JavaScript boundary only owns validation, caching, and replay semantics. `storage_provider.js` selects the new factory for `graph_data.json` and keeps the legacy generic-store fallback for older hosts.
+
+The failure contract is now explicit. Read/I/O errors may reuse the last successful projection, but malformed/truncated JSON, oversized payloads, invalid identity/edges, and unknown future schemas fail closed even when an initial or stale cache exists. Initial data is a fallback candidate, not evidence that disk state is current. A failed atomic save leaves the previous committed file and cached projection untouched.
+
+`verify-mobile-projection-replay.js` provides a durable code-level evidence path. It performs save -> fresh-store reopen in a temporary app-local directory, checks Web/Tauri/Capacitor/Android parity for metadata, exact search, neighbors, and shortest path, and records truncated/unknown-schema rejection in `output/verification/mobile-projection-replay/report-latest.json`. This closes the code/fixture portion of G3; it does not claim physical Android process-death replay, signed artifact validity, or RSS compliance.
+
+The post-change static packaging measurement is 120 staged files, 4,253,837 uncompressed bytes, and 1,546,201 estimated compressed bytes. The rebuilt unsigned arm64 APK/AAB compressed payloads are 9,434,062 and 6,978,525 bytes. Both remain under the 25 MiB budget; neither is signed-device or RSS evidence.
+
+The route-shadow verifier also gained condition-based runtime-manifest stabilization. It waits for three equal snapshots after readiness, preventing asynchronous first-use SQLite initialization from being reported as a route-induced read-only side effect on slower hosts.
+
+The mobile trade-off remains deliberate: raw versioned JSON plus a bounded body-free exact analyzer is the default because it keeps package/startup/heap costs low and is sufficient for the current workload. SQLite/WASM stays an opt-in future adapter and must first prove measured gains in startup, RSS, query p95, and package budget. Public IDs remain frozen until G4 old-snapshot, move-journal restart, rollback, collision, and cross-root corpora are replayed.
+
+### 中文
+
+第 11 阶段的持久化边界现在已经在 app-local 文件层支持重启 replay，同时不改变 projection wire shape。`knowledge_projection_store.js` 增加 `createFileProjectionStore()`，接收 host-owned 的 `readFile(fileName)` 与可选 `writeAtomic(fileName, serialized, projection)`。Tauri/Rust 与 Android/Kotlin 继续持有文件策略和原子激活；JavaScript 边界只负责校验、cache 与 replay 语义。`storage_provider.js` 对 `graph_data.json` 选择新 factory，并为旧 host 保留 generic store fallback。
+
+失败契约现在明确：读取/I/O 错误可以使用最近一次成功 projection，但非法/截断 JSON、payload 超限、非法 identity/edge 和未知未来 schema 即使存在 initial/stale cache 也必须 fail closed。Initial data 只是 fallback candidate，不代表磁盘状态最新。Atomic save 失败时，上一个 committed file 与 cache 都保持不变。
+
+`verify-mobile-projection-replay.js` 提供可落盘的代码级证据路径：在临时 app-local 目录执行 save -> 新建 store -> reopen，验证 Web/Tauri/Capacitor/Android 的 metadata、exact search、neighbor、shortest path 等价，并把截断/未知 schema 拒绝写入 `output/verification/mobile-projection-replay/report-latest.json`。这关闭了 G3 的代码/fixture 部分，但不宣称真实 Android 进程死亡 replay、签名产物有效性或 RSS 合规。
+
+变更后的静态 packaging 测量为 120 个 staging 文件、未压缩 4,253,837 字节、估算压缩 1,546,201 字节。重新构建的未签名 arm64 APK/AAB 压缩 payload 分别为 9,434,062 与 6,978,525 字节，均低于 25 MiB；两者都不是签名真机或 RSS 证据。
+
+route-shadow verifier 也增加了基于条件的 runtime manifest 稳定等待：readiness 后连续取得三次相同快照，避免慢宿主上的首次 SQLite 异步初始化被误报为 route 触发的 read-only side effect。
+
+移动端权衡仍是有意为之：默认使用原始版本化 JSON 与无正文有界 exact analyzer，以保持包体、启动和 heap 成本低，并满足当前 workload。SQLite/WASM 继续作为未来 opt-in adapter，必须先在 startup、RSS、query p95 与 package budget 上证明实测收益。G4 的 old-snapshot、move-journal restart、rollback、collision 与 cross-root 语料完成 replay 前，公共 ID 继续冻结。

@@ -35,6 +35,7 @@
     "verify:mobile:slim:budget": "node scripts/verify-mobile-slim-budget.js",
     "verify:mobile:artifact": "node scripts/verify-mobile-artifact.js",
     "verify:mobile:artifact:release": "node scripts/verify-mobile-artifact.js --require-rss --require-arm64",
+    "verify:mobile:projection-replay": "node scripts/verify-mobile-projection-replay.js",
     "build": "node scripts/copy-reader-runtime-assets.js && tsc && node scripts/bundle_path_core.js && node scripts/copy-assets.js && node scripts/sync-wasm-parity-artifact.js",
     "build:mini": "node scripts/copy-reader-runtime-assets.js && tsc && node scripts/bundle_path_core.js && node scripts/copy-assets.js --mini && node scripts/sync-wasm-parity-artifact.js",
     "build:full": "node scripts/copy-reader-runtime-assets.js && tsc && node scripts/bundle_path_core.js && node scripts/copy-assets.js --include-generated-graph-assets && node scripts/sync-wasm-parity-artifact.js",

@@ -153,6 +153,29 @@
 - [x] 增加 SQLite close/reopen replay 与 graph 原子回滚测试。
 - [~] 仍需新鲜签名 arm64 产物解包和真机 RSS；`not-measured` 不是 release evidence。
 - [ ] old-snapshot、collision、rollback、cross-root corpus replay 记录完成前，不切换公开 canonical ID。
+
+## 2026-08-18 第 12 阶段 App-Local Projection Replay
+
+- [x] 增加 `createFileProjectionStore()` 作为 host-neutral 的 app-local 文件边界。Host 提供 `readFile(fileName)`，需要写入时提供 `writeAtomic(fileName, serialized, projection)`；持久化 payload 仍保持 schema-1 projection JSON。
+- [x] 明确 fallback 语义：initial projection 仅在 host I/O 读取失败后作为候选回退；截断 JSON、大小超限、身份重复和未知未来 schema 即使存在旧 cache 也必须 fail closed。
+- [x] 移动 exact analysis 经由文件边界读取，同时保留 legacy `createProjectionStore()` fallback，继续兼容 Web/Tauri/Capacitor，并保持运行时 projection 无正文。
+- [x] 增加 `scripts/verify-mobile-projection-replay.js` 与 `npm run verify:mobile:projection-replay`。报告证明 Web、Tauri、Capacitor、Android 四个 adapter 完成 save -> 新建 store -> load -> metadata/search/neighbor/path 等价，并拒绝截断/未知 schema。
+- [x] 加固 route-shadow verifier：按条件等待 runtime manifest 稳定，避免异步 SQLite 初始化把时序差异误报成 read-only side-effect 失败。
+- [x] 在 adapter 变更后重新构建 mobile-slim staging：120 个文件、未压缩 4,253,837 字节、估算压缩 1,546,201 字节；既有 25 MiB payload budget 仍通过。
+- [~] G2 仍只是静态证据：未签名 arm64 APK/AAB 与 25 MiB 压缩 payload 门禁通过，但签名产物、真机 SAF 导入/query/path workload 与 RSS <= 256 MiB 仍是 release 门禁。
+- [~] G3 已有代码级 app-local restart replay 和四 host fixture 证据；真实 Android 进程死亡后的 replay 与 SQLite/WASM adapter 提升仍开放。
+- [ ] G4 仍阻塞 canonical 公共 ID 迁移，需先完成旧 snapshot、move-journal restart、rollback、同内容 collision 与跨 root identity 语料 replay。
+
+### 第 12 阶段架构决策
+
+移动端持久化格式继续使用原始的版本化 projection JSON，不默认提升 SQLite/WASM。原因是当前有界 exact-search/path workload 并不需要数据库能力，而 SQLite/WASM 会增加二进制体积、启动时间、heap 压力和迁移成本。Adapter 边界由 host 持有：Android/Tauri 可提供原子 writer，Web/Capacitor 保持 read-through，或以后接入各自的原子 native primitive。允许并发后台导入前必须先建立 single-writer policy。
+
+### 第 12 阶段验收目标
+
+1. app-local projection 重开后，四类 host contract 的 byte/schema/metadata/search/neighbor/path 结果等价。
+2. 旧 cache 不得掩盖损坏或未来 schema；只有 transport/storage 读取失败可以使用最近一次成功 projection。
+3. 移动包继续排除 sidecar/Godot/model/SVG，既有 25 MiB 压缩资源和 256 MiB 常驻内存预算保持不变。
+4. 发布声明继续分层：静态 artifact 证据不能替代签名真机 SAF 与 RSS 证据。
 - [x] runtime runbook 的 modular-route composition 已不再只以内联形式存在于 `src/server.ts`；`src/routes/runtimeRunbookRouteOps.ts` 现在负责 `/api/knowledge/runtime-capability-runbook/*` 的 route-op 组装，并保持当前响应契约不变。
 - [x] graph-focus 右侧 pane 现在会通过共享 markdown runtime 渲染原始知识点正文，并在原文内高亮命中段落，而不再只显示摘录列表。
 - [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、当前 Windows 宿主 strict 3/3 证据、以及 opt-in 多宿主审计工具都已自动化，但实际多宿主证据与阈值校准仍待补齐。

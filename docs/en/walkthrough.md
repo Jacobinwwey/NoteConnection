@@ -161,3 +161,27 @@ The runtime path is now `graph_data.json` -> `knowledge_projection_store.js` -> 
 Android uses an asynchronous SAF state machine: Rust requests `ACTION_OPEN_DOCUMENT_TREE`, Kotlin streams Markdown files into app-local `filesDir/Knowledge_Base` within the existing 16 MiB/document and 64 MiB/total budgets, then Rust polls a short result marker and persists only the app-local path. The external URI remains provenance, not identity. This keeps mobile packages sidecar/Godot/model/SVG free while supporting user-selected knowledge bases.
 
 Verification: 24 focused Jest tests, TypeScript no-emit, and 26 Rust tests pass. Generated Android patching is idempotent; a fresh arm64 slim build produced an unsigned APK (9,555,787 bytes) and AAB (7,179,228 bytes), and static artifact verification passed with no forbidden entries. Signed arm64, device import, and RSS evidence remain open.
+
+## 2026-08-18 Phase 12 App-Local Replay Walkthrough
+
+The mobile load path now has an explicit file boundary:
+
+`graph_data.json` -> `createFileProjectionStore()` -> versioned projection contract -> `mobile_exact_analyzer`.
+
+`createFileProjectionStore()` takes a host-owned `readFile(fileName)` and an optional `writeAtomic(fileName, serialized, projection)`. It deliberately stores the existing raw schema-1 projection rather than a new envelope, so Tauri/Rust and Android/Kotlin writers remain compatible. `storage_provider.js` selects this factory when available and falls back to the legacy generic store for older runtimes.
+
+The store distinguishes I/O failure from data incompatibility. A read failure can reuse the last successful value; malformed JSON, a future schema, invalid node/edge identity, or a size violation is surfaced and blocks analysis. The first load still reads the file even when an initial projection is supplied, so a stale bootstrap value cannot mask a newer app-local projection.
+
+Run the deterministic evidence command:
+
+```text
+npm run verify:mobile:projection-replay
+```
+
+It performs an atomic save in a temporary app-local directory, drops the first store instance, recreates a read-through store for Web/Tauri/Capacitor/Android, and compares metadata, exact search, neighbors, and shortest path. It then writes `output/verification/mobile-projection-replay/report-latest.json` and verifies truncated JSON and unknown schema fail closed. The output directory is ignored and is not a source artifact.
+
+After this change, `mobile:prepare:slim` stages 120 files (4,253,837 uncompressed; 1,546,201 estimated compressed). The rebuilt unsigned arm64 APK/AAB static payloads are 9,434,062 and 6,978,525 bytes; both remain below the 25 MiB budget and neither measurement includes device RSS.
+
+The route-shadow gate also waits for three consecutive stable runtime-directory manifests after readiness. This is required because the registry backend may finish its first SQLite initialization asynchronously after `/api/knowledge/state` returns; without the wait, a slow host can produce a false read-only side-effect failure.
+
+This closes code-level G3 replay evidence, not the device gate. A signed arm64 artifact, physical Android process-death/SAF import/query/path run, and peak RSS <= 256 MiB are still required. SQLite/WASM remains an opt-in future adapter because the current bounded exact workload does not justify its mobile size, startup, and heap costs.

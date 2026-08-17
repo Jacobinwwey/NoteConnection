@@ -409,6 +409,54 @@
 - **G4 canonical ID：保护中。** 原子 restore、alias、move journal 基础已通过；corpus replay 记录完成前保持公开 ID 不变。
 
 后续顺序：为两种 dispatch 模式建立 CI 矩阵，固化版本化 projection-store 契约，实现 host-owned PathBridge adapter，两条移动 packaging 共用一份 staging，最后再以证据驱动 identity cutover。
+
+## 2026-08-18 第 12 阶段 向前兼容的移动持久化计划
+
+### 第 11 阶段后的当前代码真相
+
+此前方案正确地把 canonical graph identity 与移动 projection 分开，但 G3 的措辞过宽，把 fixture replay 近似成了 Android 进程重启证明。当前代码已经收敛为可测试的窄契约：
+
+- `knowledge_projection_contract.js` 继续作为 schema owner，限制 node、edge、evidence reference、adjacency 与身份元数据，不保留正文。
+- `knowledge_projection_store.js` 是持久化边界。`createProjectionStore()` 保持兼容入口，`createFileProjectionStore()` 明确 app-local 文件语义，但不改变序列化 projection 形状。
+- `storage_provider.js` 通过文件边界读取 `graph_data.json`；对于尚未提供新 factory 的 runtime，仍保留旧 generic store 路径。
+- `src-tauri/src/lib.rs` 已经通过同目录临时文件与 rename 写入 graph projection。Android 持久化 lite projection，并在 projection 前释放解析正文。因此 JavaScript adapter 消费 host-owned atomic primitive，不重复实现 Rust/Kotlin 文件策略。
+- `scripts/verify-mobile-projection-replay.js` 在真实临时目录中执行 save/reopen，并写出结构化报告。四个 host label 使用同一 fixture，验证 schema、metadata、exact search、neighbor、shortest path，而不只是 JSON 相等。
+- `verify-route-registry-shadow.js` 现在在 readiness 后等待三次连续稳定的 runtime manifest，修复异步 SQLite 初始化被误判为 read-only route side effect 的 verifier race。
+- adapter 变更后的 mobile-slim staging 仍在预算内：120 个文件、未压缩 4,253,837 字节、估算压缩 1,546,201 字节；新鲜未签名 arm64 APK/AAB 的压缩 payload 分别为 9,434,062 与 6,978,525 字节。这些是静态 artifact 测量，不是 RSS 证据。
+
+### 修正后的失败语义
+
+旧 store 会对所有异常返回 initial/stale projection，包括 JSON 损坏或未知未来 schema。这会破坏向前兼容：schema 不兼容必须暴露给 host 处理迁移或 abstain。新规则如下：
+
+| 边界失败 | 行为 | 原因 |
+| --- | --- | --- |
+| app-local read/I/O 错误 | 有最近成功 projection 时使用它 | 短暂存储故障不应清空当前会话 |
+| 截断/非法 JSON | fail closed | 不能对部分状态运行分析 |
+| 未知 schema 或非法 identity/edge | fail closed | 不能静默降级未来数据 |
+| atomic write 错误 | 保留上一个 committed file 与 cache | save 必须是 commit-or-no-change |
+
+这样保留既有 memory fallback，同时移除 stale-cache masking bug。Initial data 只是 fallback candidate，不代表磁盘状态最新；首次 load 仍会先尝试 host read。
+
+### 移动架构与权衡
+
+默认移动路径继续使用无正文 JSON projection 与有界 exact analyzer。当前 workload 只是本地 exact lookup、有界 neighbor 和有界 shortest path，因此不把 SQLite/WASM 置为默认抽象。现在提升会增加 APK/AAB 体积、冷启动工作、heap 常驻和迁移面，却不会关闭尚未获得的 release gate。这个决策可逆：store 契约已经版本化且 host-neutral，未来 SQLite/WASM adapter 可以实现同一组 `load/save/metadata`，而无需改变 `storage_provider.js` 或公共 ID。
+
+Adapter 不拥有平台文件策略。Android SAF 继续由 Kotlin/Rust 持有，Tauri 由 Rust 持有，Web/Capacitor 以后再接入各自 native atomic writer。这避免泄漏跨平台 path abstraction，但在开放并发后台导入前必须建立 single-writer 规则，并补齐进程死亡、URI 权限持续性和 import/query/path continuity 的真机证据。
+
+### 当前起点后的执行顺序
+
+1. **G2 真机证据**：生成签名 arm64 APK/AAB，在低硬件设备上执行 SAF import -> graph build -> exact query -> path，采集 peak RSS；任何 `not-measured` 结果都不能作为 release 证据。
+2. **G3 host 矩阵**：在 CI 对 Tauri 与 Capacitor 两条 packaging path 运行 replay script 与 native adapter，并至少在一个 Android API/ABI 目标上补进程死亡/重开证据。
+3. **G4 identity 语料**：重放 old snapshot、move journal、rollback、同内容/NFC collision 与 cross-root 用例，全部在 restart 后验证；结果确定前冻结公共 ID。
+4. **证据之后再做**：把 SQLite/WASM 作为大语料 opt-in adapter 评估，必须以 startup、RSS、query p95、package budget 的实测收益为晋级依据。
+5. **架构减重**：继续从 `server.ts` 与 `KnowledgeLearningPlatform.ts` 抽取 owner，但只有新模块真正持有 state/invariant 才允许拆分，不给 projection store 增加 pass-through facade。
+
+### 验收门禁
+
+- `npm run verify:mobile:projection-replay` 生成新鲜报告，包含四 host pass 与 fail-closed failure mode。
+- Full Jest、TypeScript no-emit、Rust tests、mobile slim budget、artifact inspection、route shadow、Diataxis 均保持通过。
+- 签名真机 RSS 与 SAF workload 证据必须与静态 APK/AAB 体积证据分开报告。
+- 所有检查完成后才允许保持 `main` clean 并 push。
   - `runtime-capability-runbook/*` 这组 modular knowledge route 现已改为接入真实 server 侧 runbook ops，而不再返回 KLP placeholder payload；route 层现在也会保留 `checkId` / `sinceMinutes` / queue-filter 这类 query 参数，不再静默丢弃。
   - 真实浏览器 smoke 门禁现在也会端到端证明这三条链路：严格浏览器证据必须能看到 ANN sync-health verify 卡、新增的 verify/checks ANN 熔断/可追踪性/预筛选钻取、首个检查的 ANN sync 指标，以及 index-sync action-queue 钻取，而不再只是证明卡片“能打开”。
   - agent-workspace 的 locale 加固现在也覆盖了当前真实暴露出来的诊断卡片/消息空间：源码里引用到的 `agentWorkspace.*` key 已由 `src/agent_workspace.locale.contract.test.ts` 做门禁，双语 locale bundle 现已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片标签，并且启动期 `translate()` 会等 locale 完成初始化后再调用 `window.i18n.t()`，避免在 locale hydrate 前产生误报式 missing-key warning。
