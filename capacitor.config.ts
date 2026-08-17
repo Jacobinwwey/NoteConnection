@@ -11,4 +11,8 @@ const config: CapacitorConfig = {
   },
 };
 
+if (process.env.NOTE_CONNECTION_MOBILE_WEB_DIR) {
+  config.webDir = process.env.NOTE_CONNECTION_MOBILE_WEB_DIR;
+}
+
 export default config;

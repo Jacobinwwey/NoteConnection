@@ -37,3 +37,16 @@
 - [Git LFS 资产迁移](../explanation/git-lfs-asset-migration.md)
 - [引导 Godot Sidecar](../how-to/bootstrap-godot-sidecar.md)
 - [发布与治理](release-and-governance.md)
+
+## Mobile Slim 契约（2026-08-17）
+
+`mobile-slim` 现在是可执行的打包 profile，不再只是导出标签。
+
+- `npm run mobile:prepare:slim` 先构建 runtime-first 前端，只 staging `dist/mobile-slim/frontend`，排除生成图 payload、桌面专用 Mermaid/GPU 资源、SVG、模型文件和二进制 sidecar，并生成 `dist/mobile-slim/mobile-slim-manifest.json`。
+- Capacitor 通过 `NOTE_CONNECTION_MOBILE_WEB_DIR` 消费同一 staging 目录；Tauri Android 通过 `src-tauri/tauri.android.conf.json` 消费同一目录。瘦身路径不再构建 Node sidecar。
+- 移动运行时通过 storage boundary 读取本地 `graph_data.json`，提供有界 exact lookup、邻居查询和有向最短路径：`queryKnowledgeBaseExact()`、`findKnowledgePath()`。分析器只保留投影后的节点元数据，不保留文档正文。
+- `mobile-slim` 明确声明本地 ingest/exact query 可用，远程推理仅为可选能力，SVG materialization 不支持；估算压缩资源门禁为 25 MiB，低内存 RSS 门禁为 256 MiB。
+- 静态 verifier 会报告 ZIP-deflate 估算字节并拒绝禁入物。没有真机 evidence JSON 时 RSS 状态必须是 `not-measured`；静态门禁通过不等于设备验收通过。
+- Godot Pathmode 改为显式扩展档（`NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE=1`）。默认 Android runner 会移除生成工程中的 Godot bridge、依赖声明和 `path_mode` 资源，避免旧生成目录悄悄放大 slim 包体。
+
+本切片不宣称移动端本地 LLM parity 或 SQLite 持久化已经完成。当前移动投影是对有界本地图的 exact 内存索引；SQLite 持久化和完整 agent conversation parity 仍是后续独立契约阶段。

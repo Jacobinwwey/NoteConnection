@@ -737,7 +737,7 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 
 ### Multi-platform direction
 
-- Keep `mobile-slim` as a sidecar-free export profile, but do not call it a complete mobile analysis runtime yet.
+- Keep `mobile-slim` as a sidecar-free export profile with callable bounded local exact analysis; do not call device RSS/APK acceptance complete without evidence.
 - Build the next mobile slice around a host-neutral SQLite/WASM exact-analysis core and versioned bridge operations (`analyze`, `query`, `readEvidence`, `exportBundle`).
 - Enforce signed artifact budgets: mobile-low <= 25 MiB app-owned compressed payload / <= 256 MiB RSS for 5k documents and 50k atoms; mobile-standard <= 35 MiB / <= 384 MiB for 20k documents and 200k atoms.
 - Never ship Godot, desktop server binaries, full desktop renderer bundles, or local model weights in mobile artifacts. Remote ANN/LLM is optional and cancellable.
@@ -760,7 +760,7 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 
 ### 多端方向
 
-- 保留 `mobile-slim` sidecar-free export profile，但当前不能宣称移动端分析 runtime 已闭环。
+- 保留 `mobile-slim` sidecar-free export profile，并具备可调用的有界本地 exact analysis；没有设备 RSS/APK evidence 时不能宣称移动端验收闭环。
 - 下一切片以 host-neutral SQLite/WASM exact-analysis core 为中心，通过版本化 bridge 提供 `analyze`、`query`、`readEvidence`、`exportBundle`。
 - signed artifact 门禁：mobile-low <= 25 MiB 应用自有压缩 payload / 5k documents、50k atoms 下 <= 256 MiB RSS；mobile-standard <= 35 MiB / 20k documents、200k atoms 下 <= 384 MiB。
 - 移动包绝不携带 Godot、桌面 server、完整桌面 renderer 或本地模型权重；远端 ANN/LLM 只能是可选、可取消能力。
@@ -772,3 +772,17 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 3. 改变 graph ID 前先完成稳定 `sourceUri` 双读。
 4. 先做 route-registry shadow parity，旧 URL 覆盖完整后再切默认。
 5. 在增加 worker/GPU 预算前，先用 explicit/indexed projection 替代 pairwise inferred matching。
+
+# 2026-08-17 Mobile Slim Implementation Reconciliation
+
+## English
+
+The mobile slice is implemented as a compact exact graph projection, not as a claimed SQLite runtime. The existing Rust Tauri and Capacitor local builders remain platform adapters; the browser-compatible analyzer is the shared query projection. This preserves the multi-platform advantage without duplicating graph policy in each UI.
+
+Completed gates: capability fields, local exact query/path calls, deterministic staging and manifest, forbidden-artifact/estimated-compressed-byte verifier, Capacitor web-dir override, Tauri Android slim frontend override, sidecar removal from default Android build, and explicit Godot opt-in. Open gates: device RSS/APK evidence, SQLite-backed persistence, remote cancellation integration, and the broader identity/registry/graph/Bridge migrations.
+
+## 中文
+
+本轮移动切片落地的是紧凑 exact graph projection，并没有冒充 SQLite runtime 已经存在。复用现有 Tauri Rust 与 Capacitor 本地构建器作为平台 adapter，由浏览器兼容 analyzer 提供共同 query projection，在保持多端优势的同时避免各 UI 各自复制图规则。
+
+已完成门禁：capability 字段、本地 exact query/path 调用、deterministic staging 与 manifest、禁入物/估算压缩字节 verifier、Capacitor web-dir override、Tauri Android slim frontend override、默认 Android 构建移除 sidecar、Godot 显式 opt-in。待完成门禁：真机 RSS/APK 证据、SQLite 持久化、远程取消接线，以及更大范围的 identity/registry/graph/Bridge 迁移。

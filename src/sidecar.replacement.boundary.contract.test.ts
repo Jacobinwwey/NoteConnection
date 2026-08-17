@@ -6,6 +6,9 @@ type PackageJson = {
 };
 
 type TauriConfig = {
+  build?: {
+    frontendDist?: string;
+  };
   bundle?: {
     externalBin?: string[];
   };
@@ -101,14 +104,17 @@ describe('sidecar replacement boundary contract', () => {
     expect(pathApp).toContain("this._sendBridgeMessage('identify', this._getBridgeIdentifyPayload('frontend'))");
   });
 
-  test('shows Android runtime decoupling without full build-chain decoupling yet', () => {
+  test('keeps the default Android build sidecar-free and makes Godot opt-in', () => {
     const pkg = readJson<PackageJson>(packageJsonPath);
     const tauriAndroidConfig = readJson<TauriConfig>(tauriAndroidConfigPath);
     const tauriLib = readText(tauriLibPath);
 
-    expect(pkg.scripts?.['tauri:android:dev']).toContain('npm run build:sidecar');
-    expect(pkg.scripts?.['tauri:android:build']).toContain('npm run build:sidecar');
+    expect(pkg.scripts?.['tauri:android:dev']).toContain('npm run mobile:prepare:slim');
+    expect(pkg.scripts?.['tauri:android:build']).toContain('npm run mobile:prepare:slim');
+    expect(pkg.scripts?.['tauri:android:dev']).not.toContain('npm run build:sidecar');
+    expect(pkg.scripts?.['tauri:android:build']).not.toContain('npm run build:sidecar');
     expect(tauriAndroidConfig.bundle?.externalBin || []).toEqual([]);
+    expect(tauriAndroidConfig.build?.frontendDist).toBe('../dist/mobile-slim/frontend');
     expect(tauriLib).toContain('supports_sidecar: false');
     expect(tauriLib).toContain('supports_build: true');
     expect(tauriLib).toContain('Android startup: desktop sidecar and Godot launch are intentionally disabled.');

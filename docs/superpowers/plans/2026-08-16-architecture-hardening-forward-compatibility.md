@@ -16,7 +16,7 @@
 - Use POSIX separators for persisted relative source paths so Windows/POSIX builds produce the same identity input.
 - Keep snapshot replacement atomic; a failed write must not remove the last valid snapshot.
 - Mobile builds must use the `mobile-slim` export profile: no Godot binary, no Node sidecar, no bundled LLM weights, PNG/WebP-only assets, and lazy optional capabilities.
-- Mobile analysis must work on-device through the portable exact-index/SQLite/WASM path; remote LLM/ANN calls are optional, explicit, cancellable, and never required for local ingest/query.
+- Mobile analysis must work on-device through the portable bounded exact-index path shipped in this slice; SQLite/WASM is a future persistence/acceleration host, not a current capability claim. Remote LLM/ANN calls are optional, explicit, cancellable, and never required for local ingest/query.
 - Initial mobile budgets are release gates, not aspirations: app-owned compressed payload <= 25 MiB, low-memory profile peak RSS <= 256 MiB for a 5,000-document/50,000-atom corpus, and standard profile peak RSS <= 384 MiB for a 20,000-document/200,000-atom corpus on a 4-core ARM64 device.
 - Do not ship model weights or desktop-only `mermaid.min.js`/Godot assets in the mobile profile; measure the signed APK/AAB and extracted asset set in CI.
 - Every plan/progress/walkthrough document updated in this slice contains separated English and Chinese sections.
@@ -141,8 +141,18 @@ rtk git commit -m "fix(storage): keep file snapshots atomic and cache-coherent"
 - Modify: `src/platform/ExportProfile.ts`
 - Modify: `src/platform/PlatformCapabilities.ts`
 - Modify: `src/platform/RenderMaterializer.ts`
+- Create: `src/frontend/mobile_exact_analyzer.js`
+- Modify: `src/frontend/storage_provider.js`
+- Modify: `src/frontend/index.html`
+- Modify: `src/frontend/path.html`
 - Modify: `src-tauri/tauri.android.conf.json`
+- Modify: `src-tauri/src/lib.rs`
+- Modify: `capacitor.config.ts`
+- Modify: `build_apk.bat`
+- Modify: `scripts/run-tauri-android.js`
+- Modify: `scripts/apply-tauri-android-pathmode.js`
 - Create: `src/mobile.profile.contract.test.ts`
+- Create: `scripts/prepare-mobile-slim.js`
 - Create: `scripts/verify-mobile-slim-budget.js`
 - Modify: `package.json`
 - Modify: `docs/diataxis/en/reference/multi-platform-build-flows.md`
@@ -150,19 +160,19 @@ rtk git commit -m "fix(storage): keep file snapshots atomic and cache-coherent"
 
 **Interfaces:**
 - `mobile-slim` remains sidecar-free and exposes `supportsLocalExactQuery`, `supportsRemoteInference`, `maxResidentBytes`, and `assetBudgetBytes` through the platform capability contract.
-- A mobile workspace bundle contains source metadata, compact SQLite/index projections, and PNG/WebP assets; it does not contain the desktop server, Godot, full graph text, or model weights.
+- A mobile workspace bundle contains source metadata, a compact exact graph/index projection, and PNG/WebP assets; it does not contain the desktop server, Godot, full graph text, or model weights. SQLite remains a deferred persistence backend, not a capability claim for this slice.
 - `verify-mobile-slim-budget.js` measures the staged mobile asset directory and fails with a file-level report when the compressed payload or runtime memory evidence exceeds the profile budget.
 
-- [ ] **Step 1: Write failing capability and packaging tests.** Assert that mobile local ingest/query is available without a sidecar, remote inference is optional, SVG is rejected, desktop/Godot binaries are excluded, and the budget verifier rejects an intentionally oversized fixture.
-- [ ] **Step 2: Run the focused mobile contract test and confirm failure.**
+- [x] **Step 1: Write failing capability and packaging tests.** Assert that mobile local ingest/query is available without a sidecar, remote inference is optional, SVG is rejected, desktop/Godot binaries are excluded, and the budget verifier rejects an intentionally oversized fixture.
+- [x] **Step 2: Run the focused mobile contract test and confirm failure.**
 
 ```powershell
 rtk proxy npm.cmd test -- --runInBand src/mobile.profile.contract.test.ts
 ```
 
-- [ ] **Step 3: Implement the profile contract.** Add explicit mobile capability fields and keep all business rules in the portable core; route mobile ingestion/query through bounded worker/WASM + embedded SQLite/index projections. Keep remote calls behind an adapter with timeout, cancellation, and an explainable offline fallback.
-- [ ] **Step 4: Implement the budget verifier and a deterministic mobile build command.** The command must stage only the mobile profile, omit Godot/server/LLM assets, emit a JSON manifest with byte totals and capability flags, and be callable before both Capacitor and Tauri Android packaging.
-- [ ] **Step 5: Run mobile contracts and the existing cross-platform gates.**
+- [x] **Step 3: Implement the profile contract.** Add explicit mobile capability fields and keep graph rules in a bounded portable exact-index core; route mobile ingestion/query through the existing Tauri Rust / Capacitor local graph builders plus the browser-compatible analyzer. Keep remote calls optional, timeout-bounded, cancellable, and explainably offline-degradable. Do not claim SQLite until its mobile runtime is shipped.
+- [x] **Step 4: Implement the budget verifier and a deterministic mobile build command.** The command stages only the mobile profile, strips desktop/Godot/LLM assets and desktop-only Mermaid/GPU payloads, emits a deterministic JSON manifest with byte totals and capability flags, and runs before both Capacitor and Tauri Android packaging.
+- [x] **Step 5: Run mobile contracts and the existing cross-platform gates.**
 
 ```powershell
 rtk proxy npm.cmd test -- --runInBand src/mobile.profile.contract.test.ts src/platform/PlatformCapabilities.test.ts src/platform/RenderMaterializer.test.ts src/mobile.pipeline.test.ts src/capacitor.runtime.contract.test.ts src/android.pathmode.contract.test.ts
@@ -172,7 +182,7 @@ rtk proxy npm.cmd run verify:mobile:slim:budget
 - [ ] **Step 6: Commit the portable mobile profile.**
 
 ```powershell
-rtk git add src/platform/ExportProfile.ts src/platform/PlatformCapabilities.ts src/platform/RenderMaterializer.ts src-tauri/tauri.android.conf.json src/mobile.profile.contract.test.ts scripts/verify-mobile-slim-budget.js package.json docs/diataxis/en/reference/multi-platform-build-flows.md docs/diataxis/zh/reference/multi-platform-build-flows.md
+rtk git add src/platform/ExportProfile.ts src/platform/PlatformCapabilities.ts src/platform/RenderMaterializer.ts src/frontend/mobile_exact_analyzer.js src/frontend/storage_provider.js src/frontend/index.html src/frontend/path.html src-tauri/tauri.android.conf.json src-tauri/src/lib.rs capacitor.config.ts build_apk.bat scripts/run-tauri-android.js scripts/apply-tauri-android-pathmode.js src/mobile.profile.contract.test.ts scripts/prepare-mobile-slim.js scripts/verify-mobile-slim-budget.js package.json docs/diataxis/en/reference/multi-platform-build-flows.md docs/diataxis/zh/reference/multi-platform-build-flows.md
 rtk git commit -m "feat(mobile): formalize slim local-analysis packaging profile"
 ```
 
@@ -200,7 +210,7 @@ rtk git commit -m "feat(mobile): formalize slim local-analysis packaging profile
 rtk proxy npm.cmd run docs:diataxis:check
 ```
 
-- [ ] **Step 5: Commit the progress reconciliation.**
+- [x] **Step 5: Commit the progress reconciliation.** The mobile slice and the bilingual tracker reconciliation are promoted together so no document claims a capability before the corresponding code and tests exist.
 
 ```powershell
 rtk git add docs/solutions/architecture-hardening-forward-compatibility-2026-08-16.md task.md implementation_plan.md walkthrough.md docs/diataxis/en/explanation/development-progress-dashboard.md docs/diataxis/zh/explanation/development-progress-dashboard.md
@@ -266,7 +276,7 @@ rtk proxy npm.cmd run docs:diataxis:check
 
 ### 多端与移动端硬约束
 
-- `mobile-slim` 必须是不带 Godot、Node sidecar、模型权重的 slim profile，只保留 PNG/WebP、紧凑 SQLite/索引投影与 portable core 的 WASM/Worker 路径。
+- `mobile-slim` 必须是不带 Godot、Node sidecar、模型权重的 slim profile，只保留 PNG/WebP、紧凑 exact 索引投影与 portable core 路径；SQLite/WASM 作为后续持久化/加速 host，不能在本切片中冒充已交付。
 - 移动端必须能在本机完成 ingest、exact graph projection、indexed query、evidence/export；远程 LLM/ANN 只是可取消、可超时、需用户授权的增强，不得成为本地知识库分析的启动依赖。
 - 初始 release gate：应用自有压缩 payload 不超过 25 MiB；4 核 ARM64、低内存 profile 在 5,000 文档 / 50,000 atom 下峰值 RSS 不超过 256 MiB；standard profile 在 20,000 文档 / 200,000 atom 下不超过 384 MiB。
 - CI 必须测量签名 APK/AAB 与解包资源，按文件列出超预算原因；不得把桌面 `server`、Godot 或完整 `mermaid.min.js` 偷渡进 mobile bundle。
@@ -299,13 +309,13 @@ rtk proxy npm.cmd run docs:diataxis:check
 
 ### 任务 4：portable mobile profile 与打包门禁
 
-**文件：** 修改 `src/platform/ExportProfile.ts`、`src/platform/PlatformCapabilities.ts`、`src/platform/RenderMaterializer.ts`、`src-tauri/tauri.android.conf.json`、`package.json`；创建 `src/mobile.profile.contract.test.ts`、`scripts/verify-mobile-slim-budget.js`；更新中英文多端构建参考文档。
+**文件：** 修改 `src/platform/ExportProfile.ts`、`src/platform/PlatformCapabilities.ts`、`src/platform/RenderMaterializer.ts`、`src/frontend/storage_provider.js`、`src/frontend/index.html`、`src/frontend/path.html`、`src-tauri/tauri.android.conf.json`、`src-tauri/src/lib.rs`、`capacitor.config.ts`、`build_apk.bat`、`scripts/run-tauri-android.js`、`scripts/apply-tauri-android-pathmode.js`、`package.json`；创建 `src/frontend/mobile_exact_analyzer.js`、`src/mobile.profile.contract.test.ts`、`scripts/prepare-mobile-slim.js`、`scripts/verify-mobile-slim-budget.js`；更新中英文多端构建参考文档。
 
-- [ ] 先写失败契约：mobile 无 sidecar 仍能本地 ingest/query，remote inference 可选，SVG/桌面/Godot/模型权重被排除，超大 fixture 会被预算验证器拒绝。
-- [ ] 运行 `rtk proxy npm.cmd test -- --runInBand src/mobile.profile.contract.test.ts` 确认失败。
-- [ ] 在 platform capability 中显式暴露 `supportsLocalExactQuery`、`supportsRemoteInference`、`maxResidentBytes`、`assetBudgetBytes`；移动 ingestion/query 走有界 Worker/WASM + embedded SQLite/index projection；远程调用必须有 timeout、cancel 与 offline fallback。
-- [ ] 新增 deterministic mobile staging/budget 命令，同时供 Capacitor 与 Tauri Android 调用，输出字节与 capability manifest。
-- [ ] 运行 mobile contract、Platform/Render、现有 Capacitor/Android gate 与 `rtk proxy npm.cmd run verify:mobile:slim:budget`。
+- [x] 先写失败契约：mobile 无 sidecar 仍能本地 ingest/query，remote inference 可选，SVG/桌面/Godot/模型权重被排除，超大 fixture 会被预算验证器拒绝。
+- [x] 运行 `rtk proxy npm.cmd test -- --runInBand src/mobile.profile.contract.test.ts` 确认失败。
+- [x] 在 platform capability 中显式暴露 `supportsLocalExactQuery`、`supportsRemoteInference`、`maxResidentBytes`、`assetBudgetBytes`；移动 ingestion/query 走 Tauri Rust/Capacitor 本地建图 + 有界 browser exact-index projection；SQLite/WASM 不在本切片中冒充已交付；远程调用必须有 timeout、cancel 与 offline fallback。
+- [x] 新增 deterministic mobile staging/budget 命令，同时供 Capacitor 与 Tauri Android 调用，输出字节与 capability manifest。
+- [x] 运行 mobile contract、Platform/Render、现有 Capacitor/Android gate 与 `rtk proxy npm.cmd run verify:mobile:slim:budget`。
 
 ### 任务 5：进度文档与参考对比对账
 

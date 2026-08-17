@@ -297,7 +297,7 @@ Implementation of 13 steps across 4 components (Core Algorithm, Frontend Bridge,
 2. `GraphBuilder` rejects ambiguous legacy basenames before adding any node; existing basename IDs remain the compatibility key for non-ambiguous workspaces.
 3. Protected HTTP/sidecar requests pass through the same token decision, with both existing credential header forms accepted.
 4. File-backed snapshots write a unique sibling temp file, atomically rename it, then update the in-process cache.
-5. Desktop continues to use the sidecar/full profile; mobile continues to consume deterministic `mobile-slim` bundles while the portable local-analysis runtime remains the next gated implementation.
+5. Desktop continues to use the sidecar/full profile; mobile consumes deterministic `mobile-slim` bundles and now has a callable bounded local exact-analysis projection. Device/RSS evidence remains a separate gate.
 
 ### Mobile target flow
 
@@ -305,7 +305,7 @@ Implementation of 13 steps across 4 components (Core Algorithm, Frontend Bridge,
 scoped source package
 -> streaming parser
 -> stable resource/revision validation
--> embedded SQLite + compact exact graph/index
+-> compact exact graph/index projection
 -> bounded Worker/WASM query
 -> evidence/result projection
 -> Tauri/Capacitor UI
@@ -322,7 +322,7 @@ The mobile flow must never require the desktop Node sidecar or Godot process. La
 2. `GraphBuilder` 在加入任何 node 前拒绝歧义 legacy basename；无冲突 workspace 继续用 basename ID 兼容旧布局。
 3. 受保护 HTTP/sidecar 请求使用同一 token 判定，并兼容已有两种凭证头。
 4. 文件快照先写唯一同目录临时文件，原子 rename 后再刷新进程内缓存。
-5. Desktop 继续使用 sidecar/full profile；mobile 继续消费 deterministic `mobile-slim` bundle，portable 本地分析 runtime 是下一项有门禁实现。
+5. Desktop 继续使用 sidecar/full profile；mobile 消费 deterministic `mobile-slim` bundle，并已具备可调用的有界本地 exact-analysis projection；设备/RSS 证据仍是独立门禁。
 
 ### 移动端目标链路
 
@@ -330,7 +330,7 @@ The mobile flow must never require the desktop Node sidecar or Godot process. La
 scoped source package
 -> streaming parser
 -> stable resource/revision validation
--> embedded SQLite + compact exact graph/index
+-> compact exact graph/index projection
 -> bounded Worker/WASM query
 -> evidence/result projection
 -> Tauri/Capacitor UI
@@ -338,3 +338,37 @@ scoped source package
 ```
 
 移动链路不得依赖桌面 Node sidecar 或 Godot 进程；大文本按 reference 分页，inferred edge 必须 Top-K 有界，签名 APK/AAB 与 RSS 证据决定 release readiness。
+
+# 2026-08-17 Mobile Slim Walkthrough Update
+
+## English
+
+The executable flow is now:
+
+```text
+runtime-first build
+-> mobile-slim staging/filter
+-> compressed-byte + forbidden-artifact gate
+-> Capacitor or Tauri Android frontend
+-> local Rust/Capacitor graph build
+-> mobile_exact_analyzer exact query/path projection
+-> optional remote inference
+```
+
+The staged frontend intentionally excludes Mermaid/GPU desktop payloads, generated graph caches, SVG files, binaries, and model paths. The default Android runner also removes stale generated Godot bridge/assets; `NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE=1` is the only extended-profile opt-in. RSS is measured only from supplied device evidence.
+
+## 中文
+
+当前可执行链路为：
+
+```text
+runtime-first build
+-> mobile-slim staging/filter
+-> 压缩字节 + 禁入物门禁
+-> Capacitor 或 Tauri Android frontend
+-> 本地 Rust/Capacitor 建图
+-> mobile_exact_analyzer exact query/path projection
+-> 可选远程推理
+```
+
+staging 前端会主动排除 Mermaid/GPU 桌面 payload、生成图缓存、SVG、二进制和模型路径。默认 Android runner 还会移除旧生成工程中的 Godot bridge/asset；只有 `NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE=1` 才能启用扩展档。RSS 只有在提供真机 evidence 后才会测量。

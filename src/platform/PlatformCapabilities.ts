@@ -13,6 +13,8 @@ export interface PlatformCapabilities {
         deterministicBundles: boolean;
         bundlePackagingMode: 'full' | 'slim';
         requiresIndexedReadiness: boolean;
+        assetBudgetBytes: number | null;
+        maxResidentBytes: number | null;
     };
     render: {
         supportsSvgArtifacts: boolean;
@@ -23,6 +25,10 @@ export interface PlatformCapabilities {
     retrieval: {
         supportsSidecar: boolean;
         supportsBackgroundIndexing: boolean;
+        supportsLocalIngest: boolean;
+        supportsLocalExactQuery: boolean;
+        supportsRemoteInference: boolean;
+        requiresRemoteInference: boolean;
     };
     conversation: {
         supportsStreaming: boolean;
@@ -62,6 +68,8 @@ export function resolvePlatformCapabilities(input: {
             deterministicBundles: true,
             bundlePackagingMode: profile.supportsSidecar ? 'full' : 'slim',
             requiresIndexedReadiness: true,
+            assetBudgetBytes: profile.assetBudgetBytes,
+            maxResidentBytes: profile.maxResidentBytes,
         },
         render: {
             supportsSvgArtifacts: profile.supportsSvgRenderArtifacts,
@@ -72,6 +80,10 @@ export function resolvePlatformCapabilities(input: {
         retrieval: {
             supportsSidecar: profile.supportsSidecar,
             supportsBackgroundIndexing: profile.supportsBackgroundIndexing,
+            supportsLocalIngest: profile.supportsLocalIngest,
+            supportsLocalExactQuery: profile.supportsLocalExactQuery,
+            supportsRemoteInference: profile.supportsRemoteInference,
+            requiresRemoteInference: profile.requiresRemoteInference,
         },
         conversation: {
             supportsStreaming: profile.supportsConversationStreaming,

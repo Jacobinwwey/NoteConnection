@@ -1782,3 +1782,22 @@ full 模式运行时验证现已覆盖 build、restore-cache 与回归会话。�
 Policy v2 还会在 numeric fact key 中保留符号、常见中英文测量单位和日期分量。空 calibration dimension 会以明确的 `corpus_empty:<dimension>` case fail closed，不再产生乐观的满分结果。
 
 下一方向是用人工评分的多语言样本和置信区间扩展该版本化 corpus。不得根据单个 Water Glass fixture 调阈值，也不能把确定性语料满分当成泛化证明。
+
+## 2026-08-17 架构与移动端进度增量
+
+### 已交付
+
+- 资源身份冲突保护、共享严格 auth 判定、原子且 cache-coherent 的 snapshot 写入仍已在 `main` 验证。
+- `mobile-slim` 已成为可执行 profile：本地 exact ingest/query 能力明确，远程推理为可选，SVG 禁用，并携带 25 MiB 估算压缩资源 / 256 MiB 常驻内存预算。
+- `mobile_exact_analyzer.js` 与 storage-provider adapter 从本地图资源提供有界 exact lookup、邻居查询和有向路径，不依赖 sidecar。analyzer 构建复杂度为 O(V + E)，不保留节点正文。
+- Capacitor 与 Tauri Android 共用 deterministic staging 和 manifest。默认 Tauri Android 路径不构建 sidecar、不注入 Godot；Godot Pathmode 仅能通过显式扩展档启用。
+
+### 证据与缺口
+
+- 本机静态证据：移动/平台定向 33 个测试通过；118 个 staging 文件测得未压缩 4,220,607 字节、估算压缩 1,538,529 字节。
+- RSS 与签名 APK/AAB 解包结果尚未测量。缺少 RSS evidence 时状态保持 `not-measured`，因此看板不宣称设备验收通过。
+- SQLite 持久化、完整 agent conversation parity、稳定 `sourceUri` 双读、strict route-registry 默认切换、indexed explicit/inferred projection、Bridge v2 与 domain 抽取仍待完成。
+
+### 后续方向
+
+后续顺序为：真机证据与移动 workload runner；带大小写折叠/Unicode 策略的稳定 identity 双读；HTTP schema 校验；route-registry shadow parity；带 `contentRef` 的 explicit/inferred indexed graph projection；最后推进 versioned Bridge negotiation 与完整 use-case 抽取。这样保留 LearnGraph 的类型化边界经验和 textbooks 的内容包/compiler 经验，同时拒绝把 Docker-only、SaaS 数据库、Godot 和本地 LLM 假设带入 slim 产品。

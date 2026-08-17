@@ -3,6 +3,7 @@ setlocal EnableDelayedExpansion
 set "SHOULD_PAUSE=1"
 if defined NOTE_CONNECTION_NO_PAUSE set "SHOULD_PAUSE=0"
 if /I "%CI%"=="true" set "SHOULD_PAUSE=0"
+set "NOTE_CONNECTION_MOBILE_WEB_DIR=dist/mobile-slim/frontend"
 
 REM ========================================================
 REM   NoteConnection APK Build Script
@@ -113,10 +114,10 @@ REM --------------------------------------------------------
 echo.
 echo [3/8] Building Web Frontend...
 echo       (This may take a moment...)
-call npm run build
+call npm run mobile:prepare:slim
 if %errorlevel% neq 0 (
     echo.
-    echo [ERROR] Web build failed ^(npm run build^).
+    echo [ERROR] Mobile slim preparation failed ^(npm run mobile:prepare:slim^).
     echo         Check the output above for compilation errors.
     if "%SHOULD_PAUSE%"=="1" pause
     exit /b 1
@@ -128,11 +129,11 @@ REM 4. Directory Standardization
 REM --------------------------------------------------------
 echo.
 echo [4/8] Standardizing Output Directory...
-REM Capacitor webDir is configured as dist/src/frontend in capacitor.config.ts.
-if exist "dist\src\frontend" (
-    echo   [OK] 'dist\src\frontend' exists.
+REM Capacitor webDir is switched to the verified mobile-slim staging directory.
+if exist "dist\mobile-slim\frontend" (
+    echo   [OK] 'dist\mobile-slim\frontend' exists.
 ) else (
-    echo [ERROR] Expected build output 'dist\src\frontend' NOT found.
+    echo [ERROR] Expected build output 'dist\mobile-slim\frontend' NOT found.
     echo         Build might have produced a different structure.
     if "%SHOULD_PAUSE%"=="1" pause
     exit /b 1
@@ -145,7 +146,7 @@ echo.
 echo [5/8] Configuring Capacitor Bridge...
 if not exist "capacitor.config.ts" (
     echo   [INFO] Initializing Capacitor project...
-    call npx cap init "Knowledge Planet" "com.jacob.noteconnection" --web-dir "dist/src/frontend"
+    call npx cap init "Knowledge Planet" "com.jacob.noteconnection" --web-dir "dist/mobile-slim/frontend"
 ) else (
     echo   [OK] Capacitor config found.
 )

@@ -37,3 +37,16 @@ This page is the Diataxis reference entry for the current multi-platform build m
 - [Git LFS Asset Migration](../explanation/git-lfs-asset-migration.md)
 - [Bootstrap Godot Sidecar](../how-to/bootstrap-godot-sidecar.md)
 - [Release and Governance](release-and-governance.md)
+
+## Mobile Slim Contract (2026-08-17)
+
+`mobile-slim` is now a real packaging profile, not only an export label.
+
+- `npm run mobile:prepare:slim` builds the runtime-first frontend, stages only `dist/mobile-slim/frontend`, removes generated graph payloads, desktop-only Mermaid/GPU assets, SVG files, model files, and binary sidecars, then emits `dist/mobile-slim/mobile-slim-manifest.json`.
+- The same staged directory is consumed by Capacitor through `NOTE_CONNECTION_MOBILE_WEB_DIR` and by Tauri Android through `src-tauri/tauri.android.conf.json`. Tauri Android no longer builds a Node sidecar on the slim path.
+- The mobile runtime loads the local `graph_data.json` through the storage boundary and exposes bounded exact lookup, neighbor inspection, and directed shortest-path operations through `queryKnowledgeBaseExact()` and `findKnowledgePath()`. The analyzer retains projected node metadata, not document bodies.
+- `mobile-slim` declares local ingest and exact query as available, remote inference as optional, SVG materialization as unsupported, a 25 MiB estimated compressed asset gate, and a 256 MiB low-memory RSS gate.
+- The static verifier reports estimated ZIP-deflate bytes and fails on forbidden artifacts. RSS is `not-measured` until a device evidence JSON is supplied; a passing static gate is not a device acceptance claim.
+- Godot Pathmode is an extended opt-in (`NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE=1`). The default Android runner disables generated Godot bridge files, dependency declarations, and `path_mode` assets so stale generated scaffolds cannot silently inflate a slim build.
+
+This slice intentionally does not claim mobile-local LLM parity or SQLite persistence. The current mobile projection is an exact in-memory index over a bounded local graph; SQLite-backed persistence and full agent conversation parity remain subsequent phases with separate contracts.

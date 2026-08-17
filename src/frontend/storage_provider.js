@@ -1320,6 +1320,7 @@
     class RuntimeStorageProvider {
         constructor(runtimeCaps) {
             this.runtimeCaps = runtimeCaps || {};
+            this.mobileExactIndexPromise = null;
         }
 
         _supportsSidecar() {
@@ -1556,6 +1557,85 @@
             }
 
             throw unsupportedOperationError('buildGraph');
+        }
+
+        async _loadMobileExactIndex() {
+            if (this.mobileExactIndexPromise) {
+                return await this.mobileExactIndexPromise;
+            }
+
+            this.mobileExactIndexPromise = (async () => {
+                const analyzer = window.NoteConnectionMobileExactAnalyzer;
+                if (!analyzer || typeof analyzer.createMobileExactIndex !== 'function') {
+                    throw unsupportedOperationError('mobileExactAnalysis');
+                }
+                const graphText = await this.readGeneratedAsset('graph_data.json');
+                if (measureUtf8Bytes(graphText) > CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES) {
+                    throw new Error(
+                        `Local exact graph payload exceeds ${CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES} bytes.`
+                    );
+                }
+                let graph;
+                try {
+                    graph = JSON.parse(graphText);
+                } catch (error) {
+                    throw new Error(`Local exact graph payload is invalid JSON: ${String(error && error.message || error)}`);
+                }
+                return analyzer.createMobileExactIndex(graph);
+            })();
+
+            try {
+                return await this.mobileExactIndexPromise;
+            } catch (error) {
+                this.mobileExactIndexPromise = null;
+                throw error;
+            }
+        }
+
+        async queryKnowledgeBaseExact(request) {
+            const payload = request && typeof request === 'object' ? request : {};
+            const query = typeof payload.query === 'string' ? payload.query.trim() : '';
+            if (!query) {
+                throw new Error('Local exact query requires a non-empty query.');
+            }
+            const index = await this._loadMobileExactIndex();
+            const matches = index.searchExact(query, payload.maxMatches);
+            return {
+                query,
+                matches: matches.map((node) => ({
+                    ...node,
+                    neighbors: index.neighbors(node.id, payload.maxNeighborsPerMatch)
+                })),
+                statistics: index.statistics(),
+                execution: 'local-exact',
+                remoteInferenceUsed: false
+            };
+        }
+
+        async findKnowledgePath(request) {
+            const payload = request && typeof request === 'object' ? request : {};
+            const sourceNodeId = typeof payload.sourceNodeId === 'string'
+                ? payload.sourceNodeId.trim()
+                : '';
+            const targetNodeId = typeof payload.targetNodeId === 'string'
+                ? payload.targetNodeId.trim()
+                : '';
+            if (!sourceNodeId || !targetNodeId) {
+                throw new Error('Local knowledge path requires sourceNodeId and targetNodeId.');
+            }
+            const index = await this._loadMobileExactIndex();
+            return {
+                sourceNodeId,
+                targetNodeId,
+                path: index.shortestPath(
+                    sourceNodeId,
+                    targetNodeId,
+                    payload.maxDepth,
+                    payload.maxVisitedNodes
+                ),
+                execution: 'local-exact',
+                remoteInferenceUsed: false
+            };
         }
 
         async readContent(filePath) {

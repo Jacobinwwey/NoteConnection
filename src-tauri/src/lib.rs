@@ -1157,13 +1157,18 @@ fn build_graph_runtime_for_target(
         "edges": edges
     });
 
+    #[cfg(target_os = "android")]
+    let persisted_graph = &lite_graph;
+    #[cfg(not(target_os = "android"))]
+    let persisted_graph = &full_graph;
+
     ensure_directory(runtime_data_dir);
     let graph_json_path = runtime_data_dir.join("graph_data.json");
     let data_js_path = runtime_data_dir.join("data.js");
 
     fs::write(
         &graph_json_path,
-        serde_json::to_string_pretty(&full_graph)
+        serde_json::to_string_pretty(persisted_graph)
             .map_err(|err| format!("Failed to serialize graph_data.json: {}", err))?,
     )
     .map_err(|err| format!("Failed to write '{}': {}", graph_json_path.to_string_lossy(), err))?;
@@ -1193,7 +1198,7 @@ fn build_graph_runtime_for_target(
         .map_err(|err| format!("Failed to write '{}': {}", cache_js_path.to_string_lossy(), err))?;
         fs::write(
             &cache_json_path,
-            serde_json::to_string_pretty(&full_graph)
+            serde_json::to_string_pretty(persisted_graph)
                 .map_err(|err| format!("Failed to serialize cache graph payload: {}", err))?,
         )
         .map_err(|err| format!("Failed to write '{}': {}", cache_json_path.to_string_lossy(), err))?;
@@ -1566,7 +1571,7 @@ fn get_runtime_capabilities() -> RuntimeCapabilities {
             supports_build: true,
             supports_content_api: true,
             supports_kb_runtime_change: false,
-            supports_native_pathmode: true,
+            supports_native_pathmode: option_env!("NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE") == Some("1"),
         };
     }
 
@@ -1635,6 +1640,13 @@ fn launch_native_pathmode_activity(payload_json: &str) -> Result<bool, String> {
 fn open_native_pathmode(request: NativePathmodeLaunchRequest) -> Result<NativePathmodeLaunchResult, String> {
     #[cfg(target_os = "android")]
     {
+        if option_env!("NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE") != Some("1") {
+            let _ = request;
+            return Ok(NativePathmodeLaunchResult {
+                launched: false,
+                reason: Some("Native Android Pathmode is disabled in mobile-slim profile".to_string()),
+            });
+        }
         let payload_json = serde_json::to_string(&request)
             .map_err(|err| format!("Failed to serialize native Pathmode payload: {}", err))?;
 
@@ -2600,7 +2612,10 @@ mod tests {
             assert!(caps.supports_build);
             assert!(caps.supports_content_api);
             assert!(!caps.supports_kb_runtime_change);
-            assert!(caps.supports_native_pathmode);
+            assert_eq!(
+                caps.supports_native_pathmode,
+                option_env!("NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE") == Some("1")
+            );
         } else {
             assert!(caps.supports_sidecar);
             assert!(caps.supports_build);
@@ -3172,5 +3187,3 @@ reader_media_scale = 1.5
         assert!(err.contains("Target directory does not exist"));
     }
 }
-
-

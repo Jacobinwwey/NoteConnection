@@ -153,8 +153,46 @@ function copyPathmodeAssets(repoRoot, androidAppDir) {
   });
 }
 
+function removePathmodeAssets(androidAppDir) {
+  const targetDir = path.join(androidAppDir, 'src', 'main', 'assets', 'path_mode');
+  fs.rmSync(targetDir, { recursive: true, force: true });
+}
+
+function removeFileIfPresent(filePath) {
+  if (fs.existsSync(filePath)) {
+    fs.rmSync(filePath, { force: true });
+  }
+}
+
+function unpatchManifest(manifestPath) {
+  let manifest = readText(manifestPath);
+  manifest = manifest.replace(
+    /\s*<activity\s+android:name="\.PathmodeGodotActivity"[\s\S]*?\/>\s*/m,
+    '\n'
+  );
+  manifest = manifest.replace(/\s*tools:replace="android:resource"/g, '');
+  if (!manifest.includes('tools:')) {
+    manifest = manifest.replace(/\s+xmlns:tools="http:\/\/schemas\.android\.com\/tools"/, '');
+  }
+  writeText(manifestPath, manifest);
+}
+
+function unpatchBuildGradle(appGradlePath) {
+  let gradle = readText(appGradlePath);
+  gradle = gradle.replace(
+    /\r?\n?val godotAndroidVersion = System\.getenv\("NOTE_CONNECTION_GODOT_ANDROID_VERSION"\) \?: "[^"]+"\r?\n?/g,
+    '\n'
+  );
+  gradle = gradle.replace(
+    /^\s*implementation\("org\.godotengine:godot:\$godotAndroidVersion"\)\s*\r?\n?/gm,
+    ''
+  );
+  writeText(appGradlePath, gradle);
+}
+
 function main() {
   const allowMissing = process.argv.includes('--allow-missing');
+  const disable = process.argv.includes('--disable');
   const repoRoot = path.resolve(__dirname, '..');
   const androidAppDir = path.join(repoRoot, 'src-tauri', 'gen', 'android', 'app');
 
@@ -177,6 +215,16 @@ function main() {
   const templateDir = path.join(repoRoot, 'src-tauri', 'mobile', 'android');
   const bridgeTemplatePath = path.join(templateDir, 'PathmodeBridge.kt');
   const activityTemplatePath = path.join(templateDir, 'PathmodeGodotActivity.kt');
+
+  if (disable) {
+    removeFileIfPresent(path.join(packageDir, 'PathmodeBridge.kt'));
+    removeFileIfPresent(path.join(packageDir, 'PathmodeGodotActivity.kt'));
+    unpatchManifest(manifestPath);
+    unpatchBuildGradle(appGradlePath);
+    removePathmodeAssets(androidAppDir);
+    console.log('[Pathmode Android Patch] Godot dependency, bridge, activity, and assets disabled for mobile-slim.');
+    return;
+  }
 
   writeText(
     path.join(packageDir, 'PathmodeBridge.kt'),

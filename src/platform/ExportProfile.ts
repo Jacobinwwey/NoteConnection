@@ -19,8 +19,17 @@ export interface ExportProfile {
     supportsConversationStreaming: boolean;
     supportsSvgRenderArtifacts: boolean;
     supportsPngRenderArtifacts: boolean;
+    supportsLocalIngest: boolean;
+    supportsLocalExactQuery: boolean;
+    supportsRemoteInference: boolean;
+    requiresRemoteInference: boolean;
+    assetBudgetBytes: number | null;
+    maxResidentBytes: number | null;
     preferredMermaidRenderer: 'auto' | 'local' | 'frontend';
 }
+
+export const MOBILE_SLIM_ASSET_BUDGET_BYTES = 25 * 1024 * 1024;
+export const MOBILE_SLIM_MAX_RESIDENT_BYTES = 256 * 1024 * 1024;
 
 const EXPORT_PROFILES: Record<ExportProfileId, ExportProfile> = {
     'desktop-full': {
@@ -32,6 +41,12 @@ const EXPORT_PROFILES: Record<ExportProfileId, ExportProfile> = {
         supportsConversationStreaming: true,
         supportsSvgRenderArtifacts: true,
         supportsPngRenderArtifacts: true,
+        supportsLocalIngest: true,
+        supportsLocalExactQuery: true,
+        supportsRemoteInference: true,
+        requiresRemoteInference: false,
+        assetBudgetBytes: null,
+        maxResidentBytes: null,
         preferredMermaidRenderer: 'auto',
     },
     'desktop-reader': {
@@ -43,6 +58,12 @@ const EXPORT_PROFILES: Record<ExportProfileId, ExportProfile> = {
         supportsConversationStreaming: true,
         supportsSvgRenderArtifacts: true,
         supportsPngRenderArtifacts: true,
+        supportsLocalIngest: false,
+        supportsLocalExactQuery: true,
+        supportsRemoteInference: true,
+        requiresRemoteInference: false,
+        assetBudgetBytes: null,
+        maxResidentBytes: null,
         preferredMermaidRenderer: 'auto',
     },
     'godot-path-mode': {
@@ -54,6 +75,12 @@ const EXPORT_PROFILES: Record<ExportProfileId, ExportProfile> = {
         supportsConversationStreaming: false,
         supportsSvgRenderArtifacts: false,
         supportsPngRenderArtifacts: true,
+        supportsLocalIngest: false,
+        supportsLocalExactQuery: false,
+        supportsRemoteInference: false,
+        requiresRemoteInference: false,
+        assetBudgetBytes: null,
+        maxResidentBytes: null,
         preferredMermaidRenderer: 'auto',
     },
     'mobile-slim': {
@@ -65,6 +92,12 @@ const EXPORT_PROFILES: Record<ExportProfileId, ExportProfile> = {
         supportsConversationStreaming: false,
         supportsSvgRenderArtifacts: false,
         supportsPngRenderArtifacts: true,
+        supportsLocalIngest: true,
+        supportsLocalExactQuery: true,
+        supportsRemoteInference: true,
+        requiresRemoteInference: false,
+        assetBudgetBytes: MOBILE_SLIM_ASSET_BUDGET_BYTES,
+        maxResidentBytes: MOBILE_SLIM_MAX_RESIDENT_BYTES,
         preferredMermaidRenderer: 'local',
     },
 };

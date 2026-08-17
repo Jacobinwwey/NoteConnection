@@ -47,7 +47,7 @@ describe('runtime capability gating contract', () => {
     expect(reader).toContain("window.i18n.t('source.error.contentUnavailableMobile')");
   });
 
-  test('rust runtime capabilities command is registered and has android-safe defaults', () => {
+  test('rust runtime capabilities command is registered and keeps Godot Pathmode opt-in', () => {
     const tauriLib = fs.readFileSync(tauriLibPath, 'utf8');
     expect(tauriLib).toContain('fn get_runtime_capabilities()');
     expect(tauriLib).toContain('get_runtime_capabilities,');
@@ -58,7 +58,7 @@ describe('runtime capability gating contract', () => {
     expect(tauriLib).toContain('supports_sidecar: false');
     expect(tauriLib).toContain('supports_build: true');
     expect(tauriLib).toContain('supports_content_api: true');
-    expect(tauriLib).toContain('supports_native_pathmode: true');
+    expect(tauriLib).toContain('supports_native_pathmode: option_env!("NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE")');
     expect(tauriLib).toContain('read_node_content');
   });
 

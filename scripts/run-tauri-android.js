@@ -77,9 +77,12 @@ function resolveAndroidTarget(mode, cliTarget) {
   return '';
 }
 
-function runPathmodePatch({ allowMissing }) {
+function runPathmodePatch({ mode, allowMissing }) {
   const patchScript = path.join(__dirname, 'apply-tauri-android-pathmode.js');
   const args = [patchScript];
+  if (mode === 'disable') {
+    args.push('--disable');
+  }
   if (allowMissing) {
     args.push('--allow-missing');
   }
@@ -90,6 +93,13 @@ function runPathmodePatch({ allowMissing }) {
   });
 
   return patchResult.status === 0;
+}
+
+function syncPathmodeIntegration({ includeGodotPathmode, allowMissing }) {
+  if (includeGodotPathmode) {
+    return runPathmodePatch({ mode: 'enable', allowMissing });
+  }
+  return runPathmodePatch({ mode: 'disable', allowMissing });
 }
 
 function spawnTauriCommand(tauriArgs, envOverrides) {
@@ -170,6 +180,7 @@ function main() {
   const cargoReleasePanic = String(process.env.CARGO_PROFILE_RELEASE_PANIC || 'abort');
   const cargoIncremental = String(process.env.CARGO_INCREMENTAL || '0');
   const rustflags = appendRustflag(process.env.RUSTFLAGS, '-C debuginfo=0');
+  const includeGodotPathmode = process.env.NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE === '1';
   const tauriEnv = {
     ...process.env,
     ANDROID_HOME: sdkRoot,
@@ -183,7 +194,8 @@ function main() {
     CARGO_PROFILE_RELEASE_LTO: cargoReleaseLto,
     CARGO_PROFILE_RELEASE_PANIC: cargoReleasePanic,
     CARGO_INCREMENTAL: cargoIncremental,
-    RUSTFLAGS: rustflags
+    RUSTFLAGS: rustflags,
+    NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE: includeGodotPathmode ? '1' : '0'
   };
 
   // Dev/build commands require the generated Android project before patching.
@@ -193,13 +205,13 @@ function main() {
       process.exit(1);
     }
 
-    if (!runPathmodePatch({ allowMissing: false })) {
-      console.error('[Tauri Android Runner] Failed to apply Android Pathmode patch before build/dev.');
+    if (!syncPathmodeIntegration({ includeGodotPathmode, allowMissing: false })) {
+      console.error('[Tauri Android Runner] Failed to synchronize Android Pathmode profile before build/dev.');
       process.exit(1);
     }
   } else {
     // init may run before the Android project exists; pre-patch is best-effort.
-    runPathmodePatch({ allowMissing: true });
+    syncPathmodeIntegration({ includeGodotPathmode, allowMissing: true });
   }
 
   console.log(`[Tauri Android Runner] SDK: ${sdkRoot}`);
@@ -212,6 +224,7 @@ function main() {
   console.log(`[Tauri Android Runner] Cargo release panic: ${cargoReleasePanic}`);
   console.log(`[Tauri Android Runner] Cargo incremental: ${cargoIncremental}`);
   console.log(`[Tauri Android Runner] RUSTFLAGS: ${rustflags || '(empty)'}`);
+  console.log(`[Tauri Android Runner] Godot Pathmode: ${includeGodotPathmode ? 'enabled (extended profile)' : 'disabled (mobile-slim)'}`);
   if (target) {
     console.log(`[Tauri Android Runner] Target: ${target}`);
   } else {
@@ -234,8 +247,8 @@ function main() {
   }
 
   // Keep project patched after successful init/dev/build.
-  if (!runPathmodePatch({ allowMissing: false })) {
-    console.error('[Tauri Android Runner] Android command succeeded, but post-patch failed.');
+  if (!syncPathmodeIntegration({ includeGodotPathmode, allowMissing: false })) {
+    console.error('[Tauri Android Runner] Android command succeeded, but post-build profile synchronization failed.');
     process.exit(1);
   }
 

@@ -1753,3 +1753,22 @@ The production correction is narrow: graph-plan redundancy and composer suppleme
 Policy v2 also retains signs, common measurement units, and date components in numeric fact keys. Empty calibration dimensions fail closed with an explicit `corpus_empty:<dimension>` case instead of producing an optimistic perfect score.
 
 The next direction is to expand this versioned corpus with human-rated multilingual examples and confidence intervals. Do not tune thresholds from one Water Glass fixture or treat a perfect deterministic corpus score as proof of generalization.
+
+## 2026-08-17 Architecture and Mobile Progress Delta
+
+### Shipped
+
+- Resource identity collision guard, shared strict auth decision, and atomic/cache-coherent snapshot writes remain verified on `main`.
+- `mobile-slim` is now an executable profile: local exact ingest/query capability is explicit, remote inference is optional, SVG is disabled, and the profile carries 25 MiB estimated compressed asset / 256 MiB resident-memory budgets.
+- `mobile_exact_analyzer.js` and the storage-provider adapter provide bounded exact lookup, neighbors, and directed paths from the local graph asset without a sidecar. The analyzer is O(V + E) to build and does not retain node bodies.
+- Capacitor and Tauri Android share deterministic staging and manifest generation. The default Tauri Android path does not build sidecars or inject Godot; Godot Pathmode is an explicit extended profile.
+
+### Evidence and gaps
+
+- Static host evidence: 33 focused mobile/platform tests passed; 118 staged files measured 4,220,607 bytes uncompressed and 1,538,529 estimated compressed bytes.
+- RSS and signed APK/AAB extraction are not yet measured. A missing RSS evidence file remains `not-measured`, so this dashboard does not claim device acceptance.
+- SQLite persistence, full agent conversation parity, stable `sourceUri` dual-read, strict route-registry defaulting, indexed explicit/inferred projections, Bridge v2, and domain extraction remain pending.
+
+### Direction
+
+The next order is: device evidence and mobile workload runner; stable identity dual-read with case-folding/Unicode policy; HTTP schema validation; route-registry shadow parity; explicit/inferred indexed graph projections with `contentRef`; then versioned Bridge negotiation and complete use-case extraction. This keeps the LearnGraph typed-boundary lesson and textbooks content-package/compiler lesson while rejecting Docker-only, SaaS-database, Godot, and local-LLM assumptions for the slim product.

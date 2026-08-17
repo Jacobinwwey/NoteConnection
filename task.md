@@ -307,8 +307,8 @@
 - [x] Sidecar and HTTP authorization now share one strict token decision while preserving `Authorization: Bearer` and `X-NoteConnection-Token`.
 - [x] File-backed graph snapshots use unique sibling temp files and refresh the in-process cache only after atomic rename.
 - [x] The full code-vs-plan and reference comparison is recorded in `docs/solutions/architecture-hardening-forward-compatibility-2026-08-16.md`.
-- [~] `mobile-slim` currently provides deterministic slim export/readiness and PNG-first materialization, but on-device ingest/query execution is not yet proven as a complete loop.
-- [ ] Add the portable SQLite/WASM exact-analysis runtime and a signed APK/AAB byte/RSS budget gate; exclude desktop server, Godot, and model weights from mobile artifacts.
+- [x] `mobile-slim` now provides deterministic slim staging, PNG-first materialization, and callable bounded local exact ingest/query projection without a sidecar.
+- [~] Signed APK/AAB extraction and real-device RSS gates remain open; SQLite/WASM persistence is intentionally not claimed by this slice.
 - [ ] Complete stable `sourceUri` dual-read migration, route-registry shadow parity, indexed exact/inferred projections, and Bridge capability negotiation before changing public IDs or default routing.
 
 ### Acceptance targets
@@ -326,8 +326,8 @@
 - [x] Sidecar 与 HTTP 共用严格 token 判定，同时兼容 `Authorization: Bearer` 与 `X-NoteConnection-Token`。
 - [x] 文件图快照使用唯一同目录临时文件，并仅在原子 rename 成功后刷新进程内缓存。
 - [x] 完整代码/方案/参考仓库对账已落盘于 `docs/solutions/architecture-hardening-forward-compatibility-2026-08-16.md`。
-- [~] `mobile-slim` 当前具备 deterministic slim export/readiness 与 PNG-first materialization，但端上 ingest/query 的完整闭环尚未证明。
-- [ ] 增加 portable SQLite/WASM exact-analysis runtime 与签名 APK/AAB 字节/RSS 门禁；移动产物必须排除桌面 server、Godot 与模型权重。
+- [x] `mobile-slim` 现在具备 deterministic slim staging、PNG-first materialization，以及不依赖 sidecar 的可调用有界本地 exact ingest/query projection。
+- [~] 签名 APK/AAB 解包与真机 RSS 门禁仍未完成；本切片有意不宣称 SQLite/WASM 持久化。
 - [ ] 在改变公开 ID 或默认路由前，完成稳定 `sourceUri` 双读迁移、route-registry shadow parity、indexed exact/inferred projection 与 Bridge capability negotiation。
 
 ### 验收目标
@@ -336,3 +336,35 @@
 2. mobile-low（4 核 ARM64、5,000 docs / 50,000 atoms）应用自有压缩资产不超过 25 MiB、峰值 RSS 不超过 256 MiB；standard mobile 对应 35 MiB / 384 MiB、20,000 docs / 200,000 atoms。
 3. 移动端无需 Node/Godot/模型依赖即可完成本地分析；远端推理仅作为可取消、带 timeout、离线可解释降级的可选能力。
 4. 后续 identity、registry、graph、Bridge 迁移必须先有 replay/rollback 证据再切默认。
+
+# 2026-08-17 Mobile Slim Execution Update
+
+## English
+
+### Implemented in code
+
+- [x] `mobile-slim` now exposes local ingest, local exact query, optional remote inference, SVG suppression, and explicit asset/RSS budgets through `PlatformCapabilities`.
+- [x] `mobile_exact_analyzer.js` provides bounded exact lookup, bidirectional neighbor inspection, and directed shortest-path queries without retaining document bodies; `storage_provider.js` exposes `queryKnowledgeBaseExact()` and `findKnowledgePath()`.
+- [x] `prepare-mobile-slim.js` stages one deterministic frontend directory and emits a manifest; `verify-mobile-slim-budget.js` rejects forbidden artifacts and compressed payload/RSS overages.
+- [x] Capacitor and Tauri Android consume the same staged directory. Tauri Android no longer builds a sidecar by default, and Godot Pathmode is explicit opt-in.
+
+### Evidence boundary
+
+- [x] Focused mobile/platform matrix: 33 tests passed; staged build measured 118 files, 4,220,607 uncompressed bytes, and 1,538,529 estimated compressed bytes.
+- [ ] Real-device RSS evidence and signed APK/AAB extraction evidence remain open. `not-measured` is a deliberate state, not a pass.
+- [ ] SQLite persistence, full agent conversation parity, stable `sourceUri` dual-read, strict route-registry default, indexed explicit/inferred projections, Bridge v2, and domain extraction remain pending.
+
+## 中文
+
+### 已落地代码
+
+- [x] `mobile-slim` 现在通过 `PlatformCapabilities` 暴露本地 ingest、本地 exact query、可选远程推理、SVG 抑制以及明确的资源/RSS 预算。
+- [x] `mobile_exact_analyzer.js` 提供有界 exact lookup、双向邻居查询和有向最短路径，不保留文档正文；`storage_provider.js` 暴露 `queryKnowledgeBaseExact()` 与 `findKnowledgePath()`。
+- [x] `prepare-mobile-slim.js` 生成唯一 deterministic frontend staging 目录和 manifest；`verify-mobile-slim-budget.js` 会拒绝禁入物及压缩 payload/RSS 超预算。
+- [x] Capacitor 与 Tauri Android 消费同一 staging 目录。Tauri Android 默认不再构建 sidecar，Godot Pathmode 改为显式 opt-in。
+
+### 证据边界
+
+- [x] 移动/平台定向矩阵通过 33 个测试；本机 staging 测得 118 个文件、未压缩 4,220,607 字节、估算压缩 1,538,529 字节。
+- [ ] 真机 RSS 证据和签名 APK/AAB 解包证据仍未完成。`not-measured` 是诚实的未测状态，不是通过状态。
+- [ ] SQLite 持久化、完整 agent conversation parity、稳定 `sourceUri` 双读、strict route-registry 默认切换、indexed explicit/inferred projection、Bridge v2 与 domain 抽取仍待后续阶段。
