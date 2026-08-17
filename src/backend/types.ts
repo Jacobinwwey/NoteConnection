@@ -7,6 +7,10 @@ export interface RawFile {
     filename: string;
     content: string;
     modifiedTime: Date;
+    relativePath?: string;
+    sourceUri?: string;
+    revision?: string;
+    identityAliases?: string[];
 }
 
 // Interface for Parsed Concept

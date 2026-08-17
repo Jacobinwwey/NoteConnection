@@ -1,0 +1,63 @@
+import { GraphBuilder } from './GraphBuilder';
+import { config } from './config';
+import { RawFile } from './FileLoader';
+
+describe('GraphBuilder identity compatibility', () => {
+    const originalConfig = {
+        ...config,
+        exclusionList: [...config.exclusionList],
+    };
+
+    beforeEach(() => {
+        config.enableTags = false;
+        config.enableStatisticalInference = false;
+        config.enableVectorSimilarity = false;
+        config.enableHybridInference = false;
+        config.enableGPU = false;
+        config.enableGPULayout = false;
+        config.clusteringStrategy = 'folder';
+        config.exclusionList = [];
+    });
+
+    afterEach(() => {
+        Object.assign(config, originalConfig);
+    });
+
+    test('preserves identity metadata, reads URI frontmatter, and accepts URI layouts', async () => {
+        const files: RawFile[] = [
+            {
+                filepath: 'workspace/algebra/a.md',
+                filename: 'A',
+                content: '# A',
+                relativePath: 'algebra/a.md',
+                sourceUri: 'note://workspace/v1/algebra/a.md',
+                revision: 'sha256:a',
+                identityAliases: ['A', 'algebra/a.md'],
+            },
+            {
+                filepath: 'workspace/algebra/b.md',
+                filename: 'B',
+                content: '---\nprerequisites:\n  - note://workspace/v1/algebra/a.md\n---\n# B',
+                relativePath: 'algebra/b.md',
+                sourceUri: 'note://workspace/v1/algebra/b.md',
+                revision: 'sha256:b',
+                identityAliases: ['B', 'algebra/b.md'],
+            },
+        ];
+
+        const graph = await GraphBuilder.build(files, new Map([
+            ['note://workspace/v1/algebra/a.md', { x: 12, y: 34 }],
+        ]));
+
+        expect(graph.getNode('A')).toEqual(expect.objectContaining({
+            sourceUri: 'note://workspace/v1/algebra/a.md',
+            revision: 'sha256:a',
+            identityAliases: expect.arrayContaining(['algebra/a.md']),
+            x: 12,
+            y: 34,
+        }));
+        expect(graph.getIncomingEdges('B')).toEqual(expect.arrayContaining([
+            expect.objectContaining({ source: 'A', target: 'B', type: 'explicit-prerequisite' }),
+        ]));
+    });
+});

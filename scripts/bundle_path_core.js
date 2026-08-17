@@ -16,12 +16,13 @@ function bundlePathCore(options = {}) {
     const distCoreDir = options.distCoreDir || DIST_CORE;
     const dest = options.destOverride || DEFAULT_DEST;
     const graphFile = path.join(distCoreDir, 'Graph.js');
+    const resourceReferenceFile = path.join(distCoreDir, 'ResourceReference.js');
     const engineFile = path.join(distCoreDir, 'PathEngine.js');
     const orbitalStateFile = path.join(distCoreDir, 'OrbitalState.js');
 
     console.log('📦 Bundling Path Core...');
 
-    if (!fs.existsSync(graphFile) || !fs.existsSync(engineFile) || !fs.existsSync(orbitalStateFile)) {
+    if (!fs.existsSync(graphFile) || !fs.existsSync(resourceReferenceFile) || !fs.existsSync(engineFile) || !fs.existsSync(orbitalStateFile)) {
         console.error('❌ Build artifacts not found. Run "tsc" first.');
         process.exitCode = 1;
         return null;
@@ -35,9 +36,12 @@ var module = { exports: exports };
 `;
 
     const graphContent = fs.readFileSync(graphFile, 'utf8');
+    const resourceReferenceContent = fs.readFileSync(resourceReferenceFile, 'utf8');
     const engineContent = fs.readFileSync(engineFile, 'utf8');
     const orbitalStateContent = fs.readFileSync(orbitalStateFile, 'utf8');
-    const graphClean = cleanContent(graphContent);
+    const resourceReferenceClean = cleanContent(resourceReferenceContent);
+    const graphClean = cleanContent(graphContent)
+        .replace(/ResourceReference_1\.normalizeResourceReference/g, 'normalizeResourceReference');
     const engineClean = cleanContent(engineContent);
     const orbitalStateClean = cleanContent(orbitalStateContent);
 
@@ -45,6 +49,9 @@ var module = { exports: exports };
 /* Auto-bundled Path Core */
 (function() {
     ${shim}
+
+    /* ResourceReference.js */
+    ${resourceReferenceClean}
 
     /* Graph.js */
     ${graphClean}

@@ -466,3 +466,10 @@
   - [ ] 测试规则 6（脊柱始终可见）
   - [ ] 测试规则 7（粘性认领开关）
   - [ ] 测试 hull-节点碰撞避让
+
+## 2026-08-17 身份边界与移动端内存门禁
+
+- [x] 显式 workspace root 让全库与子目录扫描生成稳定一致的 `sourceUri`。
+- [x] 学习摄入与快照保留可选 `sourceUri`、`revision`、`identityAliases`；删除先按 URI/alias 解析，再回退旧 path。
+- [x] Android 低内存建图在读取无界正文前限制 5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 条边。
+- [ ] 文件移动/重命名 replay、Android 文件夹选择、签名 APK/AAB 解包、真机 RSS、SQLite、registry parity、indexed projection 与 Bridge v2 仍是明确门禁。

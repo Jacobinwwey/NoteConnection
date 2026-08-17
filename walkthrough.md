@@ -339,6 +339,42 @@ scoped source package
 
 移动链路不得依赖桌面 Node sidecar 或 Godot 进程；大文本按 reference 分页，inferred edge 必须 Top-K 有界，签名 APK/AAB 与 RSS 证据决定 release readiness。
 
+# 2026-08-17 Stable sourceUri Dual-Read Walkthrough
+
+## English
+
+### Runtime flow
+
+`FileLoader` reads a note, normalizes its workspace-relative path once, and creates `sourceUri`, `revision`, and aliases. `GraphBuilder` copies those fields into the node and metadata. `Graph` registers the current ID, source URI, relative path, and legacy aliases in one collision-checked index. Existing algorithms continue to consume the legacy ID; URI/relative frontmatter and saved layouts are resolved at the boundary and serialized output remains backward-readable.
+
+### Compatibility checkpoints
+
+- Exact layout lookup checks source URI, relative path, explicit aliases, then the legacy basename; old layouts remain readable, but basename is not an implicit priority when aliases collide.
+- Old nodes without identity fields remain valid because all new fields are optional.
+- Alias collisions fail before graph mutation, and case-folding makes the policy deterministic across Windows/POSIX.
+- Mobile slim packaging gains no Node/Godot/LLM dependency; this is backend metadata consumed only when present.
+
+### Evidence and next checkpoint
+
+The identity suites and URI/layout compatibility tests pass (15 tests total), and `npx tsc --noEmit` passes. The next checkpoint is move/rename replay plus old-snapshot corpus verification; public ID migration remains blocked until that evidence exists.
+
+## 中文
+
+### 运行链路
+
+`FileLoader` 读取笔记后只在边界做一次 workspace-relative path 规范化，并生成 `sourceUri`、`revision` 与 alias。`GraphBuilder` 将字段复制到节点和 metadata。`Graph` 在一个经过冲突检查的索引中登记当前 ID、source URI、relative path 与 legacy alias。现有算法继续使用 legacy ID；URI/relative frontmatter 和保存布局在边界解析，序列化输出保持向后可读。
+
+### 兼容性检查点
+
+- exact layout lookup 依次检查 source URI、relative path、显式 alias 和 legacy basename；旧布局仍可读，但 alias 冲突时不再假定 basename 优先。
+- 没有身份字段的旧节点仍然有效，因为新增字段均为可选。
+- alias 冲突在图变更前 fail-fast，大小写折叠策略保证 Windows/POSIX 一致。
+- mobile slim 不增加 Node/Godot/LLM 依赖；这些后端元数据只在存在时被消费。
+
+### 证据与下一检查点
+
+身份 suite 与 URI/layout 兼容测试共 15 个通过，`npx tsc --noEmit` 通过。下一检查点是文件移动/重命名 replay 与旧 snapshot 语料验证；在获得证据前不切换公开 ID。
+
 # 2026-08-17 Mobile Slim Walkthrough Update
 
 ## English
@@ -356,6 +392,24 @@ runtime-first build
 ```
 
 The staged frontend intentionally excludes Mermaid/GPU desktop payloads, generated graph caches, SVG files, binaries, and model paths. The default Android runner also removes stale generated Godot bridge/assets; `NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE=1` is the only extended-profile opt-in. RSS is measured only from supplied device evidence.
+
+# 2026-08-17 Identity and Mobile Guardrail Walkthrough
+
+## English
+
+The build boundary now passes `kbRoot` into `FileLoader` when a target subdirectory is scanned. A note loaded through `Knowledge_Base/` and the same note loaded through `Knowledge_Base/algebra/` therefore share `relativePath` and `sourceUri`; the old basename `documentId` is unchanged.
+
+The learning ingest payload keeps `sourceUri`, `revision`, and `identityAliases` optional. A URI/alias delete resolves the persisted document before the legacy path normalizer is consulted. This is an additive bridge for replay and migration, not a claim that a path-derived URI survives rename.
+
+On Android, corpus admission checks metadata sizes before reading bodies and bounds documents, total input bytes, and edges. This prevents the low-memory projection from turning an oversized import into an unbounded allocation; it does not replace device RSS evidence.
+
+## 中文
+
+现在 target 子目录扫描会把 `kbRoot` 传入 `FileLoader`。同一笔记从 `Knowledge_Base/` 或 `Knowledge_Base/algebra/` 加载时会得到一致的 `relativePath` 与 `sourceUri`；旧 basename `documentId` 保持不变。
+
+学习摄入 payload 以可选字段保留 `sourceUri`、`revision` 与 `identityAliases`。按 URI/alias 删除时先查持久化文档，再回退到旧 path normalizer。这是用于 replay 与迁移的 additive bridge，并不声称路径派生 URI 能抵抗重命名。
+
+Android 在读取正文前检查文件元数据大小，并限制文档数、总输入字节数与边数，避免超大导入在低内存 projection 中形成无界分配；它不能替代真机 RSS 证据。
 
 ## 中文
 

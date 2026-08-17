@@ -1754,6 +1754,19 @@ Policy v2 also retains signs, common measurement units, and date components in n
 
 The next direction is to expand this versioned corpus with human-rated multilingual examples and confidence intervals. Do not tune thresholds from one Water Glass fixture or treat a perfect deterministic corpus score as proof of generalization.
 
+## 2026-08-17 Stable sourceUri Dual-Read Foundation
+
+### Shipped
+
+- `FileLoader` now emits normalized `relativePath`, versioned percent-encoded `sourceUri`, deterministic `sha256` revision, and legacy/relative aliases.
+- Path traversal/NUL inputs and case-folded basename collisions fail at the resource boundary.
+- `Graph` resolves current IDs, source URIs, relative paths, and legacy aliases through one collision-checked registry; `GraphBuilder` propagates metadata and accepts URI/legacy layout and frontmatter references.
+- Public `NoteNode.id` and old snapshot/layout contracts remain unchanged. The mobile-slim profile gains no runtime dependency.
+
+### Evidence and limits
+
+Four focused suites passed (15 tests) and `npx tsc --noEmit` passed. Move/rename replay, canonical-ID cutover, route-registry shadow parity, indexed projections, Bridge v2, and real-device APK/RSS evidence remain open. The authoritative detail is in [the architecture hardening solution note](../../../solutions/architecture-hardening-forward-compatibility-2026-08-16.md).
+
 ## 2026-08-17 Architecture and Mobile Progress Delta
 
 ### Shipped
@@ -1765,9 +1778,10 @@ The next direction is to expand this versioned corpus with human-rated multiling
 
 ### Evidence and gaps
 
-- Static host evidence: 34 focused mobile/platform tests passed; 118 staged files measured 4,220,607 bytes uncompressed and 1,538,529 estimated compressed bytes.
+- Static host evidence: 34 focused mobile/platform tests passed; 118 staged files measured 4,223,135 bytes uncompressed and 1,539,168 estimated compressed bytes.
 - RSS and signed APK/AAB extraction are not yet measured. A missing RSS evidence file remains `not-measured`, so this dashboard does not claim device acceptance.
-- SQLite persistence, full agent conversation parity, stable `sourceUri` dual-read, strict route-registry defaulting, indexed explicit/inferred projections, Bridge v2, and domain extraction remain pending.
+- SQLite persistence, full agent conversation parity, complete `sourceUri` migration (the additive dual-read foundation is shipped), strict route-registry defaulting, indexed explicit/inferred projections, Bridge v2, and domain extraction remain pending.
+- Workspace-root propagation now keeps full-workspace and subdirectory identities aligned; learning ingest/snapshots retain optional URI/revision/aliases, and Android admission rejects over-budget corpora before body reads (5,000 docs / 16 MiB per doc / 64 MiB total / 250,000 edges).
 
 ### Direction
 

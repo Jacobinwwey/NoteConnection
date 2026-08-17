@@ -8,6 +8,9 @@ export interface NoteNode {
   inDegree: number; // Number of incoming edges | 入度数量
   outDegree: number; // Number of outgoing edges | 出度数量
   content?: string;  // Full text content (v0.1.5)
+  sourceUri?: string; // Versioned portable source identity
+  revision?: string; // Content-addressed revision
+  identityAliases?: string[]; // Legacy and portable lookup aliases
   x?: number;        // Saved X position | 保存的 X 坐标
   y?: number;        // Saved Y position | 保存的 Y 坐标
   centrality?: number; // Betweenness Centrality | 介数中心性

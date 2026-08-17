@@ -773,6 +773,56 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 4. 先做 route-registry shadow parity，旧 URL 覆盖完整后再切默认。
 5. 在增加 worker/GPU 预算前，先用 explicit/indexed projection 替代 pairwise inferred matching。
 
+# 2026-08-17 Task 7: Stable sourceUri Dual-Read Foundation
+
+## English
+
+### Scope and invariants
+
+- `FileLoader` is the only filesystem identity boundary: it emits POSIX `relativePath`, versioned percent-encoded `sourceUri`, `sha256` `revision`, and explicit aliases.
+- Canonical path keys use NFC plus locale-independent lowercasing. NUL, absolute, traversal, and empty-segment inputs are rejected; legacy basename collisions are case-folded and fail-fast.
+- `NoteNode.id` remains the legacy public/storage key. `sourceUri`, `revision`, and `identityAliases` are additive and optional for old callers/snapshots.
+- `Graph` owns alias resolution for reads and edges. It returns canonical legacy IDs to existing algorithms and rejects alias collisions before mutating indexes.
+- `GraphBuilder` accepts old layout keys and new URI/relative aliases, and frontmatter references can use the same forms. No frontend, Godot, or mobile business-rule copy is introduced.
+
+### Verification and rollback
+
+- [x] Four focused suites: 15 tests passed.
+- [x] `npx tsc --noEmit` passed.
+- [ ] Full Jest/build/mobile/docs/Rust matrix still gates the commit.
+- Rollback is additive-field removal; old IDs, layouts, route paths, and snapshot JSON remain the compatibility surface.
+
+### Next gates
+
+1. Add move/rename replay and old-snapshot corpus tests before any canonical ID cutover.
+2. Validate HTTP payload schemas at route edges, then run route-registry shadow parity.
+3. Split explicit/inferred graph projections and bound indexed matching before raising worker/GPU budgets.
+4. Negotiate Bridge capabilities and cancellation only after the portable exact contract is replayable on Web, Tauri, Capacitor, and Android.
+
+## 中文
+
+### 范围与不变量
+
+- `FileLoader` 是唯一文件系统身份边界：生成 POSIX `relativePath`、版本化逐段 percent-encoded `sourceUri`、`sha256` `revision` 和显式 alias。
+- canonical path key 使用 NFC 与 locale-independent 小写；拒绝 NUL、绝对路径、路径穿越和空段；legacy basename 冲突按大小写折叠并 fail-fast。
+- `NoteNode.id` 仍是 legacy 公开/存储 key；`sourceUri`、`revision`、`identityAliases` 为兼容旧调用方和快照的 additive 可选字段。
+- `Graph` 统一拥有 alias 读解析与边解析，向现有算法返回 canonical legacy ID，并在修改索引前拒绝 alias 冲突。
+- `GraphBuilder` 同时接受旧布局 key 与 URI/relative alias，frontmatter 也支持相同引用形式；不新增 frontend、Godot 或移动端业务规则副本。
+
+### 验证与回滚
+
+- [x] 四个聚焦 suite 共 15 个测试通过。
+- [x] `npx tsc --noEmit` 通过。
+- [ ] 全量 Jest/build/mobile/docs/Rust 矩阵仍是提交门禁。
+- 回滚只需移除 additive 字段；旧 ID、布局、route path 和 snapshot JSON 继续作为兼容面。
+
+### 后续门禁
+
+1. 在切换 canonical ID 前增加文件移动/重命名 replay 与旧 snapshot 语料测试。
+2. 在 HTTP 边界完成 schema 校验，再执行 route-registry shadow parity。
+3. 拆分 explicit/inferred graph projection，并在提高 worker/GPU 预算前完成索引化匹配。
+4. 只有 portable exact 契约能在 Web、Tauri、Capacitor、Android replay 后，才推进 Bridge capability negotiation 与取消语义。
+
 # 2026-08-17 Mobile Slim Implementation Reconciliation
 
 ## English
@@ -780,6 +830,50 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 The mobile slice is implemented as a compact exact graph projection, not as a claimed SQLite runtime. The existing Rust Tauri and Capacitor local builders remain platform adapters; the browser-compatible analyzer is the shared query projection. This preserves the multi-platform advantage without duplicating graph policy in each UI.
 
 Completed gates: capability fields, local exact query/path calls, deterministic staging and manifest, forbidden-artifact/estimated-compressed-byte verifier, Capacitor web-dir override, Tauri Android slim frontend override, sidecar removal from default Android build, and explicit Godot opt-in. Open gates: device RSS/APK evidence, SQLite-backed persistence, remote cancellation integration, and the broader identity/registry/graph/Bridge migrations.
+
+# 2026-08-17 Identity Boundary and Mobile Budget Plan
+
+## English
+
+### Decision record
+
+1. `FileLoader` owns workspace identity. Subdirectory scans pass the same workspace root used by full-corpus builds; the optional parameter preserves legacy callers.
+2. Learning documents carry identity metadata as optional fields. Persistence is additive, and delete resolution checks explicit `documentId`, then URI/aliases, then the legacy normalized path.
+3. Android low-memory graph construction is admission-controlled before file bodies are read. The current `mobile-low` contract is 5,000 documents, 16 MiB per document, 64 MiB total input, and 250,000 edges.
+
+### Forward-compatible sequence
+
+- **Now:** stabilize root propagation, identity metadata propagation, and mobile admission control.
+- **Next:** add move/rename journal events and replay fixtures; define the workspace namespace so URI identity is not confused with permanent file identity.
+- **Then:** add HTTP schema validation and registry shadow parity; only after parity is measured may registry-first routing become the default.
+- **Later:** split explicit/inferred projections, replace pairwise matching with bounded indexes, and negotiate Bridge capabilities/cancellation across Web, Tauri, Capacitor, and Android.
+
+### Trade-offs
+
+- Keeping legacy IDs and optional metadata costs a small amount of payload/storage space but avoids invalidating layouts, caches, and old snapshots.
+- Rejecting oversized Android corpora is preferable to partial indexing or silent OOM; the UI must expose the limit and offer a smaller target/export.
+- URI aliases are not a rename journal. Treating them as permanent identity would merge same-content files or resurrect stale documents.
+
+## 中文
+
+### 决策记录
+
+1. `FileLoader` 拥有 workspace identity。子目录扫描必须传入与全库构建相同的 workspace root；可选参数保证旧调用方继续工作。
+2. 学习文档以可选字段携带身份元数据。持久化保持 additive，删除按显式 `documentId`、URI/alias、旧 normalized path 的顺序解析。
+3. Android 低内存建图在读取正文前执行 admission control；当前 `mobile-low` 契约为 5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 条边。
+
+### 向前兼容顺序
+
+- **当前：** 稳定 root 传播、身份元数据传播和移动端 admission control。
+- **下一步：** 增加 move/rename journal 事件与 replay fixture，并定义 workspace namespace，避免把 URI 身份误当成永久文件身份。
+- **随后：** 增加 HTTP schema 校验与 registry shadow parity；只有完成 parity 度量后才能将 registry-first 设为默认。
+- **后续：** 拆分 explicit/inferred projection，用有界索引替代 pairwise matching，并在 Web、Tauri、Capacitor、Android 间协商 Bridge capability/cancellation。
+
+### 权衡
+
+- 保留旧 ID 并增加可选元数据会增加少量 payload/storage 成本，但不会破坏布局、缓存和旧快照。
+- Android 超限时拒绝构建优于部分索引或静默 OOM；UI 必须显示限制并引导用户缩小 target/export。
+- URI alias 不是 rename journal；把它当永久身份会合并同内容文件，或复活过期文档。
 
 ## 中文
 

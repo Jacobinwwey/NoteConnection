@@ -1025,3 +1025,10 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 3. 折叠"微积分" → 验证脊柱节点返回（规则6）
 4. 切换粘性认领 → 验证非脊柱节点还原/保持（规则7）
 5. 检查 Hull 边界不与节点重叠
+
+## 2026-08-17 身份边界与移动端预算计划
+
+1. 通过 `FileLoader` 传递显式 workspace root；保留可选参数，保证旧调用方源码兼容。
+2. 在学习摄入与快照中传播可选 `sourceUri`、`revision`、`identityAliases`；删除先按 URI/alias 解析，再回退旧 path。
+3. 在读取正文前执行 Android admission limit：5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 条边。
+4. 在完成 move/rename replay、旧 snapshot fixture、HTTP schema parity 与跨端 Bridge replay 前，保持 canonical-ID 切换冻结。

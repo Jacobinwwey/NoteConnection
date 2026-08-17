@@ -26,6 +26,9 @@ import type { WorkspaceRegistrySnapshot } from '../workspace/types';
 export interface SerializedDocumentSnapshot {
     documentId: string;
     sourcePath: string;
+    sourceUri?: string;
+    revision?: string;
+    identityAliases?: string[];
     sourceHash: string;
     content?: string;
     version: number;

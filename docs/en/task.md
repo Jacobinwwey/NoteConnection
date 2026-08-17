@@ -256,3 +256,10 @@ Primary references:
 - `verify:agent-workspace:browser` uses an isolated Playwright-managed browser session. Do not run it concurrently with other Playwright-driven browser jobs. It is intended to verify NoteConnection, not to take control of an already-open user Chrome window.
 - `npm run tauri:dev:mini:gpu` and `npm run tauri:android:dev` are manual interactive real-machine commands. Keep them outside automated CI, drive them manually, and close them yourself after collecting evidence.
 - The orchestration report is only trustworthy when the command exits `0` and the generated report under `output/verification/core-real-machine/` shows all automated steps as `PASS`.
+
+## 2026-08-17 Identity Boundary and Mobile Memory Guardrails
+
+- [x] Explicit workspace roots keep `sourceUri` stable across full-workspace and subdirectory scans.
+- [x] Learning ingest and snapshots retain optional `sourceUri`, `revision`, and `identityAliases`; deletes resolve URI/alias before legacy path fallback.
+- [x] Android low-memory graph builds enforce 5,000 documents, 16 MiB per document, 64 MiB total input, and 250,000 edges before reading unbounded content.
+- [ ] Move/rename replay, Android folder picking, signed APK/AAB extraction, device RSS, SQLite persistence, registry parity, indexed projection, and Bridge v2 remain explicit gates.

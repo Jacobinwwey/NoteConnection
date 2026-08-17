@@ -18,13 +18,40 @@ import { HybridEngine } from './algorithms/HybridEngine';
 import { PerformanceLogger } from './utils/PerformanceLogger';
 import { LayoutEngine } from './algorithms/LayoutEngine';
 import { resolveWorkerRuntimePath } from './utils/WorkerRuntime';
-import { assertUniqueLegacyResourceIds } from './ResourceIdentity';
+import { assertUniqueLegacyResourceIds, normalizeResourceReference } from './ResourceIdentity';
 
 /**
  * Service to build the graph from raw files.
  * 从原始文件构建图的服务。
  */
 export class GraphBuilder {
+  private static findLayoutPosition(
+    file: RawFile,
+    layout?: Map<string, {x: number, y: number}>,
+  ): {x: number, y: number} | undefined {
+    if (!layout) return undefined;
+
+    const references = [
+      file.sourceUri,
+      file.relativePath,
+      ...(file.identityAliases ?? []),
+      file.filename,
+    ].filter((reference): reference is string => Boolean(reference));
+
+    for (const reference of references) {
+      const exactPosition = layout.get(reference);
+      if (exactPosition) return exactPosition;
+    }
+
+    const normalizedReferences = new Set(references.map(normalizeResourceReference));
+    for (const [reference, position] of layout.entries()) {
+      if (normalizedReferences.has(normalizeResourceReference(reference))) {
+        return position;
+      }
+    }
+    return undefined;
+  }
+
   /**
    * Builds a graph from raw files using keyword matching.
    * 使用关键词匹配从原始文件构建图。
@@ -49,16 +76,23 @@ export class GraphBuilder {
         inDegree: 0,
         outDegree: 0,
         content: file.content,
+        sourceUri: file.sourceUri,
+        revision: file.revision,
+        identityAliases: file.identityAliases,
         metadata: { 
             filepath: file.filepath, 
+            relativePath: file.relativePath,
+            sourceUri: file.sourceUri,
+            revision: file.revision,
             tags: metadata.tags,
             prerequisites: metadata.prerequisites,
             next: metadata.next
         }
       };
 
-      if (layout && layout.has(file.filename)) {
-          const pos = layout.get(file.filename)!;
+      const savedPosition = this.findLayoutPosition(file, layout);
+      if (savedPosition) {
+          const pos = savedPosition;
           node.x = pos.x;
           node.y = pos.y;
       }

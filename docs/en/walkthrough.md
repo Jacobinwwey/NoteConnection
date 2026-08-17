@@ -135,4 +135,8 @@ Performed comprehensive gap analysis between `tree_path_mockup.html` (702 lines,
 
 Implementation of 13 steps across 4 components (Core Algorithm, Frontend Bridge, Godot Renderer, Worker Communication).
 
+## 2026-08-17 Identity and Mobile Guardrail Walkthrough
+
+The target build passes `kbRoot` into `FileLoader`, so full-workspace and subdirectory scans emit the same `relativePath` and `sourceUri`. Learning ingest keeps identity fields optional and resolves URI/alias deletes before the legacy path normalizer. Android checks metadata sizes before reading bodies and rejects over-budget document, byte, or edge counts; this is an admission guard, not device RSS evidence.
+
 ---

@@ -99,9 +99,15 @@ Mobile bundles must exclude `server-*`, `godot-*`, desktop-only renderer bundles
 
 - Implemented and tested: resource collision guard (`src/backend/ResourceIdentity.ts`), normalized `RawFile.relativePath`, shared strict auth (`src/middleware/auth.ts` + `src/server.ts`), unique atomic snapshot temp files and cache refresh (`src/learning/store.ts`).
 - Existing targeted verification: identity/graph suites 13/13, auth/server/registry suites 30 passed with 13 existing skips, store/persistence suites 23/23.
-- Fresh full verification: 130/130 Jest suites passed, 1,202 tests passed, 26 were skipped (1,228 total); `npm run build`, Rust (25/25), `npm run docs:diataxis:check`, and the mobile-slim budget gate passed.
+- Fresh full verification: 132/132 Jest suites passed, 1,211 tests passed, 26 were skipped (1,237 total); `npm run build`, Rust (26/26), `npm run docs:diataxis:check`, and the mobile-slim budget gate passed.
 - Known repository-wide gate debt: `npm run verify:markdown:mermaid:fence` still reports 588 pre-existing inline-fence findings under `Knowledge_Base`; this slice did not rewrite unrelated corpus files.
 - Previously open mobile local analysis/verifier work is now implemented at the callable/static-contract level; device RSS/APK evidence and SQLite persistence remain open. Stable `sourceUri` migration, strict registry default, complete use-case extraction, indexed graph projection and Bridge protocol v2 remain explicit next gates.
+
+## 2026-08-17 Identity Boundary and Mobile Admission Delta
+
+The additive identity foundation now crosses the learning boundary as well as the graph boundary. `FileLoader` receives an explicit workspace root, server/modular sync forwards `sourceUri`/`revision`/aliases, and snapshots retain those fields for replay. URI/alias deletes resolve persisted documents before the legacy path normalizer. Android admission checks metadata before reads and enforces the `mobile-low` corpus limits (5,000 docs, 16 MiB per doc, 64 MiB total input, 250,000 edges). These changes reduce cross-target drift and peak-memory risk without changing public IDs or adding mobile runtime dependencies.
+
+The remaining architectural blocker is intentional: a path-derived URI is not a rename journal. Move/rename events, workspace namespace, old-snapshot replay, Android folder selection, signed artifact extraction, and device RSS evidence must land before canonical-ID cutover or a strict mobile release claim.
 
 ## 中文
 
@@ -158,9 +164,41 @@ Mobile bundles must exclude `server-*`, `godot-*`, desktop-only renderer bundles
 
 - 已实现并测试：资源冲突 guard、规范化 `RawFile.relativePath`、共享严格 auth、唯一原子快照临时文件与 cache refresh。
 - 当前定向证据：identity/graph 13/13，auth/server/registry 30 passed（既有 13 skip），store/persistence 23/23。
-- 当前全量证据：130/130 Jest suites 通过，1,202 tests 通过，26 skip（1,228 total）；`npm run build`、Rust（25/25）、`npm run docs:diataxis:check` 与 mobile-slim budget gate 通过。
+- 当前全量证据：132/132 Jest suites 通过，1,211 tests 通过，26 skip（1,237 total）；`npm run build`、Rust（26/26）、`npm run docs:diataxis:check` 与 mobile-slim budget gate 通过。
 - 已知全库门禁债务：`npm run verify:markdown:mermaid:fence` 仍报告 `Knowledge_Base` 下 588 条历史 inline-fence；本轮没有借机改写无关语料。
 - 此前未完成的移动端本地分析/verifier 已在可调用与静态契约层面落地；真机 RSS/APK 证据与 SQLite 持久化仍待完成。稳定 `sourceUri` 迁移、strict registry 默认、完整 use-case 抽取、indexed graph projection 与 Bridge v2 仍是明确后续门禁。
+
+## 2026-08-17 身份边界与移动端准入增量
+
+本次 additive identity foundation 已跨过 graph boundary 进入 learning boundary。`FileLoader` 接受显式 workspace root，server/modular sync 传播 `sourceUri`/`revision`/alias，快照保留这些字段用于 replay；URI/alias 删除会先解析持久化文档，再回退旧 path normalizer。Android 在读取正文前做 admission check，并执行 `mobile-low` 语料限制（5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 条边）。这些改动降低跨 target 漂移与峰值内存风险，同时不改变公开 ID，也不增加移动端运行时依赖。
+
+剩余架构阻塞项是有意保留的：路径派生 URI 不是 rename journal。完成 canonical-ID 切换或声称移动端 release 前，必须补齐 move/rename 事件、workspace namespace、旧 snapshot replay、Android 文件夹选择、签名产物解包和真机 RSS 证据。
+
+## 2026-08-17 Stable sourceUri Dual-Read Foundation
+
+### English
+
+This phase adds identity metadata without changing the public `NoteNode.id` contract:
+
+- `createResourceIdentity()` emits `note://workspace/v1/` URIs over NFC-normalized, locale-independent lower-case workspace paths with per-segment percent encoding.
+- `revision` is a deterministic `sha256:<hex>` content revision. `identityAliases` retain the legacy basename and both display/canonical relative-path forms.
+- `FileLoader` creates the metadata once at the filesystem boundary. `Graph` keeps the current ID as the storage key, but resolves source URI, relative path, legacy basename, and case-folded separators through one alias registry; alias collisions fail before mutation.
+- `GraphBuilder` copies the additive fields into nodes and metadata, accepts URI/relative/legacy layout keys, and resolves URI frontmatter through the same graph boundary. Existing layouts, edges, and serialized snapshots remain readable.
+- The legacy basename collision guard now uses the same case-folding policy, so a graph cannot be valid on POSIX and ambiguous on Windows.
+
+Verification for this phase: four focused suites passed (15 tests) and `npx tsc --noEmit` passed. The public ID is deliberately not switched yet; move/rename replay, canonical-ID cutover, strict route registry, indexed graph projection, Bridge v2, and device APK/RSS evidence remain separate gates. The change is additive and has no new mobile-slim runtime dependency; backend identity metadata is not a Node/Godot/LLM requirement for mobile packaging.
+
+### 中文
+
+本阶段只增加身份元数据，不改变公开 `NoteNode.id` 契约：
+
+- `createResourceIdentity()` 基于 NFC、locale-independent 小写的 workspace 相对路径生成 `note://workspace/v1/` URI，并对每个路径段做 percent encoding。
+- `revision` 是确定性的 `sha256:<hex>` 内容修订号；`identityAliases` 保留 legacy basename、显示态相对路径和 canonical 相对路径。
+- `FileLoader` 在文件系统边界一次性生成元数据；`Graph` 仍以当前 ID 作为存储 key，但通过单一 alias registry 解析 source URI、relative path、legacy basename 和大小写/分隔符变体；alias 冲突在写入前 fail-fast。
+- `GraphBuilder` 将新增字段写入节点与 metadata，兼容 URI/relative/legacy 布局 key，并通过同一图边界解析 URI frontmatter；现有布局、边和序列化快照继续可读。
+- legacy basename collision guard 使用相同大小写折叠策略，避免 POSIX 上有效、Windows 上歧义的图。
+
+本阶段验证：四个聚焦 suite 共 15 个测试通过，`npx tsc --noEmit` 通过。当前刻意没有切换公开 ID；文件移动/重命名 replay、canonical ID 切换、strict route registry、indexed graph projection、Bridge v2 以及真机 APK/RSS 证据仍是独立门禁。本次为 additive 改造，不增加 mobile-slim 的 Node/Godot/LLM 运行时依赖。
 
 ## 2026-08-17 Mobile Slim Implementation Closure
 
@@ -175,7 +213,7 @@ The previously open mobile runtime/verifier gap is now closed at the static and 
 - Capacitor and Tauri Android now consume that staging directory. Tauri Android no longer builds a sidecar on the default mobile path; Godot Pathmode is an explicit extended profile and stale generated Godot files/assets are removed by the default runner.
 - Android Rust graph persistence uses the lite projection on `target_os = android`, releases parsed document bodies before projection, and never constructs `full_nodes/full_graph` in the low-memory runtime. Desktop retains the full graph contract.
 
-This is intentionally narrower than the original SQLite/WASM aspiration. The shipped implementation is an exact in-memory graph/index projection over the existing local builders. SQLite persistence, true device RSS/APK evidence, full agent conversation parity, and remote cancellation remain open gates. The static measurement on this Windows host is 118 staged files, 4,220,527 uncompressed bytes, and 1,538,549 estimated compressed bytes; it is not a signed artifact or device-memory result.
+This is intentionally narrower than the original SQLite/WASM aspiration. The shipped implementation is an exact in-memory graph/index projection over the existing local builders. SQLite persistence, true device RSS/APK evidence, full agent conversation parity, and remote cancellation remain open gates. The static measurement on this Windows host is 118 staged files, 4,223,135 uncompressed bytes, and 1,539,168 estimated compressed bytes; it is not a signed artifact or device-memory result.
 
 The reference comparison remains unchanged: LearnGraph contributes typed boundary/workspace validation patterns, and textbooks contributes content-package/compiler discipline. Neither justifies a Docker-only mobile runtime, a SaaS database dependency, Mathigon DSL adoption, or Godot/LLM inclusion in the slim profile.
 
@@ -190,6 +228,6 @@ The reference comparison remains unchanged: LearnGraph contributes typed boundar
 - Capacitor 与 Tauri Android 现在消费同一 staging 目录。默认 Android 移动路径不再构建 sidecar；Godot Pathmode 变成显式扩展档，默认 runner 会删除旧生成的 Godot 文件和资源。
 - Android Rust 在 `target_os = android` 下持久化 lite projection，会在 projection 前释放已解析正文，并且低内存运行时不会构造 `full_nodes/full_graph`；桌面仍保持 full graph 契约。
 
-这比最初的 SQLite/WASM 目标更窄，但更诚实。当前交付的是基于现有本地构建器的 exact 内存 graph/index projection；SQLite 持久化、真实设备 RSS/APK 证据、完整 agent conversation parity 和远程取消仍是开放门禁。本机静态测量为 118 个 staging 文件、未压缩 4,220,527 字节、估算压缩 1,538,549 字节；它不是签名产物或设备内存结果。
+这比最初的 SQLite/WASM 目标更窄，但更诚实。当前交付的是基于现有本地构建器的 exact 内存 graph/index projection；SQLite 持久化、真实设备 RSS/APK 证据、完整 agent conversation parity 和远程取消仍是开放门禁。本机静态测量为 118 个 staging 文件、未压缩 4,223,135 字节、估算压缩 1,539,168 字节；它不是签名产物或设备内存结果。
 
 参考仓库的取舍没有改变：LearnGraph 提供类型化边界/工作区校验模式，textbooks 提供内容包/compiler 纪律；二者都不足以证明应把 Docker-only 移动运行时、SaaS 数据库依赖、Mathigon DSL 或 Godot/LLM 带入 slim profile。

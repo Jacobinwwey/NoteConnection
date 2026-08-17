@@ -168,6 +168,9 @@ type ParsedDocument = {
 type DocumentSnapshot = {
     documentId: string;
     sourcePath: string;
+    sourceUri?: string;
+    revision?: string;
+    identityAliases: string[];
     sourceHash: string;
     content?: string;
     version: number;
@@ -182,6 +185,9 @@ type DocumentSnapshot = {
 type NormalizedKnowledgeDocumentInput = {
     documentId: string;
     sourcePath: string;
+    sourceUri?: string;
+    revision?: string;
+    identityAliases: string[];
     content: string;
     language: string;
     updatedAt: string;
@@ -861,6 +867,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             const snapshot: DocumentSnapshot = {
                 documentId: normalizedInput.documentId,
                 sourcePath: normalizedInput.sourcePath,
+                sourceUri: normalizedInput.sourceUri,
+                revision: normalizedInput.revision,
+                identityAliases: [...normalizedInput.identityAliases],
                 sourceHash,
                 content: normalizedInput.content,
                 version: currentVersion,
@@ -5366,6 +5375,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const documents: SerializedDocumentSnapshot[] = Array.from(this.documents.values()).map((snapshot) => ({
             documentId: snapshot.documentId,
             sourcePath: snapshot.sourcePath,
+            sourceUri: snapshot.sourceUri,
+            revision: snapshot.revision,
+            identityAliases: [...snapshot.identityAliases],
             sourceHash: snapshot.sourceHash,
             content: snapshot.content,
             version: snapshot.version,
@@ -5699,6 +5711,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             this.documents.set(documentSnapshot.documentId, {
                 documentId: documentSnapshot.documentId,
                 sourcePath: documentSnapshot.sourcePath,
+                sourceUri: documentSnapshot.sourceUri,
+                revision: documentSnapshot.revision,
+                identityAliases: Array.isArray(documentSnapshot.identityAliases)
+                    ? [...documentSnapshot.identityAliases]
+                    : [],
                 sourceHash: documentSnapshot.sourceHash,
                 content: typeof documentSnapshot.content === 'string' ? documentSnapshot.content : undefined,
                 version: documentSnapshot.version,
@@ -5973,6 +5990,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             updatedAt: params.updatedAt,
             metadata: {
                 ...params.document.metadata,
+                sourceUri: params.document.sourceUri,
+                revision: params.document.revision,
+                identityAliases: [...params.document.identityAliases],
                 exportProfileId: workspace.exportProfileId,
             },
         });
@@ -6137,6 +6157,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return {
             documentId,
             sourcePath: sourcePath.replace(/\\/g, '/'),
+            sourceUri: isNonEmptyString(input.sourceUri) ? input.sourceUri.trim() : undefined,
+            revision: isNonEmptyString(input.revision) ? input.revision.trim() : undefined,
+            identityAliases: Array.isArray(input.identityAliases)
+                ? Array.from(new Set(input.identityAliases.filter(isNonEmptyString).map((alias) => alias.trim())))
+                : [],
             content: String(input.content || ''),
             language,
             updatedAt: this.resolveTimestamp(input.updatedAt),
@@ -6351,8 +6376,26 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (isNonEmptyString(input.documentId)) {
             return input.documentId.trim();
         }
+        const aliases = [input.sourceUri, ...(input.identityAliases || [])]
+            .filter(isNonEmptyString)
+            .map((alias) => alias.trim());
+        if (aliases.length > 0) {
+            const aliasMatch = Array.from(this.documents.values()).find((snapshot) => {
+                const snapshotAliases = [snapshot.sourceUri, ...snapshot.identityAliases]
+                    .filter(isNonEmptyString);
+                return aliases.some((alias) => snapshotAliases.includes(alias));
+            });
+            if (aliasMatch) {
+                return aliasMatch.documentId;
+            }
+        }
         if (isNonEmptyString(input.sourcePath)) {
-            return normalizeIdentifier(input.sourcePath.replace(/\\/g, '/'));
+            const normalizedSourcePath = input.sourcePath.replace(/\\/g, '/');
+            const pathMatch = Array.from(this.documents.values()).find((snapshot) => (
+                snapshot.sourcePath === normalizedSourcePath
+                || snapshot.identityAliases.includes(normalizedSourcePath)
+            ));
+            return pathMatch?.documentId || normalizeIdentifier(normalizedSourcePath);
         }
         return null;
     }

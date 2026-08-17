@@ -56,6 +56,14 @@ describe('path core bundle contract', () => {
     ['A', 'B', 'C', 'D'].forEach((id) => {
       graph.addNode({ id, label: id, inDegree: 0, outDegree: 0 });
     });
+    graph.addNode({
+      id: 'Alias',
+      label: 'Alias',
+      inDegree: 0,
+      outDegree: 0,
+      identityAliases: ['folder/alias.md'],
+    });
+    expect(graph.hasNode('folder\\alias.md')).toBe(true);
     graph.addEdge('A', 'B');
     graph.addEdge('A', 'C');
     graph.addEdge('B', 'D');

@@ -44,4 +44,46 @@ describe('Graph Core', () => {
     expect(nodeA?.outDegree).toBe(1);
     expect(graph.getOutgoingEdges('A')).toHaveLength(1);
   });
+
+  test('resolves source URI and relative path aliases without changing the public node ID', () => {
+    graph.addNode({
+      id: 'Index',
+      label: 'Index',
+      inDegree: 0,
+      outDegree: 0,
+      sourceUri: 'note://workspace/v1/algebra/index.md',
+      revision: 'sha256:revision',
+      identityAliases: ['algebra/index.md', 'Index'],
+    });
+    graph.addNode({ id: 'Limits', label: 'Limits', inDegree: 0, outDegree: 0 });
+
+    expect(graph.getNode('note://workspace/v1/algebra/index.md')?.id).toBe('Index');
+    expect(graph.getNode('algebra\\index.md')?.id).toBe('Index');
+    expect(graph.hasNode('INDEX')).toBe(true);
+
+    graph.addEdge('algebra/index.md', 'Limits', 'explicit-next');
+    expect(graph.getOutgoingEdges('Index')[0]).toEqual(expect.objectContaining({
+      source: 'Index',
+      target: 'Limits',
+      type: 'explicit-next',
+    }));
+  });
+
+  test('rejects an alias claimed by two different nodes', () => {
+    graph.addNode({
+      id: 'A',
+      label: 'A',
+      inDegree: 0,
+      outDegree: 0,
+      identityAliases: ['shared/path.md'],
+    });
+
+    expect(() => graph.addNode({
+      id: 'B',
+      label: 'B',
+      inDegree: 0,
+      outDegree: 0,
+      identityAliases: ['shared/path.md'],
+    })).toThrow(/alias/i);
+  });
 });

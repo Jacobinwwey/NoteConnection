@@ -52,11 +52,14 @@ export function registerDataRoutes(ctx: ServerContext): RouteEntry[] {
         const targetPath = normalizedTarget && normalizedTarget !== 'ALL_FOLDERS'
             ? path.join(kbRoot, normalizedTarget)
             : kbRoot;
-        const files = await FileLoader.loadFiles(targetPath, ['.md']);
+        const files = await FileLoader.loadFiles(targetPath, ['.md'], kbRoot);
         return files.map((file) => {
             const relativePath = path.relative(kbRoot, file.filepath).replace(/\\/g, '/');
             return {
                 sourcePath: `Knowledge_Base/${relativePath}`.replace(/\/{2,}/g, '/'),
+                sourceUri: file.sourceUri,
+                revision: file.revision,
+                identityAliases: file.identityAliases,
                 content: file.content,
                 language: /[\u4e00-\u9fff]/.test(file.content) ? 'zh' : 'en',
             };

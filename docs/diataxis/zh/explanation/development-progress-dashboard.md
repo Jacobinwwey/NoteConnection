@@ -1783,6 +1783,19 @@ Policy v2 还会在 numeric fact key 中保留符号、常见中英文测量单�
 
 下一方向是用人工评分的多语言样本和置信区间扩展该版本化 corpus。不得根据单个 Water Glass fixture 调阈值，也不能把确定性语料满分当成泛化证明。
 
+## 2026-08-17 稳定 sourceUri 双读基础
+
+### 已交付
+
+- `FileLoader` 现在生成规范化 `relativePath`、版本化逐段 percent-encoded `sourceUri`、确定性的 `sha256` revision 以及 legacy/relative alias。
+- 路径穿越/NUL 输入和大小写折叠后的 basename 冲突在资源边界失败。
+- `Graph` 通过单一冲突检查 registry 解析当前 ID、source URI、relative path 和 legacy alias；`GraphBuilder` 传播元数据，并接受 URI/legacy 布局与 frontmatter 引用。
+- 公开 `NoteNode.id` 与旧 snapshot/layout 契约保持不变；mobile-slim 不增加运行时依赖。
+
+### 证据与边界
+
+四个聚焦 suite 共 15 个测试通过，`npx tsc --noEmit` 通过。文件移动/重命名 replay、canonical-ID 切换、route-registry shadow parity、indexed projection、Bridge v2 及真机 APK/RSS 证据仍未完成。权威细节见[架构加固 solution note](../../../solutions/architecture-hardening-forward-compatibility-2026-08-16.md)。
+
 ## 2026-08-17 架构与移动端进度增量
 
 ### 已交付
@@ -1794,9 +1807,10 @@ Policy v2 还会在 numeric fact key 中保留符号、常见中英文测量单�
 
 ### 证据与缺口
 
-- 本机静态证据：移动/平台定向 34 个测试通过；118 个 staging 文件测得未压缩 4,220,607 字节、估算压缩 1,538,529 字节。
+- 本机静态证据：移动/平台定向 34 个测试通过；118 个 staging 文件测得未压缩 4,223,135 字节、估算压缩 1,539,168 字节。
 - RSS 与签名 APK/AAB 解包结果尚未测量。缺少 RSS evidence 时状态保持 `not-measured`，因此看板不宣称设备验收通过。
-- SQLite 持久化、完整 agent conversation parity、稳定 `sourceUri` 双读、strict route-registry 默认切换、indexed explicit/inferred projection、Bridge v2 与 domain 抽取仍待完成。
+- SQLite 持久化、完整 agent conversation parity、`sourceUri` 完整迁移（additive 双读基础已交付）、strict route-registry 默认切换、indexed explicit/inferred projection、Bridge v2 与 domain 抽取仍待完成。
+- workspace root 传播现已让全库与子目录身份保持一致；学习摄入/快照保留可选 URI/revision/alias，Android 在读取正文前拒绝超预算语料（5,000 文档 / 单文档 16 MiB / 总输入 64 MiB / 250,000 条边）。
 
 ### 后续方向
 

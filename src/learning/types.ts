@@ -176,6 +176,12 @@ export interface DivergencePath {
 export interface KnowledgeDocumentInput {
     documentId?: string;
     sourcePath: string;
+    /** Additive portable identity emitted by the filesystem boundary. */
+    sourceUri?: string;
+    /** Content revision used for cross-client staleness and replay checks. */
+    revision?: string;
+    /** Legacy and portable aliases retained for forward-compatible deletes. */
+    identityAliases?: string[];
     content: string;
     language?: string;
     updatedAt?: string;
@@ -188,6 +194,8 @@ export interface KnowledgeDocumentInput {
 export interface KnowledgeDocumentDeleteInput {
     documentId?: string;
     sourcePath?: string;
+    sourceUri?: string;
+    identityAliases?: string[];
 }
 
 export type RelationRecomputeMode = 'auto' | 'none' | 'incremental' | 'full';

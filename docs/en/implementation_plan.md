@@ -546,3 +546,10 @@ This update aligns the implementation plan with the current Electron-to-Tauri mi
 2. Finalize websocket lifecycle guard rails and startup sequencing.
 3. Complete task-level parity checks for Electron IPC replacements and remove remaining implicit Electron dependencies.
 4. Keep dual-output mobile strategy: maintain Capacitor output while also enabling Tauri Android build path.
+
+## 2026-08-17 Identity Boundary and Mobile Budget Plan
+
+1. Pass an explicit workspace root through `FileLoader`; retain the optional parameter so legacy callers remain source-compatible.
+2. Propagate optional `sourceUri`, `revision`, and `identityAliases` through learning ingest and snapshots; resolve deletes by URI/alias before legacy path fallback.
+3. Enforce Android admission limits before body reads: 5,000 documents, 16 MiB per document, 64 MiB total input, and 250,000 edges.
+4. Keep canonical-ID cutover blocked on move/rename replay, old-snapshot fixtures, HTTP schema parity, and cross-client Bridge replay.

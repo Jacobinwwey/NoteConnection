@@ -8,6 +8,7 @@ import { once } from 'events';
 import { spawn } from 'child_process';
 import { buildGraph } from './index';
 import { CrashLogger } from './backend/utils/CrashLogger';
+import { createResourceIdentity } from './backend/ResourceIdentity';
 import { PathBridge } from './core/PathBridge';
 import { GraphMetrics } from './backend/GraphMetrics';
 import { LayoutEngine } from './backend/algorithms/LayoutEngine';
@@ -10878,12 +10879,20 @@ function normalizeKnowledgeDocumentInputPayload(
         : String(contentRaw ?? '');
     const language = readFirstNonEmptyString(record, ['language', 'lang', 'locale']);
     const updatedAt = readFirstNonEmptyString(record, ['updatedAt', 'updated_at', 'timestamp', 'now']);
+    const sourceUri = readFirstNonEmptyString(record, ['sourceUri', 'source_uri', 'uri']);
+    const revision = readFirstNonEmptyString(record, ['revision', 'sourceRevision', 'source_revision']);
+    const identityAliases = normalizeStringArrayValue(
+        readFirstPresentValue(record, ['identityAliases', 'identity_aliases', 'aliases'])
+    );
     if (!documentId && !sourcePath && !content.trim()) {
         return null;
     }
     return {
         documentId,
         sourcePath: sourcePath || '',
+        sourceUri,
+        revision,
+        identityAliases: identityAliases.length > 0 ? identityAliases : undefined,
         content,
         language,
         updatedAt,
@@ -10903,12 +10912,18 @@ function normalizeKnowledgeDocumentDeletePayload(
         'filepath',
         'file',
     ]);
-    if (!documentId && !sourcePath) {
+    const sourceUri = readFirstNonEmptyString(record, ['sourceUri', 'source_uri', 'uri']);
+    const identityAliases = normalizeStringArrayValue(
+        readFirstPresentValue(record, ['identityAliases', 'identity_aliases', 'aliases'])
+    );
+    if (!documentId && !sourcePath && !sourceUri && identityAliases.length === 0) {
         return null;
     }
     return {
         documentId,
         sourcePath,
+        sourceUri,
+        identityAliases: identityAliases.length > 0 ? identityAliases : undefined,
     };
 }
 
@@ -13221,13 +13236,22 @@ function resolveKnowledgeWorkspaceTargetFromConversationRequest(requestPayload: 
 }
 
 function buildKnowledgeDocumentPayloadFromFile(
-    file: { filepath: string; content: string }
+    file: {
+        filepath: string;
+        content: string;
+        sourceUri?: string;
+        revision?: string;
+        identityAliases?: string[];
+    }
 ): NonNullable<KnowledgeIngestRequest['documents']>[number] {
     const relativePath = path.relative(KB_ROOT, file.filepath).replace(/\\/g, '/');
     const sourcePath = `Knowledge_Base/${relativePath}`.replace(/\/{2,}/g, '/');
     const language = /[\u4e00-\u9fff]/.test(file.content) ? 'zh' : 'en';
     return {
         sourcePath,
+        sourceUri: file.sourceUri,
+        revision: file.revision,
+        identityAliases: file.identityAliases,
         content: file.content,
         language,
     };
@@ -13307,7 +13331,16 @@ async function buildKnowledgeDocumentPayloadsFromPaths(filePaths: string[]): Pro
     const documents: NonNullable<KnowledgeIngestRequest['documents']> = [];
     for (const filePath of filePaths) {
         const content = await fs.promises.readFile(filePath, 'utf8');
-        documents.push(buildKnowledgeDocumentPayloadFromFile({ filepath: filePath, content }));
+        const identity = createResourceIdentity(
+            path.relative(KB_ROOT, filePath).replace(/\\/g, '/'),
+            path.basename(filePath, path.extname(filePath)),
+            content,
+        );
+        documents.push(buildKnowledgeDocumentPayloadFromFile({
+            filepath: filePath,
+            content,
+            ...identity,
+        }));
     }
     return documents;
 }

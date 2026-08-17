@@ -129,3 +129,7 @@
 ### 后续步骤
 
 跨 4 个组件（核心算法、前端桥接、Godot 渲染器、Worker 通信）实施 13 个步骤。
+
+## 2026-08-17 身份与移动端门禁演练
+
+target 构建会把 `kbRoot` 传入 `FileLoader`，因此全库与子目录扫描生成一致的 `relativePath` 与 `sourceUri`。学习摄入保留可选身份字段，并在旧 path normalizer 之前解析 URI/alias 删除。Android 在读取正文前检查元数据大小，拒绝超出文档数、字节数或边数预算的导入；这是 admission guard，不是真机 RSS 证据。

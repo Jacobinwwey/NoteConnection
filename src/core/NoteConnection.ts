@@ -91,7 +91,7 @@ export class NoteConnection {
 
         // 3. Load Files
         log(`Loading files from: ${conceptDir}`);
-        const files = await FileLoader.loadFiles(conceptDir);
+        const files = await FileLoader.loadFiles(conceptDir, ['.md'], kbRoot);
         log(`Loaded ${files.length} files.`);
 
         // 4. Load Layout (Optional)

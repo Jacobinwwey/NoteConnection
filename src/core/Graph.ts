@@ -1,4 +1,5 @@
 import { NoteNode, NoteEdge, GraphData } from './types';
+import { normalizeResourceReference } from './ResourceReference';
 
 /**
  * Directed Graph implementation for managing notes and dependencies.
@@ -7,12 +8,14 @@ import { NoteNode, NoteEdge, GraphData } from './types';
 export class Graph {
   private nodes: Map<string, NoteNode>;
   private adjacencyList: Map<string, NoteEdge[]>;
+  private aliases: Map<string, string>;
   private reverseAdjacencyList: Map<string, NoteEdge[]>; // For efficient incoming edge lookups | 用于高效的入边查找
 
   constructor() {
     this.nodes = new Map();
     this.adjacencyList = new Map();
     this.reverseAdjacencyList = new Map();
+    this.aliases = new Map();
   }
 
   /**
@@ -21,11 +24,35 @@ export class Graph {
    * @param node The node to add | 要添加的节点
    */
   addNode(node: NoteNode): void {
-    if (!this.nodes.has(node.id)) {
-      this.nodes.set(node.id, { ...node, inDegree: 0, outDegree: 0 });
-      this.adjacencyList.set(node.id, []);
-      this.reverseAdjacencyList.set(node.id, []);
+    if (this.nodes.has(node.id)) {
+      return;
     }
+
+    const aliases = [node.id, node.sourceUri, ...(node.identityAliases ?? [])]
+      .filter((alias): alias is string => typeof alias === 'string' && alias.length > 0);
+    const normalizedAliases = new Set(aliases.map(alias => normalizeResourceReference(alias)));
+    normalizedAliases.forEach(alias => {
+      const existingNodeId = this.aliases.get(alias);
+      if (existingNodeId && existingNodeId !== node.id) {
+        throw new Error(
+          `Resource identity alias collision: "${alias}" is claimed by both "${existingNodeId}" and "${node.id}"`,
+        );
+      }
+    });
+
+    this.nodes.set(node.id, { ...node, inDegree: 0, outDegree: 0 });
+    this.adjacencyList.set(node.id, []);
+    this.reverseAdjacencyList.set(node.id, []);
+    normalizedAliases.forEach(alias => {
+      this.aliases.set(alias, node.id);
+    });
+  }
+
+  private resolveNodeId(reference: string): string | undefined {
+    if (this.nodes.has(reference)) {
+      return reference;
+    }
+    return this.aliases.get(normalizeResourceReference(reference));
   }
 
   /**
@@ -34,8 +61,9 @@ export class Graph {
    * @param id The node ID | 节点 ID
    * @returns The node or undefined if not found | 节点，如果未找到则返回 undefined
    */
-  getNode(id: string): NoteNode | undefined {
-    return this.nodes.get(id);
+  getNode(reference: string): NoteNode | undefined {
+    const nodeId = this.resolveNodeId(reference);
+    return nodeId ? this.nodes.get(nodeId) : undefined;
   }
 
   /**
@@ -43,8 +71,8 @@ export class Graph {
    * 检查图中是否存在该节点。
    * @param id The node ID | 节点 ID
    */
-  hasNode(id: string): boolean {
-    return this.nodes.has(id);
+  hasNode(reference: string): boolean {
+    return this.resolveNodeId(reference) !== undefined;
   }
 
   /**
@@ -56,35 +84,38 @@ export class Graph {
    * @param weight Edge weight (confidence) | 边权重 (置信度)
    */
   addEdge(source: string, target: string, type: string = 'dependency', weight: number = 1): void {
-    if (!this.nodes.has(source)) {
-      this.addNode({ id: source, label: source, inDegree: 0, outDegree: 0 });
+    const sourceId = this.resolveNodeId(source) ?? source;
+    const targetId = this.resolveNodeId(target) ?? target;
+
+    if (!this.nodes.has(sourceId)) {
+      this.addNode({ id: sourceId, label: sourceId, inDegree: 0, outDegree: 0 });
     }
-    if (!this.nodes.has(target)) {
-      this.addNode({ id: target, label: target, inDegree: 0, outDegree: 0 });
+    if (!this.nodes.has(targetId)) {
+      this.addNode({ id: targetId, label: targetId, inDegree: 0, outDegree: 0 });
     }
 
-    const edge: NoteEdge = { source, target, type, weight };
+    const edge: NoteEdge = { source: sourceId, target: targetId, type, weight };
     
     // Add to adjacency list (outgoing)
-    const outgoing = this.adjacencyList.get(source) || [];
+    const outgoing = this.adjacencyList.get(sourceId) || [];
     // Prevent duplicate edges
-    if (!outgoing.some(e => e.target === target && e.type === type)) {
+    if (!outgoing.some(e => e.target === targetId && e.type === type)) {
       outgoing.push(edge);
-      this.adjacencyList.set(source, outgoing);
+      this.adjacencyList.set(sourceId, outgoing);
       
       // Update out-degree
-      const sourceNode = this.nodes.get(source)!;
+      const sourceNode = this.nodes.get(sourceId)!;
       sourceNode.outDegree++;
     }
 
     // Add to reverse adjacency list (incoming)
-    const incoming = this.reverseAdjacencyList.get(target) || [];
-    if (!incoming.some(e => e.source === source && e.type === type)) {
+    const incoming = this.reverseAdjacencyList.get(targetId) || [];
+    if (!incoming.some(e => e.source === sourceId && e.type === type)) {
       incoming.push(edge);
-      this.reverseAdjacencyList.set(target, incoming);
+      this.reverseAdjacencyList.set(targetId, incoming);
 
       // Update in-degree
-      const targetNode = this.nodes.get(target)!;
+      const targetNode = this.nodes.get(targetId)!;
       targetNode.inDegree++;
     }
   }
@@ -94,8 +125,9 @@ export class Graph {
    * 获取节点的所有出边。
    * @param id Node ID | 节点 ID
    */
-  getOutgoingEdges(id: string): NoteEdge[] {
-    return this.adjacencyList.get(id) || [];
+  getOutgoingEdges(reference: string): NoteEdge[] {
+    const nodeId = this.resolveNodeId(reference);
+    return nodeId ? (this.adjacencyList.get(nodeId) || []) : [];
   }
 
   /**
@@ -103,8 +135,8 @@ export class Graph {
    * 获取节点的所有出度邻居 ID。
    * @param id Node ID | 节点 ID
    */
-  getNeighbors(id: string): string[] {
-      return (this.adjacencyList.get(id) || []).map(edge => edge.target);
+  getNeighbors(reference: string): string[] {
+      return this.getOutgoingEdges(reference).map(edge => edge.target);
   }
 
   /**
@@ -128,8 +160,9 @@ export class Graph {
    * 获取节点的所有入边。
    * @param id Node ID | 节点 ID
    */
-  getIncomingEdges(id: string): NoteEdge[] {
-    return this.reverseAdjacencyList.get(id) || [];
+  getIncomingEdges(reference: string): NoteEdge[] {
+    const nodeId = this.resolveNodeId(reference);
+    return nodeId ? (this.reverseAdjacencyList.get(nodeId) || []) : [];
   }
 
   /**
@@ -148,11 +181,13 @@ export class Graph {
    * 获取所有前驱节点（入边的传递闭包）。
    * @param id Target node ID
    */
-  getPredecessors(id: string): Set<string> {
+  getPredecessors(reference: string): Set<string> {
     const predecessors = new Set<string>();
-    const queue = [id];
+    const nodeId = this.resolveNodeId(reference);
+    if (!nodeId) return predecessors;
+    const queue = [nodeId];
     const visited = new Set<string>();
-    visited.add(id);
+    visited.add(nodeId);
 
     while (queue.length > 0) {
       const current = queue.shift()!;
@@ -174,11 +209,13 @@ export class Graph {
    * 获取所有后继节点（出边的传递闭包）。
    * @param id Source node ID
    */
-  getSuccessors(id: string): Set<string> {
+  getSuccessors(reference: string): Set<string> {
     const successors = new Set<string>();
-    const queue = [id];
+    const nodeId = this.resolveNodeId(reference);
+    if (!nodeId) return successors;
+    const queue = [nodeId];
     const visited = new Set<string>();
-    visited.add(id);
+    visited.add(nodeId);
 
     while (queue.length > 0) {
       const current = queue.shift()!;
@@ -203,16 +240,19 @@ export class Graph {
    * @returns Array of node IDs representing the path, or empty if no path found
    */
   getShortestPath(source: string, target: string): string[] {
-    if (source === target) return [source];
+    const sourceId = this.resolveNodeId(source);
+    const targetId = this.resolveNodeId(target);
+    if (!sourceId || !targetId) return [];
+    if (sourceId === targetId) return [sourceId];
     
-    const queue = [source];
+    const queue = [sourceId];
     const visited = new Set<string>();
     const parent = new Map<string, string>();
-    visited.add(source);
+    visited.add(sourceId);
 
     while (queue.length > 0) {
       const current = queue.shift()!;
-      if (current === target) break;
+      if (current === targetId) break;
 
       const neighbors = this.getNeighbors(current);
       for (const neighbor of neighbors) {
@@ -224,12 +264,12 @@ export class Graph {
       }
     }
 
-    if (!visited.has(target)) return [];
+    if (!visited.has(targetId)) return [];
 
     // Reconstruct path
-    const path = [target];
-    let curr = target;
-    while (curr !== source) {
+    const path = [targetId];
+    let curr = targetId;
+    while (curr !== sourceId) {
       curr = parent.get(curr)!;
       path.unshift(curr);
     }

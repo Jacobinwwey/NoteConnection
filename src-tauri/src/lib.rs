@@ -820,6 +820,47 @@ struct RuntimeBuildResult {
     graph_json_path: String,
 }
 
+const MOBILE_MAX_DOCUMENTS: usize = 5_000;
+const MOBILE_MAX_DOCUMENT_BYTES: u64 = 16 * 1024 * 1024;
+const MOBILE_MAX_TOTAL_INPUT_BYTES: u64 = 64 * 1024 * 1024;
+const MOBILE_MAX_EDGES: usize = 250_000;
+
+fn validate_mobile_corpus_budget(document_count: usize, total_bytes: u64) -> Result<(), String> {
+    if document_count > MOBILE_MAX_DOCUMENTS {
+        return Err(format!(
+            "Mobile knowledge base exceeds the document limit ({} > {})",
+            document_count, MOBILE_MAX_DOCUMENTS
+        ));
+    }
+    if total_bytes > MOBILE_MAX_TOTAL_INPUT_BYTES {
+        return Err(format!(
+            "Mobile knowledge base exceeds the input budget ({} bytes > {} bytes)",
+            total_bytes, MOBILE_MAX_TOTAL_INPUT_BYTES
+        ));
+    }
+    Ok(())
+}
+
+fn validate_mobile_document_size(file_bytes: u64) -> Result<(), String> {
+    if file_bytes > MOBILE_MAX_DOCUMENT_BYTES {
+        return Err(format!(
+            "Mobile document exceeds the per-file limit ({} bytes > {} bytes)",
+            file_bytes, MOBILE_MAX_DOCUMENT_BYTES
+        ));
+    }
+    Ok(())
+}
+
+fn validate_mobile_edge_budget(edge_count: usize) -> Result<(), String> {
+    if edge_count > MOBILE_MAX_EDGES {
+        return Err(format!(
+            "Mobile knowledge base exceeds the edge limit ({} > {})",
+            edge_count, MOBILE_MAX_EDGES
+        ));
+    }
+    Ok(())
+}
+
 fn normalize_path_key(raw: &str) -> String {
     raw.replace('\\', "/")
         .trim()
@@ -1009,6 +1050,22 @@ fn build_graph_runtime_for_target(
     }
 
     let markdown_files = collect_markdown_files(&source_root)?;
+    #[cfg(target_os = "android")]
+    {
+        let mut total_input_bytes = 0u64;
+        for file_path in &markdown_files {
+            let file_bytes = fs::metadata(file_path)
+                .map_err(|err| format!("Failed to inspect '{}': {}", file_path.to_string_lossy(), err))?
+                .len();
+            validate_mobile_document_size(file_bytes).map_err(|error| {
+                format!("{}: {}", error, file_path.to_string_lossy())
+            })?;
+            total_input_bytes = total_input_bytes
+                .checked_add(file_bytes)
+                .ok_or_else(|| "Mobile knowledge base input size overflowed".to_string())?;
+        }
+        validate_mobile_corpus_budget(markdown_files.len(), total_input_bytes)?;
+    }
     let mut node_drafts: Vec<RuntimeNodeDraft> = Vec::with_capacity(markdown_files.len());
     let mut id_by_relative_key: HashMap<String, String> = HashMap::new();
     let mut stem_to_ids: HashMap<String, Vec<String>> = HashMap::new();
@@ -1087,6 +1144,8 @@ fn build_graph_runtime_for_target(
 
             if target_id != node.id {
                 unique_edges.insert((node.id.clone(), target_id));
+                #[cfg(target_os = "android")]
+                validate_mobile_edge_budget(unique_edges.len())?;
             }
         }
     }
@@ -2438,6 +2497,21 @@ mod tests {
     use super::*;
     use std::sync::MutexGuard;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn mobile_corpus_budget_rejects_oversized_document_sets() {
+        assert!(validate_mobile_corpus_budget(
+            MOBILE_MAX_DOCUMENTS,
+            MOBILE_MAX_TOTAL_INPUT_BYTES
+        )
+        .is_ok());
+        assert!(validate_mobile_corpus_budget(MOBILE_MAX_DOCUMENTS + 1, 0).is_err());
+        assert!(validate_mobile_corpus_budget(0, MOBILE_MAX_TOTAL_INPUT_BYTES + 1).is_err());
+        assert!(validate_mobile_document_size(MOBILE_MAX_DOCUMENT_BYTES).is_ok());
+        assert!(validate_mobile_document_size(MOBILE_MAX_DOCUMENT_BYTES + 1).is_err());
+        assert!(validate_mobile_edge_budget(MOBILE_MAX_EDGES).is_ok());
+        assert!(validate_mobile_edge_budget(MOBILE_MAX_EDGES + 1).is_err());
+    }
 
     fn test_env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
