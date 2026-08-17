@@ -37,6 +37,7 @@ type MobileBudgetVerifier = {
 describe('mobile-slim profile contract', () => {
   const repoRoot = path.resolve(__dirname, '..');
   const analyzerPath = path.join(repoRoot, 'src', 'frontend', 'mobile_exact_analyzer.js');
+  const projectionContractPath = path.join(repoRoot, 'src', 'frontend', 'knowledge_projection_contract.js');
   const verifierPath = path.join(repoRoot, 'scripts', 'verify-mobile-slim-budget.js');
   const preparePath = path.join(repoRoot, 'scripts', 'prepare-mobile-slim.js');
 
@@ -157,6 +158,23 @@ describe('mobile-slim profile contract', () => {
     expect(storageProvider).toContain("this.readGeneratedAsset('graph_data.json')");
     expect(analyzerScriptOffset).toBeGreaterThan(-1);
     expect(analyzerScriptOffset).toBeLessThan(storageScriptOffset);
+  });
+
+  test('loads one versioned projection contract before both mobile consumers', () => {
+    const projectionContract = fs.readFileSync(projectionContractPath, 'utf8');
+    const storageProvider = fs.readFileSync(
+      path.join(repoRoot, 'src', 'frontend', 'storage_provider.js'),
+      'utf8'
+    );
+    const indexHtml = fs.readFileSync(path.join(repoRoot, 'src', 'frontend', 'index.html'), 'utf8');
+    const projectionScriptOffset = indexHtml.indexOf('<script src="knowledge_projection_contract.js"></script>');
+    expect(projectionContract).toContain('schemaVersion: SCHEMA_VERSION');
+    expect(projectionContract).toContain('MAX_NEIGHBORS');
+    expect(storageProvider).toContain('window.NoteConnectionKnowledgeProjection');
+    expect(storageProvider).toContain('createKnowledgeProjection');
+    expect(projectionScriptOffset).toBeGreaterThan(-1);
+    expect(projectionScriptOffset).toBeLessThan(indexHtml.indexOf('<script src="mobile_exact_analyzer.js"></script>'));
+    expect(projectionScriptOffset).toBeLessThan(indexHtml.indexOf('<script src="storage_provider.js"></script>'));
   });
 
   test('fails closed for oversized, forbidden, and over-RSS mobile staging evidence', () => {

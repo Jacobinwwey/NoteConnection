@@ -482,6 +482,21 @@
 - [x] 学习摄入与快照保留可选 `sourceUri`、`revision`、`identityAliases`；删除先按 URI/alias 解析，再回退旧 path。
 - [x] Android 低内存建图在读取无界正文前限制 5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 条边；读取时先提取 link candidate，中间 projection 不保留正文。
 - [x] 文件移动/重命名 replay 保留旧 document ID 与历史 alias；只提供新路径时不清空已有 URI/revision。
-- [ ] Android 文件夹选择、签名 APK/AAB 解包、真机 RSS、SQLite、registry parity、indexed projection 与完整 Bridge host adapter 仍是明确门禁。
+- [ ] Android 文件夹选择、签名 APK/AAB 解包、真机 RSS、SQLite、registry parity、跨 host replay 与 canonical-ID 迁移仍是明确门禁；版本化 projection 与可选 Bridge host 执行已交付。
+
+# 2026-08-17 第 10 阶段：版本化 Projection 与 Host 执行
+
+## 本次交付
+
+- [x] 新增浏览器兼容的版本化 projection 契约：无正文节点、source URI/revision/alias、边 provenance、有界 evidence reference 与有界 adjacency。
+- [x] Capacitor 与 Tauri Rust graph 输出现在使用 schema `1` 和同一身份字段；Android 仍不保留正文。
+- [x] 新增可选 `PathBridgeHostAdapter`，支持 correlated operation result、timeout、断连清理、`AbortSignal` 和显式 cancel；旧广播行为仍为 fallback。
+- [x] 最新 slim staging 为 119 个文件、未压缩 4,242,970 字节、估算压缩 1,543,913 字节。
+
+## 证据门禁
+
+- [ ] 新鲜签名 arm64 APK/AAB 解包与低于 256 MiB 的真机 RSS。
+- [ ] Tauri Android 面向外部知识库的 Storage Access Framework 文件夹导入。
+- [ ] canonical-ID 迁移前完成跨 host projection replay 以及旧 snapshot/move/rename/collision 语料。
 - [x] 第 8 阶段已落地 replay、有界 ingest 校验、indexed keyword matching、移动身份 projection，以及 additive Bridge 2.0 capability/cancellation envelope，并有聚焦回归覆盖。
 - [ ] registry response/status shadow parity、签名 Android APK/RSS 证据、SQLite 持久化与 canonical 公共 ID 切换仍受证据门禁约束。

@@ -847,7 +847,7 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 1. Add old-snapshot, collision, rollback, and cross-root replay corpora before any canonical ID cutover.
 2. Validate HTTP payload schemas at route edges, then run route-registry shadow parity.
 3. Split explicit/inferred graph projections and bound indexed matching before raising worker/GPU budgets.
-4. Replay the additive Bridge 2.0 capability/cancellation envelope across Web, Tauri, Capacitor, and Android before wiring host adapters.
+4. Replay the additive Bridge 2.0 capability/cancellation envelope across Web, Tauri, Capacitor, and Android; the optional host adapter is now wired on the Node boundary, while concrete mobile host adapters remain evidence-gated.
 
 ## 中文
 
@@ -871,7 +871,7 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 1. 在切换 canonical ID 前增加旧 snapshot、collision、rollback 与跨 root replay 语料测试。
 2. 在 HTTP 边界完成 schema 校验，再执行 route-registry shadow parity。
 3. 拆分 explicit/inferred graph projection，并在提高 worker/GPU 预算前完成索引化匹配。
-4. 先在 Web、Tauri、Capacitor、Android replay additive Bridge 2.0 capability/cancellation envelope，再接入各 host adapter。
+4. 先在 Web、Tauri、Capacitor、Android replay additive Bridge 2.0 capability/cancellation envelope；Node 边界的可选 host adapter 已接入，具体移动 host adapter 仍受证据门禁约束。
 
 # 2026-08-17 Mobile Slim Implementation Reconciliation
 
@@ -955,6 +955,40 @@ Completed gates: capability fields, local exact query/path calls, deterministic 
 - 这里的 exact parity 比 additive response evolution 更严格，因为旧客户端可能按固定 shape 反序列化；新 telemetry 应进入 diagnostics 或版本化 route。
 - 静态 payload 预算能拦截桌面运行时泄漏，但不能预测 WebView/native RSS；发布门禁必须同时要求静态和真机证据。
 - 共享 projection schema 避免各 host 算法漂移，host adapter 仍可承载平台 I/O 与 cancellation，而不复制 graph 语义。
+
+# 2026-08-17 Phase 10 Implementation Update
+
+## English
+
+### Architecture delta
+
+1. **Projection contract:** `knowledge_projection_contract.js` is the browser-compatible canonical wire shape for mobile projections. Writers emit schema/projection version `1`; readers accept only known versions, ignore additive extensions, omit document bodies, and enforce 50,000 nodes, 250,000 edges, 64 neighbors per direction, and bounded evidence references.
+2. **Host parity:** Capacitor normalizes its generated graph through the contract. Tauri Rust emits the same identity and projection fields, including deterministic URI encoding, revision, aliases, edge provenance, and bounded adjacency. This is a shared serialization contract, not a second graph domain model.
+3. **Bridge ownership:** `PathBridgeHostAdapter` is an optional execution port. The host controls authorization, graph policy, memory policy, and persistence; the bridge controls correlation, timeout, abort propagation, disconnect cleanup, and legacy-compatible transport fallback.
+4. **Mobile constraints:** the Rust Android path remains body-free after link extraction, and the JS path keeps worker/single-thread fallback plus serialization budgets. No Godot, sidecar, local model, SVG, or GPU runtime is introduced into `mobile-slim`.
+
+### Next gates and rationale
+
+- **G2:** produce a fresh signed arm64 APK/AAB, inspect its central directory, run a representative local-KB workload on a physical device, and record peak RSS. Static staging is necessary but cannot establish native/WebView memory safety.
+- **G3:** replay the same projection fixture through Web, Tauri, Capacitor, and Android storage boundaries; keep SQLite/WASM adapter-specific and preserve the memory fallback until all hosts agree on schema and query results.
+- **G4:** add old snapshots, same-content multi-document collisions, move/rename, rollback, and cross-root identity corpora. Do not promote URI-derived IDs to public canonical IDs.
+- **Android import:** implement a Storage Access Framework adapter that copies/streams selected trees into the app-local workspace; do not persist arbitrary external absolute paths as identity.
+
+## 中文
+
+### 架构增量
+
+1. **Projection 契约：** `knowledge_projection_contract.js` 是浏览器兼容的移动 projection canonical wire shape。写端输出 schema/projection 版本 `1`；读端只接受已知版本、忽略 additive extension、不保存正文，并执行 50,000 节点、250,000 边、每方向 64 邻接和有界 evidence reference 限制。
+2. **Host parity：** Capacitor 生成图先经过契约归一化；Tauri Rust 输出相同的身份与 projection 字段，包括确定性 URI 编码、revision、alias、边 provenance 与有界 adjacency。这是共享序列化契约，不是第二套 graph domain model。
+3. **Bridge 所有权：** `PathBridgeHostAdapter` 是可选执行端口。授权、graph policy、memory policy、persistence 由 host 持有；correlation、timeout、abort 传播、断连清理和 legacy transport fallback 由 Bridge 持有。
+4. **移动约束：** Rust Android 路径在提取 link 后仍不保留正文，JS 路径继续使用 worker/single-thread fallback 与序列化预算；`mobile-slim` 不引入 Godot、sidecar、本地模型、SVG 或 GPU runtime。
+
+### 后续门禁与理由
+
+- **G2：** 生成新鲜签名 arm64 APK/AAB，解包中央目录，在真机上运行代表性本地知识库 workload 并记录峰值 RSS。静态 staging 必须通过，但不能证明 native/WebView 内存安全。
+- **G3：** 让同一 projection fixture 经过 Web、Tauri、Capacitor、Android storage boundary replay；SQLite/WASM 继续是 adapter 实现，所有 host schema/query 结果一致前保留 memory fallback。
+- **G4：** 增加旧 snapshot、同内容多文档 collision、move/rename、rollback 与跨 root identity 语料；不得把 URI 派生值直接升级为公共 canonical ID。
+- **Android 导入：** 实现 Storage Access Framework adapter，将用户选择的 tree 复制/流式导入 app-local workspace；不得把外部绝对路径作为永久 identity。
 
 ## 中文
 

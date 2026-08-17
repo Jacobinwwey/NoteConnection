@@ -1807,9 +1807,9 @@ Policy v2 还会在 numeric fact key 中保留符号、常见中英文测量单�
 
 ### 证据与缺口
 
-- 当前本机证据：core/route 12 suite（70 tests）、learning 24 suite（501 tests）、mobile contract 9 suite（51 tests）、replay/identity 6 suite（35 tests）、Rust（26 tests）、PathBridge strict、Diataxis 与 TypeScript build 通过；118 个 staging 文件测得未压缩 4,231,472 字节、估算压缩 1,540,865 字节。
+- 当前本机证据：migration matrix 57 suite（307 tests）、projection/Bridge 定向测试、Rust graph-runtime、PathBridge strict、Diataxis 与 TypeScript build 通过；最新 119 个 staging 文件测得未压缩 4,242,970 字节、估算压缩 1,543,913 字节。
 - RSS 与签名 APK/AAB 解包结果尚未测量。缺少 RSS evidence 时状态保持 `not-measured`，因此看板不宣称设备验收通过。
-- SQLite 持久化、完整 agent conversation parity、`sourceUri` 完整迁移（additive 双读基础与显式 move journal 已交付）、strict route-registry 默认切换、indexed explicit/inferred projection、Bridge host adapter 与 domain 抽取仍待完成。
+- SQLite 持久化、完整 agent conversation parity、`sourceUri` 完整迁移、strict route-registry 默认切换、Android 文件夹导入、跨 host replay 与 domain 抽取仍待完成；版本化 projection 与可选 Bridge host 执行已交付。
 - workspace root 传播现已让全库与子目录身份保持一致；学习摄入/快照保留可选 URI/revision/alias，Android 在读取正文前拒绝超预算语料（5,000 文档 / 单文档 16 MiB / 总输入 64 MiB / 250,000 条边）。
 
 ### 后续方向
@@ -1827,8 +1827,14 @@ Policy v2 还会在 numeric fact key 中保留符号、常见中英文测量单�
 
 ### 证据边界
 
-TypeScript build 与 replay/identity 6 suite / 35 个测试通过，同时 core/route 12 suite / 70 个测试、learning 24 suite / 501 个测试、mobile 9 suite / 51 个测试、Rust / 26 个测试、PathBridge strict、Diataxis 与 slim staging 通过。staging 为 118 个文件、未压缩 4,231,472 字节、估算压缩 1,540,865 字节；registry response/status shadow parity、签名 arm64 APK 解包、真机 RSS、SQLite 重启 replay 与 canonical 公共 ID 切换仍未闭环，`not-measured` 不视为通过。
+Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定向测试、Rust graph-runtime、PathBridge strict、Diataxis 与 slim staging 通过。staging 为 119 个文件、未压缩 4,242,970 字节、估算压缩 1,543,913 字节；registry response/status shadow parity、签名 arm64 APK 解包、真机 RSS、Android 文件夹导入、跨 host replay 与 canonical 公共 ID 切换仍未闭环，`not-measured` 不视为通过。
 
 ### 后续方向
 
 按 G1 registry shadow parity、G2 移动产物/RSS 证据、G3 export 契约后的版本化 SQLite/WASM projection、G4 canonical-ID 迁移推进；G4 前必须完成旧 snapshot/collision/跨 root replay 语料与 rollback 证据。
+## 2026-08-17 第 10 阶段 Projection 与 Host 执行
+
+- `knowledge_projection_contract.js` 定义 schema `1` 的无正文移动 projection：身份元数据、边 provenance、有界 evidence reference 与有界 adjacency。
+- Capacitor 与 Tauri Rust 输出同一组 projection 字段；exact analyzer 对未知 schema 版本 fail closed。
+- `PathBridgeHostAdapter` 为可选能力，保留旧广播 fallback，并增加 host 执行、correlation、timeout、abort、断连清理与 cancel 传播。
+- 最新 mobile-slim 证据为 119 个文件 / 未压缩 4,242,970 / 估算压缩 1,543,913 字节。签名 arm64 APK/AAB、真机 RSS、Android 文件夹导入与跨 host replay 仍是开放门禁。

@@ -384,9 +384,9 @@
 
 ### Evidence boundary
 
-- [x] Focused mobile/platform matrix: 51 tests passed; current staged build measured 118 files, 4,231,472 uncompressed bytes, and 1,540,865 estimated compressed bytes.
+- [x] Focused mobile/platform matrix: 51 tests passed; current staged build measured 119 files, 4,242,970 uncompressed bytes, and 1,543,913 estimated compressed bytes.
 - [ ] Real-device RSS evidence and signed APK/AAB extraction evidence remain open. `not-measured` is a deliberate state, not a pass.
-- [ ] SQLite persistence, full agent conversation parity, complete `sourceUri` migration beyond additive dual-read, strict route-registry default, indexed explicit/inferred projections, Bridge host adapters, and domain extraction remain pending; the transport-only Bridge 2.0 contract is delivered.
+- [ ] SQLite persistence, full agent conversation parity, complete `sourceUri` migration beyond additive dual-read, strict route-registry default, and domain extraction remain pending; versioned mobile projection and optional Bridge host adapter execution are delivered, while real cross-host replay remains open.
 
 ## 中文
 
@@ -399,7 +399,7 @@
 
 ### 证据边界
 
-- [x] 移动/平台定向矩阵通过 51 个测试；本机 staging 测得 118 个文件、未压缩 4,231,472 字节、估算压缩 1,540,865 字节。
+- [x] 移动/平台定向矩阵通过 51 个测试；本机 staging 测得 119 个文件、未压缩 4,242,970 字节、估算压缩 1,543,913 字节。
 - [ ] 真机 RSS 证据和签名 APK/AAB 解包证据仍未完成。`not-measured` 是诚实的未测状态，不是通过状态。
 - [ ] SQLite 持久化、完整 agent conversation parity、strict route-registry 默认切换、indexed explicit/inferred projection 与 domain 抽取仍待后续阶段；Bridge 2.0 transport contract 已交付。
 
@@ -418,7 +418,7 @@
 
 - [x] URI-derived identity remains workspace-scoped, while explicit move/rename journal replay now preserves the legacy ID and historical aliases. Old-snapshot, collision, rollback, and cross-root corpus fixtures are still required before canonical-ID cutover.
 - [ ] Android folder picking, signed APK/AAB extraction, and device RSS remain unverified; `not-measured` must remain visible until evidence exists.
-- [ ] SQLite persistence, route-registry shadow parity, indexed explicit/inferred projection, and complete Bridge host adapters remain separate milestones; the transport-only Bridge 2.0 envelope is delivered.
+- [ ] SQLite persistence, route-registry shadow parity, complete `sourceUri` migration and domain extraction remain separate milestones；版本化 mobile projection 与可选 Bridge host adapter 执行已交付，但真实跨 host replay 仍待完成。
 
 # 2026-08-17 Phase 9 Route Shadow and Mobile Artifact Evidence Update
 
@@ -491,4 +491,38 @@
 
 - [x] URI 派生身份仍是 workspace-scoped；显式 move/rename journal replay 已保留旧 document ID 与历史 alias。切换 canonical ID 前仍必须完成旧 snapshot、collision、rollback 与跨 root 语料测试。
 - [ ] Android 文件夹选择、签名 APK/AAB 解包和真机 RSS 仍未验证；在获得证据前必须保留 `not-measured` 状态。
-- [ ] SQLite 持久化、route-registry shadow parity、indexed explicit/inferred projection 与完整 Bridge host adapter 仍是独立里程碑；transport-only Bridge 2.0 已交付。
+- [ ] SQLite 持久化、route-registry shadow parity、完整 `sourceUri` 迁移与 domain 抽取仍是独立里程碑；版本化 mobile projection 与可选 Bridge host adapter 执行已交付，真实跨 host replay 仍待完成。
+
+# 2026-08-17 Phase 10 Versioned Projection and Host Execution
+
+## English
+
+### Delivered
+
+- [x] Added `src/frontend/knowledge_projection_contract.js`: schema `1`, body-free nodes, `sourceUri`, `revision`, aliases, edge kind/provenance, bounded evidence references, and bounded adjacency (64 neighbors per direction).
+- [x] Capacitor graph writes normalize through the contract before `graph_data.json`/`data.js`; the exact analyzer rejects unknown projection versions and preserves local exact query/path limits.
+- [x] Tauri Rust graph output now emits the same versioned projection metadata and identity fields without retaining Android document bodies; Rust runtime tests cover replayable identity fields and adjacency.
+- [x] Added `PathBridgeHostAdapter`: host-owned execution for `analyze`, `query`, `readEvidence`, and `exportBundle`; correlation IDs, timeout, disconnect cleanup, `AbortSignal`, and explicit cancel propagation are covered by WebSocket tests. Without an adapter, legacy broadcast behavior remains unchanged.
+- [x] Fresh slim staging: 119 files, 4,242,970 uncompressed bytes, 1,543,913 estimated compressed bytes; no Godot, desktop sidecar, model, SVG, or forbidden binary payloads.
+
+### Open evidence gates
+
+- [ ] A signed arm64 APK/AAB extracted from a fresh build and a physical-device RSS JSON under 256 MiB are still required. `not-measured` is not release evidence.
+- [ ] Android folder selection/import is still unavailable in the Tauri path; the default app-local `Knowledge_Base` path works, but user-selected external trees need a Storage Access Framework adapter.
+- [ ] Cross-host projection replay (Web/Tauri/Capacitor/Android), old-snapshot corpus, move/rename corpus, and canonical public-ID migration remain blocked until identity and persistence evidence is complete.
+
+## 中文
+
+### 本次交付
+
+- [x] 新增 `src/frontend/knowledge_projection_contract.js`：schema `1`、无正文节点、`sourceUri`、`revision`、alias、边 kind/provenance、有界 evidence reference，以及每个方向最多 64 个邻接。
+- [x] Capacitor 在写入 `graph_data.json`/`data.js` 前统一归一化；exact analyzer 拒绝未知 projection 版本，并继续执行本地 exact query/path 上限。
+- [x] Tauri Rust 图输出改为同一版本化 projection 元数据与身份字段；Android 仍不保留正文，Rust 测试覆盖可 replay 的身份字段和 adjacency。
+- [x] 新增 `PathBridgeHostAdapter`：`analyze`、`query`、`readEvidence`、`exportBundle` 由 host 执行；correlation ID、超时、断连清理、`AbortSignal` 与显式 cancel 传播均有 WebSocket 测试。未配置 adapter 时保持旧广播行为。
+- [x] 最新 slim staging：119 个文件、未压缩 4,242,970 字节、估算压缩 1,543,913 字节；不含 Godot、桌面 sidecar、模型、SVG 或禁用二进制。
+
+### 尚未闭合的证据门禁
+
+- [ ] 仍需新鲜构建的签名 arm64 APK/AAB 解包结果和低于 256 MiB 的真机 RSS JSON；`not-measured` 不是 release 证据。
+- [ ] Tauri Android 路径仍未实现文件夹选择/导入；默认 app-local `Knowledge_Base` 可用，但外部知识库需要 Storage Access Framework adapter。
+- [ ] Web/Tauri/Capacitor/Android 跨 host projection replay、旧 snapshot、move/rename 语料与 canonical 公共 ID 迁移，在身份和持久化证据完成前继续冻结。

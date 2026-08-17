@@ -140,3 +140,9 @@ target/data 构建与 `NoteConnection` 会把 `kbRoot` 传入 `FileLoader`，因
 route shadow 已通过 14 条 legacy-equivalent 与 6 条 registry-only probe。它实际捕获并修复了 response shape 和错误状态码漂移，而不是在比较器中吞掉差异；`NOTE_CONNECTION_ROUTE_DISPATCH_MODE=legacy` 仍可用于回滚诊断。
 
 APK/AAB verifier 是静态且轻量的：读取 ZIP central-directory metadata，release 模式要求 arm64，拒绝 Godot/sidecar/model/SVG 泄漏，执行 profile payload budget，并要求显式 RSS JSON。SQLite 现在有 close/reopen replay fixture，graph restore 有原子回滚 fixture。签名 arm64 产物、真机 RSS、跨 host replay 和 canonical-ID 切换仍未完成。
+## 2026-08-17 第 10 阶段 Projection 与 Host Adapter Walkthrough
+
+- `knowledge_projection_contract.js` 在 mobile analyzer 与 storage provider 之前加载，因此 Capacitor 和 browser replay 使用同一份无正文 schema。
+- Tauri Rust 输出 schema `1`、身份元数据与有界 adjacency；Android 在提取 link 后继续清除正文。
+- `PathBridgeHostAdapter` 为可选能力，未配置时保留旧 relay 语义；配置后返回 correlated result，并处理 timeout、断连、abort 与 cancel 传播。
+- 已通过 `build:mini`、mobile-slim staging（119 个文件 / 未压缩 4,242,970 / 估算压缩 1,543,913 字节）、migration matrix（57 suite / 307 个测试）、projection/Bridge 定向测试、`cargo check` 与 Rust 定向测试。本机未安装 `rustfmt`；签名 arm64 APK/AAB 与真机 RSS 仍未完成。

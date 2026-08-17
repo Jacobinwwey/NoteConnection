@@ -322,7 +322,7 @@ The modular ingest endpoint now rejects malformed JSON, oversized bodies/documen
 
 On mobile, the exact analyzer projects only identity, labels, tags, degrees, and bounded adjacency. URI/alias lookup uses NFC normalization. Edge provenance is classified for filtering and diagnostics, but no full document body, Node sidecar, Godot runtime, or model weight is introduced into `mobile-slim`. PathBridge `2.0` envelopes let hosts advertise the same analysis/cancellation contract; the host, not the client, owns policy and persistence.
 
-Verification for this increment: TypeScript build passed; 6 replay/identity suites / 35 tests passed, plus 12 core/route suites / 70 tests, 24 learning suites / 501 tests, 9 mobile suites / 51 tests, PathBridge strict, Diataxis, and Rust / 26 tests. Slim staging measured 118 files, 4,231,472 uncompressed bytes, and 1,540,865 estimated compressed bytes. Signed APK/RSS and registry response parity are not inferred from these tests.
+Verification for this increment: TypeScript build passed; the migration matrix passed 57 suites / 307 tests, focused projection/Bridge suites passed, Diataxis passed, and Rust graph-runtime tests passed. Fresh slim staging measured 119 files, 4,242,970 uncompressed bytes, and 1,543,913 estimated compressed bytes. Signed APK/RSS and registry response parity are not inferred from these tests.
 
 ## 中文
 
@@ -332,7 +332,7 @@ Verification for this increment: TypeScript build passed; 6 replay/identity suit
 
 移动端 exact analyzer 只投影身份、标签、tags、度数和有界邻接，URI/alias 查询使用 NFC 归一化。边 provenance 可用于过滤和诊断，但 `mobile-slim` 不增加正文、Node sidecar、Godot runtime 或模型权重。PathBridge `2.0` envelope 让各 host 声明统一分析/取消契约；策略与持久化仍由 host 掌握。
 
-本增量验证：TypeScript build 通过；6 个 replay/identity suite / 35 个测试、core/route 12 suite / 70 个测试、learning 24 suite / 501 个测试、mobile 9 suite / 51 个测试、PathBridge strict、Diataxis 与 Rust / 26 个测试通过。slim staging 为 118 个文件、未压缩 4,231,472 字节、估算压缩 1,540,865 字节。不能从这些测试推断签名 APK/RSS 或 registry response parity 已完成。
+本增量验证：TypeScript build 通过；migration matrix 57 suite / 307 个测试、projection/Bridge 定向 suite、Diataxis 与 Rust graph-runtime 测试通过。最新 slim staging 为 119 个文件、未压缩 4,242,970 字节、估算压缩 1,543,913 字节。不能从这些测试推断签名 APK/RSS 或 registry response parity 已完成。
 
 The mobile flow must never require the desktop Node sidecar or Godot process. Large source text is paged by reference, inferred edges are Top-K bounded, and signed APK/AAB + RSS evidence determines release readiness.
 
@@ -401,6 +401,24 @@ SQLite fixture 会关闭 adapter，再用同一文件创建新 adapter，回放�
 ### Evidence and next checkpoint
 
 The identity suites and URI/layout compatibility tests pass (15 tests total), and `npx tsc --noEmit` passes. The next checkpoint is move/rename replay plus old-snapshot corpus verification; public ID migration remains blocked until that evidence exists.
+
+# 2026-08-17 Phase 10 Projection and Host Adapter Walkthrough
+
+## English
+
+The mobile write path now follows one bounded sequence: collect Markdown -> build a body-free graph -> normalize through `knowledge_projection_contract.js` -> persist versioned nodes/edges/adjacency -> replay with the exact analyzer. Capacitor and Tauri Rust both emit `schemaVersion=1`, identity metadata, and edge provenance. Unknown future schemas fail closed instead of being silently treated as legacy data.
+
+The Bridge path is additive. With no host adapter, existing clients still receive the old broadcast behavior. With an adapter, the host executes the use case and the Bridge returns an `operationResult` carrying request/correlation IDs; timeout, disconnect, and explicit cancel all abort the host signal. This prevents mobile clients from selecting graph or persistence policy.
+
+Fresh verification: `npm run build:mini`, `npm run mobile:prepare:slim`, `npm run test:migration` (57 suites / 307 passing tests), focused projection/Bridge tests, `cargo check`, and targeted Rust graph-runtime tests. `cargo fmt --check` could not run because `rustfmt` is not installed. No signed arm64 APK/AAB or device RSS evidence exists yet.
+
+## 中文
+
+移动写入路径现在遵循同一条有界链路：收集 Markdown -> 构建无正文 graph -> 经过 `knowledge_projection_contract.js` 归一化 -> 持久化版本化 node/edge/adjacency -> 用 exact analyzer replay。Capacitor 与 Tauri Rust 都输出 `schemaVersion=1`、身份元数据和边 provenance；未知未来 schema 会 fail closed，不会静默按 legacy 数据处理。
+
+Bridge 采用 additive 方式。未配置 host adapter 时，现有客户端仍收到旧广播行为；配置 adapter 后，由 host 执行 use case，Bridge 返回带 request/correlation ID 的 `operationResult`，超时、断连和显式 cancel 都会中止 host signal，移动客户端不能选择 graph 或 persistence policy。
+
+最新验证：`npm run build:mini`、`npm run mobile:prepare:slim`、`npm run test:migration`（57 suite / 307 个测试通过）、projection/Bridge 定向测试、`cargo check` 与 Rust graph-runtime 定向测试通过。由于本机未安装 `rustfmt`，`cargo fmt --check` 无法执行；目前仍没有签名 arm64 APK/AAB 或真机 RSS 证据。
 
 ## 中文
 

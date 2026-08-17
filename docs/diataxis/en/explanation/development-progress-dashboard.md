@@ -1778,9 +1778,9 @@ The foundation checkpoint passed four focused suites (15 tests) and `npx tsc --n
 
 ### Evidence and gaps
 
-- Current host evidence: 12 core/route suites (70 tests), 24 learning suites (501 tests), 9 mobile contract suites (51 tests), 6 replay/identity suites (35 tests), Rust (26 tests), PathBridge strict, Diataxis, and TypeScript build passed; 118 staged files measured 4,231,472 bytes uncompressed and 1,540,865 estimated compressed bytes.
+- Current host evidence: migration matrix 57 suites (307 passing tests), focused projection/Bridge suites, Rust graph-runtime tests, PathBridge strict, Diataxis, and TypeScript build passed; fresh staging measured 119 files, 4,242,970 bytes uncompressed and 1,543,913 estimated compressed bytes.
 - RSS and signed APK/AAB extraction are not yet measured. A missing RSS evidence file remains `not-measured`, so this dashboard does not claim device acceptance.
-- SQLite persistence, full agent conversation parity, complete `sourceUri` migration (the additive dual-read foundation and explicit move journal are shipped), strict route-registry defaulting, indexed explicit/inferred projections, Bridge host adapters, and domain extraction remain pending.
+- SQLite persistence, full agent conversation parity, complete `sourceUri` migration, strict route-registry defaulting, cross-host replay, Android folder import, and domain extraction remain pending; versioned projection and optional Bridge host execution are shipped.
 - Workspace-root propagation now keeps full-workspace and subdirectory identities aligned; learning ingest/snapshots retain optional URI/revision/aliases, and Android admission rejects over-budget corpora before body reads (5,000 docs / 16 MiB per doc / 64 MiB total / 250,000 edges).
 
 ### Direction
@@ -1799,8 +1799,14 @@ The next order is: device evidence and mobile workload runner; old-snapshot/coll
 
 ### Evidence boundary
 
-TypeScript build and 6 replay/identity suites / 35 tests passed, alongside 12 core/route suites / 70 tests, 24 learning suites / 501 tests, 9 mobile suites / 51 tests, Rust / 26 tests, PathBridge strict, Diataxis, and slim staging. The staged profile is 118 files, 4,231,472 uncompressed bytes, and 1,540,865 estimated compressed bytes. Registry response/status shadow parity, signed arm64 APK extraction, device RSS, SQLite restart replay, and canonical public-ID cutover remain open; `not-measured` is not a pass.
+Migration matrix 57 suites / 307 tests passed, alongside focused projection/Bridge tests, Rust graph-runtime tests, PathBridge strict, Diataxis, and slim staging. The fresh staged profile is 119 files, 4,242,970 uncompressed bytes, and 1,543,913 estimated compressed bytes. Registry response/status shadow parity, signed arm64 APK extraction, device RSS, Android folder import, cross-host replay, and canonical public-ID cutover remain open; `not-measured` is not a pass.
 
 ### Direction
 
 Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 versioned SQLite/WASM projection behind the export contract, and G4 canonical-ID migration only after old-snapshot/collision/cross-root replay corpora and rollback evidence are complete.
+## 2026-08-17 Phase 10 Projection and Host Execution
+
+- `knowledge_projection_contract.js` defines schema `1` for body-free mobile projections: identity metadata, edge provenance, bounded evidence references, and bounded adjacency.
+- Capacitor and Tauri Rust emit the same projection fields; the exact analyzer fails closed on unknown schema versions.
+- `PathBridgeHostAdapter` is opt-in, preserves legacy broadcast fallback, and adds host execution with correlation, timeout, abort, disconnect cleanup, and cancellation propagation.
+- Fresh mobile-slim evidence is 119 files / 4,242,970 uncompressed bytes / 1,543,913 estimated compressed bytes. Signed arm64 APK/AAB, device RSS, Android folder import, and cross-host replay remain open gates.

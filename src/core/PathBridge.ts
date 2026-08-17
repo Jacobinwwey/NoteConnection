@@ -1,9 +1,28 @@
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 
+export type PathBridgeHostOperationType = 'analyze' | 'query' | 'readEvidence' | 'exportBundle';
+
+export type PathBridgeHostOperation = {
+    type: PathBridgeHostOperationType;
+    requestId: string;
+    correlationId: string;
+    payload: Record<string, unknown>;
+    clientTag: string;
+    signal: AbortSignal;
+};
+
+/** Host owns authorization, graph policy, persistence policy, and domain execution. */
+export interface PathBridgeHostAdapter {
+    execute(operation: PathBridgeHostOperation): Promise<unknown> | unknown;
+    cancel?(requestId: string): void;
+}
+
 type PathBridgeOptions = {
     port?: number;
     host?: string;
     authToken?: string;
+    hostAdapter?: PathBridgeHostAdapter;
+    hostOperationTimeoutMs?: number;
 };
 
 type ClientMeta = {
@@ -77,6 +96,12 @@ type PendingMermaidRenderRequest = {
     timer: NodeJS.Timeout;
 };
 
+type PendingHostOperation = {
+    client: WebSocket;
+    controller: AbortController;
+    timer: NodeJS.Timeout;
+};
+
 type BridgeInboundEnvelope = {
     type: string;
     payload?: unknown;
@@ -135,6 +160,7 @@ const PATH_REQUEST_TIMEOUT_MS = 3000;
 const PATH_PRODUCER_GRACE_MS = 30000;
 const MERMAID_RENDER_TIMEOUT_MS = 12000;
 const UNAUTHORIZED_CLIENT_TIMEOUT_MS = 5000;
+const DEFAULT_HOST_OPERATION_TIMEOUT_MS = 15000;
 const BYTES_PER_MIB = 1024 * 1024;
 const DEFAULT_INBOUND_MESSAGE_LIMIT_MIB = 128;
 const LARGE_GRAPH_INBOUND_MESSAGE_LIMIT_MIB = 256;
@@ -1180,11 +1206,14 @@ export class PathBridge {
     private currentPath: Record<string, unknown> | null = null;
     private pendingPathRequests: Map<WebSocket, PendingPathRequest> = new Map();
     private pendingMermaidRenderRequests: Map<string, PendingMermaidRenderRequest> = new Map();
+    private pendingHostOperations: Map<string, PendingHostOperation> = new Map();
     private unauthorizedClientTimers: Map<WebSocket, NodeJS.Timeout> = new Map();
     private outboundQueueState: Map<WebSocket, ClientOutboundQueueState> = new Map();
     private nextMermaidRenderRequestId = 1;
     private readyPromise: Promise<void>;
     private readySettled = false;
+    private readonly hostAdapter: PathBridgeHostAdapter | null;
+    private readonly hostOperationTimeoutMs: number;
 
     constructor(options: number | PathBridgeOptions = 9876) {
         const resolvedOptions: PathBridgeOptions = typeof options === 'number'
@@ -1195,6 +1224,11 @@ export class PathBridge {
             : 9876;
         this.host = resolvedOptions.host || '127.0.0.1';
         this.authToken = typeof resolvedOptions.authToken === 'string' ? resolvedOptions.authToken.trim() : '';
+        this.hostAdapter = resolvedOptions.hostAdapter || null;
+        this.hostOperationTimeoutMs = Number.isFinite(Number(resolvedOptions.hostOperationTimeoutMs)) &&
+            Number(resolvedOptions.hostOperationTimeoutMs) > 0
+            ? Math.floor(Number(resolvedOptions.hostOperationTimeoutMs))
+            : DEFAULT_HOST_OPERATION_TIMEOUT_MS;
         this.wss = new WebSocketServer({
             port: this.port,
             host: this.host,
@@ -1287,6 +1321,7 @@ export class PathBridge {
                 const wasProducer = !!meta && this.isPathProducerTag(meta.tag);
                 this.clearUnauthorizedDisconnect(ws);
                 this.clearPendingPathRequest(ws);
+                this.cancelHostOperationsForClient(ws, 'client_disconnected');
                 this.clearOutboundQueueState(ws);
                 this.clients.delete(ws);
                 this.clientMeta.delete(ws);
@@ -1688,6 +1723,8 @@ export class PathBridge {
             protocolVersion: PATH_BRIDGE_PROTOCOL_VERSION,
             capabilities: [...PATH_BRIDGE_CAPABILITIES],
             maxPayloadBytes: MAX_INBOUND_MESSAGE_BYTES,
+            hostAdapter: Boolean(this.hostAdapter),
+            hostOperationTimeoutMs: this.hostOperationTimeoutMs,
         });
     }
 
@@ -1710,6 +1747,18 @@ export class PathBridge {
 
     private clearAllPendingPathRequests(): void {
         Array.from(this.pendingPathRequests.keys()).forEach((client) => this.clearPendingPathRequest(client));
+    }
+
+    private cancelHostOperationsForClient(client: WebSocket, reason: string): void {
+        Array.from(this.pendingHostOperations.entries()).forEach(([requestId, pending]) => {
+            if (pending.client !== client) {
+                return;
+            }
+            clearTimeout(pending.timer);
+            pending.controller.abort(reason);
+            this.pendingHostOperations.delete(requestId);
+            this.hostAdapter?.cancel?.(requestId);
+        });
     }
 
     private invalidateCurrentPath(reason: string): void {
@@ -2016,6 +2065,119 @@ export class PathBridge {
         this.broadcast('pathStatus', status);
     }
 
+    private sendHostOperationResult(
+        client: WebSocket,
+        operationType: string,
+        requestId: string,
+        correlationId: string,
+        result: unknown,
+        error?: string,
+        cancelled = false,
+    ): void {
+        this.sendMessage(client, 'operationResult', {
+            type: operationType,
+            requestId,
+            correlationId,
+            ok: !error && !cancelled,
+            cancelled,
+            result: error || cancelled ? undefined : result,
+            error: error || (cancelled ? 'operation_cancelled' : undefined),
+        });
+    }
+
+    private executeHostOperation(
+        type: PathBridgeHostOperationType,
+        payloadLike: unknown,
+        envelope: BridgeInboundEnvelope,
+        sender: WebSocket,
+    ): void {
+        if (!this.hostAdapter || !isRecord(payloadLike)) {
+            this.broadcast(type, payloadLike || {});
+            return;
+        }
+
+        const requestId = typeof payloadLike.requestId === 'string' ? payloadLike.requestId.trim() : '';
+        if (!requestId) {
+            this.sendHostOperationResult(sender, type, '', '', undefined, 'request_id_required');
+            return;
+        }
+        if (this.pendingHostOperations.has(requestId)) {
+            this.sendHostOperationResult(sender, type, requestId, requestId, undefined, 'request_in_flight');
+            return;
+        }
+
+        const controller = new AbortController();
+        const correlationId = typeof envelope.correlationId === 'string' && envelope.correlationId.trim()
+            ? envelope.correlationId.trim()
+            : requestId;
+        const timer = setTimeout(() => {
+            const pending = this.pendingHostOperations.get(requestId);
+            if (!pending) {
+                return;
+            }
+            this.pendingHostOperations.delete(requestId);
+            pending.controller.abort();
+            this.hostAdapter?.cancel?.(requestId);
+            this.sendHostOperationResult(sender, type, requestId, correlationId, undefined, 'operation_timeout');
+        }, this.hostOperationTimeoutMs);
+        const pending: PendingHostOperation = { client: sender, controller, timer };
+        this.pendingHostOperations.set(requestId, pending);
+        const clientTag = this.clientMeta.get(sender)?.tag || 'unknown';
+
+        Promise.resolve()
+            .then(() => this.hostAdapter!.execute({
+                type,
+                requestId,
+                correlationId,
+                payload: payloadLike,
+                clientTag,
+                signal: controller.signal,
+            }))
+            .then((result) => {
+                if (this.pendingHostOperations.get(requestId) !== pending) {
+                    return;
+                }
+                this.pendingHostOperations.delete(requestId);
+                clearTimeout(timer);
+                this.sendHostOperationResult(sender, type, requestId, correlationId, result);
+            })
+            .catch((error) => {
+                if (this.pendingHostOperations.get(requestId) !== pending) {
+                    return;
+                }
+                this.pendingHostOperations.delete(requestId);
+                clearTimeout(timer);
+                const message = controller.signal.aborted ? 'operation_cancelled' : String((error as Error)?.message || error);
+                this.sendHostOperationResult(sender, type, requestId, correlationId, undefined, message, controller.signal.aborted);
+            });
+    }
+
+    private cancelHostOperation(payloadLike: unknown, sender: WebSocket): void {
+        if (!this.hostAdapter) {
+            // Preserve the pre-adapter relay contract for legacy clients,
+            // including cancellation frames without a request ID.
+            this.broadcast('cancel', payloadLike || {});
+            return;
+        }
+        const payload = isRecord(payloadLike) ? payloadLike : {};
+        const requestId = typeof payload.requestId === 'string' ? payload.requestId.trim() : '';
+        if (!requestId) {
+            this.sendHostOperationResult(sender, 'cancel', '', '', undefined, 'request_id_required');
+            return;
+        }
+        const pending = this.pendingHostOperations.get(requestId);
+        if (pending) {
+            clearTimeout(pending.timer);
+            pending.controller.abort();
+            this.pendingHostOperations.delete(requestId);
+            this.hostAdapter?.cancel?.(requestId);
+            this.sendHostOperationResult(sender, 'cancel', requestId, requestId, undefined, undefined, true);
+        } else {
+            this.sendHostOperationResult(sender, 'cancel', requestId, requestId, undefined, 'operation_not_found');
+        }
+        this.broadcast('cancel', payloadLike || {});
+    }
+
     private handleMessage(envelope: BridgeInboundEnvelope, sender: WebSocket): void {
         const { type, payload, client } = envelope;
         console.log(`[PathBridge] Received: ${type}`);
@@ -2042,11 +2204,13 @@ export class PathBridge {
             case 'query':
             case 'readEvidence':
             case 'exportBundle':
+                // The optional host adapter owns domain execution while the
+                // bridge retains correlation, timeout, and cancellation policy.
+                this.executeHostOperation(type as PathBridgeHostOperationType, payload, envelope, sender);
+                break;
+
             case 'cancel':
-                // The bridge owns transport, correlation, and cancellation
-                // semantics. Domain execution remains in the host adapter and
-                // receives the request unchanged for platform-specific policy.
-                this.broadcast(type, payload || {});
+                this.cancelHostOperation(payload, sender);
                 break;
 
             case 'requestPath':
@@ -2216,6 +2380,12 @@ export class PathBridge {
 
     public close(): void {
         this.clearAllPendingPathRequests();
+        Array.from(this.pendingHostOperations.entries()).forEach(([requestId, pending]) => {
+            clearTimeout(pending.timer);
+            pending.controller.abort();
+            this.hostAdapter?.cancel?.(requestId);
+        });
+        this.pendingHostOperations.clear();
         Array.from(this.pendingMermaidRenderRequests.values()).forEach((pendingRequest) => {
             clearTimeout(pendingRequest.timer);
             pendingRequest.reject(new Error('PathBridge is closing before Mermaid render completed.'));

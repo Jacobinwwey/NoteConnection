@@ -100,6 +100,9 @@
             sourceUri: typeof rawNode.sourceUri === 'string' ? rawNode.sourceUri.trim() : '',
             revision: typeof rawNode.revision === 'string' ? rawNode.revision.trim() : '',
             identityAliases: Object.freeze(identityAliases),
+            evidenceRefs: Object.freeze(Array.isArray(rawNode.evidenceRefs)
+                ? rawNode.evidenceRefs.map((reference) => String(reference || '').trim()).filter(Boolean).slice(0, 8)
+                : []),
         });
     }
 
@@ -117,6 +120,10 @@
     function createMobileExactIndex(graph) {
         if (!graph || typeof graph !== 'object') {
             throw new Error('Mobile exact index requires a graph payload.');
+        }
+        const declaredSchemaVersion = graph.schemaVersion ?? graph.projectionVersion;
+        if (declaredSchemaVersion !== undefined && Number(declaredSchemaVersion) !== PROJECTION_VERSION) {
+            throw new Error(`Unsupported mobile projection schema version: ${String(declaredSchemaVersion)}.`);
         }
         const rawNodes = Array.isArray(graph.nodes) ? graph.nodes : [];
         const rawEdges = Array.isArray(graph.edges) ? graph.edges : [];

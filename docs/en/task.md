@@ -272,6 +272,21 @@ Primary references:
 - [x] Learning ingest and snapshots retain optional `sourceUri`, `revision`, and `identityAliases`; deletes resolve URI/alias before legacy path fallback.
 - [x] Android low-memory graph builds enforce 5,000 documents, 16 MiB per document, 64 MiB total input, and 250,000 edges before reading unbounded content; link candidates are extracted at read time so the intermediate projection does not retain document bodies.
 - [x] Move/rename replay preserves the legacy document ID and historical aliases; path-only moves retain optional URI/revision fields.
-- [ ] Android folder picking, signed APK/AAB extraction, device RSS, SQLite persistence, registry parity, indexed projection, and complete Bridge host adapters remain explicit gates.
+- [ ] Android folder picking, signed APK/AAB extraction, device RSS, SQLite persistence, registry parity, cross-host replay, and canonical-ID migration remain explicit gates; versioned projection and optional Bridge host execution are delivered.
+
+# 2026-08-17 Phase 10 Versioned Projection and Host Execution
+
+## Delivered
+
+- [x] Added a browser-compatible versioned projection contract with body-free nodes, source URI/revision/aliases, edge provenance, bounded evidence references, and bounded adjacency.
+- [x] Capacitor and Tauri Rust graph outputs now emit schema `1` and the same identity fields; Android still avoids retaining document bodies.
+- [x] Added an optional `PathBridgeHostAdapter` with correlated operation results, timeout, disconnect cleanup, `AbortSignal`, and explicit cancellation; legacy broadcast remains the fallback.
+- [x] Fresh slim staging measures 119 files, 4,242,970 uncompressed bytes, and 1,543,913 estimated compressed bytes.
+
+## Evidence gates
+
+- [ ] Fresh signed arm64 APK/AAB extraction and physical-device RSS under 256 MiB.
+- [ ] Tauri Android Storage Access Framework folder import for external knowledge trees.
+- [ ] Cross-host projection replay and old-snapshot/move/rename/collision corpora before canonical-ID migration.
 - [x] Phase 8 replay, bounded ingest validation, indexed keyword matching, mobile identity projection, and additive Bridge 2.0 capability/cancellation envelopes are implemented and covered by focused tests.
 - [ ] Registry response/status shadow parity, signed Android APK/RSS evidence, SQLite persistence, and canonical public-ID cutover remain evidence-gated.

@@ -564,3 +564,10 @@ This update aligns the implementation plan with the current Electron-to-Tauri mi
 4. Keep canonical-ID cutover blocked on move/rename replay, old-snapshot fixtures, HTTP schema parity, and cross-client Bridge replay.
 - 2026-08-17 Phase 8 delivered an atomic graph replay entry, explicit learning move/rename journal, bounded modular ingest validation, indexed keyword candidates, identity-aware mobile exact projection, and additive Bridge 2.0 capability/cancellation envelopes.
 - The next gates are registry response/status shadow parity, fresh arm64 APK/RSS evidence, versioned SQLite/WASM persistence behind the export contract, and only then canonical public-ID migration.
+
+## 2026-08-17 Phase 10: Versioned Projection and Host Execution
+
+1. `knowledge_projection_contract.js` is the canonical mobile wire shape: schema `1`, body-free nodes, identity metadata, explicit/inferred/runtime provenance, bounded evidence references, and bounded adjacency.
+2. Capacitor normalizes generated graphs through the contract; Tauri Rust emits the same schema and identity fields while preserving Android body-free memory behavior.
+3. `PathBridgeHostAdapter` keeps execution and policy in the host while the Bridge owns correlation, timeout, abort, disconnect cleanup, and legacy transport fallback.
+4. Remaining gates are fresh signed arm64 artifact/RSS evidence, Android Storage Access Framework import, cross-host replay, and old-snapshot/move/rename/collision evidence.

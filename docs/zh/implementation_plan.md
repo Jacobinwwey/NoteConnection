@@ -1043,3 +1043,13 @@ Port the 9-rule expansion/claiming/visibility engine from `tree_path_mockup.html
 4. 在完成 move/rename replay、旧 snapshot fixture、HTTP schema parity 与跨端 Bridge replay 前，保持 canonical-ID 切换冻结。
 - 2026-08-17 第 8 阶段已交付原子 graph replay 入口、显式 learning move/rename journal、有界模块化 ingest 校验、indexed keyword candidate、带身份的移动 exact projection，以及 additive Bridge 2.0 capability/cancellation envelope。
 - 后续门禁是 registry response/status shadow parity、新鲜 arm64 APK/RSS 证据、置于 export 契约后的版本化 SQLite/WASM 持久化，最后才允许 canonical 公共 ID 迁移。
+## 2026-08-17 第 10 阶段：版本化 Projection 与 Host 执行
+
+1. `knowledge_projection_contract.js` 是移动端 canonical wire shape：schema `1`、无正文节点、身份元数据、explicit/inferred/runtime provenance、有界 evidence reference 与有界 adjacency。
+2. Capacitor 生成 graph 经过契约归一化；Tauri Rust 输出相同 schema 与身份字段，同时保持 Android 无正文内存路径。
+3. `PathBridgeHostAdapter` 让执行与策略留在 host；Bridge 负责 correlation、timeout、abort、断连清理和 legacy transport fallback。
+4. 剩余门禁是新鲜签名 arm64 产物/RSS、Android Storage Access Framework 导入、跨 host replay 以及旧 snapshot/move/rename/collision 证据。
+
+### 证据边界
+
+静态 staging 不能替代签名产物与真机 RSS；`not-measured` 继续保持未测状态，canonical 公共 ID 迁移继续冻结。

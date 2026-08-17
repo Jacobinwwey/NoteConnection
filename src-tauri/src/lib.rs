@@ -3,7 +3,7 @@ use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -797,6 +797,9 @@ struct RuntimeNodeDraft {
     content: String,
     link_targets: Vec<String>,
     filepath: String,
+    source_uri: String,
+    revision: String,
+    identity_aliases: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -821,11 +824,16 @@ struct RuntimeBuildResult {
     graph_json_path: String,
 }
 
+#[cfg(any(target_os = "android", test))]
 const MOBILE_MAX_DOCUMENTS: usize = 5_000;
+#[cfg(any(target_os = "android", test))]
 const MOBILE_MAX_DOCUMENT_BYTES: u64 = 16 * 1024 * 1024;
+#[cfg(any(target_os = "android", test))]
 const MOBILE_MAX_TOTAL_INPUT_BYTES: u64 = 64 * 1024 * 1024;
+#[cfg(any(target_os = "android", test))]
 const MOBILE_MAX_EDGES: usize = 250_000;
 
+#[cfg(any(target_os = "android", test))]
 fn validate_mobile_corpus_budget(document_count: usize, total_bytes: u64) -> Result<(), String> {
     if document_count > MOBILE_MAX_DOCUMENTS {
         return Err(format!(
@@ -842,6 +850,7 @@ fn validate_mobile_corpus_budget(document_count: usize, total_bytes: u64) -> Res
     Ok(())
 }
 
+#[cfg(any(target_os = "android", test))]
 fn validate_mobile_document_size(file_bytes: u64) -> Result<(), String> {
     if file_bytes > MOBILE_MAX_DOCUMENT_BYTES {
         return Err(format!(
@@ -852,6 +861,7 @@ fn validate_mobile_document_size(file_bytes: u64) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(any(target_os = "android", test))]
 fn validate_mobile_edge_budget(edge_count: usize) -> Result<(), String> {
     if edge_count > MOBILE_MAX_EDGES {
         return Err(format!(
@@ -867,6 +877,44 @@ fn normalize_path_key(raw: &str) -> String {
         .trim()
         .trim_matches('/')
         .to_ascii_lowercase()
+}
+
+fn encode_uri_segment(segment: &str) -> String {
+    segment
+        .as_bytes()
+        .iter()
+        .map(|byte| {
+            if byte.is_ascii_alphanumeric() || matches!(*byte, b'-' | b'.' | b'_' | b'~') {
+                (*byte as char).to_string()
+            } else {
+                format!("%{:02X}", byte)
+            }
+        })
+        .collect()
+}
+
+fn create_mobile_source_uri(relative_path: &str) -> String {
+    let canonical_path = normalize_path_key(relative_path);
+    let encoded = canonical_path
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .map(encode_uri_segment)
+        .collect::<Vec<_>>()
+        .join("/");
+    if encoded.is_empty() {
+        String::new()
+    } else {
+        format!("note://workspace/v1/{}", encoded)
+    }
+}
+
+fn create_mobile_content_revision(content: &str) -> String {
+    let mut hash: u32 = 2_166_136_261;
+    for byte in content.as_bytes() {
+        hash ^= u32::from(*byte);
+        hash = hash.wrapping_mul(16_777_619);
+    }
+    format!("fnv1a:{:08x}", hash)
 }
 
 fn normalize_relative_like_path(raw: &str) -> String {
@@ -1101,7 +1149,7 @@ fn build_graph_runtime_for_target(
             .to_string();
         let filepath = file_path.to_string_lossy().to_string();
 
-        id_by_relative_key.insert(relative_key, id.clone());
+        id_by_relative_key.insert(relative_key.clone(), id.clone());
         stem_to_ids
             .entry(stem_key.clone())
             .or_default()
@@ -1109,6 +1157,19 @@ fn build_graph_runtime_for_target(
 
         let mut link_targets = extract_wiki_link_targets(&content);
         link_targets.extend(extract_markdown_link_targets(&content));
+        let source_uri = create_mobile_source_uri(&relative_without_ext);
+        let revision = create_mobile_content_revision(&content);
+        let mut identity_aliases = Vec::new();
+        for alias in [
+            id.clone(),
+            format!("{}.md", id),
+            relative_without_ext.clone(),
+            relative_key.clone(),
+        ] {
+            if !alias.is_empty() && !identity_aliases.contains(&alias) {
+                identity_aliases.push(alias);
+            }
+        }
 
         // Android emits a body-free graph, so do not retain the corpus in the
         // intermediate draft while the link index is being resolved.
@@ -1126,6 +1187,9 @@ fn build_graph_runtime_for_target(
             content: retained_content,
             link_targets,
             filepath,
+            source_uri,
+            revision,
+            identity_aliases,
         });
     }
 
@@ -1176,6 +1240,10 @@ fn build_graph_runtime_for_target(
             json!({
                 "id": node.id.clone(),
                 "label": node.label.clone(),
+                "sourceUri": node.source_uri.clone(),
+                "revision": node.revision.clone(),
+                "identityAliases": node.identity_aliases.clone(),
+                "evidenceRefs": Vec::<String>::new(),
                 "clusterId": node.cluster_id.clone(),
                 "inDegree": in_count,
                 "outDegree": out_count,
@@ -1196,6 +1264,10 @@ fn build_graph_runtime_for_target(
             json!({
                 "id": node.id.clone(),
                 "label": node.label.clone(),
+                "sourceUri": node.source_uri.clone(),
+                "revision": node.revision.clone(),
+                "identityAliases": node.identity_aliases.clone(),
+                "evidenceRefs": Vec::<String>::new(),
                 "clusterId": node.cluster_id.clone(),
                 "inDegree": in_count,
                 "outDegree": out_count,
@@ -1213,19 +1285,56 @@ fn build_graph_runtime_for_target(
             json!({
                 "source": source,
                 "target": target,
+                "type": "wiki-link",
+                "kind": "explicit",
+                "provenance": "wiki-link",
+                "evidenceRefs": Vec::<String>::new(),
                 "weight": 1.0
             })
         })
         .collect();
 
+    let mut adjacency_by_id: BTreeMap<String, (Vec<String>, Vec<String>)> = node_drafts
+        .iter()
+        .map(|node| (node.id.clone(), (Vec::new(), Vec::new())))
+        .collect();
+    for (source, target) in &unique_edges {
+        if let Some((outgoing, _)) = adjacency_by_id.get_mut(source) {
+            if outgoing.len() < 64 && !outgoing.contains(target) {
+                outgoing.push(target.clone());
+            }
+        }
+        if let Some((_, incoming)) = adjacency_by_id.get_mut(target) {
+            if incoming.len() < 64 && !incoming.contains(source) {
+                incoming.push(source.clone());
+            }
+        }
+    }
+    let adjacency: Vec<Value> = adjacency_by_id
+        .into_iter()
+        .map(|(node_id, (outgoing, incoming))| json!({
+            "nodeId": node_id,
+            "outgoing": outgoing,
+            "incoming": incoming,
+        }))
+        .collect();
+
     #[cfg(not(target_os = "android"))]
     let full_graph = json!({
+        "schemaVersion": 1,
+        "projectionVersion": 1,
+        "workspaceId": "tauri-workspace",
         "nodes": full_nodes,
-        "edges": edges.clone()
+        "edges": edges.clone(),
+        "adjacency": adjacency.clone(),
     });
     let lite_graph = json!({
+        "schemaVersion": 1,
+        "projectionVersion": 1,
+        "workspaceId": "tauri-workspace",
         "nodes": lite_nodes,
-        "edges": edges
+        "edges": edges,
+        "adjacency": adjacency,
     });
 
     #[cfg(target_os = "android")]
@@ -3250,6 +3359,17 @@ reader_media_scale = 1.5
             .trim_end_matches(';');
         let lite_graph: Value =
             serde_json::from_str(payload).expect("failed to parse data.js payload JSON");
+        assert_eq!(lite_graph["schemaVersion"].as_u64(), Some(1));
+        assert_eq!(lite_graph["projectionVersion"].as_u64(), Some(1));
+        assert!(lite_graph["nodes"][0]["sourceUri"]
+            .as_str()
+            .unwrap_or_default()
+            .starts_with("note://workspace/v1/"));
+        assert!(lite_graph["nodes"][0]["revision"]
+            .as_str()
+            .unwrap_or_default()
+            .starts_with("fnv1a:"));
+        assert!(lite_graph["adjacency"].is_array());
         assert!(lite_graph["nodes"][0].get("content").is_none());
 
         let full_graph: Value = serde_json::from_str(
@@ -3258,6 +3378,7 @@ reader_media_scale = 1.5
                 .as_str(),
         )
         .expect("failed to parse graph_data.json");
+        assert_eq!(full_graph["schemaVersion"].as_u64(), Some(1));
         assert!(full_graph["nodes"][0].get("content").is_some());
     }
 

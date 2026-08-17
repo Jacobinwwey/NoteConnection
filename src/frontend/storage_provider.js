@@ -170,7 +170,26 @@
             .pop() || '';
     }
 
-    function createMobileResourceIdentity(relativePath, legacyId) {
+    async function createContentRevision(content) {
+        const text = String(content || '');
+        const cryptoApi = typeof globalThis !== 'undefined' ? globalThis.crypto : null;
+        if (cryptoApi && cryptoApi.subtle && typeof TextEncoder === 'function') {
+            const digest = await cryptoApi.subtle.digest('SHA-256', new TextEncoder().encode(text));
+            const bytes = new Uint8Array(digest);
+            return `sha256:${Array.from(bytes).map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+        }
+
+        // Older WebViews may not expose Web Crypto; keep a deterministic fallback
+        // so replay identity remains stable without shipping a hash library.
+        let hash = 2166136261;
+        for (let index = 0; index < text.length; index += 1) {
+            hash ^= text.charCodeAt(index);
+            hash = Math.imul(hash, 16777619);
+        }
+        return `fnv1a:${(hash >>> 0).toString(16).padStart(8, '0')}`;
+    }
+
+    async function createMobileResourceIdentity(relativePath, legacyId, content) {
         const normalizedLegacyId = String(legacyId || '').trim();
         const displayPath = String(relativePath || '')
             .trim()
@@ -194,7 +213,11 @@
             displayPath,
             canonicalPath,
         ].filter(Boolean)));
-        return { sourceUri, identityAliases: aliases };
+        return {
+            sourceUri,
+            revision: await createContentRevision(content),
+            identityAliases: aliases
+        };
     }
 
     function extractWikiLinks(content) {
@@ -780,13 +803,14 @@
                 const relativePath = entry.path;
                 const segments = relativePath.split('/').filter(Boolean);
                 const clusterId = segments.length > 1 ? segments[segments.length - 2] : 'root';
-                const identity = createMobileResourceIdentity(relativePath, filename);
+                const identity = await createMobileResourceIdentity(relativePath, filename, rawText);
 
                 files.push({
                     id: filename,
                     label: filename,
                     path: relativePath,
                     sourceUri: identity.sourceUri,
+                    revision: identity.revision,
                     identityAliases: identity.identityAliases,
                     content: rawText,
                     metadata,
@@ -839,6 +863,7 @@
                 id: file.id,
                 label: file.label || file.id,
                 sourceUri: file.sourceUri || '',
+                revision: file.revision || '',
                 identityAliases: Array.isArray(file.identityAliases) ? file.identityAliases : [],
                 inDegree: 0,
                 outDegree: 0,
@@ -976,6 +1001,7 @@
             '        id: file.id,',
             '        label: file.label || file.id,',
             '        sourceUri: file.sourceUri || "",',
+            '        revision: file.revision || "",',
             '        identityAliases: Array.isArray(file.identityAliases) ? file.identityAliases : [],',
             '        inDegree: 0,',
             '        outDegree: 0,',
@@ -1248,7 +1274,13 @@
 
         const files = await collectCapacitorMarkdownFiles(targetPath);
         const buildResult = await buildCapacitorGraphDataWithWorkerFallback(files);
-        const graphData = buildResult.graphData;
+        const projectionApi = window.NoteConnectionKnowledgeProjection;
+        if (!projectionApi || typeof projectionApi.createKnowledgeProjection !== 'function') {
+            throw new Error('Knowledge projection contract is unavailable in the mobile runtime.');
+        }
+        const graphData = projectionApi.createKnowledgeProjection(buildResult.graphData, {
+            workspaceId: 'mobile-workspace',
+        });
         const graphJsChunkFactory = createCapacitorGraphJavascriptChunkFactory(graphData);
         const graphJsonChunkFactory = createCapacitorGraphJsonChunkFactory(graphData);
 

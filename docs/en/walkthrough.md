@@ -147,3 +147,9 @@ The target/data build and `NoteConnection` pass `kbRoot` into `FileLoader`, so f
 The route shadow run passed with 14 legacy-equivalent and 6 registry-only probes. It caught and fixed response-shape and error-status drift instead of normalizing those differences away. `NOTE_CONNECTION_ROUTE_DISPATCH_MODE=legacy` remains available for rollback diagnosis.
 
 The APK/AAB verifier is static and tooling-light: it reads ZIP central-directory metadata, requires arm64 in release mode, rejects Godot/sidecar/model/SVG leakage, enforces profile payload budgets, and requires an explicit RSS JSON. SQLite now has a close/reopen replay fixture, while graph restore has an atomic rollback fixture. Signed arm64 artifacts, device RSS, cross-host replay, and canonical-ID cutover remain open.
+## 2026-08-17 Phase 10 Projection and Host Adapter Walkthrough
+
+- `knowledge_projection_contract.js` is loaded before the mobile analyzer and storage provider, so Capacitor and browser replay use the same body-free schema.
+- Tauri Rust writes schema `1` identity metadata and bounded adjacency; Android continues to clear document bodies after link extraction.
+- `PathBridgeHostAdapter` is opt-in and preserves legacy relay semantics when absent. Adapter execution returns correlated results and handles timeout, disconnect, abort, and cancel propagation.
+- Verification passed: `build:mini`, mobile-slim staging (119 files / 4,242,970 uncompressed / 1,543,913 estimated compressed), migration matrix (57 suites / 307 tests), focused projection/Bridge tests, `cargo check`, and targeted Rust tests. `rustfmt` is unavailable locally; signed arm64 APK/AAB and device RSS remain open.
