@@ -1175,3 +1175,43 @@ The harness intentionally accepts only ordered schema-1 `adbArgs` and fails clos
 - Projection replay：4 个 host boundary、6 个节点、4 条边且无语义 mismatch。fresh mobile-slim：121 个文件 / 未压缩 4,275,083 字节 / 估算压缩 1,550,638 字节，SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`；RSS 仍为 `not measured`。
 - 下一道原生门禁：签名 arm64 APK/AAB、SAF import/query/path、force-stop/reopen continuity、存储与权限失败 replay，以及代表性低内存硬件上的 RSS `<= 256 MiB`。
 - 在原生 replay 与 old-snapshot、move-journal、collision、rollback corpus 归档前，继续冻结 public-ID 迁移、默认 SQLite/WASM 与移动端预算上调。
+
+## 2026-08-18 Phase 19 Native Import Failure-Path Retention
+
+### Implementation
+
+1. Keep `KnowledgeBasePickerBridge` as the sole production owner of Android import transaction state. In the outer failure boundary, delete only `stagingRoot`; clear `journalFile` only when `backupRoot` is absent. When a backup remains, retain both backup and journal for the next `bindActivity()` recovery pass and persist the existing failed result marker.
+2. Keep the public Rust request/poll commands, result JSON shape, journal schema-1 fields, and `mobile-slim` export profile unchanged. This is an additive durability correction, not a new mode flag or adapter layer.
+3. Scope the source contract to the exact failure catch. A repository-wide negative regex is invalid because successful replacement and startup recovery legitimately delete backup directories after the active target is known.
+
+### Rationale and trade-offs
+
+- Retaining one backup/journal pair consumes bounded app-local disk until the next activity bind, but eager deletion can destroy the only known-good corpus after a rename/rollback failure.
+- The failed result remains visible immediately, so callers do not receive a false success. Recovery may later emit the existing `recovered_previous` completion detail without changing the Rust polling contract.
+- No JavaScript verifier enters the mobile runtime; the host mirror remains a CI drift detector. This preserves low package size and low hardware requirements while keeping the native boundary explicit.
+
+### Verification and gates
+
+- Focused Android picker contract: 4 tests passed; TypeScript no-emit passed.
+- Full baseline remains 146 Jest suites / 1,271 passed / 26 skipped, Rust 28 passed / 1 ignored, projection replay 4 hosts / 6 nodes / 4 edges, and mobile-slim 121 files / 4,275,083 uncompressed / 1,550,638 estimated compressed bytes with SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`.
+- Native gates remain open: signed arm64 artifact, SAF import/query/path, rollback-failure and next-bind recovery, force-stop/reopen continuity, storage/permission failures, and measured RSS `<= 256 MiB`. Do not promote public IDs, default SQLite/WASM, or mobile budgets before those artifacts are archived.
+
+## 2026-08-18 第 19 阶段：原生导入失败路径保留
+
+### 实施
+
+1. `KnowledgeBasePickerBridge` 继续作为 Android import transaction 的唯一生产 owner。外层失败边界只删除 `stagingRoot`；仅当 `backupRoot` 不存在时清理 `journalFile`。backup 仍存在时保留 backup 与 journal，等待下一次 `bindActivity()` recovery，并继续写入既有 failed result marker。
+2. 保持 Rust request/poll 命令、result JSON 形状、journal schema-1 字段与 `mobile-slim` export profile 不变。这是 additive durability 修正，不是新增 mode flag 或 adapter 层。
+3. 契约测试收窄到准确的失败 catch。全仓负向正则是不正确的，因为成功替换与启动 recovery 在确认 active target 后本来就允许删除 backup。
+
+### 理由与权衡
+
+- 保留一组 backup/journal 会在下次 activity bind 前占用有界 app-local 磁盘，但急于删除可能在 rename/rollback 失败后摧毁唯一可用知识库。
+- 失败结果仍立即可见，因此调用方不会得到假成功；后续恢复可以复用既有 `recovered_previous` completion detail，不改变 Rust polling 契约。
+- JavaScript verifier 不进入移动运行时；host mirror 仍只是 CI 漂移探测器。这样保持低包体与低硬件需求，同时明确 native boundary。
+
+### 验证与门禁
+
+- Android picker 定向契约：4 个测试通过；TypeScript no-emit 通过。
+- 全量基线仍为 146 个 Jest suite / 1,271 passed / 26 skipped，Rust 28 passed / 1 ignored，projection replay 为 4 hosts / 6 nodes / 4 edges，mobile-slim 为 121 个文件 / 未压缩 4,275,083 / 估算压缩 1,550,638 字节，SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`。
+- 原生门禁仍开放：签名 arm64 产物、SAF import/query/path、rollback failure 与下次 bind recovery、force-stop/reopen continuity、存储/权限失败，以及 RSS `<= 256 MiB` 实测。在这些 artifact 归档前，不提升 public ID、默认 SQLite/WASM 或移动端预算。

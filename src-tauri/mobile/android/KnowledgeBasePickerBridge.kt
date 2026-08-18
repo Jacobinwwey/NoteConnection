@@ -136,8 +136,13 @@ object KnowledgeBasePickerBridge {
         } catch (error: Throwable) {
             Log.e(TAG, "Knowledge base import failed", error)
             stagingRoot.deleteRecursively()
-            backupRoot.deleteRecursively()
-            clearJournal(journalFile)
+            // A failed rollback leaves the only known-good corpus in backupRoot; keep it
+            // journaled so the next activity bind can recover it instead of deleting data.
+            if (!backupRoot.exists()) {
+                clearJournal(journalFile)
+            } else {
+                Log.w(TAG, "Retaining import backup for startup recovery", error)
+            }
             writeResult(resultFile, "failed", "", error.message ?: "import_failed")
         }
     }

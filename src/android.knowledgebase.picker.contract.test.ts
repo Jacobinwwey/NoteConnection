@@ -31,6 +31,13 @@ describe('Android knowledge-base picker contract', () => {
         expect(template).toContain('importInFlight');
         expect(template).toContain('import_in_progress');
         expect(template).toContain('synchronized(importLock)');
+        expect(template).toContain('Retaining import backup for startup recovery');
+        expect(template).toContain('if (!backupRoot.exists())');
+        const importFailureCatch = template.match(
+            /Log\.e\(TAG, "Knowledge base import failed"[\s\S]*?writeResult\(resultFile, "failed", "", error\.message \?: "import_failed"\)/
+        )?.[0];
+        expect(importFailureCatch).toBeDefined();
+        expect(importFailureCatch).not.toContain('backupRoot.deleteRecursively()');
         expect(template).not.toContain('readText()');
     });
 

@@ -600,3 +600,31 @@ unsafe journal / unknown schema -> fail closed
 契约测试写入 schema-1 报告，包含 `evidenceLevel: host-recovery-state-machine` 与 `nativeDeviceEvidence: false`。这是确定性的恢复镜像和 CI 漂移探测器，但不会执行 Android 进程死亡、SAF UI、存储/权限失败或 RSS 采样。移动运行时仍由 Kotlin 拥有，verifier 也不会进入 mobile-slim。
 
 当前验证为全量 Jest 146 suites / 1,271 passed / 26 skipped、TypeScript no-emit、Rust 28 passed 加 1 个 ignored probe、四 host projection replay（6 个节点 / 4 条边）、slim budget（121 个文件 / 未压缩 4,275,083 / 估算压缩 1,550,638 字节，SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`）与 Diataxis。签名真机 SAF/query/path、force-stop continuity 与 RSS <= 256 MiB 仍未闭合；public-ID 与 SQLite/WASM 提升继续冻结。
+
+## 2026-08-18 Phase 19 Native Import Failure-Path Retention Walkthrough
+
+The Android import outer catch now has an explicit ownership boundary:
+
+```text
+import failure -> delete staging
+              -> no backup exists: clear journal
+              -> backup exists: retain backup + journal for next bind recovery
+```
+
+The previous implementation deleted `backupRoot` and `journalFile` unconditionally. That was unsafe after `replaceImportedTree()` had moved the old corpus away from the active target but could not complete or undo activation. The new contract test inspects only this failure catch, so cleanup in successful replacement and recovery branches remains legal.
+
+This preserves the existing result marker and Rust polling surface, adds no mobile runtime dependency, and keeps the current slim staging budget. It is still not native-device evidence: rollback failure, next-bind recovery, SAF/storage permission failures, force-stop continuity, signed artifacts, and RSS <= 256 MiB remain required.
+
+## 2026-08-18 第 19 阶段：原生导入失败路径保留 Walkthrough
+
+Android import 外层 catch 现在有明确的所有权边界：
+
+```text
+import 失败 -> 删除 staging
+           -> 不存在 backup：清理 journal
+           -> 存在 backup：保留 backup + journal，等待下次 bind recovery
+```
+
+旧实现会无条件删除 `backupRoot` 与 `journalFile`。当 `replaceImportedTree()` 已将旧知识库移出 active target、但激活或回滚未完成时，这会造成数据丢失。新契约测试只扫描该失败 catch，因此成功替换与 recovery 分支中的合法清理仍被保留。
+
+本修复保持既有 result marker 与 Rust polling surface，不增加移动运行时依赖，也不改变 slim staging budget。它仍不是原生设备证据：rollback failure、下次 bind recovery、SAF/存储权限失败、force-stop continuity、签名产物与 RSS <= 256 MiB 仍待完成。

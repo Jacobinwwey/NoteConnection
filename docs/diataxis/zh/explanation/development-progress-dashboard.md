@@ -1894,3 +1894,10 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - 这只闭合确定性的代码级恢复覆盖，不证明 Android 进程死亡、SAF UI、存储/权限失败、签名产物完整性或 RSS。生产 owner 仍为 Kotlin，verifier 继续排除出 mobile-slim。
 - 当前验证为全量 Jest 146 suites / 1,271 passed / 26 skipped、TypeScript no-emit、Rust 28 passed / 1 ignored、projection replay 4 hosts / 6 nodes / 4 edges、mobile-slim 121 个文件 / 未压缩 4,275,083 / 估算压缩 1,550,638 字节（SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`），以及 Diataxis。
 - 下一门禁仍是签名 arm64 真机 SAF/query/path、force-stop/reopen continuity、失败路径 replay、RSS <= 256 MiB，以及 public-ID 或 SQLite/WASM 提升前的 old-snapshot/move-journal/collision/rollback corpus。
+
+## 2026-08-18 第 19 阶段：原生导入失败路径保留
+
+- Android import 失败清理现在始终删除 staging，但仅在不存在 backup 时清理 journal。若回滚后旧知识库仍在 backup 中，Kotlin 会保留 backup 与 journal，等待下次 activity-bind recovery。
+- Android picker 契约测试将负向断言限定到准确的 `Knowledge base import failed` catch，避免误伤成功替换与 recovery 分支中的合法清理。
+- Rust request/poll/result-marker 语义、journal schema、Kotlin owner 与 mobile-slim profile 均不变；没有新增移动运行时 JavaScript/数据库依赖。
+- 本轮只关闭代码级数据丢失回归。签名 arm64 rollback/recovery、SAF/存储权限失败、force-stop continuity 与 RSS `<= 256 MiB` 仍开放；在原生证据归档前继续冻结 public-ID、默认 SQLite/WASM 与预算上调。

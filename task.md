@@ -658,3 +658,25 @@ Keep recovery verification as a test-only host mirror of the Kotlin journal stat
 ### 第 18 阶段决策
 
 将 recovery verification 保持为 Kotlin journal 状态机的 test-only host mirror。它在不向移动运行时增加 JavaScript 的前提下提供确定性 CI 覆盖，同时通过显式 evidence level 防止把 host replay 误判为原生进程死亡验收。任何 journal schema 或 phase 变化都必须同步更新 Kotlin 实现、该 verifier 与双语证据记录。
+
+## 2026-08-18 Phase 19 Native Import Failure-Path Retention
+
+- [x] Fixed the outer Android import failure path so it always removes staging data but only clears the journal when no backup exists. A retained backup is the only known-good corpus after rollback failure and must remain available to startup recovery.
+- [x] Added a focused contract assertion scoped to the `Knowledge base import failed` catch block. It rejects the destructive cleanup sequence without rejecting legitimate cleanup in successful replacement and recovery branches.
+- [x] Preserved the public Rust request/poll/result-marker contract, journal schema, mobile-slim profile, and Kotlin ownership. The change adds no runtime JavaScript or database dependency.
+- [~] Retained backup/journal recovery is still code-level evidence. A signed arm64 device must exercise rollback failure, next-bind recovery, SAF/storage permission failure, force-stop continuity, and RSS `<= 256 MiB` before G2/G3 can close.
+
+### Phase 19 decision
+
+Prefer recoverability over eager cleanup at the transaction boundary. A failed import reports `failed` immediately while retaining the previous corpus and journal for the next activity bind; cleanup is performed only after a target is known to be active or a journal is proven empty/unsafe. This keeps forward compatibility and low mobile footprint without hiding a data-loss path behind a generic catch block.
+
+## 2026-08-18 第 19 阶段：原生导入失败路径保留
+
+- [x] 修复 Android import 外层失败路径：始终清理 staging；只有不存在 backup 时才清理 journal。回滚失败后 backup 是唯一已知可用知识库，必须留给启动恢复。
+- [x] 增加聚焦于 `Knowledge base import failed` catch block 的契约断言，只禁止破坏性清理序列，不误伤成功替换与 recovery 分支中的合法清理。
+- [x] 保持 Rust request/poll/result-marker 公共契约、journal schema、mobile-slim profile 与 Kotlin owner 不变；不新增移动运行时 JavaScript 或数据库依赖。
+- [~] backup/journal 保留目前仍是代码级证据。G2/G3 关闭前，签名 arm64 真机必须覆盖 rollback failure、下次 bind recovery、SAF/存储权限失败、force-stop continuity 与 RSS `<= 256 MiB`。
+
+### 第 19 阶段决策
+
+在事务边界优先保证可恢复性，而不是急于清理。失败 import 立即报告 `failed`，但保留旧知识库与 journal，交由下次 activity bind 恢复；只有确认新 target 已激活，或 journal 已证明为空/不安全时才清理。这样不改变向前兼容契约与移动包体，同时消除通用 catch 中潜在的数据丢失路径。

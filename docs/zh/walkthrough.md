@@ -255,3 +255,17 @@ Capacitor link resolution 现在与 Rust 对齐：direct canonical path、source
 契约测试输出 schema-1 evidence，包含 `evidenceLevel: host-recovery-state-machine` 与 `nativeDeviceEvidence: false`。这是确定性的 host mirror 和 CI 漂移探测器，不是 Android 进程死亡、SAF UI、存储/权限失败、签名产物或 RSS 证据。移动运行时仍由 Kotlin 拥有，verifier 不进入 mobile-slim。
 
 下一道门禁仍是原生证据：签名 arm64 执行、SAF import/query/path、force-stop/reopen continuity、失败路径 replay，以及代表性低内存硬件上的 RSS <= 256 MiB。在这些 artifact 与 old-snapshot/move-journal/collision/rollback corpus 归档前，public-ID 与 SQLite/WASM 提升继续冻结。
+
+## 2026-08-18 第 19 阶段：原生导入失败路径保留 Walkthrough
+
+Android import 失败边界现在遵循以下状态规则：
+
+```text
+失败 -> 删除 staging
+     -> 不存在 backup：清理 journal
+     -> 存在 backup：保留 backup + journal，等待下次 bind recovery
+```
+
+旧的无条件清理会在激活失败且回滚失败后删除唯一可用知识库。新契约断言只检查该 catch block；成功替换与 recovery 分支中的清理仍然有效。Result marker 与 Rust polling 不变，`mobile-slim` 不增加运行时依赖。
+
+当前仍只是代码级证据。签名 arm64 rollback/recovery、SAF 与权限失败、force-stop continuity、签名产物及 RSS <= 256 MiB 仍需真机执行。

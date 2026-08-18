@@ -1866,3 +1866,10 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - This closes deterministic code-level recovery coverage only. It does not prove Android process death, SAF UI, storage/permission failures, signed artifact integrity, or RSS. Kotlin remains the production owner and the verifier stays outside mobile-slim.
 - Current verification is full Jest 146 suites / 1,271 passed / 26 skipped, TypeScript no-emit, Rust 28 passed / 1 ignored, projection replay 4 hosts / 6 nodes / 4 edges, mobile-slim 121 files / 4,275,083 uncompressed / 1,550,638 estimated compressed bytes (SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`), and Diataxis.
 - Next gates remain signed arm64 device SAF/query/path, force-stop/reopen continuity, failure-path replay, RSS <= 256 MiB, and the old-snapshot/move-journal/collision/rollback corpus before public-ID or SQLite/WASM promotion.
+
+## 2026-08-18 Phase 19 Native Import Failure-Path Retention
+
+- Android import failure cleanup now deletes staging unconditionally but clears the journal only when no backup exists. If rollback leaves the previous corpus in backup, Kotlin retains backup plus journal for the next activity-bind recovery.
+- The Android picker contract test scopes its negative assertion to the exact `Knowledge base import failed` catch, avoiding false failures from legitimate cleanup in successful replacement and recovery branches.
+- Public Rust request/poll/result-marker semantics, journal schema, Kotlin ownership, and the mobile-slim profile are unchanged; no runtime JavaScript/database dependency was added.
+- This closes a code-level data-loss regression only. Signed arm64 rollback/recovery, SAF/storage-permission failures, force-stop continuity, and RSS `<= 256 MiB` remain open. Keep public-ID, default SQLite/WASM, and budget promotion blocked until native evidence is archived.

@@ -522,6 +522,18 @@ Additive `canonicalId` 避免用 flag 驱动公开 ID 切换，并保持旧 layo
 - merge 前重新执行 TypeScript no-emit、全量 Jest、Rust tests、mobile-slim budget 与 Diataxis 检查。
 - G2/G3 原生工作仍未闭环：签名 arm64 产物、低内存设备 SAF import -> graph -> exact query -> path、force-stop/reopen continuity 与 RSS `<= 256 MiB`。
 - 在原生 replay、rollback/move-journal、old-snapshot 与 collision corpus 归档前，不提升 public canonical ID、SQLite/WASM 或移动端 corpus 上限。
+
+## 2026-08-18 第 19 阶段：原生导入失败路径保留
+
+### 实施
+
+1. Android import transaction 的生产 owner 继续是 Kotlin。外层失败边界始终删除 `stagingRoot`；仅当 `backupRoot` 不存在时清理 `journalFile`。backup 与 journal 仍存在时，保留它们等待下一次 `bindActivity()` recovery。
+2. 保持 Rust request/poll/result-marker 行为、journal schema-1 字段、legacy ID 与 `mobile-slim` export profile 不变。本轮是 additive durability 修正，不增加移动运行时 JavaScript 或数据库依赖。
+3. 契约测试只检查准确的 import-failure catch。成功替换与 recovery 分支中的清理仍然合法，不与破坏性失败序列混淆。
+
+### 权衡与门禁
+
+保留一组 backup/journal 会在恢复前占用有界 app-local 磁盘，但急于清理可能在 rollback failure 后删除唯一可用知识库。调用方仍立即收到 `failed`，不会产生假成功；后续 recovery 可复用既有 `recovered_previous` detail。picker 定向契约与 TypeScript no-emit 已通过。签名 arm64 rollback/recovery、SAF/存储权限失败、force-stop continuity 与 RSS `<= 256 MiB` 仍是原生门禁；public-ID、默认 SQLite/WASM 与预算上调继续冻结。
   - `runtime-capability-runbook/*` 这组 modular knowledge route 现已改为接入真实 server 侧 runbook ops，而不再返回 KLP placeholder payload；route 层现在也会保留 `checkId` / `sinceMinutes` / queue-filter 这类 query 参数，不再静默丢弃。
   - 真实浏览器 smoke 门禁现在也会端到端证明这三条链路：严格浏览器证据必须能看到 ANN sync-health verify 卡、新增的 verify/checks ANN 熔断/可追踪性/预筛选钻取、首个检查的 ANN sync 指标，以及 index-sync action-queue 钻取，而不再只是证明卡片“能打开”。
   - agent-workspace 的 locale 加固现在也覆盖了当前真实暴露出来的诊断卡片/消息空间：源码里引用到的 `agentWorkspace.*` key 已由 `src/agent_workspace.locale.contract.test.ts` 做门禁，双语 locale bundle 现已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片标签，并且启动期 `translate()` 会等 locale 完成初始化后再调用 `window.i18n.t()`，避免在 locale hydrate 前产生误报式 missing-key warning。

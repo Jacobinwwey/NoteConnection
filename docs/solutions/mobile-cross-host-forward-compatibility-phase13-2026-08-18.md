@@ -107,3 +107,21 @@ This is useful evidence for phase precedence and fail-closed path/schema handlin
 Kotlin import journal 现在已有 `scripts/verify-mobile-native-recovery.js` 提供确定性的 host recovery oracle，并由一个契约测试覆盖六个场景。它保持向前兼容边界：verifier 只用于测试，输出 `host-recovery-state-machine` 且 `nativeDeviceEvidence: false`，并排除出 `mobile-slim`。生产恢复仍由 Kotlin 拥有，Rust request/poll/result-marker 契约不变。
 
 这能证明 phase 优先级以及路径/schema 的 fail-closed 处理，但不能关闭原生进程死亡、SAF UI、存储/权限失败、签名或 RSS 门禁。后续顺序仍是签名 arm64 真机 replay、原生 adapter continuity，之后才评估 public-ID 或 SQLite/WASM。
+
+## 2026-08-18 Phase 19 Native Import Failure-Path Retention
+
+### English
+
+The Android import outer failure boundary previously deleted `stagingRoot`, `backupRoot`, and the journal together. That is unsafe when `replaceImportedTree()` has moved the previous corpus to backup but cannot complete activation or rollback: the backup is then the only recoverable corpus. The boundary now always removes staging, clears the journal only when no backup exists, and retains backup plus journal for the next `bindActivity()` recovery pass. The existing failed result marker remains unchanged.
+
+This is intentionally additive and low-cost: Kotlin remains the production owner; Rust request/poll/result-marker contracts, schema-1 journal fields, legacy IDs, and the mobile-slim export profile do not change. The focused contract assertion is scoped to the exact failure catch because successful replacement and recovery branches are allowed to delete backup after the active target is known. Retention trades a bounded amount of app-local disk for data recoverability and avoids hiding a destructive path behind a generic catch.
+
+The focused picker contract and TypeScript no-emit pass. The change does not close native evidence: signed arm64 rollback/recovery, SAF/storage-permission failure, force-stop/reopen continuity, and RSS `<= 256 MiB` remain G2/G3 gates. Public-ID migration, default SQLite/WASM, and mobile budget increases remain frozen.
+
+### 中文
+
+Android import 外层失败边界此前会同时删除 `stagingRoot`、`backupRoot` 与 journal。当 `replaceImportedTree()` 已将旧知识库移入 backup、但激活或回滚未完成时，backup 就是唯一可恢复语料；这种无条件清理会造成数据丢失。现在该边界始终删除 staging，仅在不存在 backup 时清理 journal；backup 仍存在时保留 backup 与 journal，等待下一次 `bindActivity()` recovery。既有 failed result marker 保持不变。
+
+这是 additive 且低成本的修正：生产 owner 仍是 Kotlin；Rust request/poll/result-marker 契约、schema-1 journal 字段、legacy ID 与 mobile-slim export profile 均不变。契约断言只扫描准确的失败 catch，因为成功替换与 recovery 在确认 active target 后允许删除 backup。保留策略以有界 app-local 磁盘占用换取数据可恢复性，避免通用 catch 隐藏破坏性路径。
+
+picker 定向契约与 TypeScript no-emit 已通过。本轮不关闭原生证据：签名 arm64 rollback/recovery、SAF/存储权限失败、force-stop/reopen continuity 与 RSS `<= 256 MiB` 仍是 G2/G3 门禁；public-ID 迁移、默认 SQLite/WASM 与移动端预算上调继续冻结。

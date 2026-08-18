@@ -264,3 +264,17 @@ Full verification passes 146 Jest suites / 1,271 passed / 26 skipped, TypeScript
 The contract test emits schema-1 evidence with `evidenceLevel: host-recovery-state-machine` and `nativeDeviceEvidence: false`. This is a deterministic host mirror and CI drift detector, not Android process-death, SAF UI, storage/permission failure, signed artifact, or RSS evidence. The mobile runtime remains Kotlin-owned and the verifier is excluded from mobile-slim.
 
 The next gate is still native: signed arm64 execution, SAF import/query/path, force-stop/reopen continuity, failure-path replay, and RSS <= 256 MiB on representative low-memory hardware. Public-ID and SQLite/WASM promotion remain frozen until those artifacts and the old-snapshot/move-journal/collision/rollback corpus are archived.
+
+## 2026-08-18 Phase 19 Native Import Failure-Path Retention Walkthrough
+
+The Android import failure boundary now follows this state rule:
+
+```text
+failure -> delete staging
+        -> backup absent: clear journal
+        -> backup present: retain backup + journal for next bind recovery
+```
+
+The old unconditional cleanup could delete the only known-good corpus after a failed activation and failed rollback. The contract assertion is scoped to that catch block, while successful replacement and recovery cleanup remain valid. Result markers and Rust polling are unchanged, and no runtime dependency enters `mobile-slim`.
+
+This remains code-level evidence. Signed arm64 rollback/recovery, SAF and permission failures, force-stop continuity, signed artifacts, and RSS <= 256 MiB still require native execution.

@@ -234,6 +234,17 @@ Use semantic parity as a separate, test-only oracle. Keep host-specific legacy I
 ### Phase 18 decision
 
 Keep recovery verification as a test-only host mirror while Kotlin remains the production owner. The explicit evidence level prevents deterministic host replay from being mistaken for native acceptance, and any future journal schema/phase change must update the implementation, verifier, and bilingual evidence together.
+
+## 2026-08-18 Phase 19 Native Import Failure-Path Retention
+
+- [x] Fixed the Android import outer catch to always remove staging but clear the journal only when no backup exists. A retained backup is the only known-good corpus after rollback failure and remains available to startup recovery.
+- [x] Added a catch-scoped contract assertion for the destructive cleanup regression; legitimate deletion in successful replacement and recovery branches remains allowed.
+- [x] Preserved the Rust request/poll/result-marker contract, journal schema, Kotlin ownership, and mobile-slim profile. No JavaScript or database runtime dependency was added.
+- [~] Signed arm64 rollback-failure/recovery, SAF/storage-permission failure, force-stop continuity, and RSS `<= 256 MiB` evidence remain open. Public-ID and SQLite/WASM promotion stay frozen.
+
+### Phase 19 decision
+
+Prefer recoverability over eager cleanup at the transaction boundary. Report `failed` immediately while retaining backup and journal for the next activity bind; clean them only after an active target is known or the journal is proven empty/unsafe.
 - [x] Runtime runbook modular-route composition is no longer inline-only inside `src/server.ts`; `src/routes/runtimeRunbookRouteOps.ts` now owns `/api/knowledge/runtime-capability-runbook/*` route-op assembly while preserving the current response contract.
 - [x] Graph-focus now renders the original markdown knowledge point through the shared markdown runtime and highlights matched passages in-place, instead of showing only a snippet list in the right pane.
 - [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness, readiness-exposed strict history auditing, current Windows-host strict 3/3 evidence, and opt-in multi-host audit tooling are now automated, while actual multi-host evidence and threshold calibration remain pending.

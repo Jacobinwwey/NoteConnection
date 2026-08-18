@@ -230,6 +230,17 @@
 ### 第 18 阶段决策
 
 将 recovery verification 保持为 test-only host mirror，生产 owner 仍是 Kotlin。显式 evidence level 防止把确定性 host replay 误判为原生验收；未来任何 journal schema/phase 变化都必须同步更新实现、verifier 与双语证据。
+
+## 2026-08-18 第 19 阶段：原生导入失败路径保留
+
+- [x] 修复 Android import 外层 catch：始终删除 staging，但仅在不存在 backup 时清理 journal。回滚失败后 backup 是唯一已知可用知识库，必须留给启动恢复。
+- [x] 增加针对该失败 catch 的契约断言，阻止破坏性清理回归，同时允许成功替换与 recovery 分支中的合法删除。
+- [x] 保持 Rust request/poll/result-marker 契约、journal schema、Kotlin owner 与 mobile-slim profile 不变；不新增 JavaScript 或数据库运行时依赖。
+- [~] 签名 arm64 rollback-failure/recovery、SAF/存储权限失败、force-stop continuity 与 RSS `<= 256 MiB` 证据仍未闭合；public-ID 与 SQLite/WASM 提升继续冻结。
+
+### 第 19 阶段决策
+
+在事务边界优先可恢复性，而不是急于清理。立即报告 `failed`，同时保留 backup 与 journal，等待下次 activity bind；只有确认 active target 已存在，或 journal 已证明为空/不安全时才清理。
 - [x] runtime runbook 的 modular-route composition 已不再只以内联形式存在于 `src/server.ts`；`src/routes/runtimeRunbookRouteOps.ts` 现在负责 `/api/knowledge/runtime-capability-runbook/*` 的 route-op 组装，并保持当前响应契约不变。
 - [x] graph-focus 右侧 pane 现在会通过共享 markdown runtime 渲染原始知识点正文，并在原文内高亮命中段落，而不再只显示摘录列表。
 - [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、当前 Windows 宿主 strict 3/3 证据、以及 opt-in 多宿主审计工具都已自动化，但实际多宿主证据与阈值校准仍待补齐。

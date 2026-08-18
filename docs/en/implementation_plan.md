@@ -523,6 +523,18 @@ The additive `canonicalId` avoids a flag-driven public-ID switch and keeps old l
 - Re-run TypeScript no-emit, the full Jest matrix, Rust tests, mobile-slim budget, and Diataxis checks before merge.
 - G2/G3 native work remains: signed arm64 artifact, low-memory device SAF import -> graph -> exact query -> path, force-stop/reopen continuity, and measured RSS `<= 256 MiB`.
 - Do not promote public canonical IDs, SQLite/WASM, or higher mobile corpus limits until native replay, rollback/move-journal, old-snapshot, and collision corpora are archived.
+
+## 2026-08-18 Phase 19 Native Import Failure-Path Retention
+
+### Implementation
+
+1. Keep Kotlin as the production owner of Android import transactions. The outer failure boundary always removes `stagingRoot`; it clears `journalFile` only when `backupRoot` is absent. A remaining backup and journal are retained for the next `bindActivity()` recovery pass.
+2. Keep Rust request/poll/result-marker behavior, journal schema-1 fields, legacy IDs, and the `mobile-slim` export profile unchanged. The change is an additive durability correction with no runtime JavaScript or database dependency.
+3. Scope the contract test to the exact import-failure catch. Cleanup in successful replacement and recovery branches remains legal and is not confused with the destructive failure sequence.
+
+### Trade-offs and gates
+
+Retaining one backup/journal pair costs bounded app-local disk until recovery, but eager cleanup can delete the only known-good corpus after rollback failure. The caller still receives `failed` immediately, so no false success is introduced; a later recovery can reuse the existing `recovered_previous` detail. Focused picker contract and TypeScript no-emit pass. Signed arm64 rollback/recovery, SAF/storage-permission failure, force-stop continuity, and RSS `<= 256 MiB` remain native gates; public-ID, default SQLite/WASM, and budget increases stay blocked.
   - modular knowledge-route wiring for `runtime-capability-runbook/*` is now backed by live server-side runbook ops instead of KLP placeholder payloads, and the route layer now preserves `checkId` / `sinceMinutes` / queue-filter query params rather than dropping them.
   - the real browser smoke gate now proves those verify/checks/action-queue surfaces end to end: strict browser evidence must show the ANN sync-health verify card, the new verify/checks ANN circuit/traceability/prefilter drilldowns, the first-check ANN sync metric, and the index-sync action-queue drilldown instead of only proving that the cards can open.
   - agent-workspace locale hardening now covers the currently surfaced diagnostics cards/messages: source-referenced `agentWorkspace.*` keys are guarded by `src/agent_workspace.locale.contract.test.ts`, bilingual locale bundles now back the query/quality/runbook card labels that strict browser smoke actually exercises, and startup-time translate helpers defer `window.i18n.t()` until locale init to avoid false missing-key warnings before locales hydrate.
