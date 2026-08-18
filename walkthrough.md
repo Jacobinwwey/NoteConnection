@@ -628,3 +628,31 @@ import 失败 -> 删除 staging
 旧实现会无条件删除 `backupRoot` 与 `journalFile`。当 `replaceImportedTree()` 已将旧知识库移出 active target、但激活或回滚未完成时，这会造成数据丢失。新契约测试只扫描该失败 catch，因此成功替换与 recovery 分支中的合法清理仍被保留。
 
 本修复保持既有 result marker 与 Rust polling surface，不增加移动运行时依赖，也不改变 slim staging budget。它仍不是原生设备证据：rollback failure、下次 bind recovery、SAF/存储权限失败、force-stop continuity、签名产物与 RSS <= 256 MiB 仍待完成。
+
+## 2026-08-18 Phase 20 Recovery Retry and Fresh Arm64 Artifact Walkthrough
+
+Startup recovery now has an explicit retry branch:
+
+```text
+backup exists + rename succeeds -> restore target, clear journal
+backup exists + rename fails    -> delete staging, retain backup+journal, retry later
+no backup                      -> clear journal, report recovered_empty
+```
+
+The host verifier now replays eight scenarios, including deterministic journaled and orphan rename failures. Those scenarios leave recoverable state in place and emit `recovery-pending` or `orphan-recovery-pending`; the report still declares `nativeDeviceEvidence: false`.
+
+A fresh Tauri Android build completed with the slim arm64 profile. Static verification passed for the unsigned universal APK (`9,576,838` compressed payload bytes, SHA-256 `eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6`) and AAB (`7,055,579` compressed payload bytes, SHA-256 `ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934`). Both are below 25 MiB and contain an arm64 payload; signing and RSS remain unmeasured.
+
+## 2026-08-18 第 20 阶段：恢复重试与新鲜 arm64 产物 Walkthrough
+
+启动恢复现在有明确的重试分支：
+
+```text
+backup 存在且 rename 成功 -> 恢复 target，清理 journal
+backup 存在但 rename 失败 -> 删除 staging，保留 backup+journal，稍后重试
+不存在 backup             -> 清理 journal，报告 recovered_empty
+```
+
+Host verifier 现在回放 8 个场景，包含 journaled 与 orphan 的确定性 rename failure。这些场景保留可恢复状态，并分别输出 `recovery-pending` 或 `orphan-recovery-pending`；报告仍声明 `nativeDeviceEvidence: false`。
+
+新鲜 Tauri Android slim arm64 构建已完成。静态验证通过未签名 universal APK（压缩 payload `9,576,838` 字节，SHA-256 为 `eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6`）与 AAB（压缩 payload `7,055,579` 字节，SHA-256 为 `ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934`）。两者均低于 25 MiB 且包含 arm64 payload；签名与 RSS 仍未测量。

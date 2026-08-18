@@ -125,3 +125,17 @@ Android import 外层失败边界此前会同时删除 `stagingRoot`、`backupRo
 这是 additive 且低成本的修正：生产 owner 仍是 Kotlin；Rust request/poll/result-marker 契约、schema-1 journal 字段、legacy ID 与 mobile-slim export profile 均不变。契约断言只扫描准确的失败 catch，因为成功替换与 recovery 在确认 active target 后允许删除 backup。保留策略以有界 app-local 磁盘占用换取数据可恢复性，避免通用 catch 隐藏破坏性路径。
 
 picker 定向契约与 TypeScript no-emit 已通过。本轮不关闭原生证据：签名 arm64 rollback/recovery、SAF/存储权限失败、force-stop/reopen continuity 与 RSS `<= 256 MiB` 仍是 G2/G3 门禁；public-ID 迁移、默认 SQLite/WASM 与移动端预算上调继续冻结。
+
+## 2026-08-18 Phase 20 Recovery Retry and Fresh Arm64 Artifact Evidence
+
+### English
+
+The previous Phase 19 fix still had one destructive startup branch: a retained backup was deleted when `backupRoot.renameTo(targetRoot)` failed during recovery. Phase 20 makes the state machine monotonic. A present backup is either activated and journaled cleanup completes, or staging is removed while backup and journal remain with `import_recovery_pending`. Orphan backup activation now emits `orphan_recovery_pending` instead of silently leaving no result. Empty and unsafe journal paths remain fail-closed.
+
+The host oracle now injects journaled and orphan rename failures and reports eight scenarios. It proves retention and retry signaling at the host boundary only; `nativeDeviceEvidence` remains false and the verifier stays out of `mobile-slim`. A fresh Tauri Android slim build produced unsigned universal APK/AAB artifacts with compressed payloads `9,576,838` and `7,055,579` bytes. Both pass arm64/forbidden-entry/25 MiB checks, but signature, device workload, storage/permission retry, process death, and RSS evidence are still absent.
+
+### 中文
+
+Phase 19 修复后仍有一个破坏性启动分支：恢复期间 `backupRoot.renameTo(targetRoot)` 失败时会删除已保留的 backup。Phase 20 让状态机相对于已知数据单调：backup 存在时，要么成功激活并完成 journal 清理，要么只删除 staging，保留 backup 与 journal 并写入 `import_recovery_pending`。孤儿 backup 激活失败现在写入 `orphan_recovery_pending`，不再静默丢失结果；空路径与不安全 journal 继续 fail-closed。
+
+Host oracle 现在注入 journaled 与 orphan rename failure 并报告 8 个场景，只证明 host boundary 的保留与重试信号；`nativeDeviceEvidence` 仍为 false，verifier 继续排除出 `mobile-slim`。新鲜 Tauri Android slim 构建生成未签名 universal APK/AAB，压缩 payload 分别为 `9,576,838` 与 `7,055,579` 字节，均通过 arm64、禁入项与 25 MiB 检查；签名、真机 workload、存储/权限重试、进程死亡与 RSS 证据仍缺失。

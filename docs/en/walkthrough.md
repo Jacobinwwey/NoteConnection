@@ -278,3 +278,9 @@ failure -> delete staging
 The old unconditional cleanup could delete the only known-good corpus after a failed activation and failed rollback. The contract assertion is scoped to that catch block, while successful replacement and recovery cleanup remain valid. Result markers and Rust polling are unchanged, and no runtime dependency enters `mobile-slim`.
 
 This remains code-level evidence. Signed arm64 rollback/recovery, SAF and permission failures, force-stop continuity, signed artifacts, and RSS <= 256 MiB still require native execution.
+
+## 2026-08-18 Phase 20 Recovery Retry and Fresh Arm64 Artifact Walkthrough
+
+Startup recovery now preserves a journaled backup when rename fails and reports `import_recovery_pending`; orphan recovery reports `orphan_recovery_pending`. The host verifier covers 8 scenarios, including deterministic retry retention, while remaining explicitly non-native evidence.
+
+The fresh slim arm64 build passed static verification for an unsigned universal APK (`9,576,838` compressed payload bytes, SHA-256 `eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6`) and AAB (`7,055,579` compressed payload bytes, SHA-256 `ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934`). Both are below 25 MiB; signature, device continuity, and RSS remain open.

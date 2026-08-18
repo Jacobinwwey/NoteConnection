@@ -245,6 +245,13 @@ Keep recovery verification as a test-only host mirror while Kotlin remains the p
 ### Phase 19 decision
 
 Prefer recoverability over eager cleanup at the transaction boundary. Report `failed` immediately while retaining backup and journal for the next activity bind; clean them only after an active target is known or the journal is proven empty/unsafe.
+
+## 2026-08-18 Phase 20 Recovery Retry and Fresh Arm64 Artifact Evidence
+
+- [x] Startup recovery now retains backup and journal when backup rename fails, emits `import_recovery_pending`, and retries on a later bind. Orphan rename failure emits `orphan_recovery_pending`.
+- [x] Host recovery evidence now covers 8 scenarios, including deterministic journaled/orphan backup-rename failure with retention; it remains `nativeDeviceEvidence: false`.
+- [x] Fresh unsigned universal APK/AAB built with the slim arm64 profile and statically verified: `9,576,838` and `7,055,579` compressed payload bytes respectively, both below 25 MiB.
+- [~] Signing, SAF workload, process-death continuity, storage/permission retry, and RSS `<= 256 MiB` remain native gates.
 - [x] Runtime runbook modular-route composition is no longer inline-only inside `src/server.ts`; `src/routes/runtimeRunbookRouteOps.ts` now owns `/api/knowledge/runtime-capability-runbook/*` route-op assembly while preserving the current response contract.
 - [x] Graph-focus now renders the original markdown knowledge point through the shared markdown runtime and highlights matched passages in-place, instead of showing only a snippet list in the right pane.
 - [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness, readiness-exposed strict history auditing, current Windows-host strict 3/3 evidence, and opt-in multi-host audit tooling are now automated, while actual multi-host evidence and threshold calibration remain pending.

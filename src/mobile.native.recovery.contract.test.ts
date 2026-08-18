@@ -6,7 +6,7 @@ const verifier = require(path.resolve(__dirname, '..', 'scripts', 'verify-mobile
     runRecoveryVerification: (options?: { outputPath?: string }) => {
         evidenceLevel: string;
         nativeDeviceEvidence: boolean;
-        scenarios: Array<{ name: string; action: string; status: string }>;
+        scenarios: Array<{ name: string; action: string; status: string; backupExists?: boolean; journalExists?: boolean }>;
         outputPath: string;
     };
 };
@@ -23,12 +23,14 @@ describe('mobile native recovery state-machine contract', () => {
             expect(evidence.scenarios).toEqual(expect.arrayContaining([
                 expect.objectContaining({ name: 'staging-target-wins', action: 'target-preserved' }),
                 expect.objectContaining({ name: 'backup-restored', action: 'previous-restored' }),
+                expect.objectContaining({ name: 'backup-rename-retry', action: 'recovery-pending', backupExists: true, journalExists: true }),
                 expect.objectContaining({ name: 'activated-target-wins', action: 'target-preserved' }),
                 expect.objectContaining({ name: 'orphan-backup-restored', action: 'orphan-backup-restored' }),
+                expect.objectContaining({ name: 'orphan-backup-retry', action: 'orphan-recovery-pending', backupExists: true }),
                 expect.objectContaining({ name: 'unsafe-journal-rejected', action: 'unsafe_import_journal' }),
                 expect.objectContaining({ name: 'unknown-schema-rejected', action: 'invalid_import_journal' }),
             ]));
-            expect(JSON.parse(fs.readFileSync(outputPath, 'utf8')).scenarios).toHaveLength(6);
+            expect(JSON.parse(fs.readFileSync(outputPath, 'utf8')).scenarios).toHaveLength(8);
         } finally {
             fs.rmSync(root, { recursive: true, force: true });
         }

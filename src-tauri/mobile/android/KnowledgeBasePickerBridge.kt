@@ -228,15 +228,20 @@ object KnowledgeBasePickerBridge {
                 return
             }
 
-            if (backupRoot.exists() && backupRoot.renameTo(targetRoot)) {
+            if (backupRoot.exists()) {
+                if (backupRoot.renameTo(targetRoot)) {
+                    stagingRoot.deleteRecursively()
+                    clearJournal(journalFile)
+                    writeResult(resultFile, "completed", targetRoot.absolutePath, "recovered_previous:${journal.treeUri}")
+                    return
+                }
                 stagingRoot.deleteRecursively()
-                clearJournal(journalFile)
-                writeResult(resultFile, "completed", targetRoot.absolutePath, "recovered_previous:${journal.treeUri}")
+                Log.e(TAG, "Unable to restore import backup; retaining journal for retry")
+                writeResult(resultFile, "failed", "", "import_recovery_pending:${journal.treeUri}")
                 return
             }
 
             stagingRoot.deleteRecursively()
-            backupRoot.deleteRecursively()
             clearJournal(journalFile)
             writeResult(resultFile, "failed", "", "recovered_empty:${journal.treeUri}")
         } catch (error: Throwable) {
@@ -259,9 +264,14 @@ object KnowledgeBasePickerBridge {
         }
 
         val backupRoot = backupRoots.firstOrNull()
-        if (backupRoot != null && backupRoot.renameTo(targetRoot)) {
-            backupRoots.drop(1).forEach { it.deleteRecursively() }
-            writeResult(resultFile, "completed", targetRoot.absolutePath, "recovered_orphan")
+        if (backupRoot != null) {
+            if (backupRoot.renameTo(targetRoot)) {
+                backupRoots.drop(1).forEach { it.deleteRecursively() }
+                writeResult(resultFile, "completed", targetRoot.absolutePath, "recovered_orphan")
+                return
+            }
+            Log.e(TAG, "Unable to restore orphaned import backup; retaining it for retry")
+            writeResult(resultFile, "failed", "", "orphan_recovery_pending")
         }
     }
 

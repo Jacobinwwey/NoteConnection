@@ -241,6 +241,13 @@
 ### 第 19 阶段决策
 
 在事务边界优先可恢复性，而不是急于清理。立即报告 `failed`，同时保留 backup 与 journal，等待下次 activity bind；只有确认 active target 已存在，或 journal 已证明为空/不安全时才清理。
+
+## 2026-08-18 第 20 阶段：恢复重试与新鲜 arm64 产物证据
+
+- [x] 启动恢复在 backup rename 失败时保留 backup 与 journal，写入 `import_recovery_pending` 并等待下次 bind 重试；孤儿 rename 失败写入 `orphan_recovery_pending`。
+- [x] Host recovery 证据扩展到 8 个场景，包含 journaled/orphan backup rename failure 与保留语义；仍标记 `nativeDeviceEvidence: false`。
+- [x] 使用 slim arm64 profile 生成并静态验证新鲜未签名 universal APK/AAB，压缩 payload 分别为 `9,576,838` 与 `7,055,579` 字节，均低于 25 MiB。
+- [~] 签名、SAF workload、进程死亡 continuity、存储/权限重试与 RSS `<= 256 MiB` 仍是原生门禁。
 - [x] runtime runbook 的 modular-route composition 已不再只以内联形式存在于 `src/server.ts`；`src/routes/runtimeRunbookRouteOps.ts` 现在负责 `/api/knowledge/runtime-capability-runbook/*` 的 route-op 组装，并保持当前响应契约不变。
 - [x] graph-focus 右侧 pane 现在会通过共享 markdown runtime 渲染原始知识点正文，并在原文内高亮命中段落，而不再只显示摘录列表。
 - [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、当前 Windows 宿主 strict 3/3 证据、以及 opt-in 多宿主审计工具都已自动化，但实际多宿主证据与阈值校准仍待补齐。

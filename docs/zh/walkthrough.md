@@ -269,3 +269,9 @@ Android import 失败边界现在遵循以下状态规则：
 旧的无条件清理会在激活失败且回滚失败后删除唯一可用知识库。新契约断言只检查该 catch block；成功替换与 recovery 分支中的清理仍然有效。Result marker 与 Rust polling 不变，`mobile-slim` 不增加运行时依赖。
 
 当前仍只是代码级证据。签名 arm64 rollback/recovery、SAF 与权限失败、force-stop continuity、签名产物及 RSS <= 256 MiB 仍需真机执行。
+
+## 2026-08-18 第 20 阶段：恢复重试与新鲜 arm64 产物 Walkthrough
+
+启动恢复现在在 rename 失败时保留 journaled backup 并报告 `import_recovery_pending`；孤儿恢复报告 `orphan_recovery_pending`。Host verifier 覆盖 8 个场景，包含确定性的 retry retention，同时明确不属于原生证据。
+
+新鲜 slim arm64 构建已通过未签名 universal APK（压缩 payload `9,576,838` 字节，SHA-256 为 `eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6`）与 AAB（压缩 payload `7,055,579` 字节，SHA-256 为 `ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934`）的静态验证。两者均低于 25 MiB；签名、设备 continuity 与 RSS 仍开放。

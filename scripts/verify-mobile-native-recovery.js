@@ -75,8 +75,12 @@ function readJournal(journalPath) {
   }
 }
 
-function recoverOrphanedTransactions(root) {
+function recoverOrphanedTransactions(root, options = {}) {
+  const renameEntry = typeof options.renameEntry === 'function'
+    ? options.renameEntry
+    : fs.renameSync;
   const target = path.join(root, TARGET_NAME);
+  const resultPath = path.join(root, RESULT_FILE);
   const staging = fs.readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.name.startsWith(STAGING_PREFIX))
     .map((entry) => path.join(root, entry.name));
@@ -92,19 +96,27 @@ function recoverOrphanedTransactions(root) {
     return 'target-preserved';
   }
   if (backups.length > 0) {
-    fs.renameSync(backups[0], target);
+    try {
+      renameEntry(backups[0], target);
+    } catch (_error) {
+      writeAtomic(resultPath, JSON.stringify({ status: 'failed', detail: 'orphan_recovery_pending' }));
+      return 'orphan-recovery-pending';
+    }
     backups.slice(1).forEach(removeEntry);
     return 'orphan-backup-restored';
   }
   return 'nothing-to-recover';
 }
 
-function recoverImportTransaction(root) {
+function recoverImportTransaction(root, options = {}) {
+  const renameEntry = typeof options.renameEntry === 'function'
+    ? options.renameEntry
+    : fs.renameSync;
   const journalPath = path.join(root, JOURNAL_FILE);
   const resultPath = path.join(root, RESULT_FILE);
   const journal = readJournal(journalPath);
   if (!journal) {
-    return { status: 'noop', action: recoverOrphanedTransactions(root) };
+    return { status: 'noop', action: recoverOrphanedTransactions(root, options) };
   }
   if (journal.invalid) {
     removeEntry(journalPath);
@@ -129,7 +141,13 @@ function recoverImportTransaction(root) {
     return { status: 'completed', action: 'target-preserved' };
   }
   if (fs.existsSync(backup)) {
-    fs.renameSync(backup, target);
+    try {
+      renameEntry(backup, target);
+    } catch (_error) {
+      removeEntry(staging);
+      writeAtomic(resultPath, JSON.stringify({ status: 'failed', detail: 'import_recovery_pending' }));
+      return { status: 'failed', action: 'recovery-pending' };
+    }
     removeEntry(staging);
     removeEntry(journalPath);
     writeAtomic(resultPath, JSON.stringify({ status: 'completed', detail: 'previous-restored' }));
@@ -150,11 +168,11 @@ function createCorpus(root, name, content) {
   return directory;
 }
 
-function runScenario(name, setup, expectedAction, expectedTargetContent = null) {
+function runScenario(name, setup, expectedAction, expectedTargetContent = null, options = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), `noteconnection-mobile-recovery-${name}-`));
   try {
     setup(root);
-    const result = recoverImportTransaction(root);
+    const result = recoverImportTransaction(root, options);
     assert.strictEqual(result.action, expectedAction, `${name}: unexpected recovery action`);
     const target = path.join(root, TARGET_NAME);
     assert.strictEqual(
@@ -169,10 +187,11 @@ function runScenario(name, setup, expectedAction, expectedTargetContent = null) 
         `${name}: unexpected target content`,
       );
     }
+    const expectedJournalExists = options.expectedJournalExists === true;
     assert.strictEqual(
       fs.existsSync(path.join(root, JOURNAL_FILE)),
-      false,
-      `${name}: journal was not cleared`,
+      expectedJournalExists,
+      `${name}: unexpected journal state`,
     );
     return {
       name,
@@ -180,6 +199,7 @@ function runScenario(name, setup, expectedAction, expectedTargetContent = null) 
       status: result.status,
       targetExists: fs.existsSync(path.join(root, TARGET_NAME)),
       journalExists: fs.existsSync(path.join(root, JOURNAL_FILE)),
+      backupExists: fs.readdirSync(root).some((entry) => entry.startsWith(BACKUP_PREFIX)),
     };
   } finally {
     removeEntry(root);
@@ -208,6 +228,21 @@ function runRecoveryVerification(options = {}) {
         treeUri: 'content://fixture/backup',
       });
     }, 'previous-restored', 'previous'),
+    runScenario('backup-rename-retry', (root) => {
+      createCorpus(root, `${BACKUP_PREFIX}one`, 'previous');
+      createCorpus(root, `${STAGING_PREFIX}one`, 'staged');
+      writeJournal(root, {
+        phase: 'target-backed-up',
+        stagingName: `${STAGING_PREFIX}one`,
+        backupName: `${BACKUP_PREFIX}one`,
+        treeUri: 'content://fixture/retry',
+      });
+    }, 'recovery-pending', null, {
+      expectedJournalExists: true,
+      renameEntry: () => {
+        throw new Error('simulated backup rename failure');
+      },
+    }),
     runScenario('activated-target-wins', (root) => {
       createCorpus(root, TARGET_NAME, 'new-active');
       createCorpus(root, `${BACKUP_PREFIX}one`, 'old-active');
@@ -221,6 +256,13 @@ function runRecoveryVerification(options = {}) {
     runScenario('orphan-backup-restored', (root) => {
       createCorpus(root, `${BACKUP_PREFIX}orphan`, 'orphaned');
     }, 'orphan-backup-restored', 'orphaned'),
+    runScenario('orphan-backup-retry', (root) => {
+      createCorpus(root, `${BACKUP_PREFIX}orphan`, 'orphaned');
+    }, 'orphan-recovery-pending', null, {
+      renameEntry: () => {
+        throw new Error('simulated orphan backup rename failure');
+      },
+    }),
     runScenario('unsafe-journal-rejected', (root) => {
       writeJournal(root, {
         phase: 'target-backed-up',

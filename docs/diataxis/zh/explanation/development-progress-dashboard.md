@@ -1901,3 +1901,9 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - Android picker 契约测试将负向断言限定到准确的 `Knowledge base import failed` catch，避免误伤成功替换与 recovery 分支中的合法清理。
 - Rust request/poll/result-marker 语义、journal schema、Kotlin owner 与 mobile-slim profile 均不变；没有新增移动运行时 JavaScript/数据库依赖。
 - 本轮只关闭代码级数据丢失回归。签名 arm64 rollback/recovery、SAF/存储权限失败、force-stop continuity 与 RSS `<= 256 MiB` 仍开放；在原生证据归档前继续冻结 public-ID、默认 SQLite/WASM 与预算上调。
+
+## 2026-08-18 第 20 阶段：恢复重试与新鲜 arm64 产物证据
+
+- 启动恢复在 backup activation rename 失败时保留 backup 与 journal，写入 `import_recovery_pending` 并等待下次 bind；孤儿 activation 失败写入 `orphan_recovery_pending`。
+- Host recovery oracle 现在有 8 个场景，包含注入的 journaled/orphan rename failure 与保留语义；仍标记 `nativeDeviceEvidence: false` 且不进入移动运行时。
+- 新鲜未签名 slim arm64 APK/AAB 静态验证通过，压缩 payload 分别为 `9,576,838` 与 `7,055,579` 字节，均低于 25 MiB。签名、设备 continuity、存储/权限重试与 RSS 门禁仍开放。

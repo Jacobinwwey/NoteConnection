@@ -1215,3 +1215,43 @@ The harness intentionally accepts only ordered schema-1 `adbArgs` and fails clos
 - Android picker 定向契约：4 个测试通过；TypeScript no-emit 通过。
 - 全量基线仍为 146 个 Jest suite / 1,271 passed / 26 skipped，Rust 28 passed / 1 ignored，projection replay 为 4 hosts / 6 nodes / 4 edges，mobile-slim 为 121 个文件 / 未压缩 4,275,083 / 估算压缩 1,550,638 字节，SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`。
 - 原生门禁仍开放：签名 arm64 产物、SAF import/query/path、rollback failure 与下次 bind recovery、force-stop/reopen continuity、存储/权限失败，以及 RSS `<= 256 MiB` 实测。在这些 artifact 归档前，不提升 public ID、默认 SQLite/WASM 或移动端预算。
+
+## 2026-08-18 Phase 20 Recovery Retry and Fresh Arm64 Artifact Evidence
+
+### Implementation
+
+1. Make startup recovery monotonic. If a journaled backup exists but `renameTo(targetRoot)` fails, delete only staging, retain backup and journal, log the retry condition, and emit `import_recovery_pending`. Do not convert a recoverable backup into `recovered_empty`.
+2. Apply the same explicit failure semantics to orphan backups: preserve the orphan and emit `orphan_recovery_pending` when activation cannot be completed. A later activity bind can retry without changing public APIs.
+3. Extend `verify-mobile-native-recovery.js` with an injected rename-failure oracle. The eight-scenario report now checks target precedence, restoration, orphan recovery, unsafe/schema rejection, and journaled/orphan backup retention on retry. The verifier remains test-only and outside `mobile-slim`.
+4. Build a fresh Android release through `tauri:android:build` with `aarch64`, `opt-level=z`, one codegen unit, thin LTO, panic abort, symbol stripping, and Godot Path Mode excluded. Static artifact verification requires arm64 payload and rejects forbidden entries.
+
+### Evidence and trade-offs
+
+- Fresh unsigned universal APK: `9,696,699` file bytes, compressed payload `9,576,838`, SHA-256 `eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6`.
+- Fresh unsigned universal AAB: `7,256,685` file bytes, compressed payload `7,055,579`, SHA-256 `ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934`.
+- Both artifacts pass the 25 MiB `mobile-low` payload budget, arm64 payload check, and forbidden-entry scan. They are unsigned and have no RSS evidence; artifact integrity is not device acceptance.
+- Retaining failed backups costs bounded app-local disk and may require repeated startup retries, but it is strictly safer than deleting the only known-good corpus. Retry markers make the state observable without adding a runtime dependency.
+
+### Remaining gates
+
+Run signed arm64 APK/AAB on representative low-memory hardware through SAF import -> graph build -> exact query -> neighbors/path -> force-stop -> reopen. Capture storage/permission failure retries and peak RSS. Keep public-ID cutover, default SQLite/WASM, and budget increases frozen until those native artifacts are archived.
+
+## 2026-08-18 第 20 阶段：恢复重试与新鲜 arm64 产物证据
+
+### 实施
+
+1. 让启动恢复相对于已知数据单调：journaled backup 存在但 `renameTo(targetRoot)` 失败时，只删除 staging，保留 backup 与 journal，记录重试条件并写入 `import_recovery_pending`。不能把可恢复 backup 转成 `recovered_empty`。
+2. 对孤儿 backup 使用同样的显式失败语义：激活失败时保留孤儿并写入 `orphan_recovery_pending`，下次 activity bind 可重试，不改变公开 API。
+3. 为 `verify-mobile-native-recovery.js` 增加可注入 rename-failure oracle。七场景报告覆盖 target 优先、旧库恢复、孤儿恢复、unsafe/schema 拒绝，以及 retry 时 backup/journal 保留。verifier 仍仅用于测试且排除出 `mobile-slim`。
+4. 通过 `tauri:android:build` 生成新鲜 Android release，使用 `aarch64`、`opt-level=z`、单 codegen unit、thin LTO、panic abort、符号剥离并排除 Godot Path Mode。静态产物验证要求 arm64 payload 并拒绝禁入项。
+
+### 证据与权衡
+
+- 新鲜未签名 universal APK：文件大小 `9,696,699`，压缩 payload `9,576,838`，SHA-256 为 `eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6`。
+- 新鲜未签名 universal AAB：文件大小 `7,256,685`，压缩 payload `7,055,579`，SHA-256 为 `ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934`。
+- 两份产物均通过 `mobile-low` 25 MiB payload、arm64 payload 与禁入项扫描；仍未签名且没有 RSS 证据，产物完整性不等于真机验收。
+- 失败 backup 保留会占用有界 app-local 磁盘并可能需要多次启动重试，但严格优于删除唯一可用知识库；retry marker 让状态可观测且不增加运行时依赖。
+
+### 剩余门禁
+
+在代表性低内存硬件上运行签名 arm64 APK/AAB，执行 SAF import -> graph build -> exact query -> neighbors/path -> force-stop -> reopen，并记录存储/权限失败重试与 peak RSS。原生 artifact 归档前，继续冻结 public-ID 切换、默认 SQLite/WASM 与预算上调。

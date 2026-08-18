@@ -534,6 +534,13 @@ Additive `canonicalId` 避免用 flag 驱动公开 ID 切换，并保持旧 layo
 ### 权衡与门禁
 
 保留一组 backup/journal 会在恢复前占用有界 app-local 磁盘，但急于清理可能在 rollback failure 后删除唯一可用知识库。调用方仍立即收到 `failed`，不会产生假成功；后续 recovery 可复用既有 `recovered_previous` detail。picker 定向契约与 TypeScript no-emit 已通过。签名 arm64 rollback/recovery、SAF/存储权限失败、force-stop continuity 与 RSS `<= 256 MiB` 仍是原生门禁；public-ID、默认 SQLite/WASM 与预算上调继续冻结。
+
+## 2026-08-18 第 20 阶段：恢复重试与新鲜 arm64 产物证据
+
+- 启动恢复在 `renameTo(targetRoot)` 失败时保留 journaled backup，只删除 staging，并写入 `import_recovery_pending`；孤儿 backup 失败写入 `orphan_recovery_pending`。
+- Host mirror 覆盖 8 个确定性场景，包含注入的 journaled/orphan backup rename failure 与保留语义；仍仅用于测试并声明 `nativeDeviceEvidence: false`。
+- 新鲜 slim arm64 Android 构建通过静态验证。未签名 universal APK 压缩 payload 为 `9,576,838` 字节（文件 SHA-256：`eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6`）；AAB 为 `7,055,579` 字节（文件 SHA-256：`ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934`）。
+- 两者均低于 25 MiB 且包含 arm64，但签名、真机 workload、进程死亡/存储重试与 RSS 证据仍缺失。
   - `runtime-capability-runbook/*` 这组 modular knowledge route 现已改为接入真实 server 侧 runbook ops，而不再返回 KLP placeholder payload；route 层现在也会保留 `checkId` / `sinceMinutes` / queue-filter 这类 query 参数，不再静默丢弃。
   - 真实浏览器 smoke 门禁现在也会端到端证明这三条链路：严格浏览器证据必须能看到 ANN sync-health verify 卡、新增的 verify/checks ANN 熔断/可追踪性/预筛选钻取、首个检查的 ANN sync 指标，以及 index-sync action-queue 钻取，而不再只是证明卡片“能打开”。
   - agent-workspace 的 locale 加固现在也覆盖了当前真实暴露出来的诊断卡片/消息空间：源码里引用到的 `agentWorkspace.*` key 已由 `src/agent_workspace.locale.contract.test.ts` 做门禁，双语 locale bundle 现已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片标签，并且启动期 `translate()` 会等 locale 完成初始化后再调用 `window.i18n.t()`，避免在 locale hydrate 前产生误报式 missing-key warning。

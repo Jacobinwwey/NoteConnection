@@ -535,6 +535,13 @@ The additive `canonicalId` avoids a flag-driven public-ID switch and keeps old l
 ### Trade-offs and gates
 
 Retaining one backup/journal pair costs bounded app-local disk until recovery, but eager cleanup can delete the only known-good corpus after rollback failure. The caller still receives `failed` immediately, so no false success is introduced; a later recovery can reuse the existing `recovered_previous` detail. Focused picker contract and TypeScript no-emit pass. Signed arm64 rollback/recovery, SAF/storage-permission failure, force-stop continuity, and RSS `<= 256 MiB` remain native gates; public-ID, default SQLite/WASM, and budget increases stay blocked.
+
+## 2026-08-18 Phase 20 Recovery Retry and Fresh Arm64 Artifact Evidence
+
+- Startup recovery now retains a journaled backup when `renameTo(targetRoot)` fails, removes only staging, and emits `import_recovery_pending`; orphan backup failure emits `orphan_recovery_pending`.
+- The host mirror covers 8 deterministic scenarios, including injected journaled/orphan backup rename failures with retention. It remains test-only and declares `nativeDeviceEvidence: false`.
+- A fresh slim arm64 Android build passed static verification. Unsigned universal APK compressed payload is `9,576,838` bytes (file SHA-256 `eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6`); AAB is `7,055,579` bytes (file SHA-256 `ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934`).
+- Both remain below the 25 MiB payload budget and expose arm64, but signing, device workload, process-death/storage retry, and RSS evidence are still absent.
   - modular knowledge-route wiring for `runtime-capability-runbook/*` is now backed by live server-side runbook ops instead of KLP placeholder payloads, and the route layer now preserves `checkId` / `sinceMinutes` / queue-filter query params rather than dropping them.
   - the real browser smoke gate now proves those verify/checks/action-queue surfaces end to end: strict browser evidence must show the ANN sync-health verify card, the new verify/checks ANN circuit/traceability/prefilter drilldowns, the first-check ANN sync metric, and the index-sync action-queue drilldown instead of only proving that the cards can open.
   - agent-workspace locale hardening now covers the currently surfaced diagnostics cards/messages: source-referenced `agentWorkspace.*` keys are guarded by `src/agent_workspace.locale.contract.test.ts`, bilingual locale bundles now back the query/quality/runbook card labels that strict browser smoke actually exercises, and startup-time translate helpers defer `window.i18n.t()` until locale init to avoid false missing-key warnings before locales hydrate.

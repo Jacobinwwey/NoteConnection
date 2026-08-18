@@ -1873,3 +1873,9 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - The Android picker contract test scopes its negative assertion to the exact `Knowledge base import failed` catch, avoiding false failures from legitimate cleanup in successful replacement and recovery branches.
 - Public Rust request/poll/result-marker semantics, journal schema, Kotlin ownership, and the mobile-slim profile are unchanged; no runtime JavaScript/database dependency was added.
 - This closes a code-level data-loss regression only. Signed arm64 rollback/recovery, SAF/storage-permission failures, force-stop continuity, and RSS `<= 256 MiB` remain open. Keep public-ID, default SQLite/WASM, and budget promotion blocked until native evidence is archived.
+
+## 2026-08-18 Phase 20 Recovery Retry and Fresh Arm64 Artifact Evidence
+
+- Startup recovery now retains backup and journal when backup activation rename fails, emits `import_recovery_pending`, and retries on a later bind. Orphan activation failure emits `orphan_recovery_pending`.
+- The host recovery oracle now has 8 scenarios, including injected journaled/orphan rename failures with retention; it remains `nativeDeviceEvidence: false` and outside the mobile runtime.
+- Fresh unsigned slim arm64 APK/AAB static verification passes: compressed payloads are `9,576,838` and `7,055,579` bytes, respectively, both under 25 MiB. Signature, device continuity, storage/permission retry, and RSS gates remain open.

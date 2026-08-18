@@ -680,3 +680,25 @@ Prefer recoverability over eager cleanup at the transaction boundary. A failed i
 ### 第 19 阶段决策
 
 在事务边界优先保证可恢复性，而不是急于清理。失败 import 立即报告 `failed`，但保留旧知识库与 journal，交由下次 activity bind 恢复；只有确认新 target 已激活，或 journal 已证明为空/不安全时才清理。这样不改变向前兼容契约与移动包体，同时消除通用 catch 中潜在的数据丢失路径。
+
+## 2026-08-18 Phase 20 Recovery Retry and Fresh Arm64 Artifact Evidence
+
+- [x] Closed the remaining startup-recovery loss path: when a known backup cannot be renamed to the active target, Kotlin now deletes only staging, retains backup and journal, and emits `import_recovery_pending` for a later retry. Orphan backup rename failure emits `orphan_recovery_pending` instead of disappearing silently.
+- [x] Extended the dependency-free host mirror to 8 scenarios, including deterministic journaled/orphan backup-rename failure with retention; the report remains `nativeDeviceEvidence: false`.
+- [x] Generated a fresh Tauri Android release with the slim profile. Unsigned universal APK compressed payload is `9,576,838` bytes and AAB is `7,055,579` bytes, both below the 25 MiB budget; SHA-256 values are recorded in the implementation plan and walkthrough.
+- [~] Signature verification, SAF workload, device/emulator process-death continuity, retry under real storage/permission faults, and RSS `<= 256 MiB` remain external gates. Do not treat unsigned artifacts or host replay as release acceptance.
+
+### Phase 20 decision
+
+Recovery must be monotonic with respect to known-good data: an existing backup is never deleted solely because rename failed. Retry state is explicit and idempotent, while empty/unsafe journals remain fail-closed. This keeps the mobile runtime dependency-free and preserves the existing Rust/result-marker contract.
+
+## 2026-08-18 第 20 阶段：恢复重试与新鲜 arm64 产物证据
+
+- [x] 关闭启动恢复的剩余数据丢失路径：已知 backup 无法 rename 到 active target 时，Kotlin 只删除 staging，保留 backup 与 journal，并写入 `import_recovery_pending` 等待重试；孤儿 backup rename 失败写入 `orphan_recovery_pending`，不再静默消失。
+- [x] 无依赖 host mirror 扩展到 8 个场景，覆盖 journaled 与 orphan backup rename failure，并验证保留语义；报告继续标记 `nativeDeviceEvidence: false`。
+- [x] 使用 slim profile 生成新鲜 Tauri Android release。未签名 universal APK 压缩 payload 为 `9,576,838` 字节，AAB 为 `7,055,579` 字节，均低于 25 MiB；SHA-256 已写入实现计划与 walkthrough。
+- [~] 签名验证、SAF workload、设备/模拟器进程死亡 continuity、真实存储/权限故障下的重试与 RSS `<= 256 MiB` 仍是外部门禁。未签名产物与 host replay 不能作为 release acceptance。
+
+### 第 20 阶段决策
+
+恢复相对于已知可用数据必须单调：不能仅因为 rename 失败就删除已有 backup。重试状态显式且幂等；空 journal 与不安全 journal 继续 fail-closed。这样保持移动运行时无额外依赖，并维持既有 Rust/result-marker 契约。
