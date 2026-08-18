@@ -1255,3 +1255,47 @@ Run signed arm64 APK/AAB on representative low-memory hardware through SAF impor
 ### 剩余门禁
 
 在代表性低内存硬件上运行签名 arm64 APK/AAB，执行 SAF import -> graph build -> exact query -> neighbors/path -> force-stop -> reopen，并记录存储/权限失败重试与 peak RSS。原生 artifact 归档前，继续冻结 public-ID 切换、默认 SQLite/WASM 与预算上调。
+
+## 2026-08-18 Phase 21 Host Gate Reconciliation
+
+### Current evidence
+
+1. Host verification remains green: Android prerequisites, TypeScript no-emit, the 8-scenario recovery mirror, and the 4-host projection replay pass. Their reports are generated under ignored verification output and do not alter the repository.
+2. The only configured AVD is `Medium_Phone_API_36.1` at `E:\Android\avd\Medium_Phone.avd`. Its image is Android `36.1` / Play Store / `x86_64` with 2 GiB RAM; `adb devices -l` reports no online target. This is useful for tooling smoke tests only, not arm64 release evidence.
+3. No approved signing material is present in the repository or host search (`.jks`, `.keystore`, `.p12`). The fresh APK/AAB therefore remain unsigned static artifacts. The release verifier must continue requiring `--require-signed --require-arm64 --require-rss`.
+
+### Forward-compatible execution plan
+
+1. CI injects signing material ephemerally, builds the existing slim `aarch64` profile, and publishes only the signed APK/AAB plus provenance; no keystore enters git or the mobile bundle.
+2. A device-lab run selects arm64 low-memory hardware. An arm64 emulator may be used for harness debugging with explicit opt-in, but cannot satisfy production acceptance by itself.
+3. The lab supplies a schema-1 workload spec with explicit `adbArgs` for `saf-import -> graph-build -> exact-query -> path -> continuity`, including a bounded corpus and assertions for import status, exact results, edge/path shape, and post-restart continuity.
+4. The recorder archives artifact SHA-256, signature metadata, masked device identity, force-stop observation, step results, logcat tail, and `/proc/<pid>/status:VmRSS` samples. Any missing sample, unobserved process death, failed retry, or peak RSS above 256 MiB fails closed.
+5. Only after this evidence is archived should the team reassess canonical public IDs, default SQLite/WASM, or mobile budget changes. Until then, the memory projection and existing compatibility aliases remain the least-risk default.
+
+### Trade-offs and rejected shortcuts
+
+- Rebuilding for x86_64 would make the local AVD installable but would weaken the requested arm64/mobile target and provide no evidence about the release artifact.
+- Generating a local debug keystore would prove only test signing, not release provenance; it is intentionally not treated as an approved signing path.
+- Allowing unsigned or emulator-only evidence would make the gate non-monotonic and hide the exact failure modes this plan is intended to expose.
+
+## 2026-08-18 第 21 阶段：宿主门禁对账
+
+### 当前证据
+
+1. 宿主验证继续全绿：Android prerequisite、TypeScript no-emit、8 场景 recovery mirror 与 4-host projection replay 均通过。报告写入被忽略的 verification output，不改变仓库内容。
+2. 唯一已配置 AVD 为 `Medium_Phone_API_36.1`，路径是 `E:\Android\avd\Medium_Phone.avd`；镜像为 Android `36.1` / Play Store / `x86_64`，内存 2 GiB；`adb devices -l` 没有 online target。它只适用于工具链 smoke test，不能作为 arm64 release 证据。
+3. 仓库与宿主搜索均没有获批签名材料（`.jks`、`.keystore`、`.p12`）。因此新鲜 APK/AAB 仍是未签名静态产物；release verifier 继续要求 `--require-signed --require-arm64 --require-rss`。
+
+### 向前兼容执行计划
+
+1. CI 临时注入签名材料，沿用 slim `aarch64` profile 构建，只发布签名 APK/AAB 与 provenance；keystore 不进入 git 或移动 bundle。
+2. 设备实验室选择 arm64 低内存硬件。arm64 emulator 可以显式 opt-in 用于 harness 调试，但不能单独满足生产验收。
+3. 实验室提供 schema-1 workload spec，通过显式 `adbArgs` 按 `saf-import -> graph-build -> exact-query -> path -> continuity` 执行，携带有界 corpus，并断言 import status、exact result、edge/path 形状和重启后 continuity。
+4. recorder 归档 artifact SHA-256、签名元数据、脱敏设备身份、force-stop 观察、步骤结果、logcat 尾部与 `/proc/<pid>/status:VmRSS` 样本。缺样本、进程死亡不可观测、重试失败或 peak RSS 超过 256 MiB 均 fail closed。
+5. 只有这些证据归档后，才重新评估 canonical public ID、默认 SQLite/WASM 或移动预算变化。在此之前，memory projection 与既有兼容 alias 仍是风险最低的默认方案。
+
+### 权衡与拒绝的捷径
+
+- 为了让本地 AVD 可安装而重建 x86_64，会削弱目标 arm64/mobile 路径，且不能证明 release artifact。
+- 生成本地 debug keystore 只能证明测试签名，不代表 release provenance，因此不作为获批签名路径。
+- 接受未签名或仅 emulator 证据会使门禁失去单调性，并掩盖本计划要暴露的真实失败模式。

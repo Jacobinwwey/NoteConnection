@@ -425,3 +425,11 @@ Primary references:
 ### Phase 14 trade-offs
 
 The harness deliberately executes only explicit `adbArgs` from a checked workload spec. This is less convenient than an arbitrary shell script, but it makes evidence reproducible, auditable, and resistant to accidental host-side data access. SAF UI automation remains device-lab work; the repository now records the exact boundary and fails closed when that proof is absent.
+
+## 2026-08-18 Phase 21 Host Gate Reconciliation
+
+- [x] Re-run Android prerequisites, TypeScript no-emit, the 8-scenario recovery mirror, and 4-host projection replay; verification output remains ignored and the worktree is clean.
+- [x] Record the available AVD facts: `Medium_Phone_API_36.1` at `E:\Android\avd\Medium_Phone.avd`, Android 36.1 / Play Store / `x86_64` / 2 GiB; no online `adb` target.
+- [x] Keep x86_64 emulator output outside arm64 release evidence and confirm no approved `.jks`, `.keystore`, or `.p12` is available.
+- [~] G2/G3 still require CI-signed arm64 APK/AAB, an approved arm64 low-memory device, the ordered workload, storage/permission retry evidence, force-stop/reopen continuity, and peak RSS `<= 256 MiB`.
+- [ ] Do not promote public IDs, SQLite/WASM defaulting, or mobile budget changes before the signed evidence archive exists.

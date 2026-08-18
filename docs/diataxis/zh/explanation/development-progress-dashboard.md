@@ -1907,3 +1907,10 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - 启动恢复在 backup activation rename 失败时保留 backup 与 journal，写入 `import_recovery_pending` 并等待下次 bind；孤儿 activation 失败写入 `orphan_recovery_pending`。
 - Host recovery oracle 现在有 8 个场景，包含注入的 journaled/orphan rename failure 与保留语义；仍标记 `nativeDeviceEvidence: false` 且不进入移动运行时。
 - 新鲜未签名 slim arm64 APK/AAB 静态验证通过，压缩 payload 分别为 `9,576,838` 与 `7,055,579` 字节，均低于 25 MiB。签名、设备 continuity、存储/权限重试与 RSS 门禁仍开放。
+
+## 2026-08-18 第 21 阶段：宿主门禁对账
+
+- 宿主复核通过 Android prerequisite、TypeScript no-emit、8 个 recovery 场景与 4-host projection replay；验证输出被忽略，工作区保持 clean。
+- 已配置 `Medium_Phone_API_36.1` AVD 为 Android 36.1 / Play Store / `x86_64` / 2 GiB，路径 `E:\Android\avd\Medium_Phone.avd`；`adb devices -l` 没有 online target。它只能作为工具链 smoke 证据，不能作为 arm64 release 证据。
+- 没有获批 `.jks`、`.keystore` 或 `.p12`。未签名 APK/AAB 继续只是静态证据；release 必须具备签名 arm64 产物、有序 workload、force-stop/reopen continuity、失败路径重试与 peak RSS `<= 256 MiB`。
+- 不得重建 x86_64、生成本地 debug keystore 或接受 emulator-only evidence 作为 release 捷径。public-ID、默认 SQLite/WASM 与预算变化继续冻结。

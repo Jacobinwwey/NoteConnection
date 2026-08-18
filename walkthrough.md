@@ -656,3 +656,41 @@ backup 存在但 rename 失败 -> 删除 staging，保留 backup+journal，稍�
 Host verifier 现在回放 8 个场景，包含 journaled 与 orphan 的确定性 rename failure。这些场景保留可恢复状态，并分别输出 `recovery-pending` 或 `orphan-recovery-pending`；报告仍声明 `nativeDeviceEvidence: false`。
 
 新鲜 Tauri Android slim arm64 构建已完成。静态验证通过未签名 universal APK（压缩 payload `9,576,838` 字节，SHA-256 为 `eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6`）与 AAB（压缩 payload `7,055,579` 字节，SHA-256 为 `ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934`）。两者均低于 25 MiB 且包含 arm64 payload；签名与 RSS 仍未测量。
+
+## 2026-08-18 Phase 21 Host Gate Reconciliation Walkthrough
+
+The post-Phase-20 host check is reproducible: Android prerequisites, TypeScript no-emit, the 8 recovery scenarios, and the 4-host projection replay pass. Generated reports are ignored and `git status` remains clean.
+
+The host does have an AVD, but its facts matter: `Medium_Phone_API_36.1` resolves to `E:\Android\avd\Medium_Phone.avd`, uses Android `36.1` / Play Store / `x86_64`, and has 2 GiB RAM. `adb devices -l` has no online target. This AVD can validate tooling behavior only; it cannot close the arm64 release gate. No approved `.jks`, `.keystore`, or `.p12` was found, so unsigned artifacts remain static evidence and the recorder must fail before device execution when `--require-signed` is in force.
+
+The next run is intentionally external and bounded:
+
+```text
+CI ephemeral signing -> signed arm64 APK/AAB
+-> approved arm64 low-memory device
+-> SAF import -> graph build -> exact query -> path
+-> force-stop -> relaunch -> continuity
+-> storage/permission retry cases -> VmRSS samples
+-> manifest + rss.json + artifact hash + logcat
+```
+
+Rebuilding for x86_64, creating a local debug keystore, or enabling emulator-only evidence would produce a different claim, not the requested mobile release evidence. Public-ID cutover, default SQLite/WASM, and budget changes remain frozen.
+
+## 2026-08-18 第 21 阶段：宿主门禁对账 Walkthrough
+
+Phase 20 后的宿主复核可复现：Android prerequisite、TypeScript no-emit、8 个 recovery 场景与 4-host projection replay 均通过。生成报告被忽略，`git status` 仍为 clean。
+
+宿主确实存在 AVD，但其事实不能被省略：`Medium_Phone_API_36.1` 解析到 `E:\Android\avd\Medium_Phone.avd`，使用 Android `36.1` / Play Store / `x86_64`，内存 2 GiB；`adb devices -l` 没有 online target。该 AVD 只能验证工具链行为，不能关闭 arm64 release gate。未找到获批 `.jks`、`.keystore` 或 `.p12`，所以未签名产物仍只是静态证据；启用 `--require-signed` 时 recorder 必须在设备执行前 fail。
+
+下一次运行刻意保持外部化且有界：
+
+```text
+CI 临时签名 -> 签名 arm64 APK/AAB
+-> 获批 arm64 低内存设备
+-> SAF import -> graph build -> exact query -> path
+-> force-stop -> relaunch -> continuity
+-> 存储/权限重试 -> VmRSS 样本
+-> manifest + rss.json + artifact hash + logcat
+```
+
+重建 x86_64、生成本地 debug keystore 或开启 emulator-only evidence 都会产生不同的结论，不能替代要求的移动 release 证据。public-ID 切换、默认 SQLite/WASM 与预算变化继续冻结。

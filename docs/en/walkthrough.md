@@ -284,3 +284,22 @@ This remains code-level evidence. Signed arm64 rollback/recovery, SAF and permis
 Startup recovery now preserves a journaled backup when rename fails and reports `import_recovery_pending`; orphan recovery reports `orphan_recovery_pending`. The host verifier covers 8 scenarios, including deterministic retry retention, while remaining explicitly non-native evidence.
 
 The fresh slim arm64 build passed static verification for an unsigned universal APK (`9,576,838` compressed payload bytes, SHA-256 `eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6`) and AAB (`7,055,579` compressed payload bytes, SHA-256 `ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934`). Both are below 25 MiB; signature, device continuity, and RSS remain open.
+
+## 2026-08-18 Phase 21 Host Gate Reconciliation Walkthrough
+
+The post-Phase-20 host check is reproducible: Android prerequisites, TypeScript no-emit, the 8 recovery scenarios, and the 4-host projection replay pass. Generated reports are ignored and `git status` remains clean.
+
+The available AVD is `Medium_Phone_API_36.1` at `E:\Android\avd\Medium_Phone.avd`, Android `36.1` / Play Store / `x86_64`, with 2 GiB RAM. `adb devices -l` has no online target. It is a tooling smoke target only, not arm64 release evidence. No approved `.jks`, `.keystore`, or `.p12` was found, so unsigned artifacts remain static evidence and `--require-signed` must fail before device execution.
+
+Next run:
+
+```text
+CI ephemeral signing -> signed arm64 APK/AAB
+-> approved arm64 low-memory device
+-> SAF import -> graph build -> exact query -> path
+-> force-stop -> relaunch -> continuity
+-> storage/permission retry -> VmRSS samples
+-> manifest + rss.json + artifact hash + logcat
+```
+
+X86_64 rebuilds, local debug keystores, and emulator-only evidence are explicitly not release substitutes. Public-ID cutover, default SQLite/WASM, and budget changes remain frozen.

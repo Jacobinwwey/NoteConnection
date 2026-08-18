@@ -702,3 +702,27 @@ Recovery must be monotonic with respect to known-good data: an existing backup i
 ### 第 20 阶段决策
 
 恢复相对于已知可用数据必须单调：不能仅因为 rename 失败就删除已有 backup。重试状态显式且幂等；空 journal 与不安全 journal 继续 fail-closed。这样保持移动运行时无额外依赖，并维持既有 Rust/result-marker 契约。
+
+## 2026-08-18 Phase 21 Host Gate Reconciliation
+
+- [x] Re-ran the host gates after Phase 20: Android prerequisite check, TypeScript no-emit, 8-scenario native-recovery mirror, and 4-host projection replay all pass; generated reports remain ignored and the worktree stays clean.
+- [x] Inspected the available Android virtual device. `Medium_Phone_API_36.1` resolves to `E:\Android\avd\Medium_Phone.avd`, uses Android `36.1`, `x86_64`, Play Store image, and 2 GiB RAM. `adb devices -l` has no online target.
+- [x] Confirmed the AVD is not arm64 evidence. The current release artifact gate requires arm64 payload plus a signed artifact; an x86_64 emulator cannot close that gate and must not be promoted by `--allow-emulator`.
+- [x] Confirmed no repository signing material (`.jks`, `.keystore`, `.p12`) is available. Release verification therefore remains fail-closed for the unsigned APK/AAB.
+- [~] G2/G3 still require CI-signed arm64 APK/AAB, online arm64 hardware, the declarative SAF/import/query/path/continuity workload, storage/permission retry evidence, force-stop/reopen continuity, and peak `VmRSS <= 256 MiB`.
+
+### Phase 21 decision
+
+Treat this host as a contract/build station, not a mobile release lab. Do not change the arm64 target, relax the signature gate, accept x86_64 emulator output, promote SQLite/WASM or canonical public IDs, or raise mobile budgets until a signed arm64 run archives `manifest`, `rss.json`, artifact hash, workload results, and logcat evidence. The next executable handoff is CI signing plus an approved arm64 device reservation; no additional runtime dependency is justified by the current evidence.
+
+## 2026-08-18 第 21 阶段：宿主门禁对账
+
+- [x] Phase 20 后重新执行宿主门禁：Android prerequisite、TypeScript no-emit、8 场景 native-recovery mirror 与 4-host projection replay 均通过；生成报告被忽略，工作区保持 clean。
+- [x] 核对现有 Android 虚拟设备：`Medium_Phone_API_36.1` 实际解析到 `E:\Android\avd\Medium_Phone.avd`，使用 Android `36.1`、`x86_64`、Play Store image 与 2 GiB RAM；`adb devices -l` 当前没有 online target。
+- [x] 确认该 AVD 不能作为 arm64 证据。当前 release artifact gate 要求 arm64 payload 与签名产物；x86_64 emulator 不能关闭该门禁，不能通过 `--allow-emulator` 晋级。
+- [x] 确认仓库没有可用签名材料（`.jks`、`.keystore`、`.p12`）。因此未签名 APK/AAB 继续被 release verifier fail-closed 拒绝。
+- [~] G2/G3 仍需 CI 签名 arm64 APK/AAB、在线 arm64 硬件、声明式 SAF/import/query/path/continuity workload、存储/权限重试证据、force-stop/reopen continuity 与 peak `VmRSS <= 256 MiB`。
+
+### 第 21 阶段决策
+
+将当前宿主定位为契约/构建工作站，而不是移动 release 实验室。不改变 arm64 target、不放宽签名门禁、不接受 x86_64 emulator 结果、不提升 SQLite/WASM 或 canonical public ID，也不上调移动预算，直到签名 arm64 运行归档 `manifest`、`rss.json`、产物 hash、workload 结果与 logcat。下一项可执行交接是 CI 签名和预约获批的 arm64 设备；现有证据不支持增加任何运行时依赖。

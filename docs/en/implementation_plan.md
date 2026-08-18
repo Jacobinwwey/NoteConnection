@@ -788,3 +788,18 @@ This closes the deterministic, code-level recovery contract without changing the
 - Projection replay: 4 host boundaries, 6 nodes, 4 edges, no semantic mismatch. Mobile-slim: 121 files / 4,275,083 uncompressed bytes / 1,550,638 estimated compressed bytes, SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`; RSS remains `not measured`.
 - G2/G3 next: signed arm64 APK/AAB, SAF import/query/path, force-stop/reopen continuity, storage and permission failure replay, and RSS `<= 256 MiB` on representative low-memory hardware.
 - Keep public-ID migration, default SQLite/WASM, and mobile budget increases frozen until native replay and old-snapshot, move-journal, collision, and rollback corpora are archived.
+
+## 2026-08-18 Phase 21 Host Gate Reconciliation
+
+### Evidence
+
+- Android prerequisites, TypeScript no-emit, the 8-scenario native-recovery mirror, and the 4-host projection replay pass. Their reports are ignored verification output; the worktree remains clean.
+- The only configured AVD is `Medium_Phone_API_36.1` at `E:\Android\avd\Medium_Phone.avd`: Android `36.1`, Play Store image, `x86_64`, 2 GiB RAM. `adb devices -l` has no online target. It is a tooling smoke target, not arm64 release evidence.
+- No approved `.jks`, `.keystore`, or `.p12` exists on the repository/host search path. Fresh APK/AAB output therefore remains unsigned static evidence, and release verification must require `--require-signed --require-arm64 --require-rss`.
+
+### Next execution
+
+1. CI signs the existing slim `aarch64` build ephemerally and publishes the signed artifacts with provenance, never the keystore.
+2. An approved arm64 low-memory device runs the declarative schema-1 workload `saf-import -> graph-build -> exact-query -> path -> continuity`, plus storage/permission retry cases.
+3. The recorder archives artifact hash/signature, masked device metadata, force-stop/reopen observation, workload results, logcat, and `/proc/<pid>/status:VmRSS`; missing evidence or RSS above 256 MiB fails closed.
+4. Canonical public-ID, SQLite/WASM defaulting, and mobile budget changes remain frozen until that archive exists. Rebuilding x86_64, creating a local debug keystore, or accepting emulator-only/unsigned evidence are rejected shortcuts.

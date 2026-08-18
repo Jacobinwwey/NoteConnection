@@ -139,3 +139,21 @@ The host oracle now injects journaled and orphan rename failures and reports eig
 Phase 19 修复后仍有一个破坏性启动分支：恢复期间 `backupRoot.renameTo(targetRoot)` 失败时会删除已保留的 backup。Phase 20 让状态机相对于已知数据单调：backup 存在时，要么成功激活并完成 journal 清理，要么只删除 staging，保留 backup 与 journal 并写入 `import_recovery_pending`。孤儿 backup 激活失败现在写入 `orphan_recovery_pending`，不再静默丢失结果；空路径与不安全 journal 继续 fail-closed。
 
 Host oracle 现在注入 journaled 与 orphan rename failure 并报告 8 个场景，只证明 host boundary 的保留与重试信号；`nativeDeviceEvidence` 仍为 false，verifier 继续排除出 `mobile-slim`。新鲜 Tauri Android slim 构建生成未签名 universal APK/AAB，压缩 payload 分别为 `9,576,838` 与 `7,055,579` 字节，均通过 arm64、禁入项与 25 MiB 检查；签名、真机 workload、存储/权限重试、进程死亡与 RSS 证据仍缺失。
+
+## 2026-08-18 Phase 21 Host Gate Reconciliation
+
+### English
+
+The post-Phase-20 host recheck passes Android prerequisites, TypeScript no-emit, the eight recovery scenarios, and the four-host projection replay. The reports are ignored verification output and the worktree is clean.
+
+The host does have an AVD, but it is not the requested target: `Medium_Phone_API_36.1` resolves to `E:\Android\avd\Medium_Phone.avd`, uses Android `36.1` / Play Store / `x86_64`, and has 2 GiB RAM. `adb devices -l` has no online device. No approved `.jks`, `.keystore`, or `.p12` was found. Therefore the fresh unsigned APK/AAB remain static budget/arm64 evidence only; they cannot close signed-device, process-death, SAF, or RSS gates.
+
+The forward-compatible handoff is CI ephemeral signing plus an approved arm64 low-memory device. The lab must run the existing schema-1 `saf-import -> graph-build -> exact-query -> path -> continuity` workload, add storage/permission retry cases, and archive artifact hash/signature, masked device metadata, force-stop observation, workload results, logcat, `rss.json`, and peak `VmRSS`. Missing evidence or RSS above 256 MiB must fail closed. Rebuilding x86_64, accepting emulator-only results, or generating a local debug keystore are rejected shortcuts. Public-ID, SQLite/WASM defaulting, and budget changes remain frozen.
+
+### 中文
+
+Phase 20 后宿主复核通过 Android prerequisite、TypeScript no-emit、8 个 recovery 场景与 4-host projection replay。报告属于被忽略的 verification output，工作区保持 clean。
+
+宿主确实存在 AVD，但不是目标环境：`Medium_Phone_API_36.1` 解析到 `E:\Android\avd\Medium_Phone.avd`，使用 Android `36.1` / Play Store / `x86_64`，内存 2 GiB；`adb devices -l` 没有 online device。没有找到获批 `.jks`、`.keystore` 或 `.p12`。因此新鲜未签名 APK/AAB 只能作为静态预算/arm64 证据，不能关闭签名设备、进程死亡、SAF 或 RSS 门禁。
+
+向前兼容的交接是 CI 临时签名加获批 arm64 低内存设备。实验室必须执行现有 schema-1 `saf-import -> graph-build -> exact-query -> path -> continuity` workload，补充存储/权限重试，并归档 artifact hash/signature、脱敏设备信息、force-stop 观察、workload 结果、logcat、`rss.json` 与 peak `VmRSS`。缺证据或 RSS 超过 256 MiB 必须 fail closed。重建 x86_64、接受 emulator-only 结果或生成本地 debug keystore 均是拒绝的捷径；public-ID、默认 SQLite/WASM 与预算变化继续冻结。

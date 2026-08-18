@@ -1260,3 +1260,18 @@ workload spec 采用声明式、禁止 host shell 的契约，固定为有序的
 - Projection replay：4 个 host boundary、6 个节点、4 条边且无语义 mismatch。Mobile-slim：121 个文件 / 未压缩 4,275,083 字节 / 估算压缩 1,550,638 字节，SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`；RSS 仍为 `not measured`。
 - G2/G3 下一步：签名 arm64 APK/AAB、SAF import/query/path、force-stop/reopen continuity、存储与权限失败 replay，以及代表性低内存硬件上的 RSS `<= 256 MiB`。
 - 在原生 replay 与 old-snapshot、move-journal、collision、rollback corpus 归档前，继续冻结 public-ID 迁移、默认 SQLite/WASM 与移动端预算上调。
+
+## 2026-08-18 第 21 阶段：宿主门禁对账
+
+### 证据
+
+- Android prerequisite、TypeScript no-emit、8 场景 native-recovery mirror 与 4-host projection replay 均通过。报告属于被忽略的 verification output，工作区保持 clean。
+- 唯一已配置 AVD 为 `Medium_Phone_API_36.1`，路径 `E:\Android\avd\Medium_Phone.avd`：Android `36.1`、Play Store image、`x86_64`、2 GiB RAM；`adb devices -l` 没有 online target。它只能用于工具链 smoke test，不能作为 arm64 release 证据。
+- 仓库/宿主搜索没有获批 `.jks`、`.keystore` 或 `.p12`。新鲜 APK/AAB 仍是未签名静态证据，release verification 必须继续要求 `--require-signed --require-arm64 --require-rss`。
+
+### 下一步执行
+
+1. CI 临时签名现有 slim `aarch64` 构建，发布签名产物与 provenance，不发布 keystore。
+2. 在获批 arm64 低内存设备上执行 schema-1 声明式 workload：`saf-import -> graph-build -> exact-query -> path -> continuity`，并覆盖存储/权限重试。
+3. recorder 归档 artifact hash/signature、脱敏设备信息、force-stop/reopen 观察、workload 结果、logcat 与 `/proc/<pid>/status:VmRSS`；缺证据或 RSS 超过 256 MiB 必须 fail closed。
+4. 在归档完成前继续冻结 canonical public-ID、默认 SQLite/WASM 与移动预算变化。重建 x86_64、生成本地 debug keystore 或接受 emulator-only/unsigned 证据均是拒绝的捷径。

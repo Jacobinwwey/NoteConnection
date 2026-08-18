@@ -275,3 +275,22 @@ Android import 失败边界现在遵循以下状态规则：
 启动恢复现在在 rename 失败时保留 journaled backup 并报告 `import_recovery_pending`；孤儿恢复报告 `orphan_recovery_pending`。Host verifier 覆盖 8 个场景，包含确定性的 retry retention，同时明确不属于原生证据。
 
 新鲜 slim arm64 构建已通过未签名 universal APK（压缩 payload `9,576,838` 字节，SHA-256 为 `eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6`）与 AAB（压缩 payload `7,055,579` 字节，SHA-256 为 `ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934`）的静态验证。两者均低于 25 MiB；签名、设备 continuity 与 RSS 仍开放。
+
+## 2026-08-18 第 21 阶段：宿主门禁对账 Walkthrough
+
+Phase 20 后的宿主复核可复现：Android prerequisite、TypeScript no-emit、8 个 recovery 场景与 4-host projection replay 均通过。生成报告被忽略，`git status` 仍为 clean。
+
+现有 AVD 为 `Medium_Phone_API_36.1`，路径 `E:\Android\avd\Medium_Phone.avd`，Android `36.1` / Play Store / `x86_64`，内存 2 GiB；`adb devices -l` 没有 online target。它只能用于工具链 smoke test，不能作为 arm64 release 证据。没有找到获批 `.jks`、`.keystore` 或 `.p12`，因此未签名产物仍是静态证据，`--require-signed` 必须在设备执行前失败。
+
+下一次运行：
+
+```text
+CI 临时签名 -> 签名 arm64 APK/AAB
+-> 获批 arm64 低内存设备
+-> SAF import -> graph build -> exact query -> path
+-> force-stop -> relaunch -> continuity
+-> 存储/权限重试 -> VmRSS 样本
+-> manifest + rss.json + artifact hash + logcat
+```
+
+重建 x86_64、本地 debug keystore 与 emulator-only evidence 都不能替代 release 证据。public-ID 切换、默认 SQLite/WASM 与预算变化继续冻结。

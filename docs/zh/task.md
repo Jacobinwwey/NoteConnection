@@ -634,3 +634,11 @@
 ### 第 14 阶段权衡
 
 harness 只执行 workload spec 中明确列出的 `adbArgs`。这比任意 shell 脚本不方便，但证据更可复现、可审计，也避免误读宿主机数据。SAF UI 自动化仍属于设备实验室工作；仓库现在固化了边界，并在证据缺失时 fail closed。
+
+## 2026-08-18 第 21 阶段：宿主门禁对账
+
+- [x] 重新执行 Android prerequisite、TypeScript no-emit、8 场景 recovery mirror 与 4-host projection replay；验证输出继续被忽略，工作区保持 clean。
+- [x] 记录现有 AVD：`Medium_Phone_API_36.1` 位于 `E:\Android\avd\Medium_Phone.avd`，Android 36.1 / Play Store / `x86_64` / 2 GiB；`adb` 没有 online target。
+- [x] 将 x86_64 emulator 结果排除在 arm64 release 证据之外，并确认没有获批 `.jks`、`.keystore` 或 `.p12`。
+- [~] G2/G3 仍需 CI 签名 arm64 APK/AAB、获批 arm64 低内存设备、有序 workload、存储/权限重试证据、force-stop/reopen continuity 与 peak RSS `<= 256 MiB`。
+- [ ] 在签名证据归档前，不提升 public ID、默认 SQLite/WASM 或移动预算。

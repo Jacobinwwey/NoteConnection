@@ -1879,3 +1879,10 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - Startup recovery now retains backup and journal when backup activation rename fails, emits `import_recovery_pending`, and retries on a later bind. Orphan activation failure emits `orphan_recovery_pending`.
 - The host recovery oracle now has 8 scenarios, including injected journaled/orphan rename failures with retention; it remains `nativeDeviceEvidence: false` and outside the mobile runtime.
 - Fresh unsigned slim arm64 APK/AAB static verification passes: compressed payloads are `9,576,838` and `7,055,579` bytes, respectively, both under 25 MiB. Signature, device continuity, storage/permission retry, and RSS gates remain open.
+
+## 2026-08-18 Phase 21 Host Gate Reconciliation
+
+- Host recheck passes Android prerequisites, TypeScript no-emit, 8 recovery scenarios, and 4-host projection replay; ignored verification output leaves the worktree clean.
+- The configured `Medium_Phone_API_36.1` AVD is Android 36.1 / Play Store / `x86_64` / 2 GiB at `E:\Android\avd\Medium_Phone.avd`; `adb devices -l` has no online target. It is tooling smoke evidence only, not arm64 release evidence.
+- No approved `.jks`, `.keystore`, or `.p12` is available. Unsigned APK/AAB remain static evidence; release requires signed arm64 artifacts, the ordered workload, force-stop/reopen continuity, failure-path retry, and peak RSS `<= 256 MiB`.
+- Do not rebuild x86_64, create a local debug keystore, or accept emulator-only evidence as a release shortcut. Public-ID, SQLite/WASM defaulting, and budget changes remain frozen.
