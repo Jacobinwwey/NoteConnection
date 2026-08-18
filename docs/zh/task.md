@@ -218,6 +218,18 @@
 ### 第 17 阶段决策
 
 将语义 parity 作为独立的 test-only oracle。运行时继续保持各 host 的 legacy ID 与 schema-1 wire 兼容；只在验证阶段使用 canonical identity 与 provenance-aware edges 证明多个 builder 表达的是同一张图。这样不需要 public-ID flag，不给移动包增加新的运行时依赖，未来迁移也必须由证据驱动。
+
+## 2026-08-18 第 18 阶段：原生恢复状态机证据
+
+- [x] 新增 `scripts/verify-mobile-native-recovery.js`，作为 Kotlin import journal 契约的无依赖 host verifier，覆盖 active target 优先、旧知识库恢复、孤儿 backup 恢复、unsafe path 拒绝与 unknown schema 拒绝。
+- [x] 新增 `src/mobile.native.recovery.contract.test.ts` 与 `verify:mobile:native-recovery`；schema-1 报告标记 `evidenceLevel: host-recovery-state-machine` 与 `nativeDeviceEvidence: false`。
+- [x] 六个确定性 recovery 场景已回放通过。这是生产 journal phase 的代码级镜像，不是 Android 进程死亡、SAF UI、存储/权限失败、签名产物或 RSS 证据。
+- [x] 当前验证：全量 Jest `146` suites / `1,271` passed / `26` skipped；TypeScript no-emit；Rust `28` passed / `1` ignored；projection replay 为 `4` hosts / `6` nodes / `4` edges；mobile-slim 为 `121` 文件 / 未压缩 `4,275,083` / 估算压缩 `1,550,638` 字节；SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`。
+- [~] G2/G3 仍需签名 arm64 真机执行、SAF import/query/path、force-stop/reopen continuity、失败路径 replay 与 RSS `<= 256 MiB`；G4 public-ID 与 SQLite/WASM 提升继续冻结。
+
+### 第 18 阶段决策
+
+将 recovery verification 保持为 test-only host mirror，生产 owner 仍是 Kotlin。显式 evidence level 防止把确定性 host replay 误判为原生验收；未来任何 journal schema/phase 变化都必须同步更新实现、verifier 与双语证据。
 - [x] runtime runbook 的 modular-route composition 已不再只以内联形式存在于 `src/server.ts`；`src/routes/runtimeRunbookRouteOps.ts` 现在负责 `/api/knowledge/runtime-capability-runbook/*` 的 route-op 组装，并保持当前响应契约不变。
 - [x] graph-focus 右侧 pane 现在会通过共享 markdown runtime 渲染原始知识点正文，并在原文内高亮命中段落，而不再只显示摘录列表。
 - [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、当前 Windows 宿主 strict 3/3 证据、以及 opt-in 多宿主审计工具都已自动化，但实际多宿主证据与阈值校准仍待补齐。

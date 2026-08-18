@@ -1143,3 +1143,35 @@ The harness intentionally accepts only ordered schema-1 `adbArgs` and fails clos
 3. 用同一 corpus 执行 Capacitor 与 ignored Rust Cargo probe，覆盖 nested path、relative/Markdown link、同内容、percent-encoded NFC path 与含糊 legacy basename。
 4. 保持 `id`、schema-1 snapshot 与 layout 兼容；comparator 不进入 mobile-slim，endpoint 相同的 edge 仍保留 provenance。
 5. 6 节点/4 条边通过只属于 host-boundary 证据；下一门禁是签名 arm64 SAF import/query/path、force-stop continuity、RSS `<= 256 MiB`、rollback/move-journal replay，之后才评估 public-ID 或 SQLite/WASM。
+
+## 2026-08-18 Phase 18 Native Recovery State-Machine Evidence
+
+### English
+
+1. Add `scripts/verify-mobile-native-recovery.js` as a dependency-free host verifier for the production Kotlin import journal. The verifier mirrors the three journal phases and the same precedence rules: an active target wins, otherwise a valid backup restores the previous corpus, and unresolved state fails closed.
+2. Cover six deterministic scenarios: staging with an active target, target-backed-up restoration, target-activated target precedence, orphan backup recovery, unsafe journal paths, and unknown journal schema. Emit schema-1 report metadata with `evidenceLevel: host-recovery-state-machine` and `nativeDeviceEvidence: false`.
+3. Keep the verifier out of `mobile-slim`; it is a CI oracle, not a second runtime implementation. The Kotlin bridge remains the production owner, while the contract test makes drift visible when journal names, phases, or recovery precedence change.
+4. Treat the current result as code-level recovery evidence only. It does not close Android process-death, SAF UI, storage/permission failure, signed-artifact, or RSS gates.
+
+### Verification and next gates
+
+- Recovery verifier: 6 scenarios passed; focused recovery contract: 1 test passed.
+- Full Jest: 146 suites / 1,271 passed / 26 skipped. TypeScript no-emit passes. Rust host suite: 28 passed / 1 ignored probe.
+- Projection replay: 4 host boundaries, 6 nodes, 4 edges, no semantic mismatch. Fresh mobile-slim: 121 files / 4,275,083 uncompressed bytes / 1,550,638 estimated compressed bytes, SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`; RSS remains `not measured`.
+- Next native gate: signed arm64 APK/AAB, SAF import/query/path, force-stop/reopen continuity, storage and permission failure replay, and measured RSS `<= 256 MiB` on representative low-memory hardware.
+- Keep public-ID migration, default SQLite/WASM, and mobile budget increases frozen until native replay plus old-snapshot, move-journal, collision, and rollback corpora are archived.
+
+### 中文
+
+1. 新增 `scripts/verify-mobile-native-recovery.js`，作为生产 Kotlin import journal 的无依赖 host verifier。verifier 镜像三个 journal phase 与相同的优先级：active target 优先；否则有效 backup 恢复旧知识库；无法判定时 fail closed。
+2. 覆盖六个确定性场景：staging 且 target 已存在、target-backed-up 恢复、target-activated 的 target 优先、孤儿 backup 恢复、unsafe journal path 与未知 journal schema。报告使用 schema-1 元数据，标记 `evidenceLevel: host-recovery-state-machine` 与 `nativeDeviceEvidence: false`。
+3. verifier 不进入 `mobile-slim`，它是 CI oracle，不是第二套运行时实现。生产 owner 仍是 Kotlin bridge；契约测试负责在 journal 名称、phase 或恢复优先级漂移时暴露问题。
+4. 当前结果只属于代码级恢复证据，不能关闭 Android 进程死亡、SAF UI、存储/权限失败、签名产物或 RSS 门禁。
+
+### 验证与下一道门禁
+
+- Recovery verifier：6 个场景通过；恢复契约定向测试：1 个测试通过。
+- 全量 Jest：146 suites / 1,271 passed / 26 skipped。TypeScript no-emit 通过。Rust host suite：28 passed / 1 ignored probe。
+- Projection replay：4 个 host boundary、6 个节点、4 条边且无语义 mismatch。fresh mobile-slim：121 个文件 / 未压缩 4,275,083 字节 / 估算压缩 1,550,638 字节，SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`；RSS 仍为 `not measured`。
+- 下一道原生门禁：签名 arm64 APK/AAB、SAF import/query/path、force-stop/reopen continuity、存储与权限失败 replay，以及代表性低内存硬件上的 RSS `<= 256 MiB`。
+- 在原生 replay 与 old-snapshot、move-journal、collision、rollback corpus 归档前，继续冻结 public-ID 迁移、默认 SQLite/WASM 与移动端预算上调。

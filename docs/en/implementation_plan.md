@@ -517,7 +517,7 @@ The additive `canonicalId` avoids a flag-driven public-ID switch and keeps old l
 
 ### Verification and next gates
 
-- Focused Jest: semantic comparator, Capacitor graph, and projection contract suites pass (`11` tests). Rust host suite passes (`28` passed, `1` ignored probe).
+- Focused Jest: semantic comparator, Capacitor graph, and projection contract suites pass (`12` tests). Rust host suite passes (`28` passed, `1` ignored probe).
 - Fresh `mobile-slim` staging excludes the test-only comparator and measures 121 files / 4,274,600 uncompressed bytes / 1,550,561 estimated compressed bytes, SHA-256 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`; RSS remains `not measured`.
 - `verify:mobile:projection-replay` passes four storage boundaries plus the real Rust probe. It is not signed APK, Android process-death, SAF UI, or RSS evidence.
 - Re-run TypeScript no-emit, the full Jest matrix, Rust tests, mobile-slim budget, and Diataxis checks before merge.
@@ -749,3 +749,23 @@ The workload spec is declarative and shell-free. It requires ordered `saf-import
 2. Run the harness on low-memory arm64 hardware and archive manifest, RSS JSON, logcat tail, and artifact hash; reject emulator-only evidence for release.
 3. Replay the same projection corpus through Tauri, Capacitor, and Android native adapters, including force-stop/reopen and permission/storage failure paths.
 4. Close G4 identity/edge corpora and registry response/status shadow parity. Only then reconsider canonical IDs, indexed `contentRef`, or SQLite/WASM.
+
+## 2026-08-18 Phase 18 Native Recovery State-Machine Evidence
+
+### Implementation
+
+1. Add `scripts/verify-mobile-native-recovery.js` as a dependency-free host verifier for the Kotlin import journal. It mirrors `staging`, `target-backed-up`, and `target-activated`, preserves an existing target over stale transaction artifacts, restores a valid backup when the target is absent, and fails closed for unsafe paths or unknown schemas.
+2. Replay six scenarios: staging with an active target, target-backed-up restoration, target-activated target precedence, orphan backup restoration, unsafe journal rejection, and unknown-schema rejection. Emit schema-1 evidence with `evidenceLevel: host-recovery-state-machine` and `nativeDeviceEvidence: false`.
+3. Keep the verifier and its single Jest contract test outside `mobile-slim`. Kotlin remains the runtime owner; the host mirror is deliberately a drift detector rather than a second production implementation.
+
+### Architecture boundary and trade-off
+
+This closes the deterministic, code-level recovery contract without changing the Rust request/poll API, result marker fields, projection schema, or mobile bundle. The cost is an intentional test mirror that can drift if the journal contract changes; the required mitigation is to update the Kotlin bridge, verifier, contract test, and bilingual evidence entry in one change. The report must never be used as proof of Android process death, SAF UI execution, storage/permission failure handling, signed artifact integrity, or RSS.
+
+### Verification and next gates
+
+- Recovery verifier: 6 scenarios passed; focused recovery contract: 1 test passed.
+- Full Jest: 146 suites / 1,271 passed / 26 skipped. TypeScript no-emit passes. Rust: 28 passed / 1 ignored probe.
+- Projection replay: 4 host boundaries, 6 nodes, 4 edges, no semantic mismatch. Mobile-slim: 121 files / 4,275,083 uncompressed bytes / 1,550,638 estimated compressed bytes, SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`; RSS remains `not measured`.
+- G2/G3 next: signed arm64 APK/AAB, SAF import/query/path, force-stop/reopen continuity, storage and permission failure replay, and RSS `<= 256 MiB` on representative low-memory hardware.
+- Keep public-ID migration, default SQLite/WASM, and mobile budget increases frozen until native replay and old-snapshot, move-journal, collision, and rollback corpora are archived.

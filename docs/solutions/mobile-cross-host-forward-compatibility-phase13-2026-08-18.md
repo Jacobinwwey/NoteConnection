@@ -93,3 +93,17 @@ Phase 12 的 projection replay 是契约测试，不是原生端对等证明。�
 ### 本轮验证基线
 
 本轮已通过 Android picker contract、mobile artifact/profile contract、TypeScript no-emit、57 suite migration matrix（307 passed、13 skipped）与 `app:compileArm64ReleaseKotlin`。当前环境没有在线 Android 设备、没有已配置 AVD、也没有签名 keystore，因此 G2 仍明确未完成。
+
+## 2026-08-18 Phase 18 Recovery Evidence Update
+
+### English
+
+The Kotlin import journal now has a deterministic host-side recovery oracle in `scripts/verify-mobile-native-recovery.js`, with a single contract test and six scenarios. It preserves the forward-compatible boundary: the verifier is test-only, emits `host-recovery-state-machine` evidence with `nativeDeviceEvidence: false`, and is excluded from `mobile-slim`. Production recovery remains owned by Kotlin and the Rust request/poll/result-marker contracts are unchanged.
+
+This is useful evidence for phase precedence and fail-closed path/schema handling, but it does not satisfy native process-death, SAF UI, storage/permission failure, signing, or RSS gates. The next implementation order remains signed arm64 device replay, native adapter continuity, and only then public-ID or SQLite/WASM decisions.
+
+### 中文
+
+Kotlin import journal 现在已有 `scripts/verify-mobile-native-recovery.js` 提供确定性的 host recovery oracle，并由一个契约测试覆盖六个场景。它保持向前兼容边界：verifier 只用于测试，输出 `host-recovery-state-machine` 且 `nativeDeviceEvidence: false`，并排除出 `mobile-slim`。生产恢复仍由 Kotlin 拥有，Rust request/poll/result-marker 契约不变。
+
+这能证明 phase 优先级以及路径/schema 的 fail-closed 处理，但不能关闭原生进程死亡、SAF UI、存储/权限失败、签名或 RSS 门禁。后续顺序仍是签名 arm64 真机 replay、原生 adapter continuity，之后才评估 public-ID 或 SQLite/WASM。

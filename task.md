@@ -634,3 +634,27 @@
 - [x] 通过 Capacitor 与 ignored Rust Cargo probe 回放 nested/relative/Markdown/NFC 语料；语义结果为 6 个节点 / 4 条边且无 mismatch。
 - [x] comparator 已排除出 mobile-slim staging；当前 staging 为 121 个文件 / 未压缩 4,274,600 / 估算压缩 1,550,561 字节，SHA-256 为 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`。
 - [~] 签名 arm64 真机 SAF/query/path、force-stop continuity 与 RSS `<= 256 MiB` 仍未证明；public-ID 与 SQLite/WASM 提升继续冻结。
+
+## 2026-08-18 Phase 18 Native Recovery State-Machine Evidence
+
+- [x] Added `scripts/verify-mobile-native-recovery.js` as a dependency-free host verifier for the Kotlin import journal contract. It replays active-target precedence, previous-tree restoration, orphan-backup recovery, unsafe path rejection, and unknown-schema rejection.
+- [x] Added `src/mobile.native.recovery.contract.test.ts` and `verify:mobile:native-recovery`; the report is schema `1`, carries `evidenceLevel: host-recovery-state-machine`, and explicitly sets `nativeDeviceEvidence: false`.
+- [x] Verified six deterministic recovery scenarios. The verifier mirrors the production journal phases but is not the Android process, SAF UI, storage-failure, permission-failure, or RSS evidence path.
+- [x] Current post-change gates: full Jest `146` suites / `1,271` passed / `26` skipped; TypeScript no-emit; Rust `28` passed / `1` ignored; projection replay `4` hosts / `6` nodes / `4` edges; mobile-slim `121` files / `4,275,083` uncompressed / `1,550,638` estimated compressed bytes; SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`.
+- [~] G2/G3 still require a signed arm64 device workload, SAF import/query/path, force-stop/reopen continuity, storage and permission failure cases, and RSS `<= 256 MiB`; G4 public-ID and SQLite/WASM promotion remain frozen.
+
+### Phase 18 decision
+
+Keep recovery verification as a test-only host mirror of the Kotlin journal state machine. This gives deterministic CI coverage without adding JavaScript to the mobile runtime, while the explicit evidence level prevents host replay from being mistaken for native process-death acceptance. Any journal schema or phase change must update the Kotlin implementation, this verifier, and its bilingual evidence record together.
+
+## 2026-08-18 第 18 阶段：原生恢复状态机证据
+
+- [x] 新增 `scripts/verify-mobile-native-recovery.js`，作为 Kotlin import journal 契约的无依赖 host verifier；回放 active target 优先、旧知识库恢复、孤儿 backup 恢复、unsafe path 拒绝与 unknown schema 拒绝。
+- [x] 新增 `src/mobile.native.recovery.contract.test.ts` 与 `verify:mobile:native-recovery`；报告使用 schema `1`，标记 `evidenceLevel: host-recovery-state-machine`，并显式设置 `nativeDeviceEvidence: false`。
+- [x] 六个确定性 recovery scenario 已通过。verifier 镜像生产 journal phase，但不属于 Android 进程、SAF UI、存储失败、权限失败或 RSS 证据路径。
+- [x] 本轮门禁快照：全量 Jest `146` suites / `1,271` passed / `26` skipped；TypeScript no-emit；Rust `28` passed / `1` ignored；projection replay 为 `4` hosts / `6` nodes / `4` edges；mobile-slim 为 `121` 文件 / 未压缩 `4,275,083` / 估算压缩 `1,550,638` 字节；SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`。
+- [~] G2/G3 仍需签名 arm64 真机 workload、SAF import/query/path、force-stop/reopen continuity、存储与权限失败场景及 RSS `<= 256 MiB`；G4 public-ID 与 SQLite/WASM 提升继续冻结。
+
+### 第 18 阶段决策
+
+将 recovery verification 保持为 Kotlin journal 状态机的 test-only host mirror。它在不向移动运行时增加 JavaScript 的前提下提供确定性 CI 覆盖，同时通过显式 evidence level 防止把 host replay 误判为原生进程死亡验收。任何 journal schema 或 phase 变化都必须同步更新 Kotlin 实现、该 verifier 与双语证据记录。

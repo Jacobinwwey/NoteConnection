@@ -516,7 +516,7 @@ Additive `canonicalId` 避免用 flag 驱动公开 ID 切换，并保持旧 layo
 
 ### 验证与下一道门禁
 
-- 聚焦 Jest：semantic comparator、Capacitor graph、projection contract 共 `11` 个测试通过。Rust host suite 为 `28` passed、`1` ignored probe。
+- 聚焦 Jest：semantic comparator、Capacitor graph、projection contract 共 `12` 个测试通过。Rust host suite 为 `28` passed、`1` ignored probe。
 - staging 已排除 test-only comparator；fresh `mobile-slim` 为 121 个文件 / 未压缩 4,274,600 字节 / 估算压缩 1,550,561 字节，SHA-256 为 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`；RSS 仍为 `not measured`。
 - `verify:mobile:projection-replay` 已通过四种 storage boundary 与真实 Rust probe，但这不是签名 APK、Android 进程死活、SAF UI 或 RSS 证据。
 - merge 前重新执行 TypeScript no-emit、全量 Jest、Rust tests、mobile-slim budget 与 Diataxis 检查。
@@ -1221,3 +1221,23 @@ workload spec 采用声明式、禁止 host shell 的契约，固定为有序的
 2. 在低内存 arm64 硬件运行 harness，归档 manifest、RSS JSON、logcat 尾部与 artifact hash；release 不接受仅 emulator 证据。
 3. 用同一 projection corpus 执行 Tauri、Capacitor、Android 原生 adapter matrix，覆盖 force-stop/reopen 与权限/存储故障路径。
 4. 完成 G4 identity/edge corpus 与 registry response/status shadow parity；之后再评估 canonical ID、带 `contentRef` 的 indexed projection 或 SQLite/WASM。
+
+## 2026-08-18 第 18 阶段：原生恢复状态机证据
+
+### 实施内容
+
+1. 新增 `scripts/verify-mobile-native-recovery.js`，作为 Kotlin import journal 的无依赖 host verifier。它镜像 `staging`、`target-backed-up`、`target-activated` 三个 phase；已有 target 优先于过期事务 artifact；target 不存在时恢复有效 backup；unsafe path 或未知 schema 则 fail closed。
+2. 回放六个场景：staging 且 target 已存在、target-backed-up 恢复、target-activated 的 target 优先、孤儿 backup 恢复、unsafe journal 拒绝与 unknown schema 拒绝。报告使用 schema-1 evidence，标记 `evidenceLevel: host-recovery-state-machine` 与 `nativeDeviceEvidence: false`。
+3. verifier 与唯一的 Jest 契约测试均排除出 `mobile-slim`。Kotlin 仍是运行时 owner；host mirror 有意只作为漂移探测器，不形成第二套生产实现。
+
+### 架构边界与权衡
+
+本轮在不改变 Rust request/poll API、result marker 字段、projection schema 或移动包体的前提下，闭合了确定性的代码级恢复契约。代价是测试镜像可能在 journal 契约变化时漂移；缓解方式是要求 Kotlin bridge、verifier、契约测试与双语证据条目在同一变更中同步更新。该报告不能证明 Android 进程死亡、SAF UI 执行、存储/权限失败处理、签名产物完整性或 RSS。
+
+### 验证与下一道门禁
+
+- Recovery verifier：6 个场景通过；恢复契约定向测试：1 个测试通过。
+- 全量 Jest：146 suites / 1,271 passed / 26 skipped。TypeScript no-emit 通过。Rust：28 passed / 1 ignored probe。
+- Projection replay：4 个 host boundary、6 个节点、4 条边且无语义 mismatch。Mobile-slim：121 个文件 / 未压缩 4,275,083 字节 / 估算压缩 1,550,638 字节，SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`；RSS 仍为 `not measured`。
+- G2/G3 下一步：签名 arm64 APK/AAB、SAF import/query/path、force-stop/reopen continuity、存储与权限失败 replay，以及代表性低内存硬件上的 RSS `<= 256 MiB`。
+- 在原生 replay 与 old-snapshot、move-journal、collision、rollback corpus 归档前，继续冻结 public-ID 迁移、默认 SQLite/WASM 与移动端预算上调。

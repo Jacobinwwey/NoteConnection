@@ -1886,3 +1886,11 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - `verify-mobile-projection-replay.js` 通过真实 ignored Rust Cargo probe，使用与 Capacitor 相同的 nested/relative/Markdown/同内容/NFC corpus。语义 replay 以 6 个节点、4 条边通过；报告仍只属于代码级证据。
 - fresh mobile-slim staging 已排除 test-only comparator：121 个文件 / 未压缩 4,274,600 字节 / 估算压缩 1,550,561 字节，SHA-256 为 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`；RSS 仍为 `not measured`。
 - 聚焦 mobile contract suite 通过 27 个测试，Rust host tests 为 28 passed、1 ignored probe。签名设备 SAF/query/path、进程死亡 continuity、RSS <= 256 MiB、public-ID 迁移与默认 SQLite/WASM 继续冻结。
+
+## 2026-08-18 第 18 阶段：原生恢复状态机证据
+
+- `scripts/verify-mobile-native-recovery.js` 是 Kotlin import journal 的无依赖 host verifier，回放六个场景：active target 优先、旧知识库恢复、target-activated 优先、孤儿 backup 恢复、unsafe path 拒绝与 unknown schema 拒绝。
+- `src/mobile.native.recovery.contract.test.ts` 与 `verify:mobile:native-recovery` 已通过。报告使用 schema `1`，声明 `evidenceLevel: host-recovery-state-machine`，并显式设置 `nativeDeviceEvidence: false`。
+- 这只闭合确定性的代码级恢复覆盖，不证明 Android 进程死亡、SAF UI、存储/权限失败、签名产物完整性或 RSS。生产 owner 仍为 Kotlin，verifier 继续排除出 mobile-slim。
+- 当前验证为全量 Jest 146 suites / 1,271 passed / 26 skipped、TypeScript no-emit、Rust 28 passed / 1 ignored、projection replay 4 hosts / 6 nodes / 4 edges、mobile-slim 121 个文件 / 未压缩 4,275,083 / 估算压缩 1,550,638 字节（SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`），以及 Diataxis。
+- 下一门禁仍是签名 arm64 真机 SAF/query/path、force-stop/reopen continuity、失败路径 replay、RSS <= 256 MiB，以及 public-ID 或 SQLite/WASM 提升前的 old-snapshot/move-journal/collision/rollback corpus。

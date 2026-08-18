@@ -255,4 +255,12 @@ Capacitor link resolution now follows the Rust policy: direct canonical path, so
 
 The forward-compatible decision is unchanged: keep `id` and schema-1 snapshots stable, keep the comparator out of the mobile runtime bundle, and defer public canonical-ID or SQLite/WASM promotion until native replay, rollback, move-journal, collision, and RSS evidence are archived.
 
-Full verification passes 145 Jest suites / 1,270 passed / 26 skipped, TypeScript no-emit, and 28 Rust host tests plus 1 ignored probe. Focused mobile contract coverage is 5 suites / 27 tests. Fresh `mobile-slim` staging is 121 files / 4,274,600 uncompressed bytes / 1,550,561 estimated compressed bytes with SHA-256 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`; the test-only comparator is excluded and RSS remains `not measured`. Code-level semantic parity passes; signed-device SAF/query/path, process-death continuity, and RSS <= 256 MiB remain open gates.
+Full verification passes 146 Jest suites / 1,271 passed / 26 skipped, TypeScript no-emit, and 28 Rust host tests plus 1 ignored probe. Focused parity coverage is 3 suites / 12 tests; the new recovery contract is an additional 1 suite / 1 test. Fresh `mobile-slim` staging is 121 files / 4,275,083 uncompressed bytes / 1,550,638 estimated compressed bytes with SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`; the test-only comparator and recovery verifier are excluded and RSS remains `not measured`. Code-level semantic parity and host recovery replay pass; signed-device SAF/query/path, process-death continuity, and RSS <= 256 MiB remain open gates.
+
+## 2026-08-18 Phase 18 Native Recovery State-Machine Walkthrough
+
+`verify-mobile-native-recovery.js` replays the production Kotlin journal contract in a temporary host directory. The six scenarios are state-oriented: an existing target wins over staging/backup artifacts; a missing target is restored from a valid backup; orphan backups are recovered; unsafe journal paths and unknown schemas fail closed.
+
+The contract test emits schema-1 evidence with `evidenceLevel: host-recovery-state-machine` and `nativeDeviceEvidence: false`. This is a deterministic host mirror and CI drift detector, not Android process-death, SAF UI, storage/permission failure, signed artifact, or RSS evidence. The mobile runtime remains Kotlin-owned and the verifier is excluded from mobile-slim.
+
+The next gate is still native: signed arm64 execution, SAF import/query/path, force-stop/reopen continuity, failure-path replay, and RSS <= 256 MiB on representative low-memory hardware. Public-ID and SQLite/WASM promotion remain frozen until those artifacts and the old-snapshot/move-journal/collision/rollback corpus are archived.

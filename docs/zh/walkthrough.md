@@ -246,4 +246,12 @@ Capacitor link resolution 现在与 Rust 对齐：direct canonical path、source
 
 向前兼容决策不变：保持 `id` 与 schema-1 snapshot 稳定，将 comparator 排除出移动运行时 bundle；在原生 replay、rollback、move-journal、collision 与 RSS 证据归档前，不提升 public canonical-ID 或 SQLite/WASM。
 
-全量验证通过 145 个 Jest suite / 1,270 passed / 26 skipped、TypeScript no-emit 与 28 个 Rust host test 加 1 个 ignored probe。定向 mobile contract 覆盖为 5 个 suite / 27 个测试。fresh `mobile-slim` staging 为 121 个文件 / 未压缩 4,274,600 字节 / 估算压缩 1,550,561 字节，SHA-256 为 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`；test-only comparator 已排除，RSS 仍为 `not measured`。代码级语义 parity 已通过；签名真机 SAF/query/path、进程死亡 continuity 与 RSS <= 256 MiB 仍是开放门禁。
+全量验证通过 146 个 Jest suite / 1,271 passed / 26 skipped、TypeScript no-emit 与 28 个 Rust host test 加 1 个 ignored probe。定向 parity 覆盖为 3 个 suite / 12 个测试；新增 recovery contract 为 1 个 suite / 1 个测试。fresh `mobile-slim` staging 为 121 个文件 / 未压缩 4,275,083 字节 / 估算压缩 1,550,638 字节，SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`；test-only comparator 与 recovery verifier 均已排除，RSS 仍为 `not measured`。代码级语义 parity 与 host recovery replay 已通过；签名真机 SAF/query/path、进程死亡 continuity 与 RSS <= 256 MiB 仍是开放门禁。
+
+## 2026-08-18 第 18 阶段：原生恢复状态机 Walkthrough
+
+`verify-mobile-native-recovery.js` 在临时 host 目录中回放生产 Kotlin journal 契约。六个场景按状态设计：已有 target 优先于 staging/backup artifact；target 不存在时从有效 backup 恢复；孤儿 backup 进入恢复；unsafe journal path 与 unknown schema fail closed。
+
+契约测试输出 schema-1 evidence，包含 `evidenceLevel: host-recovery-state-machine` 与 `nativeDeviceEvidence: false`。这是确定性的 host mirror 和 CI 漂移探测器，不是 Android 进程死亡、SAF UI、存储/权限失败、签名产物或 RSS 证据。移动运行时仍由 Kotlin 拥有，verifier 不进入 mobile-slim。
+
+下一道门禁仍是原生证据：签名 arm64 执行、SAF import/query/path、force-stop/reopen continuity、失败路径 replay，以及代表性低内存硬件上的 RSS <= 256 MiB。在这些 artifact 与 old-snapshot/move-journal/collision/rollback corpus 归档前，public-ID 与 SQLite/WASM 提升继续冻结。

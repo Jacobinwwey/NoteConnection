@@ -1858,3 +1858,11 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - `verify-mobile-projection-replay.js` runs a real ignored Rust Cargo probe against the same nested/relative/Markdown/same-content/NFC corpus used by Capacitor. Semantic replay passes with 6 nodes and 4 edges; the report remains code-level evidence only.
 - Fresh mobile-slim staging excludes the test-only comparator: 121 files / 4,274,600 uncompressed bytes / 1,550,561 estimated compressed bytes, SHA-256 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`; RSS remains `not measured`.
 - Focused mobile contract suites pass 27 tests and Rust host tests pass 28 with 1 ignored probe. Signed-device SAF/query/path, process-death continuity, RSS <= 256 MiB, public-ID migration, and default SQLite/WASM remain blocked.
+
+## 2026-08-18 Phase 18 Native Recovery State-Machine Evidence
+
+- `scripts/verify-mobile-native-recovery.js` is a dependency-free host verifier for the Kotlin import journal. It replays six cases: active target precedence, previous-tree restoration, target-activated precedence, orphan-backup recovery, unsafe path rejection, and unknown-schema rejection.
+- `src/mobile.native.recovery.contract.test.ts` and `verify:mobile:native-recovery` pass. The report is schema `1`, declares `evidenceLevel: host-recovery-state-machine`, and explicitly sets `nativeDeviceEvidence: false`.
+- This closes deterministic code-level recovery coverage only. It does not prove Android process death, SAF UI, storage/permission failures, signed artifact integrity, or RSS. Kotlin remains the production owner and the verifier stays outside mobile-slim.
+- Current verification is full Jest 146 suites / 1,271 passed / 26 skipped, TypeScript no-emit, Rust 28 passed / 1 ignored, projection replay 4 hosts / 6 nodes / 4 edges, mobile-slim 121 files / 4,275,083 uncompressed / 1,550,638 estimated compressed bytes (SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`), and Diataxis.
+- Next gates remain signed arm64 device SAF/query/path, force-stop/reopen continuity, failure-path replay, RSS <= 256 MiB, and the old-snapshot/move-journal/collision/rollback corpus before public-ID or SQLite/WASM promotion.

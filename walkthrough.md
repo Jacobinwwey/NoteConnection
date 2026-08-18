@@ -568,3 +568,35 @@ The replay script creates one nested/relative/Markdown/NFC corpus, builds it thr
 验证边界现在可执行：无依赖的 test-only comparator 按 canonical node 匹配，并比较归一化 URI provenance 与带方向的 edge type/kind/provenance。Capacitor 与 Rust 按 direct canonical path、source-relative path、unique stem 解析；含糊 legacy basename 与重复 canonical path fail closed；当输入只有 sourceUri 时，Capacitor worker 与 single-thread builder 也保持一致。
 
 Replay 脚本创建 nested/relative/Markdown/NFC 单一语料，分别经 Capacitor 与 ignored Rust Cargo probe 构建，语义结果为 6 个节点、4 条边且无 mismatch。这只是 host-boundary 证据，不是签名真机、SAF UI、进程死亡或 RSS 证据。comparator 已排除出 mobile-slim，运行时继续使用 legacy `id` 与 schema-1 snapshot。
+
+## 2026-08-18 Phase 18 Native Recovery State-Machine Walkthrough
+
+`verify-mobile-native-recovery.js` now replays the production Kotlin journal contract in a temporary host directory. The six cases are intentionally state-oriented:
+
+```text
+staging + active target         -> preserve target
+target-backed-up                -> restore previous target
+target-activated + target       -> preserve activated target
+orphan backup                   -> restore newest backup
+unsafe journal / unknown schema -> fail closed
+```
+
+The contract test writes a schema-1 report with `evidenceLevel: host-recovery-state-machine` and `nativeDeviceEvidence: false`. This is a deterministic recovery mirror and CI drift detector, but it does not execute Android process death, SAF UI, storage/permission failures, or RSS sampling. The mobile runtime remains Kotlin-owned and the verifier is excluded from mobile-slim.
+
+Current verification is 146 Jest suites / 1,271 passed / 26 skipped, TypeScript no-emit, Rust 28 passed with 1 ignored probe, four-host projection replay (6 nodes / 4 edges), slim budget (121 files / 4,275,083 uncompressed / 1,550,638 estimated compressed, SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`), and Diataxis. Signed-device SAF/query/path, force-stop continuity, and RSS <= 256 MiB remain open; public-ID and SQLite/WASM promotion stay frozen.
+
+## 2026-08-18 第 18 阶段：原生恢复状态机 Walkthrough
+
+`verify-mobile-native-recovery.js` 现在在临时 host 目录中回放生产 Kotlin journal 契约。六个场景按状态设计：
+
+```text
+staging + active target         -> 保留 target
+target-backed-up                -> 恢复旧 target
+target-activated + target       -> 保留已激活 target
+orphan backup                   -> 恢复最新 backup
+unsafe journal / unknown schema -> fail closed
+```
+
+契约测试写入 schema-1 报告，包含 `evidenceLevel: host-recovery-state-machine` 与 `nativeDeviceEvidence: false`。这是确定性的恢复镜像和 CI 漂移探测器，但不会执行 Android 进程死亡、SAF UI、存储/权限失败或 RSS 采样。移动运行时仍由 Kotlin 拥有，verifier 也不会进入 mobile-slim。
+
+当前验证为全量 Jest 146 suites / 1,271 passed / 26 skipped、TypeScript no-emit、Rust 28 passed 加 1 个 ignored probe、四 host projection replay（6 个节点 / 4 条边）、slim budget（121 个文件 / 未压缩 4,275,083 / 估算压缩 1,550,638 字节，SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`）与 Diataxis。签名真机 SAF/query/path、force-stop continuity 与 RSS <= 256 MiB 仍未闭合；public-ID 与 SQLite/WASM 提升继续冻结。

@@ -222,6 +222,18 @@ Treat `canonicalId` as a cross-host semantic key and `id` as a compatibility ali
 ### Phase 17 decision
 
 Use semantic parity as a separate, test-only oracle. Keep host-specific legacy IDs and schema-1 wire compatibility at runtime; use canonical identity plus provenance-aware edges only to prove that independent builders mean the same graph. This avoids a public-ID flag, keeps the mobile bundle free of a new runtime dependency, and makes any future migration evidence-driven.
+
+## 2026-08-18 Phase 18 Native Recovery State-Machine Evidence
+
+- [x] Added `scripts/verify-mobile-native-recovery.js` as a dependency-free host verifier for the Kotlin import journal contract. It covers active-target precedence, previous-tree restoration, orphan-backup recovery, unsafe path rejection, and unknown-schema rejection.
+- [x] Added `src/mobile.native.recovery.contract.test.ts` and `verify:mobile:native-recovery`; the schema-1 report carries `evidenceLevel: host-recovery-state-machine` and `nativeDeviceEvidence: false`.
+- [x] Replayed six deterministic recovery scenarios. This is a code-level mirror of the production journal phases, not Android process-death, SAF UI, storage/permission failure, signed-artifact, or RSS evidence.
+- [x] Current verification: full Jest `146` suites / `1,271` passed / `26` skipped; TypeScript no-emit; Rust `28` passed / `1` ignored; projection replay `4` hosts / `6` nodes / `4` edges; mobile-slim `121` files / `4,275,083` uncompressed / `1,550,638` estimated compressed bytes; SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`.
+- [~] G2/G3 still require signed arm64 device execution, SAF import/query/path, force-stop/reopen continuity, failure-path replay, and RSS `<= 256 MiB`; G4 public-ID and SQLite/WASM promotion remain frozen.
+
+### Phase 18 decision
+
+Keep recovery verification as a test-only host mirror while Kotlin remains the production owner. The explicit evidence level prevents deterministic host replay from being mistaken for native acceptance, and any future journal schema/phase change must update the implementation, verifier, and bilingual evidence together.
 - [x] Runtime runbook modular-route composition is no longer inline-only inside `src/server.ts`; `src/routes/runtimeRunbookRouteOps.ts` now owns `/api/knowledge/runtime-capability-runbook/*` route-op assembly while preserving the current response contract.
 - [x] Graph-focus now renders the original markdown knowledge point through the shared markdown runtime and highlights matched passages in-place, instead of showing only a snippet list in the right pane.
 - [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness, readiness-exposed strict history auditing, current Windows-host strict 3/3 evidence, and opt-in multi-host audit tooling are now automated, while actual multi-host evidence and threshold calibration remain pending.

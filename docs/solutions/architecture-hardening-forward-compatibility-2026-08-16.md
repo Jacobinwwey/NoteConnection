@@ -364,3 +364,21 @@ Fresh mobile-slim staging excludes the test-only comparator and measures 121 fil
 Verifier 写入包含 nested path、relative/Markdown link、同内容文档和 NFC 归一化路径的单一 corpus，然后执行 Capacitor 与 ignored Rust Cargo probe。结果为 6 个 canonical node、4 条语义 edge 且无 mismatch。这闭合了 host-builder 语义证据，同时保持低体积决策：comparator 不进入移动运行时 asset，projection 仍为 schema-1，即使 endpoint 相同也保留 edge provenance。
 
 fresh mobile-slim staging 已排除 test-only comparator，测得 121 个文件 / 未压缩 4,274,600 字节 / 估算压缩 1,550,561 字节，SHA-256 为 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`；RSS 仍为 `not measured`。
+
+## 2026-08-18 Phase 18 Native Recovery State-Machine Evidence
+
+### English
+
+The import recovery boundary is now independently replayable on the host. `scripts/verify-mobile-native-recovery.js` mirrors the Kotlin journal schema and precedence rules in a temporary directory: an existing `Knowledge_Base` wins, a valid backup restores the previous tree when the target is absent, orphan backups are recovered, and unsafe paths or unknown schemas fail closed. Six scenarios pass through `src/mobile.native.recovery.contract.test.ts` and the `verify:mobile:native-recovery` command.
+
+The report deliberately says `evidenceLevel: host-recovery-state-machine` and `nativeDeviceEvidence: false`. This is the correct architectural split: Kotlin owns production recovery and JavaScript owns only a dependency-free CI oracle. It adds no mobile runtime dependency and stays out of `mobile-slim`, but it introduces a test mirror that must be updated with every journal schema or phase change. The verifier therefore closes deterministic recovery semantics, not Android process-death, SAF UI, storage/permission failure, signed-artifact, or RSS evidence.
+
+Current post-change evidence is full Jest 146 suites / 1,271 passed / 26 skipped, TypeScript no-emit, Rust 28 passed / 1 ignored probe, four-host projection replay with 6 nodes and 4 edges, and 121-file mobile-slim staging at 1,550,638 estimated compressed bytes (SHA-256 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`). G2/G3 native execution and G4 public-ID/SQLite-WASM promotion remain gated.
+
+### 中文
+
+导入恢复边界现在可以在 host 上独立回放。`scripts/verify-mobile-native-recovery.js` 在临时目录中镜像 Kotlin journal schema 与优先级：已有 `Knowledge_Base` 优先；target 不存在时由有效 backup 恢复旧树；孤儿 backup 进入恢复；unsafe path 或 unknown schema fail closed。六个场景已通过 `src/mobile.native.recovery.contract.test.ts` 与 `verify:mobile:native-recovery`。
+
+报告明确写入 `evidenceLevel: host-recovery-state-machine` 与 `nativeDeviceEvidence: false`。这是正确的架构分层：Kotlin 拥有生产恢复，JavaScript 只拥有无依赖 CI oracle；它不增加移动运行时依赖并排除出 `mobile-slim`，但测试镜像必须随每次 journal schema/phase 变更同步更新。因此本轮闭合的是确定性恢复语义，不是 Android 进程死亡、SAF UI、存储/权限失败、签名产物或 RSS 证据。
+
+本轮证据为全量 Jest 146 suites / 1,271 passed / 26 skipped、TypeScript no-emit、Rust 28 passed / 1 ignored probe、四 host projection replay（6 个节点、4 条边），以及 121 个文件、估算压缩 1,550,638 字节的 mobile-slim staging（SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`）。G2/G3 原生执行与 G4 public-ID/SQLite-WASM 提升继续受门禁约束。
