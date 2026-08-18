@@ -694,3 +694,61 @@ CI 临时签名 -> 签名 arm64 APK/AAB
 ```
 
 重建 x86_64、生成本地 debug keystore 或开启 emulator-only evidence 都会产生不同的结论，不能替代要求的移动 release 证据。public-ID 切换、默认 SQLite/WASM 与预算变化继续冻结。
+
+## 2026-08-18 Phase 22 CI Signing Gate and Mobile Budget Reconciliation Walkthrough
+
+The release path now has an explicit signing boundary:
+
+```text
+CI secrets -> ephemeral release.jks
+-> slim aarch64 build
+-> signed APK/AAB verification (--require-arm64 --require-signed)
+-> copy verified artifacts + remove keystore
+```
+
+Local builds intentionally stay unsigned. AAB verification accepts `jarsigner` status `4` only when the archive is signed and the certificate chain is untrusted/self-signed; unsigned archives still fail. A local ephemeral JKS smoke observed APK payload `9,576,838` bytes and AAB payload `7,140,668` bytes, but the certificate is not release evidence.
+
+The current slim manifest is 121 files, `4,275,083` uncompressed bytes, and `1,550,638` estimated compressed bytes. The APK's largest payload is the arm64 Rust library at roughly 7 MiB. This explains the packaging floor, but not runtime memory: full Markdown reads, JSON duplication, projection maps, and SAF staging/backup remain separate RSS/disk risks.
+
+One naming defect remains explicit: the workflow says `universal`, while the inspected archive contains only `arm64-v8a` native payload. The next change must either rename the output to `arm64` or verify every declared ABI. No filename is accepted as ABI proof.
+
+Release acceptance still stops before native execution:
+
+```text
+approved signing key + online arm64 device
+-> SAF import -> graph build -> exact query -> path
+-> force-stop -> reopen -> continuity
+-> storage/permission retry -> VmRSS samples
+-> manifest + rss.json + artifact hash + logcat
+```
+
+Missing evidence, an unobservable process death, or peak RSS above 256 MiB fails closed. Public-ID migration, default SQLite/WASM, Godot inclusion, and mobile budget increases remain frozen.
+
+## 2026-08-18 第 22 阶段：CI 签名门禁与移动预算对账 Walkthrough
+
+release 路径现在有明确的签名边界：
+
+```text
+CI secrets -> 临时 release.jks
+-> slim aarch64 构建
+-> 签名 APK/AAB 验证（--require-arm64 --require-signed）
+-> 复制已验证产物并删除 keystore
+```
+
+本地构建刻意保持 unsigned。AAB 只有在归档已签名且证书链不受信任/自签时才接受 `jarsigner` 返回码 `4`；unsigned 归档仍失败。临时 JKS smoke 观测到 APK payload `9,576,838` 字节、AAB payload `7,140,668` 字节，但该证书不是 release 证据。
+
+当前 slim manifest 为 121 个文件、未压缩 `4,275,083` 字节、估算压缩 `1,550,638` 字节。APK 最大项是约 7 MiB 的 arm64 Rust library。这解释了包体下限，但不代表运行时内存达标：完整 Markdown 读取、JSON 重复驻留、projection Map 与 SAF staging/backup 仍是独立 RSS/磁盘风险。
+
+还有一个必须保留的命名缺陷：workflow 称为 `universal`，而检查到的归档只有 `arm64-v8a` native payload。下一步要么把产物改名为 `arm64`，要么逐 ABI 验证；不能把文件名当 ABI 证据。
+
+原生 release 验收仍停在设备执行前：
+
+```text
+获批签名 key + 在线 arm64 设备
+-> SAF import -> graph build -> exact query -> path
+-> force-stop -> reopen -> continuity
+-> 存储/权限重试 -> VmRSS 样本
+-> manifest + rss.json + artifact hash + logcat
+```
+
+缺证据、进程死亡不可观测或 peak RSS 超过 256 MiB 都必须 fail closed。public-ID 迁移、默认 SQLite/WASM、Godot inclusion 与移动预算上调继续冻结。

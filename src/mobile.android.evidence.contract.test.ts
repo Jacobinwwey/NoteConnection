@@ -4,6 +4,7 @@ import * as path from 'path';
 describe('Tauri Android device evidence contract', () => {
   const repoRoot = path.resolve(__dirname, '..');
   const scriptPath = path.join(repoRoot, 'scripts', 'capture-tauri-android-rss-evidence.js');
+  const releaseWorkflowPath = path.join(repoRoot, '.github', 'workflows', 'release-desktop-multi-os.yml');
   const script = require(scriptPath) as {
     requiredWorkloadSteps: string[];
     maskSerial: (serial: string) => string;
@@ -85,5 +86,18 @@ describe('Tauri Android device evidence contract', () => {
     };
     expect(packageJson.scripts?.['verify:mobile:artifact:release']).toContain('--require-signed');
     expect(packageJson.scripts?.['capture:tauri:android:evidence']).toContain('capture-tauri-android-rss-evidence.js');
+  });
+
+  test('release workflow refuses unsigned Android uploads and verifies arm64 artifacts', () => {
+    const workflow = fs.readFileSync(releaseWorkflowPath, 'utf8');
+
+    expect(workflow).toContain('Materialize Android release signing key');
+    expect(workflow).toContain('NOTE_CONNECTION_ANDROID_KEYSTORE_BASE64');
+    expect(workflow).toContain('NOTE_CONNECTION_ANDROID_REQUIRE_SIGNING: "1"');
+    expect(workflow).toContain('--require-arm64');
+    expect(workflow).toContain('--require-signed');
+    expect(workflow).toContain("! -name '*unsigned*'");
+    expect(workflow).toContain('build/release/mobile/*');
+    expect(workflow).not.toContain('src-tauri/gen/android/app/build/outputs/apk/**/*.apk');
   });
 });

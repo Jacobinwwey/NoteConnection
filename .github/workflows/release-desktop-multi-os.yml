@@ -386,26 +386,70 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Materialize Android release signing key
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.NOTE_CONNECTION_ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.NOTE_CONNECTION_ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.NOTE_CONNECTION_ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.NOTE_CONNECTION_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANDROID_KEYSTORE_BASE64}" ] || [ -z "${ANDROID_KEYSTORE_PASSWORD}" ] || [ -z "${ANDROID_KEY_ALIAS}" ] || [ -z "${ANDROID_KEY_PASSWORD}" ]; then
+            echo "Android release signing secrets are incomplete; refusing to publish unsigned mobile artifacts." >&2
+            exit 1
+          fi
+          mkdir -p build/android-signing
+          printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > build/android-signing/release.jks
+          chmod 600 build/android-signing/release.jks
+          test -s build/android-signing/release.jks
+
       - name: Build Android universal APK
         shell: bash
+        env:
+          NOTE_CONNECTION_ANDROID_REQUIRE_SIGNING: "1"
+          NOTE_CONNECTION_ANDROID_KEYSTORE_FILE: ${{ github.workspace }}/build/android-signing/release.jks
+          NOTE_CONNECTION_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.NOTE_CONNECTION_ANDROID_KEYSTORE_PASSWORD }}
+          NOTE_CONNECTION_ANDROID_KEY_ALIAS: ${{ secrets.NOTE_CONNECTION_ANDROID_KEY_ALIAS }}
+          NOTE_CONNECTION_ANDROID_KEY_PASSWORD: ${{ secrets.NOTE_CONNECTION_ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           NOTE_CONNECTION_TAURI_ANDROID_TARGET=universal npm run tauri:android:build
 
-      - name: Upload workflow artifacts
+      - name: Verify signed arm64 Android artifacts
+        shell: bash
+        env:
+          NOTE_CONNECTION_ANDROID_REQUIRE_SIGNING: "1"
+        run: |
+          set -euo pipefail
+          mkdir -p build/release/mobile
+          mapfile -t artifacts < <(find src-tauri/gen/android/app/build/outputs -type f \( -name '*.apk' -o -name '*.aab' \) ! -name '*unsigned*' | sort)
+          if [ "${#artifacts[@]}" -lt 2 ]; then
+            echo "Expected signed APK and AAB outputs; found ${#artifacts[@]}." >&2
+            exit 1
+          fi
+          for artifact in "${artifacts[@]}"; do
+            node scripts/verify-mobile-artifact.js \
+              --artifact "${artifact}" \
+              --profile mobile-low \
+              --require-arm64 \
+              --require-signed
+            cp "${artifact}" "build/release/mobile/$(basename "${artifact}")"
+          done
+          rm -f build/android-signing/release.jks
+
+      - name: Upload signed Android workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ needs.ensure-release.outputs.tag_name }}-android-apk
+          name: release-${{ needs.ensure-release.outputs.tag_name }}-android-mobile
           if-no-files-found: error
-          path: |
-            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: build/release/mobile/*
 
-      - name: Upload APK assets to GitHub release
+      - name: Upload signed Android assets to GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.ensure-release.outputs.tag_name }}
-          files: |
-            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          files: build/release/mobile/*
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

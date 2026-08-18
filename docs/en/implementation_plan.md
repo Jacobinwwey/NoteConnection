@@ -803,3 +803,19 @@ This closes the deterministic, code-level recovery contract without changing the
 2. An approved arm64 low-memory device runs the declarative schema-1 workload `saf-import -> graph-build -> exact-query -> path -> continuity`, plus storage/permission retry cases.
 3. The recorder archives artifact hash/signature, masked device metadata, force-stop/reopen observation, workload results, logcat, and `/proc/<pid>/status:VmRSS`; missing evidence or RSS above 256 MiB fails closed.
 4. Canonical public-ID, SQLite/WASM defaulting, and mobile budget changes remain frozen until that archive exists. Rebuilding x86_64, creating a local debug keystore, or accepting emulator-only/unsigned evidence are rejected shortcuts.
+
+## 2026-08-18 Phase 22 CI Signing Gate and Mobile Budget Reconciliation
+
+### Implementation
+
+1. Keep signing in `scripts/configure-tauri-android-signing.js`: local builds remove stale markers and remain unsigned; CI requires all four signing values and a real keystore before injection.
+2. Materialize the keystore only inside the release job, build the existing slim `aarch64` profile, verify signed arm64 APK/AAB artifacts, publish only verified outputs, and delete the key.
+3. Treat AAB `jarsigner` status `4` as acceptable only for an actually signed archive with an untrusted/self-signed chain. Preserve fail-closed rejection for unsigned or malformed archives.
+4. Record the artifact truth separately from release acceptance: local smoke payloads were APK `9,576,838` and AAB `7,140,668` compressed bytes; slim staging is 121 files / `4,275,083` uncompressed / `1,550,638` estimated compressed bytes.
+
+### Forward plan and trade-offs
+
+- The current `universal` name is not supported by evidence; only `arm64-v8a` native payload was observed. Rename artifacts to `arm64`, or add per-ABI manifest and install checks before claiming universal support.
+- Keep input, projection, native output, staging disk, and RSS as independent budgets. Full-string Markdown reads, JSON duplication, maps, and SAF backup/staging can exceed RSS or disk limits after admission succeeds.
+- The next run is CI-signed arm64 -> approved low-memory device -> `saf-import -> graph-build -> exact-query -> path -> continuity` -> storage/permission retry -> force-stop/reopen -> `manifest + rss.json + artifact hash + logcat`. Any missing evidence or RSS above 256 MiB fails closed.
+- Do not promote SQLite/WASM, Godot, canonical public IDs, or larger corpus budgets until the native evidence archive and bounded content-read measurements exist. This preserves package size and hardware requirements at the cost of delaying feature promotion.

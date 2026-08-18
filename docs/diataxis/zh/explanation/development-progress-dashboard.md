@@ -1914,3 +1914,12 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - 已配置 `Medium_Phone_API_36.1` AVD 为 Android 36.1 / Play Store / `x86_64` / 2 GiB，路径 `E:\Android\avd\Medium_Phone.avd`；`adb devices -l` 没有 online target。它只能作为工具链 smoke 证据，不能作为 arm64 release 证据。
 - 没有获批 `.jks`、`.keystore` 或 `.p12`。未签名 APK/AAB 继续只是静态证据；release 必须具备签名 arm64 产物、有序 workload、force-stop/reopen continuity、失败路径重试与 peak RSS `<= 256 MiB`。
 - 不得重建 x86_64、生成本地 debug keystore 或接受 emulator-only evidence 作为 release 捷径。public-ID、默认 SQLite/WASM 与预算变化继续冻结。
+
+## 2026-08-18 第 22 阶段：CI 签名门禁与移动预算对账
+
+- CI-only signing 已实现：签名 secret 不完整时 fail closed，keystore 临时落盘，本地构建默认 unsigned，release 必须验证签名 arm64 APK/AAB。
+- AAB verifier 仅在归档已签名且证书链不受信任/自签时接受 `jarsigner` 返回码 `4`；unsigned 或损坏产物继续拒绝。
+- 本地集成 smoke 观测 APK/AAB 压缩 payload 为 `9,576,838` 与 `7,140,668` 字节；slim staging 为 121 个文件 / 未压缩 `4,275,083` / 估算压缩 `1,550,638` 字节。这些不是 release acceptance。
+- 当前只发现 `arm64-v8a` native payload，`universal` 仍是未验证标签。声明 universal 前应改名为 `arm64` 或增加逐 ABI 验证。
+- input、projection、native output、staging 磁盘与 RSS 必须分开预算。原生 G2/G3 仍需获批 key、在线 arm64 workload、SAF/重试/continuity 证据、产物 provenance 与 peak RSS `<= 256 MiB`。
+- 在原生归档存在前，不提升 public ID、默认 SQLite/WASM、Godot inclusion 或预算。admission limit 不是内存证明。

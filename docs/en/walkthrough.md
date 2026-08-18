@@ -303,3 +303,28 @@ CI ephemeral signing -> signed arm64 APK/AAB
 ```
 
 X86_64 rebuilds, local debug keystores, and emulator-only evidence are explicitly not release substitutes. Public-ID cutover, default SQLite/WASM, and budget changes remain frozen.
+
+## 2026-08-18 Phase 22 CI Signing Gate and Mobile Budget Reconciliation Walkthrough
+
+```text
+CI secrets -> ephemeral release.jks
+-> slim aarch64 build
+-> signed APK/AAB verification (--require-arm64 --require-signed)
+-> publish verified artifacts + remove keystore
+```
+
+Local builds remain unsigned. AAB status `4` is accepted only for a signed archive with an untrusted/self-signed chain. The local smoke payloads were APK `9,576,838` and AAB `7,140,668` compressed bytes; they are not release provenance.
+
+The slim manifest is 121 files / `4,275,083` uncompressed / `1,550,638` estimated compressed bytes. The arm64 Rust library is the largest APK item. Runtime proof still requires bounded content reads, SAF staging/retry behavior, and native RSS. The `universal` label remains unproven because only `arm64-v8a` native payload was observed; rename or verify per ABI before claiming it.
+
+Native acceptance remains:
+
+```text
+approved key + online arm64 device
+-> SAF import -> graph build -> exact query -> path
+-> force-stop -> reopen -> continuity
+-> storage/permission retry -> VmRSS samples
+-> manifest + rss.json + artifact hash + logcat
+```
+
+Missing evidence or RSS above 256 MiB fails closed. Public-ID, SQLite/WASM defaulting, Godot inclusion, and budget changes remain frozen.

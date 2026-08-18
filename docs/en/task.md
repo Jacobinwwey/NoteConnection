@@ -433,3 +433,13 @@ The harness deliberately executes only explicit `adbArgs` from a checked workloa
 - [x] Keep x86_64 emulator output outside arm64 release evidence and confirm no approved `.jks`, `.keystore`, or `.p12` is available.
 - [~] G2/G3 still require CI-signed arm64 APK/AAB, an approved arm64 low-memory device, the ordered workload, storage/permission retry evidence, force-stop/reopen continuity, and peak RSS `<= 256 MiB`.
 - [ ] Do not promote public IDs, SQLite/WASM defaulting, or mobile budget changes before the signed evidence archive exists.
+
+## 2026-08-18 Phase 22 CI Signing Gate and Mobile Budget Reconciliation
+
+- [x] Add CI-only Android signing: incomplete secrets fail closed, the keystore is ephemeral, release verification requires signed arm64 APK/AAB, and local builds remain unsigned by default.
+- [x] Accept AAB `jarsigner` status `4` only for a signed archive with an untrusted/self-signed certificate chain; unsigned and malformed archives remain rejected.
+- [x] Add signing/workflow contracts and complete an ephemeral local smoke. Observed compressed payloads: APK `9,576,838` bytes and AAB `7,140,668` bytes. These are integration facts, not release provenance.
+- [x] Reconcile the slim profile at 121 files / `4,275,083` uncompressed bytes / `1,550,638` estimated compressed bytes; the arm64 Rust library is the dominant APK payload.
+- [~] Native G2/G3 acceptance still needs an approved key, online arm64 device, SAF workload, force-stop/reopen continuity, storage/permission retry evidence, and `VmRSS <= 256 MiB`.
+- [~] `universal` is not yet an ABI claim: the inspected archive contains only `arm64-v8a` native payload. Rename to `arm64` or add per-ABI verification before claiming universal coverage.
+- [~] Keep input, projection, native output, disk staging, and RSS budgets separate. Admission limits do not prove low-memory behavior.

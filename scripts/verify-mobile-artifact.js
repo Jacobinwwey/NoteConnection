@@ -137,13 +137,27 @@ function verifyArtifactSignature(artifactPath, artifactKind) {
     shell: process.platform === 'win32' && /\.bat$/i.test(tool),
   });
   const output = `${String(result.stdout || '')}\n${String(result.stderr || '')}`.trim();
-  if (result.error || result.status !== 0) {
+  // Localized JDKs may translate the human-readable `jar verified` line. The
+  // jarsigner exit code is stable: code 4 means a valid signed JAR with an
+  // untrusted certificate chain, whereas unsigned/invalid archives fail with
+  // a different code. Keep the textual check when available and use code 4
+  // as the locale-independent equivalent.
+  const jarVerified = artifactKind === 'aab'
+    && (/jar verified\./i.test(output) || result.status === 4);
+  // jarsigner uses exit code 4 for an otherwise valid JAR whose release
+  // certificate chain is not rooted in the local trust store. Android app
+  // signing commonly uses a self-signed keystore; the cryptographic result
+  // (`jar verified.`) is the relevant invariant, not host trust discovery.
+  const acceptedJarTrustWarning = artifactKind === 'aab'
+    && result.status === 4
+    && jarVerified;
+  if (result.error || (result.status !== 0 && !acceptedJarTrustWarning)) {
     const detail = result.error ? result.error.message : output;
     throw new Error(
       `Mobile ${artifactKind.toUpperCase()} signature verification failed using ${tool}: ${detail || 'unsigned or invalid artifact'}`
     );
   }
-  if (artifactKind === 'aab' && !/jar verified/i.test(output)) {
+  if (artifactKind === 'aab' && !jarVerified) {
     throw new Error(`Mobile AAB signature verifier did not report a verified JAR: ${artifactPath}`);
   }
 

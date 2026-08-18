@@ -294,3 +294,28 @@ CI 临时签名 -> 签名 arm64 APK/AAB
 ```
 
 重建 x86_64、本地 debug keystore 与 emulator-only evidence 都不能替代 release 证据。public-ID 切换、默认 SQLite/WASM 与预算变化继续冻结。
+
+## 2026-08-18 第 22 阶段：CI 签名门禁与移动预算对账 Walkthrough
+
+```text
+CI secrets -> 临时 release.jks
+-> slim aarch64 构建
+-> 签名 APK/AAB 验证（--require-arm64 --require-signed）
+-> 发布已验证产物并删除 keystore
+```
+
+本地构建保持 unsigned。AAB 返回码 `4` 仅在归档已签名且证书链不受信任/自签时接受。本地 smoke 的 APK 为 `9,576,838`、AAB 为 `7,140,668` 压缩字节；它们不是 release provenance。
+
+slim manifest 为 121 个文件 / 未压缩 `4,275,083` / 估算压缩 `1,550,638` 字节，arm64 Rust library 是 APK 最大项。运行时仍需证明有界正文读取、SAF staging/重试与原生 RSS。当前只发现 `arm64-v8a` native payload，`universal` 标签尚未被证明；声明前应改名或逐 ABI 验证。
+
+原生验收仍为：
+
+```text
+获批 key + 在线 arm64 设备
+-> SAF import -> graph build -> exact query -> path
+-> force-stop -> reopen -> continuity
+-> 存储/权限重试 -> VmRSS 样本
+-> manifest + rss.json + artifact hash + logcat
+```
+
+缺证据或 RSS 超过 256 MiB 必须 fail closed。public-ID、默认 SQLite/WASM、Godot inclusion 与预算变化继续冻结。

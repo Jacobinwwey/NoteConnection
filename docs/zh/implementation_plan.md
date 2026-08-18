@@ -1275,3 +1275,19 @@ workload spec 采用声明式、禁止 host shell 的契约，固定为有序的
 2. 在获批 arm64 低内存设备上执行 schema-1 声明式 workload：`saf-import -> graph-build -> exact-query -> path -> continuity`，并覆盖存储/权限重试。
 3. recorder 归档 artifact hash/signature、脱敏设备信息、force-stop/reopen 观察、workload 结果、logcat 与 `/proc/<pid>/status:VmRSS`；缺证据或 RSS 超过 256 MiB 必须 fail closed。
 4. 在归档完成前继续冻结 canonical public-ID、默认 SQLite/WASM 与移动预算变化。重建 x86_64、生成本地 debug keystore 或接受 emulator-only/unsigned 证据均是拒绝的捷径。
+
+## 2026-08-18 第 22 阶段：CI 签名门禁与移动预算对账
+
+### 实施
+
+1. 保持签名逻辑由 `scripts/configure-tauri-android-signing.js` 拥有：本地清理旧 marker 并保持 unsigned；CI 只有在四项 signing value 与真实 keystore 齐全时才注入。
+2. keystore 只在 release job 临时落盘；沿用 slim `aarch64` 构建，验证签名 arm64 APK/AAB，只发布已验证产物并删除 key。
+3. AAB `jarsigner` 返回码 `4` 仅对确实已签名且证书链不受信任/自签的归档有效；unsigned 或损坏归档继续 fail closed。
+4. 将产物事实与 release acceptance 分开记录：本地 smoke 的 APK 为 `9,576,838`、AAB 为 `7,140,668` 压缩字节；slim staging 为 121 个文件 / 未压缩 `4,275,083` / 估算压缩 `1,550,638` 字节。
+
+### 向前计划与权衡
+
+- 当前 `universal` 名称没有证据支撑，只发现 `arm64-v8a` native payload。应改名为 `arm64`，或在声明 universal 前增加逐 ABI manifest 与安装校验。
+- input、projection、native output、staging 磁盘与 RSS 必须是独立预算。完整 Markdown 读取、JSON 重复驻留、Map 与 SAF backup/staging 可能在 admission 通过后仍超 RSS 或磁盘上限。
+- 下一次运行固定为 CI 签名 arm64 -> 获批低内存设备 -> `saf-import -> graph-build -> exact-query -> path -> continuity` -> 存储/权限重试 -> force-stop/reopen -> `manifest + rss.json + artifact hash + logcat`。任何缺证据或 RSS 超过 256 MiB 都失败。
+- 在原生证据归档与有界 content-read 测量前，不提升 SQLite/WASM、Godot、canonical public ID 或语料预算。这样牺牲功能晋级速度，但保护包体与硬件要求。

@@ -95,6 +95,15 @@ function runPathmodePatch({ mode, allowMissing }) {
   return patchResult.status === 0;
 }
 
+function runAndroidSigningPatch() {
+  const signingScript = path.join(__dirname, 'configure-tauri-android-signing.js');
+  const signingResult = spawnSync(process.execPath, [signingScript], {
+    stdio: 'inherit',
+    env: process.env,
+  });
+  return signingResult.status === 0;
+}
+
 function syncPathmodeIntegration({ includeGodotPathmode, allowMissing }) {
   if (includeGodotPathmode) {
     return runPathmodePatch({ mode: 'enable', allowMissing });
@@ -224,9 +233,17 @@ function main() {
       console.error('[Tauri Android Runner] Failed to synchronize Android Pathmode profile before build/dev.');
       process.exit(1);
     }
+    if (!runAndroidSigningPatch()) {
+      console.error('[Tauri Android Runner] Failed to synchronize Android release signing configuration.');
+      process.exit(1);
+    }
   } else {
     // init may run before the Android project exists; pre-patch is best-effort.
     syncPathmodeIntegration({ includeGodotPathmode, allowMissing: true });
+    if (!runAndroidSigningPatch()) {
+      console.error('[Tauri Android Runner] Failed to synchronize Android release signing configuration.');
+      process.exit(1);
+    }
   }
 
   console.log(`[Tauri Android Runner] SDK: ${sdkRoot}`);
@@ -265,6 +282,10 @@ function main() {
   // Keep project patched after successful init/dev/build.
   if (!syncPathmodeIntegration({ includeGodotPathmode, allowMissing: false })) {
     console.error('[Tauri Android Runner] Android command succeeded, but post-build profile synchronization failed.');
+    process.exit(1);
+  }
+  if (!runAndroidSigningPatch()) {
+    console.error('[Tauri Android Runner] Android command succeeded, but signing configuration synchronization failed.');
     process.exit(1);
   }
 

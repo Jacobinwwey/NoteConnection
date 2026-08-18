@@ -157,3 +157,25 @@ Phase 20 后宿主复核通过 Android prerequisite、TypeScript no-emit、8 个
 宿主确实存在 AVD，但不是目标环境：`Medium_Phone_API_36.1` 解析到 `E:\Android\avd\Medium_Phone.avd`，使用 Android `36.1` / Play Store / `x86_64`，内存 2 GiB；`adb devices -l` 没有 online device。没有找到获批 `.jks`、`.keystore` 或 `.p12`。因此新鲜未签名 APK/AAB 只能作为静态预算/arm64 证据，不能关闭签名设备、进程死亡、SAF 或 RSS 门禁。
 
 向前兼容的交接是 CI 临时签名加获批 arm64 低内存设备。实验室必须执行现有 schema-1 `saf-import -> graph-build -> exact-query -> path -> continuity` workload，补充存储/权限重试，并归档 artifact hash/signature、脱敏设备信息、force-stop 观察、workload 结果、logcat、`rss.json` 与 peak `VmRSS`。缺证据或 RSS 超过 256 MiB 必须 fail closed。重建 x86_64、接受 emulator-only 结果或生成本地 debug keystore 均是拒绝的捷径；public-ID、默认 SQLite/WASM 与预算变化继续冻结。
+
+## 2026-08-18 Phase 22 CI Signing Gate and Mobile Budget Reconciliation
+
+### English
+
+The signing boundary is now additive and host-neutral. `configure-tauri-android-signing.js` removes stale generated state, preserves unsigned local builds, and injects release signing only when all four CI values and a real keystore are present. The workflow deletes the ephemeral key after copying verified outputs. AAB status `4` is accepted only for a signed archive with an untrusted/self-signed chain; unsigned and malformed artifacts remain fail-closed.
+
+The current slim profile is 121 files / `4,275,083` uncompressed / `1,550,638` estimated compressed bytes. A local ephemeral signing smoke observed APK `9,576,838` and AAB `7,140,668` compressed payload bytes. This proves the integration path, not release provenance or native memory. The arm64 Rust library is roughly 7 MiB of the APK payload and is the dominant packaging/native-memory cost.
+
+Two architecture constraints are explicit. First, the workflow calls the artifact universal but inspection found only `arm64-v8a` native payload; `universal` is therefore a label, not evidence. Rename to arm64 or add per-ABI manifest/install checks before claiming universal support. Second, input admission, projection ceiling, Rust graph limits, SAF staging disk, and RSS are separate budgets. Full-string content reads and duplicate JSON/maps can exceed RSS after admission succeeds, so `read_node_content` needs a bounded-read policy before any budget increase.
+
+The next slice is evidence closure: CI-signed arm64 -> approved low-memory device -> schema-1 SAF/import/query/path/continuity -> storage/permission retry -> force-stop/reopen -> `manifest + rss.json + artifact hash + logcat`. Missing evidence, unobservable process death, or RSS above 256 MiB fails closed. Public-ID migration, default SQLite/WASM, Godot inclusion, and larger mobile budgets remain frozen.
+
+### 中文
+
+签名边界现在是 additive 且与 host 无关的：`configure-tauri-android-signing.js` 清理旧 generated state，保持本地 unsigned，只有四项 CI value 与真实 keystore 齐全时才注入 release signing；workflow 在复制已验证产物后删除临时 key。AAB 返回码 `4` 仅对已签名但证书链不受信任/自签的归档接受；unsigned 与损坏产物继续 fail closed。
+
+当前 slim profile 为 121 个文件 / 未压缩 `4,275,083` / 估算压缩 `1,550,638` 字节。临时本地签名 smoke 观测 APK `9,576,838`、AAB `7,140,668` 压缩 payload 字节。这证明集成路径，不证明 release provenance 或原生内存。arm64 Rust library 约占 APK payload 的 7 MiB，是包体与 native memory 的主要成本。
+
+两个架构约束必须显式保留。第一，workflow 将产物称为 universal，但检查只发现 `arm64-v8a` native payload，因此 `universal` 只是标签，不是证据；声明前应改名为 arm64 或增加逐 ABI manifest/安装校验。第二，input admission、projection ceiling、Rust graph limits、SAF staging 磁盘与 RSS 是不同预算；完整正文读取与 JSON/Map 重复驻留可能在 admission 通过后仍超 RSS，因此预算上调前必须为 `read_node_content` 增加有界读取策略。
+
+下一步只做证据闭环：CI 签名 arm64 -> 获批低内存设备 -> schema-1 SAF/import/query/path/continuity -> 存储/权限重试 -> force-stop/reopen -> `manifest + rss.json + artifact hash + logcat`。缺证据、进程死亡不可观测或 RSS 超过 256 MiB 必须 fail closed。public-ID 迁移、默认 SQLite/WASM、Godot inclusion 与移动预算扩大继续冻结。

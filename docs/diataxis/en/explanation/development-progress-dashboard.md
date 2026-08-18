@@ -1886,3 +1886,12 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - The configured `Medium_Phone_API_36.1` AVD is Android 36.1 / Play Store / `x86_64` / 2 GiB at `E:\Android\avd\Medium_Phone.avd`; `adb devices -l` has no online target. It is tooling smoke evidence only, not arm64 release evidence.
 - No approved `.jks`, `.keystore`, or `.p12` is available. Unsigned APK/AAB remain static evidence; release requires signed arm64 artifacts, the ordered workload, force-stop/reopen continuity, failure-path retry, and peak RSS `<= 256 MiB`.
 - Do not rebuild x86_64, create a local debug keystore, or accept emulator-only evidence as a release shortcut. Public-ID, SQLite/WASM defaulting, and budget changes remain frozen.
+
+## 2026-08-18 Phase 22 CI Signing Gate and Mobile Budget Reconciliation
+
+- CI-only signing is implemented: incomplete signing secrets fail closed, the keystore is ephemeral, local builds remain unsigned, and release verification requires signed arm64 APK/AAB artifacts.
+- AAB verifier semantics now accept `jarsigner` status `4` only for a signed archive with an untrusted/self-signed chain. Unsigned or malformed artifacts remain rejected.
+- Local integration smoke observed APK/AAB compressed payloads of `9,576,838` and `7,140,668` bytes. Slim staging is 121 files / `4,275,083` uncompressed / `1,550,638` estimated compressed bytes. These are not release acceptance.
+- Only `arm64-v8a` native payload was observed; `universal` remains an unverified label. Rename to `arm64` or add per-ABI verification before claiming universal support.
+- Keep input, projection, native output, staging disk, and RSS budgets separate. Native G2/G3 still requires an approved key, online arm64 workload, SAF/retry/continuity evidence, artifact provenance, and peak RSS `<= 256 MiB`.
+- Do not promote public IDs, SQLite/WASM defaulting, Godot inclusion, or budget changes until the native archive exists. Admission limits are not memory proof.

@@ -642,3 +642,13 @@ harness 只执行 workload spec 中明确列出的 `adbArgs`。这比任意 shel
 - [x] 将 x86_64 emulator 结果排除在 arm64 release 证据之外，并确认没有获批 `.jks`、`.keystore` 或 `.p12`。
 - [~] G2/G3 仍需 CI 签名 arm64 APK/AAB、获批 arm64 低内存设备、有序 workload、存储/权限重试证据、force-stop/reopen continuity 与 peak RSS `<= 256 MiB`。
 - [ ] 在签名证据归档前，不提升 public ID、默认 SQLite/WASM 或移动预算。
+
+## 2026-08-18 第 22 阶段：CI 签名门禁与移动预算对账
+
+- [x] 增加仅 CI 生效的 Android signing：secret 不完整时 fail closed，keystore 临时落盘，release 强制签名 arm64 APK/AAB，本地构建默认 unsigned。
+- [x] AAB `jarsigner` 返回码 `4` 仅在归档已签名且证书链不受信任/自签时接受；unsigned 与损坏归档继续拒绝。
+- [x] 增加 signing/workflow contract 并完成临时本地 smoke。观测压缩 payload：APK `9,576,838` 字节、AAB `7,140,668` 字节；这些是集成事实，不是 release provenance。
+- [x] 对齐 slim profile：121 个文件 / 未压缩 `4,275,083` 字节 / 估算压缩 `1,550,638` 字节；arm64 Rust library 是 APK 最大项。
+- [~] 原生 G2/G3 仍需获批 key、在线 arm64 设备、SAF workload、force-stop/reopen continuity、存储/权限重试证据与 `VmRSS <= 256 MiB`。
+- [~] `universal` 还不是 ABI 事实：当前归档只发现 `arm64-v8a` native payload。声明 universal 前应改名为 `arm64` 或增加逐 ABI 验证。
+- [~] input、projection、native output、磁盘 staging 与 RSS 必须分开预算；admission limit 不能证明低内存行为。

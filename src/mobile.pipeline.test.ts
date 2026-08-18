@@ -57,6 +57,7 @@ describe('dual mobile pipeline configuration', () => {
 
     expect(scripts['verify:android:env']).toContain('verify-tauri-android-prereqs.js');
     expect(scripts['tauri:android:patch:pathmode']).toContain('apply-tauri-android-pathmode.js');
+    expect(scripts['configure:tauri:android:signing']).toContain('configure-tauri-android-signing.js');
     expect(scripts['smoke:android:pathmode']).toContain('smoke-android-pathmode.js');
     expect(scripts['mobile:build:capacitor']).toBe('build_apk.bat');
     expect(scripts['capture:capacitor:evidence']).toContain('capture-capacitor-device-evidence.js');

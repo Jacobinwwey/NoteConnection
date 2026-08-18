@@ -1299,3 +1299,43 @@ Run signed arm64 APK/AAB on representative low-memory hardware through SAF impor
 - 为了让本地 AVD 可安装而重建 x86_64，会削弱目标 arm64/mobile 路径，且不能证明 release artifact。
 - 生成本地 debug keystore 只能证明测试签名，不代表 release provenance，因此不作为获批签名路径。
 - 接受未签名或仅 emulator 证据会使门禁失去单调性，并掩盖本计划要暴露的真实失败模式。
+
+## 2026-08-18 Phase 22 CI Signing Gate and Mobile Budget Reconciliation
+
+### Implementation status
+
+1. `scripts/configure-tauri-android-signing.js` owns the signing boundary: stale generated markers are removed, local builds remain unsigned by default, and release signing is injected only when all four environment values and a real keystore are present. `NOTE_CONNECTION_ANDROID_REQUIRE_SIGNING=1` turns missing configuration into a hard failure.
+2. The Android release workflow materializes the keystore ephemerally, builds the existing slim `aarch64` profile, verifies signed arm64 APK/AAB artifacts, copies only verified outputs, and removes the keystore. No signing material enters source or mobile-slim.
+3. `verify-mobile-artifact.js` accepts AAB `jarsigner` status `4` only for a signed archive with an untrusted/self-signed chain. Unsigned and malformed archives remain rejected.
+4. Contract coverage now includes workflow, Gradle injection, local unsigned default, and verifier semantics. An ephemeral local JKS smoke passed APK/AAB arm64 and signature checks; it is not approved release provenance.
+
+### Architecture risks and forward plan
+
+- `universal` is currently a label stronger than the artifact evidence: inspection found only `arm64-v8a/libnpm_lib.so`. Keep arm64 as the runtime target and either rename outputs to `arm64` or add an explicit per-ABI manifest and install check before claiming universal.
+- The 64 MiB input admission, 48 MiB frontend projection ceiling, Rust node/edge limits, and `VmRSS <= 256 MiB` gate are different budgets. Full-string reads, duplicate JSON parsing, maps, and SAF staging/backup can still exceed RSS or disk peaks after admission succeeds.
+- The arm64 Rust library is roughly 7 MiB of compressed APK payload. Bypassing `run-tauri-android.js` can revert Cargo to `opt-level=0`, `codegen-units=256`, and no LTO, so the runner remains part of the Android build contract.
+- `read_node_content` still needs a bounded streaming/size-rejection policy. Do not add SQLite/WASM, Godot, or a larger corpus budget until transient reads and native RSS are measured.
+
+Next execution is deliberately ordered: (1) CI-signed arm64 artifact plus approved low-memory device workload `saf-import -> graph-build -> exact-query -> path -> continuity`; (2) storage/permission retry and force-stop/reopen evidence with artifact hash, manifest, logcat, and `rss.json`; (3) one versioned mobile budget manifest; (4) only then identity migration, database promotion, or budget changes. Missing evidence or RSS above 256 MiB fails closed.
+
+Observed local evidence: slim profile 121 files / `4,275,083` uncompressed / `1,550,638` estimated compressed bytes; signed smoke APK `9,576,838` and AAB `7,140,668` compressed payload bytes. These are integration facts, not release acceptance.
+
+## 2026-08-18 第 22 阶段：CI 签名门禁与移动预算对账
+
+### 实施状态
+
+1. `scripts/configure-tauri-android-signing.js` 拥有签名边界：清理 generated marker，本地默认 unsigned，只有四项环境变量与真实 keystore 齐全时才注入 release signing；`NOTE_CONNECTION_ANDROID_REQUIRE_SIGNING=1` 会把缺失配置变成硬失败。
+2. Android release workflow 临时落盘 keystore，沿用 slim `aarch64` 构建，验证签名 arm64 APK/AAB，只复制已验证产物并删除 keystore。签名材料不进入源码或 mobile-slim。
+3. `verify-mobile-artifact.js` 仅在 AAB 确实已签名但证书链不受信任/自签时接受 `jarsigner` 返回码 `4`；unsigned 或损坏归档仍拒绝。
+4. Contract 已覆盖 workflow、Gradle 注入、本地 unsigned default 与 verifier 语义。临时 JKS smoke 已通过 APK/AAB arm64 与签名检查，但不是获批 release provenance。
+
+### 架构风险与向前计划
+
+- `universal` 目前强于产物证据：检查只发现 `arm64-v8a/libnpm_lib.so`。继续以 arm64 为运行时目标，并在声明 universal 前改名为 `arm64` 或增加逐 ABI manifest 与安装校验。
+- 64 MiB input admission、前端 48 MiB projection ceiling、Rust node/edge 上限与 `VmRSS <= 256 MiB` 属于不同预算。完整 String 读取、JSON 重复解析、Map 以及 SAF staging/backup 峰值仍可能在 admission 通过后超 RSS 或磁盘峰值。
+- arm64 Rust library 约占 APK 压缩 payload 的 7 MiB；绕过 `run-tauri-android.js` 会回退到 Cargo `opt-level=0`、`codegen-units=256`、无 LTO，因此 runner 是 Android build contract 的一部分。
+- `read_node_content` 仍需有界 streaming/大小拒绝策略。在测量瞬时读取与 native RSS 前，不增加 SQLite/WASM、Godot 或语料预算。
+
+后续顺序固定为：(1) CI 签名 arm64 产物 + 获批低内存设备执行 `saf-import -> graph-build -> exact-query -> path -> continuity`；(2) 存储/权限重试与 force-stop/reopen，归档 artifact hash、manifest、logcat、`rss.json`；(3) 版本化 mobile budget manifest；(4) 之后才评估身份迁移、数据库提升或预算变化。缺证据或 RSS 超过 256 MiB 必须 fail closed。
+
+当前本地事实：slim profile 121 个文件 / 未压缩 `4,275,083` / 估算压缩 `1,550,638` 字节；签名 smoke 的 APK `9,576,838`、AAB `7,140,668` 压缩 payload 字节。它们是集成事实，不构成 release acceptance。

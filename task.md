@@ -726,3 +726,31 @@ Treat this host as a contract/build station, not a mobile release lab. Do not ch
 ### 第 21 阶段决策
 
 将当前宿主定位为契约/构建工作站，而不是移动 release 实验室。不改变 arm64 target、不放宽签名门禁、不接受 x86_64 emulator 结果、不提升 SQLite/WASM 或 canonical public ID，也不上调移动预算，直到签名 arm64 运行归档 `manifest`、`rss.json`、产物 hash、workload 结果与 logcat。下一项可执行交接是 CI 签名和预约获批的 arm64 设备；现有证据不支持增加任何运行时依赖。
+
+## 2026-08-18 Phase 22 CI Signing Gate and Mobile Budget Reconciliation
+
+- [x] Added CI-only Android signing configuration. Release jobs now fail closed unless all four signing secrets are present, materialize the keystore ephemerally, require `--require-signed --require-arm64`, and remove the keystore after verification. Local builds remain unsigned by default.
+- [x] Corrected AAB verification semantics: `jarsigner -verify -strict` exit code `4` is accepted only when the archive is otherwise signed and the status means an untrusted/self-signed certificate chain; unsigned or malformed archives remain rejected.
+- [x] Added signing/workflow contract coverage and completed an ephemeral local signed APK/AAB smoke run. Observed compressed payloads were APK `9,576,838` bytes and AAB `7,140,668` bytes; this is integration evidence only, not release provenance.
+- [x] Reconciled the current slim profile: 121 files, `4,275,083` uncompressed bytes, `1,550,638` estimated compressed bytes. The largest APK payload is the arm64 Rust library at roughly 7 MiB; payload size is within the 25 MiB budget but does not prove low RSS.
+- [~] Native acceptance remains open: no approved signing key, online arm64 device, SAF import/query/path workload, force-stop/reopen continuity, storage/permission retry evidence, or `VmRSS <= 256 MiB` report exists.
+- [~] The workflow calls the output universal, but current artifact inspection found only `arm64-v8a` native payload. Treat `universal` as a packaging label, not ABI evidence, until each declared ABI is verified; do not expand ABI coverage merely to satisfy the name.
+- [~] Android has separate memory risks that must be measured independently: full-string content reads, projection JSON duplication, a 48 MiB frontend projection limit versus Rust output limits, and SAF staging/backup disk peaks. Admission limits are not RSS proof.
+
+### Phase 22 decision
+
+Keep the forward-compatible mobile boundary: body-free projection plus host-owned storage/lifecycle primitives, CI-only signing, and exact local analysis. The next implementation slice is evidence collection and budget alignment, not a new database, embedded model, or relaxed ABI/signature gate. Rename the release artifact/profile to `arm64` when only arm64 is shipped, or add explicit per-ABI verification before using `universal`; either choice is safer than relying on a misleading label. Public-ID migration, default SQLite/WASM, Godot inclusion, and budget increases remain frozen until native evidence closes.
+
+## 2026-08-18 第 22 阶段：CI 签名门禁与移动预算对账
+
+- [x] 增加仅 CI 生效的 Android 签名配置：四项 signing secret 不完整时 release 直接 fail closed；keystore 仅临时落盘，校验后删除；release 强制 `--require-signed --require-arm64`；本地构建默认仍为 unsigned。
+- [x] 修正 AAB 验证语义：`jarsigner -verify -strict` 返回码 `4` 仅在归档确实已签名、但证书链不受信任/自签时接受；unsigned 或损坏归档仍拒绝。
+- [x] 增加 signing/workflow contract，并完成一次临时本地签名 APK/AAB smoke。观测到的压缩 payload 为 APK `9,576,838` 字节、AAB `7,140,668` 字节；这只是集成证据，不是 release provenance。
+- [x] 对齐当前 slim profile：121 个文件、未压缩 `4,275,083` 字节、估算压缩 `1,550,638` 字节。APK 最大项是约 7 MiB 的 arm64 Rust 库；包体低于 25 MiB 不等于 RSS 达标。
+- [~] 原生验收仍未关闭：没有获批签名 key、在线 arm64 设备、SAF import/query/path workload、force-stop/reopen continuity、存储/权限重试证据或 `VmRSS <= 256 MiB` 报告。
+- [~] workflow 将产物称为 universal，但当前归档只发现 `arm64-v8a` native payload。在各声明 ABI 均被验证前，`universal` 只能视为打包标签，不能视为 ABI 证据；不能为了匹配名称盲目扩大 ABI。
+- [~] Android 仍有必须独立测量的内存风险：完整正文 String 读取、projection JSON 重复驻留、前端 48 MiB projection 上限与 Rust 输出限制不一致，以及 SAF staging/backup 磁盘峰值。admission limit 不能替代 RSS 证明。
+
+### 第 22 阶段决策
+
+保持向前兼容的移动边界：无正文 projection + host 自有存储/生命周期原语 + CI-only signing + local exact analysis。下一步应先完成证据采集与预算对齐，不增加数据库、内置模型，也不放宽 ABI/签名门禁。若当前只发布 arm64，应把 release artifact/profile 改名为 `arm64`；若确需 universal，则必须增加逐 ABI 验证。两者都比依赖误导性名称稳健。public-ID 迁移、默认 SQLite/WASM、Godot 打包与预算上调继续冻结，直到原生证据闭环。

@@ -23,6 +23,7 @@
     "capture:capacitor:evidence": "node scripts/capture-capacitor-device-evidence.js",
     "verify:capacitor:evidence": "node scripts/verify-capacitor-evidence-freshness.js",
     "tauri:android:patch:pathmode": "node scripts/apply-tauri-android-pathmode.js",
+    "configure:tauri:android:signing": "node scripts/configure-tauri-android-signing.js",
     "tauri:android:init": "npm run mobile:prepare:slim && npm run verify:android:env && node scripts/run-tauri-android.js init",
     "tauri:android:dev": "npm run mobile:prepare:slim && npm run verify:android:env && node scripts/run-tauri-android.js dev",
     "tauri:android:build": "npm run mobile:prepare:slim && npm run verify:android:env && node scripts/run-tauri-android.js build",
