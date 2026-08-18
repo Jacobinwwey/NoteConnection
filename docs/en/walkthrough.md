@@ -238,3 +238,11 @@ Android graph loading now caps each file before full UTF-8 materialization, so a
 The current post-change slim staging measures 121 files, 4,263,740 uncompressed bytes, and 1,548,695 estimated compressed bytes. Existing APK/AAB files are older unsigned outputs and must be rebuilt before they can be attributed to this source revision.
 
 Verification snapshot: full Jest 144 suites / 1,263 passed / 26 skipped; TypeScript no-emit, Rust host and Android arm64 checks, projection replay, route shadow (17 + 6 probes), slim budget, and Diataxis all pass. Real signed-device evidence remains unavailable.
+
+## 2026-08-18 Phase 16 Portable Identity Propagation Walkthrough
+
+`canonicalId` now travels through every current projection producer. TypeScript identity generation, `FileLoader`, and desktop `GraphBuilder` emit it additively; the browser identity contract and Capacitor graph use the same normalized path rule; Android Rust emits the same field from its normalized relative path. Legacy `id` remains the graph key, so old layout and snapshot replay are unchanged.
+
+The important boundary is semantic, not cosmetic: `canonicalId` is the cross-host comparison key, while `sourceUri` remains the portable provenance and `id` remains the compatibility alias. Duplicate canonical identities still fail closed. This lets the next corpus compare node and edge meaning without forcing a public-ID migration.
+
+Focused verification passes: 5 Jest suites / 20 tests, TypeScript no-emit, and 27 Rust host tests. Fresh `mobile-slim` staging is 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes with SHA-256 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`; RSS remains `not measured`. Native edge-policy parity, signed-device SAF/query/path, process-death continuity, and RSS <= 256 MiB remain open gates.

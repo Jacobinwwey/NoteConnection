@@ -798,7 +798,7 @@
 
                 files.push({
                     id: filename,
-                    canonicalId: canonicalMobileNodeIdFromIdentity(identity),
+                    canonicalId: identity.canonicalId || canonicalMobileNodeIdFromIdentity(identity),
                     label: filename,
                     path: relativePath,
                     sourceUri: identity.sourceUri,

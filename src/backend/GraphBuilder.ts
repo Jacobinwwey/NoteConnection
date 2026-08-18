@@ -77,6 +77,7 @@ export class GraphBuilder {
         outDegree: 0,
         content: file.content,
         sourceUri: file.sourceUri,
+        canonicalId: file.canonicalId,
         revision: file.revision,
         identityAliases: file.identityAliases,
         metadata: { 

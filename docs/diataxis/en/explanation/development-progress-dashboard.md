@@ -1842,3 +1842,10 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - **Verified locally:** parser/contract tests, JavaScript syntax, and TypeScript no-emit. No device evidence is generated without an online target and a schema-1 workload spec.
 - **Still open:** this host has no signing keystore, online device/AVD, or native workload run. G2/G3 remain pending; unsigned static APK/AAB payload and Node fixture replay are not substitutes.
 - **Direction:** execute on low-memory arm64 hardware, replay the same corpus across Tauri/Capacitor/Android, then close identity/edge and registry shadow corpora before canonical-ID or SQLite/WASM decisions.
+
+## 2026-08-18 Phase 16 Portable Identity Propagation
+
+- `canonicalId` is now emitted consistently by TypeScript, desktop, browser, Capacitor, and Android Rust projection producers.
+- Legacy `id`, schema-1 snapshots, and layouts remain unchanged; `canonicalId` is a semantic comparison key only.
+- Native semantic parity is still open because Rust and Capacitor use different legacy key/link-resolution policies; the next comparator must match canonical endpoints and edge provenance.
+- Fresh slim staging is 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes, SHA-256 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`; RSS remains `not measured`, and signed-device, public-ID, and SQLite/WASM claims remain gated.

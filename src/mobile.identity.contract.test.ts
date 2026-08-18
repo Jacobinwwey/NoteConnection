@@ -10,6 +10,7 @@ describe('mobile portable identity contract', () => {
         sha256HexSync: (value: string) => string;
         createResourceIdentity: (pathValue: string, legacyId: string, content: string) => Promise<{
             sourceUri: string;
+            canonicalId: string;
             revision: string;
             identityAliases: string[];
         }>;
@@ -39,6 +40,7 @@ describe('mobile portable identity contract', () => {
     test('preserves the legacy id while exposing extension-inclusive portable identity', async () => {
         const result = await identity.createResourceIdentity('algebra/index.md', 'index', '# Algebra');
         expect(result.sourceUri).toBe('note://workspace/v1/algebra/index.md');
+        expect(result.canonicalId).toBe('algebra/index');
         expect(result.identityAliases).toEqual(expect.arrayContaining(['index', 'index.md', 'algebra/index.md']));
     });
 });

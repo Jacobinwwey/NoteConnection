@@ -1094,6 +1094,7 @@ Execution order: (1) CI-secret-only signing plus a device RSS recorder; (2) nati
 2. `canonicalId` is additive and URI-derived; legacy `id` remains public and duplicate canonical IDs fail closed. Exact lookup accepts either key.
 3. Route shadow now has 17 equivalent probes, including malformed JSON and invalid build defaults. Inline `/api/build` rejects unsupported recompute modes before graph mutation and matches the registry invalid-JSON status/body/header contract.
 4. G4 corpus covers same-content isolation, NFC/case collisions, cross-root identity, legacy snapshots, and graph rollback. Android Rust caps file reads before UTF-8 materialization.
+
 5. Signed-device SAF/query/path, process-death continuity, and RSS remain explicit release gates; no host simulation upgrades their status.
 
 ## 2026-08-18 第 15 阶段 原生边界与身份语料加固
@@ -1112,3 +1113,17 @@ Execution order: (1) CI-secret-only signing plus a device RSS recorder; (2) nati
 The release boundary is now split into artifact integrity, device execution, and projection semantics. `verify-mobile-artifact.js` owns ZIP/arm64/budget/signature checks; `capture-tauri-android-rss-evidence.js` owns install, explicit workload steps, process-death observation, restart, and VmRSS sampling; the workload itself must prove SAF import, graph build, exact query, path, and continuity. This avoids treating static slim size or a Node fixture replay as Android acceptance.
 
 The harness intentionally accepts only ordered schema-1 `adbArgs` and fails closed for missing signatures, devices, steps, process death, or RSS. This is less ergonomic than arbitrary scripts but prevents host-side command ambiguity and makes evidence reviewable. Next order: CI-secret signing, low-memory arm64 execution, native Tauri/Capacitor/Android replay, then G4 identity/edge corpora and registry shadow parity.
+
+## 2026-08-18 Phase 16 Portable Identity Propagation
+
+- `canonicalId` is now additive across `ResourceIdentity`, `FileLoader`, desktop `GraphBuilder`, browser identity, Capacitor projection, and Android Rust projection.
+- `id` remains the compatibility key; schema-1 snapshots/layouts and old exact lookup aliases are unchanged.
+- The next parity oracle must match canonical nodes and directed/provenance-aware edges, because Rust and Capacitor still have different legacy key and link-resolution policies.
+- Fresh `mobile-slim` staging after this source change is 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes, SHA-256 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`; keep signed-device, RSS, public-ID, and SQLite/WASM gates closed.
+
+## 2026-08-18 第 16 阶段 Portable Identity 传播
+
+- `canonicalId` 现在以 additive 方式贯穿 `ResourceIdentity`、`FileLoader`、桌面 `GraphBuilder`、浏览器 identity、Capacitor projection 与 Android Rust projection。
+- `id` 继续是兼容 key；schema-1 snapshot/layout 与旧 exact lookup alias 不变。
+- 下一 parity oracle 必须按 canonical node 以及带方向/provenance 的边比较，因为 Rust 与 Capacitor 的 legacy key 和 link resolution 策略仍不同。
+- 本轮源码变更后的 fresh `mobile-slim` staging 为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`；签名真机、RSS、public-ID 与 SQLite/WASM 门禁继续关闭。

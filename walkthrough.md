@@ -548,3 +548,11 @@ Replay verifier 现在分别运行 Web storage、Tauri atomic-file、Capacitor c
 Projection node 增加由 URI 派生的 additive `canonicalId`，同时保留 legacy `id`；exact analyzer 两者均可解析，schema 在分析前拒绝重复 canonical identity，本轮不切 public ID。Route shadow 现在覆盖 17 条等价 probe，包括 invalid JSON 与非法 build default。Android graph read 在完整 UTF-8 分配前有上限，G4 corpus 覆盖同内容、NFC/跨 root identity、legacy snapshot 与 rollback。
 
 当前 slim staging 为 121 个文件 / 未压缩 4,263,740 字节 / 估算压缩 1,548,695 字节。已有 APK/AAB 属于更早的未签名构建，必须重新构建后才能归因到本轮源码。
+
+## 2026-08-18 Phase 16 Portable Identity Propagation Walkthrough
+
+The new field is emitted by every current producer: TypeScript identity and desktop `GraphBuilder`, browser identity and Capacitor projection, plus Android Rust full/lite projection. `canonicalId` is the normalized relative path without the Markdown extension; legacy `id` remains unchanged. Focused verification passes with 5 suites / 20 tests, TypeScript no-emit, and 27 Rust tests. Fresh slim staging is 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes with SHA-256 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`; RSS remains `not measured`.
+
+## 2026-08-18 第 16 阶段 Portable Identity 传播 Walkthrough
+
+新增字段已由当前所有 producer 输出：TypeScript identity 与桌面 `GraphBuilder`、浏览器 identity 与 Capacitor projection，以及 Android Rust full/lite projection。`canonicalId` 是去除 Markdown 扩展名的规范 relative path；legacy `id` 不变。定向验证为 5 个 suite / 20 个测试、TypeScript no-emit 与 27 个 Rust 测试通过；fresh slim staging 为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`，RSS 仍为 `not measured`。

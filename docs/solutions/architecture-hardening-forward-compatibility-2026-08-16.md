@@ -331,4 +331,18 @@ Projection node 现在携带由 `sourceUri` 派生的 additive `canonicalId`。L
 
 迁移仍按阶段推进：签名真机 SAF/query/path、进程死亡 continuity 与 RSS <= 256 MiB 继续作为 release gate；canonical 公共 ID、SQLite/WASM 默认化和更强移动端结论继续冻结。
 
+## 2026-08-18 Phase 16 Portable Identity Propagation
+
+### English
+
+`canonicalId` is now emitted by every current projection producer: the TypeScript resource boundary, desktop `GraphBuilder`, browser identity contract, Capacitor graph writer, and Android Rust full/lite writer. It is the normalized workspace-relative path without the Markdown extension. `id` remains the compatibility key and `sourceUri` remains provenance; schema-1 snapshots and layouts are unchanged.
+
+This is deliberately not a parity claim. Rust and Capacitor still differ in legacy node-key and link-resolution policy, so the next evidence gate must compare canonical nodes and directed/provenance-aware edges. Raw JSON equality would either reject valid legacy aliases or hide a semantic mismatch. Fresh slim staging now measures 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes, SHA-256 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`; RSS remains `not measured`.
+
+### 中文
+
+`canonicalId` 现在由所有当前 projection producer 输出：TypeScript resource boundary、桌面 `GraphBuilder`、浏览器 identity contract、Capacitor graph writer 和 Android Rust full/lite writer。它定义为去除 Markdown 扩展名的 workspace-relative 规范路径。`id` 继续是兼容 key，`sourceUri` 继续是 provenance；schema-1 snapshot 与 layout 不变。
+
+这不是 parity 已完成的声明。Rust 与 Capacitor 在 legacy node key 和 link resolution 策略上仍有差异，因此下一门禁必须比较 canonical node 以及带方向/provenance 的 edge。直接比较 raw JSON 要么误拒绝合法 legacy alias，要么掩盖语义不一致。本轮源码变更后的 fresh slim staging 为 121 个文件、未压缩 4,265,579、估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`；RSS 仍为 `not measured`。
+
 本轮源码变更后的 mobile-slim staging 实测为 121 个文件、未压缩 4,263,740、估算压缩 1,548,695 字节。已有 APK/AAB 是更早构建的未签名产物，必须重建后才能与本轮源码关联。

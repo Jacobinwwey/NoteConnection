@@ -31,6 +31,7 @@ describe('GraphBuilder identity compatibility', () => {
                 content: '# A',
                 relativePath: 'algebra/a.md',
                 sourceUri: 'note://workspace/v1/algebra/a.md',
+                canonicalId: 'algebra/a',
                 revision: 'sha256:a',
                 identityAliases: ['A', 'algebra/a.md'],
             },
@@ -51,6 +52,7 @@ describe('GraphBuilder identity compatibility', () => {
 
         expect(graph.getNode('A')).toEqual(expect.objectContaining({
             sourceUri: 'note://workspace/v1/algebra/a.md',
+            canonicalId: 'algebra/a',
             revision: 'sha256:a',
             identityAliases: expect.arrayContaining(['algebra/a.md']),
             x: 12,

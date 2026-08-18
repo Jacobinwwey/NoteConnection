@@ -195,6 +195,18 @@ Keep raw versioned projection JSON as the mobile persistence format. SQLite/WASM
 ### Phase 15 decision
 
 Use additive canonical identity and host-owned persistence boundaries. This closes deterministic contract gaps without breaking legacy layouts or IDs; the cost is carrying both IDs during migration. Keep device-only gates explicitly pending rather than treating host simulations as Android acceptance.
+
+## 2026-08-18 Phase 16 Portable Identity Propagation
+
+- [x] Propagate optional `canonicalId` from `ResourceIdentity` through `FileLoader`, desktop `GraphBuilder`, browser identity, Capacitor projection, and Android Rust projection.
+- [x] Keep legacy `id`, schema-1 projection, old snapshots, and layout keys unchanged; canonical identity is normalized workspace-relative path without the Markdown extension.
+- [x] Add regression assertions for TypeScript, browser identity, Capacitor graph output, desktop graph output, and Android graph output.
+- [~] Native semantic parity is still not proven: Rust and Capacitor retain different legacy node-key and link-resolution policies. The next gate compares canonical node/edge meaning, not only raw JSON shape.
+- [x] Rebuilt `mobile-slim` after this source change: 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes; staging SHA-256 is `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`. RSS remains `not measured`.
+
+### Phase 16 decision
+
+Treat `canonicalId` as a cross-host semantic key and `id` as a compatibility alias. Do not use a mode flag or public-ID cutover. First close canonical node/edge parity on the same corpus, then measure signed-device RSS and only afterward evaluate a canonical-ID migration.
 - [x] Runtime runbook modular-route composition is no longer inline-only inside `src/server.ts`; `src/routes/runtimeRunbookRouteOps.ts` now owns `/api/knowledge/runtime-capability-runbook/*` route-op assembly while preserving the current response contract.
 - [x] Graph-focus now renders the original markdown knowledge point through the shared markdown runtime and highlights matched passages in-place, instead of showing only a snippet list in the right pane.
 - [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness, readiness-exposed strict history auditing, current Windows-host strict 3/3 evidence, and opt-in multi-host audit tooling are now automated, while actual multi-host evidence and threshold calibration remain pending.

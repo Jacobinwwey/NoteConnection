@@ -10,6 +10,8 @@ export interface RawFile {
   relativePath?: string;
   /** Versioned portable identity; optional for compatibility with synthetic callers. */
   sourceUri?: string;
+  /** Canonical workspace-relative identity without a Markdown extension. */
+  canonicalId?: string;
   /** Content-addressed revision; optional for compatibility with synthetic callers. */
   revision?: string;
   /** Legacy and portable lookup aliases; optional for compatibility with snapshots. */
@@ -82,6 +84,7 @@ export class FileLoader {
                     content: content,
                     relativePath,
                     sourceUri: identity.sourceUri,
+                    canonicalId: identity.canonicalId,
                     revision: identity.revision,
                     identityAliases: identity.identityAliases,
                 };

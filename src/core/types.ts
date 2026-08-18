@@ -9,6 +9,7 @@ export interface NoteNode {
   outDegree: number; // Number of outgoing edges | 出度数量
   content?: string;  // Full text content (v0.1.5)
   sourceUri?: string; // Versioned portable source identity
+  canonicalId?: string; // Additive workspace-relative identity without extension
   revision?: string; // Content-addressed revision
   identityAliases?: string[]; // Legacy and portable lookup aliases
   x?: number;        // Saved X position | 保存的 X 坐标

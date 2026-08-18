@@ -9,6 +9,7 @@ export interface RawFile {
     modifiedTime: Date;
     relativePath?: string;
     sourceUri?: string;
+    canonicalId?: string;
     revision?: string;
     identityAliases?: string[];
 }

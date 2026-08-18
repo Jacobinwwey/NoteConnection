@@ -229,3 +229,11 @@ Android graph load 现在在完整 UTF-8 materialize 前限制单文件读取，
 本轮源码变更后的 slim staging 实测为 121 个文件、未压缩 4,263,740 字节、估算压缩 1,548,695 字节。现有 APK/AAB 是更早构建的未签名产物，必须重建后才能归因到本次源码版本。
 
 验证快照：全量 Jest 144 suites / 1,263 passed / 26 skipped；TypeScript no-emit、Rust host 与 Android arm64 check、projection replay、route shadow（17 + 6 probes）、slim budget、Diataxis 均通过。真实签名真机证据仍不可用。
+
+## 2026-08-18 第 16 阶段 Portable Identity 传播 Walkthrough
+
+`canonicalId` 现在经过当前所有 projection producer。TypeScript identity、`FileLoader` 与桌面 `GraphBuilder` 以 additive 方式输出；浏览器 identity contract 与 Capacitor graph 使用同一规范路径规则；Android Rust 从规范化 relative path 输出同名字段。Legacy `id` 仍是 graph key，因此旧 layout 与 snapshot replay 不变。
+
+关键边界是语义而非字段外观：`canonicalId` 是跨 host 对比 key，`sourceUri` 是 portable provenance，`id` 是兼容 alias。重复 canonical identity 继续 fail closed。这样下一轮 corpus 可以直接比较 node/edge 语义，而不必提前触发 public-ID 迁移。
+
+定向验证通过：5 个 Jest suite / 20 个测试、TypeScript no-emit 与 27 个 Rust host test。fresh `mobile-slim` staging 为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`；RSS 仍为 `not measured`。原生 edge-policy parity、签名真机 SAF/query/path、进程死亡 continuity 与 RSS <= 256 MiB 仍是开放门禁。

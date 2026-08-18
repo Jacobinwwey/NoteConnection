@@ -60,6 +60,10 @@
             .join('/')}`;
     }
 
+    function createCanonicalId(canonicalRelativePath) {
+        return canonicalRelativePath.replace(/\.(?:md|markdown)$/i, '');
+    }
+
     function utf8Encode(value) {
         if (typeof TextEncoder === 'function') {
             return new TextEncoder().encode(value);
@@ -193,6 +197,7 @@
         }
         return {
             sourceUri: createSourceUri(canonicalRelativePath),
+            canonicalId: createCanonicalId(canonicalRelativePath),
             revision: `sha256:${await sha256Hex(content)}`,
             identityAliases: Array.from(new Set([
                 normalizedLegacyId,

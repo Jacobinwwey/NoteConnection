@@ -35,6 +35,7 @@ describe('Resource identity boundary', () => {
         const identity = createResourceIdentity('Algebra Notes\\Index #1.MD', 'Index #1', '# Algebra');
 
         expect(identity.sourceUri).toBe('note://workspace/v1/algebra%20notes/index%20%231.md');
+        expect(identity.canonicalId).toBe('algebra notes/index #1');
         expect(identity.revision).toMatch(/^sha256:[0-9a-f]{64}$/);
         expect(identity.identityAliases).toEqual(expect.arrayContaining([
             'Index #1',

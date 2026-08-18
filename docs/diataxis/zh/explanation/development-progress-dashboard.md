@@ -1870,3 +1870,10 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - **本机已验证：** parser/契约测试、JavaScript 语法与 TypeScript no-emit。没有在线目标设备和 schema-1 workload spec 时不会生成设备证据。
 - **仍未闭环：** 当前主机没有签名 keystore、在线设备/AVD 或原生 workload 执行结果。G2/G3 继续 pending；未签名 APK/AAB 静态 payload 与 Node fixture replay 不能替代真机证据。
 - **后续方向：** 在低内存 arm64 硬件执行，使用同一 corpus 回放 Tauri/Capacitor/Android，再关闭 identity/edge 与 registry shadow corpus，之后才评估 canonical-ID 或 SQLite/WASM。
+
+## 2026-08-18 第 16 阶段 Portable Identity 传播
+
+- TypeScript、桌面、浏览器、Capacitor 与 Android Rust projection producer 现在统一输出 `canonicalId`。
+- Legacy `id`、schema-1 snapshot 与 layout 保持不变；`canonicalId` 只作为语义对比 key。
+- 原生语义 parity 仍开放，因为 Rust 与 Capacitor 的 legacy key/link resolution 策略不同；下一 comparator 必须比较 canonical endpoint 与 edge provenance。
+- 本轮源码变更后的 fresh slim staging 为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`；RSS 仍为 `not measured`，签名真机、public-ID 与 SQLite/WASM 结论继续加门禁。

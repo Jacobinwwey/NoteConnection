@@ -6,6 +6,8 @@ export { normalizeResourceReference } from '../core/ResourceReference';
 
 export interface ResourceIdentity {
     sourceUri: string;
+    /** Canonical workspace-relative identity without a Markdown extension. */
+    canonicalId?: string;
     revision: string;
     identityAliases: string[];
 }
@@ -61,6 +63,10 @@ function createSourceUri(canonicalRelativePath: string): string {
     return `${SOURCE_URI_PREFIX}${encodedSegments.join('/')}`;
 }
 
+function createCanonicalId(canonicalRelativePath: string): string {
+    return canonicalRelativePath.replace(/\.(?:md|markdown)$/i, '');
+}
+
 function createContentRevision(content: string): string {
     const normalizedContent = normalizeUnicodeText(content, 'Resource content');
     return `sha256:${createHash('sha256').update(normalizedContent, 'utf8').digest('hex')}`;
@@ -93,6 +99,7 @@ export function createResourceIdentity(
 
     return {
         sourceUri: createSourceUri(canonicalRelativePath),
+        canonicalId: createCanonicalId(canonicalRelativePath),
         revision: createContentRevision(content),
         identityAliases,
     };

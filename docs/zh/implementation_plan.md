@@ -479,6 +479,25 @@ Additive `canonicalId` 避免用 flag 驱动公开 ID 切换，并保持旧 layo
 - **G3：** 使用真实 Tauri、Capacitor、Android native adapter 回放同一语料；host-boundary 报告是必要条件但不是充分证据。
 - **G4：** 在任何 public-ID 切换前完成 move journal 重启、旧 snapshot、rollback failure、同内容/NFC collision 与 cross-root 回放。
 - **默认开关：** 在门禁记录完成前保持 legacy ID、内存 projection fallback 与 opt-in SQLite/WASM。
+
+## 2026-08-18 第 16 阶段 Portable Identity 传播
+
+### 已实现
+
+1. `ResourceIdentity` 现在返回 additive `canonicalId`（去除 `.md`/`.markdown` 的 workspace-relative 规范路径）。`FileLoader` 与桌面 `GraphBuilder` 传播该字段，不改变 legacy `id`。
+2. 浏览器 identity contract 与 Capacitor projection 输出同一字段。Android Rust 从规范化 relative path 派生它，并同时写入 full/lite projection。
+3. 定向断言覆盖所有 producer。序列化 projection 仍为 schema-1；旧 snapshot、layout key 与 exact lookup alias 继续有效。
+
+### 架构约束
+
+`canonicalId` 是语义比较 key，不是 public-ID 开关；`sourceUri` 继续承担 provenance，legacy `id` 继续承担兼容 key。这样不需要 mode flag，也不会在证据不足时触发不可逆迁移。
+
+### 后续门禁
+
+- 建立共享 corpus comparator：按 `canonicalId` 匹配节点，按 canonical endpoint、方向和 provenance 匹配边；raw node ID 不能作为 parity oracle。
+- 在宣称原生语义 parity 前，解决或显式版本化 Rust/Capacitor 在 link extraction 与 legacy key resolution 上的差异。
+- 本轮源码变更后的 fresh `mobile-slim` staging 为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`；RSS 仍为 `not measured`。
+- 继续阻塞签名真机 SAF/query/path、进程死亡 continuity、RSS <= 256 MiB、public-ID 迁移和默认 SQLite/WASM 提升。
   - `runtime-capability-runbook/*` 这组 modular knowledge route 现已改为接入真实 server 侧 runbook ops，而不再返回 KLP placeholder payload；route 层现在也会保留 `checkId` / `sinceMinutes` / queue-filter 这类 query 参数，不再静默丢弃。
   - 真实浏览器 smoke 门禁现在也会端到端证明这三条链路：严格浏览器证据必须能看到 ANN sync-health verify 卡、新增的 verify/checks ANN 熔断/可追踪性/预筛选钻取、首个检查的 ANN sync 指标，以及 index-sync action-queue 钻取，而不再只是证明卡片“能打开”。
   - agent-workspace 的 locale 加固现在也覆盖了当前真实暴露出来的诊断卡片/消息空间：源码里引用到的 `agentWorkspace.*` key 已由 `src/agent_workspace.locale.contract.test.ts` 做门禁，双语 locale bundle 现已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片标签，并且启动期 `translate()` 会等 locale 完成初始化后再调用 `window.i18n.t()`，避免在 locale hydrate 前产生误报式 missing-key warning。

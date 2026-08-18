@@ -913,6 +913,7 @@ fn bootstrap_runtime_data(frontend_dir: &Path, runtime_data_dir: &Path) {
 #[derive(Debug, Clone)]
 struct RuntimeNodeDraft {
     id: String,
+    canonical_id: String,
     label: String,
     relative_no_ext: String,
     cluster_id: String,
@@ -1361,6 +1362,7 @@ fn build_graph_runtime_for_target(
         let relative_without_ext = strip_markdown_extension(relative_path.as_str());
         let relative_key = normalize_path_key(&relative_without_ext);
         let id = relative_without_ext.clone();
+        let canonical_id = relative_key.clone();
         let label = file_path
             .file_stem()
             .and_then(|v| v.to_str())
@@ -1434,6 +1436,7 @@ fn build_graph_runtime_for_target(
 
         node_drafts.push(RuntimeNodeDraft {
             id,
+            canonical_id,
             label,
             relative_no_ext: relative_without_ext,
             cluster_id,
@@ -1501,6 +1504,7 @@ fn build_graph_runtime_for_target(
             let out_count = *out_degree.get(&node.id).unwrap_or(&0);
             json!({
                 "id": node.id.clone(),
+                "canonicalId": node.canonical_id.clone(),
                 "label": node.label.clone(),
                 "sourceUri": node.source_uri.clone(),
                 "revision": node.revision.clone(),
@@ -1525,6 +1529,7 @@ fn build_graph_runtime_for_target(
             let out_count = *out_degree.get(&node.id).unwrap_or(&0);
             json!({
                 "id": node.id.clone(),
+                "canonicalId": node.canonical_id.clone(),
                 "label": node.label.clone(),
                 "sourceUri": node.source_uri.clone(),
                 "revision": node.revision.clone(),
@@ -3729,6 +3734,7 @@ reader_media_scale = 1.5
             .as_str()
             .unwrap_or_default()
             .ends_with("/intro.md"));
+        assert_eq!(intro_node["canonicalId"].as_str(), Some("financial/intro"));
         assert!(intro_node["revision"]
             .as_str()
             .unwrap_or_default()

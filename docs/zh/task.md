@@ -191,6 +191,18 @@
 ### 第 15 阶段决策
 
 采用 additive canonical identity 与 host-owned persistence boundary。这样不破坏旧 layout 或公共 ID 即可关闭确定性契约缺口，代价是迁移期间同时携带两类 ID。设备门禁继续显式保持 pending，不能把 host simulation 当作 Android 验收。
+
+## 2026-08-18 第 16 阶段 Portable Identity 传播
+
+- [x] 将可选 `canonicalId` 从 `ResourceIdentity` 传播到 `FileLoader`、桌面 `GraphBuilder`、浏览器 identity、Capacitor projection 与 Android Rust projection。
+- [x] 保持 legacy `id`、schema-1 projection、旧 snapshot 和 layout key 不变；canonical identity 定义为去除 Markdown 扩展名的 workspace-relative 规范路径。
+- [x] 增加 TypeScript、浏览器 identity、Capacitor graph、桌面 graph 与 Android graph 的回归断言。
+- [~] 原生语义 parity 仍未证明：Rust 与 Capacitor 的 legacy node key 和 link resolution 策略仍不同。下一门禁必须比较 canonical node/edge 语义，而不是只比较 JSON 外形。
+- [x] 本轮源码变更后已重建 `mobile-slim`：121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节；staging SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`。RSS 仍为 `not measured`。
+
+### 第 16 阶段决策
+
+将 `canonicalId` 作为跨 host 语义 key，将 `id` 作为兼容 alias。禁止用 mode flag 或直接切 public ID；先在同一 corpus 上关闭 canonical node/edge parity，再完成签名真机 RSS 测量，最后才评估 canonical-ID 迁移。
 - [x] runtime runbook 的 modular-route composition 已不再只以内联形式存在于 `src/server.ts`；`src/routes/runtimeRunbookRouteOps.ts` 现在负责 `/api/knowledge/runtime-capability-runbook/*` 的 route-op 组装，并保持当前响应契约不变。
 - [x] graph-focus 右侧 pane 现在会通过共享 markdown runtime 渲染原始知识点正文，并在原文内高亮命中段落，而不再只显示摘录列表。
 - [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、当前 Windows 宿主 strict 3/3 证据、以及 opt-in 多宿主审计工具都已自动化，但实际多宿主证据与阈值校准仍待补齐。

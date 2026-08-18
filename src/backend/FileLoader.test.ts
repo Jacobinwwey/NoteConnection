@@ -15,6 +15,7 @@ describe('FileLoader resource paths', () => {
             expect(files).toHaveLength(1);
             expect(files[0].relativePath).toBe('algebra/index.md');
             expect(files[0].sourceUri).toBe('note://workspace/v1/algebra/index.md');
+            expect(files[0].canonicalId).toBe('algebra/index');
             expect(files[0].revision).toMatch(/^sha256:[0-9a-f]{64}$/);
             expect(files[0].identityAliases).toEqual(expect.arrayContaining([
                 'index',
@@ -36,6 +37,7 @@ describe('FileLoader resource paths', () => {
             expect(files).toHaveLength(1);
             expect(files[0].relativePath).toBe('algebra/index.md');
             expect(files[0].sourceUri).toBe('note://workspace/v1/algebra/index.md');
+            expect(files[0].canonicalId).toBe('algebra/index');
         } finally {
             fs.rmSync(root, { recursive: true, force: true });
         }

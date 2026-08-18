@@ -480,6 +480,25 @@ The additive `canonicalId` avoids a flag-driven public-ID switch and keeps old l
 - **G3:** execute the same corpus through actual Tauri, Capacitor, and Android native adapters; host-boundary reports are necessary but insufficient.
 - **G4:** replay move journals after restart, old snapshots, rollback failures, same-content/NFC collisions, and cross-root paths before any public-ID cutover.
 - **Default switches:** keep legacy IDs, in-memory projection fallback, and opt-in SQLite/WASM until those gates are recorded.
+
+## 2026-08-18 Phase 16 Portable Identity Propagation
+
+### Implemented
+
+1. `ResourceIdentity` now returns additive `canonicalId` (normalized workspace-relative path without `.md`/`.markdown`). `FileLoader` and desktop `GraphBuilder` carry it without changing legacy `id`.
+2. The browser identity contract and Capacitor projection emit the same field. Android Rust derives it from the normalized relative path and includes it in both full and lite projections.
+3. Focused assertions cover all producers. The serialized projection remains schema-1; old snapshots, layout keys, and exact lookup aliases remain valid.
+
+### Architectural constraint
+
+`canonicalId` is a semantic comparison key, not a public-ID switch. `sourceUri` remains provenance, and legacy `id` remains the compatibility key. This avoids a mode flag and keeps migration one-way only after evidence exists.
+
+### Next gates
+
+- Build a shared corpus comparator that matches nodes by `canonicalId` and edges by canonical endpoints plus direction/provenance; raw node IDs are not a valid parity oracle.
+- Resolve or explicitly version the remaining Rust/Capacitor differences in link extraction and legacy key resolution before claiming native semantic parity.
+- Fresh `mobile-slim` staging now measures 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes, SHA-256 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`; RSS remains `not measured`.
+- Keep signed-device SAF/query/path, process-death continuity, RSS <= 256 MiB, public-ID migration, and default SQLite/WASM promotion blocked.
   - modular knowledge-route wiring for `runtime-capability-runbook/*` is now backed by live server-side runbook ops instead of KLP placeholder payloads, and the route layer now preserves `checkId` / `sinceMinutes` / queue-filter query params rather than dropping them.
   - the real browser smoke gate now proves those verify/checks/action-queue surfaces end to end: strict browser evidence must show the ANN sync-health verify card, the new verify/checks ANN circuit/traceability/prefilter drilldowns, the first-check ANN sync metric, and the index-sync action-queue drilldown instead of only proving that the cards can open.
   - agent-workspace locale hardening now covers the currently surfaced diagnostics cards/messages: source-referenced `agentWorkspace.*` keys are guarded by `src/agent_workspace.locale.contract.test.ts`, bilingual locale bundles now back the query/quality/runbook card labels that strict browser smoke actually exercises, and startup-time translate helpers defer `window.i18n.t()` until locale init to avoid false missing-key warnings before locales hydrate.

@@ -604,3 +604,17 @@
 - [x] 增加同内容、NFC/大小写、跨 root、legacy snapshot 与 graph rollback 语料；Android graph read 在完整字符串分配前受上限约束。
 - [~] 当前宿主仍无法提供签名真机 SAF/query/path、进程死亡 continuity 与 RSS 证据。
 - [ ] 在原生证据记录前继续冻结 public-ID 与 SQLite/WASM 默认开关。
+
+## 2026-08-18 Phase 16 Portable Identity Propagation
+
+- [x] Propagated additive `canonicalId` through TypeScript identity, desktop graph construction, browser identity, Capacitor projection, and Android Rust projection.
+- [x] Preserved legacy IDs, schema-1 snapshots, layouts, and exact lookup behavior.
+- [~] Canonical node/edge semantic parity across Rust and Capacitor is not yet proven; raw JSON equality is not a sufficient oracle.
+- [x] Rebuilt slim staging after this source change: 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes; RSS remains `not measured`.
+
+## 2026-08-18 第 16 阶段 Portable Identity 传播
+
+- [x] 将 additive `canonicalId` 传播到 TypeScript identity、桌面 graph 构建、浏览器 identity、Capacitor projection 与 Android Rust projection。
+- [x] 保留 legacy ID、schema-1 snapshot、layout 与 exact lookup 行为。
+- [~] Rust 与 Capacitor 的 canonical node/edge 语义 parity 尚未证明；raw JSON 相等不是充分 oracle。
+- [x] 本轮源码变更后已重建 slim staging：121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节；RSS 仍为 `not measured`。
