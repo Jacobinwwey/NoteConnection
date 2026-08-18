@@ -166,7 +166,9 @@
         const nodeById = new Map(nodes.map((node) => [node.id, node]));
         const edges = rawEdges.map((edge) => normalizeEdge(edge, nodeById, maxEvidenceRefs))
             .filter((edge) => {
-                const key = `${edge.source}->${edge.target}:${edge.kind}`;
+                // Preserve distinct provenance for the same directed endpoints.
+                // Collapsing by kind loses whether a link was explicit-next, wiki, or markdown.
+                const key = `${edge.source}->${edge.target}:${edge.kind}:${edge.type}:${edge.provenance}`;
                 if (edgeKeys.has(key)) {
                     return false;
                 }

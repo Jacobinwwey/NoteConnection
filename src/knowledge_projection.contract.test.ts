@@ -93,4 +93,20 @@ describe('versioned knowledge projection contract', () => {
             edges: [],
         })).toThrow(/duplicate canonical node id/i);
     });
+
+    test('preserves distinct provenance for same-endpoint edges', () => {
+        const projection = contract.createKnowledgeProjection({
+            nodes: [{ id: 'A' }, { id: 'B' }],
+            edges: [
+                { source: 'A', target: 'B', type: 'wiki-link', provenance: 'wiki-link' },
+                { source: 'A', target: 'B', type: 'markdown-link', provenance: 'markdown-link' },
+            ],
+        });
+
+        expect(projection.edges).toHaveLength(2);
+        expect(projection.edges.map((edge: any) => edge.provenance)).toEqual([
+            'wiki-link',
+            'markdown-link',
+        ]);
+    });
 });

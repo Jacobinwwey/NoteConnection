@@ -1875,5 +1875,14 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 
 - TypeScript、桌面、浏览器、Capacitor 与 Android Rust projection producer 现在统一输出 `canonicalId`。
 - Legacy `id`、schema-1 snapshot 与 layout 保持不变；`canonicalId` 只作为语义对比 key。
-- 原生语义 parity 仍开放，因为 Rust 与 Capacitor 的 legacy key/link resolution 策略不同；下一 comparator 必须比较 canonical endpoint 与 edge provenance。
-- 本轮源码变更后的 fresh slim staging 为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`；RSS 仍为 `not measured`，签名真机、public-ID 与 SQLite/WASM 结论继续加门禁。
+- 下一阶段已用 canonical endpoint/provenance comparator 关闭代码级语义 parity 缺口，并对齐 resolver policy；本段保留为 Phase 16 历史基线。
+- Phase 16 staging 测量为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`；RSS 仍为 `not measured`，签名真机、public-ID 与 SQLite/WASM 结论仍受门禁约束。
+
+## 2026-08-18 第 17 阶段：跨 Host 语义 Parity 闭环
+
+- `mobile_semantic_comparator.js` 现在是仅用于测试的 parity oracle。它按 canonical node identity 匹配，并比较归一化 source URI、有向 endpoint、edge type、kind 与 provenance，不依赖 host-specific legacy ID。
+- Capacitor 与 Rust 现在共用 direct-path -> source-relative-path -> unique-stem link resolution。Capacitor 拒绝含糊 legacy basename；Rust 也拒绝重复 canonical path，并对 percent-encoded Markdown target 做 NFC/lowercase 归一化。
+- schema-1 projection 的去重保留同 endpoint 的不同 provenance。comparator 与 builder 使用有界 map，因此本轮不增加移动运行时依赖，也不引入 pairwise path scan。
+- `verify-mobile-projection-replay.js` 通过真实 ignored Rust Cargo probe，使用与 Capacitor 相同的 nested/relative/Markdown/同内容/NFC corpus。语义 replay 以 6 个节点、4 条边通过；报告仍只属于代码级证据。
+- fresh mobile-slim staging 已排除 test-only comparator：121 个文件 / 未压缩 4,274,600 字节 / 估算压缩 1,550,561 字节，SHA-256 为 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`；RSS 仍为 `not measured`。
+- 聚焦 mobile contract suite 通过 27 个测试，Rust host tests 为 28 passed、1 ignored probe。签名设备 SAF/query/path、进程死亡 continuity、RSS <= 256 MiB、public-ID 迁移与默认 SQLite/WASM 继续冻结。

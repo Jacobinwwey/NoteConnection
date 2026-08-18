@@ -1268,13 +1268,38 @@ fn sanitize_reference_target(raw: &str) -> Option<String> {
         return None;
     }
 
-    let no_ext = strip_markdown_extension(target);
-    let normalized = normalize_relative_like_path(no_ext.as_str());
+    let decoded = decode_percent_encoded_reference(target)?;
+    let no_ext = strip_markdown_extension(decoded.as_str());
+    let normalized = normalize_relative_like_path(no_ext.as_str())
+        .nfc()
+        .collect::<String>()
+        .to_lowercase();
     if normalized.is_empty() {
         None
     } else {
         Some(normalized)
     }
+}
+
+fn decode_percent_encoded_reference(raw: &str) -> Option<String> {
+    let bytes = raw.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%' {
+            if index + 2 >= bytes.len() {
+                return None;
+            }
+            let high = (bytes[index + 1] as char).to_digit(16)? as u8;
+            let low = (bytes[index + 2] as char).to_digit(16)? as u8;
+            decoded.push((high << 4) | low);
+            index += 3;
+            continue;
+        }
+        decoded.push(bytes[index]);
+        index += 1;
+    }
+    String::from_utf8(decoded).ok()
 }
 
 fn resolve_target_id_for_reference(
@@ -1361,6 +1386,12 @@ fn build_graph_runtime_for_target(
         let relative_path = relative_from_kb.to_string_lossy().replace('\\', "/");
         let relative_without_ext = strip_markdown_extension(relative_path.as_str());
         let relative_key = normalize_path_key(&relative_without_ext);
+        if relative_key.is_empty() {
+            return Err(format!(
+                "Markdown resource has an empty canonical identity: {}",
+                file_path.to_string_lossy()
+            ));
+        }
         let id = relative_without_ext.clone();
         let canonical_id = relative_key.clone();
         let label = file_path
@@ -1368,7 +1399,7 @@ fn build_graph_runtime_for_target(
             .and_then(|v| v.to_str())
             .unwrap_or("untitled")
             .to_string();
-        let stem_key = label.to_ascii_lowercase();
+        let stem_key = normalize_path_key(&label);
         let cluster_id = relative_from_kb
             .components()
             .next()
@@ -1377,7 +1408,12 @@ fn build_graph_runtime_for_target(
             .to_string();
         let filepath = file_path.to_string_lossy().to_string();
 
-        id_by_relative_key.insert(relative_key.clone(), id.clone());
+        if id_by_relative_key.insert(relative_key.clone(), id.clone()).is_some() {
+            return Err(format!(
+                "Duplicate canonical resource identity detected: {}",
+                relative_key
+            ));
+        }
         stem_to_ids
             .entry(stem_key.clone())
             .or_default()
@@ -1453,6 +1489,12 @@ fn build_graph_runtime_for_target(
     for (stem, ids) in stem_to_ids {
         if ids.len() == 1 {
             id_by_unique_stem.insert(stem, ids[0].clone());
+        } else {
+            return Err(format!(
+                "Ambiguous legacy resource basename detected: {} ({})",
+                stem,
+                ids.join(", ")
+            ));
         }
     }
 
@@ -3809,9 +3851,57 @@ reader_media_scale = 1.5
             "note://workspace/v1/caf%C3%A9.md"
         );
         assert_eq!(
+            sanitize_reference_target("./Cafe%CC%81.md"),
+            Some("café".to_string())
+        );
+        assert_eq!(
             create_mobile_content_revision("Cafe\u{301}"),
             create_mobile_content_revision("Caf\u{e9}")
         );
         assert!(create_mobile_content_revision("Caf\u{e9}").starts_with("sha256:"));
+    }
+
+    #[test]
+    fn mobile_builder_rejects_ambiguous_legacy_basenames() {
+        let kb_temp = TempDir::new("runtime_ambiguous_basename_kb");
+        let runtime_temp = TempDir::new("runtime_ambiguous_basename_output");
+        let kb_root = kb_temp.child("Knowledge_Base");
+        fs::create_dir_all(kb_root.join("algebra")).expect("failed to create algebra directory");
+        fs::create_dir_all(kb_root.join("physics")).expect("failed to create physics directory");
+        fs::write(kb_root.join("algebra/index.md"), "# Algebra")
+            .expect("failed to write algebra index");
+        fs::write(kb_root.join("physics/index.md"), "# Physics")
+            .expect("failed to write physics index");
+
+        let error = build_graph_runtime_for_target(&kb_root, &runtime_temp.path, "ALL_FOLDERS")
+            .expect_err("ambiguous legacy basenames must fail closed");
+        assert!(error.contains("Ambiguous legacy resource basename"));
+    }
+
+    #[test]
+    #[ignore = "invoked by the cross-host semantic parity verifier"]
+    fn mobile_semantic_parity_probe() {
+        let corpus_root = std::env::var("NOTE_CONNECTION_MOBILE_PARITY_CORPUS")
+            .expect("NOTE_CONNECTION_MOBILE_PARITY_CORPUS must point to Knowledge_Base");
+        let runtime_temp = TempDir::new("runtime_semantic_parity_probe");
+        let result = build_graph_runtime_for_target(
+            Path::new(&corpus_root),
+            &runtime_temp.path,
+            "ALL_FOLDERS",
+        )
+        .expect("Rust semantic parity corpus should build");
+        assert!(result.success);
+
+        let data_js = fs::read_to_string(runtime_temp.child("data.js"))
+            .expect("failed to read Rust semantic parity projection");
+        let payload = data_js
+            .strip_prefix("const graphData = ")
+            .expect("Rust parity projection should use graphData assignment")
+            .trim_end_matches(';');
+        let _: Value = serde_json::from_str(payload)
+            .expect("Rust semantic parity projection must be valid JSON");
+        println!("MOBILE_SEMANTIC_PARITY_JSON_BEGIN");
+        println!("{}", payload);
+        println!("MOBILE_SEMANTIC_PARITY_JSON_END");
     }
 }

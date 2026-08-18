@@ -498,6 +498,30 @@ Additive `canonicalId` 避免用 flag 驱动公开 ID 切换，并保持旧 layo
 - 在宣称原生语义 parity 前，解决或显式版本化 Rust/Capacitor 在 link extraction 与 legacy key resolution 上的差异。
 - 本轮源码变更后的 fresh `mobile-slim` staging 为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`；RSS 仍为 `not measured`。
 - 继续阻塞签名真机 SAF/query/path、进程死亡 continuity、RSS <= 256 MiB、public-ID 迁移和默认 SQLite/WASM 提升。
+
+## 2026-08-18 第 17 阶段：跨 Host 语义 Parity 闭环
+
+### 已实现
+
+1. `mobile_semantic_comparator.js` 是无依赖、仅用于测试的 UMD oracle。节点按归一化 `canonicalId` 匹配（缺失时仅对 legacy fixture 回退到版本化 URI），边按 canonical 方向、endpoint URI、`type`、`kind` 与 `provenance` 匹配；重复语义 identity 直接拒绝，不静默择一。
+2. Capacitor 只建立一次 canonical path index，并与 Rust 使用相同 link resolution 顺序：direct path、source-relative path、unique stem。worker 与 single-thread 路径保持同一策略。重复 legacy basename fail-closed，这是有意的保守约束，因为 legacy public ID 无法消歧。
+3. Rust 在 lookup 前将 percent-encoded Markdown target 归一化为 NFC/lowercase，并拒绝重复 canonical path 与含糊 legacy stem。schema-1 projection 保留同 endpoint 不同 provenance 的边。
+4. `verify-mobile-projection-replay.js` 写入真实临时 corpus，并通过 Cargo 调用 ignored Rust builder probe。Capacitor 与 Rust 使用同一 corpus 做语义比较；报告记录 `6` 个节点、`4` 条边且无 mismatch，但仍明确标记为代码级证据。
+
+### 权衡与约束
+
+- 保留 `id` 作为运行时 key 避免 layout/snapshot 破坏，但移动端因此不能接受重复 basename。只有在 alias 与 rollback 证据完成后，未来 canonical-ID 迁移才可放宽该限制。
+- comparator 不进入移动运行时 asset，成本只在验证阶段；Capacitor resolver 使用有界 map（建索引/建图为 `O(V + E)`），不引入 pairwise path scan。
+- 同一 endpoint 的不同 link mechanism 会增加 projection 边数，因为 provenance 不能再被静默丢弃；现有 edge 与 total-input budget 仍是硬上限。
+
+### 验证与下一道门禁
+
+- 聚焦 Jest：semantic comparator、Capacitor graph、projection contract 共 `11` 个测试通过。Rust host suite 为 `28` passed、`1` ignored probe。
+- staging 已排除 test-only comparator；fresh `mobile-slim` 为 121 个文件 / 未压缩 4,274,600 字节 / 估算压缩 1,550,561 字节，SHA-256 为 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`；RSS 仍为 `not measured`。
+- `verify:mobile:projection-replay` 已通过四种 storage boundary 与真实 Rust probe，但这不是签名 APK、Android 进程死活、SAF UI 或 RSS 证据。
+- merge 前重新执行 TypeScript no-emit、全量 Jest、Rust tests、mobile-slim budget 与 Diataxis 检查。
+- G2/G3 原生工作仍未闭环：签名 arm64 产物、低内存设备 SAF import -> graph -> exact query -> path、force-stop/reopen continuity 与 RSS `<= 256 MiB`。
+- 在原生 replay、rollback/move-journal、old-snapshot 与 collision corpus 归档前，不提升 public canonical ID、SQLite/WASM 或移动端 corpus 上限。
   - `runtime-capability-runbook/*` 这组 modular knowledge route 现已改为接入真实 server 侧 runbook ops，而不再返回 KLP placeholder payload；route 层现在也会保留 `checkId` / `sinceMinutes` / queue-filter 这类 query 参数，不再静默丢弃。
   - 真实浏览器 smoke 门禁现在也会端到端证明这三条链路：严格浏览器证据必须能看到 ANN sync-health verify 卡、新增的 verify/checks ANN 熔断/可追踪性/预筛选钻取、首个检查的 ANN sync 指标，以及 index-sync action-queue 钻取，而不再只是证明卡片“能打开”。
   - agent-workspace 的 locale 加固现在也覆盖了当前真实暴露出来的诊断卡片/消息空间：源码里引用到的 `agentWorkspace.*` key 已由 `src/agent_workspace.locale.contract.test.ts` 做门禁，双语 locale bundle 现已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片标签，并且启动期 `translate()` 会等 locale 完成初始化后再调用 `window.i18n.t()`，避免在 locale hydrate 前产生误报式 missing-key warning。

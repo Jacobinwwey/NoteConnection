@@ -556,3 +556,15 @@ The new field is emitted by every current producer: TypeScript identity and desk
 ## 2026-08-18 第 16 阶段 Portable Identity 传播 Walkthrough
 
 新增字段已由当前所有 producer 输出：TypeScript identity 与桌面 `GraphBuilder`、浏览器 identity 与 Capacitor projection，以及 Android Rust full/lite projection。`canonicalId` 是去除 Markdown 扩展名的规范 relative path；legacy `id` 不变。定向验证为 5 个 suite / 20 个测试、TypeScript no-emit 与 27 个 Rust 测试通过；fresh slim staging 为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`，RSS 仍为 `not measured`。
+
+## 2026-08-18 Phase 17 Cross-Host Semantic Parity Walkthrough
+
+The verification boundary is now executable: a dependency-free test-only comparator matches canonical nodes and compares normalized URI provenance plus directed edge type/kind/provenance. Capacitor and Rust resolve direct canonical paths, source-relative paths, then unique stems; ambiguous legacy basenames and duplicate canonical paths fail closed. The Capacitor worker and single-thread builder also agree when only sourceUri is available.
+
+The replay script creates one nested/relative/Markdown/NFC corpus, builds it through Capacitor, and invokes the ignored Rust Cargo probe against the same files. The semantic result is 6 nodes and 4 edges with no mismatch. This is host-boundary evidence, not signed-device, SAF UI, process-death, or RSS evidence. The comparator is excluded from mobile-slim, and the runtime remains on legacy `id` plus schema-1 snapshots.
+
+## 2026-08-18 第 17 阶段：跨 Host 语义 Parity Walkthrough
+
+验证边界现在可执行：无依赖的 test-only comparator 按 canonical node 匹配，并比较归一化 URI provenance 与带方向的 edge type/kind/provenance。Capacitor 与 Rust 按 direct canonical path、source-relative path、unique stem 解析；含糊 legacy basename 与重复 canonical path fail closed；当输入只有 sourceUri 时，Capacitor worker 与 single-thread builder 也保持一致。
+
+Replay 脚本创建 nested/relative/Markdown/NFC 单一语料，分别经 Capacitor 与 ignored Rust Cargo probe 构建，语义结果为 6 个节点、4 条边且无 mismatch。这只是 host-boundary 证据，不是签名真机、SAF UI、进程死亡或 RSS 证据。comparator 已排除出 mobile-slim，运行时继续使用 legacy `id` 与 schema-1 snapshot。

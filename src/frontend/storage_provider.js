@@ -203,7 +203,7 @@
         const text = String(content || '');
         let match;
         while ((match = regex.exec(text)) !== null) {
-            const linked = stripMarkdownExtension(match[1]);
+            const linked = String(match[1] || '').trim();
             if (linked) {
                 links.add(linked);
             }
@@ -217,12 +217,114 @@
         const text = String(content || '');
         let match;
         while ((match = regex.exec(text)) !== null) {
-            const linked = stripMarkdownExtension(String(match[1] || '').split('#')[0].split('?')[0]);
+            const linked = String(match[1] || '').trim();
             if (linked) {
                 links.add(linked);
             }
         }
         return Array.from(links);
+    }
+
+    function normalizeCapacitorCanonicalId(value) {
+        const normalized = String(value || '')
+            .normalize('NFC')
+            .replace(/\\/g, '/')
+            .replace(/^knowledge_base\//i, '')
+            .replace(/^\/+/, '')
+            .trim();
+        const segments = [];
+        for (const segment of normalized.split('/')) {
+            if (!segment || segment === '.') {
+                continue;
+            }
+            if (segment === '..') {
+                if (segments.length === 0) {
+                    return '';
+                }
+                segments.pop();
+                continue;
+            }
+            segments.push(segment);
+        }
+        return segments.join('/').replace(/\.(?:md|markdown)$/i, '').toLowerCase();
+    }
+
+    function cleanCapacitorReference(rawReference) {
+        let reference = String(rawReference || '').trim();
+        const wikiMatch = reference.match(/^\[\[(.*?)(?:\|.*?)?\]\]$/);
+        if (wikiMatch) {
+            reference = String(wikiMatch[1] || '').trim();
+        }
+        reference = reference.replace(/^['"]|['"]$/g, '').trim();
+        reference = reference.split('#')[0].split('?')[0].trim();
+        if (!reference || /^[a-z][a-z0-9+.-]*:/i.test(reference) || reference.startsWith('/')) {
+            return '';
+        }
+        try {
+            reference = decodeURIComponent(reference);
+        } catch (_error) {
+            return '';
+        }
+        return reference;
+    }
+
+    function resolveCapacitorReferencePath(sourceCanonicalId, rawReference) {
+        const reference = cleanCapacitorReference(rawReference);
+        if (!reference) {
+            return '';
+        }
+        const direct = normalizeCapacitorCanonicalId(reference);
+        const sourceSegments = normalizeCapacitorCanonicalId(sourceCanonicalId).split('/').filter(Boolean);
+        sourceSegments.pop();
+        const relative = normalizeCapacitorCanonicalId([...sourceSegments, reference].join('/'));
+        return { direct, relative };
+    }
+
+    function buildCapacitorReferenceIndex(files) {
+        const byCanonicalId = new Map();
+        const byLegacyId = new Map();
+        const byUniqueStem = new Map();
+        files.forEach((file) => {
+            const canonicalId = normalizeCapacitorCanonicalId(
+                file.canonicalId || canonicalMobileNodeIdFromIdentity(file) || file.path || file.id
+            );
+            if (!file.id || !canonicalId) {
+                return;
+            }
+            const legacyKey = String(file.id).normalize('NFC').toLowerCase();
+            if (byLegacyId.has(legacyKey)) {
+                throw new Error(`Capacitor graph contains an ambiguous legacy basename: ${file.id}`);
+            }
+            if (byCanonicalId.has(canonicalId)) {
+                throw new Error(`Capacitor graph contains duplicate canonical node id: ${canonicalId}`);
+            }
+            byLegacyId.set(legacyKey, file);
+            byCanonicalId.set(canonicalId, file);
+            const stem = canonicalId.split('/').pop() || canonicalId;
+            const stemCandidates = byUniqueStem.get(stem) || [];
+            stemCandidates.push(file);
+            byUniqueStem.set(stem, stemCandidates);
+            file.__canonicalId = canonicalId;
+        });
+        return { byCanonicalId, byLegacyId, byUniqueStem };
+    }
+
+    function resolveCapacitorReference(sourceFile, rawReference, referenceIndex) {
+        const paths = resolveCapacitorReferencePath(sourceFile.__canonicalId, rawReference);
+        if (!paths) {
+            return null;
+        }
+        const direct = referenceIndex.byCanonicalId.get(paths.direct);
+        if (direct) {
+            return direct;
+        }
+        const relative = referenceIndex.byCanonicalId.get(paths.relative);
+        if (relative) {
+            return relative;
+        }
+        const stem = paths.direct.split('/').pop() || paths.direct;
+        const candidates = referenceIndex.byUniqueStem.get(stem) || [];
+        return candidates.length === 1 ? candidates[0] : null;
     }
 
     function normalizeCapacitorPath(pathValue, options) {
@@ -824,6 +926,8 @@
     function buildCapacitorGraphData(files) {
         const nodeMap = new Map();
         const edgeMap = new Map();
+        const sourceFiles = Array.isArray(files) ? files.filter((file) => file && file.id) : [];
+        const referenceIndex = buildCapacitorReferenceIndex(sourceFiles);
 
         const addEdge = (source, target, type) => {
             if (!source || !target || source === target) {
@@ -832,7 +936,8 @@
             if (!nodeMap.has(source) || !nodeMap.has(target)) {
                 return;
             }
-            const key = `${source}->${target}`;
+            const edgeType = type || 'association';
+            const key = `${source}->${target}:${edgeType}`;
             if (edgeMap.has(key)) {
                 return;
             }
@@ -841,16 +946,16 @@
             edgeMap.set(key, {
                 source,
                 target,
-                type: type || 'association',
+                type: edgeType,
                 kind: 'explicit',
-                provenance: type || 'association',
+                provenance: edgeType,
                 sourceUri: sourceNode && sourceNode.sourceUri ? sourceNode.sourceUri : '',
                 targetUri: targetNode && targetNode.sourceUri ? targetNode.sourceUri : '',
                 weight: 1
             });
         };
 
-        files.forEach((file) => {
+        sourceFiles.forEach((file) => {
             if (!file || !file.id) {
                 return;
             }
@@ -859,7 +964,7 @@
             }
             nodeMap.set(file.id, {
                 id: file.id,
-                canonicalId: file.canonicalId || '',
+                canonicalId: file.canonicalId || file.__canonicalId || '',
                 label: file.label || file.id,
                 sourceUri: file.sourceUri || '',
                 revision: file.revision || '',
@@ -878,7 +983,7 @@
             });
         });
 
-        files.forEach((file) => {
+        sourceFiles.forEach((file) => {
             const sourceId = file.id;
             if (!nodeMap.has(sourceId)) {
                 return;
@@ -888,24 +993,26 @@
                 ? file.metadata.prerequisites
                 : [];
             prerequisites.forEach((rawPrereq) => {
-                const prereqId = stripMarkdownExtension(rawPrereq);
-                addEdge(prereqId, sourceId, 'explicit-prerequisite');
+                const prerequisiteFile = resolveCapacitorReference(file, rawPrereq, referenceIndex);
+                addEdge(prerequisiteFile && prerequisiteFile.id, sourceId, 'explicit-prerequisite');
             });
 
             const nextItems = Array.isArray(file.metadata && file.metadata.next)
                 ? file.metadata.next
                 : [];
             nextItems.forEach((rawNext) => {
-                const nextId = stripMarkdownExtension(rawNext);
-                addEdge(sourceId, nextId, 'explicit-next');
+                const nextFile = resolveCapacitorReference(file, rawNext, referenceIndex);
+                addEdge(sourceId, nextFile && nextFile.id, 'explicit-next');
             });
 
-            extractWikiLinks(file.content).forEach((linkedId) => {
-                addEdge(sourceId, linkedId, 'wiki-link');
+            extractWikiLinks(file.content).forEach((rawLink) => {
+                const linkedFile = resolveCapacitorReference(file, rawLink, referenceIndex);
+                addEdge(sourceId, linkedFile && linkedFile.id, 'wiki-link');
             });
 
-            extractMarkdownLinks(file.content).forEach((linkedId) => {
-                addEdge(sourceId, linkedId, 'markdown-link');
+            extractMarkdownLinks(file.content).forEach((rawLink) => {
+                const linkedFile = resolveCapacitorReference(file, rawLink, referenceIndex);
+                addEdge(sourceId, linkedFile && linkedFile.id, 'markdown-link');
             });
         });
 
@@ -952,13 +1059,78 @@
             '  try {',
             '    var files = Array.isArray(event.data && event.data.files) ? event.data.files : [];',
             '    function stripMarkdownExtension(value) {',
-            "      return String(value || '')",
-            '        .trim()',
-            "        .replace(/\\.md$/i, '')",
+            '      var normalized = String(value || "").trim()',
+            "        .replace(/\\.(?:md|markdown)$/i, '')",
             "        .replace(/\\\\/g, '/')",
-            "        .split('/')",
-            '        .filter(Boolean)',
-            '        .pop() || "";',
+            '        .replace(/^knowledge_base\\//i, "")',
+            '        .replace(/^\\/+/, "");',
+            '      var parts = [];',
+            '      normalized.split("/").forEach(function(part) {',
+            '        if (!part || part === ".") return;',
+            '        if (part === "..") { if (parts.length > 0) parts.pop(); return; }',
+            '        parts.push(part);',
+            '      });',
+            '      return parts.join("/").normalize("NFC").toLowerCase();',
+            '    }',
+            '',
+            '    function cleanReference(rawReference) {',
+            '      var reference = String(rawReference || "").trim();',
+            '      var wikiMatch = reference.match(/^\\[\\[(.*?)(?:\\|.*?)?\\]\\]$/);',
+            '      if (wikiMatch) reference = String(wikiMatch[1] || "").trim();',
+            '      reference = reference.replace(/^[\'\"]|[\'\"]$/g, "").split("#")[0].split("?")[0].trim();',
+            '      if (!reference || /^[a-z][a-z0-9+.-]*:/i.test(reference) || reference.charAt(0) === "/") return "";',
+            '      try { return decodeURIComponent(reference); } catch (_error) { return ""; }',
+            '    }',
+            '',
+            '    function canonicalIdFromSourceUri(file) {',
+            '      var sourceUri = String(file && file.sourceUri || "");',
+            '      var prefix = "note://workspace/v1/";',
+            '      if (!sourceUri.startsWith(prefix)) return "";',
+            '      try { return stripMarkdownExtension(decodeURIComponent(sourceUri.slice(prefix.length))); }',
+            '      catch (_error) { return ""; }',
+            '    }',
+            '',
+            '    function resolveReferencePath(sourceCanonicalId, rawReference) {',
+            '      var reference = cleanReference(rawReference);',
+            '      if (!reference) return null;',
+            '      var direct = stripMarkdownExtension(reference);',
+            '      var sourceSegments = stripMarkdownExtension(sourceCanonicalId).split("/").filter(Boolean);',
+            '      sourceSegments.pop();',
+            '      var relative = stripMarkdownExtension(sourceSegments.concat([reference]).join("/"));',
+            '      return { direct: direct, relative: relative };',
+            '    }',
+            '',
+            '    function buildReferenceIndex(files) {',
+            '      var byCanonicalId = new Map();',
+            '      var byLegacyId = new Map();',
+            '      var byUniqueStem = new Map();',
+            '      files.forEach(function(file) {',
+            '        var canonicalId = stripMarkdownExtension(file.canonicalId || canonicalIdFromSourceUri(file) || file.path || file.id);',
+            '        var legacyKey = String(file.id || "").normalize("NFC").toLowerCase();',
+            '        if (!file.id || !canonicalId) return;',
+            '        if (byLegacyId.has(legacyKey)) throw new Error("Capacitor graph contains an ambiguous legacy basename: " + file.id);',
+            '        if (byCanonicalId.has(canonicalId)) throw new Error("Capacitor graph contains duplicate canonical node id: " + canonicalId);',
+            '        file.__canonicalId = canonicalId;',
+            '        byLegacyId.set(legacyKey, file);',
+            '        byCanonicalId.set(canonicalId, file);',
+            '        var stem = canonicalId.split("/").pop() || canonicalId;',
+            '        var candidates = byUniqueStem.get(stem) || [];',
+            '        candidates.push(file);',
+            '        byUniqueStem.set(stem, candidates);',
+            '      });',
+            '      return { byCanonicalId: byCanonicalId, byUniqueStem: byUniqueStem };',
+            '    }',
+            '',
+            '    function resolveReference(sourceFile, rawReference, index) {',
+            '      var paths = resolveReferencePath(sourceFile.__canonicalId, rawReference);',
+            '      if (!paths) return null;',
+            '      var direct = index.byCanonicalId.get(paths.direct);',
+            '      if (direct) return direct;',
+            '      var relative = index.byCanonicalId.get(paths.relative);',
+            '      if (relative) return relative;',
+            '      var stem = paths.direct.split("/").pop() || paths.direct;',
+            '      var candidates = index.byUniqueStem.get(stem) || [];',
+            '      return candidates.length === 1 ? candidates[0] : null;',
             '    }',
             '',
             '    function extractWikiLinks(content) {',
@@ -967,7 +1139,7 @@
             "      var text = String(content || '');",
             '      var match;',
             '      while ((match = regex.exec(text)) !== null) {',
-            '        var linked = stripMarkdownExtension(match[1]);',
+            '        var linked = String(match[1] || "").trim();',
             '        if (linked) {',
             '          links.add(linked);',
             '        }',
@@ -981,8 +1153,7 @@
             "      var text = String(content || '');",
             '      var match;',
             '      while ((match = regex.exec(text)) !== null) {',
-            "        var raw = String(match[1] || '').split('#')[0].split('?')[0];",
-            '        var linked = stripMarkdownExtension(raw);',
+            "        var linked = String(match[1] || '').trim();",
             '        if (linked) {',
             '          links.add(linked);',
             '        }',
@@ -992,6 +1163,7 @@
             '',
             '    var nodeMap = new Map();',
             '    var edgeMap = new Map();',
+            '    var referenceIndex = buildReferenceIndex(files);',
             '',
             '    function addEdge(source, target, type) {',
             '      if (!source || !target || source === target) {',
@@ -1000,7 +1172,8 @@
             '      if (!nodeMap.has(source) || !nodeMap.has(target)) {',
             '        return;',
             '      }',
-            '      var key = source + "->" + target;',
+            '      var edgeType = type || "association";',
+            '      var key = source + "->" + target + ":" + edgeType;',
             '      if (edgeMap.has(key)) {',
             '        return;',
             '      }',
@@ -1009,9 +1182,9 @@
             '      edgeMap.set(key, {',
             '        source: source,',
             '        target: target,',
-            '        type: type || "association",',
+            '        type: edgeType,',
             '        kind: "explicit",',
-            '        provenance: type || "association",',
+            '        provenance: edgeType,',
             '        sourceUri: sourceNode && sourceNode.sourceUri ? sourceNode.sourceUri : "",',
             '        targetUri: targetNode && targetNode.sourceUri ? targetNode.sourceUri : "",',
             '        weight: 1',
@@ -1028,7 +1201,7 @@
             '      var metadata = file.metadata || {};',
             '      nodeMap.set(file.id, {',
             '        id: file.id,',
-            '        canonicalId: file.canonicalId || "",',
+            '        canonicalId: file.canonicalId || file.__canonicalId || "",',
             '        label: file.label || file.id,',
             '        sourceUri: file.sourceUri || "",',
             '        revision: file.revision || "",',
@@ -1055,22 +1228,24 @@
             '      var metadata = file.metadata || {};',
             '      var prerequisites = Array.isArray(metadata.prerequisites) ? metadata.prerequisites : [];',
             '      prerequisites.forEach(function(rawPrereq) {',
-            '        var prereqId = stripMarkdownExtension(rawPrereq);',
-            '        addEdge(prereqId, sourceId, "explicit-prerequisite");',
+            '        var prerequisiteFile = resolveReference(file, rawPrereq, referenceIndex);',
+            '        addEdge(prerequisiteFile && prerequisiteFile.id, sourceId, "explicit-prerequisite");',
             '      });',
             '',
             '      var nextItems = Array.isArray(metadata.next) ? metadata.next : [];',
             '      nextItems.forEach(function(rawNext) {',
-            '        var nextId = stripMarkdownExtension(rawNext);',
-            '        addEdge(sourceId, nextId, "explicit-next");',
+            '        var nextFile = resolveReference(file, rawNext, referenceIndex);',
+            '        addEdge(sourceId, nextFile && nextFile.id, "explicit-next");',
             '      });',
             '',
-            '      extractWikiLinks(file.content).forEach(function(linkedId) {',
-            '        addEdge(sourceId, linkedId, "wiki-link");',
+            '      extractWikiLinks(file.content).forEach(function(rawLink) {',
+            '        var linkedFile = resolveReference(file, rawLink, referenceIndex);',
+            '        addEdge(sourceId, linkedFile && linkedFile.id, "wiki-link");',
             '      });',
             '',
-            '      extractMarkdownLinks(file.content).forEach(function(linkedId) {',
-            '        addEdge(sourceId, linkedId, "markdown-link");',
+            '      extractMarkdownLinks(file.content).forEach(function(rawLink) {',
+            '        var linkedFile = resolveReference(file, rawLink, referenceIndex);',
+            '        addEdge(sourceId, linkedFile && linkedFile.id, "markdown-link");',
             '      });',
             '    });',
             '',
@@ -1858,6 +2033,7 @@
         module.exports = {
             createProvider,
             buildCapacitorGraphData,
+            getCapacitorGraphBuildWorkerSource,
             createMobileResourceIdentity,
         };
     }

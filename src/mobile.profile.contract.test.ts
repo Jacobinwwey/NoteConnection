@@ -252,6 +252,12 @@ describe('mobile-slim profile contract', () => {
     expect(patcher).toContain('removePathmodeAssets');
   });
 
+  test('keeps the semantic comparator out of mobile-slim runtime staging', () => {
+    const prepareSource = fs.readFileSync(preparePath, 'utf8');
+
+    expect(prepareSource).toContain('mobile_semantic_comparator\\.js');
+  });
+
   test('does not allocate the full-content graph on Android runtime builds', () => {
     const rustSource = fs.readFileSync(
       path.join(repoRoot, 'src-tauri', 'src', 'lib.rs'),

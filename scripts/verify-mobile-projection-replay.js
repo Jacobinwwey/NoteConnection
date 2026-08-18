@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const assert = require('assert');
+const childProcess = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -8,6 +9,11 @@ const path = require('path');
 const projectionContract = require(path.join(__dirname, '..', 'src', 'frontend', 'knowledge_projection_contract.js'));
 const projectionStore = require(path.join(__dirname, '..', 'src', 'frontend', 'knowledge_projection_store.js'));
 const exactAnalyzer = require(path.join(__dirname, '..', 'src', 'frontend', 'mobile_exact_analyzer.js'));
+const semanticComparator = require(path.join(__dirname, '..', 'src', 'frontend', 'mobile_semantic_comparator.js'));
+
+global.window = {};
+global.NoteConnectionMobileIdentity = require(path.join(__dirname, '..', 'src', 'frontend', 'mobile_identity_contract.js'));
+const capacitorProvider = require(path.join(__dirname, '..', 'src', 'frontend', 'storage_provider.js'));
 
 const HOSTS = ['web', 'tauri', 'capacitor', 'android'];
 const MAX_PROJECTION_BYTES = 48 * 1024 * 1024;
@@ -26,6 +32,105 @@ function createFixture() {
       { source: 'B', target: 'C', type: 'explicit-prerequisite', evidenceRefs: ['span:b-c'] },
     ],
   });
+}
+
+const SEMANTIC_CORPUS = [
+  {
+    relativePath: 'algebra/index.md',
+    content: '# Index\n',
+  },
+  {
+    relativePath: 'algebra/intro.md',
+    content: '---\nprerequisites:\n  - [[index]]\n---\n# Intro\n[Base](../shared/base.md)\n',
+  },
+  {
+    relativePath: 'shared/base.md',
+    content: '# Shared\n',
+  },
+  {
+    relativePath: 'shared/copy.md',
+    content: '# Shared\n',
+  },
+  {
+    relativePath: 'unicode/Cafe\u0301.md',
+    content: '# Cafe\n',
+  },
+  {
+    relativePath: 'unicode/reader.md',
+    content: '# Reader\n[ Cafe ](./Cafe%CC%81.md)\n',
+  },
+];
+
+async function createSemanticCorpus(root) {
+  const files = [];
+  for (const entry of SEMANTIC_CORPUS) {
+    const absolutePath = path.join(root, 'Knowledge_Base', ...entry.relativePath.split('/'));
+    fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+    fs.writeFileSync(absolutePath, entry.content, 'utf8');
+    const legacyId = path.basename(entry.relativePath, path.extname(entry.relativePath));
+    const identity = await global.NoteConnectionMobileIdentity.createResourceIdentity(
+      entry.relativePath,
+      legacyId,
+      entry.content,
+    );
+    const metadata = {};
+    if (entry.content.startsWith('---\n')) {
+      metadata.prerequisites = ['index'];
+    }
+    files.push({
+      id: legacyId,
+      canonicalId: identity.canonicalId,
+      label: legacyId,
+      path: `Knowledge_Base/${entry.relativePath}`,
+      sourceUri: identity.sourceUri,
+      revision: identity.revision,
+      identityAliases: identity.identityAliases,
+      content: entry.content,
+      metadata: {
+        tags: [],
+        prerequisites: metadata.prerequisites || [],
+        next: [],
+      },
+      clusterId: 'root',
+    });
+  }
+  return files;
+}
+
+function runRustSemanticProbe(corpusRoot, repoRoot) {
+  const cargoExecutable = process.platform === 'win32' ? 'cargo.exe' : 'cargo';
+  const result = childProcess.spawnSync(
+    cargoExecutable,
+    [
+      'test',
+      '--manifest-path',
+      path.join(repoRoot, 'src-tauri', 'Cargo.toml'),
+      '--lib',
+      'mobile_semantic_parity_probe',
+      '--',
+      '--ignored',
+      '--nocapture',
+    ],
+    {
+      cwd: repoRoot,
+      env: { ...process.env, NOTE_CONNECTION_MOBILE_PARITY_CORPUS: corpusRoot },
+      encoding: 'utf8',
+      timeout: 120000,
+      maxBuffer: 32 * 1024 * 1024,
+    },
+  );
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`Rust semantic parity probe failed:\n${result.stdout || ''}\n${result.stderr || ''}`);
+  }
+  const output = `${result.stdout || ''}\n${result.stderr || ''}`;
+  const match = output.match(/MOBILE_SEMANTIC_PARITY_JSON_BEGIN\r?\n([\s\S]*?)\r?\nMOBILE_SEMANTIC_PARITY_JSON_END/);
+  if (!match) {
+    throw new Error(`Rust semantic parity probe did not emit a projection.\n${output}`);
+  }
+  return JSON.parse(match[1]);
 }
 
 function writeAtomicFile(fileName, serialized) {
@@ -169,6 +274,8 @@ async function main() {
     failureModes: {},
     notes: [
       'Host adapters exercise separate boundary implementations in a deterministic host process.',
+      'Semantic parity uses canonicalId, normalized sourceUri, directed endpoints, edge type, kind, and provenance; host-specific legacy ids are intentionally ignored.',
+      'The Capacitor and Rust builders consume the same nested-path, relative-link, Markdown-link, duplicate-content, and NFC-normalized corpus. The Rust side is executed through an ignored cargo probe.',
       'This report is not evidence of a signed artifact, Android process death, SAF UI execution, or RSS compliance.',
     ],
   };
@@ -196,6 +303,38 @@ async function main() {
         replay: 'pass',
       });
     }
+
+    const semanticCorpusRoot = path.join(tempRoot, 'semantic-corpus');
+    const semanticFiles = await createSemanticCorpus(semanticCorpusRoot);
+    const capacitorProjection = projectionContract.createKnowledgeProjection(
+      capacitorProvider.buildCapacitorGraphData(semanticFiles),
+      { workspaceId: 'mobile-semantic-corpus', revision: 'sha256:semantic-corpus' },
+    );
+    const rustProjection = projectionContract.createKnowledgeProjection(
+      runRustSemanticProbe(path.join(semanticCorpusRoot, 'Knowledge_Base'), path.join(__dirname, '..')),
+      { workspaceId: 'mobile-semantic-corpus', revision: 'sha256:semantic-corpus' },
+    );
+    const semanticComparison = semanticComparator.assertSemanticParity(
+      capacitorProjection,
+      rustProjection,
+      'Capacitor vs Rust semantic corpus',
+    );
+    evidence.semanticParity = {
+      corpus: SEMANTIC_CORPUS.map((entry) => entry.relativePath),
+      evidenceLevel: 'host-boundary-contract-plus-rust-probe',
+      comparison: semanticComparison,
+      replay: 'pass',
+    };
+
+    const collisionFiles = [
+      { id: 'index', canonicalId: 'algebra/index', path: 'Knowledge_Base/algebra/index.md', sourceUri: 'note://workspace/v1/algebra/index.md', content: '# A', metadata: {} },
+      { id: 'INDEX', canonicalId: 'physics/index', path: 'Knowledge_Base/physics/index.md', sourceUri: 'note://workspace/v1/physics/index.md', content: '# B', metadata: {} },
+    ];
+    assert.throws(
+      () => capacitorProvider.buildCapacitorGraphData(collisionFiles),
+      /ambiguous legacy basename/i,
+    );
+    evidence.failureModes.legacyBasenameCollision = 'fail-closed';
 
     const failurePath = path.join(tempRoot, 'failure-graph_data.json');
     fs.writeFileSync(failurePath, '{"schemaVersion":1,"nodes":[', 'utf8');

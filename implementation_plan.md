@@ -1127,3 +1127,19 @@ The harness intentionally accepts only ordered schema-1 `adbArgs` and fails clos
 - `id` 继续是兼容 key；schema-1 snapshot/layout 与旧 exact lookup alias 不变。
 - 下一 parity oracle 必须按 canonical node 以及带方向/provenance 的边比较，因为 Rust 与 Capacitor 的 legacy key 和 link resolution 策略仍不同。
 - 本轮源码变更后的 fresh `mobile-slim` staging 为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`；签名真机、RSS、public-ID 与 SQLite/WASM 门禁继续关闭。
+
+## 2026-08-18 Phase 17 Cross-Host Semantic Parity Closure
+
+1. Use `mobile_semantic_comparator.js` only in verification. Match canonical nodes, normalized source URI, directed endpoints, edge type/kind/provenance; reject duplicate semantic identities.
+2. Keep Capacitor and Rust resolution order identical: direct canonical path, source-relative path, unique stem. Keep the worker source aligned with the single-thread resolver, including sourceUri-only inputs.
+3. Run one shared corpus through Capacitor and an ignored Rust Cargo probe. Required cases are nested paths, relative and Markdown links, duplicate content, percent-encoded NFC paths, and ambiguous legacy basenames.
+4. Keep `id`, schema-1 snapshots, and layout compatibility unchanged. Exclude the comparator from mobile-slim; retain provenance when edge endpoints coincide.
+5. Treat the resulting 6-node/4-edge semantic pass as host-boundary evidence only. The next gates are signed arm64 SAF import/query/path, force-stop continuity, RSS `<= 256 MiB`, rollback/move-journal replay, and only then any public-ID or SQLite/WASM decision.
+
+## 2026-08-18 第 17 阶段：跨 Host 语义 Parity 闭环
+
+1. `mobile_semantic_comparator.js` 只用于验证：按 canonical node、归一化 source URI、有向 endpoint 以及 edge type/kind/provenance 比较，重复语义 identity 直接拒绝。
+2. Capacitor 与 Rust 保持相同 resolution 顺序：direct canonical path、source-relative path、unique stem；worker 与 single-thread resolver 对 sourceUri-only 输入也必须一致。
+3. 用同一 corpus 执行 Capacitor 与 ignored Rust Cargo probe，覆盖 nested path、relative/Markdown link、同内容、percent-encoded NFC path 与含糊 legacy basename。
+4. 保持 `id`、schema-1 snapshot 与 layout 兼容；comparator 不进入 mobile-slim，endpoint 相同的 edge 仍保留 provenance。
+5. 6 节点/4 条边通过只属于 host-boundary 证据；下一门禁是签名 arm64 SAF import/query/path、force-stop continuity、RSS `<= 256 MiB`、rollback/move-journal replay，之后才评估 public-ID 或 SQLite/WASM。

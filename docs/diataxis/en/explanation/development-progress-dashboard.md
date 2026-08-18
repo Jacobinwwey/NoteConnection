@@ -1847,5 +1847,14 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 
 - `canonicalId` is now emitted consistently by TypeScript, desktop, browser, Capacitor, and Android Rust projection producers.
 - Legacy `id`, schema-1 snapshots, and layouts remain unchanged; `canonicalId` is a semantic comparison key only.
-- Native semantic parity is still open because Rust and Capacitor use different legacy key/link-resolution policies; the next comparator must match canonical endpoints and edge provenance.
-- Fresh slim staging is 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes, SHA-256 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`; RSS remains `not measured`, and signed-device, public-ID, and SQLite/WASM claims remain gated.
+- The next phase closed the code-level semantic parity gap with a canonical endpoint/provenance comparator and aligned resolver policies; this section remains the historical Phase 16 baseline.
+- The Phase 16 staging measurement was 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes, SHA-256 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`; RSS remained `not measured`, and signed-device, public-ID, and SQLite/WASM claims remained gated.
+
+## 2026-08-18 Phase 17 Cross-Host Semantic Parity Closure
+
+- `mobile_semantic_comparator.js` is now the test-only parity oracle. It matches canonical node identity and compares normalized source URI, directed endpoints, edge type, kind, and provenance without depending on host-specific legacy IDs.
+- Capacitor and Rust now share direct-path -> source-relative-path -> unique-stem link resolution. Capacitor rejects ambiguous legacy basenames; Rust also rejects duplicate canonical paths and decodes percent-encoded Markdown targets with NFC/lowercase normalization.
+- Schema-1 projection deduplication preserves distinct provenance for same-endpoint edges. The comparator and builders use bounded maps, so this verification slice does not add a mobile runtime dependency or pairwise path scan.
+- `verify-mobile-projection-replay.js` runs a real ignored Rust Cargo probe against the same nested/relative/Markdown/same-content/NFC corpus used by Capacitor. Semantic replay passes with 6 nodes and 4 edges; the report remains code-level evidence only.
+- Fresh mobile-slim staging excludes the test-only comparator: 121 files / 4,274,600 uncompressed bytes / 1,550,561 estimated compressed bytes, SHA-256 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`; RSS remains `not measured`.
+- Focused mobile contract suites pass 27 tests and Rust host tests pass 28 with 1 ignored probe. Signed-device SAF/query/path, process-death continuity, RSS <= 256 MiB, public-ID migration, and default SQLite/WASM remain blocked.

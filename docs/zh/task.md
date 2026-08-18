@@ -203,6 +203,21 @@
 ### 第 16 阶段决策
 
 将 `canonicalId` 作为跨 host 语义 key，将 `id` 作为兼容 alias。禁止用 mode flag 或直接切 public ID；先在同一 corpus 上关闭 canonical node/edge parity，再完成签名真机 RSS 测量，最后才评估 canonical-ID 迁移。
+
+## 2026-08-18 第 17 阶段：跨 Host 语义 Parity 闭环
+
+- [x] 增加 `src/frontend/mobile_semantic_comparator.js`。比较 canonical node identity、归一化 `sourceUri`、有向 endpoint、edge `type`、`kind` 与 `provenance`；host-specific legacy ID 不作为 oracle。
+- [x] 让 Capacitor link resolution 与 Rust 对齐：先查 direct canonical path，再查 source-relative path，最后只允许唯一 stem fallback。运行时继续保留 legacy `id`，但在建图前拒绝重复 canonical identity 与大小写/NFC 等价的 legacy basename。
+- [x] schema-1 projection 不再仅按 kind 合并相同 endpoint 的边，`wiki-link`、`markdown-link` 与 frontmatter provenance 保持可区分。
+- [x] 扩展 `verify-mobile-projection-replay.js`：使用包含 nested path、relative link、Markdown link、同内容文档、percent-encoded NFC path 的同一 corpus，并真实调用 ignored Rust builder probe；报告以 `host-boundary-contract-plus-rust-probe` 标记语义证据。
+- [x] 增加 canonical matching、provenance mismatch、relative-link、percent decoding 与 legacy basename fail-closed 的 JS/Rust 回归测试。
+- [x] 在 staging 中排除 test-only comparator 后重新构建 `mobile-slim`：121 个文件 / 未压缩 4,274,600 字节 / 估算压缩 1,550,561 字节；SHA-256 为 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`。RSS 仍为 `not measured`。
+- [~] 签名 arm64 真机 replay、SAF import/query/path、force-stop continuity 与 RSS `<= 256 MiB` 仍未完成。当前 verifier 是代码级跨 host 证据，不是原生设备验收。
+- [ ] 在真机证据与 rollback/move-journal replay 落盘前，继续冻结 public-ID 切换、默认 SQLite/WASM 与任何移动端预算上调。
+
+### 第 17 阶段决策
+
+将语义 parity 作为独立的 test-only oracle。运行时继续保持各 host 的 legacy ID 与 schema-1 wire 兼容；只在验证阶段使用 canonical identity 与 provenance-aware edges 证明多个 builder 表达的是同一张图。这样不需要 public-ID flag，不给移动包增加新的运行时依赖，未来迁移也必须由证据驱动。
 - [x] runtime runbook 的 modular-route composition 已不再只以内联形式存在于 `src/server.ts`；`src/routes/runtimeRunbookRouteOps.ts` 现在负责 `/api/knowledge/runtime-capability-runbook/*` 的 route-op 组装，并保持当前响应契约不变。
 - [x] graph-focus 右侧 pane 现在会通过共享 markdown runtime 渲染原始知识点正文，并在原文内高亮命中段落，而不再只显示摘录列表。
 - [~] 将 sqlite soak verification 推进为多轮 release evidence；latest 报告的新鲜度、readiness 已暴露的严格历史审计、当前 Windows 宿主 strict 3/3 证据、以及 opt-in 多宿主审计工具都已自动化，但实际多宿主证据与阈值校准仍待补齐。

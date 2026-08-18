@@ -346,3 +346,21 @@ This is deliberately not a parity claim. Rust and Capacitor still differ in lega
 这不是 parity 已完成的声明。Rust 与 Capacitor 在 legacy node key 和 link resolution 策略上仍有差异，因此下一门禁必须比较 canonical node 以及带方向/provenance 的 edge。直接比较 raw JSON 要么误拒绝合法 legacy alias，要么掩盖语义不一致。本轮源码变更后的 fresh slim staging 为 121 个文件、未压缩 4,265,579、估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`；RSS 仍为 `not measured`。
 
 本轮源码变更后的 mobile-slim staging 实测为 121 个文件、未压缩 4,263,740、估算压缩 1,548,695 字节。已有 APK/AAB 是更早构建的未签名产物，必须重建后才能与本轮源码关联。
+
+## 2026-08-18 Phase 17 Cross-Host Semantic Parity Closure
+
+### English
+
+The remaining identity gap is now executable rather than descriptive. `mobile_semantic_comparator.js` is a test-only oracle: it matches canonical nodes and compares normalized URI provenance plus directed edge type/kind/provenance. Capacitor and Rust use the same direct-path, source-relative, unique-stem resolver; ambiguous legacy basenames and duplicate canonical paths fail before graph construction. Rust also decodes percent-encoded Markdown targets and normalizes NFC/lowercase before lookup.
+
+The verifier writes one corpus with nested paths, relative and Markdown links, duplicate content, and an NFC-normalized path, then runs Capacitor and an ignored Rust Cargo probe. The result is 6 canonical nodes and 4 semantic edges with no mismatch. This closes host-builder semantic evidence while preserving the low-footprint decision: the comparator is not a mobile runtime asset, the projection remains schema-1, and edge provenance is retained even when endpoints coincide.
+
+Fresh mobile-slim staging excludes the test-only comparator and measures 121 files / 4,274,600 uncompressed bytes / 1,550,561 estimated compressed bytes, SHA-256 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`; RSS remains `not measured`.
+
+### 中文
+
+剩余的 identity 缺口现在已经从文字描述变成可执行门禁。`mobile_semantic_comparator.js` 是 test-only oracle：匹配 canonical node，并比较归一化 URI provenance 与带方向的 edge type/kind/provenance。Capacitor 与 Rust 共用 direct-path、source-relative、unique-stem resolver；含糊 legacy basename 与重复 canonical path 在建图前失败。Rust 还会在 lookup 前解码 percent-encoded Markdown target，并执行 NFC/lowercase 归一化。
+
+Verifier 写入包含 nested path、relative/Markdown link、同内容文档和 NFC 归一化路径的单一 corpus，然后执行 Capacitor 与 ignored Rust Cargo probe。结果为 6 个 canonical node、4 条语义 edge 且无 mismatch。这闭合了 host-builder 语义证据，同时保持低体积决策：comparator 不进入移动运行时 asset，projection 仍为 schema-1，即使 endpoint 相同也保留 edge provenance。
+
+fresh mobile-slim staging 已排除 test-only comparator，测得 121 个文件 / 未压缩 4,274,600 字节 / 估算压缩 1,550,561 字节，SHA-256 为 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`；RSS 仍为 `not measured`。

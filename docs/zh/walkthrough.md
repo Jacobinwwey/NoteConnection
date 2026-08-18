@@ -236,4 +236,14 @@ Android graph load 现在在完整 UTF-8 materialize 前限制单文件读取，
 
 关键边界是语义而非字段外观：`canonicalId` 是跨 host 对比 key，`sourceUri` 是 portable provenance，`id` 是兼容 alias。重复 canonical identity 继续 fail closed。这样下一轮 corpus 可以直接比较 node/edge 语义，而不必提前触发 public-ID 迁移。
 
-定向验证通过：5 个 Jest suite / 20 个测试、TypeScript no-emit 与 27 个 Rust host test。fresh `mobile-slim` staging 为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`；RSS 仍为 `not measured`。原生 edge-policy parity、签名真机 SAF/query/path、进程死亡 continuity 与 RSS <= 256 MiB 仍是开放门禁。
+## 2026-08-18 第 17 阶段：跨 Host 语义 Parity Walkthrough
+
+Parity 边界现在可执行。`mobile_semantic_comparator.js` 忽略 host-specific legacy ID，只比较归一化 canonical node，以及带 endpoint URI、type、kind、provenance 的有向 edge。重复语义 identity 直接拒绝，避免通过排序掩盖 collision。
+
+Capacitor link resolution 现在与 Rust 对齐：direct canonical path、source-relative path、unique stem fallback。worker 与 single-thread 路径使用同一 resolver。Rust 会解码 percent-encoded Markdown target，执行 NFC/lowercase 归一化，并拒绝重复 canonical path 与含糊 legacy basename。projection contract 在两个 mechanism 连接同一 endpoint 时保留不同 provenance。
+
+`verify-mobile-projection-replay.js` 创建包含 nested path、relative/Markdown link、同内容文档和 NFC 归一化 percent-encoded path 的临时 corpus，分别交给 Capacitor 与真实 ignored Rust Cargo probe，最终报告语义一致（`6` 个节点、`4` 条边）。这比 raw JSON equality 更强，但仍低于签名设备、SAF UI、进程死亡和 RSS 验收。
+
+向前兼容决策不变：保持 `id` 与 schema-1 snapshot 稳定，将 comparator 排除出移动运行时 bundle；在原生 replay、rollback、move-journal、collision 与 RSS 证据归档前，不提升 public canonical-ID 或 SQLite/WASM。
+
+全量验证通过 145 个 Jest suite / 1,270 passed / 26 skipped、TypeScript no-emit 与 28 个 Rust host test 加 1 个 ignored probe。定向 mobile contract 覆盖为 5 个 suite / 27 个测试。fresh `mobile-slim` staging 为 121 个文件 / 未压缩 4,274,600 字节 / 估算压缩 1,550,561 字节，SHA-256 为 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`；test-only comparator 已排除，RSS 仍为 `not measured`。代码级语义 parity 已通过；签名真机 SAF/query/path、进程死亡 continuity 与 RSS <= 256 MiB 仍是开放门禁。

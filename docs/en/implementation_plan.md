@@ -499,6 +499,30 @@ The additive `canonicalId` avoids a flag-driven public-ID switch and keeps old l
 - Resolve or explicitly version the remaining Rust/Capacitor differences in link extraction and legacy key resolution before claiming native semantic parity.
 - Fresh `mobile-slim` staging now measures 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes, SHA-256 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`; RSS remains `not measured`.
 - Keep signed-device SAF/query/path, process-death continuity, RSS <= 256 MiB, public-ID migration, and default SQLite/WASM promotion blocked.
+
+## 2026-08-18 Phase 17 Cross-Host Semantic Parity Closure
+
+### Implemented
+
+1. `mobile_semantic_comparator.js` is a dependency-free, test-only UMD oracle. It matches nodes by normalized `canonicalId` (falling back to the versioned URI only for legacy fixtures) and matches edges by canonical direction, endpoint URI, `type`, `kind`, and `provenance`. It rejects duplicate semantic identities rather than silently choosing one.
+2. Capacitor now indexes canonical paths once and resolves links in the same order as Rust: direct path, source-relative path, unique stem. Its worker and single-thread paths share the same policy. Duplicate legacy basenames are fail-closed, which is intentionally conservative because the legacy public ID cannot disambiguate them.
+3. Rust normalizes percent-encoded Markdown targets to NFC/lowercase before lookup and rejects duplicate canonical paths and ambiguous legacy stems. The schema-1 projection retains separate provenance for same-endpoint edges.
+4. `verify-mobile-projection-replay.js` writes a real temporary corpus and runs the ignored Rust builder probe through Cargo. The same corpus is built by Capacitor and compared semantically; the report records `6` nodes and `4` edges with no mismatches. The report still labels the result as code-level evidence.
+
+### Trade-offs and constraints
+
+- Keeping `id` as the runtime key avoids layout/snapshot breakage, but it means duplicate basenames cannot be accepted on mobile. A future canonical-ID migration can relax this only after alias and rollback evidence exists.
+- The comparator is not shipped as a mobile runtime asset. Its cost is confined to verification; Capacitor's resolver uses bounded maps (`O(V + E)` indexing/build) rather than pairwise path scans.
+- Preserving edge provenance increases projection cardinality when two link mechanisms target the same pair. This is preferable to silently losing evidence; the existing edge and total-input budgets remain the hard ceiling.
+
+### Verification and next gates
+
+- Focused Jest: semantic comparator, Capacitor graph, and projection contract suites pass (`11` tests). Rust host suite passes (`28` passed, `1` ignored probe).
+- Fresh `mobile-slim` staging excludes the test-only comparator and measures 121 files / 4,274,600 uncompressed bytes / 1,550,561 estimated compressed bytes, SHA-256 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`; RSS remains `not measured`.
+- `verify:mobile:projection-replay` passes four storage boundaries plus the real Rust probe. It is not signed APK, Android process-death, SAF UI, or RSS evidence.
+- Re-run TypeScript no-emit, the full Jest matrix, Rust tests, mobile-slim budget, and Diataxis checks before merge.
+- G2/G3 native work remains: signed arm64 artifact, low-memory device SAF import -> graph -> exact query -> path, force-stop/reopen continuity, and measured RSS `<= 256 MiB`.
+- Do not promote public canonical IDs, SQLite/WASM, or higher mobile corpus limits until native replay, rollback/move-journal, old-snapshot, and collision corpora are archived.
   - modular knowledge-route wiring for `runtime-capability-runbook/*` is now backed by live server-side runbook ops instead of KLP placeholder payloads, and the route layer now preserves `checkId` / `sinceMinutes` / queue-filter query params rather than dropping them.
   - the real browser smoke gate now proves those verify/checks/action-queue surfaces end to end: strict browser evidence must show the ANN sync-health verify card, the new verify/checks ANN circuit/traceability/prefilter drilldowns, the first-check ANN sync metric, and the index-sync action-queue drilldown instead of only proving that the cards can open.
   - agent-workspace locale hardening now covers the currently surfaced diagnostics cards/messages: source-referenced `agentWorkspace.*` keys are guarded by `src/agent_workspace.locale.contract.test.ts`, bilingual locale bundles now back the query/quality/runbook card labels that strict browser smoke actually exercises, and startup-time translate helpers defer `window.i18n.t()` until locale init to avoid false missing-key warnings before locales hydrate.

@@ -207,6 +207,21 @@ Use additive canonical identity and host-owned persistence boundaries. This clos
 ### Phase 16 decision
 
 Treat `canonicalId` as a cross-host semantic key and `id` as a compatibility alias. Do not use a mode flag or public-ID cutover. First close canonical node/edge parity on the same corpus, then measure signed-device RSS and only afterward evaluate a canonical-ID migration.
+
+## 2026-08-18 Phase 17 Cross-Host Semantic Parity Closure
+
+- [x] Add `src/frontend/mobile_semantic_comparator.js`. It compares canonical node identity, normalized `sourceUri`, directed endpoints, edge `type`, `kind`, and `provenance`; host-specific legacy IDs are deliberately excluded from the oracle.
+- [x] Align Capacitor link resolution with Rust: direct canonical path, source-relative path, then unique stem fallback. Preserve legacy `id` for compatibility, but reject duplicate canonical identities and case/NFC-equivalent legacy basenames before graph construction.
+- [x] Preserve distinct edge provenance for identical endpoints in the schema-1 projection instead of collapsing `wiki-link`, `markdown-link`, and frontmatter edges by kind alone.
+- [x] Extend `verify-mobile-projection-replay.js` with one nested-path corpus covering relative links, Markdown links, duplicate content, percent-encoded NFC paths, and a real ignored Rust builder probe. The report now records semantic parity as `host-boundary-contract-plus-rust-probe`.
+- [x] Add JS and Rust regression coverage for canonical matching, provenance mismatch, relative-link resolution, percent decoding, and fail-closed legacy basename ambiguity.
+- [x] Rebuilt `mobile-slim` after excluding the test-only comparator from staging: 121 files / 4,274,600 uncompressed bytes / 1,550,561 estimated compressed bytes; SHA-256 is `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`. RSS remains `not measured`.
+- [~] Signed arm64 device replay, SAF import/query/path, force-stop continuity, and RSS `<= 256 MiB` remain open. The verifier is code-level cross-host evidence, not native-device acceptance.
+- [ ] Keep public-ID cutover, default SQLite/WASM, and any mobile budget increase blocked until native evidence and rollback/move-journal replay are recorded.
+
+### Phase 17 decision
+
+Use semantic parity as a separate, test-only oracle. Keep host-specific legacy IDs and schema-1 wire compatibility at runtime; use canonical identity plus provenance-aware edges only to prove that independent builders mean the same graph. This avoids a public-ID flag, keeps the mobile bundle free of a new runtime dependency, and makes any future migration evidence-driven.
 - [x] Runtime runbook modular-route composition is no longer inline-only inside `src/server.ts`; `src/routes/runtimeRunbookRouteOps.ts` now owns `/api/knowledge/runtime-capability-runbook/*` route-op assembly while preserving the current response contract.
 - [x] Graph-focus now renders the original markdown knowledge point through the shared markdown runtime and highlights matched passages in-place, instead of showing only a snippet list in the right pane.
 - [~] Convert sqlite soak verification into repeated release evidence; latest-report freshness, readiness-exposed strict history auditing, current Windows-host strict 3/3 evidence, and opt-in multi-host audit tooling are now automated, while actual multi-host evidence and threshold calibration remain pending.

@@ -40,7 +40,10 @@ describe('storage provider abstraction contract', () => {
     expect(source).toContain('CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS');
     expect(source).toContain("buildMode: 'single-thread-fallback'");
     expect(source).toContain("buildMode: 'worker'");
-    expect(source).toContain('addEdge(sourceId, linkedId, \'wiki-link\')');
+    expect(source).toContain('var linkedFile = resolveReference(file, rawLink, referenceIndex);');
+    expect(source).toContain('addEdge(sourceId, linkedFile && linkedFile.id, "wiki-link")');
+    expect(source).toContain('function buildCapacitorReferenceIndex(files)');
+    expect(source).toContain('Capacitor graph contains an ambiguous legacy basename');
     expect(source).toContain('sourceUri: sourceNode && sourceNode.sourceUri');
     expect(source).toContain("const result = await capacitorBuildGraph(requestPayload || {}, this.runtimeCaps || {});");
     expect(source).toContain('buildModeDetail: resolveCapacitorBuildModeDetail(buildResult.buildMode, runtimeCaps || {})');

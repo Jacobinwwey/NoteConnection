@@ -618,3 +618,19 @@
 - [x] 保留 legacy ID、schema-1 snapshot、layout 与 exact lookup 行为。
 - [~] Rust 与 Capacitor 的 canonical node/edge 语义 parity 尚未证明；raw JSON 相等不是充分 oracle。
 - [x] 本轮源码变更后已重建 slim staging：121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节；RSS 仍为 `not measured`。
+
+## 2026-08-18 Phase 17 Cross-Host Semantic Parity Closure
+
+- [x] Added a test-only semantic comparator keyed by canonical identity and provenance-aware directed edges; duplicate semantic identities fail closed.
+- [x] Aligned Capacitor and Rust direct-path, source-relative, and unique-stem resolution; worker and single-thread Capacitor builders now share the same sourceUri fallback.
+- [x] Added nested/relative/Markdown/NFC corpus replay through Capacitor plus an ignored Rust Cargo probe; semantic result is 6 nodes / 4 edges with no mismatch.
+- [x] Excluded the comparator from mobile-slim staging; current staging is 121 files / 4,274,600 uncompressed / 1,550,561 estimated compressed bytes, SHA-256 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`.
+- [~] Signed arm64 device SAF/query/path, force-stop continuity, and RSS `<= 256 MiB` remain unproven; public-ID and SQLite/WASM promotion stay frozen.
+
+## 2026-08-18 第 17 阶段：跨 Host 语义 Parity 闭环
+
+- [x] 新增仅用于测试的 semantic comparator，按 canonical identity 与保留 provenance 的有向边比较；重复语义 identity 直接 fail closed。
+- [x] 对齐 Capacitor 与 Rust 的 direct-path、source-relative、unique-stem resolution；worker 与 single-thread Capacitor builder 共用 sourceUri fallback。
+- [x] 通过 Capacitor 与 ignored Rust Cargo probe 回放 nested/relative/Markdown/NFC 语料；语义结果为 6 个节点 / 4 条边且无 mismatch。
+- [x] comparator 已排除出 mobile-slim staging；当前 staging 为 121 个文件 / 未压缩 4,274,600 / 估算压缩 1,550,561 字节，SHA-256 为 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`。
+- [~] 签名 arm64 真机 SAF/query/path、force-stop continuity 与 RSS `<= 256 MiB` 仍未证明；public-ID 与 SQLite/WASM 提升继续冻结。

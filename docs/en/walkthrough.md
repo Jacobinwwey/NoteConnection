@@ -245,4 +245,14 @@ Verification snapshot: full Jest 144 suites / 1,263 passed / 26 skipped; TypeScr
 
 The important boundary is semantic, not cosmetic: `canonicalId` is the cross-host comparison key, while `sourceUri` remains the portable provenance and `id` remains the compatibility alias. Duplicate canonical identities still fail closed. This lets the next corpus compare node and edge meaning without forcing a public-ID migration.
 
-Focused verification passes: 5 Jest suites / 20 tests, TypeScript no-emit, and 27 Rust host tests. Fresh `mobile-slim` staging is 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes with SHA-256 `7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72`; RSS remains `not measured`. Native edge-policy parity, signed-device SAF/query/path, process-death continuity, and RSS <= 256 MiB remain open gates.
+## 2026-08-18 Phase 17 Cross-Host Semantic Parity Walkthrough
+
+The parity boundary is now executable. `mobile_semantic_comparator.js` ignores host-specific legacy IDs and compares normalized canonical nodes plus directed edges with endpoint URI, type, kind, and provenance. It rejects duplicate semantic identities so a collision cannot be hidden by ordering.
+
+Capacitor link resolution now follows the Rust policy: direct canonical path, source-relative path, then unique stem fallback. Both worker and single-thread paths use the same resolver. Rust decodes percent-encoded Markdown targets, normalizes NFC/lowercase, and rejects duplicate canonical paths and ambiguous legacy basenames. The projection contract preserves distinct provenance when two mechanisms connect the same endpoints.
+
+`verify-mobile-projection-replay.js` creates one temporary corpus containing nested paths, relative and Markdown links, same-content documents, and an NFC-normalized percent-encoded path. It builds the corpus through Capacitor and an actual ignored Rust Cargo probe, then reports semantic equality (`6` nodes, `4` edges). This is stronger code-level evidence than raw JSON equality, but it remains below signed-device, SAF UI, process-death, and RSS acceptance.
+
+The forward-compatible decision is unchanged: keep `id` and schema-1 snapshots stable, keep the comparator out of the mobile runtime bundle, and defer public canonical-ID or SQLite/WASM promotion until native replay, rollback, move-journal, collision, and RSS evidence are archived.
+
+Full verification passes 145 Jest suites / 1,270 passed / 26 skipped, TypeScript no-emit, and 28 Rust host tests plus 1 ignored probe. Focused mobile contract coverage is 5 suites / 27 tests. Fresh `mobile-slim` staging is 121 files / 4,274,600 uncompressed bytes / 1,550,561 estimated compressed bytes with SHA-256 `c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8`; the test-only comparator is excluded and RSS remains `not measured`. Code-level semantic parity passes; signed-device SAF/query/path, process-death continuity, and RSS <= 256 MiB remain open gates.
