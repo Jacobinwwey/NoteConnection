@@ -364,3 +364,11 @@ Current verification is 148 Jest suites / 1,287 passed / 26 skipped, Rust 30 pas
 All 8 cases and 4 hosts passed. The stable result hash is `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`. The report is `host-code-replay` with `nativeDeviceEvidence: false`, so it is not a signed-device, process-death, or RSS claim. Public-ID migration remains a separate review; G2/G3 still require signed arm64 hardware, SAF/retry/continuity, and RSS evidence.
 
 Final regression is 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-emit, Rust 30 passed / 1 ignored, mobile-low budget, native recovery, projection replay, Diataxis, and `git diff --check` passed.
+
+## 2026-08-21 Phase 28 Canonical-ID Migration Readiness Gate Walkthrough
+
+Run `npm run verify:canonical:id:readiness` for the non-destructive audit. It replays the versioned corpus, checks all four projection hosts and current `canonicalId` producers, then emits a structured `blocked` report while `NoteNode.id`, layouts, snapshots, APIs, and mobile payloads remain unchanged. The default success means the audit ran; it does not mean migration is approved.
+
+Run the same command with `--strict` in a release workflow. It fails closed until native device evidence exists, preventing host-only replay from being treated as signed Android acceptance.
+
+Final regression after this phase is 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit and Diataxis passed.

@@ -1931,3 +1931,10 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - 8 cases and 4 hosts passed with result hash `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`; evidence is `host-code-replay`, not native-device evidence.
 - Public-ID cutover remains blocked pending independent review. Signed arm64 execution, SAF/retry/continuity, and RSS remain separate G2/G3 gates.
 - Final regression is 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-emit, Rust, mobile budget, projection replay, native recovery, and Diataxis passed.
+
+## 2026-08-21 Phase 28 Canonical-ID Migration Readiness Gate
+
+- The read-only readiness verifier replays the versioned G4 corpus, requires four projection hosts, and checks every current `canonicalId` producer.
+- It reports `blocked` with `independentReviewRequired: true`; `--strict` fails closed without native device evidence.
+- No public ID, snapshot/projection schema, Bridge field, layout, API payload, or mobile runtime changes are allowed in this phase.
+- Final regression is 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit and Diataxis passed.

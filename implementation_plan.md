@@ -1589,5 +1589,55 @@ Observed local evidence: slim profile 121 files / `4,275,083` uncompressed / `1,
 
 - `npm run verify:identity:corpus`：8 个 case 通过，4 个 projection host 通过；result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`。
 - 最终回归：149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay、Diataxis 与 `git diff --check` 通过。
+
+## 2026-08-21 Phase 28 Canonical-ID Migration Readiness Gate
+
+### English
+
+#### Implementation
+
+1. Add `scripts/verify-canonical-id-readiness.js` as a read-only dry-run over the versioned G4 corpus, the four projection hosts, and all current `canonicalId` producers.
+2. Require the compatibility contract to remain unchanged: no public-ID, snapshot/projection, Bridge, or mobile-runtime switch may be hidden in package scripts or the readiness path.
+3. Default readiness reports `blocked` with `independentReviewRequired: true`. `--strict` fails closed when native device evidence is absent, so a host-code pass cannot become a release claim.
+4. Add contract tests for the read-only boundary and compatibility freeze. This phase does not mutate `NoteNode.id`, layouts, snapshot payloads, or API responses.
+
+#### Decision and trade-off
+
+- The readiness verifier is an audit boundary, not a migration layer. It intentionally has no public-ID write operation, feature flag, or fallback that would let callers bypass the legacy key.
+- The default command exits successfully with a structured `blocked` result so CI can publish an actionable report; release workflows should use `--strict` and require native evidence.
+- Keeping the gate separate costs one additional corpus replay, but it makes the decision auditable and avoids coupling an irreversible identity switch to static host evidence.
+
+#### Verification and remaining gates
+
+- `npm run verify:canonical:id:readiness`: `blocked` as expected; G4 corpus and four projection hosts passed, producer surface passed, and compatibility flags remained false.
+- `npm run verify:canonical:id:readiness -- --strict`: fails closed as expected because `nativeDeviceEvidence=false`.
+- Contract tests: 4 passed; TypeScript no-emit and `git diff --check` passed.
+- Final regression after this phase: 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit and Diataxis passed.
+- Independent canonical-ID migration review, signed arm64 execution, SAF/permission/retry, force-stop/reopen, and RSS `<= 256 MiB` remain open.
+
+## 2026-08-21 第 28 阶段：Canonical-ID 迁移 readiness gate
+
+### 中文
+
+#### 实施
+
+1. 增加 `scripts/verify-canonical-id-readiness.js`，只读检查 versioned G4 corpus、四个 projection host 与当前全部 `canonicalId` producer。
+2. 强制兼容性 contract 保持不变：public ID、snapshot/projection、Bridge 与移动运行时切换不能隐藏在 package script 或 readiness 路径中。
+3. 默认 readiness 输出 `blocked` 并带 `independentReviewRequired: true`。缺少原生设备证据时 `--strict` fail-closed，防止 host-code 通过被误报为 release 结论。
+4. 增加只读边界与兼容性冻结契约测试。本阶段不修改 `NoteNode.id`、layout、snapshot payload 或 API response。
+
+#### 决策与权衡
+
+- Readiness verifier 是审计边界，不是迁移层。它没有 public-ID 写操作、feature flag 或绕过 legacy key 的 fallback。
+- 默认命令以结构化 `blocked` 结果成功退出，便于 CI 发布可执行报告；release workflow 应使用 `--strict` 并要求原生证据。
+- 独立 gate 会增加一次 corpus replay 成本，但能让决策可审计，避免把不可逆 identity 切换绑定到静态 host 证据。
+
+#### 验证与剩余门禁
+
+- `npm run verify:canonical:id:readiness`：按预期输出 `blocked`；G4 corpus、四个 projection host、producer surface 通过，兼容性 flag 保持 false。
+- `npm run verify:canonical:id:readiness -- --strict`：按预期 fail-closed，因为 `nativeDeviceEvidence=false`。
+- Contract tests：4 passed；TypeScript no-emit 与 `git diff --check` 通过。
+- 本阶段最终回归：150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。
+- 独立 canonical-ID 迁移评审、签名 arm64 执行、SAF/权限/重试、force-stop/reopen 与 RSS `<= 256 MiB` 仍开放。
 - Manifest contract：2 tests passed。TypeScript no-emit、全量 Jest、Rust、mobile-low budget、native-recovery、projection replay 与 Diataxis 仍是 release 必需检查。
 - Canonical public-ID 迁移仍需独立评审。原生 G2/G3 仍需签名 arm64 硬件、SAF/权限/重试、force-stop/reopen 与实测 RSS `<= 256 MiB`。

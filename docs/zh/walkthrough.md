@@ -355,3 +355,11 @@ Release workflow 将打包与验收分离：签名 arm64 APK/AAB 先是 workflow
 8 个 case 与 4 个 host 全部通过，稳定 result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`。报告标记 `host-code-replay` 与 `nativeDeviceEvidence: false`，不代表签名真机、进程死亡或 RSS 通过。Public-ID 迁移仍需独立评审，G2/G3 仍需签名 arm64、SAF/重试/continuity 与 RSS 证据。
 
 最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay、Diataxis 与 `git diff --check` 通过。
+
+## 2026-08-21 第 28 阶段：Canonical-ID 迁移 readiness gate Walkthrough
+
+执行 `npm run verify:canonical:id:readiness` 运行非破坏性审计。它回放 versioned corpus，检查四个 projection host 与当前 `canonicalId` producer，然后在保持 `NoteNode.id`、layout、snapshot、API 与移动 payload 不变的前提下输出结构化 `blocked` 报告。默认成功只表示审计完成，不表示批准迁移。
+
+Release workflow 应使用 `--strict`。在原生设备证据出现前它会 fail-closed，避免把 host-only replay 当作签名 Android 验收。
+
+本阶段最终回归为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。

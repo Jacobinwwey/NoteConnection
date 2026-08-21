@@ -1959,3 +1959,10 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - 8 个 case 与 4 个 host 通过，result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`；证据级别是 `host-code-replay`，不是原生设备证据。
 - Public-ID 切换仍需独立评审并保持阻塞。签名 arm64 执行、SAF/重试/continuity 与 RSS 仍是独立 G2/G3 门禁。
 - 最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust、mobile budget、projection replay、native recovery 与 Diataxis 通过。
+
+## 2026-08-21 第 28 阶段：Canonical-ID 迁移 readiness gate
+
+- 只读 readiness verifier 回放 versioned G4 corpus，要求四个 projection host，并检查全部当前 `canonicalId` producer。
+- 它输出 `blocked` 与 `independentReviewRequired: true`；缺原生设备证据时 `--strict` fail-closed。
+- 本阶段禁止修改 public ID、snapshot/projection schema、Bridge 字段、layout、API payload 或移动运行时。
+- 本阶段最终回归为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。

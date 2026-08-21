@@ -492,3 +492,13 @@ The harness deliberately executes only explicit `adbArgs` from a checked workloa
 - [x] Keep public IDs, snapshot/projection schemas, Bridge fields, mobile runtime dependencies, and `mobile-slim` unchanged.
 - [ ] Perform an independent canonical-ID migration review from the archived manifest; no public-ID switch is included here.
 - [~] Native G2/G3 remains separate: signed arm64 device execution, SAF/permission/retry, force-stop/reopen, and RSS `<= 256 MiB` are unavailable on this host.
+
+## 2026-08-21 Phase 28 Canonical-ID Migration Readiness Gate
+
+- [x] Add `scripts/verify-canonical-id-readiness.js` as a read-only dry-run over the versioned G4 corpus, four projection hosts, and current `canonicalId` producers.
+- [x] Keep public IDs, snapshot/projection schemas, Bridge fields, and mobile runtime unchanged; the readiness path contains no migration operation.
+- [x] Default result is `blocked` with `independentReviewRequired: true`; `--strict` fails closed when native evidence is absent.
+- [x] Add 4 contract tests for the read-only boundary and compatibility freeze.
+- [x] Final regression: 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit and Diataxis passed.
+- [ ] Conduct the independent canonical-ID migration review; do not switch `NoteNode.id`, old layouts, or public payloads here.
+- [~] Native G2/G3 remains external until signed arm64, SAF/retry/continuity, and measured RSS evidence exists.

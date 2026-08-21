@@ -701,3 +701,13 @@ harness 只执行 workload spec 中明确列出的 `adbArgs`。这比任意 shel
 - [x] 保持 public ID、snapshot/projection schema、Bridge 字段、移动运行时依赖与 `mobile-slim` 不变。
 - [ ] 基于已归档 manifest 独立评审 canonical-ID 迁移；本阶段不切换 public ID。
 - [~] 原生 G2/G3 仍独立开放：签名 arm64 真机、SAF/权限/重试、force-stop/reopen 与 RSS `<= 256 MiB` 当前 host 仍无法提供。
+
+## 2026-08-21 第 28 阶段：Canonical-ID 迁移 readiness gate
+
+- [x] 增加 `scripts/verify-canonical-id-readiness.js`，只读检查 versioned G4 corpus、四个 projection host 与当前全部 `canonicalId` producer。
+- [x] 保持 public ID、snapshot/projection schema、Bridge 字段与移动运行时不变；readiness 路径没有迁移操作。
+- [x] 默认结果为 `blocked` 并带 `independentReviewRequired: true`；缺原生证据时 `--strict` fail-closed。
+- [x] 增加 4 个只读边界与兼容性冻结契约测试。
+- [x] 最终回归：150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。
+- [ ] 执行独立 canonical-ID 迁移评审；本阶段不切换 `NoteNode.id`、旧 layout 或 public payload。
+- [~] 原生 G2/G3 仍是外部门禁，需签名 arm64、SAF/重试/continuity 与 RSS 实测证据。

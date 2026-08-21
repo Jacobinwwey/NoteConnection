@@ -440,3 +440,19 @@ G4 identity 证据现在成为受跟踪的 contract，而不是分散且无上�
 本阶段关闭了版本化 host-code corpus 门禁，但不改变 public ID、snapshot/projection schema、Bridge 字段或移动 payload。签名真机、进程死亡、SAF 权限/重试和 RSS 门禁仍未闭合；canonical-ID 迁移继续独立评审。
 
 最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay 与 Diataxis 通过。
+
+## 2026-08-21 Phase 28 Canonical-ID Migration Readiness Gate
+
+### English
+
+The next identity step is now explicit and non-destructive. `scripts/verify-canonical-id-readiness.js` replays the versioned G4 corpus, requires all four projection hosts, checks every current `canonicalId` producer, and verifies that compatibility flags remain unchanged. It contains no public-ID write, feature switch, or layout/snapshot migration.
+
+The default result is `blocked` with `independentReviewRequired: true`; `--strict` fails closed when native device evidence is absent. This separates an auditable host-code decision from the irreversible canonical-ID migration. Public IDs, schemas, Bridge fields, and mobile payloads remain unchanged.
+
+### 中文
+
+下一步 identity 工作现在被明确为非破坏性 gate。`scripts/verify-canonical-id-readiness.js` 回放 versioned G4 corpus，要求四个 projection host，通过所有当前 `canonicalId` producer 检查，并确认兼容性 flag 没有变化。它不包含 public-ID 写操作、feature switch 或 layout/snapshot 迁移。
+
+默认结果为 `blocked` 并标记 `independentReviewRequired: true`；缺少原生设备证据时 `--strict` fail-closed。这样把可审计的 host-code 决策与不可逆 canonical-ID 迁移分离，public ID、schema、Bridge 字段与移动 payload 保持不变。
+
+本阶段最终回归为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。

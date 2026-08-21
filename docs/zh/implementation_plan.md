@@ -1329,3 +1329,11 @@ identity ownership 在 `upsert` 与 `move` 的边界统一校验。path/URI/alia
 报告明确标记为 `host-code-replay`、`nativeDeviceEvidence: false`、`canonicalPublicIdCutover: blocked`。本次 8 个 case 与 4 个 projection host 通过，result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`；manifest contract 通过 2 tests。这是 release evidence boundary，不是 Android 真机验收。Public-ID 迁移仍需独立评审；G2/G3 仍需签名 arm64、SAF/重试/continuity 与 RSS 证据。
 
 最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay 与 Diataxis 通过。
+
+## 2026-08-21 第 28 阶段：Canonical-ID 迁移 readiness gate
+
+`scripts/verify-canonical-id-readiness.js` 是只读 dry-run，检查 versioned G4 corpus、四个 projection host 与全部当前 `canonicalId` producer。它确认 public ID、snapshot/projection schema、Bridge 字段与移动运行时保持不变，且不包含迁移操作。
+
+默认命令输出 `blocked` 并带 `independentReviewRequired: true`；`nativeDeviceEvidence=false` 时 `--strict` fail-closed。Corpus、host replay、producer surface 与兼容性检查通过。本阶段不改变 `NoteNode.id`、layout、snapshot 或 API；独立迁移评审与原生 G2/G3 证据仍需完成。
+
+本阶段最终回归为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。

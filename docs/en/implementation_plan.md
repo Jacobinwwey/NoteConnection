@@ -857,3 +857,11 @@ Current verification: TypeScript no-emit passed; 148 Jest suites passed with 1,2
 The report is explicitly `host-code-replay` with `nativeDeviceEvidence: false` and `canonicalPublicIdCutover: blocked`. The run passed 8 cases and 4 projection hosts with result hash `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`; the manifest contract passed 2 tests. This is a release evidence boundary, not native Android acceptance. Public-ID migration still requires independent review; G2/G3 still require signed arm64, SAF/retry/continuity, and RSS evidence.
 
 Final regression is 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-emit, Rust 30 passed / 1 ignored, mobile-low budget, native recovery, projection replay, and Diataxis passed.
+
+## 2026-08-21 Phase 28 Canonical-ID Migration Readiness Gate
+
+`scripts/verify-canonical-id-readiness.js` is a read-only dry-run over the versioned G4 corpus, four projection hosts, and every current `canonicalId` producer. It checks that public IDs, snapshot/projection schemas, Bridge fields, and mobile runtime remain unchanged and contains no migration operation.
+
+The default command reports `blocked` with `independentReviewRequired: true`; `--strict` fails closed when `nativeDeviceEvidence=false`. The corpus, host replay, producer surface, and compatibility checks pass. This phase adds no `NoteNode.id`, layout, snapshot, or API change; independent migration review and native G2/G3 evidence remain required.
+
+Final regression after this phase is 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit and Diataxis passed.
