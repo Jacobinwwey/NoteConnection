@@ -920,3 +920,23 @@ Keep one additive runtime budget projection for WebView/Capacitor while retainin
 - [x] 更新中英文 README/release 指引；不改变 projection schema、IPC 字段、public ID 或移动运行时 payload。
 - [ ] 仅在下游消费者与 CI 不再调用 compatibility alias 后移除 deprecated Capacitor 工程。
 - [~] 原生 G2/G3 仍独立开放：路由修复不会生成签名 arm64、SAF、continuity 或 RSS 证据。
+
+## 2026-08-21 Phase 30 Graph-Conditioned Context Assembly
+
+### English
+
+- [x] Add a deterministic `graphConditionedContext` adapter between the pre-RAG graph answer plan and the evidence budgeter.
+- [x] Preserve role/score priority; graph plan matches only break same-priority ties and never expand the authorized scope.
+- [x] Expose additive `ragContextPack.graphConditioning` trace with matched claims, fragments, atoms, edges, and explicit fallback state.
+- [x] Wire normal and one-pass recovery RAG assembly through a pre-RAG plan while keeping the final evidence-backed plan unchanged.
+- [x] Add focused unit and platform regression coverage; no public ID, IPC, mobile asset, or native evidence claim changed.
+- [ ] Continue with independent canonical-ID review, strict registry shadow parity, and device evidence as separate gates.
+
+### 中文
+
+- [x] 在 pre-RAG graph answer plan 与 evidence budgeter 之间增加确定性的 `graphConditionedContext` 适配层。
+- [x] 保留 role/score 优先级；图计划只在同优先级内打破平局，不扩大授权 scope。
+- [x] 通过 additive `ragContextPack.graphConditioning` 暴露命中 claim、fragment、atom、edge 与明确 fallback 状态。
+- [x] 普通与一次恢复 RAG 都经过 pre-RAG plan；最终带证据 plan 保持不变。
+- [x] 增加纯函数与平台回归测试；不改变 public ID、IPC、移动资源或原生证据结论。
+- [ ] 独立 canonical-ID 评审、strict registry shadow parity 与真机证据继续作为独立门禁。

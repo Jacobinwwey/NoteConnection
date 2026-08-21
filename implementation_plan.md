@@ -2,6 +2,18 @@
 
 ## English Document
 
+### 2026-08-21 Phase 30 Graph-Conditioned Context Assembly
+
+The retrieval-to-synthesis boundary now consumes a deterministic pre-RAG graph answer plan. `graphConditionedContext` ranks fragments by planned atom/edge matches, while the existing role and score priorities remain authoritative. `RagContextPack.graphConditioning` records the selected claims, fragments, atoms, edges, and fallback state. Normal and one-pass recovery assembly use the same pre-RAG plan; the final composer still rebuilds the evidence-backed public plan.
+
+This is additive and bounded: it does not change `NoteNode.id`, IPC, mobile assets, scope semantics, or native release evidence. Focused learning and mobile contract tests pass; independent canonical-ID review, strict route shadow parity, and signed-device G2/G3 evidence remain open.
+
+### 2026-08-21 第 30 阶段：图条件上下文装配
+
+检索到答案合成之间现在使用确定性的 pre-RAG graph answer plan。`graphConditionedContext` 按计划 atom/edge 命中对 fragment 排序，同时保留既有 role 与 score 优先级；`RagContextPack.graphConditioning` 记录命中的 claim、fragment、atom、edge 与 fallback 状态。普通及一次恢复装配使用同一 pre-RAG plan，最终 composer 仍重新生成带证据的 public plan。
+
+本阶段为 additive、有界改动，不改变 `NoteNode.id`、IPC、移动资源、scope 语义或原生 release 证据。learning 与移动端契约定向测试通过；独立 canonical-ID 评审、strict route shadow parity 与签名设备 G2/G3 证据继续开放。
+
 ### 2026-06-10 Knowledge Workspace and DAG Implementation Direction
 
 #### Objective

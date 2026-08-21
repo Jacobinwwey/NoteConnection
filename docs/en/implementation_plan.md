@@ -2,6 +2,10 @@
 
 ## English Document
 
+### 2026-08-21 Phase 30 Graph-Conditioned Context Assembly
+
+The pre-RAG graph answer plan now feeds a deterministic fragment-order adapter. Role and score remain authoritative; graph matches only break ties within the same evidence priority. `RagContextPack.graphConditioning` makes the decision auditable, and the same plan is used by normal and bounded recovery assembly. Public IDs, IPC, mobile payloads, and native evidence gates are unchanged.
+
 ### 2026-06-21 Agent Knowledge Workspace Runtime Reuse Plan
 
 #### Objective

@@ -3,6 +3,7 @@ import type {
     RagContextBudget,
     RagContextPack,
     RagEvidenceFragment,
+    RagGraphConditioningTrace,
     RagEvidenceRole,
     RagSourceBoundary,
     RagSourceDecision,
@@ -17,6 +18,8 @@ export interface BuildRagContextPackParams {
     budget?: Partial<RagContextBudget>;
     generatedAt?: string;
     sourceBoundary?: RagSourceBoundary;
+    fragmentOrder?: ReadonlyArray<string>;
+    graphConditioning?: RagGraphConditioningTrace;
 }
 
 export const DEFAULT_RAG_CONTEXT_BUDGET: RagContextBudget = {
@@ -200,7 +203,13 @@ function rolePriority(fragment: RagEvidenceFragment): number {
     return ROLE_PRIORITY[fragment.role] ?? ROLE_PRIORITY.background;
 }
 
-function sortFragmentsForBudget(fragments: RagEvidenceFragment[]): RagEvidenceFragment[] {
+function sortFragmentsForBudget(
+    fragments: RagEvidenceFragment[],
+    fragmentOrder?: ReadonlyArray<string>
+): RagEvidenceFragment[] {
+    const order = new Map<string, number>(
+        (fragmentOrder || []).map((fragmentId, index) => [String(fragmentId), index])
+    );
     return fragments
         .map((fragment, index) => ({ fragment, index }))
         .sort((a, b) => {
@@ -212,6 +221,11 @@ function sortFragmentsForBudget(fragments: RagEvidenceFragment[]): RagEvidenceFr
             if (Math.abs(scoreDelta) > 0.0001) {
                 return scoreDelta;
             }
+            const conditionedOrderDelta = (order.get(a.fragment.fragmentId) ?? Number.MAX_SAFE_INTEGER)
+                - (order.get(b.fragment.fragmentId) ?? Number.MAX_SAFE_INTEGER);
+            if (conditionedOrderDelta !== 0) {
+                return conditionedOrderDelta;
+            }
             return a.index - b.index;
         })
         .map((entry) => entry.fragment);
@@ -221,11 +235,12 @@ function applyContextBudget(
     fragments: RagEvidenceFragment[],
     budget: RagContextBudget,
     decisions: RagSourceDecision[],
-    query: string
+    query: string,
+    fragmentOrder?: ReadonlyArray<string>
 ): RagEvidenceFragment[] {
     const selected: RagEvidenceFragment[] = [];
     let usedChars = 0;
-    sortFragmentsForBudget(fragments).forEach((fragment) => {
+    sortFragmentsForBudget(fragments, fragmentOrder).forEach((fragment) => {
         if (selected.length >= budget.maxFragments) {
             decisions.push({
                 documentId: fragment.documentId,
@@ -317,6 +332,7 @@ function buildRagContextReplayId(params: {
     sourceDecisions: RagSourceDecision[];
     totalCharCount: number;
     tokenEstimate: number;
+    graphConditioning?: RagGraphConditioningTrace;
 }): string {
     const payload = {
         query: params.query,
@@ -367,6 +383,7 @@ function buildRagContextReplayId(params: {
                 left.status.localeCompare(right.status),
                 left.reason.localeCompare(right.reason),
             ].find((delta) => delta !== 0) || 0),
+        graphConditioning: params.graphConditioning || null,
     };
     const digest = createHash('sha256')
         .update(JSON.stringify(payload))
@@ -381,7 +398,13 @@ export function buildRagContextPack(params: BuildRagContextPackParams): RagConte
         ? params.sourceDecisions.map((decision) => ({ ...decision }))
         : [];
     const fragments = Array.isArray(params.fragments) ? params.fragments.filter(Boolean) : [];
-    const selectedFragments = applyContextBudget(fragments, budget, decisions, params.query);
+    const selectedFragments = applyContextBudget(
+        fragments,
+        budget,
+        decisions,
+        params.query,
+        params.fragmentOrder
+    );
     annotateReadDecisions(decisions, selectedFragments);
     const totalCharCount = selectedFragments.reduce((sum, fragment) => sum + fragment.charCount, 0);
     const tokenEstimate = selectedFragments.reduce((sum, fragment) => sum + fragment.tokenEstimate, 0);
@@ -397,6 +420,7 @@ export function buildRagContextPack(params: BuildRagContextPackParams): RagConte
             sourceDecisions: decisions,
             totalCharCount,
             tokenEstimate,
+            graphConditioning: params.graphConditioning,
         }),
         query,
         generatedAt: String(params.generatedAt || new Date().toISOString()),
@@ -406,5 +430,6 @@ export function buildRagContextPack(params: BuildRagContextPackParams): RagConte
         sourceDecisions: decisions,
         totalCharCount,
         tokenEstimate,
+        graphConditioning: params.graphConditioning,
     };
 }

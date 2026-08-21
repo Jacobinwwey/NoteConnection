@@ -232,4 +232,28 @@ describe('buildRagContextPack', () => {
             }),
         ]));
     });
+
+    test('uses graph-conditioned order only as a tie-break inside the same role and score', () => {
+        const pack = buildRagContextPack({
+            query: 'what is water glass?',
+            fragments: [
+                makeFragment({ fragmentId: 'graph-unmatched', role: 'graph_neighbor_support', score: 0.6 }),
+                makeFragment({ fragmentId: 'graph-matched', role: 'graph_neighbor_support', score: 0.6 }),
+                makeFragment({ fragmentId: 'direct', role: 'direct_support', score: 0.4 }),
+            ],
+            fragmentOrder: ['graph-matched', 'graph-unmatched', 'direct'],
+            sourceDecisions: [],
+            budget: {
+                maxFragments: 3,
+                maxCharsPerFragment: 200,
+                maxTotalChars: 600,
+            },
+        });
+
+        expect(pack.fragments.map((fragment) => fragment.fragmentId)).toEqual([
+            'direct',
+            'graph-matched',
+            'graph-unmatched',
+        ]);
+    });
 });

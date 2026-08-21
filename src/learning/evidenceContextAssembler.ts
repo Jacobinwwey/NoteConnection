@@ -1,4 +1,5 @@
 import type {
+    GraphAnswerPlan,
     EvidenceSpan,
     KnowledgeQueryItem,
     RagContextBudget,
@@ -8,6 +9,7 @@ import type {
     RagSourceDecision,
 } from './types';
 import { buildRagContextPack, estimateRagTokenCount } from './ragContextPack';
+import { conditionRagFragmentsByGraphPlan } from './graphConditionedContext';
 
 export interface RagEvidenceSourceLookup {
     documentId: string;
@@ -36,6 +38,7 @@ export interface AssembleRagEvidenceContextParams {
     budget?: Partial<RagContextBudget>;
     paragraphWindow?: number;
     generatedAt?: string;
+    graphAnswerPlan?: GraphAnswerPlan;
 }
 
 type SourceBlockKind = 'heading' | 'paragraph' | 'code' | 'table';
@@ -1427,12 +1430,20 @@ export async function assembleRagEvidenceContext(params: AssembleRagEvidenceCont
     }
     rawFragments.push(...buildCrossDocumentConflictFragments(fullDocumentComparableFacts));
 
+    const candidateFragments = limitGraphNeighborDocumentContextFragments(rawFragments);
+    const graphConditioning = conditionRagFragmentsByGraphPlan({
+        fragments: candidateFragments,
+        graphAnswerPlan: params.graphAnswerPlan,
+    });
+
     return buildRagContextPack({
         query: params.query,
         generatedAt: params.generatedAt,
         sourceBoundary: readFullDocument ? 'full_document' : 'direct_span_only',
-        fragments: limitGraphNeighborDocumentContextFragments(rawFragments),
+        fragments: candidateFragments,
         sourceDecisions: decisions,
         budget: params.budget,
+        fragmentOrder: graphConditioning.fragmentOrder,
+        graphConditioning: graphConditioning.trace,
     });
 }

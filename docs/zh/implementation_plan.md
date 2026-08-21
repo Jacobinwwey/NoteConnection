@@ -3,6 +3,10 @@
 
 ## 中文文档
 
+### 2026-08-21 第 30 阶段：图条件上下文装配
+
+pre-RAG graph answer plan 现在通过确定性的 fragment-order 适配层参与证据选择。role 与 score 仍是权威排序，图命中只在同一证据优先级内打破平局。`RagContextPack.graphConditioning` 使选择可审计，普通与有界恢复装配共用同一 plan。public ID、IPC、移动 payload 与原生证据门禁保持不变。
+
 ### 2026-06-21 Agent Knowledge Workspace 运行时复用实施计划
 
 #### 目标

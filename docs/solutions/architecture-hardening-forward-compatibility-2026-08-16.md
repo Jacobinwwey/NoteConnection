@@ -12,6 +12,10 @@ version: 2026.08.21
 
 ## English
 
+## 2026-08-21 Phase 30 Graph-Conditioned Context Assembly
+
+The retrieval boundary now consumes a pre-RAG graph answer plan through a focused `graphConditionedContext` adapter. It produces deterministic fragment order and an additive `RagGraphConditioningTrace`; the existing role/score budget remains authoritative, so graph conditioning cannot promote weak evidence over direct support or escape scope. Normal and bounded recovery assembly share the same plan. This closes the graph-to-RAG wiring gap without changing public IDs, IPC, mobile assets, or native evidence claims.
+
 ### Decision summary
 
 The current branch is not blocked by a lack of features; it is blocked by ambiguous ownership and unsafe boundaries. The first hardening slice therefore makes three edge invariants executable without changing public graph IDs or snapshot schemas:
@@ -111,6 +115,10 @@ The additive identity foundation now crosses the learning boundary as well as th
 The remaining architectural blocker is intentional: a path-derived URI is not a rename journal. Move/rename events, workspace namespace, old-snapshot replay, Android folder selection, signed artifact extraction, and device RSS evidence must land before canonical-ID cutover or a strict mobile release claim.
 
 ## 中文
+
+## 2026-08-21 第 30 阶段：图条件上下文装配
+
+检索边界现在通过独立的 `graphConditionedContext` 适配层接收 pre-RAG graph answer plan，生成确定性的 fragment 顺序与 additive `RagGraphConditioningTrace`。既有 role/score budget 仍是权威排序，因此图条件不会让弱证据压过 direct support，也不会越过 scope。普通与有界恢复共用同一 plan。本阶段只补齐 graph 到 RAG 的接线，不改变 public ID、IPC、移动资源或原生证据结论。
 
 ### 决策摘要
 

@@ -421,6 +421,15 @@ export interface RagSourceDecision {
     fragmentsSelected?: number;
 }
 
+export interface RagGraphConditioningTrace {
+    strategy: 'graph_answer_plan' | 'none';
+    matchedClaimCount: number;
+    matchedFragmentCount: number;
+    selectedAtomIds: string[];
+    selectedEdgeIds: string[];
+    fallbackReason?: 'no_graph_answer_plan' | 'empty_graph_answer_plan';
+}
+
 export interface RagContextPack {
     replayId?: string;
     query: string;
@@ -431,6 +440,7 @@ export interface RagContextPack {
     sourceDecisions: RagSourceDecision[];
     totalCharCount: number;
     tokenEstimate: number;
+    graphConditioning?: RagGraphConditioningTrace;
 }
 
 export interface RagSufficiencyReview {

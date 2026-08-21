@@ -179,7 +179,7 @@ rtk proxy npm.cmd test -- --runInBand src/mobile.profile.contract.test.ts src/pl
 rtk proxy npm.cmd run verify:mobile:slim:budget
 ```
 
-- [ ] **Step 6: Commit the portable mobile profile.**
+- [x] **Step 6: Commit the portable mobile profile.**
 
 ```powershell
 rtk git add src/platform/ExportProfile.ts src/platform/PlatformCapabilities.ts src/platform/RenderMaterializer.ts src/frontend/mobile_exact_analyzer.js src/frontend/storage_provider.js src/frontend/index.html src/frontend/path.html src-tauri/tauri.android.conf.json src-tauri/src/lib.rs capacitor.config.ts build_apk.bat scripts/run-tauri-android.js scripts/apply-tauri-android-pathmode.js src/mobile.profile.contract.test.ts scripts/prepare-mobile-slim.js scripts/verify-mobile-slim-budget.js package.json docs/diataxis/en/reference/multi-platform-build-flows.md docs/diataxis/zh/reference/multi-platform-build-flows.md

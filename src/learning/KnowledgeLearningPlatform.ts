@@ -142,6 +142,7 @@ import {
     mergeAgentConversationKnowledgePoints,
 } from './conversationComposer';
 import { assembleAgentConversationGraphContext } from './graphContextAssembler';
+import { buildGraphAnswerPlan } from './graphAnswerPlan';
 import { resolveGraphExpansionPolicy, type GraphExpansionPolicy } from './graphExpansionPolicy';
 import {
     assembleRagEvidenceContext,
@@ -6788,6 +6789,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         items: KnowledgeQueryItem[];
         graphNeighborItems: KnowledgeQueryItem[];
         graphContext: AgentConversationResponse['trace']['graphContext'] | null;
+        graphAnswerPlan?: NonNullable<AgentConversationResponse['graphAnswerPlan']>;
         generatedAt: string;
         budget: RagContextBudget;
         paragraphWindow?: number;
@@ -6800,6 +6802,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             sourceResolver: (lookup) => this.resolveRagEvidenceSourceDocument(lookup),
             budget: params.budget,
             paragraphWindow: params.paragraphWindow,
+            graphAnswerPlan: params.graphAnswerPlan,
         });
         const ragSufficiencyReview = await reviewRagContextSufficiency({
             query: params.query,
@@ -10294,6 +10297,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             ragEvidenceProfile.graphNeighborLimit,
             traceScope
         );
+        const preRagGraphAnswerPlan = buildGraphAnswerPlan({
+            message,
+            knowledgePoints: conversationKnowledgePoints,
+            graphContext,
+        });
         const graphExpansionTrace: AgentConversationResponse['trace']['graphExpansion'] = {
             ...graphExpansionPolicy,
             executedSteps: graphExpansionPolicy.enabled && graphNeighborItems.length > 0 ? 1 : 0,
@@ -10304,6 +10312,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             items: queryResult.items,
             graphNeighborItems,
             graphContext,
+            graphAnswerPlan: preRagGraphAnswerPlan,
             generatedAt,
             budget: ragEvidenceProfile.budget,
             paragraphWindow: ragEvidenceProfile.paragraphWindow,
@@ -10325,6 +10334,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 items: queryResult.items,
                 graphNeighborItems: recoveryGraphNeighborItems,
                 graphContext,
+                graphAnswerPlan: preRagGraphAnswerPlan,
                 generatedAt,
                 budget: AGENT_RAG_RECOVERY_CONTEXT_BUDGET,
                 paragraphWindow: AGENT_RAG_RECOVERY_PARAGRAPH_WINDOW,

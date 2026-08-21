@@ -1786,6 +1786,10 @@ describe('KnowledgeLearningPlatform', () => {
         }));
         expect(response.trace.graphAnswerPlan).toEqual(response.graphAnswerPlan);
         expect(response.trace.graphAnswerCoverage).toEqual(response.graphAnswerCoverage);
+        expect(response.trace.ragContextPack?.graphConditioning).toEqual(expect.objectContaining({
+            strategy: 'graph_answer_plan',
+            matchedClaimCount: expect.any(Number),
+        }));
 
         const groupedPoint = response.knowledgePoints[0] as any;
         expect(groupedPoint.title).toBe('Water Glass');

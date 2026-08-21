@@ -894,3 +894,11 @@ The routing change does not alter projection schemas, IPC fields, public IDs, st
 该路由调整不改变 projection schema、IPC 字段、public ID、存储格式或移动 payload。移除 Capacitor 仍需先审计下游与 CI 使用，本阶段也不会生成签名、SAF、continuity 或 RSS 原生证据。
 
 Phase 29 回归验证为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit、Tauri Rust 30 passed / 1 ignored、Fixrisk FR-001..FR-015 全部通过、Diataxis 与 `git diff --check` 通过。
+
+## 2026-08-21 Phase 30 Graph-Conditioned Context Assembly Walkthrough
+
+The conversation path now builds a pre-RAG `GraphAnswerPlan`, passes it through `graphConditionedContext`, and records the resulting bounded selection in `ragContextPack.graphConditioning`. Matching atoms and relation edges are preferred only after the existing role and score ordering; unmatched fragments remain available under the normal budget. Recovery uses the same plan, so the retry cannot silently change graph scope.
+
+本阶段的图回答计划在 RAG 前参与 fragment 选择，并通过 `ragContextPack.graphConditioning` 记录命中 claim、fragment、atom、edge 与 fallback。匹配只在既有 role/score 排序之后生效，未命中 fragment 仍受正常 budget 管理；恢复路径复用同一 plan，不会静默扩大图 scope。
+
+Focused verification: 25 learning suites / 510 passed, the platform conversation regression passed, 4 mobile profile/pipeline suites / 27 passed, TypeScript no-emit passed, and `git diff --check` passed. Native signed arm64, SAF/continuity, and RSS evidence remain explicitly not measured.
