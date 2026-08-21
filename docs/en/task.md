@@ -481,3 +481,14 @@ The harness deliberately executes only explicit `adbArgs` from a checked workloa
 - [x] Keep public IDs, snapshot/projection schemas, mobile runtime dependencies, and `mobile-slim` boundaries unchanged.
 - [ ] Archive versioned old-snapshot/cross-root/move-journal/collision/rollback manifests and replay them across every host adapter before canonical-ID cutover.
 - [~] Native G2/G3 remains open; the rollback pre-image adds transient memory proportional to the current graph and must be measured on the target low-memory profile.
+
+## 2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay
+
+- [x] Add `config/identity-corpus.v1.json` with eight required old-snapshot, same-content, cross-root/NFC, move-journal, collision, rollback, and four-owner cases.
+- [x] Add `scripts/verify-identity-corpus.js` to execute identity/persistence replay and invoke Web/Tauri/Capacitor/Android projection replay.
+- [x] Add a manifest contract test; reports are `host-code-replay` only, explicitly set `nativeDeviceEvidence: false`, include a stable result hash, and keep canonical public-ID cutover blocked.
+- [x] Replay result: 8 cases passed, 4 projection hosts passed; result hash `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`.
+- [x] Final regression: 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-emit, Rust 30 passed / 1 ignored, mobile-low budget, native recovery, projection replay, and Diataxis passed.
+- [x] Keep public IDs, snapshot/projection schemas, Bridge fields, mobile runtime dependencies, and `mobile-slim` unchanged.
+- [ ] Perform an independent canonical-ID migration review from the archived manifest; no public-ID switch is included here.
+- [~] Native G2/G3 remains separate: signed arm64 device execution, SAF/permission/retry, force-stop/reopen, and RSS `<= 256 MiB` are unavailable on this host.

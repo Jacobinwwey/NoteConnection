@@ -690,3 +690,14 @@ harness 只执行 workload spec 中明确列出的 `adbArgs`。这比任意 shel
 - [x] 保持 public ID、snapshot/projection schema、移动运行时依赖与 `mobile-slim` 边界不变。
 - [ ] 在 canonical-ID 切换前归档有版本的 old-snapshot/cross-root/move-journal/collision/rollback manifest，并跨所有 host adapter 回放。
 - [~] 原生 G2/G3 仍开放；rollback pre-image 会按当前 graph 产生瞬时内存开销，必须在目标低内存 profile 实测。
+
+## 2026-08-21 第 27 阶段：版本化 G4 identity corpus 回放
+
+- [x] 增加 `config/identity-corpus.v1.json`，声明八个 old-snapshot、same-content、cross-root/NFC、move-journal、collision、rollback 与四 owner 用例。
+- [x] 增加 `scripts/verify-identity-corpus.js`，实际执行 identity/persistence replay，并调用 Web/Tauri/Capacitor/Android projection replay。
+- [x] 增加 manifest contract test；报告只标记 `host-code-replay`，明确 `nativeDeviceEvidence: false`，包含稳定 result hash，并继续阻止 canonical public-ID 切换。
+- [x] 回放结果：8 个 case 通过，4 个 projection host 通过；result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`。
+- [x] 最终回归：149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay 与 Diataxis 通过。
+- [x] 保持 public ID、snapshot/projection schema、Bridge 字段、移动运行时依赖与 `mobile-slim` 不变。
+- [ ] 基于已归档 manifest 独立评审 canonical-ID 迁移；本阶段不切换 public ID。
+- [~] 原生 G2/G3 仍独立开放：签名 arm64 真机、SAF/权限/重试、force-stop/reopen 与 RSS `<= 256 MiB` 当前 host 仍无法提供。

@@ -1545,3 +1545,49 @@ Observed local evidence: slim profile 121 files / `4,275,083` uncompressed / `1,
 
 - 新增 mixed-batch rollback、显式 source alias 校验与 upsert alias ownership 回归，并保留既有 collision 与四 owner convergence fixture。
 - 发布前必须重新执行 TypeScript no-emit、全量 Jest、Rust、mobile-low staging、projection replay 与 Diataxis 检查，并记录当前精确计数。
+
+## 2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay
+
+### English
+
+#### Implementation
+
+1. `config/identity-corpus.v1.json` is the tracked, versioned corpus contract. It names eight required cases: legacy snapshot restore, same-content isolation, cross-root NFC identity, NFC/case collision rejection, move-journal restart with old-alias deletion, mixed-batch rollback, four-owner convergence, and upsert alias collision rejection.
+2. `scripts/verify-identity-corpus.js` executes those cases against the real `Graph`, `ResourceIdentity`, `KnowledgeLearningPlatform`, and file-backed snapshot store. It then invokes `verify-mobile-projection-replay.js` and requires `web`, `tauri`, `capacitor`, and `android` host results.
+3. The report is intentionally host-code evidence: it records `evidenceLevel: host-code-replay`, `nativeDeviceEvidence: false`, `canonicalPublicIdCutover: blocked`, and a stable result hash. Generated reports remain under ignored `output/verification/identity-corpus/`; the versioned contract and result hash are recorded in the tracked progress docs.
+
+#### Architecture and trade-offs
+
+- The corpus is a release gate, not a second identity implementation. Test vectors call production owners, so a future public-ID migration cannot pass by satisfying a mock-only verifier.
+- The four-host projection replay is included as a separate host boundary. It proves projection adapter parity, not signed Android execution, process-death recovery, or RSS. This distinction prevents static replay evidence from being promoted to native acceptance.
+- The manifest keeps public IDs and schemas frozen. The cost is maintaining explicit vectors and a deterministic hash whenever identity invariants intentionally change; that cost is preferable to undocumented fixture drift.
+
+#### Verification and remaining gates
+
+- `npm run verify:identity:corpus`: 8 cases passed and 4 projection hosts passed; result hash `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`.
+- Final regression: 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-emit, Rust 30 passed / 1 ignored, mobile-low budget, native recovery, projection replay, Diataxis, and `git diff --check` passed.
+- Manifest contract: 2 tests passed. TypeScript no-emit, full Jest, Rust, mobile-low budget, native-recovery, projection replay, and Diataxis remain required release checks.
+- Canonical public-ID migration remains a separate review. Native G2/G3 still requires signed arm64 hardware, SAF/permission/retry, force-stop/reopen, and measured RSS `<= 256 MiB`.
+
+## 2026-08-21 第 27 阶段：版本化 G4 identity corpus 回放
+
+### 中文
+
+#### 实施
+
+1. `config/identity-corpus.v1.json` 是受版本控制的 corpus contract，声明八个必需用例：legacy snapshot restore、same-content isolation、cross-root NFC identity、NFC/case collision rejection、move-journal restart + old-alias deletion、mixed-batch rollback、four-owner convergence 与 upsert alias collision rejection。
+2. `scripts/verify-identity-corpus.js` 使用真实 `Graph`、`ResourceIdentity`、`KnowledgeLearningPlatform` 与 file-backed snapshot store 执行用例，再调用 `verify-mobile-projection-replay.js`，强制要求 `web`、`tauri`、`capacitor`、`android` 四 host 结果。
+3. 报告明确只属于 host-code 证据：记录 `evidenceLevel: host-code-replay`、`nativeDeviceEvidence: false`、`canonicalPublicIdCutover: blocked` 与稳定 result hash。动态报告写入被 gitignore 的 `output/verification/identity-corpus/`；版本化 contract 与结果 hash 写入受跟踪的进度文档。
+
+#### 架构与权衡
+
+- Corpus 是 release gate，不是第二套 identity 实现。测试向量直接调用生产 owner，避免未来 public-ID 迁移通过 mock-only verifier。
+- 四 host projection replay 作为独立 host boundary 纳入，证明 projection adapter parity，但不证明签名 Android 执行、进程死亡恢复或 RSS。这样不会把静态 replay 证据误升格为原生验收。
+- Manifest 保持 public ID 与 schema 冻结。代价是 identity invariant 有意变化时必须维护显式 vector 与 deterministic hash，但这优于未文档化的 fixture 漂移。
+
+#### 验证与剩余门禁
+
+- `npm run verify:identity:corpus`：8 个 case 通过，4 个 projection host 通过；result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`。
+- 最终回归：149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay、Diataxis 与 `git diff --check` 通过。
+- Manifest contract：2 tests passed。TypeScript no-emit、全量 Jest、Rust、mobile-low budget、native-recovery、projection replay 与 Diataxis 仍是 release 必需检查。
+- Canonical public-ID 迁移仍需独立评审。原生 G2/G3 仍需签名 arm64 硬件、SAF/权限/重试、force-stop/reopen 与实测 RSS `<= 256 MiB`。

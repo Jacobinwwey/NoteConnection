@@ -38,6 +38,7 @@
     "verify:mobile:artifact:release": "node scripts/verify-mobile-artifact.js --require-rss --require-arm64 --require-arm64-only --require-signed",
     "verify:mobile:projection-replay": "node scripts/verify-mobile-projection-replay.js",
     "verify:mobile:native-recovery": "node scripts/verify-mobile-native-recovery.js",
+    "verify:identity:corpus": "node scripts/verify-identity-corpus.js",
     "capture:tauri:android:evidence": "node scripts/capture-tauri-android-rss-evidence.js",
     "build": "node scripts/copy-reader-runtime-assets.js && tsc && node scripts/bundle_path_core.js && node scripts/copy-assets.js && node scripts/sync-wasm-parity-artifact.js",
     "build:mini": "node scripts/copy-reader-runtime-assets.js && tsc && node scripts/bundle_path_core.js && node scripts/copy-assets.js --mini && node scripts/sync-wasm-parity-artifact.js",

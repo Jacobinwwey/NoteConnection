@@ -347,3 +347,11 @@ Release workflow 将打包与验收分离：签名 arm64 APK/AAB 先是 workflow
 实现复用现有 snapshot/replay contract，因此 public ID、projection schema、Bridge 字段与 runtime-first 移动包保持不变。瞬时内存及 JSON clone/restore 延迟会随 graph 增长，原生低内存验收必须使用有界 batch 并记录 RSS。版本化 G4 manifest 与签名 arm64 证据仍是 release 门禁。
 
 当前验证为 148 个 Jest suite / 1,287 passed / 26 skipped、Rust 30 passed / 1 ignored、TypeScript no-emit、122 文件 mobile-low staging、4 host projection replay、8 个 native-recovery scenario、Diataxis 与 `git diff --check`。
+
+## 2026-08-21 第 27 阶段：版本化 G4 identity corpus 回放 Walkthrough
+
+`config/identity-corpus.v1.json` 定义受跟踪的 G4 contract。验证器执行八个生产路径用例：legacy snapshot 原子恢复、同内容隔离、跨 root NFC 规范化、NFC/case collision rejection、move-journal 重启并通过旧 alias 删除、mixed-batch rollback、四 owner 收敛与 upsert alias collision rejection，随后强制执行 Web/Tauri/Capacitor/Android projection replay。
+
+8 个 case 与 4 个 host 全部通过，稳定 result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`。报告标记 `host-code-replay` 与 `nativeDeviceEvidence: false`，不代表签名真机、进程死亡或 RSS 通过。Public-ID 迁移仍需独立评审，G2/G3 仍需签名 arm64、SAF/重试/continuity 与 RSS 证据。
+
+最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay、Diataxis 与 `git diff --check` 通过。

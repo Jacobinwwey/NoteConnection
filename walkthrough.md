@@ -862,3 +862,23 @@ Current verification is 148 Jest suites / 1,287 passed / 26 skipped, Rust 30 pas
 实现复用现有 snapshot/replay contract，因此 public ID、projection schema、Bridge 字段与 runtime-first 移动包保持不变。代价是与当前 graph 成比例的瞬时内存及 JSON clone/restore 延迟；原生低内存验收必须用有界 import batch 实测。版本化 G4 manifest 与签名 arm64/RSS 证据仍是 release 门禁。
 
 当前验证为 148 个 Jest suite / 1,287 passed / 26 skipped、Rust 30 passed / 1 ignored、TypeScript no-emit、122 文件 mobile-low staging、4 host projection replay、8 个 native-recovery scenario、Diataxis 与 `git diff --check`。
+
+## 2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay Walkthrough
+
+`config/identity-corpus.v1.json` now defines the tracked G4 contract instead of leaving identity evidence distributed across individual tests. The verifier runs eight production-path cases: legacy snapshot atomic restore, same-content isolation, cross-root NFC normalization, NFC/case collision rejection, move-journal restart plus deletion through the old alias, mixed-batch rollback, four-owner convergence, and upsert alias collision rejection.
+
+It then runs the existing projection replay and requires `web`, `tauri`, `capacitor`, and `android`. The run passed all 8 cases and all 4 hosts. Its stable result hash is `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`. The generated report says `host-code-replay` and `nativeDeviceEvidence: false`; it is not a signed-device, process-death, or RSS claim.
+
+This phase keeps the public ID and all snapshot/projection/mobile contracts unchanged. Canonical-ID migration is still a separate review, and native G2/G3 remains gated by signed arm64 hardware, SAF/permission/retry, force-stop/reopen, and measured RSS.
+
+Final regression is 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-emit, Rust 30 passed / 1 ignored, mobile-low budget, native recovery, projection replay, Diataxis, and `git diff --check` passed.
+
+## 2026-08-21 第 27 阶段：版本化 G4 identity corpus 回放 Walkthrough
+
+`config/identity-corpus.v1.json` 现在定义受跟踪的 G4 contract，identity 证据不再分散在单个测试中。验证器执行八个生产路径用例：legacy snapshot 原子恢复、同内容隔离、跨 root NFC 规范化、NFC/case collision rejection、move-journal 重启并通过旧 alias 删除、mixed-batch rollback、四 owner 收敛与 upsert alias collision rejection。
+
+随后执行既有 projection replay，并强制要求 `web`、`tauri`、`capacitor`、`android` 四 host。8 个 case 与 4 个 host 全部通过，稳定 result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`。报告标记 `host-code-replay` 与 `nativeDeviceEvidence: false`，不代表签名真机、进程死亡或 RSS 通过。
+
+本阶段保持 public ID 及所有 snapshot/projection/mobile contract 不变。Canonical-ID 迁移仍需独立评审，原生 G2/G3 仍受签名 arm64、SAF/权限/重试、force-stop/reopen 与 RSS 实测门禁约束。
+
+最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay、Diataxis 与 `git diff --check` 通过。

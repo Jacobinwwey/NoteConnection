@@ -854,3 +854,27 @@ Keep one additive runtime budget projection for WebView/Capacitor while retainin
 - [x] 保持所有向前兼容边界：不改变 public ID、snapshot/projection schema，不加入 Node sidecar、数据库、模型、Godot asset 或 mobile-slim 依赖。
 - [ ] 在 canonical-ID 切换前归档有版本的 old-snapshot/cross-root/move-journal/collision/rollback manifest，并跨所有 host adapter 回放。
 - [~] 原生 G2/G3 仍需获批 signing、arm64 硬件、SAF/query/path workload、force-stop/reopen continuity、失败重试证据与 RSS `<= 256 MiB`；rollback pre-image 会按当前 graph 产生瞬时内存开销，必须在目标 profile 实测。
+
+## 2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay
+
+### English
+
+- [x] Add `config/identity-corpus.v1.json` with eight required old-snapshot, same-content, cross-root/NFC, move-journal, collision, rollback, and four-owner cases.
+- [x] Add `scripts/verify-identity-corpus.js` to execute the TypeScript identity/persistence replay and invoke the four-host Web/Tauri/Capacitor/Android projection replay.
+- [x] Add a manifest contract test; the verifier emits `evidenceLevel: host-code-replay`, `nativeDeviceEvidence: false`, a stable result hash, and keeps canonical public-ID cutover blocked.
+- [x] Replay result: 8 cases passed, 4 projection hosts passed; result hash `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`.
+- [x] Final regression after this phase: 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-emit, Rust 30 passed / 1 ignored, mobile-low budget, native recovery, projection replay, and Diataxis passed.
+- [x] Keep public IDs, snapshot/projection schemas, Bridge fields, mobile runtime dependencies, and `mobile-slim` unchanged.
+- [ ] Perform an independent canonical-ID migration review using the archived manifest; no public-ID switch is included in this phase.
+- [~] Native G2/G3 remains separate: signed arm64 device execution, SAF/permission/retry, force-stop/reopen, and RSS `<= 256 MiB` are still unavailable on this host.
+
+### 中文
+
+- [x] 增加 `config/identity-corpus.v1.json`，声明八个 old-snapshot、same-content、cross-root/NFC、move-journal、collision、rollback 与四 owner 用例。
+- [x] 增加 `scripts/verify-identity-corpus.js`，实际执行 TypeScript identity/persistence replay，并调用 Web/Tauri/Capacitor/Android 四 host projection replay。
+- [x] 增加 manifest contract test；验证器输出 `evidenceLevel: host-code-replay`、`nativeDeviceEvidence: false` 与稳定 result hash，并继续阻止 canonical public-ID 切换。
+- [x] 回放结果：8 个 case 通过，4 个 projection host 通过；result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`。
+- [x] 本阶段最终回归：149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay 与 Diataxis 通过。
+- [x] 保持 public ID、snapshot/projection schema、Bridge 字段、移动运行时依赖与 `mobile-slim` 不变。
+- [ ] 基于已归档 manifest 独立评审 canonical-ID 迁移；本阶段不切换 public ID。
+- [~] 原生 G2/G3 仍独立开放：签名 arm64 真机、SAF/权限/重试、force-stop/reopen 与 RSS `<= 256 MiB` 当前 host 仍无法提供。

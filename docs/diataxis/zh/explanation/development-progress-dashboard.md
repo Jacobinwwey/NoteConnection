@@ -1951,3 +1951,11 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - rollback 覆盖 graph record、resource/workspace/index owner、identity journal、telemetry 与 ID allocation；`upsert`/`move` 的 alias ownership、显式 source alias、歧义与必需 owner 均在边界校验。
 - mixed-batch G4 回归证明后续 collision 后不可观察到部分 move。Public ID、projection schema、Bridge 字段与 mobile-slim 依赖保持不变。
 - 代价是与 graph 成比例的瞬时内存及 clone/restore 延迟；原生低内存验收必须使用有界 batch 与真实 RSS。版本化 replay manifest 仍是开放门禁。
+
+## 2026-08-21 第 27 阶段：版本化 G4 identity corpus 回放
+
+- `config/identity-corpus.v1.json` 现在跟踪八个 identity/persistence 用例，不再依赖分散的测试名称。
+- `scripts/verify-identity-corpus.js` 执行生产 identity owner，并强制 Web/Tauri/Capacitor/Android 四 host projection replay。
+- 8 个 case 与 4 个 host 通过，result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`；证据级别是 `host-code-replay`，不是原生设备证据。
+- Public-ID 切换仍需独立评审并保持阻塞。签名 arm64 执行、SAF/重试/continuity 与 RSS 仍是独立 G2/G3 门禁。
+- 最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust、mobile budget、projection replay、native recovery 与 Diataxis 通过。

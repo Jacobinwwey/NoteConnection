@@ -356,3 +356,11 @@ The boundary validates `upsert` and `move` ownership: duplicate path/URI/aliases
 The implementation reuses the existing snapshot/replay contract, leaving public IDs, projection schemas, Bridge fields, and the runtime-first mobile package unchanged. Transient memory and JSON clone/restore latency grow with the current graph, so low-memory native acceptance must use bounded batches and record RSS. Versioned G4 manifests and signed arm64 evidence remain release gates.
 
 Current verification is 148 Jest suites / 1,287 passed / 26 skipped, Rust 30 passed / 1 ignored, TypeScript no-emit, 122-file mobile-low staging, four-host projection replay, eight native-recovery scenarios, Diataxis, and `git diff --check`.
+
+## 2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay Walkthrough
+
+`config/identity-corpus.v1.json` defines the tracked G4 contract. The verifier runs eight production-path cases: legacy snapshot atomic restore, same-content isolation, cross-root NFC normalization, NFC/case collision rejection, move-journal restart plus old-alias deletion, mixed-batch rollback, four-owner convergence, and upsert alias collision rejection. It then requires the existing Web/Tauri/Capacitor/Android projection replay.
+
+All 8 cases and 4 hosts passed. The stable result hash is `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`. The report is `host-code-replay` with `nativeDeviceEvidence: false`, so it is not a signed-device, process-death, or RSS claim. Public-ID migration remains a separate review; G2/G3 still require signed arm64 hardware, SAF/retry/continuity, and RSS evidence.
+
+Final regression is 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-emit, Rust 30 passed / 1 ignored, mobile-low budget, native recovery, projection replay, Diataxis, and `git diff --check` passed.

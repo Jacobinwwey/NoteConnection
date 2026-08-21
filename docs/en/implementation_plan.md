@@ -849,3 +849,11 @@ Identity ownership is checked at the boundary for both `upsert` and `move`. Path
 This closes the Phase 25 partial-commit gap without changing public IDs, snapshot/projection schemas, Bridge fields, or the runtime-first mobile package. The trade-off is transient memory proportional to the graph plus JSON clone/restore latency; low-memory acceptance must measure it with bounded batches. Versioned old-snapshot/cross-root/move-journal/collision/rollback manifests and native signed-arm64/RSS evidence remain required before public-ID, SQLite/WASM, Godot, budget, or strict-default route promotion.
 
 Current verification: TypeScript no-emit passed; 148 Jest suites passed with 1,287 passed and 26 skipped; Rust passed with 30 passed and 1 ignored; mobile-low staging passed at 122 files / 4,283,033 uncompressed / 1,552,689 estimated compressed bytes; projection replay passed for 4 hosts; native recovery passed 8 scenarios; Diataxis passed with 18 entries / 36 paths / 64 canonical references; `git diff --check` passed.
+
+## 2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay
+
+`config/identity-corpus.v1.json` is now the tracked corpus contract for eight cases: legacy snapshot restore, same-content isolation, cross-root NFC identity, NFC/case collision rejection, move-journal restart with old-alias deletion, mixed-batch rollback, four-owner convergence, and upsert alias collision rejection. `scripts/verify-identity-corpus.js` executes production `Graph`, `ResourceIdentity`, `KnowledgeLearningPlatform`, and file-store paths, then requires the four-host projection replay.
+
+The report is explicitly `host-code-replay` with `nativeDeviceEvidence: false` and `canonicalPublicIdCutover: blocked`. The run passed 8 cases and 4 projection hosts with result hash `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`; the manifest contract passed 2 tests. This is a release evidence boundary, not native Android acceptance. Public-ID migration still requires independent review; G2/G3 still require signed arm64, SAF/retry/continuity, and RSS evidence.
+
+Final regression is 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-emit, Rust 30 passed / 1 ignored, mobile-low budget, native recovery, projection replay, and Diataxis passed.

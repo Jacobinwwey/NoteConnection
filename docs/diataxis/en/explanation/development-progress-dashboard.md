@@ -1923,3 +1923,11 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - Rollback covers graph records, resource/workspace/index owners, identity journal, telemetry, and ID allocation. `upsert`/`move` alias ownership, explicit source aliases, ambiguity, and required owner presence are checked at the boundary.
 - The mixed-batch G4 regression proves no partial move is visible after a later collision. Public IDs, projection schemas, Bridge fields, and mobile-slim dependencies remain unchanged.
 - The trade-off is transient graph-proportional memory and clone/restore latency; native low-memory acceptance must use bounded batches and real RSS evidence. Versioned replay manifests remain open gates.
+
+## 2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay
+
+- `config/identity-corpus.v1.json` now tracks eight identity/persistence cases instead of relying on scattered test names.
+- `scripts/verify-identity-corpus.js` executes production identity owners and requires the four-host Web/Tauri/Capacitor/Android projection replay.
+- 8 cases and 4 hosts passed with result hash `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`; evidence is `host-code-replay`, not native-device evidence.
+- Public-ID cutover remains blocked pending independent review. Signed arm64 execution, SAF/retry/continuity, and RSS remain separate G2/G3 gates.
+- Final regression is 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-emit, Rust, mobile budget, projection replay, native recovery, and Diataxis passed.

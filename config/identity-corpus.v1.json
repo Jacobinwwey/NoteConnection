@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "corpusId": "noteconnection-identity-g4-v1",
+  "compatibility": {
+    "publicIdsChanged": false,
+    "snapshotSchemaChanged": false,
+    "projectionSchemaChanged": false,
+    "mobileRuntimeChanged": false
+  },
+  "requiredCases": [
+    "legacy_snapshot_restore",
+    "same_content_isolation",
+    "cross_root_nfc_identity",
+    "nfc_case_collision_rejection",
+    "move_journal_restart_alias_delete",
+    "mixed_batch_rollback",
+    "four_owner_convergence",
+    "upsert_alias_collision_rejection"
+  ],
+  "requiredProjectionHosts": [
+    "web",
+    "tauri",
+    "capacitor",
+    "android"
+  ],
+  "gates": {
+    "canonicalPublicIdCutover": "blocked_until_all_cases_and_projection_hosts_pass",
+    "nativeDeviceEvidence": "separate_gate",
+    "rssEvidence": "separate_gate"
+  }
+}

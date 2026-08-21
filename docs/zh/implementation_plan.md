@@ -1321,3 +1321,11 @@ identity ownership 在 `upsert` 与 `move` 的边界统一校验。path/URI/alia
 本阶段关闭 Phase 25 的 partial-commit 缺口，不改变 public ID、snapshot/projection schema、Bridge 字段或 runtime-first 移动包。代价是与 graph 成比例的瞬时内存及 JSON clone/restore 延迟；低内存验收必须使用有界 batch 实测。在 public-ID、SQLite/WASM、Godot、预算或 strict-default route 提升前，仍需有版本 old-snapshot/cross-root/move-journal/collision/rollback manifest 与原生签名 arm64/RSS 证据。
 
 当前验证：TypeScript no-emit 通过；148 个 Jest suite 通过，1,287 passed、26 skipped；Rust 通过，30 passed、1 ignored；mobile-low staging 通过，为 122 文件 / 未压缩 4,283,033 / 估算压缩 1,552,689 bytes；projection replay 通过（4 hosts）；native recovery 通过（8 scenarios）；Diataxis 通过（18 entries / 36 paths / 64 canonical references）；`git diff --check` 通过。
+
+## 2026-08-21 第 27 阶段：版本化 G4 identity corpus 回放
+
+`config/identity-corpus.v1.json` 现在是受跟踪的八用例 corpus contract，覆盖 legacy snapshot restore、same-content isolation、cross-root NFC identity、NFC/case collision rejection、move-journal restart + old-alias deletion、mixed-batch rollback、four-owner convergence 与 upsert alias collision rejection。`scripts/verify-identity-corpus.js` 执行生产 `Graph`、`ResourceIdentity`、`KnowledgeLearningPlatform` 与 file store 路径，再强制执行四 host projection replay。
+
+报告明确标记为 `host-code-replay`、`nativeDeviceEvidence: false`、`canonicalPublicIdCutover: blocked`。本次 8 个 case 与 4 个 projection host 通过，result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`；manifest contract 通过 2 tests。这是 release evidence boundary，不是 Android 真机验收。Public-ID 迁移仍需独立评审；G2/G3 仍需签名 arm64、SAF/重试/continuity 与 RSS 证据。
+
+最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay 与 Diataxis 通过。

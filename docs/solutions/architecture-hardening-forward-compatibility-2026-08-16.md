@@ -420,3 +420,23 @@ This is deliberately implemented by reusing the current snapshot/replay contract
 实现复用当前 snapshot/replay contract，保持 public ID、projection schema、Bridge 字段与 runtime-first 移动包不变；代价是与 graph 大小成正比的瞬时内存和 JSON clone/restore 延迟。因此原生低内存验收需要有界 batch 与真实 RSS 证据。在 canonical-ID、SQLite/WASM、Godot、预算或 route-registry 提升前，仍需归档有版本的 old-snapshot/cross-root/move-journal/collision/rollback manifest。
 
 当前验证：TypeScript no-emit 通过；148 个 Jest suite / 1,287 passed / 26 skipped；Rust 30 passed / 1 ignored；mobile-low staging 122 文件 / 4,283,033 未压缩 / 1,552,689 估算压缩 bytes；4 host projection replay；8 个 native-recovery scenario；Diataxis 与 `git diff --check` 均通过。
+
+## 2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay
+
+### English
+
+The G4 identity evidence is now a tracked contract instead of an unbounded collection of test names. `config/identity-corpus.v1.json` requires eight cases covering legacy snapshot atomic restore, same-content isolation, cross-root NFC identity, NFC/case collision rejection, move-journal restart and old-alias deletion, mixed-batch rollback, four-owner convergence, and upsert alias collision rejection.
+
+`scripts/verify-identity-corpus.js` executes production TypeScript owners and then invokes the four-host projection replay. The run passed 8 cases and `web`, `tauri`, `capacitor`, and `android`; result hash `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`. The report is explicitly `evidenceLevel: host-code-replay`, sets `nativeDeviceEvidence: false`, and leaves `canonicalPublicIdCutover: blocked`.
+
+This closes the versioned host-code corpus gate without changing public IDs, snapshot/projection schemas, Bridge fields, or mobile payloads. It does not close signed-device, process-death, SAF permission/retry, or RSS gates; canonical-ID migration remains an independent review.
+
+### 中文
+
+G4 identity 证据现在成为受跟踪的 contract，而不是分散且无上限的测试名称集合。`config/identity-corpus.v1.json` 要求八个用例，覆盖 legacy snapshot 原子恢复、同内容隔离、跨 root NFC identity、NFC/case collision rejection、move-journal 重启与旧 alias 删除、mixed-batch rollback、四 owner 收敛和 upsert alias collision rejection。
+
+`scripts/verify-identity-corpus.js` 执行生产 TypeScript owner，再调用四 host projection replay。本次 8 个 case 与 `web`、`tauri`、`capacitor`、`android` 全部通过；result hash 为 `4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb`。报告明确标记 `evidenceLevel: host-code-replay`、`nativeDeviceEvidence: false`，并保持 `canonicalPublicIdCutover: blocked`。
+
+本阶段关闭了版本化 host-code corpus 门禁，但不改变 public ID、snapshot/projection schema、Bridge 字段或移动 payload。签名真机、进程死亡、SAF 权限/重试和 RSS 门禁仍未闭合；canonical-ID 迁移继续独立评审。
+
+最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay 与 Diataxis 通过。
