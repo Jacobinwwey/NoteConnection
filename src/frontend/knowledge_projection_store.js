@@ -10,7 +10,15 @@
     'use strict';
 
     const STORE_VERSION = 1;
-    const DEFAULT_MAX_BYTES = 48 * 1024 * 1024;
+    const FALLBACK_MAX_BYTES = 48 * 1024 * 1024;
+
+    function defaultMaxBytes() {
+        const root = typeof globalThis !== 'undefined' ? globalThis : null;
+        const runtime = root && root.NoteConnectionMobileBudget && root.NoteConnectionMobileBudget.runtime;
+        return runtime && Number.isInteger(runtime.maxProjectionBytes) && runtime.maxProjectionBytes > 0
+            ? runtime.maxProjectionBytes
+            : FALLBACK_MAX_BYTES;
+    }
 
     function requireProjectionContract() {
         if (!projectionContract || typeof projectionContract.replayKnowledgeProjection !== 'function') {
@@ -74,7 +82,7 @@
             return createMemoryProjectionStore(normalizedOptions.initialProjection, normalizedOptions);
         }
 
-        const maxBytes = Math.max(1024, Math.floor(Number(normalizedOptions.maxBytes) || DEFAULT_MAX_BYTES));
+        const maxBytes = Math.max(1024, Math.floor(Number(normalizedOptions.maxBytes) || defaultMaxBytes()));
         let cached = normalizedOptions.initialProjection === undefined || normalizedOptions.initialProjection === null
             ? null
             : normalizeProjection(normalizedOptions.initialProjection, normalizedOptions);
@@ -196,7 +204,7 @@
 
     return Object.freeze({
         storeVersion: STORE_VERSION,
-        defaultMaxBytes: DEFAULT_MAX_BYTES,
+        defaultMaxBytes: FALLBACK_MAX_BYTES,
         createProjectionStore,
         createMemoryProjectionStore,
         createPersistentProjectionStore,

@@ -38,7 +38,16 @@ describe('capacitor runtime parity closure contract', () => {
 
   test('storage provider keeps capacitor local build fallback path', () => {
     const source = fs.readFileSync(storageProviderPath, 'utf8');
-    expect(source).toContain('CAPACITOR_GRAPH_BUILD_MAX_FILES');
+    expect(source).toContain('getMobileRuntimeBudget');
+    expect(source).toContain('measureUtf8Bytes');
+    expect(source).toContain('maxBytes: getMobileRuntimeBudget().maxDocumentBytes');
+    expect(source).toContain('maxBytes: getMobileRuntimeBudget().maxProjectionBytes');
+    expect(source).toContain('maxDocuments');
+    expect(source).toContain('maxBytes: budget.maxDocumentBytes');
+    expect(source).toContain('maxTotalInputBytes');
+    expect(source).toContain('maxDepth');
+    expect(source).toContain('const entryDepth = currentDepth + 1;');
+    expect(source).toContain("MOBILE_BUDGET_EXCEEDED");
     expect(source).toContain('collectCapacitorMarkdownFiles');
     expect(source).toContain('buildCapacitorGraphData');
     expect(source).toContain('buildCapacitorGraphDataWithWorkerFallback');
@@ -51,7 +60,7 @@ describe('capacitor runtime parity closure contract', () => {
     expect(source).toContain('supportsMobileWasmCompute');
     expect(source).toContain('mobileWasmReason');
     expect(source).toContain('capacitorBuildGraph');
-    expect(source).toContain("return await capacitorReadText(normalized);");
+    expect(source).toContain("return await capacitorReadText(normalized, {");
   });
 
   test('source panel no longer hard-blocks capacitor load action before cache/build flow', () => {

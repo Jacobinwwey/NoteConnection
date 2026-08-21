@@ -652,3 +652,20 @@ harness 只执行 workload spec 中明确列出的 `adbArgs`。这比任意 shel
 - [~] 原生 G2/G3 仍需获批 key、在线 arm64 设备、SAF workload、force-stop/reopen continuity、存储/权限重试证据与 `VmRSS <= 256 MiB`。
 - [~] `universal` 还不是 ABI 事实：当前归档只发现 `arm64-v8a` native payload。声明 universal 前应改名为 `arm64` 或增加逐 ABI 验证。
 - [~] input、projection、native output、磁盘 staging 与 RSS 必须分开预算；admission limit 不能证明低内存行为。
+
+## 2026-08-18 第 23 阶段：版本化移动预算契约与 arm64 语义对齐
+
+- [x] 增加 `config/mobile-budget.v1.json` 与校验 loader，供 slim staging、APK/AAB verifier 与生成 manifest 共用。
+- [x] Rust atomic write 前执行 48 MiB serialized projection ceiling，Android `read_node_content` 复用 16 MiB bounded reader。
+- [x] release workflow 改为构建并命名 `aarch64`/arm64 产物；universal 继续只是显式本地 opt-in。
+- [x] 增加 JS/Rust budget drift contract 与超大正文回归测试。
+- [~] 原生 G2/G3 仍需获批签名、在线 arm64 设备、SAF workload、重启/重试证据与实测 RSS `<= 256 MiB`。
+
+## 2026-08-21 第 24 阶段：跨 host runtime budget 投影与原生证据隔离
+
+- [x] 在 storage provider 之前加载轻量 browser budget projection，并由版本化 JSON contract 校验一致性。
+- [x] Capacitor 两种构图路径统一执行 UTF-8 字节、文档数、深度、边数和 projection 上限；在 stat/read 边界拒绝超大正文。
+- [x] Tauri 增加 bootstrap/IPC asset guard，Android evidence manifest 增加 ABI/RAM provenance。
+- [x] 签名 arm64 Android 产物先作为 workflow artifact，只有显式 self-hosted workload 与 RSS job 成功后才发布移动 Release asset。
+- [x] 当前静态 mobile-low staging：122 个文件 / 未压缩 4,283,033 bytes / 估算压缩 1,552,689 bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`。
+- [~] 没有获批 signing key 与在线获批 arm64 硬件，原生 G2/G3 仍开放。

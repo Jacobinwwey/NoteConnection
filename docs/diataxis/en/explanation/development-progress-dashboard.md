@@ -1895,3 +1895,17 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - Only `arm64-v8a` native payload was observed; `universal` remains an unverified label. Rename to `arm64` or add per-ABI verification before claiming universal support.
 - Keep input, projection, native output, staging disk, and RSS budgets separate. Native G2/G3 still requires an approved key, online arm64 workload, SAF/retry/continuity evidence, artifact provenance, and peak RSS `<= 256 MiB`.
 - Do not promote public IDs, SQLite/WASM defaulting, Godot inclusion, or budget changes until the native archive exists. Admission limits are not memory proof.
+
+## 2026-08-18 Phase 23 Versioned Mobile Budget Contract and Arm64 Truthfulness
+
+- `config/mobile-budget.v1.json` is now consumed by slim staging, APK/AAB verification, and the generated manifest; runtime limits are versioned and visible in evidence.
+- Rust rejects serialized Android projections over 48 MiB before atomic replacement and reuses the 16 MiB bounded reader for Android content requests.
+- The release job now targets and names `aarch64`/arm64. Universal remains an explicit local opt-in, not a release ABI claim.
+- JS/Rust drift contracts and oversized-content regression coverage pass. Native signing/device/SAF/restart/retry/RSS evidence remains open.
+
+## 2026-08-21 Phase 24 Cross-Host Runtime Budget Projection and Native Evidence Separation
+
+- The browser-sized `NoteConnectionMobileBudget` projection now loads before the storage provider; Capacitor uses UTF-8 byte limits, stat-before-read when available, and a decoded-text fallback for SAF implementations without stat.
+- Document count, per-document/total bytes, depth, edges, and serialized projection limits are enforced in worker and single-thread paths. Tauri rejects oversized generated assets before bootstrap/IPC reads.
+- Android evidence requires exact `arm64-v8a`, measurable RAM within the selected profile ceiling, and records ABI/RAM provenance. Static signed artifacts remain workflow artifacts; Release upload requires the explicit self-hosted workload and RSS evidence.
+- Current staging is 122 files / 4,283,033 uncompressed / 1,552,689 estimated compressed bytes. Native G2/G3 remains pending without approved signing/device evidence.

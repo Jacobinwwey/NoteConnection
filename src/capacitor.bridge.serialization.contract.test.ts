@@ -8,7 +8,7 @@ describe('capacitor bridge serialization contract', () => {
   test('capacitor graph payload writes are chunked and bounded for bridge safety', () => {
     const source = fs.readFileSync(storageProviderPath, 'utf8');
     expect(source).toContain('CAPACITOR_BRIDGE_MAX_CHUNK_BYTES');
-    expect(source).toContain('CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES');
+    expect(source).toContain('getMobileRuntimeBudget().maxProjectionBytes');
     expect(source).toContain('splitCapacitorPayloadIntoChunks');
     expect(source).toContain('writeCapacitorChunkSequenceToDirectory');
     expect(source).toContain('appendFile');

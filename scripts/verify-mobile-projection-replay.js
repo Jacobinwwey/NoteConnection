@@ -10,13 +10,14 @@ const projectionContract = require(path.join(__dirname, '..', 'src', 'frontend',
 const projectionStore = require(path.join(__dirname, '..', 'src', 'frontend', 'knowledge_projection_store.js'));
 const exactAnalyzer = require(path.join(__dirname, '..', 'src', 'frontend', 'mobile_exact_analyzer.js'));
 const semanticComparator = require(path.join(__dirname, '..', 'src', 'frontend', 'mobile_semantic_comparator.js'));
+const { MOBILE_BUDGET_CONTRACT } = require('./mobile-budget-contract');
 
 global.window = {};
 global.NoteConnectionMobileIdentity = require(path.join(__dirname, '..', 'src', 'frontend', 'mobile_identity_contract.js'));
 const capacitorProvider = require(path.join(__dirname, '..', 'src', 'frontend', 'storage_provider.js'));
 
 const HOSTS = ['web', 'tauri', 'capacitor', 'android'];
-const MAX_PROJECTION_BYTES = 48 * 1024 * 1024;
+const MAX_PROJECTION_BYTES = MOBILE_BUDGET_CONTRACT.runtime.maxProjectionBytes;
 
 function createFixture() {
   return projectionContract.createKnowledgeProjection({

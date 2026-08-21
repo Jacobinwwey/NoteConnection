@@ -14,6 +14,8 @@ describe('Tauri Android device evidence contract', () => {
       requiredSteps: string[];
       steps: Array<{ name: string; adbArgs: string[] }>;
     };
+    parseAbiList: (output: string) => string[];
+    parseTotalRamBytes: (output: string) => number;
   };
   let fixtureRoot: string;
 
@@ -80,11 +82,20 @@ describe('Tauri Android device evidence contract', () => {
     expect(script.parsePid('')).toBe(0);
   });
 
+  test('requires measurable arm64 hardware budget inputs', () => {
+    expect(script.parseAbiList('arm64-v8a, armeabi-v7a\n')).toEqual(['arm64-v8a', 'armeabi-v7a']);
+    expect(script.parseAbiList('')).toEqual([]);
+    expect(script.parseTotalRamBytes('MemTotal:       2097152 kB\n')).toBe(2097152 * 1024);
+    expect(script.parseTotalRamBytes('MemTotal:       2097152 kB\r\n')).toBe(2097152 * 1024);
+    expect(script.parseTotalRamBytes('')).toBe(0);
+  });
+
   test('exposes signed artifact and RSS release gates in the package contract', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')) as {
       scripts?: Record<string, string>;
     };
     expect(packageJson.scripts?.['verify:mobile:artifact:release']).toContain('--require-signed');
+    expect(packageJson.scripts?.['verify:mobile:artifact:release']).toContain('--require-arm64-only');
     expect(packageJson.scripts?.['capture:tauri:android:evidence']).toContain('capture-tauri-android-rss-evidence.js');
   });
 
@@ -92,12 +103,36 @@ describe('Tauri Android device evidence contract', () => {
     const workflow = fs.readFileSync(releaseWorkflowPath, 'utf8');
 
     expect(workflow).toContain('Materialize Android release signing key');
+    expect(workflow).toContain('Build Android arm64 APK');
+    expect(workflow).toContain('NOTE_CONNECTION_TAURI_ANDROID_TARGET=aarch64');
+    expect(workflow).not.toContain('NOTE_CONNECTION_TAURI_ANDROID_TARGET=universal npm run tauri:android:build');
     expect(workflow).toContain('NOTE_CONNECTION_ANDROID_KEYSTORE_BASE64');
     expect(workflow).toContain('NOTE_CONNECTION_ANDROID_REQUIRE_SIGNING: "1"');
     expect(workflow).toContain('--require-arm64');
+    expect(workflow).toContain('--require-arm64-only');
     expect(workflow).toContain('--require-signed');
+    expect(workflow).toContain('verify-android-device-evidence');
+    expect(workflow).toContain('self-hosted, android-arm64');
+    expect(workflow).toContain('--require-rss');
+    expect(workflow).toContain('publish-android-release-assets');
+    expect(workflow).toContain('name: release-${{ needs.ensure-release.outputs.tag_name }}-android-evidence');
+    expect(workflow).not.toContain('name: release-${{ github.event.inputs.tag }}-android-evidence');
+    expect(workflow).toContain('noteconnection-arm64-release.apk');
+    expect(workflow).toContain('noteconnection-arm64-release.aab');
     expect(workflow).toContain("! -name '*unsigned*'");
     expect(workflow).toContain('build/release/mobile/*');
     expect(workflow).not.toContain('src-tauri/gen/android/app/build/outputs/apk/**/*.apk');
+    const androidBuildJob = workflow.split('  build-and-upload-android:')[1]
+      .split('  verify-android-device-evidence:')[0];
+    expect(androidBuildJob).not.toContain('softprops/action-gh-release@v2');
+  });
+
+  test('RSS harness keeps the release ABI contract strict', () => {
+    const evidenceScript = fs.readFileSync(scriptPath, 'utf8');
+    const verifierCalls = evidenceScript.match(/verifyMobileArtifact\(\{[\s\S]*?\}\);/g) || [];
+    expect(verifierCalls.length).toBeGreaterThanOrEqual(2);
+    verifierCalls.forEach((call) => {
+      expect(call).toContain('requireArm64Only: true');
+    });
   });
 });

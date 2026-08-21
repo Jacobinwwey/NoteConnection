@@ -319,3 +319,13 @@ slim manifest 为 121 个文件 / 未压缩 `4,275,083` / 估算压缩 `1,550,63
 ```
 
 缺证据或 RSS 超过 256 MiB 必须 fail closed。public-ID、默认 SQLite/WASM、Godot inclusion 与预算变化继续冻结。
+
+## 2026-08-18 第 23 阶段：版本化移动预算契约与 arm64 语义对齐
+
+manifest 现在从 `config/mobile-budget.v1.json` 记录 schema-1 artifact/RSS/runtime budget。Rust 在 atomic replacement 前拒绝超过 48 MiB 的 serialized projection，Android content 复用 16 MiB bounded reader。release job 构建 `aarch64`，强制精确 `arm64-v8a`，并发布 `noteconnection-arm64-release.apk/.aab`，不再把产物称为 universal。这些都是 additive guard；原生 SAF/重启/RSS 证据仍需补齐。
+
+## 2026-08-21 第 24 阶段：跨 host runtime budget 投影与原生证据隔离
+
+`mobile_budget_runtime.js` 在 storage provider 前加载，将版本化限制投影到 WebView/Capacitor，不增加 runtime 依赖。Capacitor 现在按 UTF-8 字节计量，在可用时先做 filesystem size 预检，并在读取前拒绝超深 entry；Tauri 在 bootstrap/IPC read 前执行同一 projection ceiling。
+
+Release workflow 将打包与验收分离：签名 arm64 APK/AAB 先是 workflow artifact，GitHub Release 上传必须经过 self-hosted arm64 workload、force-stop/reopen continuity 与可测 RSS。当前静态 staging 为 122 文件 / 未压缩 4,283,033 bytes / 估算压缩 1,552,689 bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`；原生 G2/G3 仍待补齐。

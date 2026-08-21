@@ -328,3 +328,13 @@ approved key + online arm64 device
 ```
 
 Missing evidence or RSS above 256 MiB fails closed. Public-ID, SQLite/WASM defaulting, Godot inclusion, and budget changes remain frozen.
+
+## 2026-08-18 Phase 23 Versioned Mobile Budget Contract and Arm64 Truthfulness
+
+The manifest now records schema-1 artifact/RSS/runtime budgets from `config/mobile-budget.v1.json`. Rust rejects serialized projections over 48 MiB before atomic replacement and reuses the 16 MiB bounded reader for Android content. The release job builds `aarch64`, requires exactly `arm64-v8a`, and publishes `noteconnection-arm64-release.apk/.aab`; it no longer labels the artifact universal. These are additive guards; native SAF/restart/RSS evidence is still required.
+
+## 2026-08-21 Phase 24 Cross-Host Runtime Budget Projection and Native Evidence Separation
+
+`mobile_budget_runtime.js` is loaded before the storage provider and projects the versioned limits into WebView/Capacitor without adding a runtime dependency. Capacitor now checks UTF-8 bytes, performs a filesystem-size preflight when available, and rejects over-depth entries before reading them. Tauri applies the same projection ceiling before bootstrap/IPC reads.
+
+The release workflow separates packaging from acceptance: signed arm64 APK/AAB are first workflow artifacts, while GitHub Release upload requires the self-hosted arm64 workload, force-stop/reopen continuity, and measurable RSS evidence. Static staging is 122 files / 4,283,033 uncompressed bytes / 1,552,689 estimated compressed bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`; native G2/G3 is still pending.

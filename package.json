@@ -35,7 +35,7 @@
     "mobile:prepare:slim": "npm run build:mini && node scripts/prepare-mobile-slim.js && node scripts/verify-mobile-slim-budget.js",
     "verify:mobile:slim:budget": "node scripts/verify-mobile-slim-budget.js",
     "verify:mobile:artifact": "node scripts/verify-mobile-artifact.js",
-    "verify:mobile:artifact:release": "node scripts/verify-mobile-artifact.js --require-rss --require-arm64 --require-signed",
+    "verify:mobile:artifact:release": "node scripts/verify-mobile-artifact.js --require-rss --require-arm64 --require-arm64-only --require-signed",
     "verify:mobile:projection-replay": "node scripts/verify-mobile-projection-replay.js",
     "verify:mobile:native-recovery": "node scripts/verify-mobile-native-recovery.js",
     "capture:tauri:android:evidence": "node scripts/capture-tauri-android-rss-evidence.js",

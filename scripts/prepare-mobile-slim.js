@@ -9,6 +9,7 @@ const {
   assertMobileSlimBudget,
   isForbiddenMobileArtifact,
 } = require('./verify-mobile-slim-budget');
+const { MOBILE_BUDGET_CONTRACT } = require('./mobile-budget-contract');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_SOURCE_DIR = path.join(REPO_ROOT, 'dist', 'src', 'frontend');
@@ -146,8 +147,13 @@ function stageMobileSlimAssets(options = {}) {
         supportsGodotPathmode: false,
       },
       budgets: {
+        profile: 'mobile-low',
         assetBudgetBytes: measurement.assetBudgetBytes,
         maxResidentBytes: measurement.maxResidentBytes,
+        maxDeviceRamBytes: MOBILE_BUDGET_CONTRACT.profiles['mobile-low'].maxDeviceRamBytes,
+        contractSchemaVersion: MOBILE_BUDGET_CONTRACT.schemaVersion,
+        contractSha256: MOBILE_BUDGET_CONTRACT.contractSha256,
+        runtime: MOBILE_BUDGET_CONTRACT.runtime,
       },
       measurement: {
         fileCount: measurement.fileCount,

@@ -1923,3 +1923,17 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - 当前只发现 `arm64-v8a` native payload，`universal` 仍是未验证标签。声明 universal 前应改名为 `arm64` 或增加逐 ABI 验证。
 - input、projection、native output、staging 磁盘与 RSS 必须分开预算。原生 G2/G3 仍需获批 key、在线 arm64 workload、SAF/重试/continuity 证据、产物 provenance 与 peak RSS `<= 256 MiB`。
 - 在原生归档存在前，不提升 public ID、默认 SQLite/WASM、Godot inclusion 或预算。admission limit 不是内存证明。
+
+## 2026-08-18 第 23 阶段：版本化移动预算契约与 arm64 语义对齐
+
+- `config/mobile-budget.v1.json` 现在由 slim staging、APK/AAB verifier 与生成 manifest 共用；runtime limits 版本化并进入证据。
+- Rust 在 atomic replacement 前拒绝超过 48 MiB 的 Android serialized projection，Android content request 复用 16 MiB bounded reader。
+- release job 现在 target/命名为 `aarch64`/arm64。Universal 继续是显式本地 opt-in，不是 release ABI 声明。
+- JS/Rust drift contract 与超大正文回归覆盖通过；原生 signing/device/SAF/restart/retry/RSS 证据仍开放。
+
+## 2026-08-21 第 24 阶段：跨 host runtime budget 投影与原生证据隔离
+
+- browser-sized `NoteConnectionMobileBudget` 现在在 storage provider 前加载；Capacitor 按 UTF-8 字节执行限制，可用时先 stat-before-read，不提供 stat 的 SAF 实现保留 decoded-text 兜底。
+- worker 与 single-thread 路径统一执行文档数、单文档/总字节、深度、边数和 serialized projection 限制；Tauri 在 bootstrap/IPC read 前拒绝超限 generated asset。
+- Android evidence 要求精确 `arm64-v8a`、profile ceiling 内的可测 RAM，并记录 ABI/RAM provenance。签名静态产物只作为 workflow artifact，Release 上传必须经过显式 self-hosted workload 与 RSS evidence。
+- 当前 staging 为 122 文件 / 未压缩 4,283,033 / 估算压缩 1,552,689 bytes；缺少获批签名/设备证据，原生 G2/G3 仍开放。

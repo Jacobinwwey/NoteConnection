@@ -19,6 +19,16 @@ on:
         required: false
         default: true
         type: boolean
+      run_android_device_evidence:
+        description: "Run the native Android RSS/SAF evidence gate on a self-hosted arm64 device before publishing mobile release assets."
+        required: false
+        default: false
+        type: boolean
+      android_workload_spec:
+        description: "Repository-relative schema-1 Android workload spec used by the self-hosted evidence runner."
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -404,7 +414,7 @@ jobs:
           chmod 600 build/android-signing/release.jks
           test -s build/android-signing/release.jks
 
-      - name: Build Android universal APK
+      - name: Build Android arm64 APK
         shell: bash
         env:
           NOTE_CONNECTION_ANDROID_REQUIRE_SIGNING: "1"
@@ -414,7 +424,7 @@ jobs:
           NOTE_CONNECTION_ANDROID_KEY_PASSWORD: ${{ secrets.NOTE_CONNECTION_ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          NOTE_CONNECTION_TAURI_ANDROID_TARGET=universal npm run tauri:android:build
+          NOTE_CONNECTION_TAURI_ANDROID_TARGET=aarch64 npm run tauri:android:build
 
       - name: Verify signed arm64 Android artifacts
         shell: bash
@@ -424,8 +434,16 @@ jobs:
           set -euo pipefail
           mkdir -p build/release/mobile
           mapfile -t artifacts < <(find src-tauri/gen/android/app/build/outputs -type f \( -name '*.apk' -o -name '*.aab' \) ! -name '*unsigned*' | sort)
-          if [ "${#artifacts[@]}" -lt 2 ]; then
-            echo "Expected signed APK and AAB outputs; found ${#artifacts[@]}." >&2
+          apk_count=0
+          aab_count=0
+          for artifact in "${artifacts[@]}"; do
+            case "$artifact" in
+              *.apk) apk_count=$((apk_count + 1)) ;;
+              *.aab) aab_count=$((aab_count + 1)) ;;
+            esac
+          done
+          if [ "$apk_count" -ne 1 ] || [ "$aab_count" -ne 1 ]; then
+            echo "Expected exactly one signed APK and one signed AAB; found ${apk_count} APK and ${aab_count} AAB." >&2
             exit 1
           fi
           for artifact in "${artifacts[@]}"; do
@@ -433,8 +451,14 @@ jobs:
               --artifact "${artifact}" \
               --profile mobile-low \
               --require-arm64 \
+              --require-arm64-only \
               --require-signed
-            cp "${artifact}" "build/release/mobile/$(basename "${artifact}")"
+            case "$artifact" in
+              *.apk) publish_name="noteconnection-arm64-release.apk" ;;
+              *.aab) publish_name="noteconnection-arm64-release.aab" ;;
+              *) echo "Unsupported Android artifact: ${artifact}" >&2; exit 1 ;;
+            esac
+            cp "${artifact}" "build/release/mobile/${publish_name}"
           done
           rm -f build/android-signing/release.jks
 
@@ -444,6 +468,118 @@ jobs:
           name: release-${{ needs.ensure-release.outputs.tag_name }}-android-mobile
           if-no-files-found: error
           path: build/release/mobile/*
+
+  verify-android-device-evidence:
+    name: Verify Android device evidence (arm64)
+    needs:
+      - ensure-release
+      - build-and-upload-android
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_android_device_evidence == 'true' }}
+    runs-on: [self-hosted, android-arm64]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_ref != '' && github.event.inputs.source_ref || github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+          lfs: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download signed Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-${{ needs.ensure-release.outputs.tag_name }}-android-mobile
+          path: build/release/mobile
+
+      - name: Run native Android workload and RSS evidence
+        shell: bash
+        env:
+          WORKLOAD_SPEC: ${{ github.event.inputs.android_workload_spec }}
+        run: |
+          set -euo pipefail
+          if [ -z "${WORKLOAD_SPEC}" ]; then
+            echo "android_workload_spec is required when native Android evidence is enabled." >&2
+            exit 1
+          fi
+          test -f "${WORKLOAD_SPEC}"
+          apk_path="$(find build/release/mobile -type f -name '*.apk' -print -quit)"
+          if [ -z "${apk_path}" ]; then
+            echo "Signed arm64 APK was not downloaded." >&2
+            exit 1
+          fi
+          node scripts/capture-tauri-android-rss-evidence.js \
+            --artifact "${apk_path}" \
+            --workload-spec "${WORKLOAD_SPEC}" \
+            --output output/verification/mobile-android
+
+      - name: Upload native Android evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ needs.ensure-release.outputs.tag_name }}-android-evidence
+          if-no-files-found: error
+          path: output/verification/mobile-android/**
+
+  publish-android-release-assets:
+    name: Publish Android release assets after native evidence
+    needs:
+      - ensure-release
+      - build-and-upload-android
+      - verify-android-device-evidence
+    if: ${{ needs.verify-android-device-evidence.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_ref != '' && github.event.inputs.source_ref || github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+          lfs: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Download signed Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-${{ needs.ensure-release.outputs.tag_name }}-android-mobile
+          path: build/release/mobile
+
+      - name: Download native Android evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: release-${{ needs.ensure-release.outputs.tag_name }}-android-evidence
+          path: build/release/mobile-evidence
+
+      - name: Re-verify artifacts against RSS evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          rss_path="$(find build/release/mobile-evidence -type f -name 'rss.json' -print -quit)"
+          manifest_path="$(find build/release/mobile-evidence -type f -name 'tauri_android_rss_evidence.json' -print -quit)"
+          if [ -z "${rss_path}" ] || [ -z "${manifest_path}" ]; then
+            echo "Native Android evidence must contain rss.json and tauri_android_rss_evidence.json." >&2
+            exit 1
+          fi
+          for artifact in build/release/mobile/*.apk build/release/mobile/*.aab; do
+            node scripts/verify-mobile-artifact.js \
+              --artifact "${artifact}" \
+              --profile mobile-low \
+              --rss-evidence "${rss_path}" \
+              --require-rss \
+              --require-arm64 \
+              --require-arm64-only \
+              --require-signed
+          done
 
       - name: Upload signed Android assets to GitHub release
         uses: softprops/action-gh-release@v2

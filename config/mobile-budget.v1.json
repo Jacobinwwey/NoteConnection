@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "profiles": {
+    "mobile-low": {
+      "artifactCompressedBytes": 26214400,
+      "maxResidentBytes": 268435456,
+      "maxDeviceRamBytes": 4294967296
+    },
+    "mobile-standard": {
+      "artifactCompressedBytes": 36700160,
+      "maxResidentBytes": 402653184,
+      "maxDeviceRamBytes": 8589934592
+    }
+  },
+  "runtime": {
+    "maxDocuments": 5000,
+    "maxDocumentBytes": 16777216,
+    "maxTotalInputBytes": 67108864,
+    "maxEdges": 250000,
+    "maxDepth": 64,
+    "maxProjectionBytes": 50331648
+  }
+}

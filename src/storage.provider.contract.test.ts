@@ -62,7 +62,7 @@ describe('storage provider abstraction contract', () => {
     expect(source).toContain('async buildGraph(requestPayload)');
     expect(source).toContain('async readContent(filePath)');
     expect(source).toContain('const capacitorPath = resolveCapacitorContentCandidatePath(filePath);');
-    expect(source).toContain('return await capacitorReadText(capacitorPath);');
+    expect(source).toContain('return await capacitorReadText(capacitorPath, {');
     expect(source).toContain('async setKbPath(kbPath)');
     expect(source).toContain('async readGeneratedAsset(filename)');
   });

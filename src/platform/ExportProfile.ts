@@ -1,3 +1,8 @@
+import {
+    MOBILE_LOW_ARTIFACT_BUDGET_BYTES,
+    MOBILE_LOW_MAX_RESIDENT_BYTES,
+} from './MobileBudget';
+
 export type ExportProfileId =
     | 'desktop-full'
     | 'desktop-reader'
@@ -28,8 +33,8 @@ export interface ExportProfile {
     preferredMermaidRenderer: 'auto' | 'local' | 'frontend';
 }
 
-export const MOBILE_SLIM_ASSET_BUDGET_BYTES = 25 * 1024 * 1024;
-export const MOBILE_SLIM_MAX_RESIDENT_BYTES = 256 * 1024 * 1024;
+export const MOBILE_SLIM_ASSET_BUDGET_BYTES = MOBILE_LOW_ARTIFACT_BUDGET_BYTES;
+export const MOBILE_SLIM_MAX_RESIDENT_BYTES = MOBILE_LOW_MAX_RESIDENT_BYTES;
 
 const EXPORT_PROFILES: Record<ExportProfileId, ExportProfile> = {
     'desktop-full': {

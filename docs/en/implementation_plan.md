@@ -819,3 +819,15 @@ This closes the deterministic, code-level recovery contract without changing the
 - Keep input, projection, native output, staging disk, and RSS as independent budgets. Full-string Markdown reads, JSON duplication, maps, and SAF backup/staging can exceed RSS or disk limits after admission succeeds.
 - The next run is CI-signed arm64 -> approved low-memory device -> `saf-import -> graph-build -> exact-query -> path -> continuity` -> storage/permission retry -> force-stop/reopen -> `manifest + rss.json + artifact hash + logcat`. Any missing evidence or RSS above 256 MiB fails closed.
 - Do not promote SQLite/WASM, Godot, canonical public IDs, or larger corpus budgets until the native evidence archive and bounded content-read measurements exist. This preserves package size and hardware requirements at the cost of delaying feature promotion.
+
+## 2026-08-18 Phase 23 Versioned Mobile Budget Contract and Arm64 Truthfulness
+
+The checked-in `config/mobile-budget.v1.json` is now consumed by the slim verifier, artifact verifier, and staging manifest. Rust keeps native constants for runtime independence, while a Rust contract test parses the same file to prevent drift. Serialized Android projections are rejected above 48 MiB before atomic replacement, and Android content reads reject files above 16 MiB before returning a large String. The release workflow now targets `aarch64`, requires an exact `arm64-v8a` ABI set, and publishes `noteconnection-arm64-release.apk/.aab`; universal remains local-only opt-in. Projection schema, public IDs, and IPC contracts are unchanged. Native device/RSS gates remain open.
+
+## 2026-08-21 Phase 24 Cross-Host Runtime Budget Projection and Native Evidence Separation
+
+Phase 23 unified build-time budgets but left duplicated browser constants and post-read Capacitor accounting. Phase 24 adds `mobile_budget_runtime.js` as the small WebView projection, switches admission accounting to UTF-8 bytes, and performs `stat` preflight plus decoded-text fallback checks. Every enumerated entry obeys depth; worker and single-thread graph paths share edge/projection validation.
+
+Tauri now rejects oversized generated assets before bootstrap/IPC reads. The Android evidence harness requires exact `arm64-v8a`, measurable RAM within the selected profile ceiling, and records ABI/RAM provenance. CI exposes signed arm64 outputs as workflow artifacts; GitHub Release mobile upload is gated by the explicit self-hosted workload and real RSS evidence. This preserves the existing projection/IPC/public-ID contracts and keeps the package runtime-first.
+
+Current static staging is 122 files / `4,283,033` uncompressed / `1,552,689` estimated compressed bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`. Focused boundary contracts, TypeScript, Rust, slim budget, and Diataxis checks pass; native G2/G3 remains pending because this host has no approved signing key or online approved arm64 device.

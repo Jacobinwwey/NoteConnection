@@ -1291,3 +1291,15 @@ workload spec 采用声明式、禁止 host shell 的契约，固定为有序的
 - input、projection、native output、staging 磁盘与 RSS 必须是独立预算。完整 Markdown 读取、JSON 重复驻留、Map 与 SAF backup/staging 可能在 admission 通过后仍超 RSS 或磁盘上限。
 - 下一次运行固定为 CI 签名 arm64 -> 获批低内存设备 -> `saf-import -> graph-build -> exact-query -> path -> continuity` -> 存储/权限重试 -> force-stop/reopen -> `manifest + rss.json + artifact hash + logcat`。任何缺证据或 RSS 超过 256 MiB 都失败。
 - 在原生证据归档与有界 content-read 测量前，不提升 SQLite/WASM、Godot、canonical public ID 或语料预算。这样牺牲功能晋级速度，但保护包体与硬件要求。
+
+## 2026-08-18 第 23 阶段：版本化移动预算契约与 arm64 语义对齐
+
+checked-in 的 `config/mobile-budget.v1.json` 现在由 slim verifier、artifact verifier 与 staging manifest 共用。Rust 为保持 native runtime 独立继续保留常量，同时由 Rust contract test 解析同一文件防止漂移。Android serialized projection 超过 48 MiB 会在 atomic replacement 前拒绝，content read 超过 16 MiB 会在返回大 String 前拒绝。release workflow 改为 `aarch64`，强制精确 `arm64-v8a` ABI 集合，并发布 `noteconnection-arm64-release.apk/.aab`；universal 仅保留本地 opt-in。Projection schema、public ID 与 IPC contract 不变；真机/RSS 门禁仍开放。
+
+## 2026-08-21 第 24 阶段：跨 host runtime budget 投影与原生证据隔离
+
+第 23 阶段统一了 build-time budget，但 browser constants 仍有重复，Capacitor 仍是读后计量。第 24 阶段增加 `mobile_budget_runtime.js` 作为小型 WebView projection，改用 UTF-8 字节计量，并在可用时先做 `stat` 预检、再以 decoded text 兜底。所有枚举 entry 都执行深度检查，worker 与 single-thread 构图共用边数/projection 校验。
+
+Tauri 在 bootstrap/IPC read 前拒绝超限 generated asset。Android evidence harness 要求精确 `arm64-v8a`、可测且不超过 profile ceiling 的 RAM，并记录 ABI/RAM provenance。CI 只先暴露签名 arm64 workflow artifact；只有 self-hosted workload 与真实 RSS 证据成功后才上传 GitHub Release。Projection/IPC/public-ID contract 保持不变，移动包继续 runtime-first。
+
+当前静态 staging 为 122 文件 / 未压缩 `4,283,033` / 估算压缩 `1,552,689` bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`。边界 contract、TypeScript、Rust、slim budget 与 Diataxis 通过；当前宿主没有获批 signing key 或在线获批 arm64 设备，原生 G2/G3 仍待完成。

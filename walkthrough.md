@@ -752,3 +752,73 @@ CI secrets -> 临时 release.jks
 ```
 
 缺证据、进程死亡不可观测或 peak RSS 超过 256 MiB 都必须 fail closed。public-ID 迁移、默认 SQLite/WASM、Godot inclusion 与移动预算上调继续冻结。
+
+## 2026-08-18 Phase 23 Versioned Mobile Budget Contract and Arm64 Truthfulness Walkthrough
+
+The mobile build now derives its limits from one checked-in contract:
+
+```json
+{
+  "schemaVersion": 1,
+  "profiles": { "mobile-low": { "artifactCompressedBytes": 26214400, "maxResidentBytes": 268435456 } },
+  "runtime": {
+    "maxDocuments": 5000,
+    "maxDocumentBytes": 16777216,
+    "maxTotalInputBytes": 67108864,
+    "maxEdges": 250000,
+    "maxDepth": 64,
+    "maxProjectionBytes": 50331648
+  }
+}
+```
+
+The staging manifest records this contract version and runtime budget. Rust checks serialized `graph_data.json`, `data.js`, and target caches before atomic replacement. Content reads on Android use the same 16 MiB sentinel-bounded reader as graph ingestion, so an oversized note fails before returning a large String.
+
+The release workflow now builds `aarch64`, requires exactly `arm64-v8a`, and publishes `noteconnection-arm64-release.apk/.aab`. Universal remains an explicit local opt-in only; no release claim is made for unverified ABIs.
+
+This increment changes no projection schema or IPC field. It makes failure monotonic: a new over-budget graph or note is rejected while the previous valid projection remains intact. Native device/RSS evidence is still required before claiming G2/G3 completion.
+
+## 2026-08-18 第 23 阶段：版本化移动预算契约与 arm64 语义对齐 Walkthrough
+
+移动构建现在从一份 checked-in contract 推导限制：
+
+```json
+{
+  "schemaVersion": 1,
+  "profiles": { "mobile-low": { "artifactCompressedBytes": 26214400, "maxResidentBytes": 268435456 } },
+  "runtime": {
+    "maxDocuments": 5000,
+    "maxDocumentBytes": 16777216,
+    "maxTotalInputBytes": 67108864,
+    "maxEdges": 250000,
+    "maxDepth": 64,
+    "maxProjectionBytes": 50331648
+  }
+}
+```
+
+staging manifest 会记录 contract version 与 runtime budget。Rust 在 atomic replacement 前检查 `graph_data.json`、`data.js` 与 target cache 的序列化大小。Android content read 复用 graph ingestion 的 16 MiB sentinel-bounded reader，超大笔记在返回大 String 前失败。
+
+release workflow 现在构建 `aarch64`，强制精确 `arm64-v8a`，并发布 `noteconnection-arm64-release.apk/.aab`。Universal 只保留为显式本地 opt-in，不对未验证 ABI 作 release 声明。
+
+本轮不改变 projection schema 或 IPC 字段，而是让失败单调：新的超预算图谱或正文被拒绝，上一份有效 projection 保持不变。G2/G3 仍需真机与 RSS 证据后才能关闭。
+
+## 2026-08-21 Phase 24 Cross-Host Runtime Budget Projection and Native Evidence Separation Walkthrough
+
+The Phase 23 JSON contract now has a deliberately small browser projection. `index.html` loads `mobile_budget_runtime.js` before the storage provider, so WebView and Capacitor use the same runtime limits without shipping Node or Rust loaders. The contract remains additive metadata; projection schema, public IDs, and IPC fields are unchanged.
+
+The mobile read path is now bounded at the edge. Capacitor checks the filesystem-reported size before `readFile` when the platform exposes `stat`, then measures decoded UTF-8 bytes as a fallback. Directory depth is checked for every enumerated entry, and graph edges/projection bytes are validated after worker or single-thread construction. The failure mode is monotonic: an oversized input is rejected while the previous valid projection remains available.
+
+The native side follows the same rule. Tauri rejects oversized generated assets before bootstrap/IPC reads, and Android evidence records ABI plus device RAM. `mobile-low` accepts only measurable devices at or below 4 GiB and exact `arm64-v8a` artifacts; `mobile-standard` raises the device ceiling to 8 GiB without changing the low profile.
+
+CI now makes the evidence boundary visible: signed arm64 outputs are workflow artifacts, while GitHub Release upload depends on an explicit self-hosted workload and real `VmRSS` samples. The current static staging is 122 files / 4,283,033 uncompressed bytes / 1,552,689 estimated compressed bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`. No native G2/G3 claim is made on this host.
+
+## 2026-08-21 第 24 阶段：跨 host runtime budget 投影与原生证据隔离 Walkthrough
+
+第 23 阶段的 JSON contract 现在有一个刻意保持很小的 browser projection。`index.html` 在 storage provider 之前加载 `mobile_budget_runtime.js`，因此 WebView 与 Capacitor 共用同一组 runtime limits，不需要把 Node 或 Rust loader 放进移动包。Contract 仍只是 additive metadata，projection schema、public ID 与 IPC 字段不变。
+
+移动 read path 在边界处有界：Capacitor 在平台提供 `stat` 时先检查 filesystem 报告的大小，再在 `readFile` 后以 decoded UTF-8 字节兜底。每个枚举 entry 都检查目录深度，worker 与 single-thread 构图后都校验边数和 projection 字节。失败保持单调：超限输入被拒绝，上一次有效 projection 仍可用。
+
+Native 侧遵循同一规则。Tauri 在 bootstrap/IPC read 前拒绝超限 generated asset，Android evidence 记录 ABI 与设备 RAM。`mobile-low` 只接受可测且不超过 4 GiB 的设备与精确 `arm64-v8a` 产物；`mobile-standard` 将设备上限提高到 8 GiB，但不改变 low profile。
+
+CI 现在显式隔离证据边界：签名 arm64 产物先是 workflow artifact，只有显式 self-hosted workload 与真实 `VmRSS` 样本成功后才上传 GitHub Release。当前静态 staging 为 122 文件 / 未压缩 4,283,033 bytes / 估算压缩 1,552,689 bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`。当前宿主不宣称原生 G2/G3 通过。

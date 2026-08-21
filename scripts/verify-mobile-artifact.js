@@ -3,15 +3,18 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { MOBILE_BUDGET_CONTRACT } = require('./mobile-budget-contract');
 
 const PROFILES = {
   'mobile-low': {
-    compressedBudgetBytes: 25 * 1024 * 1024,
-    maxResidentBytes: 256 * 1024 * 1024,
+    compressedBudgetBytes: MOBILE_BUDGET_CONTRACT.profiles['mobile-low'].artifactCompressedBytes,
+    maxResidentBytes: MOBILE_BUDGET_CONTRACT.profiles['mobile-low'].maxResidentBytes,
+    maxDeviceRamBytes: MOBILE_BUDGET_CONTRACT.profiles['mobile-low'].maxDeviceRamBytes,
   },
   'mobile-standard': {
-    compressedBudgetBytes: 35 * 1024 * 1024,
-    maxResidentBytes: 384 * 1024 * 1024,
+    compressedBudgetBytes: MOBILE_BUDGET_CONTRACT.profiles['mobile-standard'].artifactCompressedBytes,
+    maxResidentBytes: MOBILE_BUDGET_CONTRACT.profiles['mobile-standard'].maxResidentBytes,
+    maxDeviceRamBytes: MOBILE_BUDGET_CONTRACT.profiles['mobile-standard'].maxDeviceRamBytes,
   },
 };
 
@@ -72,6 +75,17 @@ function listZipEntries(filePath) {
 
 function normalizeEntryName(name) {
   return String(name || '').replace(/\\/g, '/').replace(/^\/+/, '');
+}
+
+function collectNativeAbis(entries) {
+  const abis = new Set();
+  for (const entry of entries) {
+    const match = entry.name.match(/(?:^|\/)(?:lib|jni)\/([^/]+)\//i);
+    if (match) {
+      abis.add(match[1]);
+    }
+  }
+  return [...abis].sort();
 }
 
 function resolveSignatureTool(kind) {
@@ -197,9 +211,15 @@ function verifyMobileArtifact(options = {}) {
   }
 
   const rssEvidencePath = options.rssEvidencePath ? path.resolve(options.rssEvidencePath) : '';
+  const nativeAbis = collectNativeAbis(entries);
   const hasArm64Payload = entries.some((entry) => /(^|\/)(?:lib|jni)\/arm64-v8a\//i.test(entry.name));
   if (options.requireArm64 && !hasArm64Payload) {
     throw new Error(`Mobile artifact does not expose an arm64-v8a native payload: ${artifactPath}`);
+  }
+  if (options.requireArm64Only && (nativeAbis.length !== 1 || nativeAbis[0] !== 'arm64-v8a')) {
+    throw new Error(
+      `Mobile artifact ABI set must be exactly arm64-v8a; found ${nativeAbis.join(', ') || 'none'}: ${artifactPath}`
+    );
   }
   let peakResidentBytes = null;
   if (rssEvidencePath) {
@@ -234,9 +254,11 @@ function verifyMobileArtifact(options = {}) {
     compressedBudgetBytes: profile.compressedBudgetBytes,
     uncompressedPayloadBytes: entries.reduce((total, entry) => total + entry.uncompressedBytes, 0),
     maxResidentBytes: profile.maxResidentBytes,
+    maxDeviceRamBytes: profile.maxDeviceRamBytes,
     peakResidentBytes,
     rssStatus: peakResidentBytes === null ? 'not-measured' : 'within-budget',
     hasArm64Payload,
+    nativeAbis,
     signature,
     forbiddenEntries,
   };
@@ -245,7 +267,7 @@ function verifyMobileArtifact(options = {}) {
 function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
-    console.log('Usage: node scripts/verify-mobile-artifact.js --artifact <file.apk|file.aab> [--profile mobile-low|mobile-standard] [--rss-evidence <file>] [--require-rss] [--require-arm64] [--require-signed]');
+    console.log('Usage: node scripts/verify-mobile-artifact.js --artifact <file.apk|file.aab> [--profile mobile-low|mobile-standard] [--rss-evidence <file>] [--require-rss] [--require-arm64] [--require-arm64-only] [--require-signed]');
     return;
   }
   const artifactPath = parseOption(args, '--artifact') || process.env.NOTE_CONNECTION_MOBILE_ARTIFACT || '';
@@ -258,6 +280,7 @@ function main() {
       rssEvidencePath,
       requireRss: args.includes('--require-rss'),
       requireArm64: args.includes('--require-arm64'),
+      requireArm64Only: args.includes('--require-arm64-only'),
       requireSigned: args.includes('--require-signed'),
     });
     console.log(`[Mobile Artifact] PASS ${result.artifactKind} entries=${result.entryCount}`);
@@ -279,4 +302,5 @@ module.exports = {
   resolveSignatureTool,
   verifyArtifactSignature,
   verifyMobileArtifact,
+  collectNativeAbis,
 };

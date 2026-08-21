@@ -322,6 +322,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // 动态脚本加载器（缓存破坏与顺序保证）
     const loadGraphDataFromSidecar = async (src) => {
         const parseGraphDataPayload = (text) => {
+            const mobileRuntime = window.NoteConnectionMobileBudget && window.NoteConnectionMobileBudget.runtime;
+            if (mobileRuntime && Number.isInteger(mobileRuntime.maxProjectionBytes)) {
+                const payloadText = String(text || '');
+                const byteCounter = window.NoteConnectionStorage
+                    && typeof window.NoteConnectionStorage.measureUtf8Bytes === 'function'
+                    ? window.NoteConnectionStorage.measureUtf8Bytes
+                    : null;
+                const payloadBytes = byteCounter
+                    ? byteCounter(payloadText)
+                    : (typeof TextEncoder === 'function'
+                        ? new TextEncoder().encode(payloadText).length
+                        : (typeof Buffer !== 'undefined' && typeof Buffer.byteLength === 'function'
+                            ? Buffer.byteLength(payloadText, 'utf8')
+                            : payloadText.length));
+                if (payloadBytes > mobileRuntime.maxProjectionBytes) {
+                    throw new Error(
+                        `Mobile graph projection exceeds ${mobileRuntime.maxProjectionBytes} bytes.`
+                    );
+                }
+            }
             const trimmed = text.trim();
             let parsed = null;
             const extractAssignedJson = (sourceText, equalsIndex) => {

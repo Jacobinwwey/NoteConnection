@@ -3,15 +3,17 @@ import * as path from 'path';
 
 type ArtifactVerifier = {
     verifyMobileArtifact: (options: {
-        artifactPath: string;
+    artifactPath: string;
     profile?: string;
     rssEvidencePath?: string;
     requireRss?: boolean;
     requireSigned?: boolean;
+    requireArm64Only?: boolean;
     }) => {
         artifactKind: string;
         rssStatus: string;
         compressedPayloadBytes: number;
+        nativeAbis: string[];
     };
 };
 
@@ -97,11 +99,13 @@ describe('mobile APK/AAB artifact verifier contract', () => {
             profile: 'mobile-low',
             rssEvidencePath: rssPath,
             requireRss: true,
+            requireArm64Only: true,
         });
 
         expect(result.artifactKind).toBe('apk');
         expect(result.rssStatus).toBe('within-budget');
         expect((result as { hasArm64Payload?: boolean }).hasArm64Payload).toBe(true);
+        expect(result.nativeAbis).toEqual(['arm64-v8a']);
         expect(result.compressedPayloadBytes).toBeGreaterThan(0);
     });
 

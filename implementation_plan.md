@@ -1339,3 +1339,93 @@ Observed local evidence: slim profile 121 files / `4,275,083` uncompressed / `1,
 后续顺序固定为：(1) CI 签名 arm64 产物 + 获批低内存设备执行 `saf-import -> graph-build -> exact-query -> path -> continuity`；(2) 存储/权限重试与 force-stop/reopen，归档 artifact hash、manifest、logcat、`rss.json`；(3) 版本化 mobile budget manifest；(4) 之后才评估身份迁移、数据库提升或预算变化。缺证据或 RSS 超过 256 MiB 必须 fail closed。
 
 当前本地事实：slim profile 121 个文件 / 未压缩 `4,275,083` / 估算压缩 `1,550,638` 字节；签名 smoke 的 APK `9,576,838`、AAB `7,140,668` 压缩 payload 字节。它们是集成事实，不构成 release acceptance。
+
+## 2026-08-18 Phase 23 Versioned Mobile Budget Contract and Arm64 Truthfulness
+
+### Implementation
+
+1. Added `config/mobile-budget.v1.json` plus `scripts/mobile-budget-contract.js`. The loader validates schema `1`, positive integer fields, and both `mobile-low` and `mobile-standard` profiles. `verify-mobile-slim-budget.js`, `verify-mobile-artifact.js`, and `prepare-mobile-slim.js` now consume the same profile values; the generated manifest records the runtime limits and contract version.
+2. Added Rust-side `MOBILE_MAX_PROJECTION_BYTES` at 48 MiB. Android/test builds validate pretty `graph_data.json`, compact `data.js`, and target cache variants before atomic writes. This aligns the native writer with the existing frontend projection store ceiling without changing the projection schema.
+3. Reused `read_mobile_markdown_content` for Android `read_node_content` and test builds. The bounded reader reads at most 16 MiB plus one sentinel byte, rejects over-limit content, and preserves UTF-8/path-jail checks. Non-mobile desktop builds retain the existing unbounded API behavior.
+4. Changed the release workflow target and label to `aarch64`/arm64. The verifier now exposes native ABI directories and supports an exact `arm64-v8a`-only gate; verified outputs are copied as `noteconnection-arm64-release.apk/.aab`. The explicit `tauri:android:*:universal` scripts remain available for local experiments, but release evidence cannot imply unverified ABI coverage.
+
+### Contract and compatibility rules
+
+- The JSON contract is build/evidence metadata, not a runtime schema migration. Existing projection `schemaVersion`, public IDs, Rust request/poll commands, and host adapters remain backward-compatible.
+- Limits are intentionally duplicated into Rust constants because Android native code cannot depend on a Node loader at runtime. The Rust unit test parses the checked-in contract and fails on drift; JS contract tests cover the packaging/verifier consumers.
+- Projection size is checked before `write_atomic`, preserving the previous known-good projection when a new graph is too large. This is a monotonic failure boundary and avoids replacing a valid cache with a partial or over-budget artifact.
+- Bounded content reads may reject a single oversized note even when the rest of the corpus is valid. That trade-off is required for the low-memory profile; desktop behavior and public content APIs are unchanged.
+
+### Verification and next gates
+
+- Versioned manifest generated with 121 files / `4,275,083` uncompressed / `1,550,638` estimated compressed bytes and runtime budget fields.
+- Focused JS contracts: 28 tests passed. Rust: 30 passed / 1 ignored. TypeScript no-emit, slim budget and Diataxis checks pass.
+- Remaining external gates are unchanged: approved CI signing key, online arm64 device, SAF/import/query/path workload, force-stop/reopen, storage/permission retries, and native RSS `<= 256 MiB`.
+- Do not promote SQLite/WASM, Godot inclusion, public-ID migration, or larger budgets until the native evidence archive is complete.
+
+## 2026-08-18 第 23 阶段：版本化移动预算契约与 arm64 语义对齐
+
+### 实施
+
+1. 增加 `config/mobile-budget.v1.json` 与 `scripts/mobile-budget-contract.js`。loader 校验 schema `1`、正整数以及 `mobile-low`/`mobile-standard` 两个 profile；`verify-mobile-slim-budget.js`、`verify-mobile-artifact.js` 与 `prepare-mobile-slim.js` 共用同一组 profile 值，生成 manifest 同时记录 runtime limits 与 contract version。
+2. Rust 增加 48 MiB 的 `MOBILE_MAX_PROJECTION_BYTES`。Android/test 构建在 atomic write 前检查 pretty `graph_data.json`、compact `data.js` 与 target cache，和现有前端 projection store ceiling 对齐，不改变 projection schema。
+3. Android `read_node_content` 与 tests 复用 `read_mobile_markdown_content`。bounded reader 最多读取 16 MiB 加一个 sentinel byte，超限即拒绝，并保留 UTF-8/path-jail 校验；桌面非 mobile 构建继续使用原有 API 行为。
+4. release workflow 的 target 与命名改为 `aarch64`/arm64。verifier 暴露 native ABI 目录并支持精确 `arm64-v8a`-only 门禁；已验证产物复制为 `noteconnection-arm64-release.apk/.aab`。显式 `tauri:android:*:universal` 命令仍可用于本地实验，但 release 证据不再暗示未验证的 ABI 覆盖。
+
+### 契约与兼容规则
+
+- JSON contract 是构建/证据 metadata，不是 runtime schema migration。现有 projection `schemaVersion`、public ID、Rust request/poll command 与 host adapter 保持向前兼容。
+- Rust 常量仍需本地保留，因为 Android native 运行时不能依赖 Node loader；Rust unit test 解析仓库 contract 防止漂移，JS contract 覆盖 packaging/verifier consumer。
+- projection 在 `write_atomic` 前检查大小，过大的新图谱不会替换上一份已知可用 projection。这是单调失败边界，避免用不完整或超预算产物覆盖有效缓存。
+- bounded content read 可能拒绝单个超大笔记，即使其余语料合法；这是低内存 profile 的必要权衡，桌面行为与 public content API 不变。
+
+### 验证与下一道门禁
+
+- 生成 manifest：121 个文件 / 未压缩 `4,275,083` / 估算压缩 `1,550,638` 字节，并包含 runtime budget fields。
+- 定向 JS contract：28 tests passed；Rust：30 passed / 1 ignored；TypeScript no-emit、slim budget 与 Diataxis 通过。
+- 外部门禁不变：获批 CI signing key、在线 arm64 设备、SAF/import/query/path workload、force-stop/reopen、存储/权限重试与原生 RSS `<= 256 MiB`。
+- 在原生证据归档完成前，不提升 SQLite/WASM、Godot inclusion、public-ID 迁移或移动预算。
+
+## 2026-08-21 Phase 24 Cross-Host Runtime Budget Projection and Native Evidence Separation
+
+### Implementation
+
+1. Added `src/frontend/mobile_budget_runtime.js` as the browser-sized projection of `config/mobile-budget.v1.json`; it loads before `storage_provider.js`. The Node loader remains the source of truth and `src/mobile.budget.contract.test.ts` rejects drift in schema, profiles, runtime limits, and SHA-backed staging metadata.
+2. Changed Capacitor graph admission to measure UTF-8 bytes rather than JavaScript UTF-16 code units. The same runtime budget now bounds documents (5,000), a document (16 MiB), total input (64 MiB), depth (64), edges (250,000), and serialized projection (48 MiB) for worker and single-thread fallback paths.
+3. Closed two preflight gaps found during review: `capacitorReadText` uses filesystem `stat` when available before `readFile` and retains a decoded UTF-8 guard for SAF implementations without stat; all enumerated entries, including Markdown files, are checked against depth before traversal/read. This is intentionally conservative for low-memory devices.
+4. Added Tauri generated-asset checks before bootstrap copy and IPC reads. The known-good projection remains intact when a new projection exceeds the ceiling. Android evidence now records exact native ABI and measurable RAM, rejects devices above the selected profile ceiling, and keeps serials masked.
+5. Split CI packaging from release acceptance. The Ubuntu Android job signs/builds/verifies arm64 artifacts and exposes workflow artifacts only. An explicit self-hosted `[self-hosted, android-arm64]` job runs the schema-1 SAF/import/query/path/continuity workload and RSS capture; only its success unlocks GitHub Release upload.
+
+### Position against the preceding architecture
+
+- Phase 23 unified build/evidence metadata but still had duplicated browser limits and post-read Capacitor accounting. Phase 24 makes the browser runtime consume one additive projection and moves the memory-sensitive rejection to the read boundary.
+- The cross-host contract is unchanged: projection schema, public IDs, request/poll commands, and host adapters remain backward-compatible. No mobile database, embedded model, or Godot runtime is added to the payload.
+- Packaging remains runtime-first. The latest mobile-low staging is 122 files / `4,283,033` uncompressed / `1,552,689` estimated compressed bytes, well below the 25 MiB artifact ceiling; this is not an RSS result.
+
+### Verification and forward gates
+
+- Latest focused contracts after the boundary fix: 16 tests passed; TypeScript no-emit, slim staging/budget, and Diataxis checks pass. Full Jest is 148 suites / 1,280 passed / 26 skipped; Rust host tests are 30 passed / 1 ignored.
+- The native G2/G3 gate remains open because this host has no approved signing key or online approved arm64 device. The next executable step is CI-signed artifact -> approved low-RAM arm64 device -> ordered workload -> force-stop/reopen -> `rss.json` and provenance archive.
+- Keep SQLite/WASM promotion, public-ID migration, Godot inclusion, and budget increases frozen until native evidence is reproducible and archived.
+
+## 2026-08-21 第 24 阶段：跨 host runtime budget 投影与原生证据隔离
+
+### 实施
+
+1. 增加 `src/frontend/mobile_budget_runtime.js`，作为 `config/mobile-budget.v1.json` 的 browser-sized projection，并在 `storage_provider.js` 之前加载。Node loader 仍是 source of truth，`src/mobile.budget.contract.test.ts` 校验 schema、profile、runtime limits 与 staging metadata 不漂移。
+2. Capacitor graph admission 改用 UTF-8 字节而非 JavaScript UTF-16 code unit 计量。worker 与 single-thread fallback 共用文档数 5,000、单文档 16 MiB、总输入 64 MiB、深度 64、边 250,000、serialized projection 48 MiB 上限。
+3. 关闭 review 发现的两个预检缺口：`capacitorReadText` 在可用时先调用 filesystem `stat` 再 `readFile`，对不提供 stat 的 SAF 实现保留 decoded UTF-8 兜底；所有枚举 entry（包括 Markdown 文件）在遍历/读取前检查深度。该策略对低内存设备有意偏保守。
+4. Tauri 在 bootstrap copy 与 IPC read 前增加 generated-asset 检查；新 projection 超限时保留上一份 known-good projection。Android evidence 记录精确 native ABI 与可测 RAM，拒绝超过 profile ceiling 的设备，并继续脱敏 serial。
+5. CI 分离打包与发布验收。Ubuntu Android job 签名/构建/验证 arm64 产物但只暴露 workflow artifact；显式 self-hosted `[self-hosted, android-arm64]` job 执行 schema-1 SAF/import/query/path/continuity workload 与 RSS capture，只有成功后才允许上传 GitHub Release。
+
+### 相对前序架构的位置
+
+- 第 23 阶段统一了 build/evidence metadata，但 browser limits 仍有重复，Capacitor 仍是读后计量。第 24 阶段让 browser runtime 消费同一份 additive projection，并把内存敏感拒绝前移到 read boundary。
+- 跨 host contract 不变：projection schema、public ID、request/poll command 与 host adapter 保持向前兼容；没有向移动 payload 加入数据库、内置模型或 Godot runtime。
+- 打包继续采用 runtime-first。当前 mobile-low staging 为 122 文件 / 未压缩 `4,283,033` / 估算压缩 `1,552,689` bytes，明显低于 25 MiB artifact ceiling；这不是 RSS 结果。
+
+### 验证与前向门禁
+
+- 边界修复后的定向 contract 为 16 tests passed；TypeScript no-emit、slim staging/budget 与 Diataxis 通过。全量 Jest 为 148 suites / 1,280 passed / 26 skipped；Rust host tests 为 30 passed / 1 ignored。
+- 原生 G2/G3 仍开放：当前宿主没有获批 signing key 或在线获批 arm64 设备。下一步必须是 CI 签名产物 -> 获批低 RAM arm64 设备 -> 有序 workload -> force-stop/reopen -> `rss.json` 与 provenance archive。
+- 在原生证据可重复并归档前，继续冻结 SQLite/WASM、public-ID 迁移、Godot inclusion 与预算上调。

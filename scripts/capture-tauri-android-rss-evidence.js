@@ -13,6 +13,7 @@ const {
   inspectDeviceRuntime,
 } = require('./capacitor-device-utils');
 const { verifyMobileArtifact } = require('./verify-mobile-artifact');
+const { MOBILE_BUDGET_CONTRACT } = require('./mobile-budget-contract');
 
 const repoRoot = path.resolve(__dirname, '..');
 const defaultOutputRoot = path.join(repoRoot, 'output', 'verification', 'mobile-android');
@@ -164,6 +165,30 @@ function runAdb(adbCommand, serial, adbArgs, timeoutMs = DEFAULT_TIMEOUT_MS) {
   };
 }
 
+function parseAbiList(output) {
+  return [...new Set(String(output || '')
+    .split(/[\s,]+/)
+    .map((value) => value.trim())
+    .filter(Boolean))].sort();
+}
+
+function parseTotalRamBytes(output) {
+  const match = String(output || '').match(/^MemTotal:\s+(\d+)\s+kB\s*$/im);
+  return match ? Number(match[1]) * 1024 : 0;
+}
+
+function inspectDeviceBudget(adbCommand, serial) {
+  const abiResult = runAdb(adbCommand, serial, ['shell', 'getprop', 'ro.product.cpu.abilist'], 5000);
+  const fallbackAbiResult = abiResult.ok && abiResult.stdout.trim().length > 0
+    ? abiResult
+    : runAdb(adbCommand, serial, ['shell', 'getprop', 'ro.product.cpu.abi'], 5000);
+  const memoryResult = runAdb(adbCommand, serial, ['shell', 'cat', '/proc/meminfo'], 5000);
+  return {
+    supportedAbis: parseAbiList(fallbackAbiResult.stdout),
+    totalRamBytes: parseTotalRamBytes(memoryResult.stdout),
+  };
+}
+
 function parsePid(output) {
   const match = String(output || '').match(/\b(\d+)\b/);
   return match ? Number(match[1]) : 0;
@@ -291,7 +316,13 @@ function collectDevice(adbCommand, requestedSerial) {
   if (!online.includes(serial)) {
     throw new Error(`Requested Android serial is not online: ${serial}. Device states: ${formatDeviceStateSummary(devices)}`);
   }
-  return { serial, runtime: inspectDeviceRuntime(adbCommand, serial) };
+  return {
+    serial,
+    runtime: {
+      ...inspectDeviceRuntime(adbCommand, serial),
+      ...inspectDeviceBudget(adbCommand, serial),
+    },
+  };
 }
 
 function main() {
@@ -311,6 +342,7 @@ function main() {
     artifactPath,
     profile,
     requireArm64: true,
+    requireArm64Only: true,
     requireSigned,
   });
   const workloadSpec = readWorkloadSpec(
@@ -322,6 +354,21 @@ function main() {
   }
   const requestedSerial = parseOption(args, '--serial') || process.env.NOTE_CONNECTION_ANDROID_SERIAL || '';
   const device = collectDevice(adbCommand, requestedSerial);
+  const profileBudget = MOBILE_BUDGET_CONTRACT.profiles[profile];
+  if (!profileBudget) {
+    throw new Error(`Unknown mobile profile: ${profile}`);
+  }
+  if (!device.runtime.supportedAbis.includes('arm64-v8a')) {
+    throw new Error(
+      `Selected device must expose arm64-v8a; found ${device.runtime.supportedAbis.join(', ') || 'none'}.`
+    );
+  }
+  if (!device.runtime.totalRamBytes || device.runtime.totalRamBytes > profileBudget.maxDeviceRamBytes) {
+    throw new Error(
+      `Selected device RAM must be measurable and <= ${profileBudget.maxDeviceRamBytes} bytes; ` +
+      `found ${device.runtime.totalRamBytes || 'unknown'}.`
+    );
+  }
   const allowEmulator = args.includes('--allow-emulator') || isTruthy(process.env.NOTE_CONNECTION_ALLOW_EMULATOR_EVIDENCE);
   if (device.runtime.likelyEmulator && !allowEmulator) {
     throw new Error(
@@ -395,6 +442,7 @@ function main() {
     artifactPath,
     profile,
     requireArm64: true,
+    requireArm64Only: true,
     requireSigned,
     rssEvidencePath,
     requireRss: true,
@@ -422,6 +470,9 @@ function main() {
       androidVersion: device.runtime.androidVersion || '',
       likelyEmulator: Boolean(device.runtime.likelyEmulator),
       emulatorReasons: device.runtime.emulatorReasons || [],
+      supportedAbis: device.runtime.supportedAbis,
+      totalRamBytes: device.runtime.totalRamBytes,
+      maxDeviceRamBytes: profileBudget.maxDeviceRamBytes,
     },
     packageId,
     process: {
@@ -470,6 +521,9 @@ module.exports = {
   maskSerial,
   parseWorkloadSpec: readWorkloadSpec,
   parsePid,
+  parseAbiList,
+  parseTotalRamBytes,
+  inspectDeviceBudget,
   readRssBytes,
   resolveArtifactPath,
 };

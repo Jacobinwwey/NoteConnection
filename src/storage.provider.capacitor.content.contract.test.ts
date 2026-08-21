@@ -17,6 +17,6 @@ describe('storage provider capacitor content mapping contract', () => {
     const source = fs.readFileSync(storageProviderPath, 'utf8');
     expect(source).toContain('if (isCapacitorNativeRuntime()) {');
     expect(source).toContain('const capacitorPath = resolveCapacitorContentCandidatePath(filePath);');
-    expect(source).toContain('return await capacitorReadText(capacitorPath);');
+    expect(source).toContain('return await capacitorReadText(capacitorPath, {');
   });
 });

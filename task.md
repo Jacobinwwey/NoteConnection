@@ -754,3 +754,57 @@ Keep the forward-compatible mobile boundary: body-free projection plus host-owne
 ### 第 22 阶段决策
 
 保持向前兼容的移动边界：无正文 projection + host 自有存储/生命周期原语 + CI-only signing + local exact analysis。下一步应先完成证据采集与预算对齐，不增加数据库、内置模型，也不放宽 ABI/签名门禁。若当前只发布 arm64，应把 release artifact/profile 改名为 `arm64`；若确需 universal，则必须增加逐 ABI 验证。两者都比依赖误导性名称稳健。public-ID 迁移、默认 SQLite/WASM、Godot 打包与预算上调继续冻结，直到原生证据闭环。
+
+## 2026-08-18 Phase 23 Versioned Mobile Budget Contract and Arm64 Truthfulness
+
+- [x] Added `config/mobile-budget.v1.json` and a validated loader shared by slim staging, APK/AAB verification, and the generated mobile manifest. Artifact, RSS, input, graph, depth, and projection limits are now recorded under one schema version.
+- [x] Added a 48 MiB serialized projection guard to the Rust Android/test path. Graph JSON, `data.js`, and target cache variants fail before atomic write when the bounded projection contract is exceeded.
+- [x] Reused the mobile 16 MiB bounded reader for `read_node_content` on Android and in Rust tests. Oversized content is rejected before returning a large String; desktop production behavior remains unchanged.
+- [x] Changed the release workflow from the misleading `universal` target to `aarch64`, added exact `arm64-v8a` ABI verification, and publish as `noteconnection-arm64-release.apk/.aab`; the existing universal commands remain explicit local opt-ins.
+- [x] Added JS/Rust budget drift contracts and an oversized-content regression test. Rust host tests now cover 30 passed / 1 ignored in the current toolchain.
+- [~] Native G2/G3 remains external: approved signing key, online arm64 device, SAF workload, process restart, failure retries, and measured RSS are still required.
+
+### Phase 23 decision
+
+Make budgets and artifact claims explicit at every boundary. The versioned contract is additive metadata and does not change projection schema, public IDs, or IPC fields. Failing before projection writes trades support for pathological oversized corpora for deterministic low-memory behavior; the mobile profile is intentionally bounded rather than silently allocating until WebView/native OOM.
+
+## 2026-08-18 第 23 阶段：版本化移动预算契约与 arm64 语义对齐
+
+- [x] 增加 `config/mobile-budget.v1.json` 与校验 loader，供 slim staging、APK/AAB verifier 与 mobile manifest 共用。artifact、RSS、input、graph、depth 与 projection 上限现在归档在同一 schema version 下。
+- [x] Rust Android/test 路径增加 48 MiB serialized projection guard。graph JSON、`data.js` 与 target cache 超过有界 projection contract 时在 atomic write 前失败。
+- [x] `read_node_content` 在 Android 与 Rust tests 复用 16 MiB bounded reader；超大正文在返回大 String 前被拒绝，桌面生产行为不变。
+- [x] release workflow 从容易误导的 `universal` target 改为 `aarch64`，增加精确 `arm64-v8a` ABI 验证并以 `noteconnection-arm64-release.apk/.aab` 发布；现有 universal 命令继续作为显式本地 opt-in。
+- [x] 增加 JS/Rust budget drift contract 与超大正文回归测试；当前工具链 Rust host tests 为 30 passed / 1 ignored。
+- [~] 原生 G2/G3 仍是外部门禁：获批签名 key、在线 arm64 设备、SAF workload、进程重启、失败重试与实测 RSS 仍需补齐。
+
+### 第 23 阶段决策
+
+让每个边界都显式表达预算与产物语义。版本化契约是 additive metadata，不改变 projection schema、public ID 或 IPC 字段。在 projection 写入前失败，会牺牲极端超大语料的支持范围，但换取低端设备上的确定性内存行为；移动 profile 必须有界，不能静默分配到 WebView/native OOM。
+
+## 2026-08-21 第 24 阶段：跨 host runtime budget 投影与原生证据隔离
+
+- [x] 增加轻量 `NoteConnectionMobileBudget` browser projection，在 storage provider 前加载，并由 contract tests 与版本化 JSON contract 对账。
+- [x] Capacitor admission 改用 UTF-8 字节计量，worker 与 single-thread 路径统一执行文档数、单文档字节、总输入字节、边数、目录深度和 serialized projection 上限。
+- [x] 增加 Capacitor `stat` 预检与 decoded UTF-8 兜底，超大正文在正常操作 materialize 前拒绝；目录枚举得到的所有 entry 现在都受深度限制。
+- [x] 增加 Tauri bootstrap/IPC generated-asset size guard，并强化 Android evidence harness：要求精确 `arm64-v8a`、可测设备 RAM 且不超过所选 profile 上限，同时记录 ABI/RAM provenance。
+- [x] 将 Android 静态打包与原生 release acceptance 分离：签名 arm64 APK/AAB 先作为 workflow artifact，只有显式 self-hosted workload 与 RSS evidence job 成功后才上传 GitHub Release。
+- [x] 当前 mobile-low staging：122 个文件、未压缩 4,283,033 bytes、估算压缩 1,552,689 bytes，content SHA-256 为 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`。
+- [~] 原生 G2/G3 仍是外部门禁：当前宿主没有获批 signing key 或在线获批 arm64 设备，SAF/import/query/path、force-stop/reopen continuity、重试场景与实测 RSS 尚未关闭。
+
+### 第 24 阶段决策
+
+WebView/Capacitor 共用一份 additive runtime budget projection，同时保留 native Rust 常量以维持运行时独立。UTF-8 字节上限与 stat-before-read 让不同 host 的移动边界采取保守一致的行为；代价是超大正文确定性拒绝，而不是尽力 ingest。静态产物检查只是必要的打包证据，release 发布必须继续等待签名真机证据。证据归档前不提升 SQLite/WASM、public-ID 迁移、Godot inclusion 或更大预算。
+
+## 2026-08-21 Phase 24 Cross-Host Runtime Budget Projection and Native Evidence Separation
+
+- [x] Added the tiny `NoteConnectionMobileBudget` browser projection, loaded before the storage provider, and kept it aligned with the versioned JSON contract through contract tests.
+- [x] Changed Capacitor admission accounting to UTF-8 bytes and enforced document count, per-document bytes, total input bytes, graph edges, directory depth, and serialized projection bytes in both worker and single-thread paths.
+- [x] Added a Capacitor `stat` preflight plus decoded UTF-8 fallback guard so an oversized note is rejected before normal operation materializes it; every enumerated entry now obeys the depth limit.
+- [x] Added Tauri bootstrap/IPC generated-asset size checks and strengthened the Android evidence harness to require exact `arm64-v8a`, measurable device RAM within the selected profile ceiling, and recorded ABI/RAM provenance.
+- [x] Separated static Android packaging from native release acceptance: signed arm64 APK/AAB are workflow artifacts first; GitHub Release upload occurs only after the explicit self-hosted workload and RSS evidence job succeeds.
+- [x] Rebuilt the current mobile-low staging: 122 files, 4,283,033 uncompressed bytes, 1,552,689 estimated compressed bytes, content SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`.
+- [~] Native G2/G3 remains external: this host still has no approved signing key or online approved arm64 device, so SAF/import/query/path, force-stop/reopen continuity, retry cases, and measured RSS are not closed.
+
+### Phase 24 decision
+
+Keep one additive runtime budget projection for WebView/Capacitor while retaining native Rust constants for runtime independence. UTF-8 byte limits and stat-before-read make the mobile boundary conservative across host implementations; the trade-off is deterministic rejection of oversized notes instead of best-effort ingestion. Static artifact checks are necessary packaging evidence, but release publication must stay behind signed-device evidence. Do not promote SQLite/WASM, public-ID migration, Godot inclusion, or larger budgets until that evidence is archived.

@@ -12,7 +12,7 @@ use std::sync::Mutex;
 use jni::objects::{JObject, JString, JValue};
 #[cfg(target_os = "android")]
 use jni::JavaVM;
-#[cfg(target_os = "android")]
+#[cfg(any(target_os = "android", test))]
 use std::io::Read;
 #[cfg(not(target_os = "android"))]
 use std::net::TcpListener;
@@ -898,6 +898,15 @@ fn bootstrap_runtime_data(frontend_dir: &Path, runtime_data_dir: &Path) {
                 continue;
             }
 
+            if let Err(err) = validate_mobile_projection_file(&source_path) {
+                eprintln!(
+                    "[Rust] Refusing to seed generated projection '{}': {}",
+                    source_path.to_string_lossy(),
+                    err
+                );
+                continue;
+            }
+
             if let Err(err) = fs::copy(&source_path, &target_path) {
                 eprintln!(
                     "[Rust] Failed to seed runtime data '{}' -> '{}': {}",
@@ -963,6 +972,8 @@ const MOBILE_MAX_TOTAL_INPUT_BYTES: u64 = 64 * 1024 * 1024;
 const MOBILE_MAX_EDGES: usize = 250_000;
 #[cfg(any(target_os = "android", test))]
 const MOBILE_MAX_DEPTH: usize = 64;
+#[cfg(any(target_os = "android", test))]
+const MOBILE_MAX_PROJECTION_BYTES: usize = 48 * 1024 * 1024;
 
 #[cfg(any(target_os = "android", test))]
 fn validate_mobile_corpus_budget(document_count: usize, total_bytes: u64) -> Result<(), String> {
@@ -1003,7 +1014,7 @@ fn validate_mobile_edge_budget(edge_count: usize) -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(target_os = "android")]
+#[cfg(any(target_os = "android", test))]
 fn read_mobile_markdown_content(path: &Path) -> Result<String, String> {
     let file = fs::File::open(path)
         .map_err(|err| format!("Failed to read '{}': {}", path.to_string_lossy(), err))?;
@@ -1016,6 +1027,29 @@ fn read_mobile_markdown_content(path: &Path) -> Result<String, String> {
     })?;
     String::from_utf8(bytes)
         .map_err(|err| format!("Markdown file '{}' is not valid UTF-8: {}", path.to_string_lossy(), err))
+}
+
+#[cfg(any(target_os = "android", test))]
+fn validate_mobile_projection_bytes(byte_count: usize) -> Result<(), String> {
+    if byte_count > MOBILE_MAX_PROJECTION_BYTES {
+        return Err(format!(
+            "Mobile graph projection exceeds the serialized byte limit ({} bytes > {} bytes)",
+            byte_count, MOBILE_MAX_PROJECTION_BYTES
+        ));
+    }
+    Ok(())
+}
+
+fn validate_mobile_projection_file(path: &Path) -> Result<(), String> {
+    let metadata = fs::metadata(path)
+        .map_err(|err| format!("Failed to inspect generated projection '{}': {}", path.to_string_lossy(), err))?;
+    #[cfg(any(target_os = "android", test))]
+    {
+        let byte_count = usize::try_from(metadata.len())
+            .map_err(|_| format!("Generated projection '{}' is too large to address", path.to_string_lossy()))?;
+        validate_mobile_projection_bytes(byte_count)?;
+    }
+    Ok(())
 }
 
 fn normalize_path_key(raw: &str) -> String {
@@ -1657,17 +1691,18 @@ fn build_graph_runtime_for_target(
     let graph_json_path = runtime_data_dir.join("graph_data.json");
     let data_js_path = runtime_data_dir.join("data.js");
 
-    write_atomic(
-        &graph_json_path,
-        serde_json::to_string_pretty(persisted_graph)
-            .map_err(|err| format!("Failed to serialize graph_data.json: {}", err))?
-            .as_str(),
-    )?;
+    let graph_json = serde_json::to_string_pretty(persisted_graph)
+        .map_err(|err| format!("Failed to serialize graph_data.json: {}", err))?;
+    #[cfg(any(target_os = "android", test))]
+    validate_mobile_projection_bytes(graph_json.len())?;
+    write_atomic(&graph_json_path, graph_json.as_str())?;
     let data_js = format!(
         "const graphData = {};",
         serde_json::to_string(&lite_graph)
             .map_err(|err| format!("Failed to serialize data.js payload: {}", err))?
     );
+    #[cfg(any(target_os = "android", test))]
+    validate_mobile_projection_bytes(data_js.len())?;
     write_atomic(&data_js_path, data_js.as_str())?;
 
     if !is_all_targets {
@@ -1680,9 +1715,13 @@ fn build_graph_runtime_for_target(
             serde_json::to_string(&lite_graph)
                 .map_err(|err| format!("Failed to serialize cache data payload: {}", err))?
         );
+        #[cfg(any(target_os = "android", test))]
+        validate_mobile_projection_bytes(cache_js.len())?;
         write_atomic(&cache_js_path, cache_js.as_str())?;
         let cache_json = serde_json::to_string_pretty(persisted_graph)
             .map_err(|err| format!("Failed to serialize cache graph payload: {}", err))?;
+        #[cfg(any(target_os = "android", test))]
+        validate_mobile_projection_bytes(cache_json.len())?;
         write_atomic(&cache_json_path, cache_json.as_str())?;
     }
 
@@ -2633,6 +2672,8 @@ fn read_generated_asset(filename: String) -> Result<String, String> {
         ));
     }
 
+    validate_mobile_projection_file(&file_path)?;
+
     fs::read_to_string(&file_path)
         .map_err(|err| format!("Failed to read generated asset '{}': {}", sanitized, err))
 }
@@ -2661,8 +2702,15 @@ fn read_node_content(file_path: String) -> Result<String, String> {
         return Err("Requested path is not a file".to_string());
     }
 
-    fs::read_to_string(&canonical_path)
-        .map_err(|err| format!("Failed to read file content: {}", err))
+    #[cfg(any(target_os = "android", test))]
+    {
+        return read_mobile_markdown_content(&canonical_path);
+    }
+    #[cfg(not(any(target_os = "android", test)))]
+    {
+        fs::read_to_string(&canonical_path)
+            .map_err(|err| format!("Failed to read file content: {}", err))
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -3025,6 +3073,28 @@ mod tests {
         assert!(validate_mobile_document_size(MOBILE_MAX_DOCUMENT_BYTES + 1).is_err());
         assert!(validate_mobile_edge_budget(MOBILE_MAX_EDGES).is_ok());
         assert!(validate_mobile_edge_budget(MOBILE_MAX_EDGES + 1).is_err());
+    }
+
+    #[test]
+    fn mobile_runtime_guards_match_versioned_budget_contract() {
+        let contract: Value = serde_json::from_str(include_str!("../../config/mobile-budget.v1.json"))
+            .expect("mobile budget contract must be valid JSON");
+        assert_eq!(contract["schemaVersion"].as_u64(), Some(1));
+        assert_eq!(contract["runtime"]["maxDocuments"].as_u64(), Some(MOBILE_MAX_DOCUMENTS as u64));
+        assert_eq!(
+            contract["runtime"]["maxDocumentBytes"].as_u64(),
+            Some(MOBILE_MAX_DOCUMENT_BYTES)
+        );
+        assert_eq!(
+            contract["runtime"]["maxTotalInputBytes"].as_u64(),
+            Some(MOBILE_MAX_TOTAL_INPUT_BYTES)
+        );
+        assert_eq!(contract["runtime"]["maxEdges"].as_u64(), Some(MOBILE_MAX_EDGES as u64));
+        assert_eq!(contract["runtime"]["maxDepth"].as_u64(), Some(MOBILE_MAX_DEPTH as u64));
+        assert_eq!(
+            contract["runtime"]["maxProjectionBytes"].as_u64(),
+            Some(MOBILE_MAX_PROJECTION_BYTES as u64)
+        );
     }
 
     fn test_env_lock() -> &'static Mutex<()> {
@@ -3570,6 +3640,33 @@ reader_media_scale = 1.5
         let legacy_result =
             read_node_content(windows_style_path).expect("legacy windows-style path read failed");
         assert!(legacy_result.contains("Financial Overview"));
+    }
+
+    #[test]
+    fn read_node_content_rejects_oversized_mobile_documents() {
+        let _lock = lock_test_env();
+        let temp = TempDir::new("read_node_content_oversized");
+        let config_file = temp.child("app_config.toml");
+        let kb_dir = temp.child("Knowledge_Base");
+        let note_file = kb_dir.join("oversized.md");
+
+        fs::create_dir_all(&kb_dir).expect("failed to create kb directory");
+        fs::write(
+            &note_file,
+            vec![b'x'; (MOBILE_MAX_DOCUMENT_BYTES + 1) as usize],
+        )
+        .expect("failed to write oversized note");
+
+        let _config_guard = EnvVarGuard::set(
+            "NOTE_CONNECTION_CONFIG_PATH",
+            config_file.to_string_lossy().as_ref(),
+        );
+        persist_kb_path(kb_dir.to_string_lossy().as_ref())
+            .expect("persist_kb_path should succeed");
+
+        let error = read_node_content(note_file.to_string_lossy().to_string())
+            .expect_err("oversized mobile content should be rejected");
+        assert!(error.contains("per-file limit"));
     }
 
     #[test]

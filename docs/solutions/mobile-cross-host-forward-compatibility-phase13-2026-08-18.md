@@ -179,3 +179,31 @@ The next slice is evidence closure: CI-signed arm64 -> approved low-memory devic
 两个架构约束必须显式保留。第一，workflow 将产物称为 universal，但检查只发现 `arm64-v8a` native payload，因此 `universal` 只是标签，不是证据；声明前应改名为 arm64 或增加逐 ABI manifest/安装校验。第二，input admission、projection ceiling、Rust graph limits、SAF staging 磁盘与 RSS 是不同预算；完整正文读取与 JSON/Map 重复驻留可能在 admission 通过后仍超 RSS，因此预算上调前必须为 `read_node_content` 增加有界读取策略。
 
 下一步只做证据闭环：CI 签名 arm64 -> 获批低内存设备 -> schema-1 SAF/import/query/path/continuity -> 存储/权限重试 -> force-stop/reopen -> `manifest + rss.json + artifact hash + logcat`。缺证据、进程死亡不可观测或 RSS 超过 256 MiB 必须 fail closed。public-ID 迁移、默认 SQLite/WASM、Godot inclusion 与移动预算扩大继续冻结。
+
+## 2026-08-18 Phase 23 Versioned Mobile Budget Contract and Arm64 Truthfulness
+
+### English
+
+The mobile profile now has one checked-in budget contract, `config/mobile-budget.v1.json`, consumed by staging, artifact verification, and manifest generation. It records artifact/RSS profiles plus runtime limits for documents, bytes, edges, depth, and serialized projection size. Rust keeps native constants for runtime independence but parses the same contract in tests to prevent drift. Android rejects projections over 48 MiB before replacing the known-good file and rejects content over 16 MiB before returning a large String. The release workflow now builds `aarch64`, requires exactly `arm64-v8a`, and publishes `noteconnection-arm64-release.apk/.aab`; universal remains an explicit local opt-in. Projection schema, public IDs, and IPC contracts are unchanged. Native device/RSS evidence is still open.
+
+### 中文
+
+移动 profile 现在只有一份 checked-in budget contract：`config/mobile-budget.v1.json`，由 staging、artifact verifier 与 manifest generation 共用。它记录 artifact/RSS profile，以及文档数、字节数、边数、深度和 serialized projection 上限。Rust 为保持 native runtime 独立继续保留常量，但 tests 解析同一 contract 防止漂移。Android 在替换已知可用文件前拒绝超过 48 MiB 的 projection，并在返回大 String 前拒绝超过 16 MiB 的正文。release workflow 现在构建 `aarch64`，强制精确 `arm64-v8a` 并发布 `noteconnection-arm64-release.apk/.aab`；universal 继续只是显式本地 opt-in。Projection schema、public ID 与 IPC contract 不变；真机/RSS 证据仍未关闭。
+
+## 2026-08-21 Phase 24 Cross-Host Runtime Budget Projection and Native Evidence Separation
+
+### English
+
+Phase 23 established one build/evidence budget contract, but the browser still duplicated limits and Capacitor checked document size after materializing the text. Phase 24 adds the small `mobile_budget_runtime.js` projection, UTF-8 byte accounting, stat-before-read when available, decoded-text fallback checks, and a depth guard for every enumerated entry. Worker and single-thread graph paths validate the same edge/projection limits.
+
+Tauri now rejects oversized generated assets before bootstrap copy and IPC reads. The Android evidence harness requires exact `arm64-v8a`, measurable device RAM within the selected profile ceiling, and records ABI/RAM provenance. CI builds and signs arm64 artifacts as workflow artifacts; GitHub Release upload is a separate job gated by the self-hosted workload, force-stop/reopen continuity, and real RSS evidence.
+
+The current mobile-low staging is 122 files / `4,283,033` uncompressed / `1,552,689` estimated compressed bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`. Projection schema, public IDs, and IPC remain forward-compatible. Native G2/G3 is still pending because this host has no approved signing key or online approved arm64 device; SQLite/WASM, public-ID migration, Godot inclusion, and budget increases remain frozen.
+
+### 中文
+
+第 23 阶段建立了统一的 build/evidence budget contract，但 browser 仍重复限制，Capacitor 也在正文 materialize 后才检查大小。第 24 阶段增加小型 `mobile_budget_runtime.js` projection、UTF-8 字节计量、可用时 stat-before-read、decoded-text 兜底，以及对所有枚举 entry 的深度 guard。worker 与 single-thread 构图路径现在校验同一组边数/projection 上限。
+
+Tauri 现在在 bootstrap copy 与 IPC read 前拒绝超限 generated asset。Android evidence harness 要求精确 `arm64-v8a`、profile ceiling 内的可测设备 RAM，并记录 ABI/RAM provenance。CI 将 arm64 产物构建/签名为 workflow artifact；GitHub Release 上传拆为独立 job，必须经过 self-hosted workload、force-stop/reopen continuity 与真实 RSS 证据。
+
+当前 mobile-low staging 为 122 文件 / 未压缩 `4,283,033` / 估算压缩 `1,552,689` bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`。Projection schema、public ID 与 IPC 继续向前兼容。当前宿主没有获批 signing key 或在线获批 arm64 设备，原生 G2/G3 仍待完成；SQLite/WASM、public-ID 迁移、Godot inclusion 与预算上调继续冻结。

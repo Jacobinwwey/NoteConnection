@@ -42,12 +42,43 @@
 
     let capacitorFsPermissionGranted = false;
     let capacitorFsPermissionPromise = null;
-    const CAPACITOR_GRAPH_BUILD_MAX_FILES = 2000;
-    const CAPACITOR_GRAPH_BUILD_MAX_BYTES = 16 * 1024 * 1024;
     const CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS = 20000;
     const CAPACITOR_BRIDGE_MAX_CHUNK_BYTES = 192 * 1024;
     const CAPACITOR_BRIDGE_MAX_TEXT_PAYLOAD_BYTES = 64 * 1024 * 1024;
-    const CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES = 48 * 1024 * 1024;
+    const FALLBACK_MOBILE_RUNTIME_BUDGET = Object.freeze({
+        maxDocuments: 5000,
+        maxDocumentBytes: 16 * 1024 * 1024,
+        maxTotalInputBytes: 64 * 1024 * 1024,
+        maxEdges: 250000,
+        maxDepth: 64,
+        maxProjectionBytes: 48 * 1024 * 1024
+    });
+
+    function getMobileRuntimeBudget() {
+        const candidate = typeof window !== 'undefined' ? window.NoteConnectionMobileBudget : null;
+        const runtime = candidate && candidate.runtime;
+        if (!runtime || typeof runtime !== 'object') {
+            return FALLBACK_MOBILE_RUNTIME_BUDGET;
+        }
+
+        const keys = Object.keys(FALLBACK_MOBILE_RUNTIME_BUDGET);
+        const isValid = keys.every((key) => Number.isInteger(runtime[key]) && runtime[key] > 0);
+        return isValid ? runtime : FALLBACK_MOBILE_RUNTIME_BUDGET;
+    }
+
+    function measureUtf8Bytes(textPayload) {
+        const text = String(textPayload || '');
+        if (!text) {
+            return 0;
+        }
+        if (typeof TextEncoder === 'function') {
+            return new TextEncoder().encode(text).length;
+        }
+        if (typeof Buffer !== 'undefined' && typeof Buffer.byteLength === 'function') {
+            return Buffer.byteLength(text, 'utf8');
+        }
+        return text.length;
+    }
 
     function getCapacitorDirectoryHints(filesystem) {
         const directoryHints = [];
@@ -547,20 +578,6 @@
         }
     }
 
-    function measureUtf8Bytes(textPayload) {
-        const text = String(textPayload || '');
-        if (!text) {
-            return 0;
-        }
-        if (typeof TextEncoder === 'function') {
-            return new TextEncoder().encode(text).length;
-        }
-        if (typeof Buffer !== 'undefined' && typeof Buffer.byteLength === 'function') {
-            return Buffer.byteLength(text, 'utf8');
-        }
-        return text.length;
-    }
-
     async function writeCapacitorChunkSequenceToDirectory(filesystem, normalizedPath, chunkSequenceFactory, options) {
         const directory = options && Object.prototype.hasOwnProperty.call(options, 'directory')
             ? options.directory
@@ -723,6 +740,10 @@
         const explicitDirectory = options && Object.prototype.hasOwnProperty.call(options, 'directory')
             ? options.directory
             : undefined;
+        const maxBytes = Math.max(
+            1024,
+            Math.floor(Number(options && options.maxBytes) || CAPACITOR_BRIDGE_MAX_TEXT_PAYLOAD_BYTES)
+        );
         const directoryHints = explicitDirectory === undefined
             ? getCapacitorDirectoryHints(filesystem)
             : [explicitDirectory];
@@ -734,9 +755,41 @@
                 if (directory) {
                     args.directory = directory;
                 }
+                // Stat is a preflight guard: reading an oversized note first would
+                // defeat the low-memory contract even if the decoded text is later rejected.
+                if (typeof filesystem.stat === 'function') {
+                    try {
+                        const statResult = await filesystem.stat(args);
+                        const reportedBytes = Number(statResult && statResult.size);
+                        if (Number.isFinite(reportedBytes) && reportedBytes > maxBytes) {
+                            const budgetError = new Error(
+                                `Capacitor file exceeds ${maxBytes} bytes: ${normalizedPath}`
+                            );
+                            budgetError.code = 'MOBILE_BUDGET_EXCEEDED';
+                            throw budgetError;
+                        }
+                    } catch (err) {
+                        if (err && err.code === 'MOBILE_BUDGET_EXCEEDED') {
+                            throw err;
+                        }
+                        // Some Capacitor versions do not expose stat for SAF handles;
+                        // the bounded decoded-text check below remains the fallback.
+                    }
+                }
                 const result = await filesystem.readFile(args);
-                return decodeCapacitorTextPayload(result);
+                const text = decodeCapacitorTextPayload(result);
+                if (measureUtf8Bytes(text) > maxBytes) {
+                    const budgetError = new Error(
+                        `Capacitor file exceeds ${maxBytes} bytes: ${normalizedPath}`
+                    );
+                    budgetError.code = 'MOBILE_BUDGET_EXCEEDED';
+                    throw budgetError;
+                }
+                return text;
             } catch (err) {
+                if (err && err.code === 'MOBILE_BUDGET_EXCEEDED') {
+                    throw err;
+                }
                 lastError = err;
             }
         }
@@ -847,13 +900,21 @@
     }
 
     async function collectCapacitorMarkdownFiles(targetPath) {
-        const queue = [normalizeCapacitorPath(targetPath, { allowCurrentDir: true })];
+        const budget = getMobileRuntimeBudget();
+        const queue = [{
+            path: normalizeCapacitorPath(targetPath, { allowCurrentDir: true }),
+            depth: 0
+        }];
         const visited = new Set();
         const files = [];
         let totalBytes = 0;
 
         while (queue.length > 0) {
-            const current = queue.shift();
+            const currentEntry = queue.shift();
+            const current = currentEntry && currentEntry.path;
+            const currentDepth = currentEntry && Number.isInteger(currentEntry.depth)
+                ? currentEntry.depth
+                : 0;
             if (!current || visited.has(current)) {
                 continue;
             }
@@ -866,23 +927,47 @@
                 }
 
                 const looksLikeMarkdown = /\.md$/i.test(entry.name);
+                const entryDepth = currentDepth + 1;
+                if (entryDepth > budget.maxDepth) {
+                    throw new Error(
+                        `Capacitor local build directory depth exceeds ${budget.maxDepth}. ` +
+                        'Please flatten the knowledge base or build on desktop.'
+                    );
+                }
                 if (entry.isDirectory === true) {
-                    queue.push(entry.path);
+                    queue.push({ path: entry.path, depth: entryDepth });
                     continue;
                 }
                 if (entry.isDirectory === null && !looksLikeMarkdown) {
-                    queue.push(entry.path);
+                    queue.push({ path: entry.path, depth: entryDepth });
                     continue;
                 }
                 if (!looksLikeMarkdown) {
                     continue;
                 }
 
-                const rawText = await capacitorReadText(entry.path, { directory: entry.directory });
-                totalBytes += rawText.length;
-                if (totalBytes > CAPACITOR_GRAPH_BUILD_MAX_BYTES) {
+                if (files.length >= budget.maxDocuments) {
                     throw new Error(
-                        `Capacitor local build payload exceeds ${CAPACITOR_GRAPH_BUILD_MAX_BYTES} bytes. ` +
+                        `Capacitor local build file count exceeds ${budget.maxDocuments}. ` +
+                        'Please build on desktop for large datasets.'
+                    );
+                }
+
+                const rawText = await capacitorReadText(entry.path, {
+                    directory: entry.directory,
+                    maxBytes: budget.maxDocumentBytes
+                });
+                const documentBytes = measureUtf8Bytes(rawText);
+                if (documentBytes > budget.maxDocumentBytes) {
+                    throw new Error(
+                        `Capacitor local build document exceeds ${budget.maxDocumentBytes} bytes. ` +
+                        'Please split the note or build on desktop.'
+                    );
+                }
+                totalBytes += documentBytes;
+                if (totalBytes > budget.maxTotalInputBytes) {
+                    throw new Error(
+                        `Capacitor local build payload exceeds ${budget.maxTotalInputBytes} bytes. ` +
                         'Please build on desktop for large datasets.'
                     );
                 }
@@ -911,12 +996,6 @@
                     clusterId
                 });
 
-                if (files.length > CAPACITOR_GRAPH_BUILD_MAX_FILES) {
-                    throw new Error(
-                        `Capacitor local build file count exceeds ${CAPACITOR_GRAPH_BUILD_MAX_FILES}. ` +
-                        'Please build on desktop for large datasets.'
-                    );
-                }
             }
         }
 
@@ -1017,6 +1096,13 @@
         });
 
         const edges = Array.from(edgeMap.values());
+        const budget = getMobileRuntimeBudget();
+        if (edges.length > budget.maxEdges) {
+            throw new Error(
+                `Capacitor graph edge count exceeds ${budget.maxEdges}. ` +
+                'Please reduce links or build on desktop for large datasets.'
+            );
+        }
         edges.forEach((edge) => {
             const sourceNode = nodeMap.get(edge.source);
             const targetNode = nodeMap.get(edge.target);
@@ -1418,9 +1504,22 @@
     }
 
     async function buildCapacitorGraphDataWithWorkerFallback(files) {
+        const budget = getMobileRuntimeBudget();
+        const validateGraphBudget = (graphData) => {
+            if (!graphData || !Array.isArray(graphData.nodes) || !Array.isArray(graphData.edges)) {
+                throw new Error('Capacitor graph payload is invalid.');
+            }
+            if (graphData.nodes.length > budget.maxDocuments) {
+                throw new Error(`Capacitor graph node count exceeds ${budget.maxDocuments}.`);
+            }
+            if (graphData.edges.length > budget.maxEdges) {
+                throw new Error(`Capacitor graph edge count exceeds ${budget.maxEdges}.`);
+            }
+            return graphData;
+        };
         if (!supportsCapacitorGraphBuildWorker()) {
             return {
-                graphData: buildCapacitorGraphData(files),
+                graphData: validateGraphBudget(buildCapacitorGraphData(files)),
                 buildMode: 'single-thread'
             };
         }
@@ -1431,7 +1530,7 @@
                 throw new Error('Capacitor worker returned invalid graph payload.');
             }
             return {
-                graphData: workerGraph,
+                graphData: validateGraphBudget(workerGraph),
                 buildMode: 'worker'
             };
         } catch (workerErr) {
@@ -1441,7 +1540,7 @@
                 workerErr
             );
             return {
-                graphData: buildCapacitorGraphData(files),
+                graphData: validateGraphBudget(buildCapacitorGraphData(files)),
                 buildMode: 'single-thread-fallback',
                 warning
             };
@@ -1490,15 +1589,16 @@
         const graphData = projectionApi.createKnowledgeProjection(buildResult.graphData, {
             workspaceId: 'mobile-workspace',
         });
+        const projectionMaxBytes = getMobileRuntimeBudget().maxProjectionBytes;
         const graphJsChunkFactory = createCapacitorGraphJavascriptChunkFactory(graphData);
         const graphJsonChunkFactory = createCapacitorGraphJsonChunkFactory(graphData);
 
         await capacitorWriteChunkSequence('data.js', graphJsChunkFactory, {
-            maxPayloadBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+            maxPayloadBytes: projectionMaxBytes,
             payloadLabel: 'data.js graph payload'
         });
         await capacitorWriteChunkSequence('graph_data.json', graphJsonChunkFactory, {
-            maxPayloadBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+            maxPayloadBytes: projectionMaxBytes,
             payloadLabel: 'graph_data.json graph payload'
         });
 
@@ -1506,11 +1606,11 @@
             const targetName = sanitizeTargetName(rawTarget);
             if (targetName) {
                 await capacitorWriteChunkSequence(`data_${targetName}.js`, graphJsChunkFactory, {
-                    maxPayloadBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+                    maxPayloadBytes: projectionMaxBytes,
                     payloadLabel: `data_${targetName}.js graph payload`
                 });
                 await capacitorWriteChunkSequence(`graph_data_${targetName}.json`, graphJsonChunkFactory, {
-                    maxPayloadBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+                    maxPayloadBytes: projectionMaxBytes,
                     payloadLabel: `graph_data_${targetName}.json graph payload`
                 });
             }
@@ -1857,11 +1957,11 @@
                 const projectionStore = typeof storeApi.createFileProjectionStore === 'function'
                     ? storeApi.createFileProjectionStore({
                         fileName: 'graph_data.json',
-                        maxBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+                        maxBytes: getMobileRuntimeBudget().maxProjectionBytes,
                         readFile: async (filename) => await this.readGeneratedAsset(filename),
                     })
                     : storeApi.createProjectionStore({
-                        maxBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+                        maxBytes: getMobileRuntimeBudget().maxProjectionBytes,
                         read: async () => await this.readGeneratedAsset('graph_data.json'),
                     });
                 const graph = await projectionStore.load();
@@ -1933,7 +2033,9 @@
 
             if (isCapacitorNativeRuntime()) {
                 const capacitorPath = resolveCapacitorContentCandidatePath(filePath);
-                return await capacitorReadText(capacitorPath);
+                return await capacitorReadText(capacitorPath, {
+                    maxBytes: getMobileRuntimeBudget().maxDocumentBytes
+                });
             }
 
             if (this._supportsSidecar()) {
@@ -1998,7 +2100,9 @@
                 try {
                     // Prefer local runtime-generated assets first so on-device builds
                     // are picked up without requiring an app rebundle.
-                    return await capacitorReadText(normalized);
+                    return await capacitorReadText(normalized, {
+                        maxBytes: getMobileRuntimeBudget().maxProjectionBytes
+                    });
                 } catch (_fsErr) {
                     // Fall through to bundled asset fetch.
                 }
@@ -2026,7 +2130,8 @@
     }
 
     window.NoteConnectionStorage = {
-        createProvider
+        createProvider,
+        measureUtf8Bytes
     };
 
     if (typeof module === 'object' && module.exports) {
@@ -2035,6 +2140,8 @@
             buildCapacitorGraphData,
             getCapacitorGraphBuildWorkerSource,
             createMobileResourceIdentity,
+            getMobileRuntimeBudget,
+            measureUtf8Bytes,
         };
     }
 }());

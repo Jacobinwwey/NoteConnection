@@ -3,9 +3,10 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const { MOBILE_BUDGET_CONTRACT } = require('./mobile-budget-contract');
 
-const DEFAULT_ASSET_BUDGET_BYTES = 25 * 1024 * 1024;
-const DEFAULT_MAX_RESIDENT_BYTES = 256 * 1024 * 1024;
+const DEFAULT_ASSET_BUDGET_BYTES = MOBILE_BUDGET_CONTRACT.profiles['mobile-low'].artifactCompressedBytes;
+const DEFAULT_MAX_RESIDENT_BYTES = MOBILE_BUDGET_CONTRACT.profiles['mobile-low'].maxResidentBytes;
 const DEFAULT_STAGING_DIR = path.resolve(__dirname, '..', 'dist', 'mobile-slim', 'frontend');
 const ZIP_ENTRY_OVERHEAD_BYTES = 46;
 

@@ -443,3 +443,20 @@ The harness deliberately executes only explicit `adbArgs` from a checked workloa
 - [~] Native G2/G3 acceptance still needs an approved key, online arm64 device, SAF workload, force-stop/reopen continuity, storage/permission retry evidence, and `VmRSS <= 256 MiB`.
 - [~] `universal` is not yet an ABI claim: the inspected archive contains only `arm64-v8a` native payload. Rename to `arm64` or add per-ABI verification before claiming universal coverage.
 - [~] Keep input, projection, native output, disk staging, and RSS budgets separate. Admission limits do not prove low-memory behavior.
+
+## 2026-08-18 Phase 23 Versioned Mobile Budget Contract and Arm64 Truthfulness
+
+- [x] Add `config/mobile-budget.v1.json` and a validated loader shared by slim staging, APK/AAB verification, and the generated manifest.
+- [x] Enforce a 48 MiB serialized projection ceiling before Rust atomic writes and reuse the 16 MiB bounded reader for Android `read_node_content`.
+- [x] Change the release workflow to build and name `aarch64`/arm64 artifacts; universal remains an explicit local opt-in.
+- [x] Add JS/Rust budget drift contracts and an oversized-content regression test.
+- [~] Native G2/G3 still requires approved signing, an online arm64 device, SAF workload, restart/retry evidence, and measured RSS `<= 256 MiB`.
+
+## 2026-08-21 Phase 24 Cross-Host Runtime Budget Projection and Native Evidence Separation
+
+- [x] Load a tiny browser budget projection before the storage provider and keep it aligned with the versioned JSON contract.
+- [x] Enforce UTF-8 byte budgets, document count, depth, edges, and projection size in both Capacitor build modes; reject oversized notes at stat/read boundaries.
+- [x] Add Tauri bootstrap/IPC asset guards and ABI/RAM provenance to the Android evidence manifest.
+- [x] Keep signed arm64 Android artifacts as workflow artifacts until the explicit self-hosted workload and RSS job succeeds; only then publish mobile Release assets.
+- [x] Current static mobile-low staging: 122 files / 4,283,033 uncompressed bytes / 1,552,689 estimated compressed bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`.
+- [~] Native G2/G3 remains open without an approved signing key and online approved arm64 hardware.
