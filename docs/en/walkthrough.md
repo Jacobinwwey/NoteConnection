@@ -371,4 +371,8 @@ Run `npm run verify:canonical:id:readiness` for the non-destructive audit. It re
 
 Run the same command with `--strict` in a release workflow. It fails closed until native device evidence exists, preventing host-only replay from being treated as signed Android acceptance.
 
-Final regression after this phase is 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit and Diataxis passed.
+## 2026-08-21 Phase 29 Tauri-Primary Mobile Release Routing
+
+Use `npm run mobile:build:release` for the documented Android release path. It delegates to Tauri Android and keeps the slim/prerequisite gates in one owner. `npm run mobile:build:compatibility` is the explicit legacy Capacitor-plus-Tauri check; `mobile:build:both` remains unchanged for callers that already depend on it.
+
+Regression verification is 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit, Tauri Rust 30 passed / 1 ignored, Fixrisk FR-001..FR-015, Diataxis, and `git diff --check` passed.

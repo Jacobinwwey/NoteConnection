@@ -1937,4 +1937,10 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - The read-only readiness verifier replays the versioned G4 corpus, requires four projection hosts, and checks every current `canonicalId` producer.
 - It reports `blocked` with `independentReviewRequired: true`; `--strict` fails closed without native device evidence.
 - No public ID, snapshot/projection schema, Bridge field, layout, API payload, or mobile runtime changes are allowed in this phase.
-- Final regression is 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit and Diataxis passed.
+
+## 2026-08-21 Phase 29 Tauri-Primary Mobile Release Routing
+
+- `mobile:build:release` is the documented Tauri Android release entry.
+- `mobile:build:compatibility` names the historical Capacitor-plus-Tauri check; `mobile:build:both` remains for backward compatibility.
+- The release alias has no Capacitor dependency. No runtime, schema, public-ID, or payload change was made.
+- Regression verification is 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit, Tauri Rust 30 passed / 1 ignored, Fixrisk FR-001..FR-015, Diataxis, and `git diff --check` passed.

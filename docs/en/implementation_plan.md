@@ -864,4 +864,4 @@ Final regression is 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-e
 
 The default command reports `blocked` with `independentReviewRequired: true`; `--strict` fails closed when `nativeDeviceEvidence=false`. The corpus, host replay, producer surface, and compatibility checks pass. This phase adds no `NoteNode.id`, layout, snapshot, or API change; independent migration review and native G2/G3 evidence remain required.
 
-Final regression after this phase is 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit and Diataxis passed.
+Regression verification is 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit, Tauri Rust 30 passed / 1 ignored, Fixrisk FR-001..FR-015, Diataxis, and `git diff --check` passed.

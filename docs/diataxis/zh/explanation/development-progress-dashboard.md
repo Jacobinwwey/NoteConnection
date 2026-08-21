@@ -1965,4 +1965,10 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - 只读 readiness verifier 回放 versioned G4 corpus，要求四个 projection host，并检查全部当前 `canonicalId` producer。
 - 它输出 `blocked` 与 `independentReviewRequired: true`；缺原生设备证据时 `--strict` fail-closed。
 - 本阶段禁止修改 public ID、snapshot/projection schema、Bridge 字段、layout、API payload 或移动运行时。
-- 本阶段最终回归为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。
+
+## 2026-08-21 第 29 阶段：Tauri-primary 移动 release 路由
+
+- `mobile:build:release` 是文档化的 Tauri Android release 入口。
+- `mobile:build:compatibility` 明确历史 Capacitor + Tauri 检查；`mobile:build:both` 为向后兼容保留。
+- release alias 不依赖 Capacitor；没有修改 runtime、schema、public-ID 或 payload。
+- 本阶段回归验证为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit、Tauri Rust 30 passed / 1 ignored、Fixrisk FR-001..FR-015 全部通过、Diataxis 与 `git diff --check` 通过。

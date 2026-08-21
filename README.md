@@ -127,6 +127,8 @@ npm run tauri:android:dev
 npm run tauri:android:build
 ```
 
+For the primary Android release path, use `npm run mobile:build:release`. It targets Tauri Android and runs the slim budget and Android prerequisite gates. `npm run mobile:build:compatibility` is retained for explicitly validating the historical Capacitor plus Tauri pair; it is not the release path.
+
 For a universal APK:
 
 ```bash

@@ -1569,6 +1569,24 @@ Observed local evidence: slim profile 121 files / `4,275,083` uncompressed / `1,
 - Manifest contract: 2 tests passed. TypeScript no-emit, full Jest, Rust, mobile-low budget, native-recovery, projection replay, and Diataxis remain required release checks.
 - Canonical public-ID migration remains a separate review. Native G2/G3 still requires signed arm64 hardware, SAF/permission/retry, force-stop/reopen, and measured RSS `<= 256 MiB`.
 
+## 2026-08-21 Phase 29 Tauri-Primary Mobile Release Routing
+
+### English
+
+1. Add `mobile:build:release` as the single documented Android release entry. It delegates to `mobile:build:tauri-android`, so slim preparation and Android prerequisite checks remain owned by the existing Tauri path.
+2. Add `mobile:build:compatibility` as an explicit legacy validation alias for `mobile:build:both`. Keep `mobile:build:both` unchanged so existing CI and downstream callers do not break.
+3. Add contract coverage that the release alias contains no Capacitor dependency. Update bilingual README and progress docs to distinguish release from compatibility validation.
+
+This is a routing/ownership change only: projection schema, IPC, public IDs, storage formats, mobile assets, and runtime behavior are unchanged. Removing Capacitor remains a separate deprecation task after CI and downstream usage are audited. Native G2/G3 evidence is unaffected.
+
+### 中文
+
+1. 增加 `mobile:build:release` 作为唯一文档化 Android release 入口，委托 `mobile:build:tauri-android`，因此 slim preparation 与 Android prerequisite 仍由现有 Tauri 路径拥有。
+2. 增加 `mobile:build:compatibility` 作为 `mobile:build:both` 的显式历史兼容验证别名；保持 `mobile:build:both` 不变，避免破坏既有 CI 与下游调用方。
+3. 增加 contract，确保 release alias 不依赖 Capacitor；更新双语 README 与进度文档，明确区分 release 与 compatibility validation。
+
+本阶段只调整路由与 owner：不改变 projection schema、IPC、public ID、存储格式、移动 asset 或运行时行为。移除 Capacitor 仍需单独审计 CI/下游使用后执行，原生 G2/G3 证据不受影响。
+
 ## 2026-08-21 第 27 阶段：版本化 G4 identity corpus 回放
 
 ### 中文

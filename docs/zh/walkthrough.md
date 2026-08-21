@@ -362,4 +362,8 @@ Release workflow 将打包与验收分离：签名 arm64 APK/AAB 先是 workflow
 
 Release workflow 应使用 `--strict`。在原生设备证据出现前它会 fail-closed，避免把 host-only replay 当作签名 Android 验收。
 
-本阶段最终回归为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。
+## 2026-08-21 第 29 阶段：Tauri-primary 移动 release 路由
+
+文档化 Android release 路径使用 `npm run mobile:build:release`，它委托 Tauri Android，并让 slim/prerequisite gate 保持单一 owner。`npm run mobile:build:compatibility` 是显式的历史 Capacitor + Tauri 检查，`mobile:build:both` 对依赖旧调用方保持不变。
+
+本阶段回归验证为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit、Tauri Rust 30 passed / 1 ignored、Fixrisk FR-001..FR-015 全部通过、Diataxis 与 `git diff --check` 通过。

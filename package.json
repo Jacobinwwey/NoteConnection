@@ -31,6 +31,8 @@
     "tauri:android:build:universal": "set NOTE_CONNECTION_TAURI_ANDROID_TARGET=universal&& npm run tauri:android:build",
     "mobile:build:capacitor": "build_apk.bat",
     "mobile:build:tauri-android": "npm run tauri:android:build",
+    "mobile:build:release": "npm run mobile:build:tauri-android",
+    "mobile:build:compatibility": "npm run mobile:build:both",
     "mobile:build:both": "npm run mobile:build:capacitor && npm run mobile:build:tauri-android",
     "mobile:prepare:slim": "npm run build:mini && node scripts/prepare-mobile-slim.js && node scripts/verify-mobile-slim-budget.js",
     "verify:mobile:slim:budget": "node scripts/verify-mobile-slim-budget.js",

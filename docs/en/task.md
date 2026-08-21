@@ -502,3 +502,12 @@ The harness deliberately executes only explicit `adbArgs` from a checked workloa
 - [x] Final regression: 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit and Diataxis passed.
 - [ ] Conduct the independent canonical-ID migration review; do not switch `NoteNode.id`, old layouts, or public payloads here.
 - [~] Native G2/G3 remains external until signed arm64, SAF/retry/continuity, and measured RSS evidence exists.
+
+## 2026-08-21 Phase 29 Tauri-Primary Mobile Release Routing
+
+- [x] Add `mobile:build:release` as the documented Android release entry, delegating to the Tauri Android slim build and prerequisite gates.
+- [x] Add `mobile:build:compatibility` for explicit historical Capacitor plus Tauri validation while preserving `mobile:build:both`.
+- [x] Add a contract preventing the release alias from depending on Capacitor.
+- [x] Update bilingual README/release guidance without changing schemas, IPC, IDs, or payloads.
+- [ ] Remove the deprecated Capacitor project only after downstream and CI usage is gone.
+- [~] Native G2/G3 remains separate and unproven.

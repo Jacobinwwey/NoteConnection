@@ -126,6 +126,8 @@ npm run tauri:android:dev
 npm run tauri:android:build
 ```
 
+主 Android release 路径使用 `npm run mobile:build:release`，它以 Tauri Android 为唯一目标并执行 slim budget 与 Android prerequisite gate。`npm run mobile:build:compatibility` 仅用于显式验证历史 Capacitor + Tauri 双路径，不是 release 路径。
+
 构建通用 APK：
 
 ```bash

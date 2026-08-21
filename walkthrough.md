@@ -881,4 +881,16 @@ Final regression is 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-e
 
 本阶段保持 public ID 及所有 snapshot/projection/mobile contract 不变。Canonical-ID 迁移仍需独立评审，原生 G2/G3 仍受签名 arm64、SAF/权限/重试、force-stop/reopen 与 RSS 实测门禁约束。
 
-最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay、Diataxis 与 `git diff --check` 通过。
+## 2026-08-21 Phase 29 Tauri-Primary Mobile Release Routing Walkthrough
+
+`mobile:build:release` is now the single documented Android release entry. It delegates to `mobile:build:tauri-android`, which already owns slim preparation and Android prerequisite checks. The historical `mobile:build:both` command remains intact, while `mobile:build:compatibility` makes its Capacitor-plus-Tauri purpose explicit.
+
+The routing change does not alter projection schemas, IPC fields, public IDs, storage formats, or mobile payloads. Capacitor removal remains deferred until downstream and CI usage is audited. This phase also does not create native signing, SAF, continuity, or RSS evidence.
+
+## 2026-08-21 第 29 阶段：Tauri-primary 移动 release 路由 Walkthrough
+
+`mobile:build:release` 现在是唯一文档化 Android release 入口，委托 `mobile:build:tauri-android`，由后者继续拥有 slim preparation 与 Android prerequisite。历史 `mobile:build:both` 保持不变，`mobile:build:compatibility` 明确其 Capacitor + Tauri 兼容验证用途。
+
+该路由调整不改变 projection schema、IPC 字段、public ID、存储格式或移动 payload。移除 Capacitor 仍需先审计下游与 CI 使用，本阶段也不会生成签名、SAF、continuity 或 RSS 原生证据。
+
+Phase 29 回归验证为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit、Tauri Rust 30 passed / 1 ignored、Fixrisk FR-001..FR-015 全部通过、Diataxis 与 `git diff --check` 通过。

@@ -71,6 +71,9 @@ describe('dual mobile pipeline configuration', () => {
     expect(scripts['tauri:android:dev:universal']).toContain('NOTE_CONNECTION_TAURI_ANDROID_TARGET=universal');
     expect(scripts['tauri:android:build:universal']).toContain('NOTE_CONNECTION_TAURI_ANDROID_TARGET=universal');
     expect(scripts['mobile:build:tauri-android']).toBe('npm run tauri:android:build');
+    expect(scripts['mobile:build:release']).toBe('npm run mobile:build:tauri-android');
+    expect(scripts['mobile:build:release']).not.toContain('capacitor');
+    expect(scripts['mobile:build:compatibility']).toBe('npm run mobile:build:both');
     expect(scripts['mobile:build:both']).toContain('mobile:build:capacitor');
     expect(scripts['mobile:build:both']).toContain('mobile:build:tauri-android');
     expect(scripts['verify:mobile:artifact']).toContain('verify-mobile-artifact.js');

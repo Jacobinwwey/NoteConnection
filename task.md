@@ -900,3 +900,23 @@ Keep one additive runtime budget projection for WebView/Capacitor while retainin
 - [x] 本阶段最终回归：150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。
 - [ ] 执行独立 canonical-ID 迁移评审；本阶段不切换 `NoteNode.id`、旧 layout 或 public payload。
 - [~] 原生 G2/G3 仍是外部门禁，需签名 arm64、SAF/重试/continuity 与 RSS 实测证据。
+
+## 2026-08-21 Phase 29 Tauri-Primary Mobile Release Routing
+
+### English
+
+- [x] Add `mobile:build:release` as the single documented Android release entry; it delegates to the existing Tauri Android slim build and prerequisite gates.
+- [x] Add `mobile:build:compatibility` for explicit historical Capacitor plus Tauri validation while preserving `mobile:build:both` for backward-compatible callers.
+- [x] Add a mobile pipeline contract preventing the release alias from depending on Capacitor.
+- [x] Update English and Chinese README/release guidance; no projection schema, IPC field, public ID, or mobile runtime payload changed.
+- [ ] Remove the deprecated Capacitor project only after downstream consumers and CI no longer invoke the compatibility alias.
+- [~] Native G2/G3 remains independent: the routing fix does not create signed arm64, SAF, continuity, or RSS evidence.
+
+### 中文
+
+- [x] 增加 `mobile:build:release`，作为唯一文档化 Android release 入口；它复用现有 Tauri Android slim build 与 prerequisite gate。
+- [x] 增加 `mobile:build:compatibility`，用于显式验证历史 Capacitor + Tauri 双路径，同时保留 `mobile:build:both` 兼容旧调用方。
+- [x] 增加 mobile pipeline contract，禁止 release alias 依赖 Capacitor。
+- [x] 更新中英文 README/release 指引；不改变 projection schema、IPC 字段、public ID 或移动运行时 payload。
+- [ ] 仅在下游消费者与 CI 不再调用 compatibility alias 后移除 deprecated Capacitor 工程。
+- [~] 原生 G2/G3 仍独立开放：路由修复不会生成签名 arm64、SAF、continuity 或 RSS 证据。

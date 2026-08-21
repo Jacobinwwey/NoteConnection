@@ -1336,4 +1336,4 @@ identity ownership 在 `upsert` 与 `move` 的边界统一校验。path/URI/alia
 
 默认命令输出 `blocked` 并带 `independentReviewRequired: true`；`nativeDeviceEvidence=false` 时 `--strict` fail-closed。Corpus、host replay、producer surface 与兼容性检查通过。本阶段不改变 `NoteNode.id`、layout、snapshot 或 API；独立迁移评审与原生 G2/G3 证据仍需完成。
 
-本阶段最终回归为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。
+本阶段回归验证为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit、Tauri Rust 30 passed / 1 ignored、Fixrisk FR-001..FR-015 全部通过、Diataxis 与 `git diff --check` 通过。

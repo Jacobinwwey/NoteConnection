@@ -711,3 +711,12 @@ harness 只执行 workload spec 中明确列出的 `adbArgs`。这比任意 shel
 - [x] 最终回归：150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。
 - [ ] 执行独立 canonical-ID 迁移评审；本阶段不切换 `NoteNode.id`、旧 layout 或 public payload。
 - [~] 原生 G2/G3 仍是外部门禁，需签名 arm64、SAF/重试/continuity 与 RSS 实测证据。
+
+## 2026-08-21 第 29 阶段：Tauri-primary 移动 release 路由
+
+- [x] 增加 `mobile:build:release` 作为文档化 Android release 入口，复用 Tauri Android slim build 与 prerequisite gate。
+- [x] 增加 `mobile:build:compatibility` 用于显式验证历史 Capacitor + Tauri 双路径，同时保留 `mobile:build:both`。
+- [x] 增加 contract，禁止 release alias 依赖 Capacitor。
+- [x] 更新双语 README/release 指引，不改变 schema、IPC、ID 或 payload。
+- [ ] 仅在下游与 CI 不再使用 compatibility alias 后移除 deprecated Capacitor 工程。
+- [~] 原生 G2/G3 仍独立开放且未被该路由修复证明。

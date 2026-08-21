@@ -455,4 +455,10 @@ The default result is `blocked` with `independentReviewRequired: true`; `--stric
 
 默认结果为 `blocked` 并标记 `independentReviewRequired: true`；缺少原生设备证据时 `--strict` fail-closed。这样把可审计的 host-code 决策与不可逆 canonical-ID 迁移分离，public ID、schema、Bridge 字段与移动 payload 保持不变。
 
-本阶段最终回归为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit 与 Diataxis 通过。
+## 2026-08-21 Phase 29 Tauri-Primary Mobile Release Routing
+
+The release owner is now explicit: `mobile:build:release` delegates only to Tauri Android, while `mobile:build:compatibility` names the historical Capacitor-plus-Tauri validation path. `mobile:build:both` remains unchanged for backward compatibility. This removes ambiguity from release instructions without deleting the deprecated project or changing any runtime contract. Capacitor removal requires a separate downstream/CI usage audit.
+
+发布 owner 现在明确：`mobile:build:release` 只委托 Tauri Android，`mobile:build:compatibility` 明确历史 Capacitor + Tauri 验证路径，`mobile:build:both` 为向后兼容保持不变。本阶段只消除 release 指引歧义，不删除 deprecated 工程，也不改变运行时 contract；移除 Capacitor 需另行审计下游与 CI 使用。
+
+本阶段回归验证为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit、Tauri Rust 30 passed / 1 ignored、Fixrisk FR-001..FR-015 全部通过、Diataxis 与 `git diff --check` 通过。

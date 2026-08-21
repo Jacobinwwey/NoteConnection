@@ -44,6 +44,7 @@
     let capacitorFsPermissionPromise = null;
     const CAPACITOR_GRAPH_BUILD_WORKER_TIMEOUT_MS = 20000;
     const CAPACITOR_BRIDGE_MAX_CHUNK_BYTES = 192 * 1024;
+    const CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES = 48 * 1024 * 1024;
     const CAPACITOR_BRIDGE_MAX_TEXT_PAYLOAD_BYTES = 64 * 1024 * 1024;
     const FALLBACK_MOBILE_RUNTIME_BUDGET = Object.freeze({
         maxDocuments: 5000,
@@ -51,7 +52,7 @@
         maxTotalInputBytes: 64 * 1024 * 1024,
         maxEdges: 250000,
         maxDepth: 64,
-        maxProjectionBytes: 48 * 1024 * 1024
+        maxProjectionBytes: CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES
     });
 
     function getMobileRuntimeBudget() {
@@ -1590,15 +1591,19 @@
             workspaceId: 'mobile-workspace',
         });
         const projectionMaxBytes = getMobileRuntimeBudget().maxProjectionBytes;
+        const graphSerializationMaxBytes = Math.min(
+            CAPACITOR_GRAPH_SERIALIZATION_MAX_BYTES,
+            projectionMaxBytes
+        );
         const graphJsChunkFactory = createCapacitorGraphJavascriptChunkFactory(graphData);
         const graphJsonChunkFactory = createCapacitorGraphJsonChunkFactory(graphData);
 
         await capacitorWriteChunkSequence('data.js', graphJsChunkFactory, {
-            maxPayloadBytes: projectionMaxBytes,
+            maxPayloadBytes: graphSerializationMaxBytes,
             payloadLabel: 'data.js graph payload'
         });
         await capacitorWriteChunkSequence('graph_data.json', graphJsonChunkFactory, {
-            maxPayloadBytes: projectionMaxBytes,
+            maxPayloadBytes: graphSerializationMaxBytes,
             payloadLabel: 'graph_data.json graph payload'
         });
 
@@ -1606,11 +1611,11 @@
             const targetName = sanitizeTargetName(rawTarget);
             if (targetName) {
                 await capacitorWriteChunkSequence(`data_${targetName}.js`, graphJsChunkFactory, {
-                    maxPayloadBytes: projectionMaxBytes,
+                    maxPayloadBytes: graphSerializationMaxBytes,
                     payloadLabel: `data_${targetName}.js graph payload`
                 });
                 await capacitorWriteChunkSequence(`graph_data_${targetName}.json`, graphJsonChunkFactory, {
-                    maxPayloadBytes: projectionMaxBytes,
+                    maxPayloadBytes: graphSerializationMaxBytes,
                     payloadLabel: `graph_data_${targetName}.json graph payload`
                 });
             }

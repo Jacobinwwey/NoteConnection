@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-23T11:45:00.252Z",
-  "completedAt": "2026-03-23T11:45:22.144Z",
+  "generatedAt": "2026-08-21T11:21:22.815Z",
+  "completedAt": "2026-08-21T11:21:46.927Z",
   "source": [
     "docs/en/fixrisk_TODO.md",
     "docs/zh/fixrisk_TODO.md"
@@ -31,10 +31,10 @@
       "src/content.path.sandbox.contract.test.ts"
     ],
     "jestReportPath": "build/fixrisk-jest-contract-report.json",
-    "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\node_modules\\jest\\bin\\jest.js --runInBand --json --outputFile=E:\\Knowledge_project\\NoteConnection_app\\build\\fixrisk-jest-contract-report.json src/runtime.spool.policy.contract.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/pkg.snapshot.safety.contract.test.ts src/runtime.heap.policy.contract.test.ts src/sidecar.signature.contract.test.ts src/graph.accessibility.contract.test.ts src/privacy.manifest.contract.test.ts src/server.port.fallback.contract.test.ts src/sbom.policy.contract.test.ts src/sbom.attestation.policy.contract.test.ts src/pathbridge.strict.policy.contract.test.ts src/capacitor.evidence.contract.test.ts src/tauri.test.runner.contract.test.ts src/capacitor.bridge.serialization.contract.test.ts src/content.path.sandbox.contract.test.ts",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\18848_1787311281990\\node.exe E:\\Knowledge_project\\NoteConnection_app\\node_modules\\jest\\bin\\jest.js --runInBand --json --outputFile=E:\\Knowledge_project\\NoteConnection_app\\build\\fixrisk-jest-contract-report.json src/runtime.spool.policy.contract.test.ts src/pkg.sidecar.contract.test.ts src/mobile.pipeline.test.ts src/pkg.snapshot.safety.contract.test.ts src/runtime.heap.policy.contract.test.ts src/sidecar.signature.contract.test.ts src/graph.accessibility.contract.test.ts src/privacy.manifest.contract.test.ts src/server.port.fallback.contract.test.ts src/sbom.policy.contract.test.ts src/sbom.attestation.policy.contract.test.ts src/pathbridge.strict.policy.contract.test.ts src/capacitor.evidence.contract.test.ts src/tauri.test.runner.contract.test.ts src/capacitor.bridge.serialization.contract.test.ts src/content.path.sandbox.contract.test.ts",
     "ok": true,
     "exitCode": 0,
-    "durationMs": 16865
+    "durationMs": 19743
   },
   "issues": [
     {
@@ -345,9 +345,9 @@
         {
           "name": "verify-sidecar-signatures --contract-only",
           "ok": true,
-          "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sidecar-signatures.js --contract-only",
+          "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\18848_1787311281990\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sidecar-signatures.js --contract-only",
           "exitCode": 0,
-          "durationMs": 90,
+          "durationMs": 103,
           "detail": "Contract-only sidecar signature gate passed"
         },
         {
@@ -452,9 +452,9 @@
         {
           "name": "verify-privacy-manifest",
           "ok": true,
-          "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-privacy-manifest.js",
+          "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\18848_1787311281990\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-privacy-manifest.js",
           "exitCode": 0,
-          "durationMs": 82,
+          "durationMs": 98,
           "detail": "Privacy manifest verifier passed"
         },
         {
@@ -494,10 +494,10 @@
     },
     {
       "id": "FR-009",
-      "status": "verified-pending",
+      "status": "verified-closed",
       "codeStatus": "verified-closed",
-      "operationalStatus": "pending",
-      "pendingReason": "Operational evidence pending: large-graph physical-device evidence is missing, stale, or below threshold.",
+      "operationalStatus": "cleared",
+      "pendingReason": null,
       "checks": [
         {
           "name": "Contract test src/capacitor.evidence.contract.test.ts",
@@ -526,9 +526,9 @@
         {
           "name": "verify-capacitor-evidence-freshness",
           "ok": true,
-          "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-capacitor-evidence-freshness.js",
+          "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\18848_1787311281990\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-capacitor-evidence-freshness.js",
           "exitCode": 1,
-          "durationMs": 77,
+          "durationMs": 97,
           "detail": "Accepted pending state: evidence root not found. [Capacitor Evidence Verify] Evidence verification failed.\n[Capacitor Evidence Verify] Error: Evidence root not found: E:\\Knowledge_project\\NoteConnection_app\\docs\\mobile-evidence"
         },
         {
@@ -581,143 +581,279 @@
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "fixrisk-operational-readiness.yml, migration-gates.yml, mobile-e2e-detox-contracts.yml, npm-publish.yml, version-check.yml, wasm-parity-benchmark-snapshots.yml"
+          "detail": "docs-diataxis-site.yml, docs-github-pages-publish.yml, fixrisk-operational-readiness.yml, migration-gates.yml, mobile-e2e-detox-contracts.yml, npm-publish.yml, release-desktop-multi-os.yml, version-check.yml, wasm-parity-benchmark-snapshots.yml"
         },
         {
-          "name": "fixrisk-operational-readiness.yml: checkout action uses v5",
+          "name": "docs-diataxis-site.yml: checkout action uses v4 (latest)",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/checkout@v5 configured"
+          "detail": "actions/checkout@v4 configured"
         },
         {
-          "name": "fixrisk-operational-readiness.yml: setup-node action uses v5",
+          "name": "docs-diataxis-site.yml: setup-node action uses v4 (latest)",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/setup-node@v5 configured"
+          "detail": "actions/setup-node@v4 configured"
         },
         {
-          "name": "fixrisk-operational-readiness.yml: Node24 force flag set",
+          "name": "docs-diataxis-site.yml: setup-node pins Node 24 baseline",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present"
+          "detail": "node-version values: 24"
         },
         {
-          "name": "migration-gates.yml: checkout action uses v5",
+          "name": "docs-diataxis-site.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/checkout@v5 configured"
+          "detail": "No legacy Node24 transition override present"
         },
         {
-          "name": "migration-gates.yml: setup-node action uses v5",
+          "name": "docs-github-pages-publish.yml: checkout action uses v4 (latest)",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/setup-node@v5 configured"
+          "detail": "actions/checkout@v4 configured"
         },
         {
-          "name": "migration-gates.yml: Node24 force flag set",
+          "name": "docs-github-pages-publish.yml: setup-node action uses v4 (latest)",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present"
+          "detail": "actions/setup-node@v4 configured"
         },
         {
-          "name": "mobile-e2e-detox-contracts.yml: checkout action uses v5",
+          "name": "docs-github-pages-publish.yml: setup-node pins Node 24 baseline",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/checkout@v5 configured"
+          "detail": "node-version values: 24"
         },
         {
-          "name": "mobile-e2e-detox-contracts.yml: setup-node action uses v5",
+          "name": "docs-github-pages-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/setup-node@v5 configured"
+          "detail": "No legacy Node24 transition override present"
         },
         {
-          "name": "mobile-e2e-detox-contracts.yml: Node24 force flag set",
+          "name": "fixrisk-operational-readiness.yml: checkout action uses v4 (latest)",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present"
+          "detail": "actions/checkout@v4 configured"
         },
         {
-          "name": "npm-publish.yml: checkout action uses v5",
+          "name": "fixrisk-operational-readiness.yml: setup-node action uses v4 (latest)",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/checkout@v5 configured"
+          "detail": "actions/setup-node@v4 configured"
         },
         {
-          "name": "npm-publish.yml: setup-node action uses v5",
+          "name": "fixrisk-operational-readiness.yml: setup-node pins Node 24 baseline",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/setup-node@v5 configured"
+          "detail": "node-version values: 24, 24, 24"
         },
         {
-          "name": "npm-publish.yml: Node24 force flag set",
+          "name": "fixrisk-operational-readiness.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present"
+          "detail": "No legacy Node24 transition override present"
         },
         {
-          "name": "version-check.yml: checkout action uses v5",
+          "name": "migration-gates.yml: checkout action uses v4 (latest)",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/checkout@v5 configured"
+          "detail": "actions/checkout@v4 configured"
         },
         {
-          "name": "version-check.yml: Node24 force flag set",
+          "name": "migration-gates.yml: setup-node action uses v4 (latest)",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present"
+          "detail": "actions/setup-node@v4 configured"
         },
         {
-          "name": "wasm-parity-benchmark-snapshots.yml: checkout action uses v5",
+          "name": "migration-gates.yml: setup-node pins Node 24 baseline",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/checkout@v5 configured"
+          "detail": "node-version values: 24, 24, 24"
         },
         {
-          "name": "wasm-parity-benchmark-snapshots.yml: setup-node action uses v5",
+          "name": "migration-gates.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/setup-node@v5 configured"
+          "detail": "No legacy Node24 transition override present"
         },
         {
-          "name": "wasm-parity-benchmark-snapshots.yml: Node24 force flag set",
+          "name": "mobile-e2e-detox-contracts.yml: checkout action uses v4 (latest)",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present"
+          "detail": "actions/checkout@v4 configured"
+        },
+        {
+          "name": "mobile-e2e-detox-contracts.yml: setup-node action uses v4 (latest)",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/setup-node@v4 configured"
+        },
+        {
+          "name": "mobile-e2e-detox-contracts.yml: setup-node pins Node 24 baseline",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "node-version values: 24"
+        },
+        {
+          "name": "mobile-e2e-detox-contracts.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "No legacy Node24 transition override present"
+        },
+        {
+          "name": "npm-publish.yml: checkout action uses v4 (latest)",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/checkout@v4 configured"
+        },
+        {
+          "name": "npm-publish.yml: setup-node action uses v4 (latest)",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/setup-node@v4 configured"
+        },
+        {
+          "name": "npm-publish.yml: setup-node pins Node 24 baseline",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "node-version values: 24"
+        },
+        {
+          "name": "npm-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "No legacy Node24 transition override present"
+        },
+        {
+          "name": "release-desktop-multi-os.yml: checkout action uses v4 (latest)",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/checkout@v4 configured"
+        },
+        {
+          "name": "release-desktop-multi-os.yml: setup-node action uses v4 (latest)",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/setup-node@v4 configured"
+        },
+        {
+          "name": "release-desktop-multi-os.yml: setup-node pins Node 24 baseline",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "node-version values: 24, 24, 24, 24"
+        },
+        {
+          "name": "release-desktop-multi-os.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "No legacy Node24 transition override present"
+        },
+        {
+          "name": "version-check.yml: checkout action uses v4 (latest)",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/checkout@v4 configured"
+        },
+        {
+          "name": "version-check.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "No legacy Node24 transition override present"
+        },
+        {
+          "name": "wasm-parity-benchmark-snapshots.yml: checkout action uses v4 (latest)",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/checkout@v4 configured"
+        },
+        {
+          "name": "wasm-parity-benchmark-snapshots.yml: setup-node action uses v4 (latest)",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "actions/setup-node@v4 configured"
+        },
+        {
+          "name": "wasm-parity-benchmark-snapshots.yml: setup-node pins Node 24 baseline",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "node-version values: 24"
+        },
+        {
+          "name": "wasm-parity-benchmark-snapshots.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+          "ok": true,
+          "command": null,
+          "exitCode": 0,
+          "durationMs": 0,
+          "detail": "No legacy Node24 transition override present"
         },
         {
           "name": "EN issue row FR-010 present",
@@ -745,30 +881,47 @@
         }
       ],
       "verification": [
-        "PASS Workflow files discovered: fixrisk-operational-readiness.yml, migration-gates.yml, mobile-e2e-detox-contracts.yml, npm-publish.yml, version-check.yml, wasm-parity-benchmark-snapshots.yml",
-        "PASS fixrisk-operational-readiness.yml: checkout action uses v5: actions/checkout@v5 configured",
-        "PASS fixrisk-operational-readiness.yml: setup-node action uses v5: actions/setup-node@v5 configured",
-        "PASS fixrisk-operational-readiness.yml: Node24 force flag set: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present",
-        "PASS migration-gates.yml: checkout action uses v5: actions/checkout@v5 configured",
-        "PASS migration-gates.yml: setup-node action uses v5: actions/setup-node@v5 configured",
-        "PASS migration-gates.yml: Node24 force flag set: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present",
-        "PASS mobile-e2e-detox-contracts.yml: checkout action uses v5: actions/checkout@v5 configured",
-        "PASS mobile-e2e-detox-contracts.yml: setup-node action uses v5: actions/setup-node@v5 configured",
-        "PASS mobile-e2e-detox-contracts.yml: Node24 force flag set: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present",
-        "PASS npm-publish.yml: checkout action uses v5: actions/checkout@v5 configured",
-        "PASS npm-publish.yml: setup-node action uses v5: actions/setup-node@v5 configured",
-        "PASS npm-publish.yml: Node24 force flag set: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present",
-        "PASS version-check.yml: checkout action uses v5: actions/checkout@v5 configured",
-        "PASS version-check.yml: Node24 force flag set: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present",
-        "PASS wasm-parity-benchmark-snapshots.yml: checkout action uses v5: actions/checkout@v5 configured",
-        "PASS wasm-parity-benchmark-snapshots.yml: setup-node action uses v5: actions/setup-node@v5 configured",
-        "PASS wasm-parity-benchmark-snapshots.yml: Node24 force flag set: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 present",
+        "PASS Workflow files discovered: docs-diataxis-site.yml, docs-github-pages-publish.yml, fixrisk-operational-readiness.yml, migration-gates.yml, mobile-e2e-detox-contracts.yml, npm-publish.yml, release-desktop-multi-os.yml, version-check.yml, wasm-parity-benchmark-snapshots.yml",
+        "PASS docs-diataxis-site.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+        "PASS docs-diataxis-site.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+        "PASS docs-diataxis-site.yml: setup-node pins Node 24 baseline: node-version values: 24",
+        "PASS docs-diataxis-site.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+        "PASS docs-github-pages-publish.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+        "PASS docs-github-pages-publish.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+        "PASS docs-github-pages-publish.yml: setup-node pins Node 24 baseline: node-version values: 24",
+        "PASS docs-github-pages-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+        "PASS fixrisk-operational-readiness.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+        "PASS fixrisk-operational-readiness.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+        "PASS fixrisk-operational-readiness.yml: setup-node pins Node 24 baseline: node-version values: 24, 24, 24",
+        "PASS fixrisk-operational-readiness.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+        "PASS migration-gates.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+        "PASS migration-gates.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+        "PASS migration-gates.yml: setup-node pins Node 24 baseline: node-version values: 24, 24, 24",
+        "PASS migration-gates.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+        "PASS mobile-e2e-detox-contracts.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+        "PASS mobile-e2e-detox-contracts.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+        "PASS mobile-e2e-detox-contracts.yml: setup-node pins Node 24 baseline: node-version values: 24",
+        "PASS mobile-e2e-detox-contracts.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+        "PASS npm-publish.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+        "PASS npm-publish.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+        "PASS npm-publish.yml: setup-node pins Node 24 baseline: node-version values: 24",
+        "PASS npm-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+        "PASS release-desktop-multi-os.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+        "PASS release-desktop-multi-os.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+        "PASS release-desktop-multi-os.yml: setup-node pins Node 24 baseline: node-version values: 24, 24, 24, 24",
+        "PASS release-desktop-multi-os.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+        "PASS version-check.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+        "PASS version-check.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+        "PASS wasm-parity-benchmark-snapshots.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+        "PASS wasm-parity-benchmark-snapshots.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+        "PASS wasm-parity-benchmark-snapshots.yml: setup-node pins Node 24 baseline: node-version values: 24",
+        "PASS wasm-parity-benchmark-snapshots.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
         "PASS EN issue row FR-010 present: Closed",
         "PASS ZH issue row FR-010 present: Closed",
         "PASS EN/ZH status marker parity FR-010: EN=Closed (closed) | ZH=Closed (closed)"
       ],
-      "passedChecks": 21,
-      "totalChecks": 21
+      "passedChecks": 38,
+      "totalChecks": 38
     },
     {
       "id": "FR-011",
@@ -788,18 +941,18 @@
         {
           "name": "verify-tauri-android-prereqs",
           "ok": true,
-          "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-tauri-android-prereqs.js",
+          "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\18848_1787311281990\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-tauri-android-prereqs.js",
           "exitCode": 0,
-          "durationMs": 4408,
+          "durationMs": 3654,
           "detail": "Android prerequisite verifier passed"
         },
         {
-          "name": "migration-gates tauri-rust-suite uses actions/setup-java@v5",
+          "name": "migration-gates tauri-rust-suite uses actions/setup-java@v4 (latest)",
           "ok": true,
           "command": null,
           "exitCode": 0,
           "durationMs": 0,
-          "detail": "actions/setup-java@v5 detected"
+          "detail": "actions/setup-java@v4 detected"
         },
         {
           "name": "migration-gates tauri-rust-suite pins java-version 21",
@@ -845,7 +998,7 @@
       "verification": [
         "PASS Contract test src/tauri.test.runner.contract.test.ts: Jest status: passed",
         "PASS verify-tauri-android-prereqs: Android prerequisite verifier passed",
-        "PASS migration-gates tauri-rust-suite uses actions/setup-java@v5: actions/setup-java@v5 detected",
+        "PASS migration-gates tauri-rust-suite uses actions/setup-java@v4 (latest): actions/setup-java@v4 detected",
         "PASS migration-gates tauri-rust-suite pins java-version 21: java-version 21 detected",
         "PASS migration-gates Java setup is scoped to tauri-rust-suite: Conditional suite scoping detected",
         "PASS EN issue row FR-011 present: Closed",
@@ -873,9 +1026,9 @@
         {
           "name": "verify-privacy-manifest",
           "ok": true,
-          "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-privacy-manifest.js",
+          "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\18848_1787311281990\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-privacy-manifest.js",
           "exitCode": 0,
-          "durationMs": 82,
+          "durationMs": 98,
           "detail": "Privacy manifest verifier passed"
         },
         {
@@ -1155,33 +1308,33 @@
     {
       "name": "verify-detox-pipeline",
       "ok": true,
-      "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-detox-pipeline.js",
+      "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\18848_1787311281990\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-detox-pipeline.js",
       "exitCode": 0,
-      "durationMs": 85,
+      "durationMs": 97,
       "detail": "Detox pipeline verifier passed"
     },
     {
       "name": "verify-sbom-policy --contract-only",
       "ok": true,
-      "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sbom-policy.js --contract-only",
+      "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\18848_1787311281990\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sbom-policy.js --contract-only",
       "exitCode": 0,
-      "durationMs": 89,
+      "durationMs": 93,
       "detail": "SBOM policy verifier contract mode passed"
     },
     {
       "name": "verify-sbom-attestation --contract-only",
       "ok": true,
-      "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sbom-attestation.js --contract-only",
+      "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\18848_1787311281990\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-sbom-attestation.js --contract-only",
       "exitCode": 0,
-      "durationMs": 94,
+      "durationMs": 100,
       "detail": "SBOM attestation verifier contract mode passed"
     },
     {
       "name": "verify-pathbridge-strict-schema --contract-only",
       "ok": true,
-      "command": "C:\\Program Files\\nodejs\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-pathbridge-strict-schema.js --contract-only",
+      "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\18848_1787311281990\\node.exe E:\\Knowledge_project\\NoteConnection_app\\scripts\\verify-pathbridge-strict-schema.js --contract-only",
       "exitCode": 0,
-      "durationMs": 87,
+      "durationMs": 95,
       "detail": "PathBridge strict schema verifier contract mode passed"
     },
     {
@@ -1307,25 +1460,21 @@
   ],
   "overall": {
     "issueCount": 15,
-    "passedIssueCount": 14,
-    "pendingIssueCount": 1,
+    "passedIssueCount": 15,
+    "pendingIssueCount": 0,
     "failedIssueCount": 0,
     "failedIssues": [],
-    "pendingIssues": [
-      "FR-009"
-    ],
+    "pendingIssues": [],
     "codePassedIssueCount": 15,
     "codeFailedIssueCount": 0,
     "codeFailedIssues": [],
     "allCodeLevelIssuesClosed": true,
-    "operationalPendingIssueCount": 1,
+    "operationalPendingIssueCount": 0,
     "operationalBlockedIssueCount": 0,
-    "operationalPendingIssues": [
-      "FR-009"
-    ],
+    "operationalPendingIssues": [],
     "operationalBlockedIssues": [],
-    "pendingOperationalBlocker": "FR-009",
-    "totalChecks": 121,
-    "passedChecks": 121
+    "pendingOperationalBlocker": null,
+    "totalChecks": 138,
+    "passedChecks": 138
   }
 }
