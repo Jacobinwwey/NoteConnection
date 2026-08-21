@@ -148,6 +148,29 @@ export class IndexLifecycle {
         this.unitIdsByDocumentId.delete(String(documentId || '').trim());
     }
 
+    /**
+     * Moves the indexed path in place. Rebuilding units would allocate new
+     * segments and make a path-only identity transition look like content
+     * churn, so the existing index identity is deliberately preserved.
+     */
+    public updateDocumentSourcePath(documentId: string, sourcePath: string, updatedAt: string): number {
+        const unitIds = this.unitIdsByDocumentId.get(String(documentId || '').trim()) || [];
+        let updatedCount = 0;
+        unitIds.forEach((unitId) => {
+            const unit = this.units.get(unitId);
+            if (!unit) {
+                return;
+            }
+            this.units.set(unitId, {
+                ...unit,
+                sourcePath,
+                updatedAt,
+            });
+            updatedCount += 1;
+        });
+        return updatedCount;
+    }
+
     public listSegmentsForAtom(atomId: string): IndexSegmentRecord[] {
         const segmentIds = this.segmentIdsByAtomId.get(String(atomId || '').trim()) || [];
         return segmentIds

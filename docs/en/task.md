@@ -460,3 +460,24 @@ The harness deliberately executes only explicit `adbArgs` from a checked workloa
 - [x] Keep signed arm64 Android artifacts as workflow artifacts until the explicit self-hosted workload and RSS job succeeds; only then publish mobile Release assets.
 - [x] Current static mobile-low staging: 122 files / 4,283,033 uncompressed bytes / 1,552,689 estimated compressed bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`.
 - [~] Native G2/G3 remains open without an approved signing key and online approved arm64 hardware.
+
+## 2026-08-21 Phase 25 Collision-Safe Identity Transition and Owner Convergence
+
+- [x] Preflight `move`/`rename` target aliases against active and historical aliases; URI/path/basename collisions fail closed.
+- [x] Mirror successful identity transitions into `ResourceRegistry`, workspace bindings, and `IndexLifecycle` without changing resource/projection/index identities.
+- [x] Add G4 regression coverage for collision rollback visibility and four-owner path convergence after persistence.
+- [x] Keep legacy `documentId`, snapshot/projection schemas, mobile runtime dependencies, and `mobile-slim` boundaries unchanged.
+- [x] Full regression: 148 Jest suites / 1,284 passed / 26 skipped; Rust 30 passed / 1 ignored; four-host projection replay and fresh mobile-low budget passed.
+- [ ] Add whole-request transaction preflight or journaled rollback for mixed `upsert`/`move`/`delete` batches; this guard is not full ingest atomicity.
+- [ ] Archive versioned old-snapshot/cross-root/move-journal/collision/rollback manifests before public canonical-ID cutover.
+- [~] Native G2/G3 still needs approved signing, arm64 hardware, SAF/query/path workload, force-stop/reopen continuity, retry evidence, and RSS `<= 256 MiB`.
+
+## 2026-08-21 Phase 26 Request-Level Ingest Atomicity and Single-Writer Serialization
+
+- [x] Serialize `ingestKnowledge` mutations per platform instance so rollback cannot race a concurrent writer.
+- [x] Capture a deep versioned graph pre-image before mutation and restore it after operation, relation-recompute, owner-mirror, or atomic-persistence failure; document, atom/evidence, registry, workspace, index, journal, and ID-counter state roll back together.
+- [x] Reject ambiguous move source aliases and fail closed when a required owner is missing instead of silently leaving secondary state stale.
+- [x] Add a mixed-batch G4 regression proving a successful first move is not visible after a later collision and that the original alias remains usable.
+- [x] Keep public IDs, snapshot/projection schemas, mobile runtime dependencies, and `mobile-slim` boundaries unchanged.
+- [ ] Archive versioned old-snapshot/cross-root/move-journal/collision/rollback manifests and replay them across every host adapter before canonical-ID cutover.
+- [~] Native G2/G3 remains open; the rollback pre-image adds transient memory proportional to the current graph and must be measured on the target low-memory profile.

@@ -1429,3 +1429,119 @@ Observed local evidence: slim profile 121 files / `4,275,083` uncompressed / `1,
 - 边界修复后的定向 contract 为 16 tests passed；TypeScript no-emit、slim staging/budget 与 Diataxis 通过。全量 Jest 为 148 suites / 1,280 passed / 26 skipped；Rust host tests 为 30 passed / 1 ignored。
 - 原生 G2/G3 仍开放：当前宿主没有获批 signing key 或在线获批 arm64 设备。下一步必须是 CI 签名产物 -> 获批低 RAM arm64 设备 -> 有序 workload -> force-stop/reopen -> `rss.json` 与 provenance archive。
 - 在原生证据可重复并归档前，继续冻结 SQLite/WASM、public-ID 迁移、Godot inclusion 与预算上调。
+
+## 2026-08-21 Phase 25 Collision-Safe Identity Transition and Owner Convergence
+
+### English
+
+#### Implementation
+
+1. `KnowledgeLearningPlatform` now preflights the complete target alias set for `move`/`rename` before changing document, atom, or evidence records. Historical aliases are part of the collision domain; a target URI, path, or basename owned by another document fails closed.
+2. A successful identity transition mirrors the committed path/URI/revision/alias state into `ResourceRegistry`, the workspace binding, and `IndexLifecycle` in place. Resource/projection IDs, legacy `documentId`, index units, content hashes, and segments remain stable.
+3. Regression coverage now records the G4 move/collision corpus: rejected collision leaves the persisted document, resource projection, and index path unchanged; successful move keeps all four owners aligned after persistence.
+
+#### Position against earlier plans
+
+- The earlier additive `sourceUri` work protected graph and learning snapshots but left secondary owners stale after a path-only move. This phase closes that owner gap without changing snapshot schema, projection schema, public IDs, or mobile runtime assets.
+- LearnGraph's typed boundary lesson is applied as an explicit identity transition contract; textbooks' package/compiler direction remains a future source-ingestion boundary. Neither reference justifies putting a database, Node sidecar, Godot runtime, or model into `mobile-slim`.
+- The mobile consequence is favorable but intentionally small: no new dependency or payload, and fewer stale path lookups when a desktop or mobile host replays an imported corpus. This is not native-device RSS evidence.
+
+#### Remaining risk and next execution order
+
+1. Add whole-request preflight or journaled rollback for batches containing multiple `upsert`/`move`/`delete` operations. The single-move collision boundary is fail-closed, but a later operation in the same request can still expose the broader ingest transaction to partial mutation.
+2. Record old-snapshot, cross-root, collision, rollback, and move-journal manifests as versioned G4 evidence; keep public canonical-ID cutover frozen until replay is archived across host adapters.
+3. Keep the memory projection as the mobile default. Evaluate SQLite/WASM only as an opt-in adapter after native restart/RSS evidence and projection query parity are reproducible.
+4. Only after those gates, continue route-registry strict-default and complete-use-case extraction; do not add wrappers that merely rename `KnowledgeLearningPlatform` responsibilities.
+
+#### Verification
+
+- Focused suites: 3 suites / 11 tests passed (`ResourceRegistry`, `IndexLifecycle`, `KnowledgeLearningPlatform.persistence`).
+- Full regression after this phase: 148 Jest suites / 1,284 passed / 26 skipped; Rust 30 passed / 1 ignored; four-host projection replay passed; fresh mobile-low staging remains 122 files / 4,283,033 uncompressed / 1,552,689 estimated compressed bytes with SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`.
+- TypeScript no-emit passed; `git diff --check` passed.
+- Native G2/G3 remains pending: no approved signing key, online approved arm64 device, SAF workload, force-stop/reopen continuity, retry evidence, or measured `VmRSS <= 256 MiB`.
+
+## 2026-08-21 第 25 阶段：冲突安全的身份迁移与 owner 收敛
+
+### 中文
+
+#### 已落地
+
+1. `KnowledgeLearningPlatform` 在执行 `move`/`rename` 前，先对完整目标 alias 集合做预检，再修改 document、atom 与 evidence。历史 alias 也属于 collision 域；若目标 URI、路径或 basename 已被其他文档占用，则 fail-closed。
+2. 成功的身份迁移会原地同步 `ResourceRegistry`、workspace binding 与 `IndexLifecycle` 的 path/URI/revision/alias。resource/projection ID、旧 `documentId`、index unit、content hash 与 segment 保持稳定。
+3. 回归测试补齐 G4 的 move/collision 语料：拒绝 collision 后持久化 document、resource projection 与 index 路径不变；成功 move 持久化后四个 owner 保持一致。
+
+#### 相对既有方案的位置
+
+- 之前的 additive `sourceUri` 只保护了 graph 与 learning snapshot，path-only move 后的 secondary owner 仍可能指向旧路径。本阶段在不改变 snapshot schema、projection schema、公开 ID 或移动运行时资产的前提下补齐该缺口。
+- LearnGraph 的类型化边界经验被落实为明确的 identity transition contract；textbooks 的 package/compiler 方向仍作为后续 source-ingestion 边界。两者都不能证明应把数据库、Node sidecar、Godot runtime 或模型带入 `mobile-slim`。
+- 对移动端的收益是低成本且有限的：不增加依赖或包体，并减少导入语料在 move replay 后出现陈旧路径查询的概率；这不等于真机 RSS 证据。
+
+#### 剩余风险与执行顺序
+
+1. 为包含多个 `upsert`/`move`/`delete` 的单个请求增加 whole-request preflight 或 journaled rollback。当前单 move collision 已 fail-closed，但同一请求后续操作仍可能产生部分 mutation。
+2. 将 old-snapshot、跨 root、collision、rollback 与 move-journal manifests 作为有版本的 G4 证据归档；在跨 host replay 归档前继续冻结 public canonical-ID 切换。
+3. 保持 memory projection 为移动端默认；只有在原生重启/RSS 证据和 projection query parity 可复现后，才评估 SQLite/WASM opt-in adapter。
+4. 上述门禁完成后再推进 route-registry strict default 与完整 use-case 抽取；不增加只改名、不承载 invariant 的 wrapper。
+
+#### 验证
+
+- 定向 suite：3 suites / 11 tests passed（`ResourceRegistry`、`IndexLifecycle`、`KnowledgeLearningPlatform.persistence`）。
+- 本阶段全量回归：148 个 Jest suite / 1,284 passed / 26 skipped；Rust 30 passed / 1 ignored；四 host projection replay 通过；fresh mobile-low staging 仍为 122 文件 / 未压缩 4,283,033 / 估算压缩 1,552,689 bytes，SHA-256 为 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`。
+- TypeScript no-emit 与 `git diff --check` 通过。
+- 原生 G2/G3 仍 pending：缺少获批 signing key、在线获批 arm64 设备、SAF workload、force-stop/reopen continuity、失败重试证据与实测 `VmRSS <= 256 MiB`。
+
+## 2026-08-21 Phase 26 Request-Level Ingest Atomicity and Single-Writer Serialization
+
+### English
+
+#### Implementation
+
+1. `ingestKnowledge` is now a per-platform single-writer queue. Web, Tauri, and future mobile adapters therefore share one ordering invariant without a new runtime or IPC dependency.
+2. Each request captures a deep pre-image of the existing versioned `KnowledgeGraphSnapshot` before mutation. Operation, relation-recompute, owner-mirror, or atomic-persistence failures restore document/atom/evidence maps, secondary registries, index state, identity journal, telemetry, and `idCounter` together.
+3. Identity ownership is validated once at the boundary. `upsert` and `move` reject path/URI/alias collisions; an explicit move ID must agree with supplied `from*` aliases; ambiguous alias resolution and missing owner mirrors fail closed.
+4. A G4 mixed-batch fixture proves that a successful first move is invisible after a later collision and that the original alias remains available for a subsequent move.
+
+#### Position against earlier plans and mobile trade-off
+
+- This closes the Phase 25 limitation without changing public IDs, snapshot/projection schemas, Bridge fields, or the runtime-first mobile package. LearnGraph remains a typed-boundary reference; textbooks remains a future content-package/compiler input boundary. Neither reference justifies a database, Node sidecar, Godot runtime, or model in `mobile-slim`.
+- Full snapshot rollback reuses the existing replay contract and keeps host adapters forward-compatible. The cost is transient memory proportional to the current graph and JSON clone/restore latency, so low-memory acceptance must measure it and callers should use bounded batches.
+- The single-writer queue prevents a second import from observing a half-restored graph, but storage providers remain responsible for their atomic save contract.
+
+#### Remaining gates
+
+1. Archive versioned old-snapshot, cross-root, move-journal, collision, and rollback manifests and replay them on Web, Tauri, Capacitor compatibility, and Android journaled storage.
+2. Run signed arm64 native workload, force-stop/reopen continuity, permission/retry paths, and real `VmRSS <= 256 MiB` evidence with representative batch sizes. Keep SQLite/WASM, public-ID cutover, Godot inclusion, and budget increases frozen until those artifacts exist.
+3. Only after replay and native evidence are reproducible should route-registry strict-default and complete-use-case extraction proceed; do not add pass-through wrappers.
+
+#### Verification
+
+- Added mixed-batch rollback, explicit source alias validation, and upsert alias ownership regression coverage; prior collision and four-owner convergence fixtures remain.
+- Current verification: TypeScript no-emit passed; 148 Jest suites passed with 1,287 passed and 26 skipped; Rust passed with 30 passed and 1 ignored; mobile-low staging passed with 122 files / 4,283,033 uncompressed / 1,552,689 estimated compressed bytes; projection replay passed for 4 hosts; native recovery passed 8 scenarios; Diataxis passed with 18 entries / 36 paths / 64 canonical references; `git diff --check` passed.
+
+## 2026-08-21 第 26 阶段：请求级 ingest 原子性与单写者串行化
+
+### 中文
+
+#### 实施
+
+1. `ingestKnowledge` 现在按 platform instance 使用单写者队列，Web、Tauri 与后续移动端 adapter 共享同一 ordering invariant，不增加 runtime 或 IPC 依赖。
+2. 每个请求在 mutation 前保存现有 versioned `KnowledgeGraphSnapshot` 的深拷贝。operation、relation recompute、owner mirror 或 atomic persistence 失败时恢复 document/atom/evidence、secondary registry、index、identity journal、telemetry 与 `idCounter`。
+3. 在边界一次性验证 identity ownership。`upsert` 与 `move` 拒绝 path/URI/alias collision；显式 move ID 必须与 `from*` alias 一致；alias 歧义与 owner mirror 缺失均 fail-closed。
+4. G4 mixed-batch fixture 证明第一步成功后若后续 collision，第一步状态不可见，原始 alias 仍可继续执行后续 move。
+
+#### 相对前序方案与移动端权衡
+
+- 本阶段关闭 Phase 25 限制，不改变 public ID、snapshot/projection schema、Bridge 字段或 runtime-first 移动包。LearnGraph 仍是 typed-boundary 参考；textbooks 仍只作为未来 content-package/compiler ingestion 边界。二者都不足以证明应把数据库、Node sidecar、Godot runtime 或模型加入 `mobile-slim`。
+- 全量 snapshot rollback 复用现有 replay contract，保持 host adapter 向前兼容；代价是瞬时内存与 JSON clone/restore 延迟随 graph 增长，低内存验收必须实测，调用方应采用有界 batch。
+- 单写者队列防止第二个 import 观察到半恢复 graph，但 storage provider 仍必须履行 atomic save contract。
+
+#### 剩余门禁
+
+1. 归档有版本的 old-snapshot、cross-root、move-journal、collision 与 rollback manifest，并在 Web、Tauri、Capacitor 兼容存储及 Android journaled storage 上回放。
+2. 使用代表性 batch size 执行签名 arm64 原生 workload、force-stop/reopen continuity、权限/重试路径与真实 `VmRSS <= 256 MiB` 证据。在 artifact 产生前继续冻结 SQLite/WASM、public-ID 切换、Godot inclusion 与预算上调。
+3. 只有 replay 与原生证据可复现后才推进 route-registry strict-default 与 complete-use-case extraction；不增加 pass-through wrapper。
+
+#### 验证
+
+- 新增 mixed-batch rollback、显式 source alias 校验与 upsert alias ownership 回归，并保留既有 collision 与四 owner convergence fixture。
+- 发布前必须重新执行 TypeScript no-emit、全量 Jest、Rust、mobile-low staging、projection replay 与 Diataxis 检查，并记录当前精确计数。

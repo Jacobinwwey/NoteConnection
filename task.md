@@ -808,3 +808,49 @@ WebView/Capacitor 共用一份 additive runtime budget projection，同时保留
 ### Phase 24 decision
 
 Keep one additive runtime budget projection for WebView/Capacitor while retaining native Rust constants for runtime independence. UTF-8 byte limits and stat-before-read make the mobile boundary conservative across host implementations; the trade-off is deterministic rejection of oversized notes instead of best-effort ingestion. Static artifact checks are necessary packaging evidence, but release publication must stay behind signed-device evidence. Do not promote SQLite/WASM, public-ID migration, Godot inclusion, or larger budgets until that evidence is archived.
+
+## 2026-08-21 Phase 25 Collision-Safe Identity Transition and Owner Convergence
+
+### English
+
+- [x] Preflight `move`/`rename` target aliases against every active and historical alias before mutation; URI/path/basename collisions fail closed.
+- [x] Mirror a successful identity transition into `ResourceRegistry`, workspace bindings, and `IndexLifecycle` without allocating new resource/projection/index identities.
+- [x] Add G4 regression coverage for collision rollback visibility and four-owner path convergence after persistence.
+- [x] Preserve legacy `documentId`, snapshot/projection schemas, mobile runtime dependencies, and `mobile-slim` package boundaries.
+- [x] Full regression: 148 Jest suites / 1,284 passed / 26 skipped; Rust 30 passed / 1 ignored; four-host projection replay and fresh mobile-low budget passed.
+- [ ] Add whole-request transaction preflight or journaled rollback for mixed `upsert`/`move`/`delete` batches; the current guard is not a claim of full ingest atomicity.
+- [ ] Archive versioned old-snapshot/cross-root/move-journal/collision/rollback manifests before public canonical-ID cutover.
+- [~] Native G2/G3 still needs approved signing, arm64 hardware, SAF/query/path workload, force-stop/reopen continuity, retry evidence, and RSS `<= 256 MiB`.
+
+### 中文
+
+- [x] 在 mutation 前对 `move`/`rename` 目标 alias 与全部 active/historical alias 做预检；URI/path/basename collision fail-closed。
+- [x] 成功身份迁移原地同步 `ResourceRegistry`、workspace binding 与 `IndexLifecycle`，不重新分配 resource/projection/index identity。
+- [x] 增加 G4 collision rollback 可见性与持久化后四 owner 路径收敛的回归覆盖。
+- [x] 保持旧 `documentId`、snapshot/projection schema、移动运行时依赖与 `mobile-slim` 包体边界不变。
+- [x] 全量回归：148 个 Jest suite / 1,284 passed / 26 skipped；Rust 30 passed / 1 ignored；四 host projection replay 与 fresh mobile-low budget 通过。
+- [ ] 为混合 `upsert`/`move`/`delete` 请求增加 whole-request transaction preflight 或 journaled rollback；当前 guard 不宣称完整 ingest 原子性。
+- [ ] 在 public canonical-ID 切换前归档有版本的 old-snapshot/cross-root/move-journal/collision/rollback manifest。
+- [~] 原生 G2/G3 仍需获批 signing、arm64 硬件、SAF/query/path workload、force-stop/reopen continuity、失败重试证据与 RSS `<= 256 MiB`。
+
+## 2026-08-21 Phase 26 Request-Level Ingest Atomicity and Single-Writer Serialization
+
+### English
+
+- [x] Serialize `ingestKnowledge` mutations per platform instance so rollback cannot race a concurrent writer.
+- [x] Capture a deep, versioned graph pre-image before ingest mutation and restore it when an operation, relation recompute, owner mirror, or atomic persistence step fails; `document`, atom/evidence, registry, workspace, index, journal, and ID-counter state roll back together.
+- [x] Reject ambiguous move source aliases instead of selecting the first matching document; owner mirror methods now fail closed when a required owner is missing.
+- [x] Add a mixed-batch G4 regression proving a successful first move is not visible after a later collision, and that the original alias remains usable for a subsequent move.
+- [x] Preserve all forward-compatibility boundaries: no public-ID change, snapshot/projection schema change, Node sidecar, database, model, Godot asset, or mobile-slim dependency.
+- [ ] Archive versioned old-snapshot/cross-root/move-journal/collision/rollback manifests and replay them across every host adapter before canonical-ID cutover.
+- [~] Native G2/G3 still needs approved signing, arm64 hardware, SAF/query/path workload, force-stop/reopen continuity, retry evidence, and RSS `<= 256 MiB`; the rollback pre-image adds transient memory proportional to the current graph and must be measured on the target profile.
+
+### 中文
+
+- [x] 按 platform instance 串行化 `ingestKnowledge` mutation，避免 rollback 与并发 writer 竞态。
+- [x] 在 ingest mutation 前保存深拷贝的 versioned graph pre-image；operation、relation recompute、owner mirror 或 atomic persistence 失败时整体恢复，document、atom/evidence、registry、workspace、index、journal 与 ID counter 一致回滚。
+- [x] move source alias 出现歧义时拒绝而不是选首个匹配；必需 owner 缺失时 mirror 现在 fail-closed。
+- [x] 增加 mixed-batch G4 回归：第一步成功、后续 collision 失败后不可观察到第一步状态，原始 alias 仍可用于后续 move。
+- [x] 保持所有向前兼容边界：不改变 public ID、snapshot/projection schema，不加入 Node sidecar、数据库、模型、Godot asset 或 mobile-slim 依赖。
+- [ ] 在 canonical-ID 切换前归档有版本的 old-snapshot/cross-root/move-journal/collision/rollback manifest，并跨所有 host adapter 回放。
+- [~] 原生 G2/G3 仍需获批 signing、arm64 硬件、SAF/query/path workload、force-stop/reopen continuity、失败重试证据与 RSS `<= 256 MiB`；rollback pre-image 会按当前 graph 产生瞬时内存开销，必须在目标 profile 实测。

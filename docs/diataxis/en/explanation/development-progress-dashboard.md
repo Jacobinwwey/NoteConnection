@@ -1909,3 +1909,17 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - Document count, per-document/total bytes, depth, edges, and serialized projection limits are enforced in worker and single-thread paths. Tauri rejects oversized generated assets before bootstrap/IPC reads.
 - Android evidence requires exact `arm64-v8a`, measurable RAM within the selected profile ceiling, and records ABI/RAM provenance. Static signed artifacts remain workflow artifacts; Release upload requires the explicit self-hosted workload and RSS evidence.
 - Current staging is 122 files / 4,283,033 uncompressed / 1,552,689 estimated compressed bytes. Native G2/G3 remains pending without approved signing/device evidence.
+
+## 2026-08-21 Phase 25 Identity Transition Owner Convergence
+
+- `move`/`rename` now preflights the complete target alias set, including historical aliases, before mutation; URI/path/basename collisions fail closed.
+- Successful moves preserve legacy document and resource/index identities while mirroring the new path/URI/revision/aliases into `ResourceRegistry`, workspace bindings, and `IndexLifecycle`.
+- G4 regression coverage proves rejected-collision persistence and successful four-owner convergence. Focused evidence is 3 suites / 11 tests plus TypeScript no-emit and `git diff --check`; full regression is 148 Jest suites / 1,284 passed / 26 skipped, Rust 30 passed / 1 ignored, and four-host projection replay plus fresh mobile-low budget pass.
+- This remains host/code evidence, not native RSS or release evidence. Whole-request transaction preflight/journaled rollback, versioned G4 manifest archival, public-ID migration, and SQLite/WASM promotion remain pending.
+
+## 2026-08-21 Phase 26 Request-Level Ingest Atomicity
+
+- `ingestKnowledge` now serializes writers per platform instance and restores a deep versioned snapshot after operation, relation-recompute, owner-mirror, or atomic-persistence failure.
+- Rollback covers graph records, resource/workspace/index owners, identity journal, telemetry, and ID allocation. `upsert`/`move` alias ownership, explicit source aliases, ambiguity, and required owner presence are checked at the boundary.
+- The mixed-batch G4 regression proves no partial move is visible after a later collision. Public IDs, projection schemas, Bridge fields, and mobile-slim dependencies remain unchanged.
+- The trade-off is transient graph-proportional memory and clone/restore latency; native low-memory acceptance must use bounded batches and real RSS evidence. Versioned replay manifests remain open gates.

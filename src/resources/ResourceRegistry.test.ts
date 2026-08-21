@@ -62,4 +62,43 @@ describe('ResourceRegistry', () => {
         expect(restored.getProjectionByDocumentId('doc_delete')?.status).toBe('deleted');
         expect(restored.listProjectionsByIds([created.projection.projectionId], { includeDeleted: true })).toHaveLength(1);
     });
+
+    test('mirrors a document move without changing resource or projection identity', () => {
+        let idCounter = 0;
+        const registry = new ResourceRegistry((prefix = 'resource') => `${prefix}_${++idCounter}`);
+        const created = registry.upsertKnowledgeDocument({
+            documentId: 'doc_move',
+            sourcePath: 'Knowledge_Base/old.md',
+            content: '# Move',
+            sourceHash: 'hash_move',
+            title: 'old',
+            language: 'en',
+            version: 1,
+            updatedAt: '2026-05-26T04:00:00.000Z',
+            metadata: { sourceUri: 'note://workspace/v1/old.md' },
+        });
+
+        expect(registry.updateKnowledgeDocumentIdentity({
+            documentId: 'doc_move',
+            sourcePath: 'Knowledge_Base/new.md',
+            sourceUri: 'note://workspace/v1/new.md',
+            revision: 'sha256:new',
+            identityAliases: ['old.md', 'Knowledge_Base/new.md'],
+            updatedAt: '2026-05-26T05:00:00.000Z',
+        })).toBe(true);
+
+        expect(registry.getProjectionByDocumentId('doc_move')).toEqual(expect.objectContaining({
+            projectionId: created.projection.projectionId,
+            sourcePath: 'Knowledge_Base/new.md',
+            metadata: expect.objectContaining({
+                sourceUri: 'note://workspace/v1/new.md',
+                revision: 'sha256:new',
+                identityAliases: ['old.md', 'Knowledge_Base/new.md'],
+            }),
+        }));
+        expect(registry.getResourceById(created.resource.resourceId)).toEqual(expect.objectContaining({
+            resourceId: created.resource.resourceId,
+            sourcePath: 'Knowledge_Base/new.md',
+        }));
+    });
 });

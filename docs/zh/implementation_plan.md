@@ -1303,3 +1303,21 @@ checked-in 的 `config/mobile-budget.v1.json` 现在由 slim verifier、artifact
 Tauri 在 bootstrap/IPC read 前拒绝超限 generated asset。Android evidence harness 要求精确 `arm64-v8a`、可测且不超过 profile ceiling 的 RAM，并记录 ABI/RAM provenance。CI 只先暴露签名 arm64 workflow artifact；只有 self-hosted workload 与真实 RSS 证据成功后才上传 GitHub Release。Projection/IPC/public-ID contract 保持不变，移动包继续 runtime-first。
 
 当前静态 staging 为 122 文件 / 未压缩 `4,283,033` / 估算压缩 `1,552,689` bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`。边界 contract、TypeScript、Rust、slim budget 与 Diataxis 通过；当前宿主没有获批 signing key 或在线获批 arm64 设备，原生 G2/G3 仍待完成。
+
+## 2026-08-21 第 25 阶段：冲突安全的身份迁移与 owner 收敛
+
+身份迁移边界现在会在修改 document、atom 或 evidence 前预检完整目标 alias 集合。历史 alias 仍是兼容查询入口，因此其他文档已经拥有的 URI、path 或 basename 会直接 fail-closed。合法 move 会原地把 path/URI/revision/alias 同步到 `ResourceRegistry`、workspace binding 与 `IndexLifecycle`；resource/projection/index ID、旧 `documentId`、content hash 与 segment 保持稳定。
+
+本阶段关闭了此前 additive `sourceUri` 留下的 secondary-owner 缺口，但不改变 snapshot/projection schema、公开 ID 或移动端运行时资产。LearnGraph 的 typed boundary 纪律被落实为 identity contract；textbooks 的 package/compiler 方向仍保留给后续 ingestion 边界，二者都不足以证明应把数据库、Node sidecar、Godot runtime 或模型加入 `mobile-slim`。
+
+新增 G4 fixture 验证 rejected-collision 状态与持久化后的四 owner 收敛。定向验证为 3 suites / 11 tests、TypeScript no-emit 与 `git diff --check`；全量回归为 148 个 Jest suite / 1,284 passed / 26 skipped、Rust 30 passed / 1 ignored、四 host projection replay 与 fresh mobile-low budget 通过。这还不是完整 ingest transaction：混合请求可能在后续 operation 失败前产生部分 mutation。下一步是 whole-request preflight 或 journaled rollback，再归档有版本的 G4 manifest；public-ID 与 SQLite/WASM 提升继续等待 replay 与原生 RSS 证据。
+
+## 2026-08-21 第 26 阶段：请求级 ingest 原子性与单写者串行化
+
+`ingestKnowledge` 现在使用按 platform instance 的单写者队列。每个请求在 mutation 前保存 versioned graph snapshot 的深拷贝；operation、relation recompute、owner mirror 或 atomic persistence 失败时，document/atom/evidence、secondary registry、index、identity journal、telemetry 与 `idCounter` 一起恢复。
+
+identity ownership 在 `upsert` 与 `move` 的边界统一校验。path/URI/alias collision、显式 move ID 与 `from*` alias 不属于同一文档、source alias 歧义以及 owner mirror 缺失都会 fail-closed。mixed-batch G4 fixture 证明第一步成功但后续 collision 后第一步不可见，原始 alias 仍可继续使用。
+
+本阶段关闭 Phase 25 的 partial-commit 缺口，不改变 public ID、snapshot/projection schema、Bridge 字段或 runtime-first 移动包。代价是与 graph 成比例的瞬时内存及 JSON clone/restore 延迟；低内存验收必须使用有界 batch 实测。在 public-ID、SQLite/WASM、Godot、预算或 strict-default route 提升前，仍需有版本 old-snapshot/cross-root/move-journal/collision/rollback manifest 与原生签名 arm64/RSS 证据。
+
+当前验证：TypeScript no-emit 通过；148 个 Jest suite 通过，1,287 passed、26 skipped；Rust 通过，30 passed、1 ignored；mobile-low staging 通过，为 122 文件 / 未压缩 4,283,033 / 估算压缩 1,552,689 bytes；projection replay 通过（4 hosts）；native recovery 通过（8 scenarios）；Diataxis 通过（18 entries / 36 paths / 64 canonical references）；`git diff --check` 通过。

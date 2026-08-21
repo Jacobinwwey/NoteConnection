@@ -744,6 +744,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private hydrationPromise: Promise<void> | null = null;
 
+    /** Serializes ingest mutations so a rollback cannot race a concurrent writer. */
+    private ingestQueue: Promise<void> = Promise.resolve();
+
     constructor(nowProviderOrOptions: (() => Date) | KnowledgeLearningPlatformOptions = {}) {
         if (typeof nowProviderOrOptions === 'function') {
             this.nowProvider = nowProviderOrOptions;
@@ -812,8 +815,35 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             || createGraphQueryBackend(this.graphQueryBackendFactoryOptions);
     }
 
-    public async ingestKnowledge(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse> {
+    public ingestKnowledge(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse> {
+        const run = this.ingestQueue.then(() => this.ingestKnowledgeExclusive(request));
+        this.ingestQueue = run.then(() => undefined, () => undefined);
+        return run;
+    }
+
+    private async ingestKnowledgeExclusive(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse> {
         await this.ensureHydrated();
+        const rollbackSnapshot = this.cloneKnowledgeGraphSnapshotForTransaction(await this.buildSnapshotForPersist());
+        try {
+            return await this.performKnowledgeIngest(request);
+        } catch (error) {
+            this.restoreFromSnapshot(rollbackSnapshot);
+            if (this.store && this.autoPersist) {
+                try {
+                    await this.store.saveSnapshot(rollbackSnapshot);
+                } catch (rollbackError) {
+                    const originalMessage = error instanceof Error ? error.message : String(error);
+                    const rollbackMessage = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+                    throw new Error(
+                        `Ingest transaction failed and rollback persistence failed: ${originalMessage}; rollback: ${rollbackMessage}`,
+                    );
+                }
+            }
+            throw error;
+        }
+    }
+
+    private async performKnowledgeIngest(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse> {
         const ingestStartAtMs = Date.now();
         const ingestedAt = this.resolveTimestamp(request.ingestedAt);
         const incremental = request.incremental !== false;
@@ -833,6 +863,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
         const processUpsert = (documentInput: KnowledgeDocumentInput): void => {
             const normalizedInput = this.normalizeDocumentInput(documentInput);
+            this.assertIdentityAliasesAvailable(normalizedInput.documentId, [
+                normalizedInput.sourcePath,
+                normalizedInput.sourceUri,
+                ...normalizedInput.identityAliases,
+            ]);
             ingestedDocumentCount += 1;
             const sourceHash = this.computeHash(normalizedInput.content);
             const previousSnapshot = this.documents.get(normalizedInput.documentId);
@@ -5574,6 +5609,15 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
     }
 
+    /**
+     * The mutation path updates records in place. A JSON clone gives rollback
+     * an immutable pre-image while retaining the existing versioned snapshot
+     * contract used by every host adapter.
+     */
+    private cloneKnowledgeGraphSnapshotForTransaction(snapshot: KnowledgeGraphSnapshot): KnowledgeGraphSnapshot {
+        return JSON.parse(JSON.stringify(snapshot)) as KnowledgeGraphSnapshot;
+    }
+
     private restoreFromSnapshot(snapshot: KnowledgeGraphSnapshot): void {
         this.idCounter = Number(snapshot.idCounter || 0);
         this.identityJournal.length = 0;
@@ -6251,20 +6295,94 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 && next.identityAliases.some((alias) => !previous.identityAliases.includes(alias)));
     }
 
+    /** Rejects aliases already owned by another document before any mutation. */
+    private assertIdentityAliasesAvailable(documentId: string, candidateAliases: Array<string | undefined>): void {
+        const normalizedCandidateAliases = candidateAliases
+            .filter(isNonEmptyString)
+            .map((alias) => normalizeResourceReference(alias.trim()));
+        const conflicts: string[] = [];
+        this.documents.forEach((snapshot) => {
+            if (snapshot.documentId === documentId) {
+                return;
+            }
+            const ownedAliases = [
+                snapshot.sourcePath,
+                snapshot.sourceUri,
+                ...snapshot.identityAliases,
+            ]
+                .filter(isNonEmptyString)
+                .map((alias) => normalizeResourceReference(alias));
+            const collision = normalizedCandidateAliases.find((alias) => ownedAliases.includes(alias));
+            if (collision) {
+                conflicts.push(`${snapshot.documentId}:${collision}`);
+            }
+        });
+        if (conflicts.length > 0) {
+            throw new Error(
+                `Identity transition alias collision for ${documentId}; candidate aliases are already owned: ${conflicts.join(', ')}`,
+            );
+        }
+    }
+
+    /**
+     * A move must not claim an alias already owned by another document. The
+     * legacy path and every historical alias remain searchable, so this check
+     * covers the complete compatibility alias set before mutation.
+     */
+    private assertIdentityTransitionIsAvailable(
+        documentId: string,
+        input: Pick<KnowledgeDocumentMoveInput, 'toSourcePath' | 'toSourceUri' | 'toIdentityAliases'>,
+    ): void {
+        const current = this.documents.get(documentId);
+        if (!current) {
+            throw new Error(`Identity transition references an unknown document: ${documentId}.`);
+        }
+        this.assertIdentityAliasesAvailable(documentId, [
+            current.sourcePath,
+            current.sourceUri,
+            input.toSourcePath,
+            input.toSourceUri,
+            ...(input.toIdentityAliases || []),
+        ]);
+    }
+
     private resolveDocumentIdForMove(input: KnowledgeDocumentMoveInput): string | null {
         if (isNonEmptyString(input.documentId)) {
-            return input.documentId.trim();
+            const documentId = input.documentId.trim();
+            const current = this.documents.get(documentId);
+            if (!current) {
+                return documentId;
+            }
+            const sourceAliases = [input.fromSourcePath, input.fromSourceUri, ...(input.fromIdentityAliases || [])]
+                .filter(isNonEmptyString)
+                .map((alias) => normalizeResourceReference(alias.trim()));
+            if (sourceAliases.length > 0) {
+                const ownedAliases = [current.sourcePath, current.sourceUri, ...current.identityAliases]
+                    .filter(isNonEmptyString)
+                    .map((alias) => normalizeResourceReference(alias));
+                if (!sourceAliases.some((alias) => ownedAliases.includes(alias))) {
+                    throw new Error(`Move source aliases do not belong to document: ${documentId}.`);
+                }
+            }
+            return documentId;
         }
         const aliases = [input.fromSourcePath, input.fromSourceUri, ...(input.fromIdentityAliases || [])]
             .filter(isNonEmptyString)
             .map((alias) => normalizeResourceReference(alias.trim()));
-        const match = Array.from(this.documents.values()).find((snapshot) => {
+        const matches = Array.from(this.documents.values()).filter((snapshot) => {
             const snapshotAliases = [snapshot.sourcePath, snapshot.sourceUri, ...snapshot.identityAliases]
                 .filter(isNonEmptyString);
             const normalizedSnapshotAliases = snapshotAliases.map((alias) => normalizeResourceReference(alias));
             return aliases.some((alias) => normalizedSnapshotAliases.includes(alias));
         });
-        return match?.documentId || null;
+        if (matches.length > 1) {
+            throw new Error(
+                `Move source alias is ambiguous; it is owned by multiple documents: ${matches
+                    .map((snapshot) => snapshot.documentId)
+                    .join(', ')}`,
+            );
+        }
+        return matches[0]?.documentId || null;
     }
 
     private applyDocumentIdentityTransition(
@@ -6281,6 +6399,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (!toSourcePath) {
             throw new Error('Identity transition requires a non-empty toSourcePath.');
         }
+        this.assertIdentityTransitionIsAvailable(documentId, input);
         const previousSourcePath = snapshot.sourcePath;
         const previousSourceUri = snapshot.sourceUri;
         const historicalAliases = [
@@ -6312,6 +6431,30 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 evidence.sourcePath = toSourcePath;
             }
         });
+
+        const resourceUpdated = this.resourceRegistry.updateKnowledgeDocumentIdentity({
+            documentId,
+            sourcePath: toSourcePath,
+            sourceUri: snapshot.sourceUri,
+            revision: snapshot.revision,
+            identityAliases: [...snapshot.identityAliases],
+            updatedAt: snapshot.updatedAt,
+        });
+        if (!resourceUpdated) {
+            throw new Error(`Identity transition has no resource projection owner: ${documentId}.`);
+        }
+        const workspaceUpdated = this.workspaceRegistry.updateDocumentSourcePath(
+            documentId,
+            toSourcePath,
+            snapshot.updatedAt,
+        );
+        if (!workspaceUpdated) {
+            throw new Error(`Identity transition has no workspace binding owner: ${documentId}.`);
+        }
+        const updatedIndexUnits = this.indexLifecycle.updateDocumentSourcePath(documentId, toSourcePath, snapshot.updatedAt);
+        if (updatedIndexUnits <= 0) {
+            throw new Error(`Identity transition has no index owner: ${documentId}.`);
+        }
 
         this.identityJournal.push({
             documentId,

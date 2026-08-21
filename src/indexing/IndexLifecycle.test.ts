@@ -52,4 +52,39 @@ describe('IndexLifecycle', () => {
         expect(lifecycle.hasIndexedSegmentsForAtom('atom_1')).toBe(false);
         expect(lifecycle.buildSummary().totalUnits).toBe(0);
     });
+
+    test('updates indexed source paths in place during a document move', () => {
+        let idCounter = 0;
+        const lifecycle = new IndexLifecycle(
+            (prefix = 'index') => `${prefix}_${++idCounter}`,
+            (value) => `hash_${value.length}`
+        );
+        const indexed = lifecycle.syncDocumentIndex({
+            resourceId: 'resource_move',
+            projectionId: 'projection_move',
+            documentId: 'doc_move',
+            sourcePath: 'Knowledge_Base/old.md',
+            language: 'en',
+            workspaceId: 'workspace',
+            corpusId: 'corpus',
+            title: 'old',
+            content: '# Move\nContent',
+            atoms: [],
+            indexedAt: '2026-05-26T06:00:00.000Z',
+        });
+
+        expect(lifecycle.updateDocumentSourcePath(
+            'doc_move',
+            'Knowledge_Base/new.md',
+            '2026-05-26T07:00:00.000Z',
+        )).toBe(indexed.units.length);
+        expect(lifecycle.listUnitsByProjectionIds(['projection_move'])).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    sourcePath: 'Knowledge_Base/new.md',
+                    updatedAt: '2026-05-26T07:00:00.000Z',
+                }),
+            ])
+        );
+    });
 });

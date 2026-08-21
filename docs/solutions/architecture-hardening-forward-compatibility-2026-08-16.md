@@ -3,9 +3,9 @@ module: architecture
 tags: [architecture, forward-compatibility, mobile, tauri, capacitor, sqlite, wasm, graph, security]
 problem_type: tracking
 created: 2026-08-16
-updated: 2026-08-18
+updated: 2026-08-21
 status: active
-version: 2026.08.18
+version: 2026.08.21
 ---
 
 # 2026-08-16 Architecture Hardening and Forward-Compatible Multi-Platform Plan
@@ -382,3 +382,41 @@ Current post-change evidence is full Jest 146 suites / 1,271 passed / 26 skipped
 报告明确写入 `evidenceLevel: host-recovery-state-machine` 与 `nativeDeviceEvidence: false`。这是正确的架构分层：Kotlin 拥有生产恢复，JavaScript 只拥有无依赖 CI oracle；它不增加移动运行时依赖并排除出 `mobile-slim`，但测试镜像必须随每次 journal schema/phase 变更同步更新。因此本轮闭合的是确定性恢复语义，不是 Android 进程死亡、SAF UI、存储/权限失败、签名产物或 RSS 证据。
 
 本轮证据为全量 Jest 146 suites / 1,271 passed / 26 skipped、TypeScript no-emit、Rust 28 passed / 1 ignored probe、四 host projection replay（6 个节点、4 条边），以及 121 个文件、估算压缩 1,550,638 字节的 mobile-slim staging（SHA-256 为 `5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38`）。G2/G3 原生执行与 G4 public-ID/SQLite-WASM 提升继续受门禁约束。
+
+## 2026-08-21 Phase 25 Collision-Safe Identity Transition and Owner Convergence
+
+### English
+
+The previous additive `sourceUri` foundation protected graph and learning snapshots but did not update secondary owners after a path-only move. Phase 25 closes that gap without changing snapshot/projection schemas, public IDs, or mobile assets.
+
+`KnowledgeLearningPlatform` now preflights a move's complete destination alias set against every other document's current and historical aliases. URI, path, and basename collisions fail closed before document, atom, or evidence mutation. A valid transition keeps the legacy `documentId`, revision, resource/projection/index IDs, and content hashes, then mirrors the new identity into `ResourceRegistry`, the workspace binding, and `IndexLifecycle`.
+
+The G4 fixture covers both rejected-collision persistence and successful four-owner convergence. Focused evidence is 3 suites / 11 tests, TypeScript no-emit, and `git diff --check`; full regression is 148 Jest suites / 1,284 passed / 26 skipped, Rust 30 passed / 1 ignored, four-host projection replay passed, and fresh mobile-low budget passed. This is deliberately not advertised as whole-request transaction atomicity: mixed `upsert`/`move`/`delete` operations still need request-level preflight or journaled rollback. Public canonical-ID cutover, default SQLite/WASM, and native G2/G3 release acceptance remain frozen.
+
+### 中文
+
+之前的 additive `sourceUri` 基础保护了 graph 与 learning snapshot，但 path-only move 后没有同步 secondary owner。第 25 阶段在不改变 snapshot/projection schema、公开 ID 或移动 asset 的前提下关闭该缺口。
+
+`KnowledgeLearningPlatform` 现在会在 move 前，把完整目标 alias 集合与其他文档的当前及历史 alias 对比。URI、path 或 basename collision 会在 document、atom、evidence mutation 前 fail-closed。合法迁移保留旧 `documentId`、revision、resource/projection/index ID 与 content hash，再把新身份同步到 `ResourceRegistry`、workspace binding 与 `IndexLifecycle`。
+
+G4 fixture 同时覆盖 rejected-collision 持久化状态与成功后的四 owner 收敛。定向证据为 3 suites / 11 tests、TypeScript no-emit 与 `git diff --check`；全量回归为 148 个 Jest suite / 1,284 passed / 26 skipped、Rust 30 passed / 1 ignored、四 host projection replay 与 fresh mobile-low budget 通过。本阶段有意不宣称 whole-request transaction atomicity：混合 `upsert`/`move`/`delete` 仍需 request-level preflight 或 journaled rollback。public canonical-ID 切换、默认 SQLite/WASM 与原生 G2/G3 release acceptance 继续冻结。
+
+## 2026-08-21 Phase 26 Request-Level Ingest Atomicity and Single-Writer Serialization
+
+### English
+
+Phase 25's remaining partial-commit risk is now closed at the platform boundary. `ingestKnowledge` is a per-instance single-writer queue. Each request captures a deep pre-image of the existing versioned snapshot before mutation and restores it after operation, relation-recompute, owner-mirror, or atomic-persistence failure. The restore covers the document graph, atom/evidence records, resource/workspace/index owners, identity journal, telemetry, and ID counter together.
+
+Identity ownership is validated for both `upsert` and `move`. Duplicate path/URI/aliases, explicit move source mismatches, ambiguous aliases, and missing owner mirrors fail closed. The mixed-batch G4 regression proves that a successful first move is not observable after a later collision and that the old alias remains usable after rollback.
+
+This is deliberately implemented by reusing the current snapshot/replay contract. It preserves public IDs, projection schemas, Bridge fields, and the runtime-first mobile package, but adds transient memory and JSON clone/restore latency proportional to graph size. Native low-memory acceptance therefore needs bounded batches and real RSS evidence. Versioned old-snapshot/cross-root/move-journal/collision/rollback manifests remain required before canonical-ID, SQLite/WASM, Godot, budget, or route-registry promotion.
+
+### 中文
+
+第 25 阶段剩余的 partial-commit 风险现在在 platform 边界闭合。`ingestKnowledge` 使用按 instance 的单写者队列；每个请求在 mutation 前保存现有 versioned snapshot 的深拷贝，operation、relation recompute、owner mirror 或 atomic persistence 失败时整体恢复。恢复范围包含 document graph、atom/evidence、resource/workspace/index owner、identity journal、telemetry 与 ID counter。
+
+`upsert` 与 `move` 都会验证 identity ownership。重复 path/URI/alias、显式 move source 不匹配、alias 歧义以及 owner mirror 缺失均 fail-closed。mixed-batch G4 回归证明第一步成功但后续 collision 后不可观察到第一步，回滚后旧 alias 仍可继续使用。
+
+实现复用当前 snapshot/replay contract，保持 public ID、projection schema、Bridge 字段与 runtime-first 移动包不变；代价是与 graph 大小成正比的瞬时内存和 JSON clone/restore 延迟。因此原生低内存验收需要有界 batch 与真实 RSS 证据。在 canonical-ID、SQLite/WASM、Godot、预算或 route-registry 提升前，仍需归档有版本的 old-snapshot/cross-root/move-journal/collision/rollback manifest。
+
+当前验证：TypeScript no-emit 通过；148 个 Jest suite / 1,287 passed / 26 skipped；Rust 30 passed / 1 ignored；mobile-low staging 122 文件 / 4,283,033 未压缩 / 1,552,689 估算压缩 bytes；4 host projection replay；8 个 native-recovery scenario；Diataxis 与 `git diff --check` 均通过。

@@ -669,3 +669,24 @@ harness 只执行 workload spec 中明确列出的 `adbArgs`。这比任意 shel
 - [x] 签名 arm64 Android 产物先作为 workflow artifact，只有显式 self-hosted workload 与 RSS job 成功后才发布移动 Release asset。
 - [x] 当前静态 mobile-low staging：122 个文件 / 未压缩 4,283,033 bytes / 估算压缩 1,552,689 bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`。
 - [~] 没有获批 signing key 与在线获批 arm64 硬件，原生 G2/G3 仍开放。
+
+## 2026-08-21 第 25 阶段：冲突安全的身份迁移与 owner 收敛
+
+- [x] 在 mutation 前对 `move`/`rename` 目标 alias 与 active/historical alias 做预检；URI/path/basename collision fail-closed。
+- [x] 成功身份迁移原地同步 `ResourceRegistry`、workspace binding 与 `IndexLifecycle`，不改变 resource/projection/index identity。
+- [x] 增加 G4 collision rollback 可见性与持久化后四 owner 路径收敛回归覆盖。
+- [x] 保持旧 `documentId`、snapshot/projection schema、移动运行时依赖与 `mobile-slim` 边界不变。
+- [x] 全量回归：148 个 Jest suite / 1,284 passed / 26 skipped；Rust 30 passed / 1 ignored；四 host projection replay 与 fresh mobile-low budget 通过。
+- [ ] 为混合 `upsert`/`move`/`delete` 请求增加 whole-request transaction preflight 或 journaled rollback；当前 guard 不等于完整 ingest 原子性。
+- [ ] 在 public canonical-ID 切换前归档有版本的 old-snapshot/cross-root/move-journal/collision/rollback manifest。
+- [~] 原生 G2/G3 仍需获批 signing、arm64 硬件、SAF/query/path workload、force-stop/reopen continuity、失败重试证据与 RSS `<= 256 MiB`。
+
+## 2026-08-21 第 26 阶段：请求级 ingest 原子性与单写者串行化
+
+- [x] 按 platform instance 串行化 `ingestKnowledge` mutation，避免 rollback 与并发 writer 竞态。
+- [x] mutation 前保存深拷贝的 versioned graph pre-image；operation、relation recompute、owner mirror 或 atomic persistence 失败时整体恢复，document、atom/evidence、registry、workspace、index、journal 与 ID counter 一致回滚。
+- [x] move source alias 歧义时拒绝，并在必需 owner 缺失时 fail-closed，禁止 secondary state 静默漂移。
+- [x] 增加 mixed-batch G4 回归，证明第一步成功但后续 collision 失败后第一步不可见，原始 alias 仍可继续使用。
+- [x] 保持 public ID、snapshot/projection schema、移动运行时依赖与 `mobile-slim` 边界不变。
+- [ ] 在 canonical-ID 切换前归档有版本的 old-snapshot/cross-root/move-journal/collision/rollback manifest，并跨所有 host adapter 回放。
+- [~] 原生 G2/G3 仍开放；rollback pre-image 会按当前 graph 产生瞬时内存开销，必须在目标低内存 profile 实测。

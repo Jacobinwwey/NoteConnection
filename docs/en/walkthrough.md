@@ -338,3 +338,21 @@ The manifest now records schema-1 artifact/RSS/runtime budgets from `config/mobi
 `mobile_budget_runtime.js` is loaded before the storage provider and projects the versioned limits into WebView/Capacitor without adding a runtime dependency. Capacitor now checks UTF-8 bytes, performs a filesystem-size preflight when available, and rejects over-depth entries before reading them. Tauri applies the same projection ceiling before bootstrap/IPC reads.
 
 The release workflow separates packaging from acceptance: signed arm64 APK/AAB are first workflow artifacts, while GitHub Release upload requires the self-hosted arm64 workload, force-stop/reopen continuity, and measurable RSS evidence. Static staging is 122 files / 4,283,033 uncompressed bytes / 1,552,689 estimated compressed bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`; native G2/G3 is still pending.
+
+## 2026-08-21 Phase 25 Collision-Safe Identity Transition and Owner Convergence Walkthrough
+
+`move`/`rename` now checks the complete destination alias set before mutation. Current path, current URI, and every retained alias of every other document participate in collision detection, so a rejected move cannot silently steal a compatibility lookup.
+
+After a valid move, `KnowledgeLearningPlatform` preserves the legacy `documentId` and content revision, updates atoms/evidence, and mirrors the new identity into `ResourceRegistry`, its workspace binding, and `IndexLifecycle`. Existing resource/projection/index IDs and content hashes remain stable. The persisted G4 fixture verifies both rejected collision state and successful four-owner convergence.
+
+This is an in-process owner-convergence boundary, not a full transaction engine. A mixed ingest request can still expose partial state if a later operation fails; whole-request preflight or journaled rollback is the next reliability slice. No mobile dependency, database, model, Godot asset, budget, or public-ID change was introduced. Focused verification is 3 suites / 11 tests plus TypeScript no-emit and `git diff --check`; full regression is 148 Jest suites / 1,284 passed / 26 skipped, Rust 30 passed / 1 ignored, and four-host projection replay plus fresh mobile-low budget pass. Native G2/G3 remains open.
+
+## 2026-08-21 Phase 26 Request-Level Ingest Atomicity and Single-Writer Serialization Walkthrough
+
+`ingestKnowledge` is now serialized per platform instance. Before a request mutates the graph, it captures a deep copy of the versioned snapshot. If an operation, relation recompute, owner mirror, or atomic save fails, document/atom/evidence state, secondary registries, index state, identity journal, telemetry, and the ID counter restore together. A second import cannot interleave with that restore.
+
+The boundary validates `upsert` and `move` ownership: duplicate path/URI/aliases, an explicit move whose `from*` alias belongs elsewhere, ambiguous source aliases, and missing owners are rejected. The mixed-batch fixture verifies unchanged persisted bytes after a later collision and then proves the original alias remains usable for a subsequent move.
+
+The implementation reuses the existing snapshot/replay contract, leaving public IDs, projection schemas, Bridge fields, and the runtime-first mobile package unchanged. Transient memory and JSON clone/restore latency grow with the current graph, so low-memory native acceptance must use bounded batches and record RSS. Versioned G4 manifests and signed arm64 evidence remain release gates.
+
+Current verification is 148 Jest suites / 1,287 passed / 26 skipped, Rust 30 passed / 1 ignored, TypeScript no-emit, 122-file mobile-low staging, four-host projection replay, eight native-recovery scenarios, Diataxis, and `git diff --check`.

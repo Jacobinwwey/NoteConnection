@@ -417,4 +417,239 @@ describe('KnowledgeLearningPlatform persistence', () => {
         });
         expect(deleteResult.summary.deletedDocuments).toBe(1);
     });
+
+    test('rejects a move alias collision before changing dependent owners', async () => {
+        const platform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store: createFileBackedKnowledgeGraphStore({ filePath: snapshotPath }),
+        });
+
+        await platform.ingestKnowledge({
+            documents: [
+                {
+                    documentId: 'doc_move_source',
+                    sourcePath: 'Knowledge_Base/source.md',
+                    sourceUri: 'note://workspace/v1/source.md',
+                    language: 'en',
+                    content: '# Source\nThe source document remains addressable after a rejected move.',
+                },
+                {
+                    documentId: 'doc_move_target',
+                    sourcePath: 'Knowledge_Base/target.md',
+                    sourceUri: 'note://workspace/v1/target.md',
+                    language: 'en',
+                    content: '# Target\nThe target alias is already owned.',
+                },
+            ],
+        });
+
+        await expect(platform.ingestKnowledge({
+            operations: [{
+                op: 'move',
+                document: {
+                    documentId: 'doc_move_source',
+                    toSourcePath: 'Knowledge_Base/moved.md',
+                    toSourceUri: 'note://workspace/v1/target.md',
+                    toIdentityAliases: ['target'],
+                },
+            }],
+        })).rejects.toThrow(/identity transition alias collision/i);
+
+        const persisted = JSON.parse(fs.readFileSync(snapshotPath, 'utf8')) as any;
+        expect(persisted.documents).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: 'doc_move_source',
+                sourcePath: 'Knowledge_Base/source.md',
+                sourceUri: 'note://workspace/v1/source.md',
+            }),
+        ]));
+        expect(persisted.resourceRegistry.projections).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: 'doc_move_source',
+                sourcePath: 'Knowledge_Base/source.md',
+            }),
+        ]));
+        expect(persisted.indexLifecycle.units).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: 'doc_move_source',
+                sourcePath: 'Knowledge_Base/source.md',
+            }),
+        ]));
+    });
+
+    test('rolls back an entire mixed operation batch after a later move fails', async () => {
+        const platform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store: createFileBackedKnowledgeGraphStore({ filePath: snapshotPath }),
+        });
+
+        await platform.ingestKnowledge({
+            documents: [
+                {
+                    documentId: 'doc_batch_first',
+                    sourcePath: 'Knowledge_Base/batch-first.md',
+                    language: 'en',
+                    content: '# Batch first\nThe first operation must be rolled back with the batch.',
+                },
+                {
+                    documentId: 'doc_batch_second',
+                    sourcePath: 'Knowledge_Base/batch-second.md',
+                    language: 'en',
+                    content: '# Batch second\nThe second operation introduces a collision.',
+                },
+            ],
+        });
+        const persistedBeforeFailure = fs.readFileSync(snapshotPath, 'utf8');
+
+        await expect(platform.ingestKnowledge({
+            operations: [
+                {
+                    op: 'move',
+                    document: {
+                        documentId: 'doc_batch_first',
+                        toSourcePath: 'Knowledge_Base/batch-moved.md',
+                    },
+                },
+                {
+                    op: 'move',
+                    document: {
+                        documentId: 'doc_batch_second',
+                        toSourcePath: 'Knowledge_Base/batch-moved.md',
+                    },
+                },
+            ],
+        })).rejects.toThrow(/identity transition alias collision/i);
+
+        expect(fs.readFileSync(snapshotPath, 'utf8')).toBe(persistedBeforeFailure);
+
+        await platform.ingestKnowledge({
+            operations: [{
+                op: 'move',
+                document: {
+                    fromSourcePath: 'Knowledge_Base/batch-first.md',
+                    toSourcePath: 'Knowledge_Base/batch-recovered.md',
+                },
+            }],
+        });
+        const recovered = JSON.parse(fs.readFileSync(snapshotPath, 'utf8')) as any;
+        expect(recovered.documents).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                documentId: 'doc_batch_first',
+                sourcePath: 'Knowledge_Base/batch-recovered.md',
+            }),
+            expect.objectContaining({
+                documentId: 'doc_batch_second',
+                sourcePath: 'Knowledge_Base/batch-second.md',
+            }),
+        ]));
+    });
+
+    test('rejects upsert alias collisions before creating a duplicate identity', async () => {
+        const platform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store: createFileBackedKnowledgeGraphStore({ filePath: snapshotPath }),
+        });
+
+        await platform.ingestKnowledge({
+            documents: [{
+                documentId: 'doc_existing_alias',
+                sourcePath: 'Knowledge_Base/existing-alias.md',
+                sourceUri: 'note://workspace/v1/existing-alias.md',
+                language: 'en',
+                content: '# Existing alias\nOnly one document may own this path.',
+            }],
+        });
+        const persistedBeforeFailure = fs.readFileSync(snapshotPath, 'utf8');
+
+        await expect(platform.ingestKnowledge({
+            documents: [{
+                documentId: 'doc_duplicate_alias',
+                sourcePath: 'Knowledge_Base/existing-alias.md',
+                language: 'en',
+                content: '# Duplicate alias\nThis identity must be rejected.',
+            }],
+        })).rejects.toThrow(/identity transition alias collision/i);
+
+        expect(fs.readFileSync(snapshotPath, 'utf8')).toBe(persistedBeforeFailure);
+    });
+
+    test('rejects an explicit move whose source alias belongs to another document', async () => {
+        const platform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store: createFileBackedKnowledgeGraphStore({ filePath: snapshotPath }),
+        });
+
+        await platform.ingestKnowledge({
+            documents: [
+                {
+                    documentId: 'doc_explicit_source',
+                    sourcePath: 'Knowledge_Base/explicit-source.md',
+                    language: 'en',
+                    content: '# Explicit source\nThe source alias must match the ID.',
+                },
+                {
+                    documentId: 'doc_other_source',
+                    sourcePath: 'Knowledge_Base/other-source.md',
+                    language: 'en',
+                    content: '# Other source\nThis alias belongs elsewhere.',
+                },
+            ],
+        });
+        const persistedBeforeFailure = fs.readFileSync(snapshotPath, 'utf8');
+
+        await expect(platform.ingestKnowledge({
+            operations: [{
+                op: 'move',
+                document: {
+                    documentId: 'doc_explicit_source',
+                    fromSourcePath: 'Knowledge_Base/other-source.md',
+                    toSourcePath: 'Knowledge_Base/invalid-source.md',
+                },
+            }],
+        })).rejects.toThrow(/source aliases do not belong/i);
+
+        expect(fs.readFileSync(snapshotPath, 'utf8')).toBe(persistedBeforeFailure);
+    });
+
+    test('replays a successful move across resource, workspace, and index owners', async () => {
+        const platform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            store: createFileBackedKnowledgeGraphStore({ filePath: snapshotPath }),
+        });
+
+        await platform.ingestKnowledge({
+            documents: [{
+                documentId: 'doc_owner_sync',
+                sourcePath: 'Knowledge_Base/old-owner.md',
+                sourceUri: 'note://workspace/v1/old-owner.md',
+                language: 'en',
+                content: '# Owner sync\nAll identity owners must move together.',
+            }],
+        });
+        await platform.ingestKnowledge({
+            operations: [{
+                op: 'move',
+                document: {
+                    documentId: 'doc_owner_sync',
+                    toSourcePath: 'Knowledge_Base/new-owner.md',
+                    toSourceUri: 'note://workspace/v1/new-owner.md',
+                    toIdentityAliases: ['new-owner'],
+                },
+            }],
+        });
+
+        const persisted = JSON.parse(fs.readFileSync(snapshotPath, 'utf8')) as any;
+        expect(persisted.documents).toEqual(expect.arrayContaining([
+            expect.objectContaining({ documentId: 'doc_owner_sync', sourcePath: 'Knowledge_Base/new-owner.md' }),
+        ]));
+        expect(persisted.resourceRegistry.projections).toEqual(expect.arrayContaining([
+            expect.objectContaining({ documentId: 'doc_owner_sync', sourcePath: 'Knowledge_Base/new-owner.md' }),
+        ]));
+        expect(persisted.workspaceRegistry.bindings).toEqual(expect.arrayContaining([
+            expect.objectContaining({ documentId: 'doc_owner_sync', sourcePath: 'Knowledge_Base/new-owner.md' }),
+        ]));
+        expect(persisted.indexLifecycle.units).toEqual(expect.arrayContaining([
+            expect.objectContaining({ documentId: 'doc_owner_sync', sourcePath: 'Knowledge_Base/new-owner.md' }),
+        ]));
+    });
 });

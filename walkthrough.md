@@ -822,3 +822,43 @@ CI now makes the evidence boundary visible: signed arm64 outputs are workflow ar
 Native 侧遵循同一规则。Tauri 在 bootstrap/IPC read 前拒绝超限 generated asset，Android evidence 记录 ABI 与设备 RAM。`mobile-low` 只接受可测且不超过 4 GiB 的设备与精确 `arm64-v8a` 产物；`mobile-standard` 将设备上限提高到 8 GiB，但不改变 low profile。
 
 CI 现在显式隔离证据边界：签名 arm64 产物先是 workflow artifact，只有显式 self-hosted workload 与真实 `VmRSS` 样本成功后才上传 GitHub Release。当前静态 staging 为 122 文件 / 未压缩 4,283,033 bytes / 估算压缩 1,552,689 bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`。当前宿主不宣称原生 G2/G3 通过。
+
+## 2026-08-21 Phase 25 Collision-Safe Identity Transition and Owner Convergence Walkthrough
+
+The identity transition path now checks the full destination alias set before mutation. A historical basename or URI is still a valid compatibility lookup, so collision detection includes the current path, current URI, and every retained alias of every other document. A move that would claim one of those aliases fails before the document, registry, workspace, or index state changes.
+
+After a valid move, `KnowledgeLearningPlatform` keeps the legacy `documentId` and content revision, updates the document's atoms/evidence, then mirrors the new path and identity metadata into `ResourceRegistry`, its workspace binding, and `IndexLifecycle`. Existing resource/projection/index IDs and content hashes are preserved, which prevents a path-only rename from being misreported as content churn. The persisted G4 fixture verifies both the rejected-collision state and the successful four-owner state.
+
+This is an in-process owner-convergence boundary, not a full transaction engine. A mixed request that mutates one document and fails on a later operation can still expose partial ingest state; whole-request preflight or journaled rollback is the next reliability slice. The change adds no mobile dependency, database, model, Godot asset, or budget, and does not promote public canonical IDs.
+
+Focused verification is 3 suites / 11 tests, TypeScript no-emit, and `git diff --check`. Full regression is 148 Jest suites / 1,284 passed / 26 skipped plus 30 Rust tests and one ignored probe; four-host projection replay and fresh mobile-low budget pass. Native G2/G3 remains open because signed arm64 artifacts, approved low-memory hardware, SAF execution, force-stop/reopen continuity, failure retries, and measured RSS are unavailable on this host.
+
+## 2026-08-21 第 25 阶段：冲突安全的身份迁移与 owner 收敛 Walkthrough
+
+身份迁移路径现在会在 mutation 前检查完整目标 alias 集合。历史 basename 或 URI 仍是兼容查询入口，因此 collision 检查包含当前 path、当前 URI 以及其他文档保留的全部 alias。若 move 会抢占这些 alias，操作会在 document、registry、workspace 或 index 状态变化前失败。
+
+合法 move 保留旧 `documentId` 与 content revision，更新 document 的 atom/evidence，再把新 path 与身份元数据同步到 `ResourceRegistry`、workspace binding 与 `IndexLifecycle`。既有 resource/projection/index ID 与 content hash 不变，path-only rename 不会被误报成 content churn。持久化 G4 fixture 同时验证 rejected-collision 与成功后的四 owner 状态。
+
+这仍是进程内 owner convergence 边界，不是完整事务引擎。混合请求如果先修改一个文档、再在后续 operation 失败，仍可能暴露部分 ingest state；下一阶段应增加 whole-request preflight 或 journaled rollback。本改动不增加移动端依赖、数据库、模型、Godot asset 或预算，也不切换 public canonical ID。
+
+定向验证为 3 suites / 11 tests、TypeScript no-emit 与 `git diff --check`。全量回归为 148 个 Jest suite / 1,284 passed / 26 skipped，加上 Rust 30 个通过与 1 个 ignored probe；四 host projection replay 与 fresh mobile-low budget 通过。原生 G2/G3 仍开放，因为当前宿主没有签名 arm64 产物、获批低内存硬件、SAF 执行、force-stop/reopen continuity、失败重试与 RSS 实测证据。
+
+## 2026-08-21 Phase 26 Request-Level Ingest Atomicity and Single-Writer Serialization Walkthrough
+
+`ingestKnowledge` is now serialized per platform instance. Before a request mutates the graph, it captures a deep copy of the existing versioned snapshot. If a later operation, relation recompute, owner mirror, or atomic save fails, the platform restores the document graph, secondary registries, index, identity journal, telemetry, and ID counter as one pre-image. A second import cannot interleave with that restore.
+
+The boundary also validates ownership for `upsert` and `move`: duplicate path/URI/aliases, an explicit move whose `from*` alias belongs elsewhere, ambiguous source aliases, and missing secondary owners are rejected. The mixed-batch fixture moves one document successfully, forces a collision on the next move, verifies the persisted bytes remain unchanged, then moves the first document from its original alias to prove in-memory rollback.
+
+This is a deliberate reuse of the existing snapshot/replay contract, so public IDs, projection schemas, Bridge fields, and the runtime-first mobile package remain unchanged. The cost is transient memory proportional to the current graph and JSON clone/restore latency; native low-memory acceptance must measure that cost with bounded import batches. Versioned G4 manifests and signed arm64/RSS evidence remain release gates.
+
+Current verification is 148 Jest suites / 1,287 passed / 26 skipped, Rust 30 passed / 1 ignored, TypeScript no-emit, 122-file mobile-low staging, four-host projection replay, eight native-recovery scenarios, Diataxis, and `git diff --check`.
+
+## 2026-08-21 第 26 阶段：请求级 ingest 原子性与单写者串行化 Walkthrough
+
+`ingestKnowledge` 现在按 platform instance 串行执行。请求在 mutation 前保存 versioned snapshot 的深拷贝；后续 operation、relation recompute、owner mirror 或 atomic save 失败时，document graph、secondary registry、index、identity journal、telemetry 与 ID counter 作为一个 pre-image 一起恢复，第二个 import 不能在恢复期间插入。
+
+边界同时为 `upsert` 与 `move` 校验 ownership：重复 path/URI/alias、显式 move 的 `from*` alias 属于其他文档、source alias 歧义以及 secondary owner 缺失都会被拒绝。mixed-batch fixture 先让一个 move 成功，再让下一步 collision，验证持久化字节未改变，随后从原始 alias 成功迁移第一文档，证明内存状态也已回滚。
+
+实现复用现有 snapshot/replay contract，因此 public ID、projection schema、Bridge 字段与 runtime-first 移动包保持不变。代价是与当前 graph 成比例的瞬时内存及 JSON clone/restore 延迟；原生低内存验收必须用有界 import batch 实测。版本化 G4 manifest 与签名 arm64/RSS 证据仍是 release 门禁。
+
+当前验证为 148 个 Jest suite / 1,287 passed / 26 skipped、Rust 30 passed / 1 ignored、TypeScript no-emit、122 文件 mobile-low staging、4 host projection replay、8 个 native-recovery scenario、Diataxis 与 `git diff --check`。

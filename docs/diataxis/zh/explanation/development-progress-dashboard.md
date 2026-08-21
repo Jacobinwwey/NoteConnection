@@ -1937,3 +1937,17 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - worker 与 single-thread 路径统一执行文档数、单文档/总字节、深度、边数和 serialized projection 限制；Tauri 在 bootstrap/IPC read 前拒绝超限 generated asset。
 - Android evidence 要求精确 `arm64-v8a`、profile ceiling 内的可测 RAM，并记录 ABI/RAM provenance。签名静态产物只作为 workflow artifact，Release 上传必须经过显式 self-hosted workload 与 RSS evidence。
 - 当前 staging 为 122 文件 / 未压缩 4,283,033 / 估算压缩 1,552,689 bytes；缺少获批签名/设备证据，原生 G2/G3 仍开放。
+
+## 2026-08-21 第 25 阶段：身份迁移 owner 收敛
+
+- `move`/`rename` 现在会在 mutation 前预检完整目标 alias 集合，包括历史 alias；URI/path/basename collision fail-closed。
+- 成功 move 保留旧 document 与 resource/index identity，并把新 path/URI/revision/alias 同步到 `ResourceRegistry`、workspace binding 与 `IndexLifecycle`。
+- G4 回归覆盖 rejected-collision 持久化状态与成功后的四 owner 收敛。定向证据为 3 suites / 11 tests、TypeScript no-emit 与 `git diff --check`；全量回归为 148 个 Jest suite / 1,284 passed / 26 skipped、Rust 30 passed / 1 ignored，四 host projection replay 与 fresh mobile-low budget 通过。
+- 这仍是 host/code 证据，不是原生 RSS 或 release 证据。whole-request transaction preflight/journaled rollback、版本化 G4 manifest 归档、public-ID 迁移与 SQLite/WASM 提升仍待完成。
+
+## 2026-08-21 第 26 阶段：请求级 ingest 原子性
+
+- `ingestKnowledge` 现在按 platform instance 串行 writer，并在 operation、relation recompute、owner mirror 或 atomic persistence 失败后恢复深拷贝的 versioned snapshot。
+- rollback 覆盖 graph record、resource/workspace/index owner、identity journal、telemetry 与 ID allocation；`upsert`/`move` 的 alias ownership、显式 source alias、歧义与必需 owner 均在边界校验。
+- mixed-batch G4 回归证明后续 collision 后不可观察到部分 move。Public ID、projection schema、Bridge 字段与 mobile-slim 依赖保持不变。
+- 代价是与 graph 成比例的瞬时内存及 clone/restore 延迟；原生低内存验收必须使用有界 batch 与真实 RSS。版本化 replay manifest 仍是开放门禁。

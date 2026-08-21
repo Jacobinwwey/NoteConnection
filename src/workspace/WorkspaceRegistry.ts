@@ -103,6 +103,20 @@ export class WorkspaceRegistry {
         return this.bindings.get(bindingId) || null;
     }
 
+    /** Mirrors a committed document move for workspace-scoped path filters. */
+    public updateDocumentSourcePath(documentId: string, sourcePath: string, updatedAt: string): boolean {
+        const binding = this.resolveBindingByDocumentId(documentId);
+        if (!binding) {
+            return false;
+        }
+        this.bindings.set(binding.bindingId, {
+            ...binding,
+            sourcePath,
+            updatedAt,
+        });
+        return true;
+    }
+
     public getWorkspaceById(workspaceId: string): WorkspaceRecord | null {
         return this.workspaces.get(String(workspaceId || '').trim().toLowerCase()) || null;
     }

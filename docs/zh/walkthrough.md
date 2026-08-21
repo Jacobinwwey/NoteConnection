@@ -329,3 +329,21 @@ manifest 现在从 `config/mobile-budget.v1.json` 记录 schema-1 artifact/RSS/r
 `mobile_budget_runtime.js` 在 storage provider 前加载，将版本化限制投影到 WebView/Capacitor，不增加 runtime 依赖。Capacitor 现在按 UTF-8 字节计量，在可用时先做 filesystem size 预检，并在读取前拒绝超深 entry；Tauri 在 bootstrap/IPC read 前执行同一 projection ceiling。
 
 Release workflow 将打包与验收分离：签名 arm64 APK/AAB 先是 workflow artifact，GitHub Release 上传必须经过 self-hosted arm64 workload、force-stop/reopen continuity 与可测 RSS。当前静态 staging 为 122 文件 / 未压缩 4,283,033 bytes / 估算压缩 1,552,689 bytes / SHA-256 `c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c`；原生 G2/G3 仍待补齐。
+
+## 2026-08-21 第 25 阶段：冲突安全的身份迁移与 owner 收敛 Walkthrough
+
+`move`/`rename` 现在会在 mutation 前检查完整目标 alias 集合。当前 path、当前 URI 与其他文档保留的全部 alias 都参与 collision 检查，因此 rejected move 不会静默抢占兼容查询入口。
+
+合法 move 保留旧 `documentId` 与 content revision，更新 atom/evidence，并把新身份同步到 `ResourceRegistry`、workspace binding 与 `IndexLifecycle`。既有 resource/projection/index ID 与 content hash 保持稳定。持久化 G4 fixture 同时验证 rejected collision 与成功后的四 owner 收敛。
+
+这仍是进程内 owner convergence 边界，不是完整事务引擎。混合 ingest request 如果后续 operation 失败仍可能暴露部分 state；下一阶段应增加 whole-request preflight 或 journaled rollback。本阶段没有增加移动端依赖、数据库、模型、Godot asset、预算或 public-ID 变更。定向验证为 3 suites / 11 tests、TypeScript no-emit 与 `git diff --check`；全量回归为 148 个 Jest suite / 1,284 passed / 26 skipped、Rust 30 passed / 1 ignored，四 host projection replay 与 fresh mobile-low budget 通过；原生 G2/G3 仍开放。
+
+## 2026-08-21 第 26 阶段：请求级 ingest 原子性与单写者串行化 Walkthrough
+
+`ingestKnowledge` 现在按 platform instance 串行执行。请求在 mutation 前保存 versioned snapshot 的深拷贝；operation、relation recompute、owner mirror 或 atomic save 失败时，document/atom/evidence、secondary registry、index、identity journal、telemetry 与 ID counter 一起恢复，第二个 import 不能在恢复期间插入。
+
+边界为 `upsert` 与 `move` 校验 ownership：重复 path/URI/alias、显式 move 的 `from*` alias 属于其他文档、source alias 歧义以及 owner 缺失都会被拒绝。mixed-batch fixture 验证后续 collision 后持久化字节不变，再证明原始 alias 仍可用于后续 move。
+
+实现复用现有 snapshot/replay contract，因此 public ID、projection schema、Bridge 字段与 runtime-first 移动包保持不变。瞬时内存及 JSON clone/restore 延迟会随 graph 增长，原生低内存验收必须使用有界 batch 并记录 RSS。版本化 G4 manifest 与签名 arm64 证据仍是 release 门禁。
+
+当前验证为 148 个 Jest suite / 1,287 passed / 26 skipped、Rust 30 passed / 1 ignored、TypeScript no-emit、122 文件 mobile-low staging、4 host projection replay、8 个 native-recovery scenario、Diataxis 与 `git diff --check`。

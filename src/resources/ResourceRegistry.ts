@@ -142,6 +142,55 @@ export class ResourceRegistry {
         return { resource, projection };
     }
 
+    /**
+     * Keeps the resource/projection owners aligned with a document move without
+     * allocating a new resource or changing the stable document projection key.
+     * The document store owns the transition journal; this adapter only mirrors
+     * the committed identity metadata for export and diagnostics consumers.
+     */
+    public updateKnowledgeDocumentIdentity(input: {
+        documentId: string;
+        sourcePath: string;
+        sourceUri?: string;
+        revision?: string;
+        identityAliases?: string[];
+        title?: string;
+        updatedAt: string;
+    }): boolean {
+        const projection = this.getProjectionByDocumentId(input.documentId);
+        if (!projection) {
+            return false;
+        }
+        const resource = this.resources.get(projection.resourceId);
+        const identityMetadata: Record<string, unknown> = {
+            ...(input.sourceUri !== undefined ? { sourceUri: input.sourceUri } : {}),
+            ...(input.revision !== undefined ? { revision: input.revision } : {}),
+            ...(input.identityAliases !== undefined ? { identityAliases: [...input.identityAliases] } : {}),
+        };
+        this.projections.set(projection.projectionId, {
+            ...projection,
+            sourcePath: input.sourcePath,
+            metadata: {
+                ...projection.metadata,
+                ...identityMetadata,
+            },
+            updatedAt: input.updatedAt,
+        });
+        if (resource) {
+            this.resources.set(resource.resourceId, {
+                ...resource,
+                sourcePath: input.sourcePath,
+                title: input.title || resource.title,
+                metadata: {
+                    ...resource.metadata,
+                    ...identityMetadata,
+                },
+                updatedAt: input.updatedAt,
+            });
+        }
+        return true;
+    }
+
     public markDocumentProjectionDeleted(documentId: string, deletedAt: string): void {
         const stableKey = `knowledge_document:${String(documentId || '').trim()}`;
         const projectionId = this.projectionIdsByStableKey.get(stableKey);
