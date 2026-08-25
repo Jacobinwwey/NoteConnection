@@ -14,6 +14,7 @@ function deriveScopedConversationRequest(caseEntry: KnowledgeWorkspaceConversati
         userId: `regression_user_${caseEntry.id}`,
         sessionId: `regression_session_${caseEntry.id}`,
         message: caseEntry.query,
+        answerLanguage: caseEntry.answerLanguage || 'auto',
         persistMemory: false,
         topK: Number.isInteger(caseEntry.topK) && Number(caseEntry.topK) > 0
             ? Number(caseEntry.topK)
@@ -3848,6 +3849,18 @@ describe('KnowledgeWorkspaceConversationRegression', () => {
             expected.answerMustNotContain?.forEach((fragment) => {
                 expect(response.answer).not.toContain(fragment);
             });
+            if (caseEntry.id.startsWith('waterglass_explicit_scope_')) {
+                const publicAnswer = String(response.answer || '');
+                expect(publicAnswer).not.toMatch(/(?:Plastic Cup|Metal Cup|Comparison of Fluid Containment|Context pa|紧邻前置节点包括|后续分支包括)/iu);
+                expect(publicAnswer).not.toMatch(/\.\.\.$|(?:and|or|with|between|from|to|is|are|以及|并且|其中|通常在|范围为|分别为|性能)\s*$/iu);
+                expect(publicAnswer).not.toContain('```');
+                expect((publicAnswer.match(/(?<!\\)\$/gu) || []).length % 2).toBe(0);
+                expect((publicAnswer.match(/(?<!\\)\$\$/gu) || []).length % 2).toBe(0);
+                expect(response.assistantBlocks?.filter((block) => block.type === 'structured_answer')).toHaveLength(1);
+                expect(response.assistantBlocks?.find((block) => block.type === 'structured_answer')).toEqual(
+                    expect.objectContaining({ directAnswer: response.answer })
+                );
+            }
             if (expected.ragSourceBoundary) {
                 expect(response.trace.ragContextPack).toEqual(expect.objectContaining({
                     sourceBoundary: expected.ragSourceBoundary,

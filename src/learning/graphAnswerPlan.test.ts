@@ -333,7 +333,7 @@ describe('buildGraphAnswerPlan', () => {
         expect(plan.claims[0].evidenceRefs[0].text).toBe(denseEvidence);
     });
 
-    test('retains every query-connected clause from dense direct evidence without a claim-count quota', () => {
+    test('retains complete internal claims and preserves their evidence provenance', () => {
         const plan = buildGraphAnswerPlan({
             message: 'what is water glass',
             knowledgePoints: [knowledgePoint],
@@ -350,7 +350,9 @@ describe('buildGraphAnswerPlan', () => {
                         'A water glass is a transparent vessel used to hold water.',
                         'It separates the liquid from the surrounding environment.',
                         'Its wall conducts heat between the drink and the air.',
-                        'Mars has two moons.',
+                        'It is compared with a PET Plastic Cup and a Stainless Steel Metal Cup.',
+                        'The thermal field can be described by $$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$.',
+                        'This clause is intentionally beyond the public definition budget and should remain internal.',
                     ].join(' '),
                     score: 0.9,
                 }],
@@ -366,7 +368,10 @@ describe('buildGraphAnswerPlan', () => {
             'It separates the liquid from the surrounding environment.',
             'Its wall conducts heat between the drink and the air.',
         ]));
-        expect(directClaims).not.toContain('Mars has two moons.');
+        expect(directClaims).toContain('It is compared with a PET Plastic Cup and a Stainless Steel Metal Cup.');
+        expect(directClaims).not.toContain('This clause is intentionally beyond the public definition budget and should remain internal.');
+        expect(plan.claims.find((claim) => claim.statement.includes('PET Plastic Cup'))?.evidenceRefs[0].evidenceId)
+            .toBe('direct_water_glass_dense_evidence');
     });
 
     test('retains distinct fact values from semantically similar conflict evidence', () => {

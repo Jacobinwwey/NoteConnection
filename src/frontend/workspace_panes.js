@@ -9228,13 +9228,71 @@
         ).trim();
         wrapper.appendChild(title);
 
-        const directAnswer = String(block && block.directAnswer || '').trim();
-        if (directAnswer) {
-            const summary = document.createElement('div');
-            summary.className = 'agent-chat-inline-card-summary agent-chat-structured-answer-direct';
-            summary.textContent = directAnswer;
-            summary.setAttribute('data-structured-answer-section', 'directAnswer');
-            wrapper.appendChild(summary);
+        const appendMarkdownSection = async function (sectionName, rawMarkdown, className) {
+            const markdown = String(rawMarkdown || '').trim();
+            if (!markdown) {
+                return;
+            }
+            const section = document.createElement('div');
+            section.className = className;
+            section.setAttribute('data-structured-answer-section', sectionName);
+            if (markdownRuntime && typeof markdownRuntime.renderMarkdownInto === 'function') {
+                await markdownRuntime.renderMarkdownInto(section, markdown);
+            } else {
+                section.style.whiteSpace = 'pre-wrap';
+                section.textContent = markdown;
+            }
+            wrapper.appendChild(section);
+        };
+
+        await appendMarkdownSection(
+            'directAnswer',
+            block && block.directAnswer,
+            'agent-chat-inline-card-summary agent-chat-structured-answer-direct agent-chat-structured-answer-markdown'
+        );
+        const nextActionsMarkdown = String(block && block.nextActionsMarkdown || '').trim();
+        if (nextActionsMarkdown) {
+            const nextActionsToggle = document.createElement('button');
+            nextActionsToggle.type = 'button';
+            nextActionsToggle.className = 'agent-chat-structured-answer-next-actions-toggle';
+            nextActionsToggle.setAttribute('data-structured-answer-next-actions-toggle', 'true');
+            const setNextActionsExpanded = function (expanded) {
+                const label = expanded
+                    ? translate('agentWorkspace.reply.hideNextActions', 'Hide next actions')
+                    : translate('agentWorkspace.reply.showNextActions', 'Show next actions');
+                nextActionsToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                nextActionsToggle.setAttribute('aria-label', label);
+                nextActionsToggle.title = label;
+                nextActionsToggle.textContent = expanded ? '-' : '+';
+            };
+            setNextActionsExpanded(false);
+            nextActionsToggle.addEventListener('click', function () {
+                const expanded = nextActionsToggle.getAttribute('aria-expanded') === 'true';
+                if (expanded) {
+                    const existingPanel = wrapper.querySelector('[data-structured-answer-next-actions-panel]');
+                    existingPanel?.remove();
+                    setNextActionsExpanded(false);
+                    return;
+                }
+                const panel = document.createElement('div');
+                panel.className = 'agent-chat-structured-answer-section agent-chat-structured-answer-next-actions';
+                panel.setAttribute('data-structured-answer-next-actions-panel', 'true');
+                panel.setAttribute('data-structured-answer-section', 'nextActionsMarkdown');
+                wrapper.insertBefore(panel, nextActionsToggle);
+                setNextActionsExpanded(true);
+                if (markdownRuntime && typeof markdownRuntime.renderMarkdownInto === 'function') {
+                    Promise.resolve(markdownRuntime.renderMarkdownInto(panel, nextActionsMarkdown)).catch(function () {
+                        if (panel.parentNode === wrapper) {
+                            panel.remove();
+                            setNextActionsExpanded(false);
+                        }
+                    });
+                } else {
+                    panel.style.whiteSpace = 'pre-wrap';
+                    panel.textContent = nextActionsMarkdown;
+                }
+            });
+            wrapper.appendChild(nextActionsToggle);
         }
 
         return wrapper;

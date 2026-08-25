@@ -1125,6 +1125,14 @@ function createWorkspaceHtml() {
                     <select id="agent-workspace-scope-select"></select>
                     <div id="agent-workspace-scope-summary"></div>
                   </div>
+                  <div class="agent-answer-language-control">
+                    <label for="agent-workspace-answer-language-select">Answer language</label>
+                    <select id="agent-workspace-answer-language-select">
+                      <option value="en">English</option>
+                      <option value="zh">中文</option>
+                    </select>
+                    <div id="agent-workspace-answer-language-summary"></div>
+                  </div>
                   <input id="agent-workspace-user-id" value="path_user_default" />
                   <div id="agent-workspace-chat-messages"></div>
                   <div id="agent-workspace-knowledge-points"></div>
@@ -1177,6 +1185,7 @@ function createBaseSandbox(dom: JSDOM) {
     const sandbox: Record<string, any> = {
         window: dom.window as any,
         document: dom.window.document,
+        localStorage: dom.window.localStorage,
         console: {
             log: jest.fn(),
             warn: jest.fn(),
@@ -6432,6 +6441,65 @@ describe('agent workspace learning-path integration', () => {
             corpusId: 'waterglass',
             sourcePathPrefixes: ['Knowledge_Base/waterglass'],
         });
+        expect(requestBody.answerLanguage).toBe('en');
+    });
+
+    test('uses the software language by default and preserves an explicit answer-language override in requests', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+
+        const completedTurn = (turnId: string) => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId,
+                    emittedAt: '2026-08-24T00:00:00.000Z',
+                    result: {
+                        assistantMessage: 'scoped response',
+                        citations: [],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        knowledgePoints: [],
+                        summary: {
+                            generatedAt: '2026-08-24T00:00:00.000Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 0,
+                            returnedCitations: 0,
+                            recalledMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 0,
+                        },
+                    },
+                },
+            },
+        ]);
+        fetchMock.mockImplementationOnce(async () => completedTurn('turn_answer_language_default'));
+        fetchMock.mockImplementationOnce(async () => completedTurn('turn_answer_language_override'));
+
+        const selector = document.getElementById('agent-workspace-answer-language-select') as HTMLSelectElement;
+        await (window as any).i18n.setLanguage('zh');
+        expect(selector.value).toBe('zh');
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'what is water glass?';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+        expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body || '{}')).answerLanguage).toBe('zh');
+
+        selector.value = 'en';
+        selector.dispatchEvent(new window.Event('change', { bubbles: true }));
+        expect(window.localStorage.getItem('nc_agent_answer_language')).toBe('en');
+        await (window as any).i18n.setLanguage('zh');
+        expect(selector.value).toBe('en');
+
+        input.value = 'what is water glass?';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+        expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body || '{}')).answerLanguage).toBe('en');
     });
 
     test('prefers SSE turn streaming for conversation and renders the completed turn payload', async () => {
@@ -7053,6 +7121,9 @@ describe('agent workspace learning-path integration', () => {
         }));
         (window as any).marked = {
             parse: jest.fn((markdown: string) => {
+                if (markdown.includes('Scoped Answer')) {
+                    return '<p>Scoped Answer with inline math $E=mc^2$ and display math $$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$.</p>';
+                }
                 if (markdown.includes('## Answer Context')) {
                     return (
                         '<h2>Answer Context</h2>'
@@ -7108,7 +7179,7 @@ describe('agent workspace learning-path integration', () => {
                                 blockId: 'block_structured_answer_1',
                                 type: 'structured_answer',
                                 title: 'Grounded Answer',
-                                directAnswer: 'Scoped Answer',
+                                directAnswer: 'Scoped Answer with inline math $E=mc^2$ and display math $$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$.',
                                 overviewMarkdown: '## Answer Context\n\n- Relevant knowledge points: **1**\n- Citations returned: **1**\n- Scoped memories recalled: **0**',
                                 explanationMarkdown: '## Explanation\n\n**Blocks Citation** is the current best scoped anchor.\n\nInline math $E=mc^2$ and a diagram:\n\n```mermaid\ngraph TD;A-->B;\n```',
                                 evidenceMarkdown: '## Evidence Summary\n\n1. **Blocks Citation** (Knowledge_Base/optics/blocks.md:18)\n   - Scoped snippet',
@@ -7231,6 +7302,12 @@ describe('agent workspace learning-path integration', () => {
                                     },
                                 ],
                             },
+                            {
+                                blockId: 'block_knowledge_actions_1',
+                                type: 'knowledge_actions',
+                                title: 'Knowledge Actions',
+                                atomIds: ['atom_blocks_1'],
+                            },
                         ],
                         citations: [
                             {
@@ -7302,13 +7379,45 @@ describe('agent workspace learning-path integration', () => {
         expect(assistantNode?.querySelector('[data-structured-answer-section="overviewMarkdown"]')).toBeNull();
         expect(assistantNode?.querySelector('[data-structured-answer-section="explanationMarkdown"]')).toBeNull();
         expect(assistantNode?.querySelector('[data-structured-answer-section="evidenceMarkdown"]')).toBeNull();
+        expect(assistantNode?.querySelector('[data-structured-answer-section="nextActionsMarkdown"]')).toBeNull();
         expect(String(assistantNode?.textContent || '')).not.toContain('Answer Context');
         expect(String(assistantNode?.textContent || '')).not.toContain('Evidence Summary');
+        expect(String(assistantNode?.textContent || '')).not.toContain('Explanation');
         expect(String(assistantNode?.textContent || '')).not.toContain('Knowledge Run');
+        expect(String(assistantNode?.textContent || '')).not.toContain('Knowledge Actions');
         expect(String(assistantNode?.textContent || '')).not.toContain('Inspect Run');
-        expect(renderMathInElement).not.toHaveBeenCalled();
-        expect((window as any).mermaid.initialize).not.toHaveBeenCalled();
+        expect(String(assistantNode?.querySelector('[data-structured-answer-section="directAnswer"]')?.textContent || '')).toContain('$E=mc^2$');
+        expect(String(assistantNode?.querySelector('[data-structured-answer-section="directAnswer"]')?.textContent || '')).toContain('$$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$');
+        expect(renderMathInElement).toHaveBeenCalledTimes(1);
+        expect((window as any).mermaid.initialize).toHaveBeenCalledTimes(1);
         expect(mermaidRender).not.toHaveBeenCalled();
+        const nextActionsToggle = assistantNode?.querySelector('[data-structured-answer-next-actions-toggle]') as HTMLButtonElement | null;
+        expect(nextActionsToggle).not.toBeNull();
+        expect(nextActionsToggle?.getAttribute('aria-expanded')).toBe('false');
+        expect(nextActionsToggle?.getAttribute('aria-label')).toBe('Show next actions');
+        expect(assistantNode?.querySelector('[data-structured-answer-next-actions-panel]')).toBeNull();
+        nextActionsToggle?.click();
+        await Promise.resolve();
+        expect(nextActionsToggle?.getAttribute('aria-expanded')).toBe('true');
+        expect(nextActionsToggle?.getAttribute('aria-label')).toBe('Hide next actions');
+        expect(assistantNode?.querySelector('[data-structured-answer-next-actions-panel]')).not.toBeNull();
+        expect(String(assistantNode?.textContent || '')).toContain('Next Actions');
+        expect(renderMathInElement).toHaveBeenCalled();
+        nextActionsToggle?.click();
+        expect(nextActionsToggle?.getAttribute('aria-expanded')).toBe('false');
+        expect(assistantNode?.querySelector('[data-structured-answer-next-actions-panel]')).toBeNull();
+        const markdownRuntime = (window as any).NoteConnectionMarkdownRuntime;
+        const renderMarkdownInto = markdownRuntime.renderMarkdownInto;
+        markdownRuntime.renderMarkdownInto = jest.fn((container: HTMLElement, markdown: string) => {
+            if (markdown.includes('## Next Actions')) {
+                return Promise.reject(new Error('next actions renderer failure'));
+            }
+            return renderMarkdownInto(container, markdown);
+        });
+        nextActionsToggle?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(nextActionsToggle?.getAttribute('aria-expanded')).toBe('false');
+        expect(assistantNode?.querySelector('[data-structured-answer-next-actions-panel]')).toBeNull();
         expect((window as any).NoteConnectionAgentWorkspace.getLastConversationResult()?.assistantBlocks?.[0]).toEqual(expect.objectContaining({
             overviewMarkdown: expect.stringContaining('## Answer Context'),
             evidenceMarkdown: expect.stringContaining('## Evidence Summary'),
@@ -7322,6 +7431,66 @@ describe('agent workspace learning-path integration', () => {
                 ]),
             })
         );
+    });
+
+    test('keeps non-public assistant blocks out of the chat release surface', async () => {
+        const { document, window, fetchMock } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+        fetchMock.mockImplementationOnce(async () => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId: 'turn_public_projection_only',
+                    emittedAt: '2026-04-13T00:02:00.000Z',
+                    result: {
+                        assistantMessage: 'Grounded Answer fallback',
+                        answer: 'Grounded Answer fallback',
+                        assistantBlocks: [
+                            {
+                                blockId: 'structured_public',
+                                type: 'structured_answer',
+                                title: 'Grounded Answer',
+                                directAnswer: 'Public answer.',
+                                knowledgePointCount: 0,
+                                citationCount: 0,
+                                recalledMemoryCount: 0,
+                            },
+                            { blockId: 'metadata_markdown', type: 'main_markdown', markdown: '# Answer Context' },
+                            { blockId: 'metadata_html', type: 'html_artifact', title: 'Evidence Summary', html: '<p>leak</p>' },
+                            { blockId: 'metadata_notice', type: 'system_notice', text: 'internal notice' },
+                            { blockId: 'metadata_citations', type: 'citations', title: 'Citations', citations: [] },
+                            { blockId: 'metadata_actions', type: 'knowledge_actions', title: 'Knowledge Actions', atomIds: [] },
+                        ],
+                        knowledgePoints: [],
+                        citations: [],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        summary: { generatedAt: '2026-04-13T00:02:00.000Z', topK: 6, returnedKnowledgePoints: 0, returnedCitations: 0, recalledMemoryCount: 0, appliedMemoryCount: 0, queryEvidenceCoverageRatioPct: 100 },
+                        trace: {},
+                    },
+                },
+            },
+        ]));
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'public projection';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+
+        const renderedMessages = document.querySelectorAll('.agent-chat-message-rendered.agent-chat-message-assistant');
+        expect(renderedMessages).toHaveLength(1);
+        const assistantNode = renderedMessages[0];
+        expect(assistantNode.querySelectorAll('.agent-chat-structured-answer-card')).toHaveLength(1);
+        expect(assistantNode.querySelectorAll('.agent-chat-render-block-main_markdown')).toHaveLength(0);
+        expect(assistantNode.querySelectorAll('.agent-chat-inline-artifact')).toHaveLength(0);
+        expect(assistantNode.querySelectorAll('.agent-chat-knowledge-run-card')).toHaveLength(0);
+        expect(assistantNode.textContent).toContain('Public answer.');
+        expect(assistantNode.textContent).not.toContain('Answer Context');
+        expect(assistantNode.textContent).not.toContain('Evidence Summary');
+        expect(assistantNode.textContent).not.toContain('internal notice');
+        expect(assistantNode.textContent).not.toContain('Knowledge Actions');
     });
 
     test('inspects durable knowledge-run artifacts from structured conversation blocks', async () => {

@@ -392,6 +392,14 @@
     "subtitle": "可信对话、知识检索与引导式学习",
     "conversationTitle": "可信对话",
     "conversationSubtitle": "限定范围的知识、引用依据与引导式学习动作",
+    "answerLanguage": {
+      "label": "回答语言",
+      "english": "English",
+      "chinese": "中文",
+      "summary": "跟随软件语言",
+      "summaryEnglish": "使用英文回答",
+      "summaryChinese": "使用中文回答"
+    },
     "userId": "学习者 ID",
     "inputLabel": "向当前限定知识域提问",
     "inputPlaceholder": "可以询问概念、引用依据、先修依赖或学习步骤...",
@@ -952,6 +960,8 @@
     },
     "reply": {
       "structuredAnswer": "可信回答",
+      "showNextActions": "显示下一步行动",
+      "hideNextActions": "隐藏下一步行动",
       "citations": "引用",
       "citationsEmpty": "未返回引用。",
       "citationUntitled": "未命名引用",

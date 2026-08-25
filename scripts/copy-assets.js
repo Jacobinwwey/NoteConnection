@@ -16,6 +16,23 @@ const GENERATED_GRAPH_PATTERNS = [
     /^graph_data_cli_.*\.json$/i
 ];
 
+const GENERATED_FRONTEND_BUNDLE_DIRECTORIES = [
+    'assets',
+    'vite-assets'
+];
+
+function cleanGeneratedFrontendBundleDirectories(frontendDir) {
+    const root = path.resolve(frontendDir);
+    GENERATED_FRONTEND_BUNDLE_DIRECTORIES.forEach((directoryName) => {
+        const target = path.resolve(root, directoryName);
+        const relative = path.relative(root, target);
+        if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+            throw new Error(`Refusing to clean generated frontend bundle directory outside destination: ${target}`);
+        }
+        fs.rmSync(target, { recursive: true, force: true });
+    });
+}
+
 function isGeneratedGraphAsset(filename) {
     return GENERATED_GRAPH_FILES.includes(filename)
         || GENERATED_GRAPH_PATTERNS.some((pattern) => pattern.test(filename));
@@ -138,6 +155,7 @@ function copyProjectAssets(options = {}) {
         logger = console
     } = options;
 
+    cleanGeneratedFrontendBundleDirectories(dest);
     copyDir(src, dest, {
         includeGeneratedGraphAssets,
         logger
@@ -226,6 +244,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+    cleanGeneratedFrontendBundleDirectories,
     copyProjectAssets,
     isGeneratedGraphAsset,
     isLfsPointerContent,

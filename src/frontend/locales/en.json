@@ -392,6 +392,14 @@
     "subtitle": "Grounded conversation, knowledge search, and guided learning",
     "conversationTitle": "Grounded Conversation",
     "conversationSubtitle": "Scoped knowledge, citations, and guided learning actions",
+    "answerLanguage": {
+      "label": "Answer language",
+      "english": "English",
+      "chinese": "Chinese",
+      "summary": "Matches software language",
+      "summaryEnglish": "English answer",
+      "summaryChinese": "Chinese answer"
+    },
     "userId": "Learner ID",
     "inputLabel": "Ask the scoped knowledge corpus",
     "inputPlaceholder": "Ask about a concept, citation, prerequisite, or study step...",
@@ -952,6 +960,8 @@
     },
     "reply": {
       "structuredAnswer": "Grounded Answer",
+      "showNextActions": "Show next actions",
+      "hideNextActions": "Hide next actions",
       "citations": "Citations",
       "citationsEmpty": "No citations were returned.",
       "citationUntitled": "Untitled citation",

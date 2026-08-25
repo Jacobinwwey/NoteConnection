@@ -192,6 +192,14 @@
                   data-i18n="agentWorkspace.scope.summaryAll"
                 >All folders</div>
               </div>
+              <div class="agent-answer-language-control">
+                <label for="agent-workspace-answer-language-select" data-i18n="agentWorkspace.answerLanguage.label">Answer language</label>
+                <select id="agent-workspace-answer-language-select" aria-describedby="agent-workspace-answer-language-summary">
+                  <option value="en" data-i18n="agentWorkspace.answerLanguage.english">English</option>
+                  <option value="zh" data-i18n="agentWorkspace.answerLanguage.chinese">中文</option>
+                </select>
+                <div id="agent-workspace-answer-language-summary" class="agent-answer-language-summary" data-i18n="agentWorkspace.answerLanguage.summary">Matches software language</div>
+              </div>
               <div class="agent-pane-field">
                 <label for="agent-workspace-user-id" data-i18n="agentWorkspace.userId">Learner ID</label>
                 <input id="agent-workspace-user-id" type="text" value="path_user_default" />

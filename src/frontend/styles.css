@@ -1683,6 +1683,55 @@ body.agent-workspace-open .agent-workspace-drawer {
   grid-column: 2;
 }
 
+.agent-answer-language-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 12px;
+  color: var(--text-secondary, #9aa4b2);
+  font-size: 0.78rem;
+}
+
+.agent-answer-language-control select {
+  min-width: 108px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-subtle, #3d4652);
+  border-radius: 4px;
+  background: var(--surface-input, #1c232d);
+  color: var(--text-primary, #e8edf3);
+}
+
+.agent-answer-language-summary {
+  color: var(--text-muted, #758195);
+}
+
+.agent-chat-structured-answer-next-actions-toggle {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  margin: 8px 0 0 auto;
+  padding: 0;
+  border: 1px solid var(--border-subtle, #3d4652);
+  border-radius: 50%;
+  background: var(--surface-raised, #252e3a);
+  color: var(--text-primary, #e8edf3);
+  cursor: pointer;
+  line-height: 24px;
+  text-align: center;
+}
+
+.agent-chat-structured-answer-next-actions-toggle:hover,
+.agent-chat-structured-answer-next-actions-toggle:focus-visible {
+  border-color: var(--accent, #6ea8fe);
+  outline: none;
+}
+
+.agent-chat-structured-answer-next-actions {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle, #3d4652);
+}
+
 .agent-pane-field label {
   color: #cbd5e1;
   font-size: 0.84rem;

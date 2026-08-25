@@ -61,6 +61,16 @@ describe('versioned mobile budget contract', () => {
     expect(prepareSource).toContain('contractSha256');
   });
 
+  test('excludes Vite verification chunks from the mobile staging input', () => {
+    const prepare = require(preparePath) as {
+      shouldExcludeSourceAsset: (relativePath: string) => boolean;
+    };
+
+    expect(prepare.shouldExcludeSourceAsset('assets/main-stale.js')).toBe(true);
+    expect(prepare.shouldExcludeSourceAsset('vite-assets/main-stale.js')).toBe(true);
+    expect(prepare.shouldExcludeSourceAsset('workspace_panes.js')).toBe(false);
+  });
+
   test('browser budget projection stays aligned with the versioned contract', () => {
     const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
       schemaVersion: number;

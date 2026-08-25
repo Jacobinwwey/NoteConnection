@@ -19,6 +19,7 @@ const DEFAULT_MANIFEST_PATH = path.join(DEFAULT_STAGING_ROOT, 'mobile-slim-manif
 
 const EXCLUDED_SOURCE_PATTERNS = [
   /(^|\/)assets(\/|$)/i,
+  /(^|\/)vite-assets(\/|$)/i,
   /(^|\/)(?:README|User_Manual(?:_zh)?)\.md$/i,
   /(^|\/)(?:data|graph_data)(?:_[^/]+)?\.(?:js|json)$/i,
   /(^|\/)mobile_semantic_comparator\.js$/i,

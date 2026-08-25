@@ -422,6 +422,53 @@ describe('conversationComposer', () => {
         }));
     });
 
+    test('uses the explicit Chinese answer language for an English no-match query', () => {
+        let blockCounter = 0;
+        const reply = buildScopedConversationReply({
+            message: 'what is water glass?',
+            answerLanguage: 'zh',
+            knowledgePoints: [],
+            citations: [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: {
+                ...globalScope,
+                source: 'scoped',
+                workspaceId: 'waterglass',
+                corpusId: 'waterglass',
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+                readiness: {
+                    status: 'ready',
+                    message: 'The scoped learning workspace is ready.',
+                    workspaceId: 'waterglass',
+                    corpusId: 'waterglass',
+                    activeResourceCount: 1,
+                    activeProjectionCount: 1,
+                    indexedUnitCount: 1,
+                    indexedSegmentCount: 4,
+                    matchedDocumentCount: 1,
+                },
+                missDiagnostics: {
+                    reason: 'retrieval_candidates_below_threshold',
+                    message: 'No evidence-bearing candidates were returned.',
+                    query: 'what is water glass?',
+                    normalizedQuery: 'what is water glass?',
+                    titleLikeQueries: ['water glass'],
+                    titleHitDocumentIds: [],
+                    indexedScopeAtomCount: 4,
+                },
+            },
+            nextBlockId: () => `language_empty_scope_${++blockCounter}`,
+        });
+
+        const structuredAnswer = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
+        expect(reply.answer).toContain('当前范围');
+        expect(reply.answer).toContain('我暂时不能');
+        expect(reply.answer).not.toContain('No scoped knowledge points matched');
+        expect(structuredAnswer && 'title' in structuredAnswer ? structuredAnswer.title : '').toBe('可信回答');
+        expect(reply.knowledgeRun.answerReleaseReview?.publicAnswer).toBe(reply.answer);
+    });
+
     test('aggregates graph context across multiple knowledge points and preserves temporal edge details', () => {
         const knowledgePoints = [
             {
@@ -1943,6 +1990,144 @@ describe('conversationComposer', () => {
 
         expect(reply.answer).toContain('It can be measured against a fixed reference mark');
         expect(reply.answer).toContain('Its correction requires recording the centroid shift before adjustment');
+    });
+
+    test('projects definition answers to bounded non-comparison claims while retaining formula integrity', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_projection_water_glass',
+                documentId: 'doc_projection_water_glass',
+                title: 'Water Glass',
+                content: 'A water glass is a transparent vessel used to hold water.',
+            },
+            evidence: {
+                id: 'evidence_projection_water_glass',
+                snippet: 'A water glass is a transparent vessel used to hold water.',
+            },
+            score: 0.95,
+        });
+        const projectionPoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const densePack: RagContextPack = {
+            query: 'what is water glass?',
+            generatedAt: '2026-07-12T00:00:00.000Z',
+            sourceBoundary: 'direct_span_only',
+            budget: { maxFragments: 1, maxCharsPerFragment: 1000, maxTotalChars: 1000 },
+            fragments: [{
+                fragmentId: 'definition_projection_dense',
+                role: 'direct_support',
+                atomId: 'atom_projection_water_glass',
+                documentId: 'doc_projection_water_glass',
+                sourcePath: 'Knowledge_Base/test/projection-water-glass.md',
+                title: 'Water Glass',
+                headingPath: ['Water Glass'],
+                text: [
+                    'A water glass is a transparent vessel used to hold water.',
+                    'It separates the liquid from the surrounding environment.',
+                    'Its wall conducts heat between the drink and the air.',
+                    'It is compared with a PET Plastic Cup and a Stainless Steel Metal Cup.',
+                    'The water glass thermal field follows $$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$.',
+                    'This extra sentence should remain outside the compact definition answer.',
+                ].join(' '),
+                charCount: 330,
+                tokenEstimate: 80,
+                truncated: false,
+                citationIds: ['evidence_projection_water_glass'],
+                sourceBoundary: 'direct_span_only',
+                score: 0.95,
+            }],
+            sourceDecisions: [],
+            totalCharCount: 330,
+            tokenEstimate: 80,
+        };
+        const reply = buildScopedConversationReply({
+            message: 'what is water glass?',
+            knowledgePoints: projectionPoints,
+            citations: [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-07-12T00:00:00.000Z',
+            nextBlockId: (() => {
+                let index = 0;
+                return () => `projection_block_${++index}`;
+            })(),
+            ragContextPack: densePack,
+            ragSufficiencyReview: {
+                reviewedAt: '2026-07-12T00:00:00.000Z',
+                status: 'sufficient',
+                score: 0.9,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+        });
+
+        expect(reply.answer).toContain('A water glass is a transparent vessel used to hold water.');
+        expect(reply.answer).toContain('It separates the liquid from the surrounding environment.');
+        expect(reply.answer).toContain('Its wall conducts heat between the drink and the air.');
+        expect(reply.answer).toContain('$$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$');
+        expect(reply.answer).not.toContain('PET Plastic Cup');
+        expect(reply.answer).not.toContain('Stainless Steel Metal Cup');
+        expect(reply.answer).not.toContain('This extra sentence should remain outside');
+        expect(reply.graphAnswerPlan).toEqual(reply.answerReleaseReview.publicGraphAnswerPlan);
+        expect(reply.graphAnswerCoverage).toEqual(reply.answerReleaseReview.graphAnswerCoverage);
+        expect(reply.knowledgeRun.graphAnswerPlan).toEqual(reply.graphAnswerPlan);
+        expect(reply.knowledgeRun.graphAnswerCoverage).toEqual(reply.graphAnswerCoverage);
+        expect((reply.answer.match(/\$\$/gu) || []).length % 2).toBe(0);
+        expect((reply.answer.match(/\\frac\{\\partial T\}\{\\partial t\}=\\alpha\\nabla\^2 T/gu) || [])).toHaveLength(1);
+        expect(reply.answer.trim()).not.toMatch(/(?:and|or|with|between|is|are|:|：)\s*$/iu);
+    });
+
+    test('uses the explicit answer language for grounded and deferred action text', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_language_contract',
+                documentId: 'doc_language_contract',
+                title: 'Language Contract',
+                content: 'A language contract keeps the answer and follow-up actions consistent.',
+            },
+            evidence: {
+                id: 'evidence_language_contract',
+                snippet: 'A language contract keeps the answer and follow-up actions consistent.',
+            },
+            score: 0.95,
+        });
+        const points = mergeAgentConversationKnowledgePoints([item], () => []);
+        const buildReply = (answerLanguage: 'en' | 'zh') => buildScopedConversationReply({
+            message: 'what is language contract?',
+            answerLanguage,
+            knowledgePoints: points,
+            citations: points[0].citations || [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-07-12T00:10:00.000Z',
+            nextBlockId: (() => {
+                let index = 0;
+                return () => `language_block_${answerLanguage}_${++index}`;
+            })(),
+        });
+
+        const englishBlock = buildReply('en').assistantBlocks.find((block) => block.type === 'structured_answer');
+        const chineseBlock = buildReply('zh').assistantBlocks.find((block) => block.type === 'structured_answer');
+        expect(englishBlock && 'title' in englishBlock ? englishBlock.title : '').toBe('Grounded Answer');
+        expect(chineseBlock && 'title' in chineseBlock ? chineseBlock.title : '').toBe('可信回答');
+        expect(englishBlock && 'directAnswer' in englishBlock ? englishBlock.directAnswer : '').toMatch(/\.$/u);
+        expect(englishBlock && 'nextActionsMarkdown' in englishBlock ? englishBlock.nextActionsMarkdown : '').toContain('## Next Actions');
+        expect(chineseBlock && 'directAnswer' in chineseBlock ? chineseBlock.directAnswer : '').toMatch(/。$/u);
+        expect(chineseBlock && 'nextActionsMarkdown' in chineseBlock ? chineseBlock.nextActionsMarkdown : '').toContain('## 下一步行动');
+        expect(chineseBlock && 'nextActionsMarkdown' in chineseBlock ? chineseBlock.nextActionsMarkdown : '').not.toContain('## Next Actions');
+        expect(chineseBlock && 'overviewMarkdown' in chineseBlock ? chineseBlock.overviewMarkdown : '').toContain('## \u56de\u7b54\u4e0a\u4e0b\u6587');
+        expect(chineseBlock && 'explanationMarkdown' in chineseBlock ? chineseBlock.explanationMarkdown : '').toContain('## \u8bf4\u660e');
+        expect(chineseBlock && 'evidenceMarkdown' in chineseBlock ? chineseBlock.evidenceMarkdown : '').toContain('## \u8bc1\u636e\u6458\u8981');
+        expect(buildReply('zh').assistantBlocks).toEqual(expect.arrayContaining([
+            expect.objectContaining({ type: 'knowledge_run_summary', title: '\u77e5\u8bc6\u8fd0\u884c' }),
+            expect.objectContaining({ type: 'citations', title: '\u5f15\u7528' }),
+            expect.objectContaining({ type: 'knowledge_actions', title: '\u77e5\u8bc6\u64cd\u4f5c' }),
+            expect.objectContaining({ type: 'system_notice', text: expect.stringContaining('\u672a\u53ec\u56de') }),
+        ]));
     });
 
     test('fails graph comparison gate when compare intent only has reference context and no real branch signal', () => {

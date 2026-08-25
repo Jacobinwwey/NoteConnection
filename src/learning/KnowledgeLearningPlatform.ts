@@ -10179,6 +10179,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             ? request.sessionId.trim()
             : this.nextId('agent_session');
         const message = normalizeWhitespace(String(request.message || ''));
+        const answerLanguage = request.answerLanguage === 'zh' || request.answerLanguage === 'en'
+            ? request.answerLanguage
+            : 'auto';
         const topK = clamp(Math.floor(Number(request.topK) || 6), 1, 18);
         const generatedAt = this.resolveTimestamp(request.asOf);
         const namespace = this.normalizeConversationMemoryNamespace(request.memoryNamespace);
@@ -10370,6 +10373,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const effectiveCorpusId = traceScope.corpusId || scopedWorkspace.corpusId;
         const reply = buildScopedConversationReply({
             message,
+            answerLanguage,
             knowledgePoints: conversationKnowledgePoints,
             citations,
             recalledMemories,

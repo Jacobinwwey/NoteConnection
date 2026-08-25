@@ -41,6 +41,7 @@ export type BuildAgentWorkspaceCapabilities = (atomId: string) => unknown[];
 
 export type ScopedConversationReplyParams = {
     message: string;
+    answerLanguage?: 'auto' | 'en' | 'zh';
     knowledgePoints: AgentConversationKnowledgePoint[];
     citations: KnowledgeCitation[];
     recalledMemories: AgentConversationMemoryRecord[];
@@ -534,6 +535,21 @@ function containsCjk(value: string): boolean {
     return /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/u.test(String(value || ''));
 }
 
+function useChineseAnswerLanguage(params: ScopedConversationReplyParams): boolean {
+    if (params.answerLanguage === 'zh') {
+        return true;
+    }
+    if (params.answerLanguage === 'en') {
+        return false;
+    }
+    return containsCjk([
+        params.message,
+        params.knowledgePoints[0]?.title,
+        params.knowledgePoints[0]?.summary,
+        params.graphContext?.anchorTitle,
+    ].filter(Boolean).join(' '));
+}
+
 function stripConversationAnswerTerminalPunctuation(value: string): string {
     return normalizeWhitespace(String(value || '').replace(/[.!?\u3002\uFF01\uFF1F]+$/u, ''));
 }
@@ -685,22 +701,20 @@ function buildScopedConversationAnswer(
     graphContext: AgentConversationGraphContext | null,
     graphAnswerPlan: GraphAnswerPlan
 ): string {
+    const useChinese = useChineseAnswerLanguage(params);
     if (params.knowledgePoints.length <= 0) {
-        const readinessMessage = String(params.usedScope.readiness?.message || '').trim();
-        const missMessage = String(params.usedScope.missDiagnostics?.message || '').trim();
+        const query = normalizeWhitespace(String(params.message || '')) || (useChinese ? '当前问题' : 'your query');
         if (params.recalledMemories.length > 0) {
-            return `No scoped knowledge points matched "${params.message || 'your query'}", but I recovered ${params.recalledMemories.length} relevant conversation memory note(s). ${missMessage || readinessMessage || 'Refine the corpus scope or use the recalled memory as a follow-up anchor.'}`;
+            return useChinese
+                ? `当前范围没有匹配“${query}”的知识点，但已找回 ${params.recalledMemories.length} 条相关会话记忆。请调整知识范围，或将这条记忆作为后续检索锚点。`
+                : `No scoped knowledge points matched "${query}", but I recovered ${params.recalledMemories.length} relevant conversation memory note(s). Refine the corpus scope or use the recalled memory as a follow-up anchor.`;
         }
-        return `No scoped knowledge points matched "${params.message || 'your query'}". ${missMessage || readinessMessage || 'Refine the scope, add more notes to the corpus, or broaden the query terms.'}`;
+        return useChinese
+            ? `当前范围没有匹配“${query}”的知识点。请调整范围、补充笔记，或使用更具体的检索词。`
+            : `No scoped knowledge points matched "${query}". Refine the scope, add more notes to the corpus, or broaden the query terms.`;
     }
 
     const leadingPoint = params.knowledgePoints[0];
-    const useChinese = containsCjk([
-        params.message,
-        leadingPoint.title,
-        leadingPoint.summary,
-        graphContext && graphContext.anchorTitle,
-    ].filter(Boolean).join(' '));
     const answerSentences: string[] = [];
     const ragAnswer = buildCoverageDrivenRagAnswer(params, graphContext, graphAnswerPlan, useChinese);
     if (ragAnswer) {
@@ -768,39 +782,68 @@ function buildScopedConversationOverviewMarkdown(
     params: ScopedConversationReplyParams,
     graphContext: AgentConversationGraphContext | null
 ): string {
+    const useChinese = useChineseAnswerLanguage(params);
     const strongestPoint = params.knowledgePoints[0];
     const lines = [
-        '## Answer Context',
+        useChinese ? '## 回答上下文' : '## Answer Context',
         '',
     ];
     if (strongestPoint) {
-        lines.push(`Best scoped anchor: **${strongestPoint.title}**.`, '');
+        lines.push(
+            useChinese
+                ? `当前最佳范围锚点：**${strongestPoint.title}**。`
+                : `Best scoped anchor: **${strongestPoint.title}**.`,
+            ''
+        );
     } else {
-        lines.push('No scoped knowledge point produced a strong match for the current request.', '');
+        lines.push(
+            useChinese
+                ? '当前请求没有得到足够强的范围内知识点匹配。'
+                : 'No scoped knowledge point produced a strong match for the current request.',
+            ''
+        );
     }
-    lines.push(
-        `- Relevant knowledge points: **${params.knowledgePoints.length}**`,
-        `- Citations returned: **${params.citations.length}**`,
-        `- Scoped memories recalled: **${params.recalledMemories.length}**`
-    );
+    lines.push(...(
+        useChinese
+            ? [
+                `- 相关知识点：**${params.knowledgePoints.length}**`,
+                `- 返回引用：**${params.citations.length}**`,
+                `- 已召回范围内记忆：**${params.recalledMemories.length}**`,
+            ]
+            : [
+                `- Relevant knowledge points: **${params.knowledgePoints.length}**`,
+                `- Citations returned: **${params.citations.length}**`,
+                `- Scoped memories recalled: **${params.recalledMemories.length}**`,
+            ]
+    ));
     if (graphContext && graphContext.relationKinds.length > 0) {
         lines.push(
-            `- Graph-supported relations: **${graphContext.relationKinds.join(', ')}**`
+            useChinese
+                ? `- 图谱支持关系：**${graphContext.relationKinds.join(', ')}**`
+                : `- Graph-supported relations: **${graphContext.relationKinds.join(', ')}**`
         );
     }
     if (graphContext) {
         lines.push(
-            `- Temporal validity: **${graphContext.temporalValidity.allPointsValid ? 'valid' : 'warning'}**`
+            useChinese
+                ? `- 时序有效性：**${graphContext.temporalValidity.allPointsValid ? '有效' : '警告'}**`
+                : `- Temporal validity: **${graphContext.temporalValidity.allPointsValid ? 'valid' : 'warning'}**`
         );
     }
     if (graphContext && Array.isArray(graphContext.connectionPaths) && graphContext.connectionPaths.length > 0) {
-        lines.push(`- Explicit connection paths: **${graphContext.connectionPaths.length}**`);
+        lines.push(useChinese
+            ? `- 显式连接路径：**${graphContext.connectionPaths.length}**`
+            : `- Explicit connection paths: **${graphContext.connectionPaths.length}**`);
     }
     if (graphContext && Array.isArray(graphContext.predecessorWindow) && graphContext.predecessorWindow.length > 0) {
-        lines.push(`- Immediate predecessors: **${graphContext.predecessorWindow.length}**`);
+        lines.push(useChinese
+            ? `- 直接前置节点：**${graphContext.predecessorWindow.length}**`
+            : `- Immediate predecessors: **${graphContext.predecessorWindow.length}**`);
     }
     if (graphContext && Array.isArray(graphContext.successorWindow) && graphContext.successorWindow.length > 0) {
-        lines.push(`- Immediate successors: **${graphContext.successorWindow.length}**`);
+        lines.push(useChinese
+            ? `- 直接后继节点：**${graphContext.successorWindow.length}**`
+            : `- Immediate successors: **${graphContext.successorWindow.length}**`);
     }
     return lines.join('\n');
 }
@@ -809,23 +852,34 @@ function buildScopedConversationExplanationMarkdown(
     params: ScopedConversationReplyParams,
     graphContext: AgentConversationGraphContext | null
 ): string {
+    const useChinese = useChineseAnswerLanguage(params);
     if (params.knowledgePoints.length <= 0) {
-        return '## Explanation\n\nThe current scope did not return a strong enough knowledge point to explain the request directly.';
+        return useChinese
+            ? '## 说明\n\n当前范围没有返回足够强的知识点来直接解释该请求。'
+            : '## Explanation\n\nThe current scope did not return a strong enough knowledge point to explain the request directly.';
     }
     const intent = classifyScopedConversationIntent(params.message);
     const strongestPoint = params.knowledgePoints[0];
     const explanationLines = [
-        '## Explanation',
+        useChinese ? '## 说明' : '## Explanation',
         '',
     ];
     if (intent === 'compare') {
-        explanationLines.push(`Use **${strongestPoint.title}** as the comparison baseline inside the current scope.`);
+        explanationLines.push(useChinese
+            ? `将 **${strongestPoint.title}** 作为当前范围内的比较基准。`
+            : `Use **${strongestPoint.title}** as the comparison baseline inside the current scope.`);
     } else if (intent === 'how_to') {
-        explanationLines.push(`Use **${strongestPoint.title}** as the starting anchor for the next concrete steps.`);
+        explanationLines.push(useChinese
+            ? `将 **${strongestPoint.title}** 作为后续具体步骤的起始锚点。`
+            : `Use **${strongestPoint.title}** as the starting anchor for the next concrete steps.`);
     } else if (intent === 'explain') {
-        explanationLines.push(`**${strongestPoint.title}** is the current best scoped anchor for the explanation.`);
+        explanationLines.push(useChinese
+            ? `**${strongestPoint.title}** 是当前用于说明的最佳范围锚点。`
+            : `**${strongestPoint.title}** is the current best scoped anchor for the explanation.`);
     } else {
-        explanationLines.push(`**${strongestPoint.title}** is the current best scoped anchor.`);
+        explanationLines.push(useChinese
+            ? `**${strongestPoint.title}** 是当前最佳范围锚点。`
+            : `**${strongestPoint.title}** is the current best scoped anchor.`);
     }
     const summary = normalizeWhitespace(String(strongestPoint.summary || strongestPoint.evidenceSnippet || '').trim());
     if (summary) {
@@ -834,7 +888,9 @@ function buildScopedConversationExplanationMarkdown(
     if (graphContext && graphContext.relationKinds.length > 0) {
         explanationLines.push(
             '',
-            `Graph support around **${graphContext.anchorTitle}** includes: ${graphContext.relationKinds.join(', ')}.`
+            useChinese
+                ? `**${graphContext.anchorTitle}** 周边的图谱支持关系包括：${graphContext.relationKinds.join(', ')}。`
+                : `Graph support around **${graphContext.anchorTitle}** includes: ${graphContext.relationKinds.join(', ')}.`
         );
     }
     if (graphContext && Array.isArray(graphContext.knowledgePointRelations) && graphContext.knowledgePointRelations.length > 0) {
@@ -844,13 +900,17 @@ function buildScopedConversationExplanationMarkdown(
             .join('; ');
         explanationLines.push(
             '',
-            `Direct graph links inside the current result set: ${relationPreview}.`
+            useChinese
+                ? `当前结果集内的直接图链接：${relationPreview}。`
+                : `Direct graph links inside the current result set: ${relationPreview}.`
         );
     }
     if (graphContext && Array.isArray(graphContext.connectionPaths) && graphContext.connectionPaths.length > 0) {
         explanationLines.push(
             '',
-            `Explicit graph path: ${formatGraphConnectionPath(graphContext.connectionPaths[0])}.`
+            useChinese
+                ? `显式图路径：${formatGraphConnectionPath(graphContext.connectionPaths[0])}。`
+                : `Explicit graph path: ${formatGraphConnectionPath(graphContext.connectionPaths[0])}.`
         );
     }
     if (graphContext) {
@@ -860,7 +920,9 @@ function buildScopedConversationExplanationMarkdown(
             normalizeTitle: (value) => normalizeGraphAnswerDisplayTitle(String(value || '')),
         }, 3);
         if (predecessorTitles.length > 0) {
-            explanationLines.push('', 'Immediate predecessor window: ' + predecessorTitles.join(', ') + '.');
+            explanationLines.push('', useChinese
+                ? '直接前置窗口：' + predecessorTitles.join('、') + '。'
+                : 'Immediate predecessor window: ' + predecessorTitles.join(', ') + '.');
         }
     }
     if (graphContext) {
@@ -870,7 +932,9 @@ function buildScopedConversationExplanationMarkdown(
             normalizeTitle: (value) => normalizeGraphAnswerDisplayTitle(String(value || '')),
         }, 3);
         if (successorTitles.length > 0) {
-            explanationLines.push('', 'Immediate successor window: ' + successorTitles.join(', ') + '.');
+            explanationLines.push('', useChinese
+                ? '直接后继窗口：' + successorTitles.join('、') + '。'
+                : 'Immediate successor window: ' + successorTitles.join(', ') + '.');
         }
     }
     if (graphContext && graphContext.temporalValidity.allPointsValid === false) {
@@ -879,7 +943,9 @@ function buildScopedConversationExplanationMarkdown(
             : 'temporal validity checks reported a warning';
         explanationLines.push(
             '',
-            `Temporal validity warning: ${reasonSummary}.`
+            useChinese
+                ? `时序有效性警告：${reasonSummary}。`
+                : `Temporal validity warning: ${reasonSummary}.`
         );
     }
     const supersedesCount = graphContext
@@ -890,7 +956,9 @@ function buildScopedConversationExplanationMarkdown(
     if (supersedesCount > 0) {
         explanationLines.push(
             '',
-            `Temporal lineage indicates this anchor supersedes ${supersedesCount} earlier revision${supersedesCount === 1 ? '' : 's'}.`
+            useChinese
+                ? `时序谱系表明该锚点替代了 ${supersedesCount} 个更早版本。`
+                : `Temporal lineage indicates this anchor supersedes ${supersedesCount} earlier revision${supersedesCount === 1 ? '' : 's'}.`
         );
     }
     const supportingTitles = params.knowledgePoints
@@ -900,21 +968,29 @@ function buildScopedConversationExplanationMarkdown(
     if (supportingTitles.length > 0) {
         explanationLines.push(
             '',
-            intent === 'compare'
-                ? `Supporting comparison nodes: ${supportingTitles.join(', ')}.`
-                : `Supporting scoped nodes: ${supportingTitles.join(', ')}.`
+            useChinese
+                ? (intent === 'compare'
+                    ? `支持比较节点：${supportingTitles.join('、')}。`
+                    : `支持范围节点：${supportingTitles.join('、')}。`)
+                : (intent === 'compare'
+                    ? `Supporting comparison nodes: ${supportingTitles.join(', ')}.`
+                    : `Supporting scoped nodes: ${supportingTitles.join(', ')}.`)
         );
     }
     if (params.recalledMemories.length > 0) {
         explanationLines.push(
             '',
-            `Scoped memory recall contributed ${params.recalledMemories.length} prior note(s) to this explanation.`
+            useChinese
+                ? `范围内记忆召回为该说明提供了 ${params.recalledMemories.length} 条先前笔记。`
+                : `Scoped memory recall contributed ${params.recalledMemories.length} prior note(s) to this explanation.`
         );
     }
     if (params.citations.length > 0) {
         explanationLines.push(
             '',
-            `The explanation is grounded by ${params.citations.length} citation(s) from the current scope.`
+            useChinese
+                ? `该说明由当前范围内的 ${params.citations.length} 条引用支撑。`
+                : `The explanation is grounded by ${params.citations.length} citation(s) from the current scope.`
         );
     }
     return explanationLines.join('\n');
@@ -925,31 +1001,43 @@ function buildScopedConversationEvidenceMarkdown(params: ScopedConversationReply
         `${index + 1}. **${citation.title}** (${citation.sourcePath}${citation.startLine ? `:${citation.startLine}` : ''})\n   - ${citation.snippet}`
     ));
     if (evidenceLines.length <= 0) {
-        return '## Evidence Summary\n\nNo scoped citations were returned.';
+        return useChineseAnswerLanguage(params)
+            ? '## 证据摘要\n\n当前范围没有返回引用。'
+            : '## Evidence Summary\n\nNo scoped citations were returned.';
     }
     return [
-        '## Evidence Summary',
+        useChineseAnswerLanguage(params) ? '## 证据摘要' : '## Evidence Summary',
         '',
         ...evidenceLines,
     ].join('\n');
 }
 
 function buildScopedConversationMemoryNotice(params: ScopedConversationReplyParams): string {
+    const useChinese = useChineseAnswerLanguage(params);
     if (params.recalledMemories.length <= 0) {
-        return 'No scoped memory note was recalled for this turn.';
+        return useChinese
+            ? '本回合未召回范围内记忆。'
+            : 'No scoped memory note was recalled for this turn.';
     }
     if (params.recalledMemories.length === 1) {
-        return '1 scoped memory note was recalled and merged into the answer context.';
+        return useChinese
+            ? '已召回 1 条范围内记忆并合并到回答上下文。'
+            : '1 scoped memory note was recalled and merged into the answer context.';
     }
-    return `${params.recalledMemories.length} scoped memory notes were recalled and merged into the answer context.`;
+    return useChinese
+        ? `已召回 ${params.recalledMemories.length} 条范围内记忆并合并到回答上下文。`
+        : `${params.recalledMemories.length} scoped memory notes were recalled and merged into the answer context.`;
 }
 
 function buildScopedConversationActionGuideMarkdown(
     params: ScopedConversationReplyParams,
     graphContext: AgentConversationGraphContext | null
 ): string {
+    const useChinese = useChineseAnswerLanguage(params);
     if (params.knowledgePoints.length <= 0) {
-        return '## Next Actions\n\nNo actionable scoped knowledge card is available for this turn.';
+        return useChinese
+            ? '## 下一步行动\n\n当前回合没有可执行的限定知识卡片。'
+            : '## Next Actions\n\nNo actionable scoped knowledge card is available for this turn.';
     }
     const intent = classifyScopedConversationIntent(params.message);
     const topTitles = params.knowledgePoints
@@ -957,15 +1045,17 @@ function buildScopedConversationActionGuideMarkdown(
         .map((point) => `- ${point.title}`);
     const actionHints = params.memoryActions
         .slice(0, 2)
-        .map((action) => normalizeWhitespace(String(action.reason || '').trim()))
+        .map((action) => useChinese
+            ? (action.kind === 'persist_session_memory' ? '- 记录本回合的用户关注点。' : '- 根据当前证据评估是否需要保存学习记忆。')
+            : normalizeWhitespace(String(action.reason || '').trim()))
         .filter(Boolean)
         .map((reason) => `- ${reason}`);
     const graphActionHints: string[] = [];
     if (graphContext && graphContext.relationKinds.includes('prerequisite')) {
-        graphActionHints.push('- Inspect prerequisite-linked concepts in focus mode before guided learning.');
+        graphActionHints.push(useChinese ? '- 在进入引导学习前，先在聚焦模式查看前置概念。' : '- Inspect prerequisite-linked concepts in focus mode before guided learning.');
     }
     if (graphContext && graphContext.temporalValidity.allPointsValid === false) {
-        graphActionHints.push('- Validate whether a fresher or superseding note should replace this anchor before promotion.');
+        graphActionHints.push(useChinese ? '- 提升答案前，确认是否存在更新或替代当前锚点的笔记。' : '- Validate whether a fresher or superseding note should replace this anchor before promotion.');
     }
     const supersedesCount = graphContext
         ? (Array.isArray(graphContext.temporalValidity.details)
@@ -973,12 +1063,14 @@ function buildScopedConversationActionGuideMarkdown(
             : 0)
         : 0;
     if (supersedesCount > 0) {
-        graphActionHints.push('- Trace the superseded lineage before promoting this answer.');
+        graphActionHints.push(useChinese ? '- 提升答案前，追踪已被替代的知识谱系。' : '- Trace the superseded lineage before promoting this answer.');
     }
     if (graphContext && Array.isArray(graphContext.knowledgePointRelations) && graphContext.knowledgePointRelations.length > 0) {
         const firstRelation = graphContext.knowledgePointRelations[0];
         graphActionHints.push(
-            `- Follow the direct graph path between ${firstRelation.sourceTitle} and ${firstRelation.targetTitle} before branching to external support nodes.`
+            useChinese
+                ? `- 在扩展到外部支持节点前，沿 ${firstRelation.sourceTitle} 与 ${firstRelation.targetTitle} 之间的直接图路径查看。`
+                : `- Follow the direct graph path between ${firstRelation.sourceTitle} and ${firstRelation.targetTitle} before branching to external support nodes.`
         );
     }
     if (graphContext && Array.isArray(graphContext.connectionPaths) && graphContext.connectionPaths.length > 0) {
@@ -987,7 +1079,7 @@ function buildScopedConversationActionGuideMarkdown(
             ? firstConnectionPath.pathTitles.map((title) => normalizeWhitespace(String(title || '').trim())).filter(Boolean)
             : [];
         if (titles.length > 1) {
-            graphActionHints.push(`- Review the path order: ${titles.join(' -> ')}.`);
+            graphActionHints.push(useChinese ? `- 检查路径顺序：${titles.join(' -> ')}。` : `- Review the path order: ${titles.join(' -> ')}.`);
         }
     }
     if (graphContext) {
@@ -997,7 +1089,9 @@ function buildScopedConversationActionGuideMarkdown(
             normalizeTitle: (value) => normalizeGraphAnswerDisplayTitle(String(value || '')),
         }, 2);
         if (predecessorTitles.length > 0) {
-            graphActionHints.push('- Inspect prerequisite context from ' + predecessorTitles.join(', ') + ' before expanding the answer.');
+            graphActionHints.push(useChinese
+                ? '- 扩展答案前，先查看前置上下文：' + predecessorTitles.join('、') + '。'
+                : '- Inspect prerequisite context from ' + predecessorTitles.join(', ') + ' before expanding the answer.');
         }
     }
     if (graphContext) {
@@ -1007,21 +1101,23 @@ function buildScopedConversationActionGuideMarkdown(
             normalizeTitle: (value) => normalizeGraphAnswerDisplayTitle(String(value || '')),
         }, 2);
         if (successorTitles.length > 0) {
-            graphActionHints.push('- Use likely next-step nodes such as ' + successorTitles.join(', ') + ' to continue follow-through after this answer.');
+            graphActionHints.push(useChinese
+                ? '- 可沿后续节点继续：' + successorTitles.join('、') + '。'
+                : '- Use likely next-step nodes such as ' + successorTitles.join(', ') + ' to continue follow-through after this answer.');
         }
     }
     return [
-        '## Next Actions',
+        useChinese ? '## 下一步行动' : '## Next Actions',
         '',
         intent === 'compare'
-            ? 'Use the scoped knowledge cards below to inspect the strongest nodes side by side before deciding which distinctions matter most:'
+            ? (useChinese ? '先查看下方限定知识卡片中的高相关节点，再判断关键差异：' : 'Use the scoped knowledge cards below to inspect the strongest nodes side by side before deciding which distinctions matter most:')
             : intent === 'how_to'
-                ? 'Use the scoped knowledge cards below to move from explanation into concrete guided-learning or focus-mode steps:'
-                : 'Use the scoped knowledge cards below to continue with focus mode or guided learning for the highest-signal nodes:',
+                ? (useChinese ? '使用下方限定知识卡片，将解释推进为具体的引导学习或聚焦步骤：' : 'Use the scoped knowledge cards below to move from explanation into concrete guided-learning or focus-mode steps:')
+                : (useChinese ? '使用下方限定知识卡片，继续聚焦或引导学习高相关节点：' : 'Use the scoped knowledge cards below to continue with focus mode or guided learning for the highest-signal nodes:'),
         ...topTitles,
-        ...(graphActionHints.length > 0 ? ['', 'Graph-aware follow-through:', ...graphActionHints] : []),
+        ...(graphActionHints.length > 0 ? ['', useChinese ? '图谱辅助行动：' : 'Graph-aware follow-through:', ...graphActionHints] : []),
         ...(actionHints.length > 0
-            ? ['', 'Suggested follow-through from the current turn:', ...actionHints]
+            ? ['', useChinese ? '本回合建议行动：' : 'Suggested follow-through from the current turn:', ...actionHints]
             : []),
     ].join('\n');
 }
@@ -1438,16 +1534,17 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
 } {
     const blocks: AgentConversationAssistantBlock[] = [];
     const graphContext = params.graphContext || buildAgentConversationGraphContextFromKnowledgePoints(params.knowledgePoints);
-    const graphAnswerPlan = buildGraphAnswerPlan({
+    const auditGraphAnswerPlan = buildGraphAnswerPlan({
         message: params.message,
         knowledgePoints: params.knowledgePoints,
         graphContext,
         ragContextPack: params.ragContextPack,
     });
-    const draftAnswer = buildScopedConversationAnswer(params, graphContext, graphAnswerPlan);
+    const draftAnswer = buildScopedConversationAnswer(params, graphContext, auditGraphAnswerPlan);
     const knowledgeRun = buildKnowledgeRun(params, graphContext);
     const answerReleaseReview = reviewAnswerRelease({
         message: params.message,
+        answerLanguage: params.answerLanguage,
         draftAnswer,
         knowledgePoints: params.knowledgePoints,
         citations: params.citations,
@@ -1455,14 +1552,24 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         graphContext,
         ragContextPack: params.ragContextPack,
         ragSufficiencyReview: params.ragSufficiencyReview,
-        graphAnswerPlan,
+        graphAnswerPlan: auditGraphAnswerPlan,
         reviewedAt: params.generatedAt,
     });
     knowledgeRun.answerReleaseReview = answerReleaseReview;
     const answer = answerReleaseReview.publicAnswer;
-    const graphAnswerCoverage = reviewGraphAnswerCoverage(answer, graphAnswerPlan);
-    knowledgeRun.graphAnswerPlan = graphAnswerPlan;
+    const publicGraphAnswerPlan = answerReleaseReview.publicGraphAnswerPlan;
+    const releasedGraphAnswerPlan: GraphAnswerPlan = publicGraphAnswerPlan || {
+        ...auditGraphAnswerPlan,
+        leadClaimId: '',
+        claims: [],
+        requiredRoles: [],
+        depth: 'compact',
+    };
+    const graphAnswerCoverage = answerReleaseReview.graphAnswerCoverage
+        || reviewGraphAnswerCoverage(answer, publicGraphAnswerPlan || null);
+    knowledgeRun.graphAnswerPlan = releasedGraphAnswerPlan;
     knowledgeRun.graphAnswerCoverage = graphAnswerCoverage;
+    const useChinese = useChineseAnswerLanguage(params);
     const overviewMarkdown = buildScopedConversationOverviewMarkdown(params, graphContext);
     const explanationMarkdown = buildScopedConversationExplanationMarkdown(params, graphContext);
     const evidenceMarkdown = buildScopedConversationEvidenceMarkdown(params);
@@ -1472,7 +1579,7 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     blocks.push({
         blockId: params.nextBlockId(),
         type: 'structured_answer',
-        title: 'Grounded Answer',
+        title: useChinese ? '可信回答' : 'Grounded Answer',
         directAnswer: answer,
         overviewMarkdown,
         explanationMarkdown,
@@ -1485,7 +1592,7 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     blocks.push({
         blockId: params.nextBlockId(),
         type: 'knowledge_run_summary',
-        title: 'Knowledge Run',
+        title: useChinese ? '知识运行' : 'Knowledge Run',
         knowledgeRun,
     });
     if (memoryNotice) {
@@ -1499,7 +1606,7 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         blocks.push({
             blockId: params.nextBlockId(),
             type: 'citations',
-            title: 'Citations',
+            title: useChinese ? '引用' : 'Citations',
             citations: params.citations.map((citation) => ({ ...citation })),
         });
     }
@@ -1507,7 +1614,7 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         blocks.push({
             blockId: params.nextBlockId(),
             type: 'knowledge_actions',
-            title: 'Knowledge Actions',
+            title: useChinese ? '知识操作' : 'Knowledge Actions',
             atomIds: collectAgentConversationAtomIds(params.knowledgePoints),
         });
     }
@@ -1517,7 +1624,7 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         knowledgeRun,
         graphContext,
         answerReleaseReview,
-        graphAnswerPlan,
+        graphAnswerPlan: releasedGraphAnswerPlan,
         graphAnswerCoverage,
     };
 }

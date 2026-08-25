@@ -1455,6 +1455,7 @@ export interface AgentConversationRequest {
     sessionId?: string;
     activeTarget?: string;
     message?: string;
+    answerLanguage?: 'auto' | 'en' | 'zh';
     topK?: number;
     asOf?: string;
     scope?: KnowledgeCorpusScope;
@@ -1539,6 +1540,7 @@ export type AnswerReleaseGateId =
     | 'rag_answer_completeness'
     | 'rag_claim_citation_support'
     | 'graph_answer_plan_coverage'
+    | 'definition_projection_integrity'
     | 'public_surface_contraction'
     | 'internal_diagnostic_leakage'
     | 'abstention_hygiene';
@@ -1555,6 +1557,12 @@ export interface AnswerReleaseReview {
     revised: boolean;
     originalAnswer: string;
     publicAnswer: string;
+    /** The auditable claim plan after public-surface projection. */
+    publicGraphAnswerPlan?: GraphAnswerPlan;
+    /** Raw pre-projection plan retained for operator audit only; never publish it as release coverage. */
+    auditGraphAnswerPlan?: GraphAnswerPlan;
+    /** Coverage evaluated against the exact answer and projected plan released to clients. */
+    graphAnswerCoverage?: GraphAnswerCoverageReview;
     reason: string;
     failedGateIds: AnswerReleaseGateId[];
     leakedInternalFragments: string[];

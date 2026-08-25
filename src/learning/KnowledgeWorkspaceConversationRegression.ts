@@ -73,6 +73,7 @@ export interface KnowledgeWorkspaceConversationRegressionCase {
     preloadTargets: string[];
     activeTarget: string;
     query: string;
+    answerLanguage?: 'auto' | 'en' | 'zh';
     topK?: number;
     runtimeProviderFixture?: 'malformed_json' | 'timeout';
     runtimeUnavailableSourcePaths?: string[];
@@ -115,6 +116,7 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
         preloadTargets: ['waterglass'],
         activeTarget: 'waterglass',
         query: '什么是waterglass?',
+        answerLanguage: 'zh',
         expected: {
             minCitations: 1,
             scopeSource: 'explicit_request',
@@ -137,6 +139,11 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
                 '下表列出了',
                 '参数 (Parameter)',
                 ':---',
+                'PET Plastic Cup',
+                'Metal Cup',
+                'Context pa',
+                'Comparison of Fluid Containment Technologies',
+                'subsequent branch',
                 '核心概念及其数学基础',
             ],
             ragSourceBoundary: 'full_document',
@@ -152,6 +159,7 @@ export const KNOWLEDGE_WORKSPACE_CONVERSATION_REGRESSION_CASES = freezeRegressio
         preloadTargets: ['waterglass'],
         activeTarget: 'waterglass',
         query: '什么是water glass',
+        answerLanguage: 'zh',
         expected: {
             minCitations: 1,
             scopeSource: 'explicit_request',

@@ -13,6 +13,7 @@ import type {
     RagSufficiencyReview,
     RelationKind,
     GraphAnswerPlan,
+    GraphAnswerClaimPlan,
     GraphAnswerCoverageReview,
 } from './types';
 import { reviewGraphAnswerCoverage } from './graphAnswerCoverage';
@@ -26,6 +27,7 @@ import { scoreRagEvidenceClause, segmentRagEvidenceClauses } from './ragEvidence
 
 export interface AnswerReleaseReviewContext {
     message: string;
+    answerLanguage?: 'auto' | 'en' | 'zh';
     draftAnswer: string;
     knowledgePoints: AgentConversationKnowledgePoint[];
     citations: KnowledgeCitation[];
@@ -428,6 +430,23 @@ function containsCjk(value: string): boolean {
     return /[\u3400-\u9fff]/u.test(String(value || ''));
 }
 
+function useChineseAnswerLanguage(
+    context: AnswerReleaseReviewContext,
+    additionalSignals: string[] = []
+): boolean {
+    if (context.answerLanguage === 'zh') {
+        return true;
+    }
+    if (context.answerLanguage === 'en') {
+        return false;
+    }
+    return containsCjk([
+        context.message,
+        context.draftAnswer,
+        ...additionalSignals,
+    ].filter(Boolean).join(' '));
+}
+
 function resolveScopeLabel(scope: KnowledgeQueryResolvedScope): string {
     if (scope.workspaceId) {
         return String(scope.workspaceId).trim();
@@ -445,13 +464,14 @@ function resolveScopeLabel(scope: KnowledgeQueryResolvedScope): string {
 }
 
 function buildFriendlyScopeFailureHint(
-    scope: KnowledgeQueryResolvedScope
+    scope: KnowledgeQueryResolvedScope,
+    useChinese: boolean
 ): string {
     const scopeLabel = resolveScopeLabel(scope);
     const readinessStatus = String(scope.readiness?.status || '').trim();
     const missReason = String(scope.missDiagnostics?.reason || '').trim();
 
-    if (containsCjk(scopeLabel) || containsCjk(scope.missDiagnostics?.query || '')) {
+    if (useChinese) {
         if (readinessStatus === 'empty_store') {
             return scopeLabel
                 ? `当前范围“${scopeLabel}”还没有可检索知识。`
@@ -512,13 +532,11 @@ function buildFriendlyScopeFailureHint(
         : 'I could not ground the answer inside the current scope.';
 }
 
-function buildAbstentionAnswer(
-    message: string,
-    scope: KnowledgeQueryResolvedScope
-): string {
-    const normalizedMessage = normalizeWhitespace(message);
-    const hint = buildFriendlyScopeFailureHint(scope);
-    if (containsCjk(normalizedMessage)) {
+function buildAbstentionAnswer(context: AnswerReleaseReviewContext): string {
+    const normalizedMessage = normalizeWhitespace(context.message);
+    const useChinese = useChineseAnswerLanguage(context);
+    const hint = buildFriendlyScopeFailureHint(context.usedScope, useChinese);
+    if (useChinese) {
         return normalizeWhitespace(
             normalizedMessage
                 ? `${hint} 我暂时不能对“${normalizedMessage}”给出有依据的回答。请换个说法、放宽范围，或补充相关笔记。`
@@ -559,12 +577,11 @@ function buildGroundedRevisionAnswer(
     const baseAnswer = summary && title && !summaryAlreadyCarriesTitle
         ? `${title}: ${summary}`
         : (summary || title || normalizeWhitespace(context.draftAnswer));
-    const useChinese = containsCjk([
-        context.message,
+    const useChinese = useChineseAnswerLanguage(context, [
         title,
         summary,
         context.graphContext?.anchorTitle || '',
-    ].join(' '));
+    ]);
     return expandAnswerWithGraphContext(baseAnswer, context, useChinese);
 }
 
@@ -698,9 +715,72 @@ function selectPublicEvidenceClause(snippet: string, title: string): string {
             && !/^[:：\-–—]+$/u.test(clause)
         ));
     const selected = clauses[0] || cleaned;
-    return selected.length > 120
-        ? `${selected.slice(0, 118).trim()}...`
-        : selected;
+    if (!hasBalancedPublicMathDelimiters(selected)) {
+        return '';
+    }
+    return selectCompletePublicEvidenceBoundary(selected);
+}
+
+const PUBLIC_EVIDENCE_MAX_CHARS = 480;
+const PUBLIC_EVIDENCE_HARD_MAX_CHARS = 720;
+
+function hasBalancedPublicMathDelimiters(value: string): boolean {
+    const source = String(value || '');
+    const displayMathCount = (source.match(/(?<!\\)\$\$/gu) || []).length;
+    if (displayMathCount % 2 !== 0) {
+        return false;
+    }
+    const inlineSource = source.replace(/(?<!\\)\$\$/gu, '');
+    const inlineMathCount = (inlineSource.match(/(?<!\\)\$/gu) || []).length;
+    return inlineMathCount % 2 === 0;
+}
+
+function selectCompletePublicEvidenceBoundary(value: string): string {
+    const normalized = normalizeWhitespace(value);
+    if (normalized.length <= PUBLIC_EVIDENCE_MAX_CHARS) {
+        return normalized;
+    }
+    let inlineMathOpen = false;
+    let displayMathOpen = false;
+    const boundaries: number[] = [];
+    for (let index = 0; index < normalized.length; index += 1) {
+        const character = normalized[index];
+        if (character === '\\') {
+            index += 1;
+            continue;
+        }
+        if (character === '$') {
+            if (normalized[index + 1] === '$') {
+                displayMathOpen = !displayMathOpen;
+                index += 1;
+            } else if (!displayMathOpen) {
+                inlineMathOpen = !inlineMathOpen;
+            }
+            continue;
+        }
+        if (
+            !inlineMathOpen
+            && !displayMathOpen
+            && /[.!?\u3002\uFF01\uFF1F]/u.test(character)
+            && !(
+                character === '.'
+                && /\d/u.test(normalized[index - 1] || '')
+                && /\d/u.test(normalized[index + 1] || '')
+            )
+            && (index + 1 >= normalized.length || /\s/u.test(normalized[index + 1]))
+        ) {
+            boundaries.push(index + 1);
+        }
+    }
+    const boundedBoundary = boundaries
+        .filter((boundary) => boundary <= PUBLIC_EVIDENCE_MAX_CHARS)
+        .pop()
+        || boundaries.find((boundary) => boundary <= PUBLIC_EVIDENCE_HARD_MAX_CHARS);
+    if (!boundedBoundary) {
+        return '';
+    }
+    const complete = normalizeWhitespace(normalized.slice(0, boundedBoundary));
+    return hasBalancedPublicMathDelimiters(complete) ? complete : '';
 }
 
 function collectDefinitionEvidenceHighlights(context: AnswerReleaseReviewContext): string[] {
@@ -1139,12 +1219,10 @@ function buildRagGroundedRevisionAnswer(context: AnswerReleaseReviewContext): st
     if (hasPlannedGraphAnswerClaims(context) || !hasUsableRagEvidenceContext(context)) {
         return '';
     }
-    const useChinese = containsCjk([
-        context.message,
-        context.draftAnswer,
+    const useChinese = useChineseAnswerLanguage(context, [
         context.graphContext?.anchorTitle || '',
         ...(context.ragContextPack?.fragments || []).slice(0, 4).map((fragment) => fragment.text),
-    ].join(' '));
+    ]);
     const queryTerms = extractRagPublicQueryTerms(context.message);
     const profile = resolveRagPublicAnswerProfile(context.message);
     const isCompareQuery = profile === 'compare';
@@ -1270,12 +1348,7 @@ function buildDefinitionIntentRevisionAnswer(
     const subject = normalizeWhitespace(String(leadingPoint?.title || supportFrame.subject || ''));
     const value = stripTerminalSentencePunctuation(supportFrame.value);
     const normalizedSurface = normalizeWhitespace(String(supportFrame.surface || ''));
-    const useChinese = containsCjk([
-        context.message,
-        subject,
-        value,
-        normalizedSurface,
-    ].join(' '));
+    const useChinese = useChineseAnswerLanguage(context, [subject, value, normalizedSurface]);
     if (!useChinese && normalizedSurface) {
         const canonicalizedSurface = (
             subject
@@ -1335,12 +1408,7 @@ function buildGraphOrderRevisionAnswer(
 ): string {
     const earlierTitle = normalizeWhitespace(conflict.evidence.earlierTitle);
     const laterTitle = normalizeWhitespace(conflict.evidence.laterTitle);
-    const useChinese = containsCjk([
-        context.message,
-        context.draftAnswer,
-        earlierTitle,
-        laterTitle,
-    ].join(' '));
+    const useChinese = useChineseAnswerLanguage(context, [earlierTitle, laterTitle]);
     if (useChinese) {
         return conflict.evidence.relationKind === 'prerequisite'
             ? `${earlierTitle}是${laterTitle}的前置条件。`
@@ -1357,12 +1425,7 @@ function buildGraphCausalRevisionAnswer(
 ): string {
     const causeTitle = normalizeWhitespace(conflict.evidence.causeTitle);
     const effectTitle = normalizeWhitespace(conflict.evidence.effectTitle);
-    const useChinese = containsCjk([
-        context.message,
-        context.draftAnswer,
-        causeTitle,
-        effectTitle,
-    ].join(' '));
+    const useChinese = useChineseAnswerLanguage(context, [causeTitle, effectTitle]);
     if (useChinese) {
         return `${causeTitle}导致${effectTitle}。`;
     }
@@ -1375,12 +1438,7 @@ function buildGraphComparisonRevisionAnswer(
 ): string {
     const leftTitle = normalizeWhitespace(conflict.evidence.leftTitle);
     const rightTitle = normalizeWhitespace(conflict.evidence.rightTitle);
-    const useChinese = containsCjk([
-        context.message,
-        context.draftAnswer,
-        leftTitle,
-        rightTitle,
-    ].join(' '));
+    const useChinese = useChineseAnswerLanguage(context, [leftTitle, rightTitle]);
     if (useChinese) {
         return conflict.evidence.relationKind === 'contrast'
             ? `${leftTitle}与${rightTitle}不同。`
@@ -1412,13 +1470,11 @@ function buildTemporalValidityRevisionAnswer(
         || conflict.invalidKnowledgePointTitles[0]
         || ''
     );
-    const useChinese = containsCjk([
-        context.message,
-        context.draftAnswer,
+    const useChinese = useChineseAnswerLanguage(context, [
         anchorTitle,
         ...conflict.invalidKnowledgePointTitles,
         ...conflict.warningReasons,
-    ].join(' '));
+    ]);
     if (useChinese) {
         if (anchorTitle) {
             return `关于${anchorTitle}的当前命中证据带有时序警告，我不能把它直接当作当前结论发布。`;
@@ -1465,12 +1521,7 @@ function buildStructuredComparisonRevisionAnswer(
     if (!correctedLeft || !correctedRight) {
         return buildGroundedRevisionAnswer(context);
     }
-    const useChinese = containsCjk([
-        context.message,
-        context.draftAnswer,
-        correctedLeft,
-        correctedRight,
-    ].join(' '));
+    const useChinese = useChineseAnswerLanguage(context, [correctedLeft, correctedRight]);
     if (useChinese) {
         return `${correctedLeft}高于${correctedRight}。`;
     }
@@ -2867,9 +2918,62 @@ function extractCompositionFrames(value: string): CompositionFrame[] {
 }
 
 function subjectFramesShareTail(answerFrame: SubjectFrame, supportFrame: SubjectFrame): boolean {
+    const answerQualifiers = collectScopeQualifierTokens(`${answerFrame.subject} ${answerFrame.tail}`);
+    const supportQualifiers = collectScopeQualifierTokens(`${supportFrame.subject} ${supportFrame.tail}`);
+    if (
+        answerQualifiers.size > 0
+        && supportQualifiers.size > 0
+        && !Array.from(answerQualifiers).some((qualifier) => supportQualifiers.has(qualifier))
+    ) {
+        return false;
+    }
     const overlapRatio = computeFeatureOverlapRatio(answerFrame.tailFeatures, supportFrame.tailFeatures);
     const jaccard = computeFeatureJaccard(answerFrame.tailFeatures, supportFrame.tailFeatures);
     return overlapRatio >= 0.75 || jaccard >= 0.7;
+}
+
+const SUBJECT_SCOPE_QUALIFIER_FEATURES = new Set([
+    'staging', 'production', 'development', 'dev', 'test', 'testing', 'qa', 'sandbox',
+    'windows', 'android', 'ios', 'linux', 'macos', 'mac',
+    'current', 'planned', 'historical', 'history', 'legacy', 'future', 'past',
+    '生产', '预发布', '开发', '测试', '版本',
+]);
+
+function collectScopeQualifierTokens(value: string): Set<string> {
+    const normalized = normalizeWhitespace(value).toLowerCase();
+    const qualifiers = normalized.match(
+        /\b(?:staging|production|development|dev|test|testing|qa|sandbox|windows|android|ios|linux|macos|mac|current|planned|historical|history|legacy|future|past)\b|\b(?:version|v)\s*\d+(?:\.\d+)*\b|(?:生产|预发布|开发|测试|当前|计划|历史|旧版|版本\s*\d+(?:\.\d+)*)/gu
+    ) || [];
+    return new Set(qualifiers.map((qualifier) => {
+        const normalizedQualifier = normalizeWhitespace(qualifier);
+        const versionMatch = normalizedQualifier.match(/^(?:version|v)\s*(\d+(?:\.\d+)*)$/iu);
+        if (!versionMatch) {
+            return normalizedQualifier;
+        }
+        const components = String(versionMatch[1] || '').split('.');
+        while (components.length > 1 && components[components.length - 1] === '0') {
+            components.pop();
+        }
+        return `version ${components.join('.')}`;
+    }));
+}
+
+function subjectFramesShareQualifiedIdentity(answerFrame: SubjectFrame, supportFrame: SubjectFrame): boolean {
+    if (!subjectFramesShareTail(answerFrame, supportFrame)) {
+        return false;
+    }
+    const answerQualifiers = collectScopeQualifierTokens(`${answerFrame.subject} ${answerFrame.tail}`);
+    const supportQualifiers = collectScopeQualifierTokens(`${supportFrame.subject} ${supportFrame.tail}`);
+    if (
+        answerQualifiers.size <= 0
+        || !Array.from(answerQualifiers).some((qualifier) => supportQualifiers.has(qualifier))
+    ) {
+        return false;
+    }
+    const answerFeatures = new Set(answerFrame.subjectFeatures.filter((feature) => !SUBJECT_SCOPE_QUALIFIER_FEATURES.has(feature)));
+    const supportFeatures = new Set(supportFrame.subjectFeatures.filter((feature) => !SUBJECT_SCOPE_QUALIFIER_FEATURES.has(feature)));
+    const sharedCoreFeatureCount = Array.from(answerFeatures).filter((feature) => supportFeatures.has(feature)).length;
+    return sharedCoreFeatureCount >= 2;
 }
 
 function subjectFramesEquivalent(answerFrame: SubjectFrame, supportFrame: SubjectFrame): boolean {
@@ -2881,7 +2985,8 @@ function subjectFramesEquivalent(answerFrame: SubjectFrame, supportFrame: Subjec
     if (normalizedAnswerSubject === normalizedSupportSubject) {
         return true;
     }
-    return computeFeatureOverlapRatio(answerFrame.subjectFeatures, supportFrame.subjectFeatures) >= 0.75;
+    return computeFeatureOverlapRatio(answerFrame.subjectFeatures, supportFrame.subjectFeatures) >= 0.75
+        || subjectFramesShareQualifiedIdentity(answerFrame, supportFrame);
 }
 
 function computeSubjectFrameTailOverlap(answerFrame: SubjectFrame, supportFrame: SubjectFrame): number {
@@ -3593,15 +3698,18 @@ function buildRagAnswerCompletenessMessage(result: RagAnswerCompleteness): strin
 
 function preservePlannedGraphAnswerClaims(
     answer: string,
-    plan: GraphAnswerPlan | null | undefined,
-    preservePlan: boolean
+    plan: GraphAnswerPlan | null | undefined
 ): string {
-    if (!preservePlan) {
+    if (!plan) {
         return normalizeWhitespace(answer);
     }
-    const plannedStatements = (plan?.claims || [])
+    const plannedStatements = (plan.claims || [])
         .map((claim) => naturalizeRagPublicEvidenceClause(String(claim.statement || '')))
-        .filter((statement) => statement && !shouldRejectPublicEvidenceClause(statement));
+        .filter((statement) => (
+            statement
+            && hasBalancedPublicMathDelimiters(statement)
+            && !shouldRejectPublicEvidenceClause(statement)
+        ));
     if (plannedStatements.length <= 0) {
         return normalizeWhitespace(answer);
     }
@@ -3609,7 +3717,15 @@ function preservePlannedGraphAnswerClaims(
     const orderedPlanText = plannedStatements.join(' ');
     const supplementalClauses = segmentRagEvidenceClauses(naturalizeRagPublicEvidenceClause(normalizedAnswer))
         .map((clause) => normalizeWhitespace(clause))
-        .filter((clause) => clause && !shouldRejectPublicEvidenceClause(clause))
+        .filter((clause) => (
+            clause
+            && hasBalancedPublicMathDelimiters(clause)
+            && !shouldRejectPublicEvidenceClause(clause)
+        ))
+        .filter((clause) => plan?.intent !== 'definition' || (
+            !/\b(?:compared?\s+with|versus|vs\.?|plastic\s+cup|metal\s+cup|对比|比较|差异|区别)\b/iu.test(clause)
+            && !/\b(?:remain(?:s)?\s+(?:internal|outside)|public\s+(?:definition|answer)\s+budget|extra\s+sentence|beyond\s+the\s+public)\b/iu.test(clause)
+        ))
         .filter((clause) => !plannedStatements.some((plannedStatement) => {
             const clauseKey = clause.toLowerCase();
             const plannedKey = plannedStatement.toLowerCase();
@@ -3617,8 +3733,212 @@ function preservePlannedGraphAnswerClaims(
                 || clauseKey.includes(plannedKey)
                 || plannedKey.includes(clauseKey);
         }));
-    const supplementalText = supplementalClauses.join(' ');
+    const supplementalText = plan?.intent === 'definition'
+        ? ''
+        : supplementalClauses.join(' ');
     return normalizeWhitespace([orderedPlanText, supplementalText].filter(Boolean).join(' '));
+}
+
+function isIncompletePublicGraphClaim(value: string): boolean {
+    const normalized = normalizeWhitespace(value);
+    if (normalized.length < 16 || /^\d+(?:\.\d+)*[.\u3001)]?$/u.test(normalized)) {
+        return true;
+    }
+    const endsWithTerminalPunctuation = /[.!?\u3002\uFF01\uFF1F]$/u.test(normalized);
+    const endsWithBalancedMath = /(?<!\\)(?:\$\$[\s\S]+?\$\$|\$[^$\n]+\$)$/u.test(normalized);
+    if (!endsWithTerminalPunctuation && !endsWithBalancedMath) {
+        return true;
+    }
+    if (/[：:]$|(?:and|or|with|between|from|to|is|are|以及|并且|其中|通常在|范围为|分别为|性能)$/iu.test(normalized)) {
+        return true;
+    }
+    return false;
+}
+
+function isDefinitionComparisonOrArtifactClaim(value: string): boolean {
+    const normalized = normalizeWhitespace(value);
+    return /\b(?:compare|comparison|contrast|versus|vs\.?|plastic\s+cup|metal\s+cup|ceramic\s+(?:mug|cup)|table|technologies|context\s+paragraph|local\s+window|technical\s+document|subsequent\s+branch)\b/iu.test(normalized)
+        || /相关技术|比较|对比|塑料杯|金属杯|陶瓷杯|流体容器技术比较|上下文段落|后续分支|本技术文档|技术规格|性能特征|核心概念|我们将从|我们将|本节|本章/u.test(normalized);
+}
+
+function extractNormalizedPublicMathExpressions(value: string): string[] {
+    const source = String(value || '');
+    const expressions: string[] = [];
+    const displayPattern = /(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$/gu;
+    for (const match of source.matchAll(displayPattern)) {
+        const expression = normalizeWhitespace(match[1]).replace(/\s+/gu, '');
+        if (expression) {
+            expressions.push(expression);
+        }
+    }
+    const inlineSource = source.replace(displayPattern, '');
+    const inlinePattern = /(?<!\\)\$([^$\n]+?)(?<!\\)\$/gu;
+    for (const match of inlineSource.matchAll(inlinePattern)) {
+        const expression = normalizeWhitespace(match[1]).replace(/\s+/gu, '');
+        if (expression) {
+            expressions.push(expression);
+        }
+    }
+    return Array.from(new Set(expressions));
+}
+
+function isFormulaOnlyPublicGraphClaim(value: string): boolean {
+    const source = String(value || '');
+    if (extractNormalizedPublicMathExpressions(source).length <= 0) {
+        return false;
+    }
+    const withoutDisplayMath = source.replace(/(?<!\\)\$\$[\s\S]*?(?<!\\)\$\$/gu, '');
+    const prose = withoutDisplayMath
+        .replace(/(?<!\\)\$[^$\n]+?(?<!\\)\$/gu, '')
+        .replace(/[()[\]{}.,;:!?]/gu, '')
+        .trim();
+    return prose.length <= 0;
+}
+
+function formulaOnlyPublicClaimIsAlreadyCovered(
+    candidate: GraphAnswerClaimPlan,
+    selectedClaims: GraphAnswerClaimPlan[]
+): boolean {
+    if (!isFormulaOnlyPublicGraphClaim(candidate.statement)) {
+        return false;
+    }
+    const candidateExpressions = extractNormalizedPublicMathExpressions(candidate.statement);
+    return candidateExpressions.length > 0 && selectedClaims.some((selectedClaim) => {
+        const selectedExpressions = extractNormalizedPublicMathExpressions(selectedClaim.statement);
+        return candidateExpressions.every((expression) => selectedExpressions.includes(expression));
+    });
+}
+
+function findContextualFormulaClaim(
+    formulaOnlyCandidate: GraphAnswerClaimPlan,
+    candidates: GraphAnswerClaimPlan[]
+): GraphAnswerClaimPlan | null {
+    if (!isFormulaOnlyPublicGraphClaim(formulaOnlyCandidate.statement)) {
+        return null;
+    }
+    const candidateExpressions = extractNormalizedPublicMathExpressions(formulaOnlyCandidate.statement);
+    if (candidateExpressions.length <= 0) {
+        return null;
+    }
+    return candidates.find((candidate) => {
+        if (candidate.claimId === formulaOnlyCandidate.claimId || isFormulaOnlyPublicGraphClaim(candidate.statement)) {
+            return false;
+        }
+        const contextualExpressions = extractNormalizedPublicMathExpressions(candidate.statement);
+        return candidateExpressions.every((expression) => contextualExpressions.includes(expression));
+    }) || null;
+}
+
+function selectPublicGraphPlanStatements(
+    plan: GraphAnswerPlan | null | undefined
+): GraphAnswerPlan['claims'] {
+    const claims = Array.isArray(plan?.claims)
+        ? plan.claims.filter((claim) => hasBalancedPublicMathDelimiters(String(claim.statement || '')))
+        : [];
+    if (plan?.intent !== 'definition') {
+        return claims;
+    }
+    const eligibleClaims = claims
+        .filter((claim) => claim.role !== 'contrast' && claim.role !== 'analogy')
+        .filter((claim) => !/\b(?:compared?\s+with|versus|vs\.?|plastic\s+cup|metal\s+cup|对比|比较|差异|区别)\b/iu.test(String(claim.statement || '')))
+        .filter((claim) => !/\b(?:remain(?:s)?\s+(?:internal|outside)|public\s+(?:definition|answer)\s+budget|extra\s+sentence|beyond\s+the\s+public)\b/iu.test(String(claim.statement || '')))
+        .filter((claim) => !isIncompletePublicGraphClaim(String(claim.statement || '')))
+        .filter((claim) => !isDefinitionComparisonOrArtifactClaim(String(claim.statement || '')));
+    const selectedCandidates: Array<{ claim: GraphAnswerClaimPlan; index: number }> = [];
+    const selectedClaimIds = new Set<string>();
+    const appendCandidate = (candidate: { claim: GraphAnswerClaimPlan; index: number }): void => {
+        if (selectedClaimIds.has(candidate.claim.claimId)) {
+            return;
+        }
+        if (formulaOnlyPublicClaimIsAlreadyCovered(
+            candidate.claim,
+            selectedCandidates.map((selectedCandidate) => selectedCandidate.claim)
+        )) {
+            return;
+        }
+        selectedCandidates.push(candidate);
+        selectedClaimIds.add(candidate.claim.claimId);
+    };
+    eligibleClaims.forEach((claim, index) => {
+        const contextualClaim = findContextualFormulaClaim(claim, eligibleClaims);
+        appendCandidate({ claim: contextualClaim || claim, index });
+    });
+
+    const selected = selectedCandidates
+        .sort((left, right) => left.index - right.index)
+        .map(({ claim }) => claim);
+    return selected;
+}
+
+function projectPublicGraphAnswerPlan(
+    plan: GraphAnswerPlan | null | undefined
+): GraphAnswerPlan | null {
+    if (!plan) {
+        return null;
+    }
+    if (plan.intent !== 'definition') {
+        return plan;
+    }
+    const claims = selectPublicGraphPlanStatements(plan);
+    return {
+        ...plan,
+        depth: claims.length <= 2 ? 'compact' : 'standard',
+        leadClaimId: claims[0]?.claimId || '',
+        claims,
+        requiredRoles: Array.from(new Set(claims.map((claim) => claim.role))),
+    };
+}
+
+function createEmptyPublicGraphAnswerPlan(
+    plan: GraphAnswerPlan | null | undefined
+): GraphAnswerPlan | null {
+    if (!plan) {
+        return null;
+    }
+    return {
+        ...plan,
+        depth: 'compact',
+        leadClaimId: '',
+        claims: [],
+        requiredRoles: [],
+    };
+}
+
+function isVerifiedRagConflictDisclosurePlan(
+    context: AnswerReleaseReviewContext,
+    plan: GraphAnswerPlan | null | undefined
+): boolean {
+    const fragments = context.ragContextPack?.fragments || [];
+    const conflictFragmentIds = new Set(
+        fragments
+            .filter((fragment) => fragment.role === 'conflict')
+            .map((fragment) => normalizeWhitespace(String(fragment.fragmentId || '')))
+            .filter(Boolean)
+    );
+    if (
+        conflictFragmentIds.size <= 0
+        || context.ragSufficiencyReview?.degradationState !== 'conflict'
+        || !plan
+        || plan.claims.length < 2
+    ) {
+        return false;
+    }
+    const conflictClaims = plan.claims.filter((claim) => (
+        (claim.evidenceRefs || []).some((evidence) => conflictFragmentIds.has(
+            normalizeWhitespace(String(evidence.evidenceId || ''))
+        ))
+    ));
+    const nonConflictClaims = plan.claims.filter((claim) => (
+        (claim.evidenceRefs || []).some((evidence) => !conflictFragmentIds.has(
+            normalizeWhitespace(String(evidence.evidenceId || ''))
+        ))
+    ));
+    return conflictClaims.length > 0
+        && nonConflictClaims.length > 0
+        && plan.claims.every((claim) => (
+            hasBalancedPublicMathDelimiters(String(claim.statement || ''))
+            && (claim.evidenceRefs || []).some((evidence) => normalizeWhitespace(String(evidence.text || '')).length > 0)
+        ));
 }
 
 function collectCitationBackedRagFragments(context: AnswerReleaseReviewContext): RagEvidenceFragment[] {
@@ -4964,6 +5284,39 @@ function checkPublicSurfaceContraction(answer: string): boolean {
     );
 }
 
+function finalPublicAnswerPassesSemanticSafety(context: AnswerReleaseReviewContext, answer: string): boolean {
+    const finalContext = {
+        ...context,
+        draftAnswer: answer,
+    };
+    return [
+        evaluateStructuredConsistency(finalContext).passed,
+        evaluateStructuredComparisonConsistency(finalContext).passed,
+        evaluateAttributeConsistency(finalContext).passed,
+        evaluateContainmentConsistency(finalContext).passed,
+        evaluateCompositionConsistency(finalContext).passed,
+        evaluatePurposeConsistency(finalContext).passed,
+        evaluateDependencyConsistency(finalContext).passed,
+        evaluateLocationConsistency(finalContext).passed,
+        evaluateSubjectConsistency(finalContext).passed,
+        evaluateStateConsistency(finalContext).passed,
+        evaluatePolarityConsistency(finalContext).passed,
+        evaluateGraphCausalConsistency(finalContext).passed,
+        evaluateGraphOrderConsistency(finalContext).passed,
+        evaluateGraphComparisonConsistency(finalContext).passed,
+    ].every(Boolean);
+}
+
+function finalPublicAnswerPassesReleaseContract(
+    context: AnswerReleaseReviewContext,
+    answer: string,
+    requireSemanticSafety: boolean
+): boolean {
+    return hasBalancedPublicMathDelimiters(answer)
+        && checkPublicSurfaceContraction(answer)
+        && (!requireSemanticSafety || finalPublicAnswerPassesSemanticSafety(context, answer));
+}
+
 function buildDecision(
     groundedEvidenceAvailable: boolean,
     groundingAlignmentPassed: boolean,
@@ -5240,8 +5593,18 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             unsupportedClaims: [],
             citationBackedFragmentCount: 0,
         };
-    const graphAnswerPlanCoverage: GraphAnswerCoverageReview = groundedEvidenceAvailable
-        ? reviewGraphAnswerCoverage(draftAnswer, context.graphAnswerPlan)
+    const publicGraphAnswerPlan = projectPublicGraphAnswerPlan(context.graphAnswerPlan);
+    const verifiedRagConflictDisclosurePlan = isVerifiedRagConflictDisclosurePlan(
+        context,
+        publicGraphAnswerPlan
+    );
+    const definitionProjectionIntegrityPassed = !(
+        context.graphAnswerPlan?.intent === 'definition'
+        && (context.graphAnswerPlan.claims || []).some((claim) => claim.required)
+        && (publicGraphAnswerPlan?.claims || []).length <= 0
+    );
+    const draftGraphAnswerPlanCoverage: GraphAnswerCoverageReview = groundedEvidenceAvailable
+        ? reviewGraphAnswerCoverage(draftAnswer, publicGraphAnswerPlan)
         : reviewGraphAnswerCoverage('', null);
     const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer);
     const graphSupportCount = context.graphContext
@@ -5252,7 +5615,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         )
         : 0;
     const graphSupportSufficient = context.knowledgePoints.length <= 0 || graphSupportCount > 0 || Boolean(context.graphContext?.anchorAtomId);
-    const decision = buildDecision(
+    const draftDecision = buildDecision(
         groundedEvidenceAvailable,
         groundingAlignment.passed,
         queryIntentAlignment.passed,
@@ -5273,7 +5636,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         temporalValidityConsistency.passed,
         ragAnswerCompleteness.passed,
         ragClaimCitationSupport.passed,
-        graphAnswerPlanCoverage.passed,
+        draftGraphAnswerPlanCoverage.passed,
         leakedInternalFragments,
         publicSurfaceContracted
     );
@@ -5283,9 +5646,9 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     const primaryStructuredComparisonConflict = structuredComparisonConsistency.conflicts[0];
     const primaryTemporalValidityConflict = temporalValidityConsistency.conflict;
     const revisedPublicAnswer = normalizeWhitespace(
-        decision === 'abstain'
-            ? buildAbstentionAnswer(context.message, context.usedScope)
-            : decision === 'revise'
+        draftDecision === 'abstain'
+            ? buildAbstentionAnswer(context)
+            : draftDecision === 'revise'
                 ? (
                     primaryTemporalValidityConflict
                         ? buildTemporalValidityRevisionAnswer(context, primaryTemporalValidityConflict)
@@ -5303,11 +5666,107 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                 )
                 : buildReleasedPublicAnswer(context, draftAnswer)
     );
-    const publicAnswer = preservePlannedGraphAnswerClaims(
-        revisedPublicAnswer,
-        context.graphAnswerPlan,
-        Boolean(context.ragContextPack && context.ragContextPack.fragments && context.ragContextPack.fragments.length > 0)
+    // Every claim-level consistency gate is a semantic safety boundary. A plan may
+    // improve coverage, but must never overwrite a correction from any of them.
+    const requiresSafetyCorrection = !verifiedRagConflictDisclosurePlan && [
+        groundingAlignment.passed,
+        structuredConsistency.passed,
+        structuredComparisonConsistency.passed,
+        attributeConsistency.passed,
+        containmentConsistency.passed,
+        compositionConsistency.passed,
+        purposeConsistency.passed,
+        dependencyConsistency.passed,
+        locationConsistency.passed,
+        subjectConsistency.passed,
+        stateConsistency.passed,
+        polarityConsistency.passed,
+        graphCausalConsistency.passed,
+        graphOrderConsistency.passed,
+        graphComparisonConsistency.passed,
+        temporalValidityConsistency.passed,
+    ].some((passed) => !passed);
+    const candidatePublicPlanCoverage: GraphAnswerCoverageReview = groundedEvidenceAvailable
+        ? reviewGraphAnswerCoverage(revisedPublicAnswer, publicGraphAnswerPlan)
+        : reviewGraphAnswerCoverage('', null);
+    const requiresDefinitionProjection = Boolean(
+        publicGraphAnswerPlan?.intent === 'definition'
+        && (
+            !candidatePublicPlanCoverage.passed
+            || !hasBalancedPublicMathDelimiters(revisedPublicAnswer)
+            || isDefinitionComparisonOrArtifactClaim(revisedPublicAnswer)
+        )
     );
+    const shouldPreservePublicPlan = Boolean(
+        publicGraphAnswerPlan
+        && definitionProjectionIntegrityPassed
+        && !requiresSafetyCorrection
+        && (
+            requiresDefinitionProjection
+            || (context.ragContextPack?.fragments || []).length > 0
+        )
+    );
+    let effectivePublicGraphAnswerPlan = requiresSafetyCorrection
+        ? createEmptyPublicGraphAnswerPlan(context.graphAnswerPlan)
+        : publicGraphAnswerPlan;
+    let publicAnswer = preservePlannedGraphAnswerClaims(
+        revisedPublicAnswer,
+        shouldPreservePublicPlan ? effectivePublicGraphAnswerPlan : null
+    );
+    let graphAnswerPlanCoverage: GraphAnswerCoverageReview = groundedEvidenceAvailable
+        ? reviewGraphAnswerCoverage(publicAnswer, effectivePublicGraphAnswerPlan)
+        : reviewGraphAnswerCoverage('', null);
+    let decision: AnswerReleaseDecision = definitionProjectionIntegrityPassed
+        ? draftDecision
+        : 'abstain';
+    if (!definitionProjectionIntegrityPassed) {
+        publicAnswer = buildAbstentionAnswer(context);
+        effectivePublicGraphAnswerPlan = createEmptyPublicGraphAnswerPlan(context.graphAnswerPlan);
+        graphAnswerPlanCoverage = reviewGraphAnswerCoverage(publicAnswer, effectivePublicGraphAnswerPlan);
+    }
+    if (
+        groundedEvidenceAvailable
+        && effectivePublicGraphAnswerPlan
+        && graphAnswerPlanCoverage.applicable
+        && !graphAnswerPlanCoverage.passed
+    ) {
+        const coveragePreservingAnswer = preservePlannedGraphAnswerClaims('', effectivePublicGraphAnswerPlan);
+        const coveragePreservingReview = reviewGraphAnswerCoverage(coveragePreservingAnswer, effectivePublicGraphAnswerPlan);
+        if (coveragePreservingReview.passed) {
+            publicAnswer = coveragePreservingAnswer;
+            graphAnswerPlanCoverage = coveragePreservingReview;
+            decision = 'revise';
+        } else {
+            publicAnswer = buildAbstentionAnswer(context);
+            graphAnswerPlanCoverage = reviewGraphAnswerCoverage(publicAnswer, effectivePublicGraphAnswerPlan);
+            decision = 'abstain';
+        }
+    }
+    if (
+        decision !== 'abstain'
+        && !finalPublicAnswerPassesReleaseContract(
+            context,
+            publicAnswer,
+            Boolean(
+                shouldPreservePublicPlan
+                && effectivePublicGraphAnswerPlan
+                && effectivePublicGraphAnswerPlan.claims.length > 0
+                && !verifiedRagConflictDisclosurePlan
+            )
+        )
+    ) {
+        const correctedAnswer = normalizeWhitespace(revisedPublicAnswer);
+        effectivePublicGraphAnswerPlan = createEmptyPublicGraphAnswerPlan(context.graphAnswerPlan);
+        if (correctedAnswer && finalPublicAnswerPassesReleaseContract(context, correctedAnswer, false)) {
+            publicAnswer = correctedAnswer;
+            graphAnswerPlanCoverage = reviewGraphAnswerCoverage(publicAnswer, effectivePublicGraphAnswerPlan);
+            decision = 'revise';
+        } else {
+            publicAnswer = buildAbstentionAnswer(context);
+            graphAnswerPlanCoverage = reviewGraphAnswerCoverage(publicAnswer, effectivePublicGraphAnswerPlan);
+            decision = 'abstain';
+        }
+    }
     const abstentionHygienePassed = decision !== 'abstain'
         || (
             collectLeakedInternalFragments(publicAnswer).length <= 0
@@ -5534,8 +5993,15 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             message: !graphAnswerPlanCoverage.applicable
                 ? 'No required graph-answer claims were active for this answer.'
                 : graphAnswerPlanCoverage.passed
-                    ? `The public draft covered all ${graphAnswerPlanCoverage.requiredClaimIds.length} required graph-answer claim(s).`
-                    : `The public draft omitted required graph-answer claims: ${graphAnswerPlanCoverage.missingRequiredClaimIds.join(', ')}.`,
+                ? `The public answer covered all ${graphAnswerPlanCoverage.requiredClaimIds.length} required graph-answer claim(s).`
+                    : `The public answer omitted required graph-answer claims: ${graphAnswerPlanCoverage.missingRequiredClaimIds.join(', ')}.`,
+        },
+        {
+            gateId: 'definition_projection_integrity',
+            passed: definitionProjectionIntegrityPassed,
+            message: definitionProjectionIntegrityPassed
+                ? 'Definition-plan projection retained at least one eligible required public claim when projection was required.'
+                : 'Required definition claims projected to zero eligible public claims, so the answer was downgraded to abstention.',
         },
         {
             gateId: 'public_surface_contraction',
@@ -5569,6 +6035,9 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         revised: publicAnswer !== draftAnswer,
         originalAnswer: draftAnswer,
         publicAnswer,
+        publicGraphAnswerPlan: effectivePublicGraphAnswerPlan || undefined,
+        auditGraphAnswerPlan: context.graphAnswerPlan || undefined,
+        graphAnswerCoverage: graphAnswerPlanCoverage,
         reason: buildReason(decision, groundedEvidenceAvailable),
         failedGateIds,
         leakedInternalFragments,

@@ -2,13 +2,15 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 const frontendDir = resolve(__dirname, 'src', 'frontend');
-const distDir = resolve(__dirname, 'dist', 'src', 'frontend');
+// Vite validates the module graph. The runtime frontend remains the build-owned
+// legacy-compatible directory consumed by Tauri and mobile staging.
+const viteVerificationDir = resolve(__dirname, 'dist', 'vite-verify');
 
 export default defineConfig({
     root: frontendDir,
     base: './',
     build: {
-        outDir: distDir,
+        outDir: viteVerificationDir,
         emptyOutDir: true,
         target: 'es2020',
         modulePreload: false,

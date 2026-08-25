@@ -31,6 +31,34 @@ function parsePositiveIntegerValue(value: unknown): number {
     return Math.floor(numeric);
 }
 
+function normalizeAnswerLanguageValue(value: unknown): AgentConversationRequest['answerLanguage'] | undefined {
+    const normalized = String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/_/gu, '-');
+    if (!normalized) {
+        return undefined;
+    }
+    if (normalized === 'auto') {
+        return 'auto';
+    }
+    if (
+        normalized === 'zh'
+        || normalized.startsWith('zh-')
+        || ['chinese', 'mandarin', 'simplified-chinese', 'traditional-chinese'].includes(normalized)
+    ) {
+        return 'zh';
+    }
+    if (
+        normalized === 'en'
+        || normalized.startsWith('en-')
+        || normalized === 'english'
+    ) {
+        return 'en';
+    }
+    return undefined;
+}
+
 function normalizeStringList(values: unknown, options: {
     normalize?: (value: string) => string;
 } = {}): string[] {
@@ -104,11 +132,15 @@ export function normalizeKnowledgeQueryRequestPayload(payload: unknown): Knowled
 export function normalizeAgentConversationRequestPayload(payload: unknown): AgentConversationRequest {
     const record = isObjectRecord(payload) ? payload : {};
     const topKValue = parsePositiveIntegerValue(readFirstPresentValue(record, ['topK', 'k', 'limit']));
+    const answerLanguage = normalizeAnswerLanguageValue(
+        readFirstPresentValue(record, ['answerLanguage', 'answer_language', 'responseLanguage', 'response_language'])
+    );
     return {
         userId: String(readFirstPresentValue(record, ['userId', 'user_id', 'learnerId']) || '').trim(),
         sessionId: readFirstNonEmptyString(record, ['sessionId', 'session_id']),
         activeTarget: readFirstNonEmptyString(record, ['activeTarget', 'active_target', 'target']),
         message: readFirstNonEmptyString(record, ['message', 'prompt', 'query', 'q', 'text']) || '',
+        answerLanguage,
         topK: topKValue > 0 ? topKValue : undefined,
         asOf: readFirstNonEmptyString(record, ['asOf', 'as_of', 'timestamp', 'now']),
         persistMemory: readFirstPresentValue(record, ['persistMemory', 'persist_memory']) !== false,

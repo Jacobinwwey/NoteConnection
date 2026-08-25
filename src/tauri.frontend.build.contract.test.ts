@@ -22,6 +22,7 @@ describe('tauri frontend build contracts', () => {
   const packageJsonPath = path.join(repoRoot, 'package.json');
   const tauriConfigPath = path.join(repoRoot, 'src-tauri', 'tauri.conf.json');
   const wrapperScriptPath = path.join(repoRoot, 'scripts', 'run-tauri-frontend-build.js');
+  const viteConfigPath = path.join(repoRoot, 'vite.config.ts');
 
   function readJson<T>(filePath: string): T {
     return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
@@ -53,5 +54,14 @@ describe('tauri frontend build contracts', () => {
     expect(() =>
       wrapper.resolveFrontendBuildCommand({ frontendBuildMode: 'legacy-full' })
     ).toThrow(/Unsupported tauri frontend build mode/i);
+  });
+
+  test('keeps Vite verification output separate from the Tauri runtime frontend directory', () => {
+    const viteConfig = fs.readFileSync(viteConfigPath, 'utf8');
+
+    expect(viteConfig).toContain("const viteVerificationDir = resolve(__dirname, 'dist', 'vite-verify')");
+    expect(viteConfig).toContain('outDir: viteVerificationDir');
+    expect(viteConfig).toContain('emptyOutDir: true');
+    expect(viteConfig).not.toContain('emptyOutDir: false');
   });
 });

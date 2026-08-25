@@ -2,6 +2,8 @@ import { reviewAnswerRelease } from './answerReleaseReview';
 import type {
     AgentConversationGraphContext,
     AgentConversationKnowledgePoint,
+    GraphAnswerClaimPlan,
+    GraphAnswerPlan,
     KnowledgeCitation,
     KnowledgeQueryResolvedScope,
     RagContextPack,
@@ -456,6 +458,40 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).toContain('后续分支包括 热量传递模型');
     });
 
+    test('does not cut a public evidence highlight through a mathematical expression', () => {
+        const longFormulaClause = [
+            'The thermal field has a grounded physical interpretation',
+            ...Array.from({ length: 12 }, () => 'with a stable source-backed description'),
+            'and is governed by $$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$, where alpha is the thermal diffusivity and the complete clause remains readable for the public answer.',
+        ].join(' ');
+        expect(longFormulaClause.length).toBeGreaterThan(480);
+        const thermalCitation: KnowledgeCitation = {
+            ...(makeKnowledgePoint().citation as KnowledgeCitation),
+            citationId: 'citation_thermal_formula',
+            atomId: 'atom_thermal_formula',
+            title: 'Thermal Model',
+            snippet: longFormulaClause,
+        };
+        const point = makeKnowledgePoint({
+            citations: [makeKnowledgePoint().citation as KnowledgeCitation, thermalCitation],
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: 'This technical document analyzes water glass as a physical system.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation, thermalCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-07-12T00:05:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.publicAnswer).toContain('$$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$');
+        expect(review.publicAnswer).toContain('the complete clause remains readable for the public answer.');
+        expect(review.publicAnswer).not.toContain('...');
+        expect((review.publicAnswer.match(/\$\$/gu) || []).length % 2).toBe(0);
+    });
+
     test('releases a complete definition draft without replacing its natural answer shape', () => {
         const baseCitation = makeKnowledgePoint().citation as KnowledgeCitation;
         const thermalCitation: KnowledgeCitation = {
@@ -574,6 +610,445 @@ describe('answerReleaseReview', () => {
 
         expect(longGroundedAnswer.length).toBeGreaterThan(900);
         expect(review.failedGateIds).not.toContain('public_surface_contraction');
+    });
+
+    test('deduplicates a formula-only definition claim already carried by contextual evidence', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water glass is a transparent vessel designed to hold water.',
+            evidenceSnippet: 'Water glass is a transparent vessel designed to hold water.',
+        });
+        const documentId = point.documentId || 'doc_water_glass';
+        const sourcePath = point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md';
+        const equation = '$$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$';
+        const graphAnswerPlan: GraphAnswerPlan = {
+            intent: 'definition',
+            depth: 'standard',
+            anchorAtomId: point.atomId,
+            leadClaimId: 'claim_definition',
+            requiredRoles: ['definition'],
+            omittedCandidates: [],
+            claims: [
+                {
+                    claimId: 'claim_definition',
+                    role: 'definition',
+                    required: true,
+                    priority: 1,
+                    statement: 'Water glass is a transparent vessel designed to hold water.',
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{
+                        evidenceId: 'citation_water_glass',
+                        atomId: point.atomId,
+                        sourcePath,
+                        citationIds: ['citation_water_glass'],
+                        text: point.evidenceSnippet,
+                    }],
+                    confidence: 0.96,
+                },
+                {
+                    claimId: 'claim_thermal_context',
+                    role: 'definition',
+                    required: true,
+                    priority: 2,
+                    statement: `Its thermal field is modeled by ${equation} where T is temperature and alpha is thermal diffusivity.`,
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{
+                        evidenceId: 'citation_thermal_context',
+                        atomId: point.atomId,
+                        sourcePath,
+                        citationIds: ['citation_thermal_context'],
+                        text: `Its thermal field is modeled by ${equation} where T is temperature and alpha is thermal diffusivity.`,
+                    }],
+                    confidence: 0.95,
+                },
+                {
+                    claimId: 'claim_thermal_formula',
+                    role: 'definition',
+                    required: true,
+                    priority: 3,
+                    statement: equation,
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{
+                        evidenceId: 'citation_thermal_formula',
+                        atomId: point.atomId,
+                        sourcePath,
+                        citationIds: ['citation_thermal_formula'],
+                        text: equation,
+                    }],
+                    confidence: 0.94,
+                },
+            ],
+        };
+        const ragContextPack: RagContextPack = {
+            query: 'what is water glass?',
+            generatedAt: '2026-08-24T00:00:00.000Z',
+            sourceBoundary: 'direct_span_only',
+            budget: { maxFragments: 3, maxCharsPerFragment: 600, maxTotalChars: 1200 },
+            fragments: [{
+                fragmentId: 'water_glass_formula_context',
+                role: 'direct_support',
+                text: `Water glass is a transparent vessel designed to hold water. Its thermal field is modeled by ${equation} where T is temperature and alpha is thermal diffusivity.`,
+                atomId: point.atomId,
+                documentId,
+                sourcePath,
+                title: point.title,
+                headingPath: ['Water Glass'],
+                startLine: 1,
+                endLine: 5,
+                charCount: 180,
+                tokenEstimate: 45,
+                truncated: false,
+                citationIds: ['citation_water_glass', 'citation_thermal_context'],
+                sourceBoundary: 'direct_span_only',
+            }],
+            sourceDecisions: [],
+            totalCharCount: 180,
+            tokenEstimate: 45,
+        };
+        const review = reviewAnswerRelease({
+            message: 'what is water glass?',
+            draftAnswer: [
+                'Water glass is a transparent vessel designed to hold water.',
+                `Its thermal field is modeled by ${equation} where T is temperature and alpha is thermal diffusivity.`,
+                equation,
+            ].join(' '),
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            graphAnswerPlan,
+            ragContextPack,
+            ragSufficiencyReview: {
+                reviewedAt: '2026-08-24T00:00:00.000Z',
+                status: 'sufficient',
+                score: 0.95,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+            reviewedAt: '2026-08-24T00:00:00.000Z',
+        });
+
+        expect((review.publicAnswer.match(/\\frac\{\\partial T\}\{\\partial t\}=\\alpha\\nabla\^2 T/gu) || [])).toHaveLength(1);
+        expect(review.publicAnswer).toContain('where T is temperature and alpha is thermal diffusivity.');
+    });
+
+    test('projects every eligible definition claim without a RAG pack and records coverage on the final public answer', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'A water glass is a transparent vessel used to hold water.',
+            evidenceSnippet: 'A water glass is a transparent vessel used to hold water.',
+        });
+        const sourcePath = point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md';
+        const graphAnswerPlan: GraphAnswerPlan = {
+            intent: 'definition',
+            depth: 'standard',
+            anchorAtomId: point.atomId,
+            leadClaimId: 'claim_definition',
+            requiredRoles: ['definition', 'composition', 'boundary', 'mechanism', 'application', 'contrast'],
+            omittedCandidates: [],
+            claims: [
+                {
+                    claimId: 'claim_definition',
+                    role: 'definition',
+                    required: true,
+                    priority: 1,
+                    statement: 'A water glass is a transparent vessel used to hold water.',
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{ evidenceId: 'definition', atomId: point.atomId, sourcePath, citationIds: [], text: point.evidenceSnippet }],
+                    confidence: 0.98,
+                },
+                {
+                    claimId: 'claim_composition',
+                    role: 'composition',
+                    required: true,
+                    priority: 2,
+                    statement: 'It combines a glass vessel with the water it contains.',
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{ evidenceId: 'composition', atomId: point.atomId, sourcePath, citationIds: [], text: 'It combines a glass vessel with the water it contains.' }],
+                    confidence: 0.97,
+                },
+                {
+                    claimId: 'claim_boundary',
+                    role: 'boundary',
+                    required: true,
+                    priority: 3,
+                    statement: 'Its wall separates the liquid from the surrounding air.',
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{ evidenceId: 'boundary', atomId: point.atomId, sourcePath, citationIds: [], text: 'Its wall separates the liquid from the surrounding air.' }],
+                    confidence: 0.96,
+                },
+                {
+                    claimId: 'claim_mechanism',
+                    role: 'mechanism',
+                    required: true,
+                    priority: 4,
+                    statement: 'Light refracts at the air-glass-water interfaces.',
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{ evidenceId: 'mechanism', atomId: point.atomId, sourcePath, citationIds: [], text: 'Light refracts at the air-glass-water interfaces.' }],
+                    confidence: 0.95,
+                },
+                {
+                    claimId: 'claim_application',
+                    role: 'application',
+                    required: true,
+                    priority: 5,
+                    statement: 'Its thermal field can be modeled by $$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$, where T is temperature.',
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{ evidenceId: 'thermal', atomId: point.atomId, sourcePath, citationIds: [], text: 'Its thermal field can be modeled by $$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$, where T is temperature.' }],
+                    confidence: 0.94,
+                },
+                {
+                    claimId: 'claim_contrast',
+                    role: 'contrast',
+                    required: true,
+                    priority: 6,
+                    statement: 'Plastic cups are a different category of container.',
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{ evidenceId: 'contrast', atomId: point.atomId, sourcePath, citationIds: [], text: 'Plastic cups are a different category of container.' }],
+                    confidence: 0.93,
+                },
+            ],
+        };
+
+        const review = reviewAnswerRelease({
+            message: 'what is water glass?',
+            draftAnswer: 'A water glass is a transparent vessel used to hold water. Plastic cups are a different category of container.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            graphAnswerPlan,
+            reviewedAt: '2026-08-24T00:10:00.000Z',
+        });
+
+        expect(review.publicAnswer).toContain('It combines a glass vessel with the water it contains.');
+        expect(review.publicAnswer).toContain('Its wall separates the liquid from the surrounding air.');
+        expect(review.publicAnswer).toContain('Light refracts at the air-glass-water interfaces.');
+        expect(review.publicAnswer).toContain('$$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$');
+        expect(review.publicAnswer).not.toContain('Plastic cups');
+        expect((review as any).publicGraphAnswerPlan.claims.map((claim: GraphAnswerClaimPlan) => claim.claimId)).toEqual([
+            'claim_definition',
+            'claim_composition',
+            'claim_boundary',
+            'claim_mechanism',
+            'claim_application',
+        ]);
+        expect((review as any).graphAnswerCoverage).toEqual(expect.objectContaining({
+            passed: true,
+            missingRequiredClaimIds: [],
+        }));
+    });
+
+    test('does not reintroduce comparison or duplicate formula claims through conflict supplements', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water glass is a transparent vessel designed to hold water.',
+            evidenceSnippet: 'Water glass is a transparent vessel designed to hold water.',
+        });
+        const sourcePath = point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md';
+        const equation = '$$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$';
+        const graphAnswerPlan: GraphAnswerPlan = {
+            intent: 'definition',
+            depth: 'standard',
+            anchorAtomId: point.atomId,
+            leadClaimId: 'definition',
+            requiredRoles: ['definition'],
+            omittedCandidates: [],
+            claims: [
+                {
+                    claimId: 'definition', role: 'definition', required: true, priority: 1,
+                    statement: 'Water glass is a transparent vessel designed to hold water.',
+                    subjectAtomId: point.atomId, supportingAtomIds: [], supportingEdgeIds: [],
+                    evidenceRefs: [{ evidenceId: 'definition', atomId: point.atomId, sourcePath, citationIds: [], text: point.evidenceSnippet }], confidence: 0.98,
+                },
+                {
+                    claimId: 'formula_context', role: 'mechanism', required: true, priority: 2,
+                    statement: `Its thermal field follows ${equation}, where T is temperature.`,
+                    subjectAtomId: point.atomId, supportingAtomIds: [], supportingEdgeIds: [],
+                    evidenceRefs: [{ evidenceId: 'formula_context', atomId: point.atomId, sourcePath, citationIds: [], text: `Its thermal field follows ${equation}, where T is temperature.` }], confidence: 0.97,
+                },
+                {
+                    claimId: 'formula_only', role: 'mechanism', required: false, priority: 3,
+                    statement: equation,
+                    subjectAtomId: point.atomId, supportingAtomIds: [], supportingEdgeIds: [],
+                    evidenceRefs: [{ evidenceId: 'formula_only', atomId: point.atomId, sourcePath, citationIds: [], text: equation }], confidence: 0.96,
+                },
+                {
+                    claimId: 'comparison_artifact', role: 'contrast', required: false, priority: 4,
+                    statement: 'Water glass transparent vessel comparison with plastic cup has 20 cm reference height.',
+                    subjectAtomId: point.atomId, supportingAtomIds: [], supportingEdgeIds: [],
+                    evidenceRefs: [{ evidenceId: 'comparison_artifact', atomId: point.atomId, sourcePath, citationIds: [], text: 'Water glass transparent vessel comparison with plastic cup has 20 cm reference height.' }], confidence: 0.95,
+                },
+            ],
+        };
+        const review = reviewAnswerRelease({
+            message: 'what is water glass?',
+            draftAnswer: `Water glass is a transparent vessel designed to hold water. Its thermal field follows ${equation}, where T is temperature.`,
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            graphAnswerPlan,
+            ragContextPack: {
+                query: 'what is water glass?',
+                generatedAt: '2026-08-24T00:20:00.000Z',
+                sourceBoundary: 'direct_span_only',
+                budget: { maxFragments: 1, maxCharsPerFragment: 600, maxTotalChars: 600 },
+                fragments: [{
+                    fragmentId: 'direct', role: 'direct_support', text: point.evidenceSnippet,
+                    atomId: point.atomId, documentId: point.documentId || 'doc_water_glass', sourcePath, title: point.title,
+                    headingPath: ['Water Glass'], charCount: point.evidenceSnippet.length, tokenEstimate: 16,
+                    truncated: false, citationIds: ['definition'], sourceBoundary: 'direct_span_only',
+                }],
+                sourceDecisions: [], totalCharCount: point.evidenceSnippet.length, tokenEstimate: 16,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-08-24T00:20:00.000Z', status: 'borderline', score: 0.6,
+                reasons: [], deterministic: true, degradationState: 'conflict',
+            },
+            reviewedAt: '2026-08-24T00:20:00.000Z',
+        });
+
+        expect(review.publicAnswer).not.toContain('plastic cup');
+        expect((review.publicAnswer.match(/\\frac\{\\partial T\}\{\\partial t\}=\\alpha\\nabla\^2 T/gu) || [])).toHaveLength(1);
+    });
+
+    test('rejects a math-bearing definition plan claim that ends in incomplete prose', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water glass is a bounded physical system.',
+            evidenceSnippet: 'Water glass is a bounded physical system.',
+        });
+        const sourcePath = point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md';
+        const equation = '$$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$';
+        const fullStatement = `Water glass is a bounded physical system whose temperature field follows ${equation}, where T is temperature and alpha is thermal diffusivity across the interface.`;
+        const incompleteStatement = fullStatement.replace('the interface.', 't');
+        const graphAnswerPlan: GraphAnswerPlan = {
+            intent: 'definition',
+            depth: 'compact',
+            anchorAtomId: point.atomId,
+            leadClaimId: 'incomplete_formula_claim',
+            requiredRoles: ['definition'],
+            omittedCandidates: [],
+            claims: [
+                {
+                    claimId: 'incomplete_formula_claim',
+                    role: 'definition',
+                    required: true,
+                    priority: 2,
+                    statement: incompleteStatement,
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{
+                        evidenceId: 'parent_context',
+                        atomId: point.atomId,
+                        sourcePath,
+                        citationIds: [],
+                        text: incompleteStatement,
+                    }],
+                    confidence: 0.94,
+                },
+                {
+                    claimId: 'complete_formula_claim',
+                    role: 'definition',
+                    required: true,
+                    priority: 1,
+                    statement: fullStatement,
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{
+                        evidenceId: 'direct_support',
+                        atomId: point.atomId,
+                        sourcePath,
+                        citationIds: [],
+                        text: fullStatement,
+                    }],
+                    confidence: 0.95,
+                },
+            ],
+        };
+        const review = reviewAnswerRelease({
+            message: 'what is waterglass?',
+            draftAnswer: fullStatement,
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            graphAnswerPlan,
+            ragContextPack: {
+                query: 'what is waterglass?',
+                generatedAt: '2026-08-25T00:00:00.000Z',
+                sourceBoundary: 'direct_span_only',
+                budget: { maxFragments: 2, maxCharsPerFragment: 600, maxTotalChars: 1200 },
+                fragments: [
+                    {
+                        fragmentId: 'direct_support', role: 'direct_support', text: fullStatement,
+                        atomId: point.atomId, documentId: point.documentId || 'doc_water_glass', sourcePath, title: point.title,
+                        headingPath: ['Water Glass'], charCount: fullStatement.length, tokenEstimate: 60,
+                        truncated: false, citationIds: ['citation_water_glass'], sourceBoundary: 'direct_span_only',
+                    },
+                    {
+                        fragmentId: 'parent_context', role: 'parent_context', text: incompleteStatement,
+                        atomId: point.atomId, documentId: point.documentId || 'doc_water_glass', sourcePath, title: point.title,
+                        headingPath: ['Water Glass'], charCount: incompleteStatement.length, tokenEstimate: 60,
+                        truncated: false, citationIds: ['citation_water_glass'], sourceBoundary: 'direct_span_only',
+                    },
+                ],
+                sourceDecisions: [], totalCharCount: fullStatement.length + incompleteStatement.length, tokenEstimate: 120,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-08-25T00:00:00.000Z', status: 'sufficient', score: 0.95,
+                reasons: [], deterministic: true, recoveryAttempted: false, llmJudgeUsed: false, degradationState: 'none',
+            },
+            reviewedAt: '2026-08-25T00:00:00.000Z',
+        });
+
+        expect(review.publicGraphAnswerPlan?.claims.map((claim) => claim.claimId)).toEqual([
+            'complete_formula_claim',
+        ]);
+        expect((review.publicAnswer.match(/Water glass is a bounded physical system/gu) || [])).toHaveLength(1);
+        expect(review.publicAnswer).not.toContain('across t Water glass');
+    });
+
+    test('honors an explicit Chinese answer language for English no-evidence abstentions', () => {
+        const review = reviewAnswerRelease({
+            message: 'what is water glass?',
+            answerLanguage: 'zh',
+            draftAnswer: 'No scoped knowledge points matched "what is water glass?".',
+            knowledgePoints: [],
+            citations: [],
+            usedScope: scopedWaterglass,
+            graphContext: null,
+            reviewedAt: '2026-08-24T00:30:00.000Z',
+        } as any);
+
+        expect(review.decision).toBe('abstain');
+        expect(review.publicAnswer).toContain('当前范围');
+        expect(review.publicAnswer).toContain('我暂时不能');
+        expect(review.publicAnswer).not.toContain('I cannot give a grounded answer');
     });
 
     test('keeps RAG evidence in revised definition answers after public-surface contraction', () => {
@@ -1437,6 +1912,35 @@ describe('answerReleaseReview', () => {
                 passed: true,
             }),
         ]));
+    });
+
+    test('does not treat a scope-qualified heading and its source sentence as different subjects', () => {
+        const point = makeKnowledgePoint({
+            title: 'Staging Owner',
+            summary: '## Staging Owner The deployment owner is Release Ops in the staging environment.',
+            evidenceSnippet: '## Staging Owner The deployment owner is Release Ops in the staging environment.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Staging Owner',
+                snippet: '## Staging Owner The deployment owner is Release Ops in the staging environment.',
+            },
+            citations: [{
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Staging Owner',
+                snippet: '## Staging Owner The deployment owner is Release Ops in the staging environment.',
+            }],
+        });
+        const review = reviewAnswerRelease({
+            message: 'compare staging and production deployment owners',
+            draftAnswer: 'Cross environment staging owner source records that the deployment owner is Release Ops in the staging environment.',
+            knowledgePoints: [point],
+            citations: point.citations || [],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-08-24T00:34:00.000Z',
+        });
+
+        expect(review.failedGateIds).not.toContain('claim_subject_consistency');
     });
 
     test('revises grounded answers when same-subject attribute claims conflict with cited support', () => {
@@ -3008,6 +3512,242 @@ describe('answerReleaseReview', () => {
                 passed: true,
             }),
         ]));
+    });
+
+    test('does not restore a containment-conflicting graph plan after revising the answer', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water Glass contains water.',
+            evidenceSnippet: 'Water Glass contains water.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass',
+                snippet: 'Water Glass contains water.',
+            },
+            citations: [{
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass',
+                snippet: 'Water Glass contains water.',
+            }],
+        });
+        const unsafePlan: GraphAnswerPlan = {
+            intent: 'definition',
+            depth: 'compact',
+            anchorAtomId: point.atomId,
+            leadClaimId: 'claim_unsafe_containment',
+            requiredRoles: ['definition'],
+            omittedCandidates: [],
+            claims: [{
+                claimId: 'claim_unsafe_containment',
+                role: 'definition',
+                required: true,
+                priority: 1,
+                statement: 'Water Glass contains mercury.',
+                subjectAtomId: point.atomId,
+                supportingAtomIds: [],
+                supportingEdgeIds: [],
+                evidenceRefs: [{
+                    evidenceId: 'unsafe_containment',
+                    atomId: point.atomId,
+                    sourcePath: point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md',
+                    citationIds: ['citation_water_glass'],
+                    text: 'Water Glass contains mercury.',
+                }],
+                confidence: 0.9,
+            }],
+        };
+        const review = reviewAnswerRelease({
+            message: 'what does water glass contain?',
+            draftAnswer: 'Water Glass contains mercury.',
+            knowledgePoints: [point],
+            citations: point.citations || [],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            graphAnswerPlan: unsafePlan,
+            ragContextPack: {
+                query: 'what does water glass contain?',
+                generatedAt: '2026-08-24T00:30:00.000Z',
+                sourceBoundary: 'direct_span_only',
+                budget: { maxFragments: 1, maxCharsPerFragment: 600, maxTotalChars: 600 },
+                fragments: [{
+                    fragmentId: 'unsafe_plan_rag_context',
+                    role: 'direct_support',
+                    text: 'Water Glass contains water.',
+                    atomId: point.atomId,
+                    documentId: point.documentId || 'doc_water_glass',
+                    sourcePath: point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md',
+                    title: point.title,
+                    headingPath: ['Water Glass'],
+                    charCount: 27,
+                    tokenEstimate: 7,
+                    truncated: false,
+                    citationIds: ['citation_water_glass'],
+                    sourceBoundary: 'direct_span_only',
+                }],
+                sourceDecisions: [],
+                totalCharCount: 27,
+                tokenEstimate: 7,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-08-24T00:30:00.000Z',
+                status: 'sufficient',
+                score: 0.9,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+            reviewedAt: '2026-08-24T00:30:00.000Z',
+        });
+
+        expect(review.decision).toBe('revise');
+        expect(review.failedGateIds).toContain('claim_containment_consistency');
+        expect(review.publicAnswer).toContain('Water Glass contains water.');
+        expect(review.publicAnswer).not.toContain('mercury');
+        expect(review.publicGraphAnswerPlan?.claims).toEqual([]);
+        expect(review.auditGraphAnswerPlan).toEqual(unsafePlan);
+        expect(review.graphAnswerCoverage).toEqual(expect.objectContaining({
+            applicable: false,
+        }));
+    });
+
+    test('drops a newly introduced unsafe plan claim during final public-answer validation', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water Glass contains water.',
+            evidenceSnippet: 'Water Glass contains water.',
+            citation: {
+                ...(makeKnowledgePoint().citation as KnowledgeCitation),
+                title: 'Water Glass',
+                snippet: 'Water Glass contains water.',
+            },
+        });
+        const unsafePlan: GraphAnswerPlan = {
+            intent: 'definition',
+            depth: 'compact',
+            anchorAtomId: point.atomId,
+            leadClaimId: 'unsafe_plan_claim',
+            requiredRoles: ['definition'],
+            omittedCandidates: [],
+            claims: [{
+                claimId: 'unsafe_plan_claim',
+                role: 'definition',
+                required: true,
+                priority: 1,
+                statement: 'Water Glass contains mercury.',
+                subjectAtomId: point.atomId,
+                supportingAtomIds: [],
+                supportingEdgeIds: [],
+                evidenceRefs: [{
+                    evidenceId: 'unsafe_plan_claim',
+                    atomId: point.atomId,
+                    sourcePath: point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md',
+                    citationIds: [],
+                    text: 'Water Glass contains mercury.',
+                }],
+                confidence: 0.9,
+            }],
+        };
+        const review = reviewAnswerRelease({
+            message: 'what does water glass contain?',
+            draftAnswer: 'Water Glass contains water.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            graphAnswerPlan: unsafePlan,
+            ragContextPack: {
+                query: 'what does water glass contain?',
+                generatedAt: '2026-08-24T00:32:00.000Z',
+                sourceBoundary: 'direct_span_only',
+                budget: { maxFragments: 1, maxCharsPerFragment: 600, maxTotalChars: 600 },
+                fragments: [{
+                    fragmentId: 'safe_support',
+                    role: 'direct_support',
+                    text: 'Water Glass contains water.',
+                    atomId: point.atomId,
+                    documentId: point.documentId || 'doc_water_glass',
+                    sourcePath: point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md',
+                    title: point.title,
+                    headingPath: ['Water Glass'],
+                    charCount: 27,
+                    tokenEstimate: 7,
+                    truncated: false,
+                    citationIds: ['citation_water_glass'],
+                    sourceBoundary: 'direct_span_only',
+                }],
+                sourceDecisions: [],
+                totalCharCount: 27,
+                tokenEstimate: 7,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-08-24T00:32:00.000Z',
+                status: 'sufficient',
+                score: 0.9,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+            reviewedAt: '2026-08-24T00:32:00.000Z',
+        });
+
+        expect(review.publicAnswer).toBe('Water Glass contains water.');
+        expect(review.publicAnswer).not.toContain('mercury');
+        expect(review.publicGraphAnswerPlan?.claims).toEqual([]);
+        expect(review.graphAnswerCoverage).toEqual(expect.objectContaining({ applicable: false }));
+    });
+
+    test('abstains when a required definition plan projects to zero public claims', () => {
+        const point = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water Glass is compared with a PET Plastic Cup.',
+            evidenceSnippet: 'Water Glass is compared with a PET Plastic Cup.',
+        });
+        const comparisonOnlyPlan: GraphAnswerPlan = {
+            intent: 'definition',
+            depth: 'compact',
+            anchorAtomId: point.atomId,
+            leadClaimId: 'comparison_only',
+            requiredRoles: ['contrast'],
+            omittedCandidates: [],
+            claims: [{
+                claimId: 'comparison_only',
+                role: 'contrast',
+                required: true,
+                priority: 1,
+                statement: 'Water Glass is compared with a PET Plastic Cup.',
+                subjectAtomId: point.atomId,
+                supportingAtomIds: [],
+                supportingEdgeIds: [],
+                evidenceRefs: [{
+                    evidenceId: 'comparison_only',
+                    atomId: point.atomId,
+                    sourcePath: point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md',
+                    citationIds: [],
+                    text: 'Water Glass is compared with a PET Plastic Cup.',
+                }],
+                confidence: 0.91,
+            }],
+        };
+        const review = reviewAnswerRelease({
+            message: 'what is water glass?',
+            draftAnswer: 'Water Glass is compared with a PET Plastic Cup.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            graphAnswerPlan: comparisonOnlyPlan,
+            reviewedAt: '2026-08-24T00:35:00.000Z',
+        });
+
+        expect(review.decision).toBe('abstain');
+        expect(review.failedGateIds).toContain('definition_projection_integrity');
+        expect(review.publicAnswer).not.toContain('PET Plastic Cup');
+        expect(review.publicGraphAnswerPlan?.claims).toEqual([]);
+        expect(review.auditGraphAnswerPlan).toEqual(comparisonOnlyPlan);
     });
 
     test('revises grounded answers when a DAG analogy pair is incorrectly released as a Chinese contrast claim', () => {

@@ -37,6 +37,7 @@
     }
 
     const ACTIVE_SOURCE_TARGET_STORAGE_KEY = 'nc_last_target';
+    const ANSWER_LANGUAGE_STORAGE_KEY = 'nc_agent_answer_language';
     const ACTIVE_SOURCE_TARGET_EVENT = 'noteconnection:active-target-changed';
     const AGENT_CONVERSATION_ENDPOINT = '/api/knowledge/conversation';
     const GRAPH_FOCUS_DIAGNOSTICS_EVENT = 'noteconnection:agent-graph-focus-diagnostics';
@@ -263,6 +264,76 @@
             return window.i18n.currentLanguage;
         }
         return 'en';
+    }
+
+    function normalizeAnswerLanguage(value) {
+        const normalized = String(value || '').trim().toLowerCase().split('-')[0];
+        return normalized === 'zh' ? 'zh' : 'en';
+    }
+
+    function getAnswerLanguage() {
+        const selector = getElement('agent-workspace-answer-language-select');
+        const selected = selector && typeof selector.value === 'string' ? selector.value : '';
+        if (selected === 'en' || selected === 'zh') {
+            return selected;
+        }
+        if (typeof localStorage !== 'undefined') {
+            const stored = String(localStorage.getItem(ANSWER_LANGUAGE_STORAGE_KEY) || '').trim();
+            if (stored === 'en' || stored === 'zh') {
+                return stored;
+            }
+        }
+        return normalizeAnswerLanguage(getActiveLanguage());
+    }
+
+    function renderAnswerLanguageSelector() {
+        const selector = getElement('agent-workspace-answer-language-select');
+        if (!selector) {
+            return;
+        }
+        const stored = typeof localStorage !== 'undefined'
+            ? String(localStorage.getItem(ANSWER_LANGUAGE_STORAGE_KEY) || '').trim()
+            : '';
+        const targetLanguage = stored === 'en' || stored === 'zh'
+            ? stored
+            : normalizeAnswerLanguage(getActiveLanguage());
+        selector.value = targetLanguage;
+        updateAnswerLanguageSummary(targetLanguage);
+    }
+
+    function updateAnswerLanguageSummary(language) {
+        const summary = getElement('agent-workspace-answer-language-summary');
+        if (!summary) {
+            return;
+        }
+        summary.textContent = language === 'zh'
+            ? translate('agentWorkspace.answerLanguage.summaryChinese', 'Chinese answer')
+            : translate('agentWorkspace.answerLanguage.summaryEnglish', 'English answer');
+    }
+
+    function bindAnswerLanguageSelector() {
+        const selector = getElement('agent-workspace-answer-language-select');
+        if (!selector || selector.getAttribute('data-agent-answer-language-bound') === 'true') {
+            return;
+        }
+        selector.setAttribute('data-agent-answer-language-bound', 'true');
+        selector.addEventListener('change', function () {
+            const language = normalizeAnswerLanguage(selector.value);
+            selector.value = language;
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem(ANSWER_LANGUAGE_STORAGE_KEY, language);
+            }
+            updateAnswerLanguageSummary(language);
+        });
+        if (window.i18n && typeof window.i18n.onLanguageChange === 'function') {
+            window.i18n.onLanguageChange(function () {
+                const hasExplicitChoice = typeof localStorage !== 'undefined'
+                    && ['en', 'zh'].includes(String(localStorage.getItem(ANSWER_LANGUAGE_STORAGE_KEY) || '').trim());
+                if (!hasExplicitChoice) {
+                    renderAnswerLanguageSelector();
+                }
+            });
+        }
     }
 
     function formatTemplate(template, params) {
@@ -1325,10 +1396,17 @@
         const assistantBlocks = Array.isArray(result && result.assistantBlocks)
             ? result.assistantBlocks.filter((block) => block && typeof block === 'object')
             : [];
-        const visibleAssistantBlocks = assistantBlocks.filter((block) => {
-            const type = String(block && block.type || '').trim();
-            return type === 'structured_answer' || type === 'main_markdown' || type === 'html_artifact';
-        });
+        // The conversation surface has one public release boundary: the
+        // structured answer. Other block types are durable metadata or
+        // capability artifacts and must stay outside the chat DOM; allowing
+        // them through here reintroduces the Answer Context/Evidence/HTML
+        // leakage that the backend additive contract intentionally permits.
+        const structuredAnswerBlock = assistantBlocks.find((block) => (
+            String(block && block.type || '').trim() === 'structured_answer'
+        ));
+        const visibleAssistantBlocks = structuredAnswerBlock
+            ? [structuredAnswerBlock]
+            : [];
         const fallbackMessage = String(
             result && (
                 result.assistantMessage
@@ -5104,6 +5182,7 @@
                 sessionId: getOrCreateConversationSessionId(userId),
                 activeTarget: requestContext.activeTarget,
                 message,
+                answerLanguage: getAnswerLanguage(),
                 topK: 6,
                 memoryNamespace: 'conversation',
                 scope: requestContext.scope,
@@ -5264,8 +5343,10 @@
         controller.init();
         bindWorkspaceDrawerChrome();
         bindWorkspaceScopeSelector();
+        bindAnswerLanguageSelector();
         observeGlobalScopeOptions();
         renderWorkspaceScopeSelector();
+        renderAnswerLanguageSelector();
         updateConversationApiStatus({
             state: 'idle',
             endpoint: AGENT_CONVERSATION_ENDPOINT,

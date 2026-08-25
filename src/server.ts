@@ -114,6 +114,9 @@ import {
     type TutorProviderTrendDiagnosticsRequest,
     type TutorTraceDiagnosticsRequest,
 } from './learning';
+import {
+    normalizeAgentConversationRequestPayload,
+} from './learning/requestNormalization';
 import { registerAllRoutes, type ServerContext, type RouteEntry } from './routes';
 import { createRuntimeRunbookRouteOps } from './routes/runtimeRunbookRouteOps';
 import { isRequestTokenAuthorized } from './middleware/auth';
@@ -10263,23 +10266,6 @@ function normalizeKnowledgeQueryRequestPayload(payload: unknown): KnowledgeQuery
     };
 }
 
-function normalizeAgentConversationRequestPayload(payload: unknown): AgentConversationRequest {
-    const record = isObjectRecord(payload) ? payload : {};
-    const topKValue = parsePositiveIntegerValue(readFirstPresentValue(record, ['topK', 'k', 'limit']));
-    const normalizedQueryRequest = normalizeKnowledgeQueryRequestPayload(payload);
-    return {
-        userId: String(readFirstPresentValue(record, ['userId', 'user_id', 'learnerId']) || '').trim(),
-        sessionId: readFirstNonEmptyString(record, ['sessionId', 'session_id']),
-        activeTarget: readFirstNonEmptyString(record, ['activeTarget', 'active_target', 'target']),
-        message: readFirstNonEmptyString(record, ['message', 'prompt', 'query', 'q', 'text']) || '',
-        topK: topKValue > 0 ? topKValue : undefined,
-        asOf: readFirstNonEmptyString(record, ['asOf', 'as_of', 'timestamp', 'now']),
-        persistMemory: readFirstPresentValue(record, ['persistMemory', 'persist_memory']) !== false,
-        memoryNamespace: readFirstNonEmptyString(record, ['memoryNamespace', 'memory_namespace']),
-        scope: normalizedQueryRequest.scope,
-    };
-}
-
 function requestAcceptsEventStream(req: http.IncomingMessage): boolean {
     const acceptHeader = String(req.headers.accept || '').toLowerCase();
     return acceptHeader.includes('text/event-stream');
@@ -10334,11 +10320,28 @@ function normalizeAgentConversationTopK(value: unknown): number {
 }
 
 function buildAgentConversationRequestFingerprint(requestPayload: AgentConversationRequest): string {
+    const scope = requestPayload.scope;
+    const normalizedScope = scope
+        ? {
+            workspaceId: String(scope.workspaceId || '').trim(),
+            corpusId: String(scope.corpusId || '').trim(),
+            documentIds: Array.from(new Set(scope.documentIds || [])).sort(),
+            atomIds: Array.from(new Set(scope.atomIds || [])).sort(),
+            sourcePathPrefixes: Array.from(new Set(scope.sourcePathPrefixes || [])).sort(),
+            languages: Array.from(new Set(scope.languages || [])).sort(),
+        }
+        : null;
     return JSON.stringify({
         userId: String(requestPayload.userId || '').trim(),
+        sessionId: String(requestPayload.sessionId || '').trim(),
+        activeTarget: String(requestPayload.activeTarget || '').trim(),
         message: String(requestPayload.message || '').trim(),
+        answerLanguage: String(requestPayload.answerLanguage || 'auto').trim(),
         topK: normalizeAgentConversationTopK(requestPayload.topK),
         asOf: String(requestPayload.asOf || '').trim(),
+        persistMemory: requestPayload.persistMemory !== false,
+        memoryNamespace: String(requestPayload.memoryNamespace || '').trim(),
+        scope: normalizedScope,
     });
 }
 

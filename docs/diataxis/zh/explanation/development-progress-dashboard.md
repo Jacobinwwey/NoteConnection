@@ -1,5 +1,41 @@
 # 解释：开发进度看板
 
+## 2026-08-25 新鲜浏览器验收与证据边界
+
+在隔离 Chrome 上重新探测 CDP 后，本次重新运行了浏览器验收。验收脚本现在会等待并关闭异步创建的首次运行语言选择弹窗，然后打开知识工作区，并明确断言 drawer 已打开后才设置 scope/语言并发送请求。这关闭了一个会让页面停在 idle 并误报缺少回答卡片的探针时序缺陷。
+
+新鲜验收使用临时 server、runtime data 与 Knowledge_Base，真实走通 ingest -> HTTP/SSE conversation -> 浏览器 DOM 链路。结果为：只有一个 Grounded Answer，KaTeX 节点 4，热传导方程与斯涅尔定律 TeX annotation 完整，原始数学分隔符为 0，Answer Context/Explanation/Evidence Summary 未挂载，Knowledge Run 可见卡片为 0，Knowledge Actions 不可见，Next Actions 初始收起（aria-expanded=false 且无 panel）。公开回答只保留一条完整定义；audit plan 故意保留 across t 畸形样本，以证明 audit/public 边界真实存在。CDP 证据记录于 output/browser-research/agent-answer-formula-render-latest.json 及配套 PNG，它们是外部验收资料，不是产品资源。
+
+当前主机仍无 online Android 设备（adb devices -l 为空）。因此 mobile-slim 只能声明 build/contract/staging 证据：122 个文件、未压缩 4,292,745 bytes、估算压缩 1,554,525 bytes，低于 25 MiB 预算。peak RSS、签名 arm64 APK/AAB 安装、SAF workload 与 force-stop/reopen continuity 尚未测量，不得表述为真机验收。用户原有 NoteConnection 进程未被修改；浏览器探针使用隔离 runtime。
+
+## 2026-08-24 Agent 回答界面与语言契约收口
+
+此前的事故收口证明了重建后端能够收缩 Water Glass 回答，但没有证明完整的浏览器交互链路。本次使用隔离 server 和 Chrome CDP 实际走了 `POST /api/knowledge/conversation` 的 SSE 路径、结构化回答 DOM、KaTeX、折叠交互以及软件语言切换。探针确认：聊天中只有一个可见 structured-answer 卡片；存在已渲染的 KaTeX 子树；可见文本中没有裸 `$...$` / `$$...$$` 分隔符；`Answer Context`、`Explanation` 与 `Evidence Summary` 没有挂入聊天 DOM；`Next Actions` 点击前折叠，点击后面板出现且 ARIA 状态同步。截图与 server 日志属于外部验收证据，不作为产品资源提交。
+
+该探针暴露了两个此前 focused test 未覆盖的真实边界。第一，带上下文的公式 claim 与仅公式 block 可以同时通过 definition 投影，导致同一公式重复出现。`answerReleaseReview.ts` 现在只会去除已经被更早上下文 claim 承载的“仅公式”公开 claim；内部 `GraphAnswerPlan`、evidence ref 与审计 trace 保持不变。第二，`server.ts` 仍有一份遗留的私有 conversation 归一化器，会丢弃 `answerLanguage`；于是直接调用平台时语言正确，但真实 HTTP/SSE 路由静默回退到自动语言检测。该路由现在统一复用 `learning/requestNormalization.ts`，不再维护第二个边界。
+
+同一次审计还发现幂等性缺口：turn-cache 指纹此前只包含 user、message、top-K 和时间。现在它还覆盖归一化后的 answer language、session、active target、持久化策略、memory namespace，以及排序后的 resolved scope。因此调用方不能在另一种回答语言或 scope 契约下回放已缓存的 turn。`src/server.migration.test.ts` 覆盖真实路由上的中文 structured block、完全相同的 replay，以及语言/target 不一致 replay 的拒绝。
+
+语言行为有意按证据权威边界拆分。语言选择控制后端生成的 structured title、`Next Actions` 和其他系统文案；选择会在客户端持久化并作为 `answerLanguage` 发送。未配置翻译 provider 时，来自源证据的正文保留源语言。这是有意限制：静默翻译技术证据会生成未经 grounding 的第二层回答。可选 provider-backed 翻译层仍是独立产品决策，必须同时携带 source/translation provenance。
+
+## 2026-08-24 公开投影与最终覆盖率后续收口
+
+事故分析发现首轮收口仍有一个发布边界缺口：coverage 在修订前针对投影计划计算，但公开答案可能在之后继续变化。`AnswerReleaseReview` 现在同时携带精确的公开投影与针对精确发布文本计算的 coverage 结果。`conversationComposer.ts`、response trace 与 knowledge-run artifact 复用该结果，不再对未投影的审计计划自行重新计算 coverage。
+
+这里不会进行盲目回退。只有公开计划确实参与发布契约时才会激活：definition 回答的候选文本不完整、数学分隔符不平衡、含文档/比较伪证据时需要投影；或者带 RAG 的回答使用了计划证据。时序与图一致性修正仍是最高优先级，会抑制公开计划而不会被 coverage 修复覆盖。激活的公开计划在修订后丢失 required coverage 时，发布层会重建安全投影；若仍无法覆盖 required claim，则拒答，而不是输出看似正常但实际不完整的回答与 trace。
+
+definition 投影现在不再使用固定 claim 数或字符上限。它保留已经有界的 evidence plan 中所有合格、完整、数学分隔符平衡的 claim，排除比较/文档伪证据；只有更早的上下文 claim 已承载同一归一化公式时，才移除仅公式 claim。conflict 降级不再接受原始 supplemental claim，因此不会重新带回比较文案或重复公式。显式 `answerLanguage` 现在覆盖普通 grounded 回答之外的 no-match 与 abstention 路径；JSON 与 SSE 契约测试覆盖英文查询下的中文回答契约。
+
+## 2026-08-23 Agent 工作区回答质量事故闭环
+
+第一次实机进程探针被当作证据而不是通过信号处理。当前打开的 NoteConnection 实例（server PID 26892、Godot PID 27264、父 npm PID 39156、HTTP/bridge 端口 12847/12848）复现了用户报告：旧构建把 45 条内部图计划 claim 拼成一条定义回答，泄漏比较表邻居，保留 `4.` 等结构编号，并且 structured-answer 前端把 Markdown 数学公式当作原文展示。该进程没有启用 WebView2 CDP 1665，因此没有虚构 CDP 实机结论。
+
+向前兼容修复保留完整内部 `GraphAnswerPlan` 与 trace，并在 `answerReleaseReview.ts` 增加 definition intent 的公开投影：排除 contrast/analogy 与文档导航伪证据，拒绝不完整编号和句尾，取消任意公开 claim 数量或字符上限；只有公开投影实际参与发布时，才对精确公开文本计算 coverage。证据高亮不再固定 120 字符硬切，只在完整句边界且 `$...$`/`$$...$$` 分隔符平衡时发布，否则省略。
+
+前端 `structured_answer` 只通过既有 `marked -> sanitize -> KaTeX -> Mermaid` 管线渲染 `directAnswer`。`Answer Context`、`Explanation` 与 `Evidence Summary` 保持为 response metadata，不挂入聊天 DOM；`Next Actions` 放在小型圆形按钮之后，仅在用户点击后渲染。该设计保留 additive response contract，也不向移动端增加模型权重或额外运行时依赖。
+
+验证证据包括：回答回归测试、完整 `src/learning` 测试集、前端工作区测试、TypeScript no-emit、生产构建、sidecar 校验、隔离 runtime 壳验证，以及独立端口启动的重建 `dist` server 对真实 Water Glass 知识库的请求。当前打开的旧进程未被终止或覆盖，必须由操作者重启/重建后才会加载本修复。
+
 ## 2026-07-18 Coverage-driven 后续 Phase 收口
 
 回答规划的剩余风险现在都有可执行 owner：多语言概念/极性匹配与 24-case 校准报告、novelty-aware 同角色抑制和 discourse ordering、仅显式请求启用且带 replay trace 的一步图扩展策略，以及 operator-only Grounding Inspector 投影。普通 `explain` 请求不再静默进入 deep profile。

@@ -763,7 +763,9 @@ describe('server migration settings routes', () => {
       {
         userId: 'server_conversation_user',
         sessionId: 'server_session_scope',
+        activeTarget: 'optics',
         message: '解释吸收系数和光学衰减',
+        answerLanguage: 'zh',
         scope: {
           corpusId: 'optics',
           languages: ['zh']
@@ -783,6 +785,23 @@ describe('server migration settings routes', () => {
     }));
     expect(firstResponse.body.result.citations.length).toBeGreaterThan(0);
     expect(firstResponse.body.result.summary.appliedMemoryCount).toBeGreaterThan(0);
+    expect(firstResponse.body.result.assistantBlocks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'structured_answer',
+        title: '可信回答',
+        nextActionsMarkdown: expect.stringContaining('## 下一步行动'),
+      }),
+      expect.objectContaining({ type: 'knowledge_run_summary', title: '知识运行' }),
+      expect.objectContaining({ type: 'citations', title: '引用' }),
+      expect.objectContaining({ type: 'knowledge_actions', title: '知识操作' }),
+    ]));
+    const firstStructuredBlock = firstResponse.body.result.assistantBlocks.find((block: any) => block.type === 'structured_answer');
+    expect(String(firstStructuredBlock?.overviewMarkdown || '')).toContain('## 回答上下文');
+    expect(String(firstStructuredBlock?.explanationMarkdown || '')).toContain('## 说明');
+    expect(String(firstStructuredBlock?.evidenceMarkdown || '')).toContain('## 证据摘要');
+    expect(firstResponse.body.result.assistantBlocks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'system_notice', text: expect.stringContaining('未召回') }),
+    ]));
 
     const replayResponse = await requestJson(
       port,
@@ -791,7 +810,9 @@ describe('server migration settings routes', () => {
       {
         userId: 'server_conversation_user',
         sessionId: 'server_session_scope',
+        activeTarget: 'optics',
         message: '解释吸收系数和光学衰减',
+        answerLanguage: 'zh',
         scope: {
           corpusId: 'optics',
           languages: ['zh']
@@ -804,6 +825,111 @@ describe('server migration settings routes', () => {
     );
     expect(replayResponse.status).toBe(200);
     expect(replayResponse.headers?.['x-agent-conversation-replay']).toBe('hit');
+    expect(replayResponse.body.result.assistantBlocks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'knowledge_run_summary', title: '知识运行' }),
+      expect.objectContaining({ type: 'citations', title: '引用' }),
+      expect.objectContaining({ type: 'knowledge_actions', title: '知识操作' }),
+      expect.objectContaining({ type: 'system_notice', text: expect.stringContaining('未召回') }),
+    ]));
+
+        const languageConflictResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      {
+        userId: 'server_conversation_user',
+        sessionId: 'server_session_scope',
+        activeTarget: 'optics',
+        message: '解释吸收系数和光学衰减',
+        answerLanguage: 'en',
+        scope: {
+          corpusId: 'optics',
+          languages: ['zh']
+        },
+        persistMemory: true
+      },
+      {
+        'X-Agent-Conversation-Turn-Id': turnId
+      }
+    );
+    expect(languageConflictResponse.status).toBe(422);
+    expect(languageConflictResponse.body).toEqual(expect.objectContaining({
+      errorCode: 'turn_id_conflict',
+    }));
+  });
+
+  test('conversation JSON and SSE responses preserve an explicit Chinese answer language for an English no-match query', async () => {
+    const requestPayload = {
+      userId: 'server_language_no_match_user',
+      sessionId: 'server_language_no_match_session',
+      activeTarget: 'empty-language-contract',
+      message: 'what is water glass?',
+      answerLanguage: 'zh',
+      scope: {
+        corpusId: 'empty-language-contract',
+        sourcePathPrefixes: ['Knowledge_Base/empty-language-contract']
+      },
+      persistMemory: false
+    };
+    const jsonResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      requestPayload,
+      {
+        'X-Agent-Conversation-Turn-Id': 'turn_language_no_match_json'
+      }
+    );
+
+    expect(jsonResponse.status).toBe(200);
+    expect(jsonResponse.body.result.answer).toContain('当前范围');
+    expect(jsonResponse.body.result.answer).toContain('我暂时不能');
+    expect(jsonResponse.body.result.assistantBlocks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'structured_answer',
+        title: '可信回答'
+      }),
+      expect.objectContaining({ type: 'knowledge_run_summary', title: '知识运行' }),
+      expect.objectContaining({ type: 'system_notice', text: expect.stringContaining('未召回') }),
+    ]));
+    const jsonStructuredBlock = jsonResponse.body.result.assistantBlocks.find((block: any) => block.type === 'structured_answer');
+    expect(String(jsonStructuredBlock?.overviewMarkdown || '')).toContain('## 回答上下文');
+    expect(String(jsonStructuredBlock?.explanationMarkdown || '')).toContain('## 说明');
+    expect(String(jsonStructuredBlock?.evidenceMarkdown || '')).toContain('## 证据摘要');
+
+    const sseResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      requestPayload,
+      {
+        Accept: 'text/event-stream',
+        'X-Agent-Conversation-Turn-Id': 'turn_language_no_match_sse'
+      }
+    );
+
+    expect(sseResponse.status).toBe(200);
+    expect(String(sseResponse.headers?.['content-type'] || '')).toContain('text/event-stream');
+    const completedPayload = String(sseResponse.body || '')
+      .split(/\n\n/)
+      .map((eventChunk) => eventChunk.split(/\n/).find((line) => line.startsWith('data: ')))
+      .filter((line): line is string => Boolean(line))
+      .map((line) => JSON.parse(line.slice('data: '.length)))
+      .find((event) => event && event.type === 'turn_completed');
+    expect(completedPayload?.result?.answer).toContain('当前范围');
+    expect(completedPayload?.result?.answer).toContain('我暂时不能');
+    expect(completedPayload?.result?.assistantBlocks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'structured_answer',
+        title: '可信回答'
+      }),
+      expect.objectContaining({ type: 'knowledge_run_summary', title: '知识运行' }),
+      expect.objectContaining({ type: 'system_notice', text: expect.stringContaining('未召回') }),
+    ]));
+    const sseStructuredBlock = completedPayload?.result?.assistantBlocks?.find((block: any) => block.type === 'structured_answer');
+    expect(String(sseStructuredBlock?.overviewMarkdown || '')).toContain('## 回答上下文');
+    expect(String(sseStructuredBlock?.explanationMarkdown || '')).toContain('## 说明');
+    expect(String(sseStructuredBlock?.evidenceMarkdown || '')).toContain('## 证据摘要');
   });
 
   test('conversation route auto-hydrates the active knowledge target when the learning workspace store is empty', async () => {

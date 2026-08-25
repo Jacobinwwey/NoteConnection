@@ -1686,32 +1686,32 @@ describe('KnowledgeLearningPlatform', () => {
             structuredBlock && 'overviewMarkdown' in structuredBlock
                 ? String(structuredBlock.overviewMarkdown || '')
                 : ''
-        ).toContain('## Answer Context');
+        ).toContain('## 回答上下文');
         expect(
             structuredBlock && 'explanationMarkdown' in structuredBlock
                 ? String(structuredBlock.explanationMarkdown || '')
                 : ''
-        ).toContain('## Explanation');
+        ).toContain('## 说明');
         expect(
             structuredBlock && 'evidenceMarkdown' in structuredBlock
                 ? String(structuredBlock.evidenceMarkdown || '')
                 : ''
-        ).toContain('## Evidence Summary');
+        ).toContain('## 证据摘要');
         expect(
             structuredBlock && 'explanationMarkdown' in structuredBlock
                 ? String(structuredBlock.explanationMarkdown || '')
                 : ''
-        ).toContain('best scoped anchor');
+        ).toContain('最佳范围锚点');
         expect(
             structuredBlock && 'nextActionsMarkdown' in structuredBlock
                 ? String(structuredBlock.nextActionsMarkdown || '')
                 : ''
-        ).toContain('## Next Actions');
+        ).toContain('## 下一步行动');
         expect(
             structuredBlock && 'nextActionsMarkdown' in structuredBlock
                 ? String(structuredBlock.nextActionsMarkdown || '')
                 : ''
-        ).toContain('Persist the latest user focus to scoped conversation memory');
+        ).toContain('记录本回合的用户关注点');
         expect(response.trace.usedScope.corpusId).toBe('optics');
         expect(response.summary.appliedMemoryCount).toBeGreaterThan(0);
 
@@ -1784,6 +1784,10 @@ describe('KnowledgeLearningPlatform', () => {
             missingRequiredClaimIds: [],
             coverageScore: 1,
         }));
+        expect(response.graphAnswerPlan).toEqual(response.answerReleaseReview?.publicGraphAnswerPlan);
+        expect(response.graphAnswerCoverage).toEqual(response.answerReleaseReview?.graphAnswerCoverage);
+        expect(response.knowledgeRun?.graphAnswerPlan).toEqual(response.graphAnswerPlan);
+        expect(response.knowledgeRun?.graphAnswerCoverage).toEqual(response.graphAnswerCoverage);
         expect(response.trace.graphAnswerPlan).toEqual(response.graphAnswerPlan);
         expect(response.trace.graphAnswerCoverage).toEqual(response.graphAnswerCoverage);
         expect(response.trace.ragContextPack?.graphConditioning).toEqual(expect.objectContaining({
@@ -1988,6 +1992,12 @@ describe('KnowledgeLearningPlatform', () => {
                 usedFallback: true,
             }),
         }));
+        expect((knowledgeRunArtifact?.payload as any)?.graphAnswerPlan).toEqual(
+            (knowledgeRunArtifact?.payload as any)?.answerReleaseReview?.publicGraphAnswerPlan
+        );
+        expect((knowledgeRunArtifact?.payload as any)?.graphAnswerCoverage).toEqual(
+            (knowledgeRunArtifact?.payload as any)?.answerReleaseReview?.graphAnswerCoverage
+        );
 
         const reviewCards = ((flashcardArtifact?.payload || {}) as any).reviewCards || [];
         expect(reviewCards).toHaveLength(1);
