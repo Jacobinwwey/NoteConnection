@@ -1466,6 +1466,178 @@ describe('conversationComposer', () => {
         expect(reply.answer).not.toContain('```');
     });
 
+    test('bounds a full-document comparison to both requested operands instead of preamble context', () => {
+        const point: AgentConversationKnowledgePoint = {
+            atomId: 'atom_full_compare_water_glass',
+            atomIds: ['atom_full_compare_water_glass'],
+            documentId: 'doc_full_compare_water_glass',
+            sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+            title: '\u6c34\u676f (water glass)',
+            summary: '\u6c34\u676f\u662f\u7531\u73bb\u7483\u5bb9\u5668\u4e0e\u6c34\u7ec4\u6210\u7684\u7269\u7406\u7cfb\u7edf\u3002',
+            evidenceSnippet: '\u6c34\u676f\u662f\u7531\u73bb\u7483\u5bb9\u5668\u4e0e\u6c34\u7ec4\u6210\u7684\u7269\u7406\u7cfb\u7edf\u3002',
+            score: 0.98,
+            citation: null,
+            citations: [],
+            matchedSpans: [],
+            matchCount: 1,
+            relationPath: [],
+            relationPathAtomIds: [],
+            relationKinds: [],
+            temporalValidity: {
+                isValid: true,
+                checkedAt: '2026-09-01T00:00:00.000Z',
+                reasons: [],
+                details: [],
+            },
+            capabilities: [],
+        };
+        const documentId = 'doc_full_compare_water_glass';
+        const sourcePath = 'Knowledge_Base/waterglass/water glass.md';
+        const graphContext: AgentConversationGraphContext = {
+            anchorAtomId: point.atomId,
+            anchorTitle: point.title,
+            anchorDocumentId: documentId,
+            supportingAtomIds: [],
+            supportingTitles: [],
+            relationKinds: [],
+            relationSummaries: [],
+            connectionPaths: [{
+                sourceAtomId: 'atom_full_compare_water_glass',
+                sourceTitle: 'Temporal Current Release Source',
+                targetAtomId: 'atom_full_compare_water_glass',
+                targetTitle: 'Temporal Planned Roadmap Source',
+                pathAtomIds: ['atom_full_compare_water_glass'],
+                pathTitles: ['Temporal Current Release Source', 'Temporal Planned Roadmap Source'],
+                pathEdges: [{
+                    fromAtomId: 'atom_full_compare_water_glass',
+                    toAtomId: 'atom_full_compare_water_glass',
+                    relationKind: 'contrast',
+                }],
+                length: 1,
+            }],
+            predecessorWindow: [{
+                atomId: 'atom_full_compare_water_glass',
+                title: 'Temporal Current Release Source',
+                relationKind: 'contrast',
+                confidence: 0.9,
+            }],
+            successorWindow: [{
+                atomId: 'atom_full_compare_water_glass',
+                title: 'Temporal Planned Roadmap Source',
+                relationKind: 'contrast',
+                confidence: 0.9,
+            }],
+            temporalValidity: {
+                checkedAt: '2026-09-01T00:00:00.000Z',
+                allPointsValid: true,
+                warningReasons: [],
+                invalidKnowledgePointTitles: [],
+                edgeKinds: [],
+                details: [],
+            },
+        };
+        const ragContextPack: RagContextPack = {
+            query: 'compare water glass and plastic cup',
+            generatedAt: '2026-09-01T00:00:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: { maxFragments: 8, maxCharsPerFragment: 1200, maxTotalChars: 4800 },
+            fragments: [
+                {
+                    fragmentId: 'full_compare_definition',
+                    role: 'direct_support',
+                    text: '## Water Glass\n\nA water glass is a transparent vessel made from soda-lime glass.',
+                    atomId: point.atomId,
+                    documentId,
+                    sourcePath,
+                    title: 'Water Glass',
+                    headingPath: ['Water Glass'],
+                    charCount: 86,
+                    tokenEstimate: 22,
+                    truncated: false,
+                    citationIds: ['full_compare_definition'],
+                    relationEdgeIds: [],
+                    sourceBoundary: 'full_document',
+                    score: 0.98,
+                },
+                {
+                    fragmentId: 'full_compare_preamble',
+                    role: 'direct_support',
+                    text: 'This technical document was generated from the title water glass and provides broad background context.',
+                    atomId: point.atomId,
+                    documentId,
+                    sourcePath,
+                    title: 'water glass.md preamble',
+                    headingPath: ['preamble'],
+                    charCount: 104,
+                    tokenEstimate: 26,
+                    truncated: false,
+                    citationIds: ['full_compare_preamble'],
+                    relationEdgeIds: [],
+                    sourceBoundary: 'full_document',
+                    score: 0.8,
+                },
+                {
+                    fragmentId: 'full_compare_mermaid',
+                    role: 'direct_support',
+                    text: [
+                        '### Container comparison',
+                        '```mermaid',
+                        'graph LR',
+                        'A[Water Glass Soda-Lime]',
+                        'B[Plastic Cup PET]',
+                        '```',
+                    ].join('\n'),
+                    atomId: point.atomId,
+                    documentId,
+                    sourcePath,
+                    title: 'Container comparison',
+                    headingPath: ['Water Glass', 'Container comparison'],
+                    charCount: 112,
+                    tokenEstimate: 28,
+                    truncated: false,
+                    citationIds: ['full_compare_mermaid'],
+                    relationEdgeIds: [],
+                    sourceBoundary: 'full_document',
+                    score: 0.95,
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 302,
+            tokenEstimate: 76,
+        };
+
+        const reply = buildScopedConversationReply({
+            message: 'compare water glass and plastic cup',
+            knowledgePoints: [point],
+            citations: [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-09-01T00:00:00.000Z',
+            nextBlockId: (() => {
+                let index = 0;
+                return () => `full_compare_block_${++index}`;
+            })(),
+            graphContext,
+            ragContextPack,
+            ragSufficiencyReview: {
+                reviewedAt: '2026-09-01T00:00:00.000Z',
+                status: 'sufficient',
+                score: 0.94,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+        });
+
+        expect(reply.answer).toContain('Water Glass Soda-Lime');
+        expect(reply.answer).toContain('Plastic Cup PET');
+        expect(reply.answer).not.toContain('This technical document was generated from the title');
+        expect(reply.answerReleaseReview.gates.filter((gate) => !gate.passed)).toEqual([]);
+    });
+
     test('uses how-to RAG profile to preserve steps prerequisites downstream checks and failure handling', () => {
         const item = makeQueryItem({
             atom: {
@@ -2078,6 +2250,406 @@ describe('conversationComposer', () => {
         expect((reply.answer.match(/\$\$/gu) || []).length % 2).toBe(0);
         expect((reply.answer.match(/\\frac\{\\partial T\}\{\\partial t\}=\\alpha\\nabla\^2 T/gu) || [])).toHaveLength(1);
         expect(reply.answer.trim()).not.toMatch(/(?:and|or|with|between|is|are|:|：)\s*$/iu);
+    });
+
+    test('compound Chinese definition queries keep the subject answer and complete formula while dropping document scaffolding', () => {
+        const items = [
+            makeQueryItem({
+                atom: {
+                    id: 'atom_amorphous_ice_definition',
+                    documentId: 'doc_amorphous_ice',
+                    title: '非晶冰',
+                    sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                    content: '## 非晶冰\n非晶冰（Amorphous ice）是水的一种固态形式，其分子排列缺乏长程有序结构。',
+                    keywords: ['非晶冰', 'amorphous', 'ice'],
+                },
+                evidence: {
+                    id: 'evidence_amorphous_ice_definition',
+                    sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                    snippet: '## 非晶冰\n非晶冰（Amorphous ice）是水的一种固态形式，其分子排列缺乏长程有序结构。',
+                    startLine: 3,
+                    endLine: 6,
+                },
+                score: 0.98,
+            }),
+            makeQueryItem({
+                atom: {
+                    id: 'atom_amorphous_ice_math',
+                    documentId: 'doc_amorphous_ice',
+                    title: '核心概念与数学基础',
+                    sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                    content: '### 核心概念与数学基础\n其结构可用径向分布函数 $g(r)$ 描述。\n$$ g(r) = \\frac{V}{N^2} \\left\\langle \\sum_{i=1}^{N} \\delta(r) \\right\\rangle $$',
+                    keywords: ['核心概念', '数学基础', '非晶冰', 'g', 'r'],
+                },
+                evidence: {
+                    id: 'evidence_amorphous_ice_math',
+                    sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                    snippet: '### 核心概念与数学基础\n其结构可用径向分布函数 $g(r)$ 描述。\n$$ g(r) = \\frac{V}{N^2} \\left\\langle \\sum_{i=1}^{N} \\delta(r) \\right\\rangle $$',
+                    startLine: 7,
+                    endLine: 18,
+                },
+                score: 0.86,
+            }),
+            makeQueryItem({
+                atom: {
+                    id: 'atom_amorphous_ice_application',
+                    documentId: 'doc_amorphous_ice',
+                    title: '常见用例与性能指标',
+                    sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                    content: '### 常见用例与性能指标\n本节介绍冷冻电子显微镜和天体物理学应用。',
+                    keywords: ['常见用例', '性能指标', '应用'],
+                },
+                evidence: {
+                    id: 'evidence_amorphous_ice_application',
+                    sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                    snippet: '### 常见用例与性能指标\n本节介绍冷冻电子显微镜和天体物理学应用。',
+                    startLine: 48,
+                    endLine: 52,
+                },
+                score: 0.62,
+            }),
+        ];
+        const points = mergeAgentConversationKnowledgePoints(items, () => []);
+        const reply = buildScopedConversationReply({
+            message: '什么是非晶冰？我应该通过哪些知识点学习？',
+            answerLanguage: 'zh',
+            knowledgePoints: points,
+            citations: points[0]?.citations || [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-09-01T00:00:00.000Z',
+            nextBlockId: (() => {
+                let index = 0;
+                return () => `compound_definition_block_${++index}`;
+            })(),
+            ragContextPack: {
+                query: '什么是非晶冰？我应该通过哪些知识点学习？',
+                generatedAt: '2026-09-01T00:00:00.000Z',
+                sourceBoundary: 'direct_span_only',
+                budget: { maxFragments: 3, maxCharsPerFragment: 900, maxTotalChars: 2400 },
+                fragments: [
+                    {
+                        fragmentId: 'rag_amorphous_ice_definition',
+                        role: 'direct_support',
+                        atomId: 'atom_amorphous_ice_definition',
+                        documentId: 'doc_amorphous_ice',
+                        sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                        title: '非晶冰',
+                        headingPath: ['非晶冰'],
+                        text: '## 非晶冰\n非晶冰（Amorphous ice）是水的一种固态形式，其分子排列缺乏长程有序结构。',
+                        startLine: 3,
+                        endLine: 6,
+                        charCount: 80,
+                        tokenEstimate: 20,
+                        truncated: false,
+                        citationIds: ['evidence_amorphous_ice_definition'],
+                        relationEdgeIds: [],
+                        sourceBoundary: 'direct_span_only',
+                        score: 0.98,
+                    },
+                    {
+                        fragmentId: 'rag_amorphous_ice_math',
+                        role: 'direct_support',
+                        atomId: 'atom_amorphous_ice_math',
+                        documentId: 'doc_amorphous_ice',
+                        sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                        title: '核心概念与数学基础',
+                        headingPath: ['非晶冰', '核心概念与数学基础'],
+                        text: '### 核心概念与数学基础\n其结构可用径向分布函数 $g(r)$ 描述。\n$$ g(r) = \\frac{V}{N^2} \\left\\langle \\sum_{i=1}^{N} \\delta(r) \\right\\rangle $$',
+                        startLine: 7,
+                        endLine: 18,
+                        charCount: 160,
+                        tokenEstimate: 40,
+                        truncated: false,
+                        citationIds: ['evidence_amorphous_ice_math'],
+                        relationEdgeIds: [],
+                        sourceBoundary: 'direct_span_only',
+                        score: 0.86,
+                    },
+                    {
+                        fragmentId: 'rag_amorphous_ice_technical_noise',
+                        role: 'direct_support',
+                        atomId: 'atom_amorphous_ice_application',
+                        documentId: 'doc_amorphous_ice',
+                        sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                        title: '关键技术规格',
+                        headingPath: ['非晶冰', '关键技术规格'],
+                        text: '### 关键技术规格\n非晶冰存在多种形态，玻璃化转变温度为 $T_g$。',
+                        startLine: 32,
+                        endLine: 45,
+                        charCount: 70,
+                        tokenEstimate: 18,
+                        truncated: false,
+                        citationIds: ['evidence_amorphous_ice_application'],
+                        relationEdgeIds: [],
+                        sourceBoundary: 'direct_span_only',
+                        score: 0.72,
+                    },
+                    {
+                        fragmentId: 'rag_amorphous_ice_math_duplicate',
+                        role: 'parent_context',
+                        atomId: 'atom_amorphous_ice_math',
+                        documentId: 'doc_amorphous_ice',
+                        sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                        title: '核心概念与数学基础',
+                        headingPath: ['非晶冰', '核心概念与数学基础'],
+                        text: '核心概念重复说明：$$ g(r) = \\frac{V}{N^2} \\left\\langle \\sum_{i=1}^{N} \\delta(r) \\right\\rangle $$。',
+                        startLine: 19,
+                        endLine: 23,
+                        charCount: 110,
+                        tokenEstimate: 28,
+                        truncated: false,
+                        citationIds: ['evidence_amorphous_ice_math'],
+                        relationEdgeIds: [],
+                        sourceBoundary: 'full_document',
+                        score: 0.65,
+                    },
+                ],
+                sourceDecisions: [],
+                totalCharCount: 240,
+                tokenEstimate: 60,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-09-01T00:00:00.000Z',
+                status: 'sufficient',
+                score: 0.95,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+        });
+
+        expect(reply.answer).toContain('非晶冰（Amorphous ice）是水的一种固态形式');
+        expect(reply.answer).toContain('$g(r)$');
+        expect(reply.answer).toContain('$$');
+        expect(reply.answer).not.toContain('###');
+        expect(reply.answer).not.toContain('常见用例与性能指标');
+        expect(reply.answer).not.toContain('关键技术规格');
+        expect(reply.answer).not.toContain('$T_g$');
+        expect(reply.answer).not.toContain('本节介绍');
+        expect(reply.answer).not.toContain('水杯');
+        expect((reply.answer.match(/\\frac\{V\}\{N\^2\}/gu) || [])).toHaveLength(1);
+    });
+
+    test('compound definition release stays bounded when the RAG pack contains a full document', () => {
+        const sourcePath = 'Knowledge_Base/waterglass/Amorphous ice.md';
+        const documentText = [
+            '## 非晶冰',
+            '非晶冰（Amorphous ice）是水的一种固态形式，其分子排列缺乏晶体冰的长程有序结构。',
+            '### 核心概念与数学基础',
+            '其结构可用径向分布函数 $g(r)$ 描述。',
+            '$$ g(r) = \\frac{V}{N^2} \\left\\langle \\sum_{i=1}^{N} \\delta(r) \\right\\rangle $$',
+            '#### 4. 热力学：热量传递',
+            '系统内部的温度场由热传导方程描述。',
+            '### 常见用例与性能指标',
+            '非晶冰可用于冷冻电子显微镜和天体物理学研究。',
+            '### 关键技术规格',
+            '不同密度和制备方法会形成不同形态。',
+            '### 相关技术与比较数学模型',
+            '```mermaid\ngraph LR\nA[非晶冰] --> B[晶体冰]\n```',
+        ].join('\n');
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_full_document_amorphous_ice',
+                documentId: 'doc_full_document_amorphous_ice',
+                title: '非晶冰',
+                sourcePath,
+                content: documentText,
+                keywords: ['非晶冰', 'amorphous', 'ice'],
+            },
+            evidence: {
+                id: 'evidence_full_document_amorphous_ice',
+                sourcePath,
+                snippet: documentText,
+                startLine: 1,
+                endLine: 12,
+            },
+            score: 0.98,
+        });
+        const points = mergeAgentConversationKnowledgePoints([item], () => []);
+        const reply = buildScopedConversationReply({
+            message: '什么是非晶冰？我应该通过哪些知识点学习？',
+            answerLanguage: 'zh',
+            knowledgePoints: points,
+            citations: points[0]?.citations || [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-09-01T00:20:00.000Z',
+            nextBlockId: (() => {
+                let index = 0;
+                return () => `full_document_compound_block_${++index}`;
+            })(),
+            ragContextPack: {
+                query: '什么是非晶冰？我应该通过哪些知识点学习？',
+                generatedAt: '2026-09-01T00:20:00.000Z',
+                sourceBoundary: 'full_document',
+                budget: { maxFragments: 4, maxCharsPerFragment: 1600, maxTotalChars: 5000 },
+                fragments: [
+                    {
+                        fragmentId: 'rag_full_document_amorphous_ice',
+                        role: 'direct_support',
+                        atomId: 'atom_full_document_amorphous_ice',
+                        documentId: 'doc_full_document_amorphous_ice',
+                        sourcePath,
+                        title: '非晶冰',
+                        headingPath: ['非晶冰'],
+                        text: documentText,
+                        startLine: 1,
+                        endLine: 12,
+                        charCount: documentText.length,
+                        tokenEstimate: 180,
+                        truncated: false,
+                        citationIds: ['evidence_full_document_amorphous_ice'],
+                        relationEdgeIds: [],
+                        sourceBoundary: 'full_document',
+                        score: 0.98,
+                    },
+                    {
+                        fragmentId: 'rag_full_document_amorphous_ice_duplicate_formula',
+                        role: 'parent_context',
+                        atomId: 'atom_full_document_amorphous_ice',
+                        documentId: 'doc_full_document_amorphous_ice',
+                        sourcePath,
+                        title: '核心概念与数学基础',
+                        headingPath: ['非晶冰', '核心概念与数学基础'],
+                        text: '核心概念重复说明：$$ g(r) = \\frac{V}{N^2} \\left\\langle \\sum_{i=1}^{N} \\delta(r) \\right\\rangle $$。',
+                        startLine: 4,
+                        endLine: 5,
+                        charCount: 110,
+                        tokenEstimate: 28,
+                        truncated: false,
+                        citationIds: ['evidence_full_document_amorphous_ice'],
+                        relationEdgeIds: [],
+                        sourceBoundary: 'full_document',
+                        score: 0.7,
+                    },
+                ],
+                sourceDecisions: [],
+                totalCharCount: documentText.length + 110,
+                tokenEstimate: 208,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-09-01T00:20:00.000Z',
+                status: 'sufficient',
+                score: 0.95,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+        });
+
+        expect(reply.answer).toContain('非晶冰（Amorphous ice）是水的一种固态形式');
+        expect(reply.answer).toContain('g(r)');
+        expect(reply.answer).toContain('$$');
+        expect(reply.answer).not.toContain('常见用例与性能指标');
+        expect(reply.answer).not.toContain('关键技术规格');
+        expect(reply.answer).not.toContain('相关技术与比较数学模型');
+        expect(reply.answer).not.toContain('```mermaid');
+        expect(reply.answer).not.toMatch(/(?:^|\\s)\\d+\\.?(?:\\s|$)/u);
+        expect((reply.answer.match(/\\frac\{V\}\{N\^2\}/gu) || [])).toHaveLength(1);
+        expect(reply.answer.length).toBeLessThan(900);
+    });
+
+    test('simple definition release keeps complete core formulas without expanding into later sections', () => {
+        const sourcePath = 'Knowledge_Base/waterglass/water glass.md';
+        const documentText = [
+            '## 水杯 (water glass)',
+            '此处的“水杯”被定义为一个由水和透明玻璃容器组成的物理系统。',
+            '### 核心概念及其数学基础',
+            '系统内部温度由热传导方程描述： $$ \\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T $$。',
+            '当光线穿过空气、玻璃和水时会发生折射，满足斯涅尔定律： $$ n_1\\sin(\\theta_1)=n_2\\sin(\\theta_2) $$。',
+            '### 常见用例与量化性能指标',
+            '静水压力可以用 P = rho g h 估算。',
+            '### 相关技术与比较数学模型',
+            '```mermaid\ngraph LR\nA[水杯] --> B[塑料杯]\n```',
+        ].join('\n');
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_full_document_water_glass',
+                documentId: 'doc_full_document_water_glass',
+                title: '水杯 (water glass)',
+                sourcePath,
+                content: documentText,
+                keywords: ['水杯', 'water', 'glass'],
+            },
+            evidence: {
+                id: 'evidence_full_document_water_glass',
+                sourcePath,
+                snippet: documentText,
+                startLine: 1,
+                endLine: 9,
+            },
+            score: 0.98,
+        });
+        const points = mergeAgentConversationKnowledgePoints([item], () => []);
+        const reply = buildScopedConversationReply({
+            message: '什么是waterglass?',
+            answerLanguage: 'zh',
+            knowledgePoints: points,
+            citations: points[0]?.citations || [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-09-01T00:30:00.000Z',
+            nextBlockId: (() => {
+                let index = 0;
+                return () => `simple_full_document_block_${++index}`;
+            })(),
+            ragContextPack: {
+                query: '什么是waterglass?',
+                generatedAt: '2026-09-01T00:30:00.000Z',
+                sourceBoundary: 'full_document',
+                budget: { maxFragments: 2, maxCharsPerFragment: 1800, maxTotalChars: 3600 },
+                fragments: [{
+                    fragmentId: 'rag_full_document_water_glass',
+                    role: 'direct_support',
+                    atomId: 'atom_full_document_water_glass',
+                    documentId: 'doc_full_document_water_glass',
+                    sourcePath,
+                    title: '水杯 (water glass)',
+                    headingPath: ['水杯 (water glass)'],
+                    text: documentText,
+                    startLine: 1,
+                    endLine: 9,
+                    charCount: documentText.length,
+                    tokenEstimate: 160,
+                    truncated: false,
+                    citationIds: ['evidence_full_document_water_glass'],
+                    relationEdgeIds: [],
+                    sourceBoundary: 'full_document',
+                    score: 0.98,
+                }],
+                sourceDecisions: [],
+                totalCharCount: documentText.length,
+                tokenEstimate: 160,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-09-01T00:30:00.000Z',
+                status: 'sufficient',
+                score: 0.95,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+        });
+
+        expect(reply.answer).toContain('水杯');
+        expect(reply.answer).toContain('\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T');
+        expect(reply.answer).toContain('n_1\\sin(\\theta_1)=n_2\\sin(\\theta_2)');
+        expect(reply.answer).not.toContain('常见用例与量化性能指标');
+        expect(reply.answer).not.toContain('相关技术与比较数学模型');
+        expect(reply.answer).not.toContain('```mermaid');
+        expect((reply.answer.match(/\\frac\{\\partial T\}\{\\partial t\}=\\alpha\\nabla\^2 T/gu) || [])).toHaveLength(1);
+        expect((reply.answer.match(/n_1\\sin\(\\theta_1\)=n_2\\sin\(\\theta_2\)/gu) || [])).toHaveLength(1);
+        expect(reply.answer.length).toBeLessThan(900);
     });
 
     test('uses the explicit answer language for grounded and deferred action text', () => {

@@ -344,6 +344,23 @@ export interface KnowledgeQueryResolvedScope {
     };
 }
 
+/**
+ * Compact source identity exposed to filesystem hydration boundaries.
+ * Content is intentionally omitted so mobile callers can reconcile paths and
+ * revisions without copying whole documents over the transport.
+ */
+export interface KnowledgeSourceInventoryItem {
+    documentId: string;
+    sourcePath: string;
+    revision: string;
+}
+
+export interface KnowledgeSourceInventory {
+    documentCount: number;
+    sourcePaths: string[];
+    items: KnowledgeSourceInventoryItem[];
+}
+
 export interface KnowledgeQueryModeWeights {
     keyword: number;
     graph: number;
@@ -1522,6 +1539,7 @@ export type AnswerReleaseGateId =
     | 'graph_support_sufficiency'
     | 'claim_grounding_alignment'
     | 'query_intent_alignment'
+    | 'query_subject_alignment'
     | 'claim_structured_consistency'
     | 'claim_structured_comparison_consistency'
     | 'claim_attribute_consistency'

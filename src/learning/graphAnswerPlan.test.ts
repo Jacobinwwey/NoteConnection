@@ -560,6 +560,69 @@ describe('buildGraphAnswerPlan', () => {
         ]));
     });
 
+    test('retains both operand claims when one side has only a two-token branch match', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'compare temporal current release source with temporal planned roadmap source',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                query: 'compare temporal current release source with temporal planned roadmap source',
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'planned_release_date',
+                        role: 'direct_support',
+                        atomId: 'planned_release_date',
+                        sourcePath: 'Knowledge_Base/test/temporal-planned.md',
+                        title: 'Temporal Planned Roadmap Source',
+                        text: 'Temporal planned roadmap source records that the migration release date is 2026-09-20 in the planned rollout draft.',
+                        score: 0.94,
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'current_release_date',
+                        role: 'direct_support',
+                        atomId: 'current_release_date',
+                        sourcePath: 'Knowledge_Base/test/temporal-current.md',
+                        title: 'Temporal Current Release Source',
+                        text: 'Temporal current release source records that the migration release date is 2026-08-15 in the current release record.',
+                        score: 0.93,
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'current_retry_limit',
+                        role: 'direct_support',
+                        atomId: 'current_retry_limit',
+                        sourcePath: 'Knowledge_Base/test/temporal-current-retry.md',
+                        title: 'Temporal Current Retry Limit Source',
+                        text: 'Temporal current retry limit source records that the retry limit is 3 in the current release record.',
+                        score: 0.92,
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'historical_retry_limit',
+                        role: 'direct_support',
+                        atomId: 'historical_retry_limit',
+                        sourcePath: 'Knowledge_Base/test/temporal-history.md',
+                        title: 'Temporal Historical Retry Limit Source',
+                        text: 'Temporal historical retry limit source records that the retry limit is 5 in the historical rollback archive.',
+                        score: 0.9,
+                    },
+                ],
+            },
+        });
+
+        expect(plan.claims.map((claim) => claim.statement)).toEqual(expect.arrayContaining([
+            'Temporal planned roadmap source records that the migration release date is 2026-09-20 in the planned rollout draft.',
+            'Temporal current release source records that the migration release date is 2026-08-15 in the current release record.',
+        ]));
+        expect(plan.claims.map((claim) => claim.statement)).not.toEqual(expect.arrayContaining([
+            'Temporal current retry limit source records that the retry limit is 3 in the current release record.',
+            'Temporal historical retry limit source records that the retry limit is 5 in the historical rollback archive.',
+        ]));
+    });
+
     test('retains comparison branches made only of one-character labels', () => {
         const plan = buildGraphAnswerPlan({
             message: 'compare A with B',
@@ -659,6 +722,29 @@ describe('buildGraphAnswerPlan', () => {
         expect(plan.claims[0].statement).toBe('当光线穿过空气、玻璃和水时会发生折射。');
     });
 
+    test('does not promote a numeric section marker into a definition claim', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'what is water glass',
+            knowledgePoints: [{
+                ...knowledgePoint,
+                matchedSpans: [{
+                    atomId: 'thermal_section',
+                    title: '4. Thermodynamics: Heat Transfer',
+                    snippet: '#### 4. Thermodynamics: Heat Transfer. The temperature field changes through heat conduction.',
+                    sourcePath: 'Knowledge_Base/waterglass/thermal.md',
+                    score: 0.9,
+                    citation: null,
+                }],
+            }],
+            graphContext,
+        });
+
+        expect(plan.claims.map((claim) => claim.statement)).not.toContain('4.');
+        expect(plan.claims.map((claim) => claim.statement)).toContain(
+            'The temperature field changes through heat conduction.'
+        );
+    });
+
     test('turns multilingual comparison prose into a required contrast claim', () => {
         const plan = buildGraphAnswerPlan({
             message: 'compare water glass and plastic cup',
@@ -733,5 +819,63 @@ describe('buildGraphAnswerPlan', () => {
             statement: 'PET塑料杯的热损失速率大约是玻璃杯的1/5。',
         }));
         expect(plan.claims.some((claim) => claim.statement.includes('消色差透镜'))).toBe(false);
+    });
+
+    test('drops full-document comparison scaffolding while retaining remote facts for both operands', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'compare nominal date full scan source with field date full scan source',
+            knowledgePoints: [knowledgePoint],
+            graphContext,
+            ragContextPack: {
+                ...ragContextPack,
+                query: 'compare nominal date full scan source with field date full scan source',
+                fragments: [
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'nominal_full_document',
+                        role: 'direct_support',
+                        atomId: 'nominal_date',
+                        sourcePath: 'Knowledge_Base/test/nominal-date.md',
+                        title: 'Nominal Date Full Scan Source',
+                        text: 'Nominal date full scan source is the scoped comparison document for full-document release-date augmentation. This opening section is intentionally separate from the remote release-date statement. Local date filler paragraph one keeps the remote appendix away from the matched opening span.',
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'field_full_document',
+                        role: 'direct_support',
+                        atomId: 'field_date',
+                        sourcePath: 'Knowledge_Base/test/field-date.md',
+                        title: 'Field Date Full Scan Source',
+                        text: 'Field date full scan source is the scoped comparison document for full-document release-date augmentation. This opening section is intentionally separate from the remote release-date statement. Local date filler paragraph one keeps the remote appendix away from the matched opening span.',
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'nominal_remote_date',
+                        role: 'direct_support',
+                        atomId: 'nominal_remote_date',
+                        sourcePath: 'Knowledge_Base/test/nominal-date.md',
+                        title: 'Remote Nominal Date Appendix',
+                        text: 'The migration release date is 2026-07-01 in the remote nominal date appendix.',
+                    },
+                    {
+                        ...ragContextPack.fragments[0],
+                        fragmentId: 'field_remote_date',
+                        role: 'direct_support',
+                        atomId: 'field_remote_date',
+                        sourcePath: 'Knowledge_Base/test/field-date.md',
+                        title: 'Remote Field Date Appendix',
+                        text: 'The migration release date is 2026-08-15 in the remote field date appendix.',
+                    },
+                ],
+            },
+        });
+
+        const statements = plan.claims.map((claim) => claim.statement);
+        expect(statements).toEqual(expect.arrayContaining([
+            'The migration release date is 2026-07-01 in the remote nominal date appendix.',
+            'The migration release date is 2026-08-15 in the remote field date appendix.',
+        ]));
+        expect(statements.join(' ')).not.toContain('filler paragraph');
+        expect(statements.join(' ')).not.toContain('scoped comparison document');
     });
 });

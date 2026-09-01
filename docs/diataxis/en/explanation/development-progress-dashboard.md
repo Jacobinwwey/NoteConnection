@@ -11,6 +11,20 @@ The fresh run exercised a temporary server, temporary runtime data, and a tempor
 
 The host still has no online Android target (`adb devices -l` is empty). Mobile-slim verification therefore remains build/contract/staging evidence only: `122` files, `4,292,745` uncompressed bytes, and an estimated `1,554,525` compressed bytes under the 25 MiB budget. Peak RSS, signed arm64 APK/AAB installation, SAF workload, and force-stop/reopen continuity are not measured and must not be reported as device acceptance. The user's existing NoteConnection process was left untouched; the browser probe used an isolated runtime.
 
+## 2026-09-02 Waterglass Release Boundary and Real Browser Verification
+
+The remaining `waterglass` defect was traced through the fresh sidecar runtime instead of inferred from unit tests. Full-document retrieval was intact; the failure was in public-plan selection. A definition plan with one thermal equation, one optical equation, and several variable glossary claims selected the glossary before the second independent equation. The public answer therefore carried correct math but the wrong evidence shape.
+
+`answerReleaseReview.ts` now treats complete equation contexts as first-class definition evidence. In the full-document definition boundary it keeps the lead definition and at most two distinct complete equation contexts, suppresses standalone variable definitions unless no contextual equation exists, and leaves the audit plan/RAG fragments untouched. This is an additive release-layer change: graph IDs, response fields, mobile payloads, and internal trace semantics remain compatible.
+
+The browser verifier also had a real fixture bug. API ingest alone created an indexed document that did not exist on disk; the conversation hydration guard correctly reconciled it as stale and deleted it. The fixture now creates the matching Markdown file before server startup, then performs API ingest and waits for the actual folder/scope hydration path.
+
+Fresh isolated Chrome acceptance passed against verified CDP `127.0.0.1:9223`: one structured answer, four KaTeX nodes, complete thermal and Snell-law TeX annotations, zero raw `$` delimiters, no hidden context/run/action leakage, and collapsed Next Actions. The old opened NoteConnection WebView still has no usable WebView2 CDP endpoint, so exact-process DOM acceptance remains explicitly unclaimed. Native Android signing, SAF workload, process-death continuity, and RSS gates remain separate.
+
+The follow-up full-document comparison regression is now closed at the planning boundary. `graphAnswerPlan.ts` drops retrieval scaffolding such as filler/opening/augmentation prose while retaining the decision-bearing fact for each requested operand; `answerReleaseReview.ts` treats generated partial-coverage and graph-path notices as metadata rather than unsupported source claims. This keeps conflict facts and graph consistency checks intact without widening the public answer surface. The focused reproducer, all `100/100` Knowledge Workspace regression cases, and the full Jest run (`154` suites, `1342` passed, `26` skipped) pass after the change.
+
+CI-equivalent verification completed locally: production/Vite build, strict WASM parity and benchmark guards, Tauri Rust (`30` passed, `1` ignored), mobile contracts (`9` suites, `51` passed), route registry, agent-workspace contracts/runtime, SBOM/attestation/sidecar/license/PathBridge policies, Diataxis and MkDocs, full `55`-group/`92`-case runtime acceptance, mobile projection replay (`4` hosts), native recovery (`8` scenarios), Android prerequisites, and isolated Chrome/KaTeX E2E. Mobile-slim remains `4,292,745` uncompressed bytes and `1,554,525` estimated compressed bytes under the 25 MiB budget; native signed artifact, device RSS, SAF workload, and force-stop continuity are still unmeasured.
+
 ## 2026-08-24 Agent Answer Surface and Language-Contract Closure
 
 The prior incident closure proved that a rebuilt backend could contract a Water Glass answer, but it did not prove the complete browser interaction. A new isolated server plus Chrome CDP probe exercised the actual `POST /api/knowledge/conversation` SSE path, the live structured-answer DOM, KaTeX, collapse interaction, and a software-language switch. The probe confirmed one visible structured-answer card, a rendered KaTeX subtree, no visible raw `$...$` / `$$...$$` delimiters, no mounted `Answer Context`, `Explanation`, or `Evidence Summary` sections, a collapsed `Next Actions` control before click, and an expanded panel with matching accessible state after click. The evidence screenshot and server logs are intentionally external verification artifacts, not checked-in product assets.
@@ -1980,3 +1994,20 @@ Run G1 registry shadow parity, G2 fresh mobile artifact/RSS evidence, G3 version
 - `mobile:build:compatibility` names the historical Capacitor-plus-Tauri check; `mobile:build:both` remains for backward compatibility.
 - The release alias has no Capacitor dependency. No runtime, schema, public-ID, or payload change was made.
 - Regression verification is 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit, Tauri Rust 30 passed / 1 ignored, Fixrisk FR-001..FR-015, Diataxis, and `git diff --check` passed.
+## 2026-09-01 Live Agent Workspace Re-audit: Subject Alignment and Runtime Evidence
+
+The current sidecar was tested with the user-reported compound query `什么是非晶冰？我应该通过哪些知识点学习？`. The opened WebView2 process did not expose its configured CDP port, so this dashboard deliberately separates exact-process evidence from isolated browser evidence. A token-authenticated sidecar request was accepted, while an unauthenticated request returned `401`; the compound conversation probe then exceeded 50 seconds and showed transient multi-gigabyte RSS growth before the client was aborted. This is evidence of a runtime-budget risk, not proof of a specific allocator defect.
+
+The first correctness fix is now landed: `answerReleaseReview.ts` evaluates a deterministic `query_subject_alignment` gate for definition-shaped queries. It extracts the requested subject, compares it against evidence titles/qualified headings, and fails closed when only an unrelated entity (for example `Water Glass`) is grounded. The public response schema, RAG trace fields, Tauri/Android transport, and mobile dependency graph remain unchanged. The regression corpus now includes both the wrong-entity hard negative and positive controls, and fresh Jest/build verification is green for the touched learning path.
+
+Progress calls:
+
+| Area | Current evidence | Status |
+| --- | --- | --- |
+| Wrong-entity release | `query_subject_alignment` is a hard abstention gate; platform regression covers `非晶冰 -> 水杯` drift | Closed for this failure class |
+| Formula rendering | Existing isolated browser verifier observed KaTeX DOM nodes and zero raw delimiters for the formula fixture | Renderer path verified; exact user process unverified |
+| Compound-query planning | No typed subquestion contract yet; definition and learning-path intent still share the legacy deterministic composer | Open |
+| Runtime budget | Live probe exceeded 50 s with transient multi-GB RSS | Open, requires bounded execution telemetry and planner work |
+| Mobile impact | Fix adds no dependency and keeps public fields additive | Preserved |
+
+The next implementation boundary is a typed query contract and subquestion coverage model. Retrieval rank must remain separate from subject identity, and learning-path neighbors must be role-tagged prerequisites/sequences rather than promoted as answer subjects. Until that work lands, absence of direct target evidence must continue to produce abstention or clarification instead of nearest-neighbor substitution.

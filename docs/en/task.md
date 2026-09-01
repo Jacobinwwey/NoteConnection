@@ -2,6 +2,28 @@
 
 ## English Document
 
+### 2026-09-02 Waterglass Release Boundary and Browser E2E Closure
+
+- [x] Reproduced the remaining `waterglass` quality failure through the real sidecar path. The 214-document full-document pack was not truncated in transport; its public projection selected a thermal variable glossary before the independent optical equation, which made a definition answer appear incomplete or over-expanded.
+- [x] Added a failing release-review regression for full-document definition plans, then changed `answerReleaseReview.ts` to prefer distinct complete equation contexts, cap them at two per definition answer, and treat standalone variable definitions as fallback evidence. Chapter markers, application/specification/comparison prose, Mermaid artifacts, and standalone `$x$ is ...` glossary claims no longer displace core definition/formula evidence.
+- [x] Preserved the internal audit plan and RAG trace. The public plan remains additive and backward-compatible; the current 214-file `什么是waterglass?` runtime now releases one definition plus complete thermal and Snell-law contexts (284 characters), each formula appearing once.
+- [x] Fixed the browser verifier fixture at the actual state boundary: API-only ingest was followed by stale-source reconciliation because the temporary filesystem scope had no matching Markdown file. The fixture now creates the `waterglass` directory and source file before startup, then performs the same API ingest and waits for real scope hydration.
+- [x] Fresh isolated Chrome E2E passed against verified CDP `127.0.0.1:9223`: `katexCount=4`, both thermal and optical TeX annotations present, raw delimiter count `0`, one visible structured answer, no leaked Knowledge Run/Knowledge Actions sections, and `Next Actions` initially `aria-expanded=false`. Evidence: `output/browser-research/agent-answer-formula-render-latest.json` and its PNG.
+- [x] Verification passed: `answerReleaseReview` 72/72, TypeScript compile, 214-file runtime probe, and browser/KaTeX probe. The original opened NoteConnection WebView still exposes no usable WebView2 CDP endpoint, so this does not claim DOM acceptance for that exact old process; restart it from the rebuilt artifacts for operator confirmation.
+- [x] Closed the follow-up full-document comparison regression: comparison planning now removes opening/filler/augmentation scaffolding while retaining both operand facts, and release review ignores generated partial-coverage/graph-path notices for citation scoring. Full Workspace regression passed `100/100`; full Jest passed `154` suites (`1342` passed, `26` skipped).
+- [x] Completed local CI-equivalent gates: production/Vite build, strict WASM benchmark, Tauri Rust, mobile contracts, route/agent-workspace contracts, SBOM/attestation/sidecar/license/PathBridge policies, docs site, `55`-group/`92`-case runtime acceptance, mobile projection replay, native recovery, Android prerequisites, and isolated Chrome E2E.
+- [ ] Continue the separate native-device gates: signed arm64 Android install, SAF import/query workload, force-stop/reopen continuity, and RSS measurement remain unclosed and must not be inferred from this browser fixture.
+
+### 2026-09-01 Live Agent Workspace Drift Re-audit
+
+- [x] Reproduced the reported failure shape against the current sidecar pipeline: a compound definition/learning-path query could be released with evidence for an unrelated graph anchor.
+- [x] Added deterministic `query_subject_alignment` release gating in `src/learning/answerReleaseReview.ts`; exact/qualified evidence titles must establish the requested definition subject before a public answer plan is retained.
+- [x] Wrong-entity grounded drafts now fail closed to a user-facing abstention and cannot be repaired by graph-neighbor or RAG evidence expansion. The response schema remains additive and mobile payload dependencies are unchanged.
+- [x] Added unit and platform regressions for `什么是非晶冰？我应该通过哪些知识点学习？` with only adjacent `Water Glass` evidence, plus positive controls for definition, composition, purpose, and prerequisite queries.
+- [x] Fresh verification passed the release-review suite (71 tests), conversation-composer suite (19 tests), platform suite (48 tests), and TypeScript production build.
+- [ ] Live-process limitation remains explicit: the opened WebView2 instance did not expose the configured CDP port, so DOM-level proof for that exact process is not claimed. The isolated browser verifier still proves the renderer can produce KaTeX nodes for the existing formula fixture.
+- [ ] The live sidecar probe also observed a compound conversation request exceeding 50 seconds and transient multi-gigabyte RSS growth. This is a separate runtime-budget issue; it requires bounded execution telemetry and a dedicated compound-query planner before being marked closed.
+
 ### 2026-06-19 Re-audit Correction
 
 - [x] A fresh code audit confirms that the final public-answer reviewer is already implemented in `src/learning/answerReleaseReview.ts`; the active gap is no longer "missing release-review ownership".

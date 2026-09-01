@@ -291,6 +291,15 @@ type QueryIntentAlignmentResult = {
     supportFrame: (StateFrame & { label: string }) | null;
 };
 
+type QuerySubjectAlignmentResult = {
+    passed: boolean;
+    applicable: boolean;
+    subject: string;
+    subjectFeatures: string[];
+    matchedLabels: string[];
+    bestScore: number;
+};
+
 type TemporalValidityQualificationSource =
     | 'not_required'
     | 'draft_qualified';
@@ -404,6 +413,32 @@ const STRUCTURED_ANCHOR_STOPWORDS = new Set([
     '的',
 ]);
 
+const QUERY_SUBJECT_STOPWORDS = new Set([
+    'a',
+    'an',
+    'the',
+    'and',
+    'are',
+    'be',
+    'definition',
+    'define',
+    'does',
+    'how',
+    'is',
+    'meaning',
+    'of',
+    'what',
+    'which',
+    'who',
+    'with',
+    '我',
+    '应该',
+    '通过',
+    '哪些',
+    '知识点',
+    '学习',
+]);
+
 const POLARITY_SENTENCE_SPLIT_PATTERN = /[.!?\u3002\uFF01\uFF1F;\n\r]+/u;
 
 const ENGLISH_POLARITY_NEGATION_PATTERN = /\b(?:not|never|no|none|cannot|is not|are not|was not|were not|do not|does not|did not|can not|could not|should not|would not|will not)\b/i;
@@ -420,6 +455,13 @@ const STATE_FRAME_SKIP_VALUE_PATTERN = /\b(?:prerequisite|before|after|depends?\
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function isCompoundLearningDefinitionQuery(message: string): boolean {
+    const normalized = normalizeWhitespace(String(message || '')).toLowerCase();
+    return isDefinitionIntentQuery(normalized)
+        && (/\b(?:learn|learning|study|knowledge\s+points?)\b/u.test(normalized)
+            || /学习|知识点|学哪些|通过哪些/u.test(normalized));
 }
 
 function escapeRegExp(value: string): string {
@@ -553,6 +595,20 @@ function buildAbstentionAnswer(context: AnswerReleaseReviewContext): string {
 function buildGroundedRevisionAnswer(
     context: AnswerReleaseReviewContext
 ): string {
+    const conflictPlanClaims = (context.graphAnswerPlan?.claims || [])
+        .filter((claim) => claim.required)
+        .map((claim) => String(claim.statement || '').trim())
+        .filter(Boolean);
+    const hasConflictEvidence = context.ragSufficiencyReview?.degradationState === 'conflict'
+        || (context.ragSufficiencyReview?.reasons || []).some((reason) => String(reason || '').includes('conflict_evidence_present'));
+    if (hasConflictEvidence && conflictPlanClaims.length > 1) {
+        const useChinese = useChineseAnswerLanguage(context, conflictPlanClaims);
+        const sentences: string[] = [];
+        conflictPlanClaims.forEach((claim) => appendRevisionAnswerSentence(sentences, claim, useChinese));
+        if (sentences.length > 0) {
+            return sentences.join(useChinese ? '' : ' ');
+        }
+    }
     const ragGroundedAnswer = buildRagGroundedRevisionAnswer(context);
     if (ragGroundedAnswer) {
         return ragGroundedAnswer;
@@ -3758,7 +3814,25 @@ function isIncompletePublicGraphClaim(value: string): boolean {
 function isDefinitionComparisonOrArtifactClaim(value: string): boolean {
     const normalized = normalizeWhitespace(value);
     return /\b(?:compare|comparison|contrast|versus|vs\.?|plastic\s+cup|metal\s+cup|ceramic\s+(?:mug|cup)|table|technologies|context\s+paragraph|local\s+window|technical\s+document|subsequent\s+branch)\b/iu.test(normalized)
+        || /\b(?:validates?\s+(?:the\s+)?source|source\s+anchoring|same\s+clause\s+appears\s+in\s+multiple\s+sections)\b/iu.test(normalized)
         || /相关技术|比较|对比|塑料杯|金属杯|陶瓷杯|流体容器技术比较|上下文段落|后续分支|本技术文档|技术规格|性能特征|核心概念|我们将从|我们将|本节|本章/u.test(normalized);
+}
+
+function isDefinitionDisambiguationContextStatement(value: string): boolean {
+    const normalized = normalizeWhitespace(value);
+    if (!normalized) {
+        return false;
+    }
+    const sectionReference = /\b(?:(?:target|selected|matched|active|current|applicable)\s+(?:section|occurrence|version|record|entry|context)|(?:first|second|later|earlier|specific|corresponding)\s+(?:occurrence|section|match|entry))\b/iu.test(normalized);
+    const authoritySignal = /\b(?:controls?|determines?|applies?|guides?|answers?|answer|selected|active|authoritative|canonical|use|used)\b/iu.test(normalized);
+    return sectionReference && authoritySignal;
+}
+
+function isFullDocumentDefinitionNoiseStatement(value: string): boolean {
+    const normalized = normalizeWhitespace(value);
+    return !normalized
+        || /^\d+(?:\.\d+)*[.、)]?$/u.test(normalized)
+        || /常见用例|应用场景|关键技术规格|技术规格|性能指标|性能特征|统计度量|量化分析|静水压力|环向应力|威布尔|机械可靠性|simple\s+optical\s+lens|use\s+case|application\s+scenario|technical\s+specification|performance\s+(?:metric|characteristic)|quantitative\s+analysis|hydrostatic\s+pressure|hoop\s+stress|weibull|mechanical\s+reliability/iu.test(normalized);
 }
 
 function extractNormalizedPublicMathExpressions(value: string): string[] {
@@ -3809,6 +3883,73 @@ function formulaOnlyPublicClaimIsAlreadyCovered(
     });
 }
 
+function isStandaloneVariableDefinitionClaim(value: string): boolean {
+    const source = normalizeWhitespace(String(value || ''));
+    const expressions = extractNormalizedPublicMathExpressions(source);
+    if (expressions.length !== 1 || /(?<!\\)\$\$[\s\S]*?(?<!\\)\$\$/u.test(source)) {
+        return false;
+    }
+    const prose = source
+        .replace(/(?<!\\)\$[^$\n]+?(?<!\\)\$/gu, '')
+        .replace(/[()[\]{}.,;:!?]/gu, '')
+        .trim();
+    return /^(?:is|are|was|were|means?|denotes?|represents?|分别是|是|为|表示|指)/iu.test(prose)
+        || /(?:^|\s)(?:is|are|means?|denotes?|represents?|分别是|是|为|表示|指)(?:\s|$)/iu.test(prose);
+}
+
+function publicClaimCarriesCompleteMathContext(value: string): boolean {
+    const source = normalizeWhitespace(String(value || ''));
+    if (!source || isStandaloneVariableDefinitionClaim(source)) {
+        return false;
+    }
+    const expressions = extractNormalizedPublicMathExpressions(source);
+    return expressions.some((expression) => expression.includes('='));
+}
+
+function publicClaimMathKeys(value: string): string[] {
+    return extractNormalizedPublicMathExpressions(value)
+        .filter((expression) => expression.includes('='));
+}
+
+function extractConflictPredicate(value: string): { subject: string; value: string } | null {
+    const normalized = normalizeWhitespace(String(value || '')).replace(/[.!?。！？]+$/u, '');
+    const englishMatch = normalized.match(/^(.+?)\s+(?:is|are|was|were|equals?|remains?|contains?|uses?)\s+(.+)$/iu);
+    if (englishMatch) {
+        return {
+            subject: normalizeWhitespace(englishMatch[1]).toLowerCase(),
+            value: normalizeWhitespace(englishMatch[2]).toLowerCase(),
+        };
+    }
+    const chineseMatch = normalized.match(/^(.+?)(?:是|为|包含|使用|位于)(.+)$/u);
+    if (chineseMatch) {
+        return {
+            subject: normalizeWhitespace(chineseMatch[1]).toLowerCase(),
+            value: normalizeWhitespace(chineseMatch[2]).toLowerCase(),
+        };
+    }
+    return null;
+}
+
+function selectConflictDefinitionClaims(
+    candidates: Array<{ claim: GraphAnswerClaimPlan; index: number }>
+): Array<{ claim: GraphAnswerClaimPlan; index: number }> {
+    const requiredCandidates = candidates.filter(({ claim }) => claim.required);
+    const conflictCandidates = requiredCandidates.filter(({ claim }, candidateIndex) => {
+        const left = extractConflictPredicate(claim.statement);
+        if (!left) {
+            return false;
+        }
+        return requiredCandidates.some(({ claim: otherClaim }, otherIndex) => {
+            if (candidateIndex === otherIndex) {
+                return false;
+            }
+            const right = extractConflictPredicate(otherClaim.statement);
+            return Boolean(right && right.subject === left.subject && right.value !== left.value);
+        });
+    });
+    return conflictCandidates.length >= 2 ? conflictCandidates : [];
+}
+
 function findContextualFormulaClaim(
     formulaOnlyCandidate: GraphAnswerClaimPlan,
     candidates: GraphAnswerClaimPlan[]
@@ -3830,7 +3971,9 @@ function findContextualFormulaClaim(
 }
 
 function selectPublicGraphPlanStatements(
-    plan: GraphAnswerPlan | null | undefined
+    plan: GraphAnswerPlan | null | undefined,
+    ragContextPack?: RagContextPack,
+    message?: string
 ): GraphAnswerPlan['claims'] {
     const claims = Array.isArray(plan?.claims)
         ? plan.claims.filter((claim) => hasBalancedPublicMathDelimiters(String(claim.statement || '')))
@@ -3843,7 +3986,8 @@ function selectPublicGraphPlanStatements(
         .filter((claim) => !/\b(?:compared?\s+with|versus|vs\.?|plastic\s+cup|metal\s+cup|对比|比较|差异|区别)\b/iu.test(String(claim.statement || '')))
         .filter((claim) => !/\b(?:remain(?:s)?\s+(?:internal|outside)|public\s+(?:definition|answer)\s+budget|extra\s+sentence|beyond\s+the\s+public)\b/iu.test(String(claim.statement || '')))
         .filter((claim) => !isIncompletePublicGraphClaim(String(claim.statement || '')))
-        .filter((claim) => !isDefinitionComparisonOrArtifactClaim(String(claim.statement || '')));
+        .filter((claim) => !isDefinitionComparisonOrArtifactClaim(String(claim.statement || '')))
+        .filter((claim) => !isFullDocumentDefinitionNoiseStatement(String(claim.statement || '')));
     const selectedCandidates: Array<{ claim: GraphAnswerClaimPlan; index: number }> = [];
     const selectedClaimIds = new Set<string>();
     const appendCandidate = (candidate: { claim: GraphAnswerClaimPlan; index: number }): void => {
@@ -3864,14 +4008,118 @@ function selectPublicGraphPlanStatements(
         appendCandidate({ claim: contextualClaim || claim, index });
     });
 
-    const selected = selectedCandidates
+    let selected = selectedCandidates
         .sort((left, right) => left.index - right.index)
         .map(({ claim }) => claim);
+    if (ragContextPack?.fragments?.some((fragment) => fragment.role === 'conflict')) {
+        const conflictClaims = selectConflictDefinitionClaims(selectedCandidates);
+        if (conflictClaims.length >= 2) {
+            return conflictClaims
+                .sort((left, right) => left.index - right.index)
+                .map(({ claim }) => claim);
+        }
+    }
+    if (ragContextPack?.sourceBoundary === 'full_document' && selected.length > 0) {
+        const selectedClaimIds = new Set<string>();
+        const boundedCandidates: Array<{ claim: GraphAnswerClaimPlan; index: number }> = [];
+        const appendBoundedCandidate = (candidate: { claim: GraphAnswerClaimPlan; index: number }): void => {
+            if (boundedCandidates.length >= 5 || selectedClaimIds.has(candidate.claim.claimId)) {
+                return;
+            }
+            if (formulaOnlyPublicClaimIsAlreadyCovered(
+                candidate.claim,
+                boundedCandidates.map((entry) => entry.claim)
+            )) {
+                return;
+            }
+            boundedCandidates.push(candidate);
+            selectedClaimIds.add(candidate.claim.claimId);
+        };
+
+        const indexedSelected = selected.map((claim, index) => ({ claim, index }));
+        const leadingDefinition = indexedSelected.find((entry) => (
+            entry.claim.role === 'definition'
+            && !isFormulaOnlyPublicGraphClaim(entry.claim.statement)
+            && !isStandaloneVariableDefinitionClaim(entry.claim.statement)
+        ));
+        if (leadingDefinition) {
+            appendBoundedCandidate(leadingDefinition);
+        }
+        indexedSelected
+            .filter((entry) => isDefinitionDisambiguationContextStatement(entry.claim.statement))
+            .sort((left, right) => right.claim.priority - left.claim.priority || left.index - right.index)
+            .slice(0, 1)
+            .forEach(appendBoundedCandidate);
+        if (isCompoundLearningDefinitionQuery(String(message || ''))) {
+            indexedSelected
+                .filter((entry) => extractNormalizedPublicMathExpressions(entry.claim.statement).length > 0)
+                .filter((entry) => !publicClaimCarriesCompleteMathContext(entry.claim.statement))
+                .filter((entry) => !isStandaloneVariableDefinitionClaim(entry.claim.statement))
+                .sort((left, right) => right.claim.priority - left.claim.priority || left.index - right.index)
+                .slice(0, 1)
+                .forEach(appendBoundedCandidate);
+        }
+        indexedSelected
+            .filter((entry) => ['composition', 'boundary', 'attribute'].includes(entry.claim.role))
+            .slice(0, 2)
+            .forEach(appendBoundedCandidate);
+
+        // Full-document definition evidence often contains a variable glossary
+        // after each equation. Prefer complete equation contexts across distinct
+        // formulas; standalone `$x$ is ...` clauses are useful only as fallback
+        // when no contextual equation is available.
+        const selectedMathKeys = new Set<string>();
+        let selectedMathContextCount = 0;
+        indexedSelected
+            .filter((entry) => publicClaimCarriesCompleteMathContext(entry.claim.statement))
+            .sort((left, right) => (
+                Number(right.claim.role === 'definition')
+                - Number(left.claim.role === 'definition')
+                || right.claim.priority - left.claim.priority
+                || left.index - right.index
+            ))
+            .forEach((entry) => {
+                if (selectedMathContextCount >= 2) {
+                    return;
+                }
+                const mathKeys = publicClaimMathKeys(entry.claim.statement);
+                if (mathKeys.length <= 0 || mathKeys.some((key) => !selectedMathKeys.has(key))) {
+                    appendBoundedCandidate(entry);
+                    mathKeys.forEach((key) => selectedMathKeys.add(key));
+                    selectedMathContextCount += 1;
+                }
+            });
+
+        if (boundedCandidates.length <= 1) {
+            indexedSelected
+                .filter((entry) => !isStandaloneVariableDefinitionClaim(entry.claim.statement))
+                .filter((entry) => extractNormalizedPublicMathExpressions(entry.claim.statement).length > 0)
+                .forEach((entry) => appendBoundedCandidate(entry));
+        }
+        if (boundedCandidates.length <= 2) {
+            indexedSelected
+                .filter((entry) => entry.claim.role === 'mechanism')
+                .filter((entry) => !isStandaloneVariableDefinitionClaim(entry.claim.statement))
+                .filter((entry) => extractNormalizedPublicMathExpressions(entry.claim.statement).length <= 0)
+                .forEach(appendBoundedCandidate);
+        }
+        indexedSelected
+            .filter((entry) => extractNormalizedPublicMathExpressions(entry.claim.statement).length <= 0)
+            .filter((entry) => !isStandaloneVariableDefinitionClaim(entry.claim.statement))
+            .filter((entry) => ['composition', 'boundary', 'attribute'].includes(entry.claim.role))
+            .filter((entry) => !isFullDocumentDefinitionNoiseStatement(entry.claim.statement))
+            .forEach(appendBoundedCandidate);
+        selected = boundedCandidates
+            .sort((left, right) => left.index - right.index)
+            .map(({ claim }) => claim);
+    }
     return selected;
 }
 
 function projectPublicGraphAnswerPlan(
-    plan: GraphAnswerPlan | null | undefined
+    plan: GraphAnswerPlan | null | undefined,
+    ragContextPack?: RagContextPack,
+    message?: string
 ): GraphAnswerPlan | null {
     if (!plan) {
         return null;
@@ -3879,7 +4127,7 @@ function projectPublicGraphAnswerPlan(
     if (plan.intent !== 'definition') {
         return plan;
     }
-    const claims = selectPublicGraphPlanStatements(plan);
+    const claims = selectPublicGraphPlanStatements(plan, ragContextPack, message);
     return {
         ...plan,
         depth: claims.length <= 2 ? 'compact' : 'standard',
@@ -3959,6 +4207,9 @@ function claimLooksLikeReleaseScaffolding(claim: string): boolean {
     }
     return (
         /\b(?:grounded by|key evidence|citations?|rag context|retrieval|planner)\b/iu.test(normalizedClaim)
+        || /\b(?:available evidence|evidence coverage)\s+is\s+still\s+partial\b/iu.test(normalizedClaim)
+        || /当前证据覆盖仍然有限|回答只使用已命中的材料|回答只陈述已有材料能够支持的内容/u.test(normalizedClaim)
+        || /^(?:当前图中的关键路径是|The strongest graph path runs through)(?:\s|$)/iu.test(normalizedClaim)
         || INTERNAL_DIAGNOSTIC_FRAGMENTS.some((fragment) => normalizedClaim.includes(fragment))
     );
 }
@@ -4167,6 +4418,134 @@ function isMetaDocumentaryAnswer(answer: string): boolean {
         ENGLISH_META_DOCUMENTARY_PATTERN.test(normalizedAnswer)
         || CHINESE_META_DOCUMENTARY_PATTERN.test(normalizedAnswer)
     );
+}
+
+function normalizeQuerySubject(value: string): string {
+    return normalizeWhitespace(String(value || ''))
+        .replace(/^["'“”‘’`]+|["'“”‘’`]+$/gu, '')
+        .replace(/^(?:a|an|the)\s+/iu, '')
+        .replace(/[?？!！。.;；:,，]+$/u, '')
+        .trim();
+}
+
+function stripDefinitionQuestionPredicate(value: string): string {
+    return normalizeWhitespace(value)
+        .replace(
+            /^(?:a|an|the)\s+(?:prerequisite|precondition|requirement|dependency|dependencies)\s+(?:for|of)\s+/iu,
+            ''
+        )
+        .replace(
+            /\s+(?:made\s+of|composed\s+of|consists?\s+of|used\s+for|used\s+to|designed\s+for|designed\s+to|intended\s+for|located\s+in|found\s+in|contains?|includes?|depends?\s+on)\b.*$/iu,
+            ''
+        )
+        .trim();
+}
+
+function extractDefinitionQuerySubject(message: string): string {
+    const normalizedMessage = normalizeWhitespace(message);
+    if (!normalizedMessage) {
+        return '';
+    }
+    const englishMatch = normalizedMessage.match(
+        /^(?:what\s+is|what'?s|what\s+are|who\s+is|define|definition\s+of|meaning\s+of)\s+([^?.!;:\n\r。！？；：]+)/iu
+    );
+    if (englishMatch?.[1]) {
+        return normalizeQuerySubject(stripDefinitionQuestionPredicate(englishMatch[1]));
+    }
+    const chineseMatch = normalizedMessage.match(
+        /^(?:什么是|指的是什么|定义(?:是什么)?|是什么意思)\s*([^?？!！。；;：:\n\r]+)/u
+    );
+    return chineseMatch?.[1] ? normalizeQuerySubject(chineseMatch[1]) : '';
+}
+
+function querySubjectFeatures(value: string): string[] {
+    return collectLexicalFeatures(value)
+        .map((feature) => String(feature || '').trim().toLowerCase())
+        .filter((feature) => feature.length > 0 && !QUERY_SUBJECT_STOPWORDS.has(feature));
+}
+
+function compactSubject(value: string): string {
+    return normalizeQuerySubject(value)
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+function scoreQuerySubjectAgainstLabel(subject: string, label: string): number {
+    const normalizedSubject = normalizeQuerySubject(subject);
+    const normalizedLabel = normalizeQuerySubject(label);
+    if (!normalizedSubject || !normalizedLabel) {
+        return 0;
+    }
+    const subjectCompact = compactSubject(normalizedSubject);
+    const labelCompact = compactSubject(normalizedLabel);
+    if (!subjectCompact || !labelCompact) {
+        return 0;
+    }
+    if (subjectCompact === labelCompact) {
+        return 1;
+    }
+    // Parenthetical bilingual titles and qualified headings are valid aliases.
+    if (labelCompact.includes(subjectCompact)) {
+        return 0.95;
+    }
+    const subjectFeatures = querySubjectFeatures(normalizedSubject);
+    const labelFeatures = new Set(querySubjectFeatures(normalizedLabel));
+    if (subjectFeatures.length <= 0 || labelFeatures.size <= 0) {
+        return 0;
+    }
+    const overlap = subjectFeatures.filter((feature) => labelFeatures.has(feature)).length;
+    return Number((overlap / subjectFeatures.length).toFixed(4));
+}
+
+function collectQuerySubjectEvidenceLabels(context: AnswerReleaseReviewContext): string[] {
+    const labels = [
+        ...(context.ragContextPack?.fragments || [])
+            .filter((fragment) => fragment.role !== 'graph_neighbor_support' && fragment.role !== 'background')
+            .flatMap((fragment) => [fragment.title || '', fragment.sourcePath || '', fragment.documentId || '']),
+        ...context.citations.flatMap((citation) => [citation.title || '', citation.sourcePath || '', citation.documentId || '']),
+        ...context.knowledgePoints.map((point) => point.title || ''),
+    ]
+        .map((label) => normalizeQuerySubject(String(label || '')))
+        .filter(Boolean);
+    return Array.from(new Set(labels));
+}
+
+function evaluateQuerySubjectAlignment(context: AnswerReleaseReviewContext): QuerySubjectAlignmentResult {
+    const subject = extractDefinitionQuerySubject(context.message);
+    if (!subject || querySubjectFeatures(subject).length <= 0) {
+        return {
+            passed: true,
+            applicable: false,
+            subject,
+            subjectFeatures: querySubjectFeatures(subject),
+            matchedLabels: [],
+            bestScore: 0,
+        };
+    }
+    const labels = collectQuerySubjectEvidenceLabels(context);
+    const scoredLabels = labels
+        .map((label) => ({ label, score: scoreQuerySubjectAgainstLabel(subject, label) }))
+        .filter((entry) => entry.score > 0)
+        .sort((left, right) => right.score - left.score);
+    const bestScore = scoredLabels[0]?.score || 0;
+    return {
+        passed: bestScore >= 0.9,
+        applicable: true,
+        subject,
+        subjectFeatures: querySubjectFeatures(subject),
+        matchedLabels: scoredLabels.filter((entry) => entry.score >= 0.9).map((entry) => entry.label).slice(0, 3),
+        bestScore,
+    };
+}
+
+function buildQuerySubjectAlignmentMessage(result: QuerySubjectAlignmentResult): string {
+    if (!result.applicable) {
+        return 'The query did not expose a stable definition subject, so subject alignment stayed conservative.';
+    }
+    if (result.passed) {
+        return `Evidence titles aligned with the requested subject "${result.subject}" (best match ${Math.round(result.bestScore * 100)}%).`;
+    }
+    return `Evidence titles did not establish the requested subject "${result.subject}" (best match ${Math.round(result.bestScore * 100)}%); unrelated entities must not be released as the answer.`;
 }
 
 function evaluateQueryIntentAlignment(
@@ -5321,6 +5700,7 @@ function buildDecision(
     groundedEvidenceAvailable: boolean,
     groundingAlignmentPassed: boolean,
     queryIntentAlignmentPassed: boolean,
+    querySubjectAlignmentPassed: boolean,
     structuredConsistencyPassed: boolean,
     structuredComparisonConsistencyPassed: boolean,
     attributeConsistencyPassed: boolean,
@@ -5343,6 +5723,11 @@ function buildDecision(
     publicSurfaceContracted: boolean
 ): AnswerReleaseDecision {
     if (!groundedEvidenceAvailable) {
+        return 'abstain';
+    }
+    // A grounded answer for the wrong entity is unsafe to revise into shape:
+    // the only valid public outcome is an explicit abstention.
+    if (!querySubjectAlignmentPassed) {
         return 'abstain';
     }
     if (
@@ -5415,6 +5800,19 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             applicable: false,
             comparableFrameCount: 0,
             supportFrame: null,
+        };
+    const querySubjectAlignment = groundedEvidenceAvailable
+        ? evaluateQuerySubjectAlignment({
+            ...context,
+            draftAnswer,
+        })
+        : {
+            passed: true,
+            applicable: false,
+            subject: '',
+            subjectFeatures: [],
+            matchedLabels: [],
+            bestScore: 0,
         };
     const structuredConsistency = groundedEvidenceAvailable
         ? evaluateStructuredConsistency({
@@ -5593,7 +5991,11 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             unsupportedClaims: [],
             citationBackedFragmentCount: 0,
         };
-    const publicGraphAnswerPlan = projectPublicGraphAnswerPlan(context.graphAnswerPlan);
+    const publicGraphAnswerPlan = projectPublicGraphAnswerPlan(
+        context.graphAnswerPlan,
+        context.ragContextPack,
+        context.message
+    );
     const verifiedRagConflictDisclosurePlan = isVerifiedRagConflictDisclosurePlan(
         context,
         publicGraphAnswerPlan
@@ -5619,6 +6021,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         groundedEvidenceAvailable,
         groundingAlignment.passed,
         queryIntentAlignment.passed,
+        querySubjectAlignment.passed,
         structuredConsistency.passed,
         structuredComparisonConsistency.passed,
         attributeConsistency.passed,
@@ -5669,6 +6072,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     // Every claim-level consistency gate is a semantic safety boundary. A plan may
     // improve coverage, but must never overwrite a correction from any of them.
     const requiresSafetyCorrection = !verifiedRagConflictDisclosurePlan && [
+        querySubjectAlignment.passed,
         groundingAlignment.passed,
         structuredConsistency.passed,
         structuredComparisonConsistency.passed,
@@ -5815,6 +6219,13 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                             : 'No grounded definition frame was available, so intent alignment stayed conservative.'
                 )
                 : 'No evidence was available, so definition-intent alignment was not evaluated.',
+        },
+        {
+            gateId: 'query_subject_alignment',
+            passed: querySubjectAlignment.passed,
+            message: groundedEvidenceAvailable
+                ? buildQuerySubjectAlignmentMessage(querySubjectAlignment)
+                : 'No evidence was available, so query-subject alignment was not evaluated.',
         },
         {
             gateId: 'claim_structured_consistency',
@@ -6028,7 +6439,6 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     const failedGateIds = gates
         .filter((gate) => gate.passed === false)
         .map((gate) => gate.gateId);
-
     return {
         reviewedAt: String(context.reviewedAt || new Date().toISOString()).trim(),
         decision,

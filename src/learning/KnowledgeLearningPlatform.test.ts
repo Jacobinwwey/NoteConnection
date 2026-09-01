@@ -272,6 +272,113 @@ describe('KnowledgeLearningPlatform', () => {
         expect(queryResult.trace.evidenceCoverageRatio).toBeGreaterThan(0);
     });
 
+    test('workspace inspection exposes an additive source inventory for hydration reconciliation', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_inventory_a',
+                    sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                    language: 'en',
+                    content: '# Water Glass\nA scoped source.',
+                },
+                {
+                    documentId: 'doc_inventory_b',
+                    sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                    language: 'zh',
+                    content: '## 非晶冰\nAmorphous ice is an amorphous solid water phase.',
+                },
+            ],
+        });
+
+        const inspection = await platform.inspectKnowledgeWorkspaceRequest({
+            query: '非晶冰',
+            scope: {
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+            },
+            includeSourceInventory: true,
+        });
+
+        expect(inspection.sourceInventory).toEqual(expect.objectContaining({
+            documentCount: 2,
+            sourcePaths: expect.arrayContaining([
+                'Knowledge_Base/waterglass/water-glass.md',
+                'Knowledge_Base/waterglass/Amorphous ice.md',
+            ]),
+        }));
+    });
+
+    test('query planner resolves a Chinese section title inside an English-named source document', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [{
+                documentId: 'doc_amorphous_ice',
+                sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                language: 'zh',
+                content: [
+                    '## 非晶冰',
+                    '非晶冰（Amorphous ice）是水的一种固态形式。',
+                    '',
+                    '### 核心概念与数学基础',
+                    '其结构可用 $g(r)$ 描述。',
+                ].join('\n'),
+            }],
+        });
+
+        const queryResult = await platform.queryKnowledge({
+            query: '什么是非晶冰？我应该通过哪些知识点学习？',
+            topK: 4,
+            scope: {
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+            },
+        });
+
+        expect(queryResult.trace.planner?.titleHitDocumentIds).toContain('doc_amorphous_ice');
+        expect(queryResult.items[0]?.atom.title).toBe('非晶冰');
+    });
+
+    test('compound agent conversation releases a complete subject definition with math markup', async () => {
+        const content = [
+            '## 非晶冰',
+            '非晶冰（Amorphous ice）是水的一种固态形式，其分子排列缺乏长程有序结构。',
+            '',
+            '### 核心概念与数学基础',
+            '其结构可用径向分布函数 $g(r)$ 描述。',
+            '',
+            '对于由 N 个粒子组成的系统：',
+            '$$ g(r) = \\frac{V}{N^2} \\left\\langle \\sum_{i=1}^{N} \\sum_{j \\ne i}^{N} \\delta(\\mathbf{r} - (\\mathbf{r}_i - \\mathbf{r}_j)) \\right\\rangle $$',
+        ].join('\n');
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [{
+                documentId: 'doc_compound_amorphous_ice',
+                sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                language: 'zh',
+                content,
+            }],
+        });
+
+        const response = await platform.agentConversation({
+            userId: 'compound_answer_user',
+            sessionId: 'compound_answer_session',
+            message: '什么是非晶冰？我应该通过哪些知识点学习？',
+            answerLanguage: 'zh',
+            topK: 8,
+            persistMemory: false,
+            scope: {
+                sourcePathPrefixes: ['Knowledge_Base/waterglass'],
+            },
+        });
+
+        expect(response.answer).toContain('非晶冰（Amorphous ice）是水的一种固态形式');
+        expect(response.answer).toContain('$g(r)$');
+        expect(response.answer).toContain('$$');
+        expect(response.answer).not.toContain('###');
+        expect(response.answer).not.toContain('标');
+        expect(response.answer).not.toContain('水杯');
+        expect(response.answerReleaseReview?.decision).not.toBe('abstain');
+    });
+
     test('query temporal validity preserves supersession edge details after document updates', async () => {
         await platform.ingestKnowledge({
             incremental: true,
@@ -1807,6 +1914,38 @@ describe('KnowledgeLearningPlatform', () => {
         expect(new Set(groupedPoint.citations.map((citation: any) => citation.documentId))).toEqual(
             new Set(['doc_water_glass_grouped'])
         );
+    });
+
+    test('agent conversation fails closed when a semantically adjacent document is not the requested subject', async () => {
+        await platform.ingestKnowledge({
+            incremental: true,
+            documents: [
+                {
+                    documentId: 'doc_water_glass_adjacent',
+                    sourcePath: 'Knowledge_Base/waterglass/water glass.md',
+                    language: 'zh',
+                    content: [
+                        '# 水杯 (water glass)',
+                        '水杯是由透明非晶态玻璃和水组成的容器。',
+                        '玻璃的非晶态结构影响其光学与热学性质。',
+                    ].join('\n'),
+                },
+            ],
+        });
+
+        const response = await platform.agentConversation({
+            userId: 'agent_subject_drift_user',
+            sessionId: 'session_subject_drift',
+            message: '什么是非晶冰？我应该通过哪些知识点学习？',
+            topK: 8,
+            persistMemory: false,
+        });
+
+        expect(response.answer).toContain('非晶冰');
+        expect(response.answer).not.toContain('水杯是由透明非晶态玻璃和水组成的容器');
+        expect(response.answerReleaseReview?.decision).toBe('abstain');
+        expect(response.answerReleaseReview?.failedGateIds).toContain('query_subject_alignment');
+        expect(response.answerReleaseReview?.publicGraphAnswerPlan?.claims || []).toHaveLength(0);
     });
 
     test('agent conversation recovers a title-like knowledge point when the active scope misses another corpus', async () => {

@@ -14,6 +14,11 @@ const {
 const DEFAULT_CDP_PORT = 9223;
 const REPO_ROOT = path.resolve(__dirname, '..');
 const OUTPUT_DIR = path.join(REPO_ROOT, 'output', 'browser-research');
+const BROWSER_FORMULA_PROBE_DOCUMENT = [
+    '# Water Glass',
+    '',
+    String.raw`Water glass is a bounded physical system whose temperature field follows $$\frac{\partial T}{\partial t}=\alpha\nabla^2 T$$, where $T$ is temperature and $\alpha$ is thermal diffusivity, and whose refractive relation is $n_1\sin(\theta_1)=n_2\sin(\theta_2)$ across the interface.`,
+].join('\n');
 
 function parsePositivePort(value, fallback) {
     const parsed = Number(value);
@@ -160,11 +165,7 @@ async function waitFor(connection, sessionId, predicate, description) {
 }
 
 function buildProbeExpression() {
-    const documentContent = [
-        '# Water Glass',
-        '',
-        String.raw`Water glass is a bounded physical system whose temperature field follows $$\frac{\partial T}{\partial t}=\alpha\nabla^2 T$$, where $T$ is temperature and $\alpha$ is thermal diffusivity, and whose refractive relation is $n_1\sin(\theta_1)=n_2\sin(\theta_2)$ across the interface.`,
-    ].join('\n');
+    const documentContent = BROWSER_FORMULA_PROBE_DOCUMENT;
     return `(() => {
         const scopeId = 'waterglass';
         const documentId = 'browser_waterglass_formula_probe_doc';
@@ -189,6 +190,48 @@ function buildProbeExpression() {
             if (!ingest.ok) {
                 throw new Error('ingest failed: ' + ingest.status);
             }
+            const ingestPayload = await ingest.json();
+            window.__NC_BROWSER_INGEST_RESULT = ingestPayload;
+            if (!ingestPayload || ingestPayload.success !== true) {
+                throw new Error('ingest response was not successful: ' + JSON.stringify(ingestPayload));
+            }
+            const runtimeBaseUrl = window.NoteConnectionRuntime
+                && typeof window.NoteConnectionRuntime.getBaseUrl === 'function'
+                ? window.NoteConnectionRuntime.getBaseUrl()
+                : '';
+            const providerFolders = window.NoteConnectionStorage
+                && typeof window.NoteConnectionStorage.createProvider === 'function'
+                ? await window.NoteConnectionStorage.createProvider({
+                    runtimeCaps: window.__NC_RUNTIME_CAPS || {},
+                }).listFolders()
+                : [];
+            const stateResponse = await fetch('/api/knowledge/state');
+            const statePayload = await stateResponse.json();
+            const storeResponse = await fetch('/api/knowledge/store-diagnostics');
+            const storePayload = await storeResponse.json();
+            const workspaceResponse = await fetch('/api/knowledge/workspace-readiness', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: 'What is waterglass?',
+                    scope: {
+                        workspaceId: scopeId,
+                        corpusId: scopeId,
+                        sourcePathPrefixes: ['Knowledge_Base/' + scopeId],
+                    },
+                }),
+            });
+            const workspacePayload = await workspaceResponse.json();
+            window.__NC_BROWSER_RUNTIME_DIAGNOSTICS = {
+                runtimeBaseUrl,
+                locationOrigin: window.location.origin,
+                providerFolders,
+                statePayload,
+                storePayload,
+                workspacePayload,
+                ingestEndpoint: new URL('/api/knowledge/ingest', window.location.href).toString(),
+                conversationEndpoint: new URL('/api/knowledge/conversation', window.location.href).toString(),
+            };
             const folderSelect = document.getElementById('folder-select');
             const messageInput = document.getElementById('agent-workspace-chat-input');
             const sendButton = document.getElementById('btn-agent-workspace-send');
@@ -237,12 +280,18 @@ function buildProbeExpression() {
             if (!scopeSelect || !languageSelect) {
                 throw new Error('agent workspace scoped controls unavailable');
             }
-            let option = Array.from(scopeSelect.options).find((candidate) => candidate.value === scopeId);
-            if (!option) {
-                option = document.createElement('option');
-                option.value = scopeId;
-                option.textContent = scopeId;
-                scopeSelect.appendChild(option);
+            const folderApiResponse = await fetch('/api/folders');
+            const folderApiPayload = await folderApiResponse.json();
+            if (!Array.isArray(folderApiPayload.folders) || !folderApiPayload.folders.includes(scopeId)) {
+                throw new Error('folder API did not expose waterglass: ' + JSON.stringify(folderApiPayload));
+            }
+            const scopeHydrationStartedAt = Date.now();
+            while (!Array.from(scopeSelect.options).some((candidate) => candidate.value === scopeId)
+                && Date.now() - scopeHydrationStartedAt < 10000) {
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+            if (!Array.from(scopeSelect.options).some((candidate) => candidate.value === scopeId)) {
+                throw new Error('agent workspace scope selector did not hydrate waterglass');
             }
             // Keep the UI interaction real, but publish the same active-target
             // contract used by the application before the selector redraws.
@@ -256,17 +305,26 @@ function buildProbeExpression() {
                 },
             };
             localStorage.setItem('nc_last_target', scopeId);
-            if (folderSelect && folderSelect.options && !Array.from(folderSelect.options).some((candidate) => candidate.value === scopeId)) {
-                const folderOption = document.createElement('option');
-                folderOption.value = scopeId;
-                folderOption.textContent = scopeId;
-                folderSelect.appendChild(folderOption);
+            if (folderSelect && folderSelect.options
+                && !Array.from(folderSelect.options).some((candidate) => candidate.value === scopeId)) {
+                throw new Error('global folder selector did not hydrate waterglass');
             }
             scopeSelect.value = scopeId;
             scopeSelect.dispatchEvent(new Event('change', { bubbles: true }));
             languageSelect.value = 'en';
             languageSelect.dispatchEvent(new Event('change', { bubbles: true }));
             messageInput.value = 'What is waterglass?';
+            window.__NC_BROWSER_PRE_SEND = {
+                runtime: window.__NC_SIDECAR_RUNTIME || null,
+                runtimeBridge: window.NoteConnectionRuntime
+                    && typeof window.NoteConnectionRuntime.getRuntimeConfig === 'function'
+                    ? window.NoteConnectionRuntime.getRuntimeConfig()
+                    : null,
+                activeTarget: window.__NC_ACTIVE_SOURCE_TARGET || null,
+                folderValue: folderSelect && folderSelect.value,
+                scopeValue: scopeSelect.value,
+                scopeOptions: Array.from(scopeSelect.options).map((option) => option.value),
+            };
             sendButton.click();
             return true;
         })();
@@ -302,6 +360,15 @@ function injectRuntimeBootstrapConfig(frontendDir, config) {
 
 async function runVerification(options) {
     const fixture = makeTempProject('noteconnection-agent-answer-browser');
+    // /api/folders is filesystem-backed, while ingest populates the in-memory
+    // learning store. Create the scope directory before startup so the async
+    // source-manager refresh cannot overwrite the intended scope with ALL_FOLDERS.
+    fs.mkdirSync(path.join(fixture.kbRoot, 'waterglass'), { recursive: true });
+    fs.writeFileSync(
+        path.join(fixture.kbRoot, 'waterglass', 'water-glass-formula-quality.md'),
+        BROWSER_FORMULA_PROBE_DOCUMENT,
+        'utf8'
+    );
     const serverPort = options.serverPort || await getFreePort();
     const bridgePort = await getFreePort();
     copyProjectAssets({
@@ -356,6 +423,10 @@ async function runVerification(options) {
                 scopeOptions: Array.from(document.querySelectorAll('#agent-workspace-scope-select option')).map((option) => ({ value: option.value, label: option.textContent })),
                 apiState: document.querySelector('#agent-workspace-api-status')?.getAttribute('data-api-state') || '',
                 apiText: document.querySelector('#agent-workspace-api-status')?.textContent || '',
+                runtime: window.__NC_SIDECAR_RUNTIME || null,
+                ingestResult: window.__NC_BROWSER_INGEST_RESULT || null,
+                runtimeDiagnostics: window.__NC_BROWSER_RUNTIME_DIAGNOSTICS || null,
+                folderSelectOptions: Array.from(document.querySelectorAll('#folder-select option')).map((option) => ({ value: option.value, label: option.textContent })),
                 messages: document.querySelector('#agent-workspace-chat-messages')?.innerText || '',
                 bodyText: document.body?.innerText?.slice(-5000) || '',
                 lastResult: window.__NC_LAST_AGENT_CONVERSATION_RESULT || null,
@@ -363,7 +434,10 @@ async function runVerification(options) {
             }))())`);
             const diagnosticPath = path.join(OUTPUT_DIR, 'agent-answer-browser-failure-latest.json');
             fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-            fs.writeFileSync(diagnosticPath, `${diagnostic}\n`, 'utf8');
+            fs.writeFileSync(diagnosticPath, `${JSON.stringify({
+                browser: JSON.parse(String(diagnostic || '{}')),
+                runtimeLogs: runtime.getLogs(),
+            }, null, 2)}\n`, 'utf8');
             throw new Error(`${error.message || String(error)}; diagnostic=${diagnosticPath}`);
         }
         await waitFor(
@@ -393,7 +467,11 @@ async function runVerification(options) {
                 nextActionsExpanded: toggle?.getAttribute('aria-expanded') || '',
                 nextActionsPanelPresent: Boolean(card?.querySelector('[data-structured-answer-next-actions-panel]')),
                 apiState: document.querySelector('#agent-workspace-api-status')?.getAttribute('data-api-state') || '',
+                ingestResult: window.__NC_BROWSER_INGEST_RESULT || null,
+                runtimeDiagnostics: window.__NC_BROWSER_RUNTIME_DIAGNOSTICS || null,
+                preSend: window.__NC_BROWSER_PRE_SEND || null,
                 lastResultAnswer: window.__NC_LAST_AGENT_CONVERSATION_RESULT?.answer || '',
+                lastResultTrace: window.__NC_LAST_AGENT_CONVERSATION_RESULT?.trace || null,
                 publicPlanStatements: window.__NC_LAST_AGENT_CONVERSATION_RESULT?.answerReleaseReview?.publicGraphAnswerPlan?.claims
                     ?.map((claim) => claim.statement) || [],
                 auditPlanStatements: window.__NC_LAST_AGENT_CONVERSATION_RESULT?.answerReleaseReview?.auditGraphAnswerPlan?.claims

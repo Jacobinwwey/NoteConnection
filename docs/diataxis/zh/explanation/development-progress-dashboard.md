@@ -8,6 +8,20 @@
 
 当前主机仍无 online Android 设备（adb devices -l 为空）。因此 mobile-slim 只能声明 build/contract/staging 证据：122 个文件、未压缩 4,292,745 bytes、估算压缩 1,554,525 bytes，低于 25 MiB 预算。peak RSS、签名 arm64 APK/AAB 安装、SAF workload 与 force-stop/reopen continuity 尚未测量，不得表述为真机验收。用户原有 NoteConnection 进程未被修改；浏览器探针使用隔离 runtime。
 
+## 2026-09-02 Waterglass 发布边界与真实浏览器验证
+
+剩余的 `waterglass` 缺陷已通过新鲜 sidecar runtime 追踪，而不是从单测结果推断。full-document 检索本身完整；故障在公开 plan 选择层：当 definition plan 同时包含热学公式、光学公式和多个变量释义时，投影先选择变量释义，挤掉第二个独立公式，导致回答虽然数学内容正确，却呈现了错误的证据形状。
+
+`answerReleaseReview.ts` 现在把完整公式上下文作为一等 definition 证据。在 full-document definition 边界保留首条主体定义及最多两个互异且完整的公式上下文；只有不存在上下文公式时才允许独立变量释义作为回退；audit plan/RAG fragments 保持不变。这是 additive 的发布层修复：graph ID、response 字段、移动端 payload 和内部 trace 语义均保持兼容。
+
+浏览器 verifier 也存在真实 fixture 缺陷：仅 API ingest 会产生磁盘上不存在的索引文档，conversation hydration guard 正确地把它当作 stale source 删除。fixture 现在在 server 启动前创建同源 Markdown 文件，再执行 API ingest 并等待真实 folder/scope hydration 链路。
+
+隔离 Chrome 真实验收已通过，使用已验证的 CDP `127.0.0.1:9223`：一个 structured answer、4 个 KaTeX 节点、完整热传导与斯涅尔定律 TeX annotation、裸 `$` 分隔符为 0、没有上下文/run/action 泄露，Next Actions 初始收起。当前打开的 NoteConnection WebView 仍没有可用 WebView2 CDP endpoint，因此明确不宣称该旧进程的 DOM 验收。Android 原生签名、SAF 负载、进程死亡连续性和 RSS 仍是独立门禁。
+
+后续 full-document comparison 回归现已在 planning boundary 收口。`graphAnswerPlan.ts` 会丢弃 filler/opening/augmentation 等检索脚手架，只保留每个请求 operand 的决定性事实；`answerReleaseReview.ts` 把自动生成的 partial-coverage 与 graph-path 提示视为 metadata，而不是缺少 citation 的源事实。冲突事实和图一致性检查仍保持，公开回答面没有被放宽。定向复现、`100/100` Knowledge Workspace 回归以及全量 Jest（`154` suites、`1342` passed、`26` skipped）均已通过。
+
+本地 CI 等价门禁已完成：生产/Vite 构建、严格 WASM parity 与 benchmark guard、Tauri Rust（`30` passed、`1` ignored）、移动端 contracts（`9` suites、`51` passed）、route registry、agent-workspace contracts/runtime、SBOM/attestation/sidecar/license/PathBridge 策略、Diataxis 与 MkDocs、完整 `55` 组/`92` case runtime 验收、移动端 projection replay（`4` hosts）、native recovery（`8` scenarios）、Android prerequisites，以及隔离 Chrome/KaTeX E2E。mobile-slim 仍为未压缩 `4,292,745` bytes、估算压缩 `1,554,525` bytes，低于 25 MiB；原生签名产物、设备 RSS、SAF 负载和 force-stop 连续性仍未实测。
+
 ## 2026-08-24 Agent 回答界面与语言契约收口
 
 此前的事故收口证明了重建后端能够收缩 Water Glass 回答，但没有证明完整的浏览器交互链路。本次使用隔离 server 和 Chrome CDP 实际走了 `POST /api/knowledge/conversation` 的 SSE 路径、结构化回答 DOM、KaTeX、折叠交互以及软件语言切换。探针确认：聊天中只有一个可见 structured-answer 卡片；存在已渲染的 KaTeX 子树；可见文本中没有裸 `$...$` / `$$...$$` 分隔符；`Answer Context`、`Explanation` 与 `Evidence Summary` 没有挂入聊天 DOM；`Next Actions` 点击前折叠，点击后面板出现且 ARIA 状态同步。截图与 server 日志属于外部验收证据，不作为产品资源提交。
@@ -2008,3 +2022,20 @@ Migration matrix 57 suite / 307 个测试通过，同时 projection/Bridge 定�
 - `mobile:build:compatibility` 明确历史 Capacitor + Tauri 检查；`mobile:build:both` 为向后兼容保留。
 - release alias 不依赖 Capacitor；没有修改 runtime、schema、public-ID 或 payload。
 - 本阶段回归验证为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit、Tauri Rust 30 passed / 1 ignored、Fixrisk FR-001..FR-015 全部通过、Diataxis 与 `git diff --check` 通过。
+## 2026-09-01 Agent 知识工作区实机复审：主题对齐与运行时证据
+
+本次针对用户报告的复合问题 `什么是非晶冰？我应该通过哪些知识点学习？` 对当前 sidecar 进行了实测。打开的 WebView2 进程没有暴露配置的 CDP 端口，因此本看板明确区分“当前进程证据”和“隔离浏览器证据”：带 token 的 sidecar 请求可以通过，未带 token 的请求返回 `401`；复合会话探针随后超过 50 秒，并在客户端中止前出现瞬时数 GB RSS 增长。这证明了运行时预算风险，但不能据此断言具体 allocator 缺陷。
+
+首个正确性修复已经落地：`answerReleaseReview.ts` 对 definition-shaped query 执行确定性的 `query_subject_alignment` gate，先提取请求主体，再与证据标题/限定标题比较；当唯一 grounded 的实体是无关主体（例如 `Water Glass`）时，直接 fail closed，不再发布错误答案。public response schema、RAG trace 字段、Tauri/Android transport 与移动端依赖图均未改变。回归语料现已包含错误主体 hard negative 与正向控制，修改涉及的学习链路 Jest/build 最新验证为绿。
+
+进度判断：
+
+| 领域 | 当前证据 | 状态 |
+| --- | --- | --- |
+| 错误主体发布 | `query_subject_alignment` 是硬 abstention gate；平台回归覆盖 `非晶冰 -> 水杯` 漂移 | 该失败类别已关闭 |
+| 公式渲染 | 隔离 browser verifier 对公式 fixture 观察到 KaTeX DOM 节点且无 raw delimiter | 渲染路径已验证；当前用户进程仍未验证 |
+| 复合问题规划 | 尚无 typed subquestion contract；definition 与 learning-path 仍共用旧 deterministic composer | 开放 |
+| 运行时预算 | 实机探针超过 50 秒并出现瞬时数 GB RSS | 开放，需要有界执行 telemetry 与 planner |
+| 移动端影响 | 修复不增加依赖，公开字段保持 additive | 已保持 |
+
+下一实现边界是 typed query contract 与 subquestion coverage。检索 rank 必须与主体身份分离；学习路径邻居必须标注为 prerequisite/sequence 等角色，不能提升为回答主体。在该工作完成前，没有直接目标证据时必须 abstention 或 clarification，不能以最近邻替代目标。

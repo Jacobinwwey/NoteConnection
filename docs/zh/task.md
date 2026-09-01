@@ -1,3 +1,25 @@
+## 2026-09-02 Waterglass 发布边界与浏览器 E2E 闭环
+
+- [x] 通过真实 sidecar 链路复现剩余的 `waterglass` 质量故障。214 文件的 full-document 传输没有被截断；公开投影先选择了热学变量释义，挤掉了独立的光学公式，导致 definition 回答看似不完整或过宽。
+- [x] 为 full-document definition plan 增加失败优先的 release-review 回归测试，并在 `answerReleaseReview.ts` 中改为优先保留互异且完整的公式上下文；每个 definition 回答最多保留两个完整等式上下文，独立变量释义仅作为无上下文公式时的回退证据。章节编号、应用/规格/比较文案、Mermaid 伪证据和独立 `$x$ 是...` 变量条目不再挤占主体定义/公式证据。
+- [x] 保留完整内部 audit plan 与 RAG trace。公开 plan 仍是 additive、向前兼容的；当前 214 文件 `什么是waterglass?` 运行时发布一条定义及完整热传导、斯涅尔定律上下文（284 字符），两条公式各只出现一次。
+- [x] 修复浏览器 verifier 的真实状态边界：此前临时 scope 只有 API ingest，没有同源 Markdown 文件，导致 conversation 前的 stale-source reconciliation 将刚 ingest 的文档判为删除。现在 fixture 在启动前创建 `waterglass` 目录和同源 Markdown 文件，再执行 API ingest，并等待真实 scope hydration。
+- [x] 隔离 Chrome E2E 已通过，使用已验证的 CDP `127.0.0.1:9223`：`katexCount=4`，热学与光学 TeX annotation 均存在，裸分隔符数量为 `0`，只有一个可见 structured answer，未泄露 Knowledge Run/Knowledge Actions，`Next Actions` 初始 `aria-expanded=false`。证据位于 `output/browser-research/agent-answer-formula-render-latest.json` 及配套 PNG。
+- [x] 已通过验证：`answerReleaseReview` 72/72、TypeScript 编译、214 文件 runtime probe，以及浏览器/KaTeX probe。当前已打开的旧 NoteConnection WebView 仍没有可用 WebView2 CDP endpoint，因此不把隔离验收冒充为该旧进程的 DOM 验收；需从重建产物重启后由操作者确认。
+- [x] 后续 full-document comparison 回归已收口：comparison planning 现在会移除 opening/filler/augmentation 脚手架，同时保留两侧 operand 事实；release review 不再把自动生成的 partial-coverage/graph-path 提示算作缺 citation 的正文 claim。完整 Workspace 回归 `100/100` 通过；全量 Jest 为 `154` suites（`1342` passed、`26` skipped）。
+- [x] 本地 CI 等价门禁已完成：生产/Vite 构建、严格 WASM benchmark、Tauri Rust、移动端 contracts、route/agent-workspace contracts、SBOM/attestation/sidecar/license/PathBridge 策略、docs site、`55` 组/`92` case runtime 验收、移动端 projection replay、native recovery、Android prerequisites 与隔离 Chrome E2E。
+- [ ] 原生设备门禁仍独立未闭环：签名 arm64 Android 安装、SAF 导入/查询负载、force-stop/reopen 连续性及 RSS 测量仍未完成，不能从本浏览器 fixture 推断。
+
+## 2026-09-01 Agent 知识工作区实机复审与主题漂移收口
+
+- [x] 针对当前 sidecar 链路复现了用户报告的失败形态：复合定义/学习路径问题可能携带无关图谱锚点的证据直接发布。
+- [x] 在 `src/learning/answerReleaseReview.ts` 增加确定性的 `query_subject_alignment` release gate；只有证据标题能够通过精确或限定标题匹配建立请求主体时，才允许保留公开回答计划。
+- [x] 错误主体的 grounded draft 现在会 fail closed 为面向用户的 abstention，不能再由图邻居或 RAG 扩展“修复”为错误答案；response schema 仍保持 additive，移动端 payload 依赖不变。
+- [x] 新增 `什么是非晶冰？我应该通过哪些知识点学习？` 仅命中相邻 `Water Glass` 证据的单元与平台回归，并保留 definition、composition、purpose、prerequisite 正向控制用例。
+- [x] 最新验证已通过 release-review suite（71 个测试）、conversation-composer suite（19 个测试）、平台 suite（48 个测试）以及 TypeScript production build。
+- [ ] 实机限制必须明确：当前打开的 WebView2 实例没有暴露配置的 CDP 端口，因此不宣称已经拿到该实例的 DOM 级证明；隔离 browser verifier 只能证明现有公式 fixture 能生成 KaTeX 节点。
+- [ ] 实机 sidecar 探针还观测到一个复合会话请求超过 50 秒，并出现瞬时数 GB RSS 增长。这是独立的运行时预算问题，需要有界执行 telemetry 与专用复合问题 planner，不能标记为已关闭。
+
 ## 2026-06-19 复审纠偏
 
 - [x] 最新源码复审确认：最终公开回答的 reviewer 已经真实落地在 `src/learning/answerReleaseReview.ts`，当前缺口已经不再是“缺少 release-review owner”。

@@ -46,6 +46,8 @@ import type {
     KnowledgeQueryRequest,
     KnowledgeQueryResponse,
     KnowledgeRepresentationType,
+    KnowledgeSourceInventory,
+    KnowledgeSourceInventoryItem,
     KnowledgeRun,
     KnowledgeRunReviewCard,
     KnowledgeRunReviewState,
@@ -150,6 +152,7 @@ import {
     type RagEvidenceSourceLookup,
 } from './evidenceContextAssembler';
 import { reviewRagContextSufficiency, type RagSufficiencyLlmJudge } from './ragSufficiencyJudge';
+import { deriveKnowledgeTargetLookupQueries } from './workspaceHydration';
 
 type ParsedAtomDraft = {
     stableKey: string;
@@ -1223,6 +1226,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         query?: string;
         scope?: KnowledgeQueryRequest['scope'];
         queryBackend?: KnowledgeQueryRequest['queryBackend'];
+        includeSourceInventory?: boolean;
     } = {}): Promise<{
         readiness: KnowledgeWorkspaceReadiness;
         resolvedScope: KnowledgeQueryResolvedScope;
@@ -1233,6 +1237,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         };
         totalAtomsInScope: number;
         totalActiveAtoms: number;
+        sourceInventory?: KnowledgeSourceInventory;
     }> {
         await this.ensureHydrated();
         const backend = normalizeGraphQueryBackendType(request.queryBackend || this.currentGraphQueryBackendType);
@@ -1241,7 +1246,18 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             scope: request.scope,
             queryBackend: backend,
         }, backend);
-        return {
+        const response: {
+            readiness: KnowledgeWorkspaceReadiness;
+            resolvedScope: KnowledgeQueryResolvedScope;
+            planner: {
+                plannerQuery: string | null;
+                titleLikeQueries: string[];
+                titleHitDocumentIds: string[];
+            };
+            totalAtomsInScope: number;
+            totalActiveAtoms: number;
+            sourceInventory?: KnowledgeSourceInventory;
+        } = {
             readiness: contextBundle.readiness,
             resolvedScope: contextBundle.resolvedScope,
             planner: {
@@ -1252,6 +1268,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             totalAtomsInScope: contextBundle.atoms.length,
             totalActiveAtoms: this.activeAtomIds.size,
         };
+        if (request.includeSourceInventory === true) {
+            response.sourceInventory = this.buildSourceInventory(request.scope);
+        }
+        return response;
     }
 
     public async diagnoseMastery(request: MasteryDiagnosticsRequest): Promise<MasteryDiagnosticsResponse> {
@@ -4159,7 +4179,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         if (!normalized) {
             return [];
         }
-        const baseCandidates = new Set<string>([normalized]);
+        const baseCandidates = new Set<string>(deriveKnowledgeTargetLookupQueries(normalized));
+        baseCandidates.add(normalized);
         this.deriveComparisonOperandTitleQueries(normalized).forEach((candidate) => {
             baseCandidates.add(candidate);
         });
@@ -4197,6 +4218,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         }
         const exactMatches = new Set<string>();
         const fuzzyMatches = new Set<string>();
+        const atomExactMatches = new Set<string>();
+        const atomFuzzyMatches = new Set<string>();
         this.documents.forEach((snapshot) => {
             const normalizedPath = String(snapshot.sourcePath || '').replace(/\\/g, '/');
             const fileName = path.basename(normalizedPath).replace(/\.[^.]+$/g, '');
@@ -4211,11 +4234,90 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             if (candidateHaystacks.some((haystack) => loweredQueries.some((query) => haystack.includes(query)))) {
                 fuzzyMatches.add(snapshot.documentId);
             }
+            snapshot.atomIds.forEach((atomId) => {
+                const atom = this.atoms.get(atomId);
+                const normalizedTitle = this.normalizeQueryForPlanning(atom?.title || '');
+                if (!normalizedTitle) {
+                    return;
+                }
+                if (loweredQueries.some((query) => normalizedTitle === query)) {
+                    atomExactMatches.add(snapshot.documentId);
+                } else if (loweredQueries.some((query) => normalizedTitle.includes(query))) {
+                    atomFuzzyMatches.add(snapshot.documentId);
+                }
+            });
         });
         if (exactMatches.size > 0) {
             return Array.from(exactMatches.values());
         }
+        if (atomExactMatches.size > 0) {
+            return Array.from(atomExactMatches.values());
+        }
+        if (atomFuzzyMatches.size > 0) {
+            return Array.from(atomFuzzyMatches.values());
+        }
         return Array.from(fuzzyMatches.values());
+    }
+
+    private buildSourceInventory(
+        scope: KnowledgeQueryRequest['scope'] | AgentConversationRequest['scope']
+    ): KnowledgeSourceInventory {
+        const normalizedScope = this.normalizeKnowledgeCorpusScope(scope);
+        const items: KnowledgeSourceInventoryItem[] = [];
+        this.documents.forEach((snapshot) => {
+            const sourcePath = this.normalizeScopePathPrefix(snapshot.sourcePath);
+            if (
+                normalizedScope.documentIds.size > 0
+                && !normalizedScope.documentIds.has(snapshot.documentId)
+            ) {
+                return;
+            }
+            if (
+                normalizedScope.atomIds.size > 0
+                && !snapshot.atomIds.some((atomId) => {
+                    const atom = this.atoms.get(atomId);
+                    return Boolean(
+                        atom
+                        && this.activeAtomIds.has(atom.id)
+                        && (normalizedScope.atomIds.has(atom.id) || normalizedScope.atomIds.has(atom.stableKey))
+                    );
+                })
+            ) {
+                return;
+            }
+            if (
+                normalizedScope.sourcePathPrefixes.length > 0
+                && !normalizedScope.sourcePathPrefixes.some((prefix) =>
+                    sourcePath === prefix || sourcePath.startsWith(`${prefix}/`)
+                )
+            ) {
+                return;
+            }
+            const binding = this.workspaceRegistry.resolveBindingByDocumentId(snapshot.documentId);
+            const workspaceId = binding?.workspaceId || this.extractCorpusIdFromSourcePath(snapshot.sourcePath);
+            const corpusId = binding?.corpusId || this.extractCorpusIdFromSourcePath(snapshot.sourcePath);
+            if (normalizedScope.workspaceId && workspaceId !== normalizedScope.workspaceId) {
+                return;
+            }
+            if (normalizedScope.corpusId && corpusId !== normalizedScope.corpusId) {
+                return;
+            }
+            items.push({
+                documentId: snapshot.documentId,
+                sourcePath: snapshot.sourcePath,
+                revision: snapshot.revision || snapshot.sourceHash,
+            });
+        });
+        items.sort((left, right) => {
+            const pathOrder = this.normalizeScopePathPrefix(left.sourcePath)
+                .localeCompare(this.normalizeScopePathPrefix(right.sourcePath));
+            return pathOrder || left.documentId.localeCompare(right.documentId);
+        });
+        return {
+            documentCount: items.length,
+            sourcePaths: items.map((item) => item.sourcePath),
+            items,
+        };
     }
 
     private buildWorkspaceReadiness(scope: {

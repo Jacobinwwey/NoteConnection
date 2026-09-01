@@ -221,6 +221,83 @@ function makeComparisonGraphContext(
 }
 
 describe('answerReleaseReview', () => {
+    test('abstains when grounded evidence belongs to a different requested subject', () => {
+        const waterGlassPoint = makeKnowledgePoint({
+            title: 'Water Glass',
+            summary: 'Water glass is a transparent container filled with water.',
+            evidenceSnippet: 'Water glass is a transparent container filled with water.',
+        });
+        const review = reviewAnswerRelease({
+            message: '什么是非晶冰？我应该通过哪些知识点学习？',
+            draftAnswer: '水杯是一个用于盛水的透明容器。',
+            knowledgePoints: [waterGlassPoint],
+            citations: [waterGlassPoint.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({
+                anchorTitle: 'Water Glass',
+                supportingTitles: ['Amorphous Ice'],
+                supportingAtomIds: ['atom_amorphous_ice'],
+            }),
+            ragContextPack: {
+                query: '什么是非晶冰？我应该通过哪些知识点学习？',
+                generatedAt: '2026-07-08T00:00:00.000Z',
+                sourceBoundary: 'full_document',
+                budget: {
+                    maxFragments: 4,
+                    maxCharsPerFragment: 600,
+                    maxTotalChars: 1600,
+                },
+                fragments: [{
+                    fragmentId: 'rag_water_glass',
+                    role: 'direct_support',
+                    text: '水杯是一个用于盛水的透明容器。',
+                    atomId: 'atom_water_glass',
+                    documentId: 'doc_water_glass',
+                    sourcePath: 'Knowledge_Base/waterglass/water-glass.md',
+                    title: 'Water Glass',
+                    headingPath: ['Water Glass'],
+                    charCount: 20,
+                    tokenEstimate: 10,
+                    truncated: false,
+                    citationIds: ['citation_water_glass'],
+                    sourceBoundary: 'direct_span_only',
+                }],
+                sourceDecisions: [],
+                totalCharCount: 20,
+                tokenEstimate: 10,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-07-08T00:00:00.000Z',
+                status: 'sufficient',
+                score: 0.9,
+                reasons: [],
+                deterministic: true,
+            },
+            reviewedAt: '2026-07-08T00:00:01.000Z',
+        });
+
+        expect(review.decision).toBe('abstain');
+        expect(review.failedGateIds).toContain('query_subject_alignment');
+        expect(review.publicAnswer).toContain('非晶冰');
+        expect(review.publicAnswer).not.toContain('水杯是一个用于盛水的透明容器');
+    });
+
+    test('keeps definition answers when the requested subject is supported by the evidence title', () => {
+        const review = reviewAnswerRelease({
+            message: 'what is water glass?',
+            draftAnswer: 'A water glass is a transparent container filled with water.',
+            knowledgePoints: [makeKnowledgePoint()],
+            citations: [makeKnowledgePoint().citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            reviewedAt: '2026-07-08T00:01:00.000Z',
+        });
+
+        expect(review.decision).toBe('release');
+        expect(review.failedGateIds).not.toContain('query_subject_alignment');
+        expect(review.publicAnswer).toContain('water glass');
+    });
+
     test('downgrades unsupported debug-style answers into concise abstentions', () => {
         const review = reviewAnswerRelease({
             message: '什么是waterglass?',
@@ -858,6 +935,125 @@ describe('answerReleaseReview', () => {
             passed: true,
             missingRequiredClaimIds: [],
         }));
+    });
+
+    test('keeps distinct complete formula contexts in a full-document definition projection', () => {
+        const point = makeKnowledgePoint({
+            title: '水杯 (water glass)',
+            summary: '此处的“水杯”被定义为一个由水和玻璃杯组成的物理系统。',
+            evidenceSnippet: '此处的“水杯”被定义为一个由水和玻璃杯组成的物理系统。',
+        });
+        const sourcePath = point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md';
+        const thermalEquation = '$$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$';
+        const opticalEquation = '$$n_1\\sin(\\theta_1)=n_2\\sin(\\theta_2)$$';
+        const claim = (
+            claimId: string,
+            role: GraphAnswerClaimPlan['role'],
+            statement: string,
+            priority: number,
+        ): GraphAnswerClaimPlan => ({
+            claimId,
+            role,
+            required: true,
+            priority,
+            statement,
+            subjectAtomId: point.atomId,
+            supportingAtomIds: [],
+            supportingEdgeIds: [],
+            evidenceRefs: [{
+                evidenceId: claimId,
+                atomId: point.atomId,
+                sourcePath,
+                citationIds: [point.citation?.citationId || 'citation_water_glass'],
+                text: statement,
+            }],
+            confidence: 0.96,
+        });
+        const graphAnswerPlan: GraphAnswerPlan = {
+            intent: 'definition',
+            depth: 'deep',
+            anchorAtomId: point.atomId,
+            leadClaimId: 'definition',
+            requiredRoles: ['definition', 'mechanism'],
+            omittedCandidates: [],
+            claims: [
+                claim('definition', 'definition', '此处的“水杯”被定义为一个由水和玻璃杯组成的物理系统。', 100),
+                claim('thermal_context', 'definition', `系统内部的温度分布由热传导方程描述：${thermalEquation} 其中 $T$ 是温度场。`, 100),
+                claim('optical_context', 'definition', `折射现象由斯涅尔定律描述：${opticalEquation} 其中 $n_1$ 和 $n_2$ 是介质折射率。`, 100),
+                claim('thermal_alpha', 'mechanism', '$\\alpha = \\frac{k}{\\rho c_p}$ 是热扩散率。', 360),
+                claim('thermal_k', 'mechanism', '$k$ 是热导率。', 360),
+                claim('thermal_cp', 'mechanism', '$c_p$ 是比热容。', 360),
+                claim('thermal_exchange', 'mechanism', '水杯系统与环境之间通过传导、对流和辐射进行热交换。', 360),
+                claim('chapter_marker', 'definition', '4. 热力学：热量传递', 100),
+            ],
+        };
+        const review = reviewAnswerRelease({
+            message: '什么是waterglass?',
+            draftAnswer: [
+                '此处的“水杯”被定义为一个由水和玻璃杯组成的物理系统。',
+                `系统内部的温度分布由热传导方程描述：${thermalEquation} 其中 $T$ 是温度场。`,
+                `折射现象由斯涅尔定律描述：${opticalEquation} 其中 $n_1$ 和 $n_2$ 是介质折射率。`,
+                '本技术文档还包含技术规格和比较章节。',
+            ].join(' '),
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            graphAnswerPlan,
+            ragContextPack: {
+                query: '什么是waterglass?',
+                generatedAt: '2026-08-25T00:00:00.000Z',
+                sourceBoundary: 'full_document',
+                budget: { maxFragments: 14, maxCharsPerFragment: 1400, maxTotalChars: 5600 },
+                fragments: [{
+                    fragmentId: 'full_document_waterglass',
+                    role: 'direct_support',
+                    text: [
+                        '此处的“水杯”被定义为一个由水和玻璃杯组成的物理系统。',
+                        `系统内部的温度分布由热传导方程描述：${thermalEquation} 其中 $T$ 是温度场。`,
+                        `折射现象由斯涅尔定律描述：${opticalEquation} 其中 $n_1$ 和 $n_2$ 是介质折射率。`,
+                    ].join(' '),
+                    atomId: point.atomId,
+                    documentId: point.documentId || 'doc_water_glass',
+                    sourcePath,
+                    title: point.title,
+                    headingPath: [point.title],
+                    charCount: 240,
+                    tokenEstimate: 60,
+                    truncated: false,
+                    citationIds: [point.citation?.citationId || 'citation_water_glass'],
+                    sourceBoundary: 'full_document',
+                }],
+                sourceDecisions: [],
+                totalCharCount: 240,
+                tokenEstimate: 60,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-08-25T00:00:00.000Z',
+                status: 'sufficient',
+                score: 0.95,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+            reviewedAt: '2026-08-25T00:00:00.000Z',
+        });
+
+        const publicClaims = review.publicGraphAnswerPlan?.claims || [];
+        expect(publicClaims.map((entry) => entry.claimId)).toEqual([
+            'definition',
+            'thermal_context',
+            'optical_context',
+        ]);
+        expect(review.publicAnswer).toContain(thermalEquation);
+        expect(review.publicAnswer).toContain(opticalEquation);
+        expect((review.publicAnswer.match(/\\frac\{\\partial T\}\{\\partial t\}=\\alpha\\nabla\^2 T/gu) || [])).toHaveLength(1);
+        expect((review.publicAnswer.match(/n_1\\sin\(\\theta_1\)=n_2\\sin\(\\theta_2\)/gu) || [])).toHaveLength(1);
+        expect(review.publicAnswer).not.toContain('$k$ 是热导率');
+        expect(review.publicAnswer).not.toContain('4. 热力学');
+        expect(review.publicAnswer).not.toContain('热交换');
     });
 
     test('does not reintroduce comparison or duplicate formula claims through conflict supplements', () => {

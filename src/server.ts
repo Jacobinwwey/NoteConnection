@@ -117,6 +117,12 @@ import {
 import {
     normalizeAgentConversationRequestPayload,
 } from './learning/requestNormalization';
+import {
+    buildKnowledgeSourceInventoryDiff,
+    deriveKnowledgeTargetLookupQueries as deriveKnowledgeTargetLookupQueriesFromMessage,
+    markdownPreviewMatchesTitleLikeQueries,
+    normalizeKnowledgeSourcePath,
+} from './learning/workspaceHydration';
 import { registerAllRoutes, type ServerContext, type RouteEntry } from './routes';
 import { createRuntimeRunbookRouteOps } from './routes/runtimeRunbookRouteOps';
 import { isRequestTokenAuthorized } from './middleware/auth';
@@ -284,6 +290,9 @@ const AGENT_WORKSPACE_DIAGNOSTICS_TRIAGE_TOP_LIMIT = 5;
 const AGENT_WORKSPACE_DIAGNOSTICS_TRIAGE_TOP_LIMIT_MIN = 1;
 const AGENT_WORKSPACE_DIAGNOSTICS_TRIAGE_TOP_LIMIT_MAX = 10;
 const REQUEST_BODY_SPOOL_DIR = path.join(runtimePaths.projectRoot, 'tmp', 'request-bodies');
+const KNOWLEDGE_WORKSPACE_TITLE_PREVIEW_BYTES = 16 * 1024;
+const KNOWLEDGE_WORKSPACE_LARGE_TARGET_FILE_THRESHOLD = 100;
+const KNOWLEDGE_WORKSPACE_MAX_SELECTIVE_HYDRATION_FILES = 32;
 let KB_ROOT = runtimePaths.kbRoot;
 let activeBuildKey: string | null = null;
 let activeBuildPromise: Promise<unknown> | null = null;
@@ -13280,8 +13289,7 @@ function buildKnowledgeDocumentPayloadFromFile(
         identityAliases?: string[];
     }
 ): NonNullable<KnowledgeIngestRequest['documents']>[number] {
-    const relativePath = path.relative(KB_ROOT, file.filepath).replace(/\\/g, '/');
-    const sourcePath = `Knowledge_Base/${relativePath}`.replace(/\/{2,}/g, '/');
+    const sourcePath = buildKnowledgeSourcePathFromFilePath(file.filepath);
     const language = /[\u4e00-\u9fff]/.test(file.content) ? 'zh' : 'en';
     return {
         sourcePath,
@@ -13291,6 +13299,11 @@ function buildKnowledgeDocumentPayloadFromFile(
         content: file.content,
         language,
     };
+}
+
+function buildKnowledgeSourcePathFromFilePath(filePath: string): string {
+    const relativePath = path.relative(KB_ROOT, filePath).replace(/\\/g, '/');
+    return `Knowledge_Base/${relativePath}`.replace(/\/{2,}/g, '/');
 }
 
 async function collectMarkdownFilePaths(targetPath: string): Promise<string[]> {
@@ -13322,26 +13335,7 @@ function normalizeKnowledgeTargetLookupQuery(value: unknown): string {
 }
 
 function deriveKnowledgeTargetLookupQueries(query: string): string[] {
-    const normalized = normalizeKnowledgeTargetLookupQuery(query);
-    if (!normalized) {
-        return [];
-    }
-    const candidates = new Set([normalized]);
-    const stripped = normalized
-        .replace(/^(what is|what are|define|explain|tell me about|what's)\s+/i, '')
-        .replace(/^(什么是|解释一下|介绍一下|请解释|请介绍)\s*/i, '')
-        .trim();
-    if (stripped) {
-        candidates.add(stripped);
-        candidates.add(stripped.replace(/\s+/g, ''));
-    }
-    if (normalized.includes('water glass') || stripped === 'waterglass') {
-        candidates.add('water glass');
-        candidates.add('waterglass');
-        candidates.add('水玻璃');
-        candidates.add('水杯');
-    }
-    return Array.from(candidates.values()).filter(Boolean);
+    return deriveKnowledgeTargetLookupQueriesFromMessage(query);
 }
 
 async function findKnowledgeFilesByTitleLikeQueries(targetPath: string, titleLikeQueries: string[]): Promise<string[]> {
@@ -13357,10 +13351,37 @@ async function findKnowledgeFilesByTitleLikeQueries(targetPath: string, titleLik
     if (exactMatches.length > 0) {
         return exactMatches;
     }
-    return markdownFiles.filter((filePath) => {
+    const fuzzyBasenameMatches = markdownFiles.filter((filePath) => {
         const normalizedBaseName = normalizeKnowledgeTargetLookupQuery(path.basename(filePath, path.extname(filePath)));
         return normalizedQueries.some((query) => normalizedBaseName.includes(query));
     });
+    if (fuzzyBasenameMatches.length > 0) {
+        return fuzzyBasenameMatches;
+    }
+
+    const previewMatches: string[] = [];
+    for (const filePath of markdownFiles) {
+        const preview = await readMarkdownTitlePreview(filePath);
+        if (markdownPreviewMatchesTitleLikeQueries({
+            sourcePath: buildKnowledgeSourcePathFromFilePath(filePath),
+            preview,
+            titleLikeQueries: normalizedQueries,
+        })) {
+            previewMatches.push(filePath);
+        }
+    }
+    return previewMatches;
+}
+
+async function readMarkdownTitlePreview(filePath: string): Promise<string> {
+    const handle = await fs.promises.open(filePath, 'r');
+    try {
+        const buffer = Buffer.allocUnsafe(KNOWLEDGE_WORKSPACE_TITLE_PREVIEW_BYTES);
+        const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+        return buffer.subarray(0, bytesRead).toString('utf8');
+    } finally {
+        await handle.close();
+    }
 }
 
 async function buildKnowledgeDocumentPayloadsFromPaths(filePaths: string[]): Promise<NonNullable<KnowledgeIngestRequest['documents']>> {
@@ -13385,6 +13406,7 @@ async function syncLearningWorkspaceForDocumentPaths(params: {
     target: string;
     filePaths: string[];
     reason: string;
+    deletedDocuments?: NonNullable<KnowledgeIngestRequest['deletedDocuments']>;
 }): Promise<{
     target: string;
     documentCount: number;
@@ -13405,6 +13427,7 @@ async function syncLearningWorkspaceForDocumentPaths(params: {
     const result = await knowledgeLearningPlatform.ingestKnowledge({
         incremental: true,
         documents,
+        deletedDocuments: params.deletedDocuments,
         ingestedAt: new Date().toISOString(),
         relationRecomputeMode: 'incremental',
     });
@@ -13412,6 +13435,7 @@ async function syncLearningWorkspaceForDocumentPaths(params: {
         target: params.target,
         reason: params.reason,
         documentCount: documents.length,
+        deletedDocumentCount: params.deletedDocuments?.length || 0,
         changedDocuments: result.summary.changedDocuments,
         activeAtoms: result.summary.activeAtoms,
     });
@@ -13488,15 +13512,8 @@ async function ensureLearningWorkspaceHydratedForConversationRequest(
     const readinessBeforeSync = await knowledgeLearningPlatform.inspectKnowledgeWorkspaceRequest({
         query: requestPayload.message,
         scope: derivedScope,
+        includeSourceInventory: true,
     });
-    if (readinessBeforeSync.readiness.status === 'ready') {
-        return {
-            hydrated: false,
-            target,
-            scope: derivedScope,
-            reason: 'existing_store_ready',
-        };
-    }
     if (!target || target === 'ALL_FOLDERS') {
         const explicitAllFoldersTarget = String(requestPayload.activeTarget || '').trim().toUpperCase() === 'ALL_FOLDERS';
         if (explicitAllFoldersTarget) {
@@ -13515,26 +13532,101 @@ async function ensureLearningWorkspaceHydratedForConversationRequest(
             reason: readinessBeforeSync.readiness.status,
         };
     }
-    const targetPath = path.join(KB_ROOT, target);
+
+    const availableTargets = await collectAvailableTargetsFromPath(KB_ROOT);
+    const resolvedTarget = availableTargets.find((entry) => entry.toLowerCase() === target.toLowerCase()) || target;
+    const targetPath = path.join(KB_ROOT, resolvedTarget);
+    const targetPathExists = await pathExists(targetPath);
+    const targetFiles = await collectMarkdownFilePaths(targetPath);
+    const diskSourcePaths = targetFiles.map(buildKnowledgeSourcePathFromFilePath);
+    const indexedSourcePaths = readinessBeforeSync.sourceInventory?.sourcePaths || [];
+    const inventoryDiff = buildKnowledgeSourceInventoryDiff({
+        diskSourcePaths,
+        indexedSourcePaths,
+    });
+    const indexedItemsByPath = new Map(
+        (readinessBeforeSync.sourceInventory?.items || []).map((item) => [
+            normalizeKnowledgeSourcePath(item.sourcePath),
+            item,
+        ])
+    );
+    // A missing target directory is an unavailable filesystem boundary, not an
+    // authoritative empty corpus. API/mobile callers may legitimately ingest a
+    // document before its host materializes the directory, and deleting those
+    // indexed projections would make the next conversation observe an empty store.
+    const deletedDocuments = targetPathExists
+        ? inventoryDiff.removedSourcePaths
+            .map((sourcePath) => indexedItemsByPath.get(normalizeKnowledgeSourcePath(sourcePath)))
+            .filter((item): item is NonNullable<typeof item> => Boolean(item))
+            .map((item) => ({
+                documentId: item.documentId,
+                sourcePath: item.sourcePath,
+            }))
+        : [];
+
+    if (
+        readinessBeforeSync.readiness.status === 'ready'
+        && inventoryDiff.addedSourcePaths.length <= 0
+        && deletedDocuments.length <= 0
+    ) {
+        return {
+            hydrated: false,
+            target: resolvedTarget,
+            scope: derivedScope,
+            reason: 'existing_store_ready',
+        };
+    }
+
     const titleLikeQueries = deriveKnowledgeTargetLookupQueries(String(requestPayload.message || ''));
     const candidateFiles = await findKnowledgeFilesByTitleLikeQueries(targetPath, titleLikeQueries);
     if (candidateFiles.length > 0) {
         await syncLearningWorkspaceForDocumentPaths({
-            target,
-            filePaths: candidateFiles,
+            target: resolvedTarget,
+            filePaths: candidateFiles.slice(0, KNOWLEDGE_WORKSPACE_MAX_SELECTIVE_HYDRATION_FILES),
+            deletedDocuments,
             reason: 'conversation_selective_title_hydration',
         });
         return {
             hydrated: true,
-            target,
+            target: resolvedTarget,
             scope: derivedScope,
             reason: 'conversation_selective_title_hydration',
         };
     }
-    await syncLearningWorkspaceForTarget(target, 'conversation_auto_hydration');
+
+    if (deletedDocuments.length > 0 && readinessBeforeSync.readiness.status === 'ready') {
+        await syncLearningWorkspaceForDocumentPaths({
+            target: resolvedTarget,
+            filePaths: [],
+            deletedDocuments,
+            reason: 'conversation_stale_source_reconciliation',
+        });
+        return {
+            hydrated: true,
+            target: resolvedTarget,
+            scope: derivedScope,
+            reason: 'conversation_stale_source_reconciliation',
+        };
+    }
+
+    if (targetFiles.length > KNOWLEDGE_WORKSPACE_LARGE_TARGET_FILE_THRESHOLD) {
+        return {
+            hydrated: false,
+            target: resolvedTarget,
+            scope: derivedScope,
+            reason: 'conversation_hydration_deferred_large_target',
+        };
+    }
+
+    await syncLearningWorkspaceForDocumentPaths({
+        target: resolvedTarget,
+        filePaths: targetFiles,
+        deletedDocuments,
+        reason: 'conversation_auto_hydration',
+    });
     return {
         hydrated: true,
-        target,
+        target: resolvedTarget,
         scope: derivedScope,
         reason: 'conversation_auto_hydration',
     };
