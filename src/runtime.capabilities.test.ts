@@ -23,6 +23,11 @@ describe('runtime capability gating contract', () => {
     expect(sourceManager).toContain('supports_mobile_wasm_compute');
     expect(sourceManager).toContain('mobile_wasm_reason');
     expect(sourceManager).toContain('detectMobileWasmCapability');
+    expect(sourceManager).toContain('storage_requested_provider');
+    expect(sourceManager).toContain('storage_resolved_provider');
+    expect(sourceManager).toContain('storage_fallback_reason');
+    expect(sourceManager).toContain('supports_sqlite');
+    expect(sourceManager).toContain('refreshStorageResolution');
   });
 
   test('source manager blocks build path when runtime does not support build', () => {
@@ -63,6 +68,12 @@ describe('runtime capability gating contract', () => {
     expect(tauriLib).toContain('supports_kb_import: true');
     expect(tauriLib).toContain('kb_import_mode: "android-saf-copy"');
     expect(tauriLib).toContain('supports_projection_store: true');
+    expect(tauriLib).toContain('storage_requested_provider: "projection".to_string()');
+    expect(tauriLib).toContain('storage_resolved_provider: "projection".to_string()');
+    expect(tauriLib).toContain('storage_requested_provider: "sqlite".to_string()');
+    expect(tauriLib).toContain('storage_resolved_provider: "unknown".to_string()');
+    expect(tauriLib).toContain('supports_sqlite: false');
+    expect(tauriLib).toContain('supports_sqlite: true');
     expect(tauriLib).toContain('supports_native_pathmode: option_env!("NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE")');
     expect(tauriLib).toContain('read_node_content');
   });

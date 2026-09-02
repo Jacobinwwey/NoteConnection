@@ -46,6 +46,26 @@ export type {
     KnowledgeRepresentationType,
 } from '../learning/types';
 
+/**
+ * Canonical storage providers used by every host boundary.
+ *
+ * `http` is represented as `remote` at the product boundary, while
+ * `projection` is the bounded mobile graph representation. Keep this union
+ * additive so older schema-1 snapshots remain readable.
+ */
+export type StorageProviderKind = 'sqlite' | 'file' | 'projection' | 'remote';
+
+/**
+ * Runtime storage resolution shared by backend diagnostics and host probes.
+ * `resolvedProvider` is optional because a fail-closed runtime may have no
+ * usable provider after the requested adapter is rejected.
+ */
+export interface StorageProviderResolutionContract {
+    requestedProvider: string;
+    resolvedProvider?: StorageProviderKind;
+    fallbackReason?: string;
+}
+
 export type {
     EvidenceSpan,
     KnowledgeAtom,

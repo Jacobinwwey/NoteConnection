@@ -22,6 +22,10 @@ import type { SessionStateSnapshot } from '../session/types';
 import type { MemoryAuditRecord } from '../memory/types';
 import type { WorkflowArtifactSnapshot } from '../workflows/types';
 import type { WorkspaceRegistrySnapshot } from '../workspace/types';
+import type {
+    StorageProviderKind,
+    StorageProviderResolutionContract,
+} from '../shared/types';
 
 export interface SerializedDocumentSnapshot {
     documentId: string;
@@ -99,7 +103,7 @@ export interface KnowledgeGraphSnapshot {
     relationEdgeSignatures: string[];
 }
 
-export interface KnowledgeGraphStoreDiagnostics {
+export interface KnowledgeGraphStoreDiagnostics extends Partial<StorageProviderResolutionContract> {
     storeType: 'none' | 'file' | 'graphdb' | 'memory';
     location?: string;
     exists: boolean;
@@ -426,6 +430,9 @@ export class FileBackedKnowledgeGraphStore implements KnowledgeGraphOpsAdapter {
             location: filePath,
             exists: fs.existsSync(filePath),
             loaded: this.loaded,
+            requestedProvider: 'file',
+            resolvedProvider: 'file',
+            storageEngine: 'file',
             lastLoadAt: this.lastLoadAt,
             lastSaveAt: this.lastSaveAt,
             lastError: this.lastError,
@@ -524,6 +531,27 @@ export function normalizeGraphDbSnapshotAdapterProvider(v: unknown): GraphDbAdap
     return 'file';
 }
 
+/**
+ * Normalize the product-level storage vocabulary without leaking adapter
+ * implementation names into cross-platform diagnostics.
+ */
+export function normalizeStorageProviderKind(v: unknown): StorageProviderKind | undefined {
+    const normalized = String(v ?? '').trim().toLowerCase();
+    if (normalized === 'sqlite' || normalized === 'embedded_sqlite' || normalized === 'embedded-sqlite' || normalized === 'embedded') {
+        return 'sqlite';
+    }
+    if (normalized === 'file' || normalized === 'local-file' || normalized === 'snapshot') {
+        return 'file';
+    }
+    if (normalized === 'http' || normalized === 'external_http' || normalized === 'remote-http' || normalized === 'service' || normalized === 'remote') {
+        return 'remote';
+    }
+    if (normalized === 'projection' || normalized === 'mobile_projection' || normalized === 'mobile-slim') {
+        return 'projection';
+    }
+    return undefined;
+}
+
 export function normalizeGraphDbStoreOperationMode(v: unknown): GraphDbOperationMode {
     const s = String(v ?? 'snapshot').trim().toLowerCase();
     if (s === 'snapshot' || s === 'snapshot_only') return 'snapshot_only';
@@ -556,6 +584,9 @@ export function createFileGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapte
         },
         getDiagnostics: () => ({
             ...store.getDiagnostics(),
+            requestedProvider: 'file',
+            resolvedProvider: 'file',
+            storageEngine: 'file',
             capabilityMode: 'ops_capable',
             supportedReadOperations: ['load_snapshot', 'load_snapshot_by_ops', 'probe_snapshot_metadata'],
             supportedWriteOperations: ['save_snapshot', 'save_snapshot_by_ops'],
@@ -950,6 +981,8 @@ function createSqliteGraphDbSnapshotAdapter(options?: GraphDbSnapshotAdapterConf
             location: sqlitePath,
             exists: fs.existsSync(sqlitePath),
             loaded,
+            requestedProvider: 'sqlite',
+            resolvedProvider: 'sqlite',
             lastLoadAt: lastLoadAt || undefined,
             lastSaveAt: lastSaveAt || undefined,
             lastError: lastError || undefined,
@@ -986,14 +1019,20 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
         return fileAdapter;
     }
     if (provider === 'sqlite') {
-        const sqliteAdapter = createSqliteGraphDbSnapshotAdapter({
-            provider: 'sqlite',
-            filePath: options?.filePath as string | undefined,
-            sqlitePath: options?.sqlitePath as string | undefined,
-            id: (options?.id ?? options?.sqliteAdapterId ?? options?.adapterId) as string | undefined,
-        });
-        if (!sqliteAdapter) return null;
-        return sqliteAdapter;
+        try {
+            const sqliteAdapter = createSqliteGraphDbSnapshotAdapter({
+                provider: 'sqlite',
+                filePath: options?.filePath as string | undefined,
+                sqlitePath: options?.sqlitePath as string | undefined,
+                id: (options?.id ?? options?.sqliteAdapterId ?? options?.adapterId) as string | undefined,
+            });
+            if (!sqliteAdapter) return null;
+            return sqliteAdapter;
+        } catch {
+            // A sandboxed or read-only host must be allowed to use the
+            // configured file fallback instead of failing during startup.
+            return null;
+        }
     }
     // HTTP adapter — real HTTP communication with graphdb endpoint
     const httpEndpoint = (options?.httpEndpoint ?? options?.baseUrl) as string | undefined;
@@ -1180,6 +1219,9 @@ export function createGraphDbSnapshotAdapter(options?: Record<string, unknown>):
                 exists: okCount > 0,
                 loaded: okCount > 0,
                 location: snapUrl,
+                requestedProvider: 'remote',
+                resolvedProvider: 'remote',
+                storageEngine: 'remote',
                 capabilityMode: 'ops_capable',
                 supportedReadOperations: ['load_snapshot', 'get_node', 'query_nodes', 'query_edges', 'find_path'],
                 supportedWriteOperations: ['save_snapshot'],
@@ -1209,6 +1251,20 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
     const graphdbAdapter = (o.graphdb as any)?.adapter ?? (o as any).graphDbAdapter ?? null;
     const graphdbOperationMode = ((o.graphdb as any)?.operationMode ?? (o as any).graphDbOperationMode ?? 'snapshot') as string;
     const graphdbFallbackEnabled = ((o.graphdb as any)?.fallbackEnabled ?? (o as any).graphDbFallbackEnabled ?? true) as boolean;
+    const requestedProviderOverride = (o.graphdb as any)?.requestedProvider
+        ?? (o as any).graphDbRequestedProvider
+        ?? (o as any).graphDbAdapterProvider;
+    const requestedProviderValue = requestedProviderOverride
+        ?? (graphdbAdapter as any)?.provider
+        ?? 'unknown';
+    const requestedProviderKind = normalizeStorageProviderKind(requestedProviderValue);
+    const requestedProvider = requestedProviderKind
+        ?? (String(requestedProviderValue || '').trim().toLowerCase() || 'unknown');
+    const adapterUnavailableReason = requestedProviderKind === 'sqlite'
+        ? 'sqlite_runtime_unavailable'
+        : requestedProviderKind === 'remote'
+            ? 'remote_endpoint_unavailable'
+            : 'graphdb_adapter_unavailable';
 
     if (backend === 'memory') {
         // In-memory store for testing
@@ -1394,6 +1450,17 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                 getDiagnostics: () => {
                     const diag = a.getDiagnostics?.() ?? ({} as KnowledgeGraphStoreDiagnostics);
                     const caps = resolveOpsCapabilities();
+                    const resolvedProvider = normalizeStorageProviderKind(
+                        (diag as any).resolvedProvider
+                        ?? (diag as any).storageEngine
+                        ?? a.provider
+                    );
+                    const fallbackReason = (diag as any).fallbackReason
+                        ?? (requestedProviderKind && resolvedProvider && requestedProviderKind !== resolvedProvider
+                            ? requestedProviderKind === 'sqlite' && resolvedProvider === 'file'
+                                ? 'sqlite_runtime_unavailable'
+                                : 'provider_request_mismatch'
+                            : undefined);
                     const totalQueryOpsReadCount = queryOpsState.nodeOpsReadCount
                         + queryOpsState.nodesOpsReadCount
                         + queryOpsState.edgesOpsReadCount
@@ -1410,6 +1477,9 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                         adapterId: a.id,
                         ...diag,
                         storeType: 'graphdb' as const,
+                        requestedProvider,
+                        resolvedProvider,
+                        fallbackReason,
                         graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbOperationMode),
                         fallbackEnabled: graphdbFallbackEnabled,
                         graphDbAdapterCapabilityMode: (diag as any).capabilityMode ?? caps.mode ?? (opsCapable ? 'ops_capable' : 'snapshot_only'),
@@ -1486,6 +1556,8 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                     usingFallback: false,
                     fallbackEnabled: false,
                     lastError: 'graphdb_adapter_unavailable_no_fallback',
+                    requestedProvider,
+                    fallbackReason: `${adapterUnavailableReason}_no_fallback`,
                     graphDbOperationMode: normalizeGraphDbStoreOperationMode(graphdbOperationMode),
                     graphDbAdapterCapabilityMode: 'unknown',
                     graphDbReadPath: 'fallback',
@@ -1512,6 +1584,10 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                 usingFallback: true,
                 fallbackEnabled: true,
                 fallbackStoreType: 'file',
+                requestedProvider,
+                resolvedProvider: 'file',
+                fallbackReason: adapterUnavailableReason,
+                storageEngine: 'file',
                 graphDbOperationMode: 'snapshot_only',
                 graphDbAdapterCapabilityMode: 'unknown',
                 graphDbReadPath: 'fallback',

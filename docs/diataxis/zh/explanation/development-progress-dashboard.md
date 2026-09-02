@@ -1,5 +1,19 @@
 # 解释：开发进度看板
 
+## 2026-09-03 打包 Sidecar 内容指纹新鲜度
+
+SQLite 矩阵找到一个 mtime 检查无法识别的真实 packaged runtime 回归：现有 Windows sidecar 内容是旧 server payload，但二进制时间戳比当前 checkout 输入更新。强制重建后，`requestedProvider=sqlite` 诊断与 SQLite 重启连续性恢复正常。现在 `scripts/sidecar-build-fingerprint.js` 对 packaged `dist/src` 树以及 package/build 输入进行内容哈希，在 host sidecar 旁的 ignored manifest 中记录指纹。`build-sidecar.js` 仅在成功构建后写入 manifest；`ensure-sidecar-ready.js` 必须在指纹、target 记录同时匹配时才允许跳过重建，缺失、过期、不可读或 target 不匹配都会 fail-closed 进入重建。
+
+新鲜度契约由内容变更回归测试覆盖，并已加入 migration gate。重建后重新运行真实矩阵：`dist_node_runtime` 与 `packaged_sidecar` 在 smoke/medium/heavy 工作负载、重启连续性、SQLite 诊断、query 计数和 foundation readiness 上全部通过。生成的 LFS sidecar 仅作为本机验证产物；ignored manifest 有意不提交。
+
+## 2026-09-02 跨平台 SQLite 解析边界恢复
+
+此前被误删的 SQLite 路径已经恢复。桌面/服务端启动仍默认请求 Node 22 内置 `node:sqlite` graph adapter，继续持久化既有 schema-1/2 snapshot，并提供节点、边和路径的操作级查询。原有 file-backed adapter 保留为显式 fallback；诊断现在区分 `requestedProvider`、`resolvedProvider`、`storageEngine` 与 `fallbackReason`，因此 SQLite runtime 缺失时不会被误报为 SQLite 已生效。
+
+移动端边界保持不同。Tauri Android 与 Capacitor 不打包 Node sidecar，存储解析为有界 `projection` provider（`graph_data.json` 加 exact analyzer）。宿主 capability 探针报告 `supports_sqlite=false`、`supports_projection=true` 和 `native_sqlite_runtime_unavailable`；移动端会忽略过期的 SQLite flag。桌面前端启动时会从 `/api/knowledge/store-diagnostics` 刷新临时 capability 数据，再暴露最终解析结果。
+
+本次变更是 additive：公开 snapshot/projection schema、graph ID、IPC 字段和移动包体预算均不变。新增契约覆盖 provider 归一化、SQLite 成功路径、file fallback、Android 强制 projection，以及桌面权威诊断刷新。这关闭了误删回归，但没有把 SQLite/WASM 提升为移动默认实现；该决策仍受签名 arm64 进程死亡/SAF continuity、RSS 和包体证据门禁约束。
+
 ## 2026-09-02 SQLite 重启诊断与 Sidecar 构建并发收口
 
 本轮按当前构建重新执行 foundation matrix 时关闭了两个真实缺陷。嵌入式 SQLite snapshot 本身是持久的：直接 SQL 取证确认提交后的 payload 与 atom 行在 stop/restart 后仍存在。失败点在 graph-store wrapper 的诊断投影：重新打开后 `loadSnapshot()` 恢复了数据，却没有重新填充 `graphDbLastSnapshotMetadata`，因此 verifier 看到的 document 数为 0，而查询实际可以读取图数据。`src/learning/store.ts` 现在会在每次 snapshot 成功读取后从 snapshot 直接生成 metadata projection，保持既有 adapter 与 response contract 不变。回归测试覆盖 save、close、reopen、load 与 diagnostics restoration。

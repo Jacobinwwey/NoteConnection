@@ -550,11 +550,17 @@ function assertStoreDiagnostics(response, mode, phase) {
     assertCondition(body.success === true, `[${mode}] ${phase}: store-diagnostics success!=true`);
     assertCondition(store.storeType === 'graphdb', `[${mode}] ${phase}: storeType=${store.storeType}`);
     assertCondition(store.storageEngine === 'sqlite', `[${mode}] ${phase}: storageEngine=${store.storageEngine}`);
+    assertCondition(store.requestedProvider === 'sqlite', `[${mode}] ${phase}: requestedProvider=${store.requestedProvider}`);
+    assertCondition(store.resolvedProvider === 'sqlite', `[${mode}] ${phase}: resolvedProvider=${store.resolvedProvider}`);
+    assertCondition(!store.fallbackReason, `[${mode}] ${phase}: fallbackReason=${store.fallbackReason || ''}`);
     assertCondition(store.backendReady === true, `[${mode}] ${phase}: backendReady=${store.backendReady}`);
     assertCondition(store.usingFallback !== true, `[${mode}] ${phase}: usingFallback unexpectedly true`);
     return {
         storeType: String(store.storeType || ''),
         storageEngine: String(store.storageEngine || ''),
+        requestedProvider: String(store.requestedProvider || ''),
+        resolvedProvider: String(store.resolvedProvider || ''),
+        fallbackReason: String(store.fallbackReason || ''),
         backendReady: Boolean(store.backendReady),
         usingFallback: Boolean(store.usingFallback),
         location: String(store.location || ''),
@@ -574,6 +580,18 @@ function assertFoundationReadiness(response, mode, phase) {
     assertCondition(readiness.decision === 'go', `[${mode}] ${phase}: readiness.decision=${readiness.decision}`);
     assertCondition(baseline.storeType === 'sqlite', `[${mode}] ${phase}: baseline.storeType=${baseline.storeType}`);
     assertCondition(
+        baseline.storageRequestedProvider === 'sqlite',
+        `[${mode}] ${phase}: baseline.storageRequestedProvider=${baseline.storageRequestedProvider}`
+    );
+    assertCondition(
+        baseline.storageResolvedProvider === 'sqlite',
+        `[${mode}] ${phase}: baseline.storageResolvedProvider=${baseline.storageResolvedProvider}`
+    );
+    assertCondition(
+        baseline.storageSupportsSqlite === true,
+        `[${mode}] ${phase}: baseline.storageSupportsSqlite=${baseline.storageSupportsSqlite}`
+    );
+    assertCondition(
         baseline.graphBackendSignalKind === 'embedded_graphdb',
         `[${mode}] ${phase}: baseline.graphBackendSignalKind=${baseline.graphBackendSignalKind}`
     );
@@ -585,6 +603,8 @@ function assertFoundationReadiness(response, mode, phase) {
         status: String(readiness.status || ''),
         decision: String(readiness.decision || ''),
         storeType: String(baseline.storeType || ''),
+        storageRequestedProvider: String(baseline.storageRequestedProvider || ''),
+        storageResolvedProvider: String(baseline.storageResolvedProvider || ''),
         graphBackendSignalKind: String(baseline.graphBackendSignalKind || ''),
         graphBackendIndependent: Boolean(baseline.graphBackendIndependent),
     };

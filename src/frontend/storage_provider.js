@@ -1704,6 +1704,23 @@
         return new Error(`Storage provider operation is unsupported in this runtime: ${operation}`);
     }
 
+    function normalizeStorageProviderKind(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === 'sqlite' || normalized === 'embedded' || normalized === 'embedded-sqlite' || normalized === 'embedded_sqlite') {
+            return 'sqlite';
+        }
+        if (normalized === 'file' || normalized === 'local-file' || normalized === 'snapshot') {
+            return 'file';
+        }
+        if (normalized === 'projection' || normalized === 'mobile_projection' || normalized === 'mobile-slim') {
+            return 'projection';
+        }
+        if (normalized === 'remote' || normalized === 'http' || normalized === 'external_http' || normalized === 'remote-http' || normalized === 'service') {
+            return 'remote';
+        }
+        return null;
+    }
+
     function formatCapacitorMtime(statObject) {
         if (!statObject || typeof statObject !== 'object') {
             return '';
@@ -1730,6 +1747,64 @@
         constructor(runtimeCaps) {
             this.runtimeCaps = runtimeCaps || {};
             this.mobileExactIndexPromise = null;
+        }
+
+        getStorageResolution() {
+            const runtimePlatform = String(this.runtimeCaps.platform || '').trim().toLowerCase();
+            const mobileRuntime = isCapacitorNativeRuntime()
+                || runtimePlatform.includes('android')
+                || runtimePlatform.includes('ios')
+                || runtimePlatform === 'mobile';
+            const requestedProvider = normalizeStorageProviderKind(
+                this.runtimeCaps.storage_requested_provider
+            ) || (mobileRuntime ? 'projection' : 'sqlite');
+            const reportedProvider = normalizeStorageProviderKind(this.runtimeCaps.storage_resolved_provider);
+            const resolvedProvider = mobileRuntime
+                ? 'projection'
+                : reportedProvider || undefined;
+            const fallbackReason = String(
+                this.runtimeCaps.storage_fallback_reason
+                || (mobileRuntime && requestedProvider === 'sqlite' ? 'native_sqlite_runtime_unavailable' : '')
+            ).trim();
+            return Object.freeze({
+                requestedProvider,
+                resolvedProvider,
+                fallbackReason: fallbackReason || undefined,
+                supportsSqlite: !mobileRuntime && resolvedProvider === 'sqlite',
+                supportsProjection: this.runtimeCaps.supports_projection_store !== false
+                    && resolvedProvider === 'projection',
+            });
+        }
+
+        async refreshStorageResolution() {
+            const current = this.getStorageResolution();
+            if (isCapacitorNativeRuntime() || !this._supportsSidecar()) {
+                return current;
+            }
+            try {
+                const payload = await sidecarFetchJson('api/knowledge/store-diagnostics');
+                const store = payload && payload.store && typeof payload.store === 'object'
+                    ? payload.store
+                    : null;
+                const resolvedProvider = normalizeStorageProviderKind(
+                    store && (store.resolvedProvider || store.storageEngine || store.provider)
+                );
+                if (resolvedProvider) {
+                    this.runtimeCaps = {
+                        ...this.runtimeCaps,
+                        storage_requested_provider: normalizeStorageProviderKind(
+                            store.requestedProvider
+                        ) || current.requestedProvider,
+                        storage_resolved_provider: resolvedProvider,
+                        storage_fallback_reason: String(store.fallbackReason || '').trim(),
+                        supports_sqlite: resolvedProvider === 'sqlite',
+                    };
+                }
+            } catch (_error) {
+                // Capability probing is advisory; the normal storage operation
+                // still owns the authoritative failure/fallback behavior.
+            }
+            return this.getStorageResolution();
         }
 
         _supportsSidecar() {

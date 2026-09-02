@@ -7160,6 +7160,7 @@ const knowledgeGraphStore = createKnowledgeGraphStore({
     backend: KNOWLEDGE_GRAPH_STORE_BACKEND,
     filePath: KNOWLEDGE_GRAPH_STORE_PATH,
     graphDbAdapter: KNOWLEDGE_GRAPHDB_ADAPTER,
+    graphDbRequestedProvider: KNOWLEDGE_GRAPHDB_ADAPTER_PROVIDER,
     graphDbFallbackEnabled: KNOWLEDGE_GRAPHDB_FALLBACK_ENABLED,
     graphDbOperationMode: KNOWLEDGE_GRAPHDB_OPERATION_MODE,
 });

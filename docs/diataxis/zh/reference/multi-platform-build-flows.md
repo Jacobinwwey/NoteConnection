@@ -50,3 +50,14 @@
 - Godot Pathmode 改为显式扩展档（`NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE=1`）。默认 Android runner 会移除生成工程中的 Godot bridge、依赖声明和 `path_mode` 资源，避免旧生成目录悄悄放大 slim 包体。
 
 本切片不宣称移动端本地 LLM parity 或 SQLite 持久化已经完成。当前移动投影是对有界本地图的 exact 内存索引；SQLite 持久化和完整 agent conversation parity 仍是后续独立契约阶段。
+## 存储 Provider 解析（2026-09-02）
+
+SQLite 功能继续保留在桌面/服务端运行时。Node sidecar 以 Node 22 为目标，默认请求内置 `node:sqlite` adapter。如果该模块不可用，graph store 保留现有 file-backed snapshot fallback，并报告 `requestedProvider=sqlite`、`resolvedProvider=file` 与 `fallbackReason=sqlite_runtime_unavailable`；绝不会把 fallback 标记成 embedded SQLite store。
+
+移动端打包继续保持 sidecar-free。Tauri Android 与 Capacitor 将存储解析为有界 `projection` provider（`graph_data.json` 加 exact analyzer），即使收到过期或手工注入的 SQLite capability 数据也不改变这一边界。运行时契约报告 `supports_sqlite=false`、`supports_projection=true` 以及明确的 `native_sqlite_runtime_unavailable` 原因。projection schema 与查询语义继续和桌面 replay fixture 共用。
+
+前端先消费宿主 capability 数据；sidecar 可用时，再从 `/api/knowledge/store-diagnostics` 刷新桌面端真实解析结果。这把平台能力与权威 store resolution 分开，同时保持旧 `storageEngine` 诊断字段向前兼容。移动端 SQLite/WASM 提升仍受签名 arm64 进程死亡、SAF、RSS 与包体证据门禁约束。
+
+## Sidecar 新鲜度（2026-09-03）
+
+Host sidecar 复用现在以内容指纹为准，不再只依赖时间戳。成功执行 `build-sidecar.js` 后，会在 ignored 的 `src-tauri/bin` 目录写入 `.noteconnection-sidecar-build-manifest.json`。`ensure-sidecar-ready.js` 对 `dist/src` 与构建输入计算 manifest digest，并验证当前 host binary 在 target 列表中；manifest 缺失、过期、不可读或来自其他 target 时重建。这可以拦截时钟回拨、文件拷贝与过期 LFS binary 导致的 packaged SQLite 行为偏差，同时在输入未变时避免每次启动都重建。

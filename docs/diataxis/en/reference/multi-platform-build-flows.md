@@ -50,3 +50,15 @@ This page is the Diataxis reference entry for the current multi-platform build m
 - Godot Pathmode is an extended opt-in (`NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE=1`). The default Android runner disables generated Godot bridge files, dependency declarations, and `path_mode` assets so stale generated scaffolds cannot silently inflate a slim build.
 
 This slice intentionally does not claim mobile-local LLM parity or SQLite persistence. The current mobile projection is an exact in-memory index over a bounded local graph; SQLite-backed persistence and full agent conversation parity remain subsequent phases with separate contracts.
+
+## Storage Provider Resolution (2026-09-02)
+
+SQLite functionality remains enabled for desktop/server runtimes. The Node sidecar targets Node 22 and requests the built-in `node:sqlite` adapter by default. When that module is unavailable, the graph store keeps the existing file-backed snapshot fallback and reports `requestedProvider=sqlite`, `resolvedProvider=file`, and `fallbackReason=sqlite_runtime_unavailable`; it never labels the fallback as an embedded SQLite store.
+
+Mobile packaging remains sidecar-free. Tauri Android and Capacitor resolve storage to the bounded `projection` provider (`graph_data.json` plus the exact analyzer), even if stale or manually supplied capability data claims SQLite. Their runtime contract reports `supports_sqlite=false`, `supports_projection=true`, and an explicit `native_sqlite_runtime_unavailable` reason. The projection schema and query semantics remain shared with desktop replay fixtures.
+
+The frontend first consumes host capability data, then refreshes desktop resolution from `/api/knowledge/store-diagnostics` when a sidecar is available. This separates platform capability from the authoritative store resolution and keeps old `storageEngine` diagnostics backward-compatible. SQLite/WASM promotion on mobile remains gated by signed arm64 process-death, SAF, RSS, and package-size evidence.
+
+## Sidecar Freshness (2026-09-03)
+
+Host sidecar reuse is content-verified rather than timestamp-only. A successful `build-sidecar.js` run writes `.noteconnection-sidecar-build-manifest.json` under the ignored `src-tauri/bin` directory. `ensure-sidecar-ready.js` compares the manifest digest over `dist/src` and build inputs, verifies that the current host binary is listed, and rebuilds when the manifest is absent, stale, unreadable, or from another target. This protects packaged SQLite behavior from clock skew, copied artifacts, and stale LFS binaries without rebuilding on every startup when the inputs are unchanged.

@@ -2150,6 +2150,10 @@ struct RuntimeCapabilities {
     supports_kb_import: bool,
     kb_import_mode: String,
     supports_projection_store: bool,
+    storage_requested_provider: String,
+    storage_resolved_provider: String,
+    storage_fallback_reason: Option<String>,
+    supports_sqlite: bool,
     supports_native_pathmode: bool,
 }
 
@@ -2189,6 +2193,10 @@ fn get_runtime_capabilities() -> RuntimeCapabilities {
             supports_kb_import: true,
             kb_import_mode: "android-saf-copy".to_string(),
             supports_projection_store: true,
+            storage_requested_provider: "projection".to_string(),
+            storage_resolved_provider: "projection".to_string(),
+            storage_fallback_reason: Some("native_sqlite_runtime_unavailable".to_string()),
+            supports_sqlite: false,
             supports_native_pathmode: option_env!("NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE") == Some("1"),
         };
     }
@@ -2204,6 +2212,10 @@ fn get_runtime_capabilities() -> RuntimeCapabilities {
             supports_kb_import: true,
             kb_import_mode: "native-folder".to_string(),
             supports_projection_store: true,
+            storage_requested_provider: "sqlite".to_string(),
+            storage_resolved_provider: "unknown".to_string(),
+            storage_fallback_reason: None,
+            supports_sqlite: true,
             supports_native_pathmode: false,
         }
     }
@@ -3284,6 +3296,10 @@ mod tests {
             assert!(caps.supports_kb_import);
             assert_eq!(caps.kb_import_mode, "android-saf-copy");
             assert!(caps.supports_projection_store);
+            assert_eq!(caps.storage_requested_provider, "projection");
+            assert_eq!(caps.storage_resolved_provider, "projection");
+            assert_eq!(caps.storage_fallback_reason.as_deref(), Some("native_sqlite_runtime_unavailable"));
+            assert!(!caps.supports_sqlite);
             assert_eq!(
                 caps.supports_native_pathmode,
                 option_env!("NOTE_CONNECTION_ANDROID_INCLUDE_GODOT_PATHMODE") == Some("1")
@@ -3293,6 +3309,10 @@ mod tests {
             assert!(caps.supports_build);
             assert!(caps.supports_content_api);
             assert!(caps.supports_kb_runtime_change);
+            assert_eq!(caps.storage_requested_provider, "sqlite");
+            assert_eq!(caps.storage_resolved_provider, "unknown");
+            assert!(caps.storage_fallback_reason.is_none());
+            assert!(caps.supports_sqlite);
             assert!(!caps.supports_native_pathmode);
         }
     }

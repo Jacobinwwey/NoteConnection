@@ -535,6 +535,9 @@ describe('NoteMD server integration', () => {
     expect(readinessResponse.body.readiness.baseline).toEqual(
       expect.objectContaining({
         storeType: 'sqlite',
+        storageRequestedProvider: 'sqlite',
+        storageResolvedProvider: 'sqlite',
+        storageSupportsSqlite: true,
         graphBackendStatus: 'independent',
         graphBackendSignalKind: 'embedded_graphdb',
         graphBackendIndependent: true,
@@ -603,6 +606,8 @@ describe('NoteMD server integration', () => {
       expect.objectContaining({
         storeType: 'graphdb',
         storageEngine: 'sqlite',
+        requestedProvider: 'sqlite',
+        resolvedProvider: 'sqlite',
         backendReady: true,
         usingFallback: false,
       })

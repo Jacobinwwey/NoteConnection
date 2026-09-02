@@ -3,6 +3,20 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-09-03 Packaged Sidecar Content-Fingerprint Freshness
+
+The SQLite matrix found one real packaged-runtime regression that mtime checks could not detect: an existing Windows sidecar carried an older server payload while its binary timestamp was newer than the checked-out inputs. A forced rebuild restored the expected `requestedProvider=sqlite` diagnostics and SQLite restart continuity. `scripts/sidecar-build-fingerprint.js` now hashes the packaged `dist/src` tree plus package/build inputs into an ignored manifest beside the host sidecar. `build-sidecar.js` writes that manifest after a successful build; `ensure-sidecar-ready.js` requires a matching digest and target entry before it can skip a rebuild, while missing, stale, unreadable, or target-mismatched manifests fail closed into rebuild.
+
+The freshness contract is covered by a content-change regression and is included in the migration gate. The real matrix was rerun after rebuilding: `dist_node_runtime` and `packaged_sidecar` both passed smoke/medium/heavy workloads, restart continuity, SQLite diagnostics, query counts, and foundation readiness. The generated LFS sidecar remains a local verification artifact; the ignored manifest is intentionally not committed.
+
+## 2026-09-02 Cross-Platform SQLite Resolution Boundary
+
+The previously removed SQLite path has been restored. Desktop/server startup still requests the embedded Node 22 `node:sqlite` graph adapter, persists the existing schema-1/2 snapshot, and serves operation-level node/edge/path queries. The existing file-backed adapter remains an explicit fallback, and diagnostics now distinguish `requestedProvider`, `resolvedProvider`, `storageEngine`, and `fallbackReason` so a missing SQLite runtime cannot be reported as an active SQLite store.
+
+The mobile boundary is intentionally different. Tauri Android and Capacitor do not ship the Node sidecar; they resolve storage to the bounded `projection` provider (`graph_data.json` plus the exact analyzer). Host capability probes report `supports_sqlite=false`, `supports_projection=true`, and `native_sqlite_runtime_unavailable`. A stale SQLite flag is ignored on mobile. Desktop frontend startup refreshes its provisional capability data from `/api/knowledge/store-diagnostics` before exposing the final resolution.
+
+The change is additive: public snapshot/projection schemas, graph IDs, IPC fields, and mobile package budgets are unchanged. New contract tests cover provider normalization, SQLite success, file fallback, Android projection forcing, and authoritative desktop diagnostic refresh. This closes the accidental deletion regression; it does not promote SQLite/WASM to the mobile default. That decision remains gated by signed arm64 process-death/SAF continuity, RSS, and package-size evidence.
+
 ## 2026-09-02 SQLite Restart Diagnostics and Sidecar Build Concurrency Closure
 
 This continuation closed two defects found by rerunning the foundation matrix against the current build. The embedded SQLite snapshot itself was durable: direct SQL inspection showed the committed payload and atom rows survived stop/restart. The failure was in the graph-store wrapper diagnostics: after reopening, `loadSnapshot()` restored data but did not repopulate `graphDbLastSnapshotMetadata`, so the verifier observed zero documents even though queries could read the graph. `src/learning/store.ts` now derives the metadata projection from every successful snapshot read, preserving the existing adapter and response contracts. A regression test covers save, close, reopen, load, and diagnostics restoration.

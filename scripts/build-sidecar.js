@@ -3,6 +3,7 @@
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { writeSidecarBuildManifest } = require('./sidecar-build-fingerprint.js');
 
 const repoRoot = path.resolve(__dirname, '..');
 const entryFile = path.join(repoRoot, 'dist', 'src', 'server.js');
@@ -167,6 +168,7 @@ function main() {
 
   targets.forEach((target) => runPkgBuild(target));
   runMarkdownWorkerBuild(forceBuild ? ['--force'] : []);
+  writeSidecarBuildManifest(repoRoot, targets.map((target) => target.outputFile));
   console.log(`[Sidecar Build] Completed ${targets.length} target(s).`);
 }
 

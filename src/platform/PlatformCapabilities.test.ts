@@ -9,6 +9,9 @@ describe('PlatformCapabilities', () => {
         expect(capabilities.render.supportsSvgArtifacts).toBe(false);
         expect(capabilities.render.preferredArtifact).toBe('png');
         expect(capabilities.conversation.supportsStreaming).toBe(false);
+        expect(capabilities.storage.preferredProvider).toBe('sqlite');
+        expect(capabilities.storage.supportsSqlite).toBe(true);
+        expect(capabilities.storage.supportsProjection).toBe(false);
     });
 
     test('resolves mobile slim profile as sidecar-free and PNG-only', () => {
@@ -18,6 +21,9 @@ describe('PlatformCapabilities', () => {
         expect(capabilities.export.requiresIndexedReadiness).toBe(true);
         expect(capabilities.retrieval.supportsSidecar).toBe(false);
         expect(capabilities.render.supportsSvgArtifacts).toBe(false);
+        expect(capabilities.storage.preferredProvider).toBe('projection');
+        expect(capabilities.storage.supportsSqlite).toBe(false);
+        expect(capabilities.storage.supportsProjection).toBe(true);
     });
 
     test('platform target override selects the compatible profile family', () => {

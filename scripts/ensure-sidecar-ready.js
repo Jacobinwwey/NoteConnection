@@ -4,6 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { acquireSidecarBuildLock } = require('./sidecar-build-lock.js');
+const {
+  isSidecarBuildManifestCurrent,
+  readSidecarBuildManifest,
+} = require('./sidecar-build-fingerprint.js');
 
 const repoRoot = path.resolve(__dirname, '..');
 const srcRoot = path.join(repoRoot, 'src');
@@ -192,7 +196,18 @@ function main() {
     const validationStatus = runNodeScript('validate-tauri-sidecars.js');
     const sidecarIsValid = validationStatus === 0;
     const sidecarIsFresh = sidecarMtime > 0 && sidecarMtime >= inputsMtime;
-    const shouldRebuild = forceRebuild || !sidecarIsValid || !sidecarIsFresh;
+    const manifest = readSidecarBuildManifest(repoRoot);
+    const manifestTargets = manifest && Array.isArray(manifest.targets) ? manifest.targets : [];
+    const hostBinaryName = hostServerBinary ? path.basename(hostServerBinary) : '';
+    let sidecarManifestCurrent = false;
+    if (sidecarIsValid && sidecarIsFresh && hostBinaryName && manifestTargets.includes(hostBinaryName)) {
+      try {
+        sidecarManifestCurrent = isSidecarBuildManifestCurrent(repoRoot);
+      } catch {
+        sidecarManifestCurrent = false;
+      }
+    }
+    const shouldRebuild = forceRebuild || !sidecarIsValid || !sidecarIsFresh || !sidecarManifestCurrent;
 
     if (!shouldRebuild) {
       console.log('[Sidecar Ensure] Sidecar binaries are valid and up-to-date. Skipping rebuild.');
@@ -203,6 +218,8 @@ function main() {
       console.log('[Sidecar Ensure] Forced rebuild requested.');
     } else if (!sidecarIsValid) {
       console.log('[Sidecar Ensure] Sidecar validation failed. Rebuilding.');
+    } else if (!sidecarManifestCurrent) {
+      console.log('[Sidecar Ensure] Sidecar input fingerprint is missing or stale. Rebuilding.');
     } else {
       console.log('[Sidecar Ensure] Sidecar is stale compared to source inputs. Rebuilding.');
     }

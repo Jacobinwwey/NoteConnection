@@ -121,7 +121,7 @@ import type {
     GraphQueryBackendResult,
     GraphQueryBackendType,
 } from './queryBackend';
-import { isOpsAdapter } from './store';
+import { isOpsAdapter, normalizeStorageProviderKind } from './store';
 import { ResourceRegistry } from '../resources/ResourceRegistry';
 import type { CanonicalResourceRecord, ResourceProjectionRecord } from '../resources/types';
 import { normalizeResourceReference } from '../core/ResourceReference';
@@ -12897,6 +12897,19 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     : ''
             )
         ).trim().toLowerCase();
+        const requestedStorageProvider = String(
+            (storeDiagnostics as Record<string, unknown>).requestedProvider
+            || storageEngine
+            || 'unknown'
+        ).trim().toLowerCase();
+        const resolvedStorageProvider = normalizeStorageProviderKind(
+            (storeDiagnostics as Record<string, unknown>).resolvedProvider
+            || storageEngine
+            || (storeDiagnostics as Record<string, unknown>).storeType
+        ) || 'unknown';
+        const storageFallbackReason = String(
+            (storeDiagnostics as Record<string, unknown>).fallbackReason || ''
+        ).trim();
         const fallbackStoreType = String((storeDiagnostics as Record<string, unknown>).fallbackStoreType || '').trim().toLowerCase();
         const usingFallback = storeDiagnostics.usingFallback === true;
         const configuredBackend = String(queryBackendConfig.configuredBackend || this.currentGraphQueryBackendType).trim();
@@ -12928,6 +12941,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     : 'file_backed';
         const baseline = {
             storeType: baselineStoreType,
+            storageRequestedProvider: requestedStorageProvider,
+            storageResolvedProvider: resolvedStorageProvider,
+            storageFallbackReason: storageFallbackReason || undefined,
+            storageSupportsSqlite: resolvedStorageProvider === 'sqlite',
+            storageSupportsProjection: resolvedStorageProvider === 'projection',
             exists: Boolean(storeDiagnostics.exists),
             loaded: Boolean(storeDiagnostics.loaded),
             fileBackedStore: baselineStoreType === 'file',

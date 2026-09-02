@@ -4,6 +4,7 @@ import {
     type ExportProfileId,
     type PlatformRenderTarget,
 } from './ExportProfile';
+import type { StorageProviderKind } from '../shared/types';
 
 export interface PlatformCapabilities {
     exportProfileId: ExportProfileId;
@@ -29,6 +30,12 @@ export interface PlatformCapabilities {
         supportsLocalExactQuery: boolean;
         supportsRemoteInference: boolean;
         requiresRemoteInference: boolean;
+    };
+    storage: {
+        preferredProvider: StorageProviderKind;
+        supportedProviders: StorageProviderKind[];
+        supportsSqlite: boolean;
+        supportsProjection: boolean;
     };
     conversation: {
         supportsStreaming: boolean;
@@ -84,6 +91,14 @@ export function resolvePlatformCapabilities(input: {
             supportsLocalExactQuery: profile.supportsLocalExactQuery,
             supportsRemoteInference: profile.supportsRemoteInference,
             requiresRemoteInference: profile.requiresRemoteInference,
+        },
+        storage: {
+            preferredProvider: profile.platformTarget === 'mobile' ? 'projection' : 'sqlite',
+            supportedProviders: profile.platformTarget === 'mobile'
+                ? ['projection']
+                : ['sqlite', 'file', 'remote'],
+            supportsSqlite: profile.platformTarget !== 'mobile',
+            supportsProjection: profile.platformTarget === 'mobile',
         },
         conversation: {
             supportsStreaming: profile.supportsConversationStreaming,

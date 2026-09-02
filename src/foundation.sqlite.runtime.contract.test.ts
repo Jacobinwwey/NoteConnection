@@ -52,6 +52,12 @@ describe('foundation sqlite runtime verification contract', () => {
     expect(source).toContain('/api/knowledge/query');
     expect(source).toContain("graphBackendSignalKind === 'embedded_graphdb'");
     expect(source).toContain("storageEngine === 'sqlite'");
+    expect(source).toContain("requestedProvider === 'sqlite'");
+    expect(source).toContain("resolvedProvider === 'sqlite'");
+    expect(source).toContain('fallbackReason');
+    expect(source).toContain("storageRequestedProvider === 'sqlite'");
+    expect(source).toContain("storageResolvedProvider === 'sqlite'");
+    expect(source).toContain('storageSupportsSqlite === true');
     expect(source).toContain("usingFallback !== true");
     expect(source).toContain("genericQuery: 'persist graph content restart sqlite proof'");
     expect(source).toContain('graphDbLastSnapshotMetadata');

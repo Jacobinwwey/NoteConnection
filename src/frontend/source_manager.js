@@ -46,15 +46,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return /^https?:\/\/(?:127\.0\.0\.1|localhost):3000$/.test(origin);
     };
 
+    const isTauriRuntime = typeof window !== 'undefined' && Boolean(window.__TAURI__);
+    const initialBrowserRuntimeBackend = canUseBrowserRuntimeBackend();
     let runtimeCaps = {
         platform: 'web',
-        supports_sidecar: canUseBrowserRuntimeBackend(),
-        supports_build: canUseBrowserRuntimeBackend(),
-        supports_content_api: canUseBrowserRuntimeBackend(),
+        supports_sidecar: initialBrowserRuntimeBackend,
+        supports_build: initialBrowserRuntimeBackend,
+        supports_content_api: initialBrowserRuntimeBackend,
         supports_kb_runtime_change: false,
         supports_kb_import: false,
         kb_import_mode: 'none',
         supports_projection_store: true,
+        storage_requested_provider: isTauriRuntime || initialBrowserRuntimeBackend ? 'sqlite' : 'projection',
+        storage_resolved_provider: isTauriRuntime || initialBrowserRuntimeBackend ? 'unknown' : 'projection',
+        storage_fallback_reason: isTauriRuntime
+            ? 'runtime_capability_unavailable'
+            : initialBrowserRuntimeBackend ? '' : 'runtime_backend_unavailable',
+        supports_sqlite: initialBrowserRuntimeBackend,
         supports_native_pathmode: false,
         supports_mobile_wasm_compute: false,
         mobile_wasm_reason: 'non-mobile-runtime'
@@ -220,6 +228,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return window.NoteConnectionStorage.createProvider({ runtimeCaps });
     };
 
+    const refreshStorageResolution = async () => {
+        const provider = getStorageProvider();
+        if (!provider || typeof provider.refreshStorageResolution !== 'function') {
+            return;
+        }
+        const resolution = await provider.refreshStorageResolution();
+        if (!resolution || typeof resolution !== 'object') {
+            return;
+        }
+        runtimeCaps = {
+            ...runtimeCaps,
+            storage_requested_provider: resolution.requestedProvider,
+            storage_resolved_provider: resolution.resolvedProvider,
+            storage_fallback_reason: resolution.fallbackReason || '',
+            supports_sqlite: resolution.supportsSqlite === true,
+        };
+        exposeRuntimeCaps();
+    };
+
     const resolveRuntimeCapabilities = async () => {
         if (!window.__TAURI__) {
             const capacitorPlatform = resolveCapacitorPlatform();
@@ -237,6 +264,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     supports_kb_import: false,
                     kb_import_mode: 'app-local-only',
                     supports_projection_store: true,
+                    storage_requested_provider: 'projection',
+                    storage_resolved_provider: 'projection',
+                    storage_fallback_reason: 'native_sqlite_runtime_unavailable',
+                    supports_sqlite: false,
                     supports_native_pathmode: false,
                     supports_mobile_wasm_compute: mobileWasm.supported,
                     mobile_wasm_reason: mobileWasm.reason,
@@ -260,6 +291,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     supports_kb_import: false,
                     kb_import_mode: 'none',
                     supports_projection_store: true,
+                    storage_requested_provider: browserRuntimeBackend ? 'sqlite' : 'projection',
+                    storage_resolved_provider: browserRuntimeBackend ? 'unknown' : 'projection',
+                    storage_fallback_reason: browserRuntimeBackend ? '' : 'runtime_backend_unavailable',
+                    supports_sqlite: browserRuntimeBackend,
                     supports_native_pathmode: false
                 };
                 if (!browserRuntimeBackend) {
@@ -1110,6 +1145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.__TAURI__ && runtimeCaps.supports_sidecar) {
             await waitForSidecarReady();
         }
+        await refreshStorageResolution();
         bootstrapScriptLoad();
 
         if (window.i18n && window.i18n.isInitialized) {

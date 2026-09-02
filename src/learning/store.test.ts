@@ -10,6 +10,7 @@ import {
     isOpsAdapter,
     normalizeGraphDbSnapshotAdapterProvider,
     normalizeGraphDbStoreOperationMode,
+    normalizeStorageProviderKind,
     normalizeKnowledgeGraphStoreBackend,
     type GraphDbSnapshotAdapter,
     type KnowledgeGraphSnapshot,
@@ -515,6 +516,40 @@ describe('Knowledge graph store backend factory', () => {
         expect(normalizeGraphDbSnapshotAdapterProvider('unknown')).toBe('file');
     });
 
+    test('normalizes cross-platform storage provider kinds without conflating http and projection', () => {
+        expect(normalizeStorageProviderKind('sqlite')).toBe('sqlite');
+        expect(normalizeStorageProviderKind('embedded-sqlite')).toBe('sqlite');
+        expect(normalizeStorageProviderKind('file')).toBe('file');
+        expect(normalizeStorageProviderKind('external_http')).toBe('remote');
+        expect(normalizeStorageProviderKind('remote')).toBe('remote');
+        expect(normalizeStorageProviderKind('mobile_projection')).toBe('projection');
+        expect(normalizeStorageProviderKind('unknown')).toBeUndefined();
+    });
+
+    test('reports file resolution when a requested sqlite graph adapter is unavailable', async () => {
+        const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-store-provider-resolution-'));
+        const filePath = path.join(tempRoot, 'runtime_data', 'knowledge_graph_store.v1.json');
+
+        try {
+            const store = createKnowledgeGraphStore({
+                backend: 'graphdb',
+                filePath,
+                graphdb: { adapter: null },
+                graphDbRequestedProvider: 'sqlite',
+                graphDbFallbackEnabled: true,
+            });
+
+            expect(store.getDiagnostics()).toEqual(expect.objectContaining({
+                requestedProvider: 'sqlite',
+                resolvedProvider: 'file',
+                fallbackReason: 'sqlite_runtime_unavailable',
+                storageEngine: 'file',
+            }));
+        } finally {
+            fs.rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
+
     test('normalizes graphdb operation mode aliases', () => {
         expect(normalizeGraphDbStoreOperationMode('snapshot')).toBe('snapshot_only');
         expect(normalizeGraphDbStoreOperationMode('snapshot_only')).toBe('snapshot_only');
@@ -994,6 +1029,8 @@ describe('Knowledge graph store backend factory', () => {
                 expect.arrayContaining(['load_snapshot', 'get_node', 'query_nodes', 'query_edges', 'find_path'])
             );
             expect(diagnostics.supportedWriteOperations).toEqual(['save_snapshot']);
+            expect(diagnostics.requestedProvider).toBe('remote');
+            expect(diagnostics.resolvedProvider).toBe('remote');
             expect(String(diagnostics.connector?.healthStatus || '')).toBe('ready');
             expect(String(diagnostics.connector?.circuitState || '')).toBe('closed');
             expect(Number(diagnostics.connector?.requestCount || 0)).toBeGreaterThanOrEqual(2);
@@ -1004,6 +1041,57 @@ describe('Knowledge graph store backend factory', () => {
             expect(mockServer.requests.some((item) => item.method === 'GET' && item.path === '/graphdb/snapshot')).toBe(true);
         } finally {
             await mockServer.close();
+        }
+    });
+
+    test('reports a SQLite runtime fallback when a file adapter is supplied for a SQLite request', () => {
+        const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-store-provider-mismatch-'));
+        const filePath = path.join(tempRoot, 'runtime_data', 'knowledge_graph_store.graphdb.v1.json');
+        try {
+            const adapter = createFileGraphDbSnapshotAdapter({ filePath, id: 'file-fallback-adapter' });
+            const store = createKnowledgeGraphStore({
+                backend: 'graphdb',
+                filePath,
+                graphdb: { adapter },
+                graphDbRequestedProvider: 'sqlite',
+                graphDbFallbackEnabled: true,
+            });
+
+            expect(store.getDiagnostics()).toEqual(expect.objectContaining({
+                requestedProvider: 'sqlite',
+                resolvedProvider: 'file',
+                fallbackReason: 'sqlite_runtime_unavailable',
+                storageEngine: 'file',
+            }));
+        } finally {
+            fs.rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
+
+    test('returns an unavailable SQLite adapter instead of throwing when its parent path cannot be created', () => {
+        const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-store-sqlite-init-failure-'));
+        const parentFile = path.join(tempRoot, 'not-a-directory');
+        fs.writeFileSync(parentFile, 'occupied', 'utf8');
+        try {
+            const adapter = createGraphDbSnapshotAdapter({
+                provider: 'sqlite',
+                sqlitePath: path.join(parentFile, 'knowledge.sqlite'),
+            });
+            expect(adapter).toBeNull();
+
+            const fallbackPath = path.join(tempRoot, 'fallback', 'knowledge.json');
+            const store = createKnowledgeGraphStore({
+                backend: 'graphdb',
+                filePath: fallbackPath,
+                graphdb: { adapter: null },
+                graphDbRequestedProvider: 'sqlite',
+            });
+            expect(store.getDiagnostics()).toEqual(expect.objectContaining({
+                resolvedProvider: 'file',
+                fallbackReason: 'sqlite_runtime_unavailable',
+            }));
+        } finally {
+            fs.rmSync(tempRoot, { recursive: true, force: true });
         }
     });
 
@@ -1119,6 +1207,9 @@ describe('Knowledge graph store backend factory', () => {
             expect(String(diagnostics.location || '')).toContain('knowledge_graph_store.graphdb.v1.sqlite');
             expect(diagnostics.storeType).toBe('graphdb');
             expect(String((diagnostics as any).storageEngine || '')).toBe('sqlite');
+            expect((diagnostics as any).requestedProvider).toBe('sqlite');
+            expect((diagnostics as any).resolvedProvider).toBe('sqlite');
+            expect((diagnostics as any).fallbackReason).toBeUndefined();
             expect((diagnostics as any).capabilityMode).toBe('ops_capable');
             expect((diagnostics as any).supportedReadOperations).toEqual(
                 expect.arrayContaining(['load_snapshot', 'get_node', 'query_nodes', 'query_edges', 'find_path'])
