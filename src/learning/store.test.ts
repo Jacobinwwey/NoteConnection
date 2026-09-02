@@ -1257,6 +1257,104 @@ describe('Knowledge graph store backend factory', () => {
         }
     });
 
+    test('graphdb store diagnostics restores snapshot metadata after reopening the sqlite adapter', async () => {
+        const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-store-sqlite-diagnostics-reopen-'));
+        const sqlitePath = path.join(tempRoot, 'runtime_data', 'knowledge_graph_store.graphdb.v1.sqlite');
+        let firstAdapter: ReturnType<typeof createGraphDbSnapshotAdapter> | null = null;
+        let secondAdapter: ReturnType<typeof createGraphDbSnapshotAdapter> | null = null;
+        let firstStore: ReturnType<typeof createKnowledgeGraphStore> | null = null;
+        let secondStore: ReturnType<typeof createKnowledgeGraphStore> | null = null;
+
+        try {
+            const snapshot = createSnapshot('sqlite_store_diagnostics_reopen_user');
+            snapshot.atoms = [createAtom('reopen_atom', 'Reopen Alpha')];
+            snapshot.documents = [{
+                documentId: 'reopen_doc',
+                sourcePath: '/reopen/doc.md',
+                sourceHash: 'reopen_hash',
+                version: 1,
+                updatedAt: '2026-01-01T00:00:00.000Z',
+                atomStableKeyToId: [['reopen_atom_stable', 'reopen_atom']],
+                atomIds: ['reopen_atom'],
+                evidenceSpanIds: [],
+                relationEdgeIds: [],
+                temporalEdgeIds: [],
+            }];
+
+            firstAdapter = createGraphDbSnapshotAdapter({ provider: 'sqlite', sqlitePath, adapterId: 'sqlite-diagnostics-reopen-first' });
+            expect(firstAdapter).not.toBeNull();
+            firstStore = createKnowledgeGraphStore({
+                backend: 'graphdb',
+                graphdb: { adapter: firstAdapter },
+                graphDbFallbackEnabled: false,
+                graphDbOperationMode: 'ops_preferred',
+            });
+            await firstStore.saveSnapshot(snapshot);
+            firstStore.close?.();
+            firstStore = null;
+            firstAdapter = null;
+
+            secondAdapter = createGraphDbSnapshotAdapter({ provider: 'sqlite', sqlitePath, adapterId: 'sqlite-diagnostics-reopen-second' });
+            expect(secondAdapter).not.toBeNull();
+            secondStore = createKnowledgeGraphStore({
+                backend: 'graphdb',
+                graphdb: { adapter: secondAdapter },
+                graphDbFallbackEnabled: false,
+                graphDbOperationMode: 'ops_preferred',
+            });
+
+            await expect(secondStore.loadSnapshot()).resolves.toEqual(snapshot);
+            expect(secondStore.getDiagnostics().graphDbLastSnapshotMetadata).toEqual(expect.objectContaining({
+                atomCount: 1,
+                documentCount: 1,
+            }));
+        } finally {
+            try { firstStore?.close?.(); } catch { }
+            try { secondStore?.close?.(); } catch { }
+            try { firstAdapter?.close?.(); } catch { }
+            try { secondAdapter?.close?.(); } catch { }
+            fs.rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
+
+    test('graphdb store diagnostics derives metadata from ops reads when the adapter has no probe method', async () => {
+        const snapshot = createSnapshot('ops_read_metadata_user');
+        snapshot.atoms = [createAtom('ops_read_atom', 'Ops Read Alpha')];
+        snapshot.documents = [{
+            documentId: 'ops_read_doc',
+            sourcePath: '/ops-read/doc.md',
+            sourceHash: 'ops_read_hash',
+            version: 1,
+            updatedAt: '2026-01-01T00:00:00.000Z',
+            atomStableKeyToId: [['ops_read_atom_stable', 'ops_read_atom']],
+            atomIds: ['ops_read_atom'],
+            evidenceSpanIds: [],
+            relationEdgeIds: [],
+            temporalEdgeIds: [],
+        }];
+        const adapter: GraphDbSnapshotAdapter = {
+            id: 'ops-only-without-probe',
+            opsCapable: true,
+            loadSnapshot: async () => snapshot,
+            saveSnapshot: async () => undefined,
+            loadSnapshotByOps: async () => snapshot,
+            saveSnapshotByOps: async () => undefined,
+            getCapabilities: () => ({ mode: 'ops_capable', snapshotSupported: true, writeSupported: true }),
+        };
+        const store = createKnowledgeGraphStore({
+            backend: 'graphdb',
+            graphdb: { adapter },
+            graphDbFallbackEnabled: false,
+            graphDbOperationMode: 'ops_preferred',
+        });
+
+        await expect(store.loadSnapshot()).resolves.toEqual(snapshot);
+        expect(store.getDiagnostics().graphDbLastSnapshotMetadata).toEqual(expect.objectContaining({
+            atomCount: 1,
+            documentCount: 1,
+        }));
+    });
+
     test('built-in http graphdb adapter surfaces circuit-open telemetry after repeated transient failures', async () => {
         const server = http.createServer((req, res) => {
             const method = String(req.method || 'GET').toUpperCase();

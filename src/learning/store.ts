@@ -1244,6 +1244,20 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                 pathFallbackCount: 0,
             };
 
+            const snapshotMetadataFromSnapshot = (snapshot: KnowledgeGraphSnapshot | null): Record<string, unknown> | null => {
+                if (!snapshot) {
+                    return null;
+                }
+                return {
+                    schemaVersion: snapshot.schemaVersion,
+                    savedAt: snapshot.savedAt,
+                    atomCount: Array.isArray(snapshot.atoms) ? snapshot.atoms.length : 0,
+                    relationEdgeCount: Array.isArray(snapshot.relationEdges) ? snapshot.relationEdges.length : 0,
+                    temporalEdgeCount: Array.isArray(snapshot.temporalEdges) ? snapshot.temporalEdges.length : 0,
+                    documentCount: Array.isArray(snapshot.documents) ? snapshot.documents.length : 0,
+                };
+            };
+
             const resolveOpsPath = async (): Promise<boolean> => {
                 if (!opsCapable || requestMode !== 'ops_preferred') return false;
                 if (opsState.probed) return true;
@@ -1271,13 +1285,21 @@ export function createKnowledgeGraphStore(o: Record<string, unknown>): Knowledge
                             const result = await a.loadSnapshotByOps();
                             opsState.probed = true;
                             opsState.opsReadUsed = true;
+                            if (result) {
+                                opsState.lastProbeResult = snapshotMetadataFromSnapshot(result);
+                            }
                             return result;
                         } catch {
                             // Downgrade: ops read failed, fall back to snapshot read
                         }
                     }
                 }
-                return a.loadSnapshot!();
+                const snapshot = await a.loadSnapshot!();
+                if (snapshot) {
+                    opsState.lastProbeResult = snapshotMetadataFromSnapshot(snapshot);
+                    opsState.probed = true;
+                }
+                return snapshot;
             };
 
             const saveSnapshotThroughAdapter = async (snapshot: KnowledgeGraphSnapshot): Promise<void> => {

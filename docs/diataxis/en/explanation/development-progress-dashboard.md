@@ -3,6 +3,16 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-09-02 SQLite Restart Diagnostics and Sidecar Build Concurrency Closure
+
+This continuation closed two defects found by rerunning the foundation matrix against the current build. The embedded SQLite snapshot itself was durable: direct SQL inspection showed the committed payload and atom rows survived stop/restart. The failure was in the graph-store wrapper diagnostics: after reopening, `loadSnapshot()` restored data but did not repopulate `graphDbLastSnapshotMetadata`, so the verifier observed zero documents even though queries could read the graph. `src/learning/store.ts` now derives the metadata projection from every successful snapshot read, preserving the existing adapter and response contracts. A regression test covers save, close, reopen, load, and diagnostics restoration.
+
+`ensure-sidecar-ready.js` also had a cross-process race. Concurrent foundation jobs could both rebuild the shared host binary, producing a corrupted pkg prelude and a connection-refused packaged runtime. `scripts/sidecar-build-lock.js` now owns an atomic `wx` lock with pid/host/start/token ownership, stale-owner reclamation, bounded polling, fail-closed timeout, and token-checked release. The ensure lifecycle holds the lock across validation, rebuild, Godot preparation, and final validation, and always releases it through `finally`. The lock contract runs three real child-process scenarios: serialization, orphan recovery, and live-owner timeout.
+
+Fresh evidence for this slice: full Jest `156` suites / `1,363` passed / `26` skipped; migration gate `58` suites / `321` passed / `13` skipped; `test:gates` completed through WASM strict parity, Tauri Rust (`30` passed / `1` ignored), Agent Workspace (`157` passed / `13` skipped), Android prerequisites, privacy, SBOM, PathBridge, and sidecar signature contracts. SQLite runtime matrix passed smoke/medium/heavy across `dist_node_runtime` and `packaged_sidecar`, including restart metadata and query continuity. ANN runtime matrix passed the same two runtime modes and three workload profiles with expected recall `1.0`.
+
+The lock prevents local/CI writers from corrupting shared build outputs; it does not make release signing, online Android device acceptance, SAF workload, process-death continuity, or RSS measurement available. Those blockers remain explicit and are not promoted by host-side tests.
+
 ## 2026-09-02 Mobile Compact Projection, Local Exact Fallback, and Final Verification
 
 The current continuation closes the remaining cross-platform answer-contract gaps. `answerTaskPlan.ts` is now the typed source of truth for compound deliverables; `answerReleaseReview.ts` applies one public Markdown boundary to every answer path, including RAG revisions, so display math is emitted as a balanced block (`$$` on standalone lines), formula-only duplicates are removed only when a contextual claim carries the same normalized expression, and incomplete math/prose is rejected without mutating the audit plan. The exact public text is still stored in the structured answer block and in the response-level answer, so clients do not have to reconstruct a release from trace fragments.

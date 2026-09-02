@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { acquireSidecarBuildLock } = require('./sidecar-build-lock.js');
 
 const repoRoot = path.resolve(__dirname, '..');
 const srcRoot = path.join(repoRoot, 'src');
@@ -162,56 +163,69 @@ function shouldForceRebuild(argv) {
 }
 
 function main() {
-  const forceRebuild = shouldForceRebuild(process.argv.slice(2));
-  const workerBuildStatus = runNodeScript(
-    'build-markdown-worker.js',
-    forceRebuild ? ['--force'] : []
-  );
-  if (workerBuildStatus !== 0) {
-    process.exit(workerBuildStatus);
-  }
+  const lockPath = process.env.NOTE_CONNECTION_SIDECAR_LOCK_PATH
+    ? path.resolve(process.env.NOTE_CONNECTION_SIDECAR_LOCK_PATH)
+    : path.join(repoRoot, 'src-tauri', 'bin', '.noteconnection-sidecar-build.lock');
+  const lock = acquireSidecarBuildLock(lockPath);
 
-  const hostServerBinary = resolveHostServerBinaryPath();
-
-  if (!hostServerBinary) {
-    console.warn(
-      `[Sidecar Ensure] Unsupported host platform/arch for sidecar caching: ${process.platform}/${process.arch}. Rebuilding sidecar.`
+  try {
+    const forceRebuild = shouldForceRebuild(process.argv.slice(2));
+    const workerBuildStatus = runNodeScript(
+      'build-markdown-worker.js',
+      forceRebuild ? ['--force'] : []
     );
+    if (workerBuildStatus !== 0) {
+      return workerBuildStatus;
+    }
+
+    const hostServerBinary = resolveHostServerBinaryPath();
+
+    if (!hostServerBinary) {
+      console.warn(
+        `[Sidecar Ensure] Unsupported host platform/arch for sidecar caching: ${process.platform}/${process.arch}. Rebuilding sidecar.`
+      );
+    }
+
+    const sidecarMtime = hostServerBinary ? getMtimeMs(hostServerBinary) : 0;
+    const inputsMtime = latestInputMtimeMs();
+
+    const validationStatus = runNodeScript('validate-tauri-sidecars.js');
+    const sidecarIsValid = validationStatus === 0;
+    const sidecarIsFresh = sidecarMtime > 0 && sidecarMtime >= inputsMtime;
+    const shouldRebuild = forceRebuild || !sidecarIsValid || !sidecarIsFresh;
+
+    if (!shouldRebuild) {
+      console.log('[Sidecar Ensure] Sidecar binaries are valid and up-to-date. Skipping rebuild.');
+      return 0;
+    }
+
+    if (forceRebuild) {
+      console.log('[Sidecar Ensure] Forced rebuild requested.');
+    } else if (!sidecarIsValid) {
+      console.log('[Sidecar Ensure] Sidecar validation failed. Rebuilding.');
+    } else {
+      console.log('[Sidecar Ensure] Sidecar is stale compared to source inputs. Rebuilding.');
+    }
+
+    const buildStatus = runNodeScript('build-sidecar.js');
+    if (buildStatus !== 0) {
+      return buildStatus;
+    }
+
+    const prepareStatus = runNpmScript('prepare:godot:bin');
+    if (prepareStatus !== 0) {
+      return prepareStatus;
+    }
+
+    return runNodeScript('validate-tauri-sidecars.js');
+  } finally {
+    lock.release();
   }
-
-  const sidecarMtime = hostServerBinary ? getMtimeMs(hostServerBinary) : 0;
-  const inputsMtime = latestInputMtimeMs();
-
-  const validationStatus = runNodeScript('validate-tauri-sidecars.js');
-  const sidecarIsValid = validationStatus === 0;
-  const sidecarIsFresh = sidecarMtime > 0 && sidecarMtime >= inputsMtime;
-  const shouldRebuild = forceRebuild || !sidecarIsValid || !sidecarIsFresh;
-
-  if (!shouldRebuild) {
-    console.log('[Sidecar Ensure] Sidecar binaries are valid and up-to-date. Skipping rebuild.');
-    process.exit(0);
-  }
-
-  if (forceRebuild) {
-    console.log('[Sidecar Ensure] Forced rebuild requested.');
-  } else if (!sidecarIsValid) {
-    console.log('[Sidecar Ensure] Sidecar validation failed. Rebuilding.');
-  } else {
-    console.log('[Sidecar Ensure] Sidecar is stale compared to source inputs. Rebuilding.');
-  }
-
-  const buildStatus = runNodeScript('build-sidecar.js');
-  if (buildStatus !== 0) {
-    process.exit(buildStatus);
-  }
-
-  const prepareStatus = runNpmScript('prepare:godot:bin');
-  if (prepareStatus !== 0) {
-    process.exit(prepareStatus);
-  }
-
-  const verifyStatus = runNodeScript('validate-tauri-sidecars.js');
-  process.exit(verifyStatus);
 }
 
-main();
+try {
+  process.exitCode = main();
+} catch (error) {
+  console.error(String(error && error.stack ? error.stack : error));
+  process.exitCode = 1;
+}

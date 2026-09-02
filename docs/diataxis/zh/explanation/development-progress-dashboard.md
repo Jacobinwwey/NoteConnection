@@ -1,5 +1,15 @@
 # 解释：开发进度看板
 
+## 2026-09-02 SQLite 重启诊断与 Sidecar 构建并发收口
+
+本轮按当前构建重新执行 foundation matrix 时关闭了两个真实缺陷。嵌入式 SQLite snapshot 本身是持久的：直接 SQL 取证确认提交后的 payload 与 atom 行在 stop/restart 后仍存在。失败点在 graph-store wrapper 的诊断投影：重新打开后 `loadSnapshot()` 恢复了数据，却没有重新填充 `graphDbLastSnapshotMetadata`，因此 verifier 看到的 document 数为 0，而查询实际可以读取图数据。`src/learning/store.ts` 现在会在每次 snapshot 成功读取后从 snapshot 直接生成 metadata projection，保持既有 adapter 与 response contract 不变。回归测试覆盖 save、close、reopen、load 与 diagnostics restoration。
+
+`ensure-sidecar-ready.js` 还存在跨进程竞争。并发 foundation job 会同时重建共享 host binary，导致 pkg prelude 损坏与 packaged runtime connection refused。新增的 `scripts/sidecar-build-lock.js` 使用原子 `wx` lock，记录 pid/host/start/token owner，支持孤儿锁回收、有界轮询、超时 fail-closed 与 token 校验释放。ensure 生命周期通过 `finally` 在校验、重建、Godot 准备和最终校验全程持锁并保证释放。lock contract 使用三个真实子进程场景验证串行化、孤儿恢复与活 owner 超时。
+
+本切片 fresh 证据：全量 Jest `156` suites / `1,363` passed / `26` skipped；migration gate `58` suites / `321` passed / `13` skipped；`test:gates` 已完成 WASM strict parity、Tauri Rust（`30` passed / `1` ignored）、Agent Workspace（`157` passed / `13` skipped）、Android prerequisite、privacy、SBOM、PathBridge 与 sidecar signature contracts。SQLite runtime matrix 在 `dist_node_runtime` 与 `packaged_sidecar` 两种模式、smoke/medium/heavy 三档均通过，包含重启 metadata 与查询连续性。ANN runtime matrix 同样覆盖两种运行模式和三档 workload，expected recall 为 `1.0`。
+
+该 lock 解决本地/CI writer 互相覆盖共享构建产物的问题，但不会凭空提供 release signing、online Android 真机验收、SAF workload、进程死亡后的 continuity 或 RSS 测量能力；这些 blocker 仍显式保持，不能被 host-side 测试升级为已完成。
+
 ## 2026-09-02 移动端 Compact Projection、本地 Exact Fallback 与最终验证
 
 本轮继续收口剩余的多端回答契约缺口。`answerTaskPlan.ts` 现在是复合任务 deliverable 的 typed source of truth；`answerReleaseReview.ts` 把统一的公开 Markdown 边界应用到所有回答路径（包括 RAG revision），因此 display math 始终输出为配对块（`$$` 独占行），只有在上下文 claim 已携带同一归一化表达式时才移除公式重复，且不完整的数学/句尾会被拒绝，同时不修改 audit plan。精确公开文本同时落在 structured answer block 与 response-level answer，客户端不需要从 trace 片段重新拼装发布内容。
