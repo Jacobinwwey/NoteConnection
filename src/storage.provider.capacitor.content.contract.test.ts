@@ -8,6 +8,9 @@ describe('storage provider capacitor content mapping contract', () => {
   test('maps desktop-style Knowledge_Base paths for capacitor content reads', () => {
     const source = fs.readFileSync(storageProviderPath, 'utf8');
     expect(source).toContain('function extractRelativePathFromKbMarker(rawFilePath)');
+    expect(source).toContain('function extractRelativePathFromWorkspaceUri(rawFilePath)');
+    expect(source).toContain("const prefix = 'note://workspace/v1/'");
+    expect(source).toContain('const relativeFromWorkspaceUri = extractRelativePathFromWorkspaceUri(raw);');
     expect(source).toContain('function resolveCapacitorContentCandidatePath(rawFilePath)');
     expect(source).toContain("if (/^[A-Za-z]:\\//.test(normalized) || normalized.startsWith('/')) {");
     expect(source).toContain('Cannot map absolute desktop path on Capacitor without Knowledge_Base marker.');

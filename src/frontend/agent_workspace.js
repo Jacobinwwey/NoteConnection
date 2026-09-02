@@ -44,6 +44,308 @@
     const GRAPH_FOCUS_DIAGNOSTICS_ENDPOINT = '/api/knowledge/session/graph-focus-diagnostics';
     let lastGraphFocusDiagnosticsPersistenceKey = '';
 
+    function isMobileNativeRuntime() {
+        const caps = window && window.__NC_RUNTIME_CAPS && typeof window.__NC_RUNTIME_CAPS === 'object'
+            ? window.__NC_RUNTIME_CAPS
+            : {};
+        const platform = String(caps.platform || '').trim().toLowerCase();
+        if (platform.startsWith('capacitor-') || platform === 'android' || platform === 'ios') {
+            return true;
+        }
+        if (window && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function') {
+            try {
+                return window.Capacitor.isNativePlatform() === true;
+            } catch (_error) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    function trimMobileText(value, limit) {
+        const normalized = String(value || '').replace(/\s+/gu, ' ').trim();
+        return normalized.length <= limit
+            ? normalized
+            : `${normalized.slice(0, Math.max(0, limit - 1)).trim()}…`;
+    }
+
+    function normalizeMobileMarkdown(value) {
+        return String(value || '').replace(/\r\n?/gu, '\n').trim();
+    }
+
+    function countMobileDisplayMathDelimiters(value) {
+        return (String(value || '').match(/(?<!\\)\$\$/gu) || []).length;
+    }
+
+    function trimMobileMarkdownText(value, limit) {
+        const normalized = normalizeMobileMarkdown(value);
+        if (normalized.length <= limit) {
+            return normalized;
+        }
+        const suffix = '…';
+        let candidate = normalized.slice(0, Math.max(0, limit - suffix.length)).trimEnd();
+        if (countMobileDisplayMathDelimiters(candidate) % 2 !== 0) {
+            const openingIndex = candidate.lastIndexOf('$$');
+            candidate = openingIndex >= 0 ? candidate.slice(0, openingIndex).trimEnd() : '';
+        }
+        return `${candidate}${suffix}`.trim();
+    }
+
+    function normalizeMobileContent(source) {
+        return normalizeMobileMarkdown(source)
+            .replace(/\$\$\s*```(?:mermaid|graph|diagram)[\s\S]*?(?:```|$)/giu, '\n')
+            .replace(/\r\n?/gu, '\n')
+            .replace(/```(?:mermaid|graph|diagram)[\s\S]*?(?:```|$)/giu, '\n')
+            .trim();
+    }
+
+    function formatMobileDisplayMath(source) {
+        return normalizeMobileContent(source)
+            .replace(/(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$/gu, (_match, expression) => {
+                const body = String(expression || '').trim();
+                return body ? `\n\n$$\n${body}\n$$\n\n` : '';
+            })
+            .replace(/[ \t]+\n/gu, '\n')
+            .replace(/\n{3,}/gu, '\n\n')
+            .trim();
+    }
+
+    function extractMobileQueryTerms(message) {
+        const source = String(message || '').trim();
+        const candidates = [];
+        const append = (value) => {
+            const term = String(value || '').replace(/^[\s?？!！,，。:：;；]+|[\s?？!！,，。:：;；]+$/gu, '').trim();
+            if (term.length >= 2 && !candidates.includes(term)) {
+                candidates.push(term);
+            }
+        };
+        const cjkTerms = source.match(/[\u3400-\u9fff]{2,}/gu) || [];
+        cjkTerms.forEach((term) => {
+            const subject = term
+                .replace(/^(?:什么是|什么叫|何为|请问|请解释(?:一下)?|解释(?:一下)?|介绍(?:一下)?|关于|我想知道)/u, '')
+                .replace(/(?:的定义|是什么|是怎样|相关知识点|知识点)$/u, '')
+                .trim();
+            append(subject);
+            const predicateSubject = subject.match(/(?:是|为|叫)([\u3400-\u9fff]{2,})$/u);
+            append(predicateSubject && predicateSubject[1]);
+            append(term);
+        });
+        const englishTerms = source
+            .replace(/\b(?:what|is|are|the|a|an|which|knowledge|points?|should|i|learn|study|define|explain|please)\b/giu, ' ')
+            .match(/[A-Za-z][A-Za-z0-9_-]*(?:\s+[A-Za-z][A-Za-z0-9_-]*){0,3}/gu) || [];
+        englishTerms.forEach(append);
+        append(source);
+        return candidates.slice(0, 8);
+    }
+
+    function takeBoundedMobileAnswerLines(lines, maxLines) {
+        const boundedLines = [];
+        let displayMathOpen = false;
+        const hardLimit = Math.max(maxLines + 12, maxLines);
+        for (const line of lines) {
+            if (boundedLines.length >= maxLines && !displayMathOpen) {
+                break;
+            }
+            boundedLines.push(line);
+            if (countMobileDisplayMathDelimiters(line) % 2 !== 0) {
+                displayMathOpen = !displayMathOpen;
+            }
+            if (boundedLines.length >= hardLimit) {
+                break;
+            }
+        }
+        if (displayMathOpen) {
+            let lastMathLine = -1;
+            for (let index = boundedLines.length - 1; index >= 0; index -= 1) {
+                if (countMobileDisplayMathDelimiters(boundedLines[index]) % 2 !== 0) {
+                    lastMathLine = index;
+                    break;
+                }
+            }
+            if (lastMathLine >= 0) {
+                boundedLines.splice(lastMathLine);
+            }
+        }
+        return boundedLines;
+    }
+
+    function selectMobileAnswerSection(content, subject) {
+        const source = normalizeMobileContent(content);
+        if (!source) {
+            return '';
+        }
+        const subjectKey = String(subject || '').replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase();
+        const lines = source.split('\n');
+        const sections = [];
+        let current = [];
+        lines.forEach((line) => {
+            if (/^\s*#{1,6}\s+/u.test(line) && current.length > 0) {
+                sections.push(current);
+                current = [];
+            }
+            current.push(line);
+        });
+        if (current.length > 0) {
+            sections.push(current);
+        }
+        const selected = sections.find((section) => {
+            const text = section.join(' ');
+            const key = text.replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase();
+            return subjectKey && key.includes(subjectKey);
+        }) || sections[0] || [];
+        const usefulLines = selected
+            .filter((line) => !/^\s*#{1,6}\s+/u.test(line))
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .filter((line) => !/(?:常见用例|应用场景|关键技术规格|技术规格|比较数学模型|相关技术与比较|参考文献|参考资料|bibliograph|reference|technical specification|comparison model|common use|use case|application(?:s)?|performance metric|related technolog)/iu.test(line));
+        return formatMobileDisplayMath(takeBoundedMobileAnswerLines(usefulLines, 6).join('\n\n'));
+    }
+
+    function isMobilePrerequisiteNeighbor(neighbor) {
+        return String(neighbor && neighbor.direction || '').trim().toLowerCase() === 'incoming'
+            && /prerequisite|precondition|foundation|先修|前置|基础|sequence/u.test(
+                String(neighbor && neighbor.edgeType || '')
+            );
+    }
+
+    function isMobileApplicationNeighbor(neighbor) {
+        return String(neighbor && neighbor.direction || '').trim().toLowerCase() === 'outgoing'
+            && /application|use|performance|应用|用例|性能/u.test(
+                String(neighbor && neighbor.edgeType || '')
+            );
+    }
+
+    function buildMobileLearningRoute(primary, matches) {
+        if (Array.isArray(primary && primary.learningRoute) && primary.learningRoute.length > 0) {
+            return primary.learningRoute
+                .slice(0, 6)
+                .map((entry, index) => ({
+                    nodeId: trimMobileText(entry.nodeId || entry.id, 160),
+                    title: trimMobileText(entry.title || entry.label || entry.nodeId || entry.id, 160),
+                    role: String(entry.role || 'mechanism').trim() || 'mechanism',
+                    order: Math.max(1, Math.floor(Number(entry.order) || index + 1)),
+                }))
+                .filter((entry) => Boolean(entry.nodeId && entry.title));
+        }
+        const entries = [];
+        const seen = new Set();
+        const append = (match, role) => {
+            const nodeId = String(match && (match.id || match.nodeId) || '').trim();
+            const title = String(match && (match.label || match.title || match.id) || '').trim();
+            if (!nodeId || !title || seen.has(nodeId)) {
+                return;
+            }
+            seen.add(nodeId);
+            entries.push({ nodeId, title, role });
+        };
+        const neighbors = Array.isArray(primary && primary.neighbors) ? primary.neighbors : [];
+        neighbors
+            .filter(isMobilePrerequisiteNeighbor)
+            .sort((left, right) => String(left.label || left.id || '').localeCompare(String(right.label || right.id || '')))
+            .forEach((neighbor) => append(neighbor, 'prerequisite'));
+        append(primary, 'core');
+        neighbors
+            .filter((neighbor) => !isMobilePrerequisiteNeighbor(neighbor))
+            .sort((left, right) => {
+                const leftApplication = isMobileApplicationNeighbor(left) ? 1 : 0;
+                const rightApplication = isMobileApplicationNeighbor(right) ? 1 : 0;
+                return leftApplication - rightApplication
+                    || String(left.label || left.id || '').localeCompare(String(right.label || right.id || ''));
+            })
+            .forEach((neighbor) => append(neighbor, isMobileApplicationNeighbor(neighbor) ? 'application' : 'mechanism'));
+        (Array.isArray(matches) ? matches : []).forEach((match) => append(match, 'mechanism'));
+        return entries.slice(0, 6).map((entry, index) => ({
+            nodeId: trimMobileText(entry.nodeId, 160),
+            title: trimMobileText(entry.title, 160),
+            role: entry.role,
+            order: index + 1,
+        }));
+    }
+
+    async function requestMobileLocalConversation(requestPayload) {
+        const storage = window && window.NoteConnectionStorage;
+        if (!storage || typeof storage.createProvider !== 'function') {
+            throw new Error('mobile_local_storage_unavailable');
+        }
+        const runtimeCaps = window.__NC_RUNTIME_CAPS || {};
+        const provider = storage.createProvider({ runtimeCaps });
+        if (!provider || typeof provider.queryKnowledgeBaseExact !== 'function') {
+            throw new Error('mobile_exact_query_unavailable');
+        }
+        const matchesById = new Map();
+        for (const term of extractMobileQueryTerms(requestPayload.message)) {
+            const result = await provider.queryKnowledgeBaseExact({
+                query: term,
+                maxMatches: Math.min(8, Math.max(1, Number(requestPayload.topK) || 4)),
+                maxNeighborsPerMatch: 8,
+                edgeKinds: ['explicit', 'runtime'],
+            });
+            (Array.isArray(result && result.matches) ? result.matches : []).forEach((match) => {
+                if (match && match.id && !matchesById.has(match.id)) {
+                    matchesById.set(match.id, match);
+                }
+            });
+            if (matchesById.size >= 8) {
+                break;
+            }
+        }
+        const matches = Array.from(matchesById.values()).slice(0, 8);
+        if (matches.length <= 0) {
+            throw new Error('mobile_exact_query_no_match');
+        }
+        const primary = matches[0];
+        const primaryTitle = String(primary.label || primary.id || '').trim();
+        let sourceContent = '';
+        if (primary.sourceUri && typeof provider.readContent === 'function') {
+            try {
+                sourceContent = await provider.readContent(primary.sourceUri);
+            } catch (_error) {
+                sourceContent = '';
+            }
+        }
+        const useChinese = /[\u3400-\u9fff]/u.test(`${requestPayload.message || ''}${primaryTitle}`);
+        const directAnswer = selectMobileAnswerSection(sourceContent, primaryTitle)
+            || (useChinese
+                ? `本地知识图谱已定位到“${primaryTitle}”，但无法读取对应正文。`
+                : `${primaryTitle} was located in the local knowledge projection, but its source text is unavailable.`);
+        const boundedDirectAnswer = trimMobileMarkdownText(formatMobileDisplayMath(directAnswer), 2400);
+        const route = buildMobileLearningRoute(primary, matches);
+        const citations = matches.slice(0, 4).map((match) => ({
+            citationId: `mobile:${match.id}`,
+            title: trimMobileText(match.label || match.id, 160),
+            sourcePath: trimMobileText(match.sourceUri || '', 320),
+        })).filter((citation) => citation.sourcePath);
+        return {
+            userId: requestPayload.userId,
+            sessionId: requestPayload.sessionId,
+            assistantMessage: boundedDirectAnswer,
+            answer: boundedDirectAnswer,
+            message: boundedDirectAnswer,
+            responseProfile: 'mobile_compact',
+            mobileProjection: {
+                schemaVersion: 1,
+                primarySubject: trimMobileText(primaryTitle, 160),
+                directAnswer: boundedDirectAnswer,
+                route,
+                citations,
+            },
+            assistantBlocks: [],
+            knowledgePoints: [],
+            citations: [],
+            recalledMemories: [],
+            memoryActions: [],
+            summary: {
+                generatedAt: new Date().toISOString(),
+                topK: Number(requestPayload.topK) || 4,
+                returnedKnowledgePoints: route.length,
+                returnedCitations: citations.length,
+                recalledMemoryCount: 0,
+                appliedMemoryCount: 0,
+                queryEvidenceCoverageRatioPct: sourceContent ? 100 : 0,
+            },
+        };
+    }
+
     function normalizeActiveSourceTarget(value) {
         const normalized = String(value || '').trim();
         return normalized || 'ALL_FOLDERS';
@@ -1045,7 +1347,16 @@
     }
 
     function buildConversationGroundingPayload(result) {
-        const citationCount = Array.isArray(result && result.citations) ? result.citations.length : 0;
+        const mobileProjection = result && result.mobileProjection && typeof result.mobileProjection === 'object'
+            ? result.mobileProjection
+            : null;
+        const responseCitations = Array.isArray(result && result.citations) ? result.citations : [];
+        const projectedCitations = Array.isArray(mobileProjection && mobileProjection.citations)
+            ? mobileProjection.citations
+            : [];
+        const citationCount = responseCitations.length > 0
+            ? responseCitations.length
+            : projectedCitations.length;
         const memoryCount = Array.isArray(result && result.recalledMemories) ? result.recalledMemories.length : 0;
         const memoryActionCount = Array.isArray(result && result.memoryActions) ? result.memoryActions.length : 0;
         const trace = result && result.trace && typeof result.trace === 'object' ? result.trace : null;
@@ -1388,6 +1699,73 @@
         });
     }
 
+    function formatMobileRouteRole(role, useChinese) {
+        const normalized = String(role || '').trim().toLowerCase();
+        if (!useChinese) {
+            return normalized || 'related';
+        }
+        return {
+            prerequisite: '前置',
+            core: '核心',
+            mechanism: '机制',
+            application: '应用',
+        }[normalized] || '相关';
+    }
+
+    function buildMobileConversationMessage(result) {
+        if (!result || typeof result !== 'object' || result.responseProfile !== 'mobile_compact') {
+            return '';
+        }
+        const projection = result.mobileProjection && typeof result.mobileProjection === 'object'
+            ? result.mobileProjection
+            : {};
+        const directAnswer = normalizeMobileMarkdown(
+            projection.directAnswer || result.answer || result.assistantMessage || result.message || ''
+        );
+        const route = Array.isArray(projection.route)
+            ? projection.route.filter((node) => node && typeof node === 'object')
+            : [];
+        if (route.length <= 0) {
+            return directAnswer;
+        }
+        const useChinese = /[\u3400-\u9fff]/u.test(
+            `${projection.primarySubject || ''}${directAnswer}`
+        );
+        const heading = useChinese ? '### 建议学习路径' : '### Suggested learning path';
+        const items = route.map((node, index) => {
+            const order = Math.max(1, Math.floor(Number(node.order) || index + 1));
+            const title = trimMobileText(node.title || node.nodeId, 160);
+            const role = formatMobileRouteRole(node.role, useChinese);
+            if (!title) {
+                return '';
+            }
+            return useChinese
+                ? `${order}. **${title}**（${role}）`
+                : `${order}. **${title}** (${role})`;
+        }).filter(Boolean);
+        return [directAnswer, heading, items.join('\n')].filter(Boolean).join('\n\n');
+    }
+
+    function buildMobileStructuredAnswerBlock(result) {
+        const directAnswer = buildMobileConversationMessage(result);
+        if (!directAnswer) {
+            return null;
+        }
+        const projection = result && result.mobileProjection && typeof result.mobileProjection === 'object'
+            ? result.mobileProjection
+            : {};
+        const useChinese = /[\u3400-\u9fff]/u.test(`${projection.primarySubject || ''}${directAnswer}`);
+        return {
+            blockId: 'mobile_projection_answer',
+            type: 'structured_answer',
+            title: useChinese ? '可信回答' : 'Grounded Answer',
+            directAnswer,
+            knowledgePointCount: 0,
+            citationCount: Array.isArray(projection.citations) ? projection.citations.length : 0,
+            recalledMemoryCount: 0,
+        };
+    }
+
     function appendAssistantConversationResult(result) {
         const controller = getController();
         if (window && typeof window === 'object') {
@@ -1404,10 +1782,14 @@
         const structuredAnswerBlock = assistantBlocks.find((block) => (
             String(block && block.type || '').trim() === 'structured_answer'
         ));
+        const mobileStructuredAnswerBlock = !structuredAnswerBlock
+            ? buildMobileStructuredAnswerBlock(result)
+            : null;
         const visibleAssistantBlocks = structuredAnswerBlock
             ? [structuredAnswerBlock]
-            : [];
-        const fallbackMessage = String(
+            : (mobileStructuredAnswerBlock ? [mobileStructuredAnswerBlock] : []);
+        const mobileFallbackMessage = buildMobileConversationMessage(result);
+        const fallbackMessage = mobileFallbackMessage || String(
             result && (
                 result.assistantMessage
                 || result.answer
@@ -5184,6 +5566,7 @@
                 message,
                 answerLanguage: getAnswerLanguage(),
                 topK: 6,
+                ...(isMobileNativeRuntime() ? { responseProfile: 'mobile_compact' } : {}),
                 memoryNamespace: 'conversation',
                 scope: requestContext.scope,
             };
@@ -5193,7 +5576,26 @@
                 transport: 'SSE',
                 activeTarget: requestContext.activeTarget,
             });
-            const conversationCall = await requestConversationWithStreamingFallback(requestPayload);
+            let conversationCall;
+            if (isMobileNativeRuntime()) {
+                const mobileStartedAt = Date.now();
+                try {
+                    const result = await requestMobileLocalConversation(requestPayload);
+                    conversationCall = {
+                        result,
+                        transport: 'Mobile local exact',
+                        latencyMs: Date.now() - mobileStartedAt,
+                    };
+                } catch (localError) {
+                    // Local exact analysis is the preferred low-memory path. A
+                    // remote bounded projection remains an additive fallback when
+                    // the projection is missing or the local index cannot load.
+                    console.warn('[AgentWorkspace] Mobile local analysis unavailable; using bounded remote fallback.', localError);
+                    conversationCall = await requestConversationWithStreamingFallback(requestPayload);
+                }
+            } else {
+                conversationCall = await requestConversationWithStreamingFallback(requestPayload);
+            }
             const result = conversationCall && typeof conversationCall === 'object' && conversationCall.result
                 ? conversationCall.result
                 : conversationCall;

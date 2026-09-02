@@ -1381,6 +1381,98 @@ export interface GraphAnswerClaimPlan {
     confidence: number;
 }
 
+export type AnswerTaskKind =
+    | 'definition'
+    | 'learning_route'
+    | 'comparison'
+    | 'procedure'
+    | 'causal_explanation';
+
+export type AnswerTaskExpectedOutput =
+    | 'direct_answer'
+    | 'ordered_nodes'
+    | 'comparison_matrix'
+    | 'steps';
+
+export type AnswerTaskDepth = 'compact' | 'standard' | 'deep';
+
+export type AgentConversationResponseProfile = 'default' | 'mobile_compact';
+
+export type LearningRouteRole = 'prerequisite' | 'core' | 'mechanism' | 'application';
+
+export type LearningRouteOrderingBasis =
+    | 'explicit_prerequisite'
+    | 'explicit_sequence'
+    | 'source_order'
+    | 'semantic_grouping';
+
+export interface LearningRouteNode {
+    nodeId: string;
+    title: string;
+    role: LearningRouteRole;
+    order: number;
+    orderingBasis: LearningRouteOrderingBasis;
+    evidenceRefs: string[];
+    reason: string;
+}
+
+export interface MobileAnswerRouteNode {
+    nodeId: string;
+    title: string;
+    role: LearningRouteRole;
+    order: number;
+}
+
+export interface MobileAnswerCitation {
+    citationId: string;
+    title: string;
+    sourcePath: string;
+    startLine?: number;
+    endLine?: number;
+}
+
+export interface MobileAnswerProjection {
+    schemaVersion: 1;
+    primarySubject: string;
+    directAnswer: string;
+    route: MobileAnswerRouteNode[];
+    citations: MobileAnswerCitation[];
+}
+
+export interface AnswerSubtask {
+    subtaskId: string;
+    kind: AnswerTaskKind;
+    subject: string;
+    required: boolean;
+    expectedOutput: AnswerTaskExpectedOutput;
+}
+
+export interface AnswerTaskPlan {
+    schemaVersion: '1';
+    primarySubject: string;
+    subtasks: AnswerSubtask[];
+    requestedDepth: AnswerTaskDepth;
+    learningRoute: LearningRouteNode[];
+}
+
+export interface AnswerSubtaskCoverage {
+    subtaskId: string;
+    kind: AnswerTaskKind;
+    covered: boolean;
+    evidenceRefIds: string[];
+    reason?: string;
+}
+
+export interface AnswerTaskCoverageReview {
+    passed: boolean;
+    applicable: boolean;
+    coveredSubtaskIds: string[];
+    missingRequiredSubtaskIds: string[];
+    subtaskCoverage: AnswerSubtaskCoverage[];
+    learningRouteNodeCount: number;
+    coverageScore: number;
+}
+
 export interface GraphAnswerPlan {
     intent: 'definition' | 'causal' | 'compare' | 'procedure' | 'generic';
     depth: 'compact' | 'standard' | 'deep';
@@ -1388,6 +1480,8 @@ export interface GraphAnswerPlan {
     leadClaimId: string;
     claims: GraphAnswerClaimPlan[];
     requiredRoles: GraphAnswerRole[];
+    /** Additive task-level contract for compound requests. */
+    answerTaskPlan?: AnswerTaskPlan;
     omittedCandidates: Array<{
         atomId: string;
         reason: 'low_relevance' | 'redundant' | 'weak_evidence' | 'budget' | 'temporal_invalidity';
@@ -1464,6 +1558,8 @@ export interface AgentConversationTrace {
     graphAnswerCoverage?: GraphAnswerCoverageReview;
     graphExpansion?: GraphAnswerExpansionTrace;
     answerClaimCitations?: AgentConversationAnswerClaimCitation[];
+    answerTaskPlan?: AnswerTaskPlan;
+    answerTaskCoverage?: AnswerTaskCoverageReview;
     answerReleaseReview?: AnswerReleaseReview;
 }
 
@@ -1473,6 +1569,8 @@ export interface AgentConversationRequest {
     activeTarget?: string;
     message?: string;
     answerLanguage?: 'auto' | 'en' | 'zh';
+    /** Additive response shaping hint; default keeps the complete desktop contract. */
+    responseProfile?: AgentConversationResponseProfile;
     topK?: number;
     asOf?: string;
     scope?: KnowledgeCorpusScope;
@@ -1491,6 +1589,8 @@ export interface AgentConversationAssistantStructuredAnswerBlock {
     type: 'structured_answer';
     title?: string;
     directAnswer: string;
+    answerTaskPlan?: AnswerTaskPlan;
+    answerTaskCoverage?: AnswerTaskCoverageReview;
     overviewMarkdown?: string;
     explanationMarkdown?: string;
     evidenceMarkdown?: string;
@@ -1558,6 +1658,10 @@ export type AnswerReleaseGateId =
     | 'rag_answer_completeness'
     | 'rag_claim_citation_support'
     | 'graph_answer_plan_coverage'
+    | 'subtask_coverage'
+    | 'learning_route_subject_alignment'
+    | 'learning_route_order_evidence'
+    | 'deliverable_completeness'
     | 'definition_projection_integrity'
     | 'public_surface_contraction'
     | 'internal_diagnostic_leakage'
@@ -1581,6 +1685,8 @@ export interface AnswerReleaseReview {
     auditGraphAnswerPlan?: GraphAnswerPlan;
     /** Coverage evaluated against the exact answer and projected plan released to clients. */
     graphAnswerCoverage?: GraphAnswerCoverageReview;
+    answerTaskCoverage?: AnswerTaskCoverageReview;
+    draftAnswerTaskCoverage?: AnswerTaskCoverageReview;
     reason: string;
     failedGateIds: AnswerReleaseGateId[];
     leakedInternalFragments: string[];
@@ -1669,6 +1775,8 @@ export interface KnowledgeRun {
     answerReleaseReview?: AnswerReleaseReview;
     graphAnswerPlan?: GraphAnswerPlan;
     graphAnswerCoverage?: GraphAnswerCoverageReview;
+    answerTaskPlan?: AnswerTaskPlan;
+    answerTaskCoverage?: AnswerTaskCoverageReview;
     summary: {
         claimCount: number;
         verifiedClaimCount: number;
@@ -1703,9 +1811,13 @@ export interface AgentConversationResponse {
     sessionId: string;
     assistantMessage: string;
     answer: string;
+    responseProfile?: AgentConversationResponseProfile;
+    mobileProjection?: MobileAnswerProjection;
     answerReleaseReview?: AnswerReleaseReview;
     graphAnswerPlan?: GraphAnswerPlan;
     graphAnswerCoverage?: GraphAnswerCoverageReview;
+    answerTaskPlan?: AnswerTaskPlan;
+    answerTaskCoverage?: AnswerTaskCoverageReview;
     assistantBlocks?: AgentConversationAssistantBlock[];
     knowledgeRun?: KnowledgeRun;
     knowledgePoints: AgentConversationKnowledgePoint[];

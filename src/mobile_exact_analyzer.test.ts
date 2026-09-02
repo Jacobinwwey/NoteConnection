@@ -67,4 +67,28 @@ describe('mobile exact projection contract', () => {
             expect.objectContaining({ id: 'Index', canonicalId: 'algebra/index' }),
         ]);
     });
+
+    test('builds a bounded prerequisite-aware learning route from explicit graph edges', () => {
+        const index = analyzer.createMobileExactIndex({
+            nodes: [
+                { id: 'water', label: 'Water molecules' },
+                { id: 'ice', label: 'Amorphous ice' },
+                { id: 'rdf', label: 'Radial distribution function g(r)' },
+                { id: 'application', label: 'Applications' },
+            ],
+            edges: [
+                { source: 'water', target: 'ice', type: 'explicit-prerequisite' },
+                { source: 'ice', target: 'rdf', type: 'sequence' },
+                { source: 'ice', target: 'application', type: 'application' },
+            ],
+        });
+
+        expect(index.learningRoute('ice', 6)).toEqual([
+            expect.objectContaining({ nodeId: 'water', role: 'prerequisite', order: 1, orderingBasis: 'explicit_prerequisite' }),
+            expect.objectContaining({ nodeId: 'ice', role: 'core', order: 2 }),
+            expect.objectContaining({ nodeId: 'rdf', role: 'mechanism', order: 3 }),
+            expect.objectContaining({ nodeId: 'application', role: 'application', order: 4 }),
+        ]);
+        expect(index.learningRoute('ice', 2)).toHaveLength(2);
+    });
 });

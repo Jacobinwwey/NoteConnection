@@ -17,6 +17,7 @@ import {
 import { graphClaimSemanticSimilarity, semanticFeatures } from './graphClaimMatcher';
 import { graphClaimsCanShareCoverage } from './graphAnswerQualityPolicy';
 import { scoreRagEvidenceClause, segmentRagEvidenceClauses } from './ragEvidenceQuality';
+import { buildAnswerTaskPlan } from './answerTaskPlan';
 
 export interface BuildGraphAnswerPlanParams {
     message: string;
@@ -36,6 +37,16 @@ function isCompoundLearningDefinitionQuery(message: string): boolean {
             /\b(?:learn|learning|study|knowledge\s+points?)\b/u.test(normalized)
             || /学习|知识点|学哪些|通过哪些/u.test(normalized)
         );
+}
+
+function hasBalancedMathDelimiters(value: string): boolean {
+    const source = String(value || '');
+    const displayCount = (source.match(/(?<!\\)\$\$/gu) || []).length;
+    if (displayCount % 2 !== 0) {
+        return false;
+    }
+    const inlineSource = source.replace(/(?<!\\)\$\$/gu, '');
+    return ((inlineSource.match(/(?<!\\)\$/gu) || []).length % 2) === 0;
 }
 
 function definitionSubjectFromMessage(message: string): string {
@@ -321,7 +332,8 @@ function rankQualityPublicClaimStatements(value: string, title: string | undefin
             const incompleteEnding = /\b(?:and|or|with|at|in|between|is|are|from|to)$/iu.test(clause)
                 || /\b(?:vs|versus)\.?$/iu.test(clause)
                 || /[:：]$/u.test(clause)
-                || /(?:以及|并且|其中|通常在|范围为|分别为|是|为)$/u.test(clause);
+                || /(?:以及|并且|其中|通常在|范围为|分别为|是|为)$/u.test(clause)
+                || !hasBalancedMathDelimiters(clause);
             return {
                 clause,
                 score: scoreRagEvidenceClause(clause).score + Math.min(0.8, anchorMatches * 0.2) - (incompleteEnding ? 0.5 : 0),
@@ -1019,6 +1031,12 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
     if (!sortedClaims.some((claim) => claim.required) && sortedClaims.length > 0) {
         sortedClaims[0].required = true;
     }
+    const answerTaskPlan = buildAnswerTaskPlan({
+        message: params.message,
+        knowledgePoints: params.knowledgePoints,
+        graphContext: params.graphContext,
+        ragContextPack: params.ragContextPack,
+    });
     return {
         intent: classifyIntent(params.message),
         depth: sortedClaims.length <= 2 ? 'compact' : sortedClaims.length <= 7 ? 'standard' : 'deep',
@@ -1026,6 +1044,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
         leadClaimId: sortedClaims[0]?.claimId || '',
         claims: sortedClaims,
         requiredRoles: Array.from(new Set(sortedClaims.filter((claim) => claim.required).map((claim) => claim.role))),
+        answerTaskPlan,
         omittedCandidates,
     };
 }

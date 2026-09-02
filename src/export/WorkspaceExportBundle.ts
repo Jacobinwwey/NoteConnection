@@ -535,6 +535,11 @@ function buildKnowledgeRunReports(records: WorkflowArtifactRecord[]): WorkspaceE
             );
             const graphAnswerPlan = (knowledgeRun.graphAnswerPlan ?? payload.graphAnswerPlan) as Record<string, unknown> | undefined;
             const graphAnswerCoverage = (knowledgeRun.graphAnswerCoverage ?? payload.graphAnswerCoverage) as Record<string, unknown> | undefined;
+            const answerTaskPlan = (knowledgeRun.answerTaskPlan
+                ?? graphAnswerPlan?.answerTaskPlan
+                ?? payload.answerTaskPlan) as Record<string, unknown> | undefined;
+            const answerTaskCoverage = (knowledgeRun.answerTaskCoverage
+                ?? payload.answerTaskCoverage) as Record<string, unknown> | undefined;
             const graphAnswerClaims = Array.isArray(graphAnswerPlan?.claims)
                 ? graphAnswerPlan.claims.filter((claim) => Boolean(claim && typeof claim === 'object')) as Record<string, unknown>[]
                 : [];
@@ -607,6 +612,24 @@ function buildKnowledgeRunReports(records: WorkflowArtifactRecord[]): WorkspaceE
                         missingRequiredClaimIds: Array.isArray(graphAnswerCoverage?.missingRequiredClaimIds)
                             ? graphAnswerCoverage.missingRequiredClaimIds.map((claimId) => String(claimId || '').trim()).filter(Boolean)
                             : [],
+                    },
+                } : {}),
+                ...(answerTaskPlan ? {
+                    answerTask: {
+                        primarySubject: String(answerTaskPlan.primarySubject || '').trim(),
+                        subtaskCount: Array.isArray(answerTaskPlan.subtasks)
+                            ? answerTaskPlan.subtasks.length
+                            : 0,
+                        requiredSubtaskCount: Array.isArray(answerTaskPlan.subtasks)
+                            ? answerTaskPlan.subtasks.filter((subtask) => Boolean(subtask && typeof subtask === 'object' && (subtask as Record<string, unknown>).required === true)).length
+                            : 0,
+                        missingRequiredSubtaskIds: Array.isArray(answerTaskCoverage?.missingRequiredSubtaskIds)
+                            ? answerTaskCoverage.missingRequiredSubtaskIds.map((id) => String(id || '').trim()).filter(Boolean)
+                            : [],
+                        learningRouteNodeCount: Array.isArray(answerTaskPlan.learningRoute)
+                            ? answerTaskPlan.learningRoute.length
+                            : 0,
+                        coverageScore: normalizeOptionalScore(answerTaskCoverage?.coverageScore),
                     },
                 } : {}),
                 ...(answerReleaseReview ? { answerReleaseReview } : {}),

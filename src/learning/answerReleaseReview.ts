@@ -15,6 +15,7 @@ import type {
     GraphAnswerPlan,
     GraphAnswerClaimPlan,
     GraphAnswerCoverageReview,
+    AnswerTaskCoverageReview,
 } from './types';
 import { reviewGraphAnswerCoverage } from './graphAnswerCoverage';
 import { collectGraphAnswerFacts, formatGraphAnswerProfileSentence } from './graphAnswerFacts';
@@ -24,6 +25,12 @@ import {
     shouldRejectCompareProcedureEvidenceClause,
 } from './ragPublicText';
 import { scoreRagEvidenceClause, segmentRagEvidenceClauses } from './ragEvidenceQuality';
+import {
+    formatDisplayMathBlocks,
+    formatLearningRouteAnswer,
+    formatTaskAwareAnswer,
+    reviewAnswerTaskCoverage,
+} from './answerTaskPlan';
 
 export interface AnswerReleaseReviewContext {
     message: string;
@@ -455,6 +462,14 @@ const STATE_FRAME_SKIP_VALUE_PATTERN = /\b(?:prerequisite|before|after|depends?\
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizePublicAnswerSurface(value: string): string {
+    return formatDisplayMathBlocks(String(value || '')
+        .replace(/\r\n?/gu, '\n')
+        .replace(/[ \t]+\n/gu, '\n')
+        .replace(/\n{3,}/gu, '\n\n')
+        .trim());
 }
 
 function isCompoundLearningDefinitionQuery(message: string): boolean {
@@ -1852,8 +1867,15 @@ function buildPolarityComparableFeatures(value: string): string[] {
         .filter((feature) => !STRUCTURED_ANCHOR_STOPWORDS.has(feature));
 }
 
-function extractPolaritySentences(value: string): PolaritySentence[] {
+function stripLearningRoutePresentation(value: string): string {
     return String(value || '')
+        .replace(/(?:^|\n)\s*#{1,6}\s*(?:建议学习路径|推荐学习路径|Suggested learning path)\s*:?[^\n]*\n[\s\S]*$/imu, ' ')
+        .replace(/(?:建议学习路径|推荐学习路径|Suggested learning path)\s*[:：][\s\S]*?(?=。|\.$|$)/giu, ' ')
+        .trim();
+}
+
+function extractPolaritySentences(value: string): PolaritySentence[] {
+    return stripLearningRoutePresentation(value)
         .split(POLARITY_SENTENCE_SPLIT_PATTERN)
         .map((sentence) => normalizeWhitespace(sentence))
         .filter((sentence) => sentence.length >= 8)
@@ -2527,7 +2549,7 @@ function extractStateFrames(value: string): StateFrame[] {
             connectorKind: 'definition',
         },
     ];
-    return String(value || '')
+    return stripLearningRoutePresentation(value)
         .split(POLARITY_SENTENCE_SPLIT_PATTERN)
         .map((sentence) => normalizeWhitespace(sentence))
         .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
@@ -2574,6 +2596,13 @@ function buildSubjectFrame(
     };
 }
 
+function collapseDisplayMathForSemanticParsing(value: string): string {
+    return String(value || '').replace(
+        /\s*(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$\s*/gu,
+        (_match, expression: string) => ` $$${normalizeWhitespace(expression)}$$ `
+    );
+}
+
 function buildAttributeFrame(
     surface: string,
     subject: string,
@@ -2607,7 +2636,7 @@ function extractSubjectFrames(value: string): SubjectFrame[] {
         /^(.{1,80}?)\s+(?:is|are|was|were|remains|stays|equals|means|refers to|belongs to|has|contains)\s+(.+)$/iu,
         /^(.{1,24}?)(?:是|为|等于|指|属于|有|包含)(.+)$/u,
     ];
-    return String(value || '')
+    return collapseDisplayMathForSemanticParsing(stripLearningRoutePresentation(value))
         .split(POLARITY_SENTENCE_SPLIT_PATTERN)
         .map((sentence) => normalizeWhitespace(sentence))
         .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
@@ -2622,7 +2651,11 @@ function extractSubjectFrames(value: string): SubjectFrame[] {
                     String(match[1] || ''),
                     String(match[2] || '')
                 );
-                return frame ? [frame] : [];
+                return frame
+                    && !isStandaloneVariableDefinitionClaim(frame.surface)
+                    && !/(?<!\\)\$[^$\n]+?(?<!\\)\$/u.test(frame.subject)
+                    ? [frame]
+                    : [];
             }
             return [];
         });
@@ -2633,7 +2666,7 @@ function extractAttributeFrames(value: string): AttributeFrame[] {
         /^(.{1,80}?)\s+(?:has|have|had|features?)\s+(.+)$/iu,
         /^(.{1,24}?)(?:有|具有|带有)(.+)$/u,
     ];
-    return String(value || '')
+    return stripLearningRoutePresentation(value)
         .split(POLARITY_SENTENCE_SPLIT_PATTERN)
         .map((sentence) => normalizeWhitespace(sentence))
         .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
@@ -2775,7 +2808,7 @@ function extractContainmentFrames(value: string): ContainmentFrame[] {
         /^(.{1,80}?)\s+(?:is|are|was|were)\s+filled\s+with\s+(.+)$/iu,
         /^(.{1,24}?)(?:装有|盛有|含有|包含)(.+)$/u,
     ];
-    return String(value || '')
+    return stripLearningRoutePresentation(value)
         .split(POLARITY_SENTENCE_SPLIT_PATTERN)
         .map((sentence) => normalizeWhitespace(sentence))
         .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
@@ -2807,7 +2840,7 @@ function extractPurposeFrames(value: string): PurposeFrame[] {
         /^(.{1,24}?)(?:可)?用来(.+)$/u,
         /^(.{1,24}?)(?:被)?用作(.+)$/u,
     ];
-    return String(value || '')
+    return stripLearningRoutePresentation(value)
         .split(POLARITY_SENTENCE_SPLIT_PATTERN)
         .map((sentence) => normalizeWhitespace(sentence))
         .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
@@ -2855,7 +2888,7 @@ function extractDependencyFrames(value: string): DependencyFrame[] {
             dependencyIndex: 1,
         },
     ];
-    return String(value || '')
+    return stripLearningRoutePresentation(value)
         .split(POLARITY_SENTENCE_SPLIT_PATTERN)
         .map((sentence) => normalizeWhitespace(sentence))
         .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
@@ -2921,7 +2954,7 @@ function extractLocationFrames(value: string): LocationFrame[] {
         /^(.{1,80}?)\s+lies?\s+(?:in|within)\s+(.+)$/iu,
         /^(.{1,24}?)(?:位于|位於|坐落于|坐落於|处于|處於)(.+)$/u,
     ];
-    return String(value || '')
+    return stripLearningRoutePresentation(value)
         .split(POLARITY_SENTENCE_SPLIT_PATTERN)
         .map((sentence) => normalizeWhitespace(sentence))
         .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
@@ -2952,7 +2985,7 @@ function extractCompositionFrames(value: string): CompositionFrame[] {
         /^(.{1,24}?)(?:是)?由(.+?)(?:组成|构成|構成)(?:的.+)?$/u,
         /^(.{1,24}?)(?:被定义为|定义为|被定義為|定義為).+?由(.+?)(?:组成|构成|構成)(?:的.+)?$/u,
     ];
-    return String(value || '')
+    return stripLearningRoutePresentation(value)
         .split(POLARITY_SENTENCE_SPLIT_PATTERN)
         .map((sentence) => normalizeWhitespace(sentence))
         .filter((sentence) => sentence.length >= 8 || (containsCjk(sentence) && sentence.length >= 5))
@@ -3577,7 +3610,10 @@ function evaluateGroundingAlignment(context: AnswerReleaseReviewContext): {
     const scored = candidates
         .map((candidate) => ({
             label: candidate.label,
-            score: computeGroundingAlignmentScore(context.draftAnswer, candidate.text),
+            score: computeGroundingAlignmentScore(
+                stripLearningRoutePresentation(context.draftAnswer),
+                candidate.text
+            ),
         }))
         .sort((left, right) => right.score - left.score);
     const best = scored[0] || { label: '', score: 0 };
@@ -3757,7 +3793,7 @@ function preservePlannedGraphAnswerClaims(
     plan: GraphAnswerPlan | null | undefined
 ): string {
     if (!plan) {
-        return normalizeWhitespace(answer);
+        return normalizePublicAnswerSurface(answer);
     }
     const plannedStatements = (plan.claims || [])
         .map((claim) => naturalizeRagPublicEvidenceClause(String(claim.statement || '')))
@@ -3770,7 +3806,7 @@ function preservePlannedGraphAnswerClaims(
         return normalizeWhitespace(answer);
     }
     const normalizedAnswer = normalizeWhitespace(answer);
-    const orderedPlanText = plannedStatements.join(' ');
+    const orderedPlanText = plannedStatements.join('\n\n');
     const supplementalClauses = segmentRagEvidenceClauses(naturalizeRagPublicEvidenceClause(normalizedAnswer))
         .map((clause) => normalizeWhitespace(clause))
         .filter((clause) => (
@@ -3791,8 +3827,13 @@ function preservePlannedGraphAnswerClaims(
         }));
     const supplementalText = plan?.intent === 'definition'
         ? ''
-        : supplementalClauses.join(' ');
-    return normalizeWhitespace([orderedPlanText, supplementalText].filter(Boolean).join(' '));
+        : supplementalClauses.join('\n\n');
+    const useChinese = /[\u3400-\u9fff]/u.test(`${answer} ${plan.answerTaskPlan?.primarySubject || ''}`);
+    return formatTaskAwareAnswer(
+        [orderedPlanText, supplementalText],
+        plan.answerTaskPlan,
+        useChinese
+    );
 }
 
 function isIncompletePublicGraphClaim(value: string): boolean {
@@ -4207,6 +4248,7 @@ function claimLooksLikeReleaseScaffolding(claim: string): boolean {
     }
     return (
         /\b(?:grounded by|key evidence|citations?|rag context|retrieval|planner)\b/iu.test(normalizedClaim)
+        || /^(?:建议学习路径|推荐学习路径|Suggested learning path)\s*[:：]/iu.test(normalizedClaim)
         || /\b(?:available evidence|evidence coverage)\s+is\s+still\s+partial\b/iu.test(normalizedClaim)
         || /当前证据覆盖仍然有限|回答只使用已命中的材料|回答只陈述已有材料能够支持的内容/u.test(normalizedClaim)
         || /^(?:当前图中的关键路径是|The strongest graph path runs through)(?:\s|$)/iu.test(normalizedClaim)
@@ -4215,7 +4257,7 @@ function claimLooksLikeReleaseScaffolding(claim: string): boolean {
 }
 
 function splitDraftAnswerClaims(answer: string): string[] {
-    return stripMarkdownScaffolding(answer)
+    return stripMarkdownScaffolding(stripLearningRoutePresentation(answer))
         .split(POLARITY_SENTENCE_SPLIT_PATTERN)
         .map((claim) => normalizeWhitespace(claim))
         .filter((claim) => (
@@ -5654,7 +5696,9 @@ function evaluateTemporalValidityConsistency(
 }
 
 function checkPublicSurfaceContraction(answer: string): boolean {
-    const normalizedAnswer = String(answer || '');
+    // Learning-route bullets are an explicit typed deliverable, not internal
+    // diagnostics. Exclude that section from the legacy contraction heuristic.
+    const normalizedAnswer = stripLearningRoutePresentation(String(answer || ''));
     return !(
         /\bGrounded by\b/i.test(normalizedAnswer)
         || /\bKey evidence\b/i.test(normalizedAnswer)
@@ -5666,24 +5710,25 @@ function checkPublicSurfaceContraction(answer: string): boolean {
 function finalPublicAnswerPassesSemanticSafety(context: AnswerReleaseReviewContext, answer: string): boolean {
     const finalContext = {
         ...context,
-        draftAnswer: answer,
+        draftAnswer: String(answer || '').replace(/\r?\n/gu, ' '),
     };
-    return [
-        evaluateStructuredConsistency(finalContext).passed,
-        evaluateStructuredComparisonConsistency(finalContext).passed,
-        evaluateAttributeConsistency(finalContext).passed,
-        evaluateContainmentConsistency(finalContext).passed,
-        evaluateCompositionConsistency(finalContext).passed,
-        evaluatePurposeConsistency(finalContext).passed,
-        evaluateDependencyConsistency(finalContext).passed,
-        evaluateLocationConsistency(finalContext).passed,
-        evaluateSubjectConsistency(finalContext).passed,
-        evaluateStateConsistency(finalContext).passed,
-        evaluatePolarityConsistency(finalContext).passed,
-        evaluateGraphCausalConsistency(finalContext).passed,
-        evaluateGraphOrderConsistency(finalContext).passed,
-        evaluateGraphComparisonConsistency(finalContext).passed,
-    ].every(Boolean);
+    const checks = [
+        ['structured', evaluateStructuredConsistency(finalContext).passed],
+        ['structuredComparison', evaluateStructuredComparisonConsistency(finalContext).passed],
+        ['attribute', evaluateAttributeConsistency(finalContext).passed],
+        ['containment', evaluateContainmentConsistency(finalContext).passed],
+        ['composition', evaluateCompositionConsistency(finalContext).passed],
+        ['purpose', evaluatePurposeConsistency(finalContext).passed],
+        ['dependency', evaluateDependencyConsistency(finalContext).passed],
+        ['location', evaluateLocationConsistency(finalContext).passed],
+        ['subject', evaluateSubjectConsistency(finalContext).passed],
+        ['state', evaluateStateConsistency(finalContext).passed],
+        ['polarity', evaluatePolarityConsistency(finalContext).passed],
+        ['graphCausal', evaluateGraphCausalConsistency(finalContext).passed],
+        ['graphOrder', evaluateGraphOrderConsistency(finalContext).passed],
+        ['graphComparison', evaluateGraphComparisonConsistency(finalContext).passed],
+    ];
+    return checks.every(([, passed]) => passed);
 }
 
 function finalPublicAnswerPassesReleaseContract(
@@ -5774,8 +5819,80 @@ function buildReason(
         : 'Draft answer lacked grounded evidence, so the public answer was downgraded to a concise abstention.';
 }
 
+function evaluateLearningRouteSubjectAlignment(
+    plan: AnswerReleaseReviewContext['graphAnswerPlan']
+): boolean {
+    const taskPlan = plan?.answerTaskPlan;
+    const route = taskPlan?.learningRoute || [];
+    if (!taskPlan?.subtasks.some((subtask) => subtask.kind === 'learning_route')) {
+        return true;
+    }
+    const subjectKey = normalizeWhitespace(taskPlan.primarySubject)
+        .replace(/[^\p{L}\p{N}]+/gu, '')
+        .toLowerCase();
+    if (!subjectKey || route.length < 3) {
+        return false;
+    }
+    return route.some((node) => {
+        const titleKey = normalizeWhitespace(node.title)
+            .replace(/[^\p{L}\p{N}]+/gu, '')
+            .toLowerCase();
+        return node.role === 'core' && Boolean(titleKey && (
+            titleKey === subjectKey
+            || titleKey.includes(subjectKey)
+            || subjectKey.includes(titleKey)
+        ));
+    });
+}
+
+function evaluateLearningRouteOrderEvidence(
+    plan: AnswerReleaseReviewContext['graphAnswerPlan']
+): boolean {
+    const taskPlan = plan?.answerTaskPlan;
+    const route = taskPlan?.learningRoute || [];
+    if (!taskPlan?.subtasks.some((subtask) => subtask.kind === 'learning_route')) {
+        return true;
+    }
+    const explicitOrderingPresent = route.some((node) => (
+        node.orderingBasis === 'explicit_prerequisite'
+        || node.orderingBasis === 'explicit_sequence'
+    ));
+    return route.length >= 3
+        && route.every((node, index) => node.order === index + 1 && node.evidenceRefs.length > 0)
+        && route.some((node) => node.role === 'core')
+        && (!explicitOrderingPresent || route.some((node) => node.orderingBasis === 'explicit_prerequisite'));
+}
+
+function buildAnswerTaskCoverageMessage(result: AnswerTaskCoverageReview): string {
+    if (!result.applicable) {
+        return 'No compound answer-task contract was active for this request.';
+    }
+    if (result.passed) {
+        return `The public answer covered all ${result.coveredSubtaskIds.length} required answer deliverable(s).`;
+    }
+    return `The public answer is missing required deliverable(s): ${result.missingRequiredSubtaskIds.join(', ')}.`;
+}
+
+function appendAnswerTaskDeliverables(
+    answer: string,
+    plan: GraphAnswerPlan['answerTaskPlan'],
+    answerLanguage?: 'auto' | 'en' | 'zh'
+): string {
+    const normalizedAnswer = String(answer || '').replace(/\r\n?/gu, '\n').trim();
+    if (!plan || !plan.subtasks.some((subtask) => subtask.kind === 'learning_route') || plan.learningRoute.length <= 0) {
+        return normalizedAnswer;
+    }
+    const useChinese = answerLanguage === 'zh'
+        || (answerLanguage !== 'en' && /[\u3400-\u9fff]/u.test(`${normalizedAnswer} ${plan.primarySubject}`));
+    const routeText = formatLearningRouteAnswer(plan, useChinese);
+    if (!routeText || normalizedAnswer.includes(routeText)) {
+        return normalizedAnswer;
+    }
+    return formatTaskAwareAnswer([normalizedAnswer], plan, useChinese);
+}
+
 export function reviewAnswerRelease(context: AnswerReleaseReviewContext): AnswerReleaseReview {
-    const draftAnswer = normalizeWhitespace(context.draftAnswer);
+    const draftAnswer = normalizePublicAnswerSurface(context.draftAnswer);
     const groundedEvidenceAvailable = context.knowledgePoints.length > 0
         || context.citations.length > 0
         || hasUsableRagEvidenceContext(context);
@@ -5991,6 +6108,9 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             unsupportedClaims: [],
             citationBackedFragmentCount: 0,
         };
+    const draftAnswerTaskCoverage = groundedEvidenceAvailable
+        ? reviewAnswerTaskCoverage(draftAnswer, context.graphAnswerPlan?.answerTaskPlan)
+        : reviewAnswerTaskCoverage('', null);
     const publicGraphAnswerPlan = projectPublicGraphAnswerPlan(
         context.graphAnswerPlan,
         context.ragContextPack,
@@ -6048,11 +6168,12 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     const primaryGraphComparisonConflict = graphComparisonConsistency.conflicts[0];
     const primaryStructuredComparisonConflict = structuredComparisonConsistency.conflicts[0];
     const primaryTemporalValidityConflict = temporalValidityConsistency.conflict;
-    const revisedPublicAnswer = normalizeWhitespace(
+    const revisedPublicAnswer =
         draftDecision === 'abstain'
             ? buildAbstentionAnswer(context)
             : draftDecision === 'revise'
-                ? (
+                ? appendAnswerTaskDeliverables(
+                    (
                     primaryTemporalValidityConflict
                         ? buildTemporalValidityRevisionAnswer(context, primaryTemporalValidityConflict)
                     : primaryGraphCausalConflict
@@ -6066,9 +6187,15 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                         : (!queryIntentAlignment.passed && queryIntentAlignment.supportFrame)
                             ? buildDefinitionIntentRevisionAnswer(context, queryIntentAlignment.supportFrame)
                         : buildGroundedRevisionAnswer(context)
+                    ),
+                    context.graphAnswerPlan?.answerTaskPlan,
+                    context.answerLanguage
                 )
-                : buildReleasedPublicAnswer(context, draftAnswer)
-    );
+                : appendAnswerTaskDeliverables(
+                    buildReleasedPublicAnswer(context, draftAnswer),
+                    context.graphAnswerPlan?.answerTaskPlan,
+                    context.answerLanguage
+                );
     // Every claim-level consistency gate is a semantic safety boundary. A plan may
     // improve coverage, but must never overwrite a correction from any of them.
     const requiresSafetyCorrection = !verifiedRagConflictDisclosurePlan && [
@@ -6113,16 +6240,30 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     let effectivePublicGraphAnswerPlan = requiresSafetyCorrection
         ? createEmptyPublicGraphAnswerPlan(context.graphAnswerPlan)
         : publicGraphAnswerPlan;
+    let decision: AnswerReleaseDecision = definitionProjectionIntegrityPassed
+        ? draftDecision
+        : 'abstain';
+    if (
+        decision === 'release'
+        && draftAnswerTaskCoverage.applicable
+        && !draftAnswerTaskCoverage.passed
+    ) {
+        decision = 'revise';
+    }
     let publicAnswer = preservePlannedGraphAnswerClaims(
         revisedPublicAnswer,
         shouldPreservePublicPlan ? effectivePublicGraphAnswerPlan : null
     );
+    if (decision !== 'abstain') {
+        publicAnswer = appendAnswerTaskDeliverables(
+            publicAnswer,
+            context.graphAnswerPlan?.answerTaskPlan,
+            context.answerLanguage
+        );
+    }
     let graphAnswerPlanCoverage: GraphAnswerCoverageReview = groundedEvidenceAvailable
         ? reviewGraphAnswerCoverage(publicAnswer, effectivePublicGraphAnswerPlan)
         : reviewGraphAnswerCoverage('', null);
-    let decision: AnswerReleaseDecision = definitionProjectionIntegrityPassed
-        ? draftDecision
-        : 'abstain';
     if (!definitionProjectionIntegrityPassed) {
         publicAnswer = buildAbstentionAnswer(context);
         effectivePublicGraphAnswerPlan = createEmptyPublicGraphAnswerPlan(context.graphAnswerPlan);
@@ -6170,6 +6311,22 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             graphAnswerPlanCoverage = reviewGraphAnswerCoverage(publicAnswer, effectivePublicGraphAnswerPlan);
             decision = 'abstain';
         }
+    }
+    const answerTaskCoverage = groundedEvidenceAvailable
+        ? reviewAnswerTaskCoverage(publicAnswer, context.graphAnswerPlan?.answerTaskPlan)
+        : reviewAnswerTaskCoverage('', null);
+    const learningRouteSubjectAlignment = groundedEvidenceAvailable
+        ? evaluateLearningRouteSubjectAlignment(context.graphAnswerPlan)
+        : true;
+    const learningRouteOrderEvidence = groundedEvidenceAvailable
+        ? evaluateLearningRouteOrderEvidence(context.graphAnswerPlan)
+        : true;
+    if (
+        decision === 'release'
+        && answerTaskCoverage.applicable
+        && (!answerTaskCoverage.passed || !learningRouteSubjectAlignment || !learningRouteOrderEvidence)
+    ) {
+        decision = 'revise';
     }
     const abstentionHygienePassed = decision !== 'abstain'
         || (
@@ -6408,6 +6565,40 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                     : `The public answer omitted required graph-answer claims: ${graphAnswerPlanCoverage.missingRequiredClaimIds.join(', ')}.`,
         },
         {
+            gateId: 'subtask_coverage',
+            passed: draftAnswerTaskCoverage.passed && answerTaskCoverage.passed,
+            message: draftAnswerTaskCoverage.passed
+                ? buildAnswerTaskCoverageMessage(answerTaskCoverage)
+                : `Draft answer ${buildAnswerTaskCoverageMessage(draftAnswerTaskCoverage).replace(/^The public answer /u, '').replace(/^公共回答/u, '')}`,
+        },
+        {
+            gateId: 'learning_route_subject_alignment',
+            passed: learningRouteSubjectAlignment,
+            message: learningRouteSubjectAlignment
+                ? 'Learning-route nodes retained the requested subject as the core anchor.'
+                : 'Learning-route nodes did not establish the requested subject as a core anchor.',
+        },
+        {
+            gateId: 'learning_route_order_evidence',
+            passed: learningRouteOrderEvidence,
+            message: learningRouteOrderEvidence
+                ? 'Learning-route order is sequential and every node retains evidence references; explicit prerequisite order is used when available.'
+                : 'Learning-route order or evidence references were insufficient for release; unsupported prerequisite order was not inferred.',
+        },
+        {
+            gateId: 'deliverable_completeness',
+            passed: draftAnswerTaskCoverage.passed
+                && answerTaskCoverage.passed
+                && learningRouteSubjectAlignment
+                && learningRouteOrderEvidence,
+            message: draftAnswerTaskCoverage.passed
+                && answerTaskCoverage.passed
+                && learningRouteSubjectAlignment
+                && learningRouteOrderEvidence
+                ? 'All required answer deliverables were present and evidence-bounded.'
+                : 'At least one required answer deliverable was missing or not evidence-bounded.',
+        },
+        {
             gateId: 'definition_projection_integrity',
             passed: definitionProjectionIntegrityPassed,
             message: definitionProjectionIntegrityPassed
@@ -6448,6 +6639,8 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         publicGraphAnswerPlan: effectivePublicGraphAnswerPlan || undefined,
         auditGraphAnswerPlan: context.graphAnswerPlan || undefined,
         graphAnswerCoverage: graphAnswerPlanCoverage,
+        answerTaskCoverage,
+        draftAnswerTaskCoverage,
         reason: buildReason(decision, groundedEvidenceAvailable),
         failedGateIds,
         leakedInternalFragments,

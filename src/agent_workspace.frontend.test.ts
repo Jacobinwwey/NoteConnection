@@ -6502,6 +6502,153 @@ describe('agent workspace learning-path integration', () => {
         expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body || '{}')).answerLanguage).toBe('en');
     });
 
+    test('uses the bounded local exact path on native mobile and exposes only the compact projection', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+        (window as any).__NC_RUNTIME_CAPS = {
+            platform: 'capacitor-android',
+            supports_sidecar: false,
+        };
+        const matches = [
+            { id: 'amorphous_ice', label: '非晶冰', sourceUri: 'Knowledge_Base/waterglass/amorphous-ice.md' },
+            { id: 'water_structure', label: '水分子与氢键网络', sourceUri: 'Knowledge_Base/waterglass/amorphous-ice.md' },
+            { id: 'radial_distribution', label: '径向分布函数 g(r)', sourceUri: 'Knowledge_Base/waterglass/amorphous-ice.md' },
+        ];
+        const queriedTerms: string[] = [];
+        const queryKnowledgeBaseExact = jest.fn(async ({ query }: { query: string }) => {
+            queriedTerms.push(query);
+            return { matches: query === '非晶冰' ? matches : [] };
+        });
+        const readContent = jest.fn(async () => [
+            '# 非晶冰',
+            '',
+            '非晶冰是水的一种缺乏长程有序的固态形式。',
+            '',
+            '## 常见用例与性能指标',
+            '该章节不应进入移动端直接回答。',
+        ].join('\n'));
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({ queryKnowledgeBaseExact, readContent }),
+        };
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = '什么是非晶冰？我应该通过哪些知识点学习？';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+
+        expect(queryKnowledgeBaseExact).toHaveBeenCalled();
+        expect(queriedTerms).toContain('非晶冰');
+        expect(readContent).toHaveBeenCalledWith('Knowledge_Base/waterglass/amorphous-ice.md');
+        expect(fetchMock).not.toHaveBeenCalled();
+        const result = (window as any).__NC_LAST_AGENT_CONVERSATION_RESULT;
+        expect(result).toEqual(expect.objectContaining({
+            responseProfile: 'mobile_compact',
+            mobileProjection: expect.objectContaining({
+                primarySubject: '非晶冰',
+                directAnswer: '非晶冰是水的一种缺乏长程有序的固态形式。',
+                route: expect.arrayContaining([
+                    expect.objectContaining({ title: '非晶冰', role: 'core' }),
+                    expect.objectContaining({ title: '水分子与氢键网络' }),
+                ]),
+            }),
+        }));
+        expect(result.knowledgePoints).toEqual([]);
+        expect(result.citations).toEqual([]);
+        expect(result.trace).toBeUndefined();
+        expect(JSON.stringify(result)).not.toContain('该章节不应进入移动端直接回答');
+        const renderedAssistant = Array.from(
+            document.querySelectorAll('.agent-chat-message-assistant')
+        ).map((node) => String(node.textContent || '')).join('\n');
+        expect(renderedAssistant).toContain('建议学习路径');
+        expect(renderedAssistant).toContain('水分子与氢键网络');
+    });
+
+    test('falls back to the bounded remote projection when the native exact index has no match', async () => {
+        const {
+            document,
+            window,
+            fetchMock,
+        } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+        (window as any).__NC_RUNTIME_CAPS = {
+            platform: 'capacitor-android',
+            supports_sidecar: false,
+        };
+        const queryKnowledgeBaseExact = jest.fn(async () => ({ matches: [] }));
+        (window as any).NoteConnectionStorage = {
+            createProvider: () => ({ queryKnowledgeBaseExact }),
+        };
+        fetchMock.mockImplementationOnce(async (_url: string, init?: { body?: string }) => {
+            const request = JSON.parse(String(init?.body || '{}'));
+            expect(request.responseProfile).toBe('mobile_compact');
+            return createSseResponse([
+                {
+                    event: 'turn_completed',
+                    payload: {
+                        type: 'turn_completed',
+                        turnId: 'turn_remote_mobile_projection',
+                        emittedAt: '2026-08-01T00:00:00.000Z',
+                        result: {
+                            responseProfile: 'mobile_compact',
+                            assistantMessage: '非晶冰是缺乏长程有序的水的固态形式。',
+                            answer: '非晶冰是缺乏长程有序的水的固态形式。',
+                            mobileProjection: {
+                                schemaVersion: 1,
+                                primarySubject: '非晶冰',
+                                directAnswer: '非晶冰是缺乏长程有序的水的固态形式。',
+                                route: [
+                                    { nodeId: 'water', title: '水分子与氢键网络', role: 'prerequisite', order: 1 },
+                                    { nodeId: 'ice', title: '非晶冰', role: 'core', order: 2 },
+                                ],
+                                citations: [],
+                            },
+                            assistantBlocks: [],
+                            knowledgePoints: [],
+                            citations: [],
+                            recalledMemories: [],
+                            memoryActions: [],
+                            summary: {
+                                generatedAt: '2026-08-01T00:00:00.000Z',
+                                topK: 6,
+                                returnedKnowledgePoints: 2,
+                                returnedCitations: 0,
+                                recalledMemoryCount: 0,
+                                appliedMemoryCount: 0,
+                                queryEvidenceCoverageRatioPct: 100,
+                            },
+                        },
+                    },
+                },
+            ]);
+        });
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = '什么是非晶冰？';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+
+        expect(queryKnowledgeBaseExact).toHaveBeenCalled();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(String(fetchMock.mock.calls[0]?.[1]?.headers?.Accept || '')).toBe('text/event-stream');
+        const result = (window as any).__NC_LAST_AGENT_CONVERSATION_RESULT;
+        expect(result).toEqual(expect.objectContaining({
+            responseProfile: 'mobile_compact',
+            mobileProjection: expect.objectContaining({ primarySubject: '非晶冰' }),
+        }));
+        expect(result.trace).toBeUndefined();
+        const renderedAssistant = Array.from(
+            document.querySelectorAll('.agent-chat-message-assistant')
+        ).map((node) => String(node.textContent || '')).join('\n');
+        expect(renderedAssistant).toContain('建议学习路径');
+        expect(renderedAssistant).toContain('非晶冰');
+    });
+
     test('prefers SSE turn streaming for conversation and renders the completed turn payload', async () => {
         const {
             document,

@@ -1,4 +1,5 @@
 import { reviewAnswerRelease } from './answerReleaseReview';
+import { buildGraphAnswerPlan } from './graphAnswerPlan';
 import type {
     AgentConversationGraphContext,
     AgentConversationKnowledgePoint,
@@ -221,6 +222,161 @@ function makeComparisonGraphContext(
 }
 
 describe('answerReleaseReview', () => {
+    test('does not treat standalone mathematical variable definitions as subject conflicts', () => {
+        const point = makeKnowledgePoint({
+            summary: 'The VFT model describes supercooled liquid viscosity as temperature changes.',
+            evidenceSnippet: 'The VFT model describes supercooled liquid viscosity as temperature changes.',
+        });
+        const review = reviewAnswerRelease({
+            message: 'what is water glass?',
+            draftAnswer: 'Water glass is a transparent container. The VFT model describes supercooled liquid viscosity as temperature changes. $\\eta(T)$ is the viscosity at temperature T.',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            ragContextPack: {
+                query: 'what is water glass?',
+                generatedAt: '2026-07-12T00:00:00.000Z',
+                sourceBoundary: 'direct_span_only',
+                budget: { maxFragments: 2, maxCharsPerFragment: 500, maxTotalChars: 900 },
+                fragments: [{
+                    fragmentId: 'vft_context',
+                    role: 'direct_support',
+                    text: 'The VFT model describes supercooled liquid viscosity as temperature changes. $\\eta(T)$ is the viscosity at temperature T.',
+                    atomId: point.atomId,
+                    documentId: point.documentId || '',
+                    sourcePath: point.sourcePath || '',
+                    title: point.title,
+                    headingPath: [point.title],
+                    charCount: 120,
+                    tokenEstimate: 30,
+                    truncated: false,
+                    citationIds: [point.citation?.citationId || 'citation_water_glass'],
+                    relationEdgeIds: [],
+                    sourceBoundary: 'direct_span_only',
+                }],
+                sourceDecisions: [],
+                totalCharCount: 120,
+                tokenEstimate: 30,
+            },
+            reviewedAt: '2026-07-12T00:00:00.000Z',
+        });
+
+        expect(review.failedGateIds).not.toContain('claim_subject_consistency');
+    });
+
+    test('does not treat a formula variable sentence with multiple math spans as an entity subject conflict', () => {
+        const point = makeKnowledgePoint({
+            title: '核心概念与数学基础',
+            summary: '描述过冷液体粘度随温度变化的常用模型。',
+            evidenceSnippet: '描述过冷液体粘度随温度变化的常用模型。',
+            sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+        });
+        const review = reviewAnswerRelease({
+            message: '什么是非晶冰？我应该通过哪些知识点学习？',
+            draftAnswer: '描述过冷液体粘度随温度变化的常用模型。$\\eta(T)$ 是在温度 $T$ 下的粘度。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({ anchorTitle: '非晶冰' }),
+            ragContextPack: {
+                query: '什么是非晶冰？我应该通过哪些知识点学习？',
+                generatedAt: '2026-07-12T00:00:00.000Z',
+                sourceBoundary: 'direct_span_only',
+                budget: { maxFragments: 1, maxCharsPerFragment: 500, maxTotalChars: 500 },
+                fragments: [{
+                    fragmentId: 'amorphous_math_variable',
+                    role: 'direct_support',
+                    atomId: point.atomId,
+                    documentId: point.documentId || '',
+                    sourcePath: point.sourcePath || '',
+                    title: point.title,
+                    headingPath: [point.title],
+                    text: '描述过冷液体粘度随温度变化的常用模型。$\\eta(T)$ 是在温度 $T$ 下的粘度。',
+                    charCount: 80,
+                    tokenEstimate: 20,
+                    truncated: false,
+                    citationIds: [point.citation?.citationId || 'citation_water_glass'],
+                    relationEdgeIds: [],
+                    sourceBoundary: 'direct_span_only',
+                }],
+                sourceDecisions: [],
+                totalCharCount: 80,
+                tokenEstimate: 20,
+            },
+            reviewedAt: '2026-07-12T00:00:00.000Z',
+        });
+
+        expect(review.failedGateIds).not.toContain('claim_subject_consistency');
+    });
+
+    test('does not release a definition-only draft for a compound learning request', () => {
+        const point = makeKnowledgePoint({
+            atomId: 'atom_amorphous_ice',
+            atomIds: ['atom_amorphous_ice', 'atom_water_structure', 'atom_rdf'],
+            documentId: 'doc_amorphous_ice',
+            sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+            title: 'Amorphous Ice',
+            summary: 'Amorphous ice is a solid form of water without long-range crystalline order.',
+            evidenceSnippet: 'Amorphous ice is a solid form of water without long-range crystalline order.',
+            matchedSpans: [
+                {
+                    atomId: 'atom_amorphous_ice',
+                    title: 'Amorphous Ice',
+                    snippet: 'Amorphous ice is a solid form of water without long-range crystalline order.',
+                    sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                    score: 0.94,
+                    citation: null,
+                },
+                {
+                    atomId: 'atom_water_structure',
+                    title: 'Water Molecular Structure',
+                    snippet: 'Water molecules and hydrogen bonding explain the local structure of ice.',
+                    sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                    score: 0.86,
+                    citation: null,
+                },
+                {
+                    atomId: 'atom_rdf',
+                    title: 'Radial Distribution Function',
+                    snippet: 'The radial distribution function g(r) distinguishes short-range from long-range order.',
+                    sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                    score: 0.84,
+                    citation: null,
+                },
+            ],
+        });
+        const message = 'what is amorphous ice? Which knowledge points should I learn?';
+        const graphContext = makeGraphContext({
+            anchorAtomId: 'atom_amorphous_ice',
+            anchorTitle: 'Amorphous Ice',
+        });
+        const graphAnswerPlan = buildGraphAnswerPlan({
+            message,
+            knowledgePoints: [point],
+            graphContext,
+        });
+        const review = reviewAnswerRelease({
+            message,
+            draftAnswer: 'Amorphous ice is a solid form of water without long-range crystalline order.',
+            knowledgePoints: [point],
+            citations: [],
+            usedScope: scopedWaterglass,
+            graphContext,
+            graphAnswerPlan,
+            reviewedAt: '2026-07-12T00:00:00.000Z',
+        });
+
+        expect(review.draftAnswerTaskCoverage).toEqual(expect.objectContaining({
+            passed: false,
+            missingRequiredSubtaskIds: expect.arrayContaining(['learning_route']),
+        }));
+        expect(review.failedGateIds).toContain('subtask_coverage');
+        expect(review.failedGateIds).toContain('deliverable_completeness');
+        expect(review.decision).toBe('revise');
+        expect(review.answerTaskCoverage?.passed).toBe(true);
+    });
+
     test('abstains when grounded evidence belongs to a different requested subject', () => {
         const waterGlassPoint = makeKnowledgePoint({
             title: 'Water Glass',
@@ -563,7 +719,7 @@ describe('answerReleaseReview', () => {
         });
 
         expect(review.decision).toBe('revise');
-        expect(review.publicAnswer).toContain('$$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$');
+        expect(review.publicAnswer).toContain('$$\n\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T\n$$');
         expect(review.publicAnswer).toContain('the complete clause remains readable for the public answer.');
         expect(review.publicAnswer).not.toContain('...');
         expect((review.publicAnswer.match(/\$\$/gu) || []).length % 2).toBe(0);
@@ -922,7 +1078,7 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).toContain('It combines a glass vessel with the water it contains.');
         expect(review.publicAnswer).toContain('Its wall separates the liquid from the surrounding air.');
         expect(review.publicAnswer).toContain('Light refracts at the air-glass-water interfaces.');
-        expect(review.publicAnswer).toContain('$$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$');
+        expect(review.publicAnswer).toContain('$$\n\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T\n$$');
         expect(review.publicAnswer).not.toContain('Plastic cups');
         expect((review as any).publicGraphAnswerPlan.claims.map((claim: GraphAnswerClaimPlan) => claim.claimId)).toEqual([
             'claim_definition',
@@ -1047,8 +1203,8 @@ describe('answerReleaseReview', () => {
             'thermal_context',
             'optical_context',
         ]);
-        expect(review.publicAnswer).toContain(thermalEquation);
-        expect(review.publicAnswer).toContain(opticalEquation);
+        expect(review.publicAnswer).toContain('$$\n\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T\n$$');
+        expect(review.publicAnswer).toContain('$$\nn_1\\sin(\\theta_1)=n_2\\sin(\\theta_2)\n$$');
         expect((review.publicAnswer.match(/\\frac\{\\partial T\}\{\\partial t\}=\\alpha\\nabla\^2 T/gu) || [])).toHaveLength(1);
         expect((review.publicAnswer.match(/n_1\\sin\(\\theta_1\)=n_2\\sin\(\\theta_2\)/gu) || [])).toHaveLength(1);
         expect(review.publicAnswer).not.toContain('$k$ 是热导率');

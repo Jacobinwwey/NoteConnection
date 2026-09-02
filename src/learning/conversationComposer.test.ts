@@ -2239,7 +2239,7 @@ describe('conversationComposer', () => {
         expect(reply.answer).toContain('A water glass is a transparent vessel used to hold water.');
         expect(reply.answer).toContain('It separates the liquid from the surrounding environment.');
         expect(reply.answer).toContain('Its wall conducts heat between the drink and the air.');
-        expect(reply.answer).toContain('$$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$');
+        expect(reply.answer).toContain('$$\n\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T\n$$');
         expect(reply.answer).not.toContain('PET Plastic Cup');
         expect(reply.answer).not.toContain('Stainless Steel Metal Cup');
         expect(reply.answer).not.toContain('This extra sentence should remain outside');
@@ -2425,13 +2425,30 @@ describe('conversationComposer', () => {
         expect(reply.answer).toContain('非晶冰（Amorphous ice）是水的一种固态形式');
         expect(reply.answer).toContain('$g(r)$');
         expect(reply.answer).toContain('$$');
-        expect(reply.answer).not.toContain('###');
+        expect(reply.answer).not.toMatch(/###\s+(?!建议学习路径)/u);
         expect(reply.answer).not.toContain('常见用例与性能指标');
         expect(reply.answer).not.toContain('关键技术规格');
         expect(reply.answer).not.toContain('$T_g$');
         expect(reply.answer).not.toContain('本节介绍');
         expect(reply.answer).not.toContain('水杯');
         expect((reply.answer.match(/\\frac\{V\}\{N\^2\}/gu) || [])).toHaveLength(1);
+        expect(reply.answer).toContain('\n\n$$\n');
+        expect(reply.answer).toContain('\n### 建议学习路径\n');
+        expect(reply.answer).toContain('1. **核心结构与数学基础**');
+        expect(reply.answer).toContain('当前资料顺序，不代表显式前置关系');
+        expect(reply.answer).not.toContain('后续分支包括');
+        const structuredBlock = reply.assistantBlocks.find((block) => block.type === 'structured_answer');
+        expect(structuredBlock && 'answerTaskPlan' in structuredBlock ? structuredBlock.answerTaskPlan : undefined)
+            .toEqual(expect.objectContaining({
+                schemaVersion: '1',
+                subtasks: expect.arrayContaining([
+                    expect.objectContaining({ kind: 'learning_route', required: true }),
+                ]),
+            }));
+        expect(reply.answerReleaseReview.answerTaskCoverage).toEqual(expect.objectContaining({
+            passed: true,
+            coveredSubtaskIds: expect.arrayContaining(['learning_route']),
+        }));
     });
 
     test('compound definition release stays bounded when the RAG pack contains a full document', () => {
@@ -2551,6 +2568,12 @@ describe('conversationComposer', () => {
         expect(reply.answer).not.toContain('关键技术规格');
         expect(reply.answer).not.toContain('相关技术与比较数学模型');
         expect(reply.answer).not.toContain('```mermaid');
+        expect(reply.graphAnswerPlan.answerTaskPlan?.learningRoute.length).toBeGreaterThanOrEqual(3);
+        expect(reply.graphAnswerPlan.answerTaskPlan?.learningRoute.every((node) => node.evidenceRefs.length > 0)).toBe(true);
+        expect(reply.answerReleaseReview.answerTaskCoverage).toEqual(expect.objectContaining({
+            passed: true,
+            coveredSubtaskIds: expect.arrayContaining(['definition', 'learning_route']),
+        }));
         expect(reply.answer).not.toMatch(/(?:^|\\s)\\d+\\.?(?:\\s|$)/u);
         expect((reply.answer.match(/\\frac\{V\}\{N\^2\}/gu) || [])).toHaveLength(1);
         expect(reply.answer.length).toBeLessThan(900);

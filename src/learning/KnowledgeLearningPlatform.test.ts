@@ -373,7 +373,7 @@ describe('KnowledgeLearningPlatform', () => {
         expect(response.answer).toContain('非晶冰（Amorphous ice）是水的一种固态形式');
         expect(response.answer).toContain('$g(r)$');
         expect(response.answer).toContain('$$');
-        expect(response.answer).not.toContain('###');
+        expect(response.answer).not.toMatch(/###\s+(?!建议学习路径)/u);
         expect(response.answer).not.toContain('标');
         expect(response.answer).not.toContain('水杯');
         expect(response.answerReleaseReview?.decision).not.toBe('abstain');

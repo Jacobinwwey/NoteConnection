@@ -853,6 +853,20 @@ describe('WorkspaceExportBundle', () => {
                                 leadClaimId: 'claim_reflection',
                                 requiredRoles: ['definition', 'mechanism'],
                                 omittedCandidates: [],
+                                answerTaskPlan: {
+                                    schemaVersion: '1',
+                                    primarySubject: 'Reflection',
+                                    requestedDepth: 'standard',
+                                    subtasks: [
+                                        { subtaskId: 'definition', kind: 'definition', subject: 'Reflection', required: true, expectedOutput: 'direct_answer' },
+                                        { subtaskId: 'learning_route', kind: 'learning_route', subject: 'Reflection', required: true, expectedOutput: 'ordered_nodes' },
+                                    ],
+                                    learningRoute: [
+                                        { nodeId: 'atom_foundation', title: 'Foundation', role: 'prerequisite', order: 1, orderingBasis: 'explicit_prerequisite', evidenceRefs: ['edge_1'], reason: 'foundation' },
+                                        { nodeId: 'atom_reflection', title: 'Reflection', role: 'core', order: 2, orderingBasis: 'explicit_prerequisite', evidenceRefs: ['claim_reflection'], reason: 'core' },
+                                        { nodeId: 'atom_measurement', title: 'Measurement', role: 'application', order: 3, orderingBasis: 'source_order', evidenceRefs: ['claim_measurement'], reason: 'application' },
+                                    ],
+                                },
                                 claims: [
                                     { claimId: 'claim_reflection', required: true },
                                     { claimId: 'claim_mechanism', required: true },
@@ -864,6 +878,15 @@ describe('WorkspaceExportBundle', () => {
                                 requiredClaimIds: ['claim_reflection', 'claim_mechanism'],
                                 coveredClaimIds: ['claim_reflection', 'claim_mechanism'],
                                 missingRequiredClaimIds: [],
+                                coverageScore: 1,
+                            },
+                            answerTaskCoverage: {
+                                passed: true,
+                                applicable: true,
+                                coveredSubtaskIds: ['definition', 'learning_route'],
+                                missingRequiredSubtaskIds: [],
+                                subtaskCoverage: [],
+                                learningRouteNodeCount: 3,
                                 coverageScore: 1,
                             },
                         },
@@ -956,6 +979,14 @@ describe('WorkspaceExportBundle', () => {
                     requiredRoles: ['definition', 'mechanism'],
                     coverageScore: 1,
                     missingRequiredClaimIds: [],
+                },
+                answerTask: {
+                    primarySubject: 'Reflection',
+                    subtaskCount: 2,
+                    requiredSubtaskCount: 2,
+                    missingRequiredSubtaskIds: [],
+                    learningRouteNodeCount: 3,
+                    coverageScore: 1,
                 },
             }),
             expect.objectContaining({

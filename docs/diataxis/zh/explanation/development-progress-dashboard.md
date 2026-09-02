@@ -1,5 +1,15 @@
 # 解释：开发进度看板
 
+## 2026-09-02 移动端 Compact Projection、本地 Exact Fallback 与最终验证
+
+本轮继续收口剩余的多端回答契约缺口。`answerTaskPlan.ts` 现在是复合任务 deliverable 的 typed source of truth；`answerReleaseReview.ts` 把统一的公开 Markdown 边界应用到所有回答路径（包括 RAG revision），因此 display math 始终输出为配对块（`$$` 独占行），只有在上下文 claim 已携带同一归一化表达式时才移除公式重复，且不完整的数学/句尾会被拒绝，同时不修改 audit plan。精确公开文本同时落在 structured answer block 与 response-level answer，客户端不需要从 trace 片段重新拼装发布内容。
+
+移动端 profile 是 additive 且有界的。JSON、实时 SSE 与 SSE replay 都接受 `responseProfile: mobile_compact`，只返回 `mobileProjection`、有界 summary 和空的内部集合；`trace`、RAG fragments、knowledge-run artifact、assistant metadata blocks 与原始正文均被排除。turn-cache fingerprint 包含 response profile，因此桌面 replay 不能被错误复用为移动端响应。Capacitor/Android 原生会优先使用 local exact index，从复合中文/英文问句提取主题词，只读取一个受限正文，并通过共享 `mobile_exact_analyzer` 的显式边契约生成学习路径；本地无命中或 index 不可用时回退到同一 bounded remote projection。`note://workspace/v1/...` source URI 会映射到 `Knowledge_Base/...`；未知 URI 或桌面绝对路径 fail closed。
+
+当前构建的 fresh 验证全部通过：TypeScript no-emit；全量 Jest `155` suites / `1,356` passed / `26` skipped；production build；Vite build；Agent Workspace contracts `157` passed / `13` skipped；移动端 contracts `51` passed；projection replay 覆盖 `4` hosts；native recovery 覆盖 `8` scenarios；mobile slim 为 `122` 个文件、未压缩 `4,292,745` bytes、估算压缩 `1,554,525` bytes，低于 25 MiB；以及真实 backend/browser verifier。隔离浏览器使用真实后端、真实 graph runtime 与 Godot future-path runtime。新鲜 `waterglass` runtime 验证保留完整内部 evidence 供审计，同时发布配对且单次出现的热传导与斯涅尔公式、无 Mermaid/比较/应用章节噪声，并交付 typed learning route。`output/verification/` 与 `output/playwright/` 下文件仅为验证证据，不是产品资源。
+
+剩余 release blocker 保持显式：当前主机没有 online Android 目标（`adb devices -l` 为空），因此不能宣称 signed arm64 APK/AAB 安装、SAF workload、进程死亡后的 reopen continuity 或设备 RSS。已经打开的旧版 NoteConnection 进程仍加载旧构建，本轮未修改它；必须由操作者重启/重建后才会加载本代码。提交推送后的远端 GitHub CI 是最后一道门禁。
+
 ## 2026-08-25 新鲜浏览器验收与证据边界
 
 在隔离 Chrome 上重新探测 CDP 后，本次重新运行了浏览器验收。验收脚本现在会等待并关闭异步创建的首次运行语言选择弹窗，然后打开知识工作区，并明确断言 drawer 已打开后才设置 scope/语言并发送请求。这关闭了一个会让页面停在 idle 并误报缺少回答卡片的探针时序缺陷。

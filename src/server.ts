@@ -117,6 +117,7 @@ import {
 import {
     normalizeAgentConversationRequestPayload,
 } from './learning/requestNormalization';
+import { projectAnswerForMobile } from './learning/mobileAnswerProjection';
 import {
     buildKnowledgeSourceInventoryDiff,
     deriveKnowledgeTargetLookupQueries as deriveKnowledgeTargetLookupQueriesFromMessage,
@@ -10346,6 +10347,7 @@ function buildAgentConversationRequestFingerprint(requestPayload: AgentConversat
         activeTarget: String(requestPayload.activeTarget || '').trim(),
         message: String(requestPayload.message || '').trim(),
         answerLanguage: String(requestPayload.answerLanguage || 'auto').trim(),
+        responseProfile: String(requestPayload.responseProfile || 'default').trim(),
         topK: normalizeAgentConversationTopK(requestPayload.topK),
         asOf: String(requestPayload.asOf || '').trim(),
         persistMemory: requestPayload.persistMemory !== false,
@@ -10439,13 +10441,63 @@ function appendAgentConversationTurnCacheEvent(
 
 function replayAgentConversationTurnEvents(
     res: http.ServerResponse,
-    record: AgentConversationTurnCacheRecord
+    record: AgentConversationTurnCacheRecord,
+    requestPayload?: AgentConversationRequest
 ): void {
     AGENT_CONVERSATION_TURN_CACHE_COUNTERS.replayResponseCount += 1;
     AGENT_CONVERSATION_TURN_CACHE_COUNTERS.replayedEventCount += record.events.length;
     for (const event of record.events) {
-        writeSseEvent(res, event.type, event);
+        writeSseEvent(res, event.type, projectAgentConversationTurnEvent(event, requestPayload));
     }
+}
+
+function buildMobileAgentConversationResponse(result: AgentConversationResponse): Record<string, unknown> {
+    const projection = result.mobileProjection || projectAnswerForMobile(result);
+    const summary = result.summary || {
+        generatedAt: new Date().toISOString(),
+        topK: 0,
+        queryEvidenceCoverageRatioPct: 0,
+    };
+    return {
+        userId: result.userId,
+        sessionId: result.sessionId,
+        assistantMessage: projection.directAnswer,
+        answer: projection.directAnswer,
+        message: projection.directAnswer,
+        responseProfile: 'mobile_compact',
+        mobileProjection: projection,
+        assistantBlocks: [],
+        knowledgePoints: [],
+        citations: [],
+        recalledMemories: [],
+        memoryActions: [],
+        summary: {
+            generatedAt: summary.generatedAt,
+            topK: summary.topK,
+            returnedKnowledgePoints: projection.route.length,
+            returnedCitations: projection.citations.length,
+            recalledMemoryCount: 0,
+            appliedMemoryCount: 0,
+            queryEvidenceCoverageRatioPct: summary.queryEvidenceCoverageRatioPct,
+        },
+    };
+}
+
+function projectAgentConversationTurnEvent(
+    event: AgentConversationTurnEvent,
+    requestPayload?: AgentConversationRequest
+): AgentConversationTurnEvent {
+    if (
+        requestPayload?.responseProfile !== 'mobile_compact'
+        || event.type !== 'turn_completed'
+        || !event.result
+    ) {
+        return event;
+    }
+    return {
+        ...event,
+        result: buildMobileAgentConversationResponse(event.result) as unknown as AgentConversationResponse,
+    };
 }
 
 function buildAgentConversationInitialTurnEvents(params: {
@@ -15143,7 +15195,10 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                                 wasCompletedBeforeExecution ? 'hit' : 'miss'
                             );
                             res.writeHead(200, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ success: true, result: turnRecord.result }));
+                            const responseResult = requestPayload.responseProfile === 'mobile_compact'
+                                ? buildMobileAgentConversationResponse(turnRecord.result)
+                                : turnRecord.result;
+                            res.end(JSON.stringify({ success: true, result: responseResult }));
                             return;
                         }
                         throwAgentConversationCachedFailure(turnRecord.failure);
@@ -15176,13 +15231,17 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         });
                         await new Promise<void>((resolve) => setImmediate(resolve));
                         await ensureAgentConversationTurnExecution(turnRecord, requestPayload, {
-                            emitLiveEvent: (event) => {
-                                writeSseEvent(res, event.type, event);
-                            },
-                        });
+                                emitLiveEvent: (event) => {
+                                    writeSseEvent(
+                                        res,
+                                        event.type,
+                                        projectAgentConversationTurnEvent(event, requestPayload)
+                                    );
+                                },
+                            });
                     } else {
                         await ensureAgentConversationTurnExecution(turnRecord, requestPayload);
-                        replayAgentConversationTurnEvents(res, turnRecord);
+                        replayAgentConversationTurnEvents(res, turnRecord, requestPayload);
                     }
                     res.end();
                 } catch (error) {

@@ -110,6 +110,89 @@ const ragContextPack: RagContextPack = {
 };
 
 describe('buildGraphAnswerPlan', () => {
+    test('drops truncated math clauses instead of publishing an incomplete formula', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'what is amorphous ice?',
+            knowledgePoints: [{
+                ...knowledgePoint,
+                atomId: 'amorphous_ice',
+                title: 'Amorphous Ice',
+                sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                summary: 'Amorphous ice is a solid form of water.',
+                evidenceSnippet: 'Amorphous ice is a solid form of water.',
+                matchedSpans: [{
+                    atomId: 'amorphous_ice_math',
+                    title: 'Core Mathematics',
+                    snippet: 'The radial distribution function is defined by $$g(r) = \\frac{V}{N^2} \\left\\langle \\sum_{i=1}^{N} \\delta(\\mathbf{r} - (\\mathb',
+                    sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                    score: 0.93,
+                    citation: null,
+                }],
+            }],
+            graphContext,
+        });
+
+        expect(plan.claims.some((claim) => claim.statement.includes('\\mathb'))).toBe(false);
+    });
+
+    test('models compound definition and learning-route deliverables separately', () => {
+        const plan = buildGraphAnswerPlan({
+            message: 'what is amorphous ice? Which knowledge points should I learn?',
+            knowledgePoints: [{
+                ...knowledgePoint,
+                atomId: 'amorphous_ice',
+                atomIds: ['amorphous_ice', 'water_structure', 'radial_distribution', 'glass_transition'],
+                documentId: 'doc_amorphous_ice',
+                sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                title: 'Amorphous Ice',
+                summary: 'Amorphous ice is a solid form of water without long-range crystalline order.',
+                evidenceSnippet: 'Amorphous ice is a solid form of water without long-range crystalline order.',
+                matchedSpans: [
+                    {
+                        atomId: 'amorphous_ice',
+                        title: 'Amorphous Ice',
+                        snippet: 'Amorphous ice is a solid form of water without long-range crystalline order.',
+                        sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                        score: 0.98,
+                        citation: null,
+                    },
+                    {
+                        atomId: 'water_structure',
+                        title: 'Water Molecular Structure',
+                        snippet: 'Water molecules and hydrogen bonding explain the local structure of ice.',
+                        sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                        score: 0.86,
+                        citation: null,
+                    },
+                    {
+                        atomId: 'radial_distribution',
+                        title: 'Radial Distribution Function',
+                        snippet: 'The radial distribution function g(r) distinguishes short-range from long-range order.',
+                        sourcePath: 'Knowledge_Base/waterglass/Amorphous ice.md',
+                        score: 0.84,
+                        citation: null,
+                    },
+                ],
+            }],
+            graphContext,
+        });
+
+        expect(plan.answerTaskPlan).toEqual(expect.objectContaining({
+            schemaVersion: '1',
+            primarySubject: 'Amorphous Ice',
+            subtasks: expect.arrayContaining([
+                expect.objectContaining({ kind: 'definition', required: true }),
+                expect.objectContaining({ kind: 'learning_route', required: true, expectedOutput: 'ordered_nodes' }),
+            ]),
+        }));
+        expect(plan.answerTaskPlan?.learningRoute?.length).toBeGreaterThanOrEqual(3);
+        expect(plan.answerTaskPlan?.learningRoute?.map((node) => node.title)).toEqual(expect.arrayContaining([
+            'Amorphous Ice',
+            'Water Molecular Structure',
+            'Radial Distribution Function',
+        ]));
+    });
+
     test('turns grouped anchor spans and evidenced graph neighbors into required semantic claims', () => {
         const plan = buildGraphAnswerPlan({
             message: 'what is water glass',

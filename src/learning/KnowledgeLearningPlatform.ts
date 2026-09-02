@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { KnowledgeLearningPlatformAPI } from './api';
+import { projectAnswerForMobile } from './mobileAnswerProjection';
 import type {
     AgentConversationAnswerClaimCitation,
     AgentConversationAssistantBlock,
@@ -13,6 +14,8 @@ import type {
     AgentConversationResponse,
     AgentConversationSessionRecord,
     AgentConversationTurnRecord,
+    AnswerTaskPlan,
+    AnswerTaskCoverageReview,
     DivergencePath,
     ErrorTagStat,
     EvidenceSpan,
@@ -3622,6 +3625,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                         type: 'structured_answer',
                         title: typeof block.title === 'string' ? block.title : undefined,
                         directAnswer: String(block.directAnswer || ''),
+                        answerTaskPlan: this.cloneAnswerTaskPlan(block.answerTaskPlan),
+                        answerTaskCoverage: this.cloneAnswerTaskCoverage(block.answerTaskCoverage),
                         overviewMarkdown: typeof block.overviewMarkdown === 'string' ? block.overviewMarkdown : undefined,
                         explanationMarkdown: typeof block.explanationMarkdown === 'string' ? block.explanationMarkdown : undefined,
                         evidenceMarkdown: typeof block.evidenceMarkdown === 'string' ? block.evidenceMarkdown : undefined,
@@ -3684,6 +3689,49 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     } satisfies AgentConversationAssistantBlock;
             }
         });
+    }
+
+    private cloneAnswerTaskPlan(plan: AnswerTaskPlan | undefined): AnswerTaskPlan | undefined {
+        if (!plan || typeof plan !== 'object') {
+            return undefined;
+        }
+        return {
+            schemaVersion: '1',
+            primarySubject: String(plan.primarySubject || '').trim(),
+            subtasks: Array.isArray(plan.subtasks)
+                ? plan.subtasks.map((subtask) => ({ ...subtask }))
+                : [],
+            requestedDepth: plan.requestedDepth,
+            learningRoute: Array.isArray(plan.learningRoute)
+                ? plan.learningRoute.map((node) => ({
+                    ...node,
+                    evidenceRefs: Array.isArray(node.evidenceRefs) ? [...node.evidenceRefs] : [],
+                }))
+                : [],
+        };
+    }
+
+    private cloneAnswerTaskCoverage(
+        coverage: AnswerTaskCoverageReview | undefined
+    ): AnswerTaskCoverageReview | undefined {
+        if (!coverage || typeof coverage !== 'object') {
+            return undefined;
+        }
+        return {
+            ...coverage,
+            coveredSubtaskIds: Array.isArray(coverage.coveredSubtaskIds)
+                ? [...coverage.coveredSubtaskIds]
+                : [],
+            missingRequiredSubtaskIds: Array.isArray(coverage.missingRequiredSubtaskIds)
+                ? [...coverage.missingRequiredSubtaskIds]
+                : [],
+            subtaskCoverage: Array.isArray(coverage.subtaskCoverage)
+                ? coverage.subtaskCoverage.map((entry) => ({
+                    ...entry,
+                    evidenceRefIds: Array.isArray(entry.evidenceRefIds) ? [...entry.evidenceRefIds] : [],
+                }))
+                : [],
+        };
     }
 
     private cloneKnowledgeRun(run: KnowledgeRun | undefined): KnowledgeRun {
@@ -3754,6 +3802,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             },
             reviewCards,
             reviewState,
+            answerTaskPlan: this.cloneAnswerTaskPlan(safeRun.answerTaskPlan),
+            answerTaskCoverage: this.cloneAnswerTaskCoverage(safeRun.answerTaskCoverage),
             summary: {
                 ...safeRun.summary,
                 reviewCardCount: reviewCards.length,
@@ -5628,6 +5678,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 request: { ...record.request },
                 response: {
                     ...record.response,
+                    answerTaskPlan: this.cloneAnswerTaskPlan(record.response.answerTaskPlan),
+                    answerTaskCoverage: this.cloneAnswerTaskCoverage(record.response.answerTaskCoverage),
                     assistantBlocks: this.cloneAgentConversationAssistantBlocks(record.response.assistantBlocks),
                     knowledgeRun: record.response.knowledgeRun
                         ? this.cloneKnowledgeRun(record.response.knowledgeRun)
@@ -5695,8 +5747,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                                 titleLikeQueries: [...(record.response.trace.planner.titleLikeQueries || [])],
                                 titleHitDocumentIds: [...(record.response.trace.planner.titleHitDocumentIds || [])],
                             }
-                            : undefined,
+                                : undefined,
                         graphContext: this.cloneAgentConversationGraphContext(record.response.trace.graphContext),
+                        answerTaskPlan: this.cloneAnswerTaskPlan(record.response.trace.answerTaskPlan),
+                        answerTaskCoverage: this.cloneAnswerTaskCoverage(record.response.trace.answerTaskCoverage),
                     },
                 },
             })),
@@ -6028,6 +6082,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 request: { ...(record.request || {}) },
                 response: {
                     ...record.response,
+                    answerTaskPlan: this.cloneAnswerTaskPlan(record.response.answerTaskPlan),
+                    answerTaskCoverage: this.cloneAnswerTaskCoverage(record.response.answerTaskCoverage),
                     assistantBlocks: this.cloneAgentConversationAssistantBlocks(record.response.assistantBlocks),
                     knowledgeRun: record.response.knowledgeRun
                         ? this.cloneKnowledgeRun(record.response.knowledgeRun)
@@ -6114,8 +6170,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                                 titleLikeQueries: [...(record.response.trace.planner.titleLikeQueries || [])],
                                 titleHitDocumentIds: [...(record.response.trace.planner.titleHitDocumentIds || [])],
                             }
-                            : undefined,
+                                : undefined,
                         graphContext: this.cloneAgentConversationGraphContext(record.response.trace?.graphContext),
+                        answerTaskPlan: this.cloneAnswerTaskPlan(record.response.trace?.answerTaskPlan),
+                        answerTaskCoverage: this.cloneAnswerTaskCoverage(record.response.trace?.answerTaskCoverage),
                     },
                 },
             });
@@ -10500,14 +10558,20 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             pack: ragContextPack,
             invocationId,
         });
+        const responseProfile = request.responseProfile === 'mobile_compact'
+            ? 'mobile_compact' as const
+            : undefined;
         const response: AgentConversationResponse = {
             userId,
             sessionId,
             assistantMessage: reply.answer,
             answer: reply.answer,
+            ...(responseProfile ? { responseProfile } : {}),
             answerReleaseReview: reply.answerReleaseReview,
             graphAnswerPlan: reply.graphAnswerPlan,
             graphAnswerCoverage: reply.graphAnswerCoverage,
+            answerTaskPlan: reply.graphAnswerPlan.answerTaskPlan,
+            answerTaskCoverage: reply.answerReleaseReview.answerTaskCoverage,
             assistantBlocks: reply.assistantBlocks,
             knowledgeRun: reply.knowledgeRun,
             knowledgePoints: conversationKnowledgePoints,
@@ -10545,12 +10609,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 ragRecovery,
                 ragFailureClassifications,
                 answerClaimCitations,
+                answerTaskPlan: reply.graphAnswerPlan.answerTaskPlan,
+                answerTaskCoverage: reply.answerReleaseReview.answerTaskCoverage,
                 answerReleaseReview: reply.answerReleaseReview,
                 graphAnswerPlan: reply.graphAnswerPlan,
                 graphAnswerCoverage: reply.graphAnswerCoverage,
                 graphExpansion: graphExpansionTrace,
             },
         };
+        if (responseProfile === 'mobile_compact') {
+            response.mobileProjection = projectAnswerForMobile(response);
+        }
         const knowledgeRunArtifact = this.recordWorkflowArtifact({
             kind: 'knowledge_run',
             sessionId,

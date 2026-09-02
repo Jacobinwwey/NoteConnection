@@ -23,4 +23,14 @@ describe('agent conversation request normalization', () => {
             response_language: 'en-US',
         }).answerLanguage).toBe('en');
     });
+
+    test('normalizes the additive mobile response profile without changing the default', () => {
+        expect(normalizeAgentConversationRequestPayload({
+            message: 'what is water glass?',
+            response_profile: 'mobile',
+        }).responseProfile).toBe('mobile_compact');
+        expect(normalizeAgentConversationRequestPayload({
+            message: 'what is water glass?',
+        }).responseProfile).toBeUndefined();
+    });
 });

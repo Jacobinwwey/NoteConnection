@@ -231,6 +231,14 @@ export interface WorkspaceExportKnowledgeRunReport {
         coverageScore: number | null;
         missingRequiredClaimIds: string[];
     };
+    answerTask?: {
+        primarySubject: string;
+        subtaskCount: number;
+        requiredSubtaskCount: number;
+        missingRequiredSubtaskIds: string[];
+        learningRouteNodeCount: number;
+        coverageScore: number | null;
+    };
     answerReleaseReview?: WorkspaceExportKnowledgeRunAnswerReleaseReviewReport;
 }
 

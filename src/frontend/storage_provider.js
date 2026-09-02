@@ -410,6 +410,20 @@
         return null;
     }
 
+    function extractRelativePathFromWorkspaceUri(rawFilePath) {
+        const normalized = String(rawFilePath || '').replace(/\\/g, '/');
+        const prefix = 'note://workspace/v1/';
+        if (!normalized.toLowerCase().startsWith(prefix)) {
+            return null;
+        }
+        try {
+            const relative = decodeURIComponent(normalized.slice(prefix.length));
+            return relative.length > 0 ? relative : null;
+        } catch (_error) {
+            throw new Error('Invalid workspace source URI for Capacitor content read.');
+        }
+    }
+
     function resolveCapacitorContentCandidatePath(rawFilePath) {
         const raw = String(rawFilePath || '').trim();
         if (!raw) {
@@ -420,6 +434,15 @@
         const relativeFromKb = extractRelativePathFromKbMarker(raw);
         if (relativeFromKb) {
             return normalizeCapacitorPath(`Knowledge_Base/${relativeFromKb}`);
+        }
+
+        const relativeFromWorkspaceUri = extractRelativePathFromWorkspaceUri(raw);
+        if (relativeFromWorkspaceUri) {
+            return normalizeCapacitorPath(`Knowledge_Base/${relativeFromWorkspaceUri}`);
+        }
+
+        if (/^[A-Za-z][A-Za-z0-9+.-]*:\/\//.test(normalized)) {
+            throw new Error('Cannot map non-workspace URI on Capacitor without Knowledge_Base marker.');
         }
 
         if (/^[A-Za-z]:\//.test(normalized) || normalized.startsWith('/')) {
@@ -1997,7 +2020,10 @@
                         node.id,
                         payload.maxNeighborsPerMatch,
                         payload.edgeKinds
-                    )
+                    ),
+                    learningRoute: typeof index.learningRoute === 'function'
+                        ? index.learningRoute(node.id, 6)
+                        : []
                 })),
                 statistics: index.statistics({ includeProvenance: true }),
                 execution: 'local-exact',

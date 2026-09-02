@@ -36,6 +36,7 @@ import {
     naturalizeRagPublicEvidenceClause,
 } from './ragPublicText';
 import { isPolaritySafeSemanticDuplicate } from './graphAnswerQualityPolicy';
+import { formatTaskAwareAnswer } from './answerTaskPlan';
 
 export type BuildAgentWorkspaceCapabilities = (atomId: string) => unknown[];
 
@@ -669,6 +670,9 @@ function buildCoverageDrivenRagAnswer(
         return '';
     }
     const answerSentences: string[] = [];
+    const hasLearningRouteTask = Boolean(
+        graphAnswerPlan.answerTaskPlan?.subtasks.some((subtask) => subtask.kind === 'learning_route')
+    );
     graphAnswerPlan.claims
         .forEach((claim) => appendPlannedEvidenceSentence(answerSentences, claim.statement, useChinese));
     if (answerSentences.length <= 0) {
@@ -683,17 +687,19 @@ function buildCoverageDrivenRagAnswer(
             useChinese
         );
     }
-    appendConversationAnswerSentence(
-        answerSentences,
-        buildGraphConnectionPathAnswerSentence(graphContext, useChinese),
-        useChinese
-    );
-    appendConversationAnswerSentence(
-        answerSentences,
-        buildGraphProfileAnswerSentence(graphContext, useChinese),
-        useChinese
-    );
-    return answerSentences.join(useChinese ? '' : ' ');
+    if (!hasLearningRouteTask) {
+        appendConversationAnswerSentence(
+            answerSentences,
+            buildGraphConnectionPathAnswerSentence(graphContext, useChinese),
+            useChinese
+        );
+        appendConversationAnswerSentence(
+            answerSentences,
+            buildGraphProfileAnswerSentence(graphContext, useChinese),
+            useChinese
+        );
+    }
+    return formatTaskAwareAnswer(answerSentences, graphAnswerPlan.answerTaskPlan, useChinese);
 }
 
 function buildScopedConversationAnswer(
@@ -721,6 +727,9 @@ function buildScopedConversationAnswer(
         return ragAnswer;
     }
     if (graphAnswerPlan.claims.length > 0) {
+        const hasLearningRouteTask = Boolean(
+            graphAnswerPlan.answerTaskPlan?.subtasks.some((subtask) => subtask.kind === 'learning_route')
+        );
         graphAnswerPlan.claims.forEach((claim) => {
             appendConversationAnswerSentence(answerSentences, claim.statement, useChinese);
         });
@@ -733,17 +742,19 @@ function buildScopedConversationAnswer(
                 useChinese
             );
         }
-        appendConversationAnswerSentence(
-            answerSentences,
-            buildGraphConnectionPathAnswerSentence(graphContext, useChinese),
-            useChinese
-        );
-        appendConversationAnswerSentence(
-            answerSentences,
-            buildGraphProfileAnswerSentence(graphContext, useChinese),
-            useChinese
-        );
-        return answerSentences.join(useChinese ? '' : ' ');
+        if (!hasLearningRouteTask) {
+            appendConversationAnswerSentence(
+                answerSentences,
+                buildGraphConnectionPathAnswerSentence(graphContext, useChinese),
+                useChinese
+            );
+            appendConversationAnswerSentence(
+                answerSentences,
+                buildGraphProfileAnswerSentence(graphContext, useChinese),
+                useChinese
+            );
+        }
+        return formatTaskAwareAnswer(answerSentences, graphAnswerPlan.answerTaskPlan, useChinese);
     }
     const directSentence = selectScopedConversationDirectSentence(params.message, leadingPoint);
     if (directSentence) {
@@ -1031,7 +1042,8 @@ function buildScopedConversationMemoryNotice(params: ScopedConversationReplyPara
 
 function buildScopedConversationActionGuideMarkdown(
     params: ScopedConversationReplyParams,
-    graphContext: AgentConversationGraphContext | null
+    graphContext: AgentConversationGraphContext | null,
+    answerTaskPlan?: GraphAnswerPlan['answerTaskPlan']
 ): string {
     const useChinese = useChineseAnswerLanguage(params);
     if (params.knowledgePoints.length <= 0) {
@@ -1051,6 +1063,14 @@ function buildScopedConversationActionGuideMarkdown(
         .filter(Boolean)
         .map((reason) => `- ${reason}`);
     const graphActionHints: string[] = [];
+    const learningRoute = answerTaskPlan?.learningRoute || [];
+    if (answerTaskPlan?.subtasks.some((subtask) => subtask.kind === 'learning_route') && learningRoute.length > 0) {
+        graphActionHints.push(
+            useChinese
+                ? `- 建议按以下顺序学习：${learningRoute.map((node) => `${node.order}. ${node.title}`).join(' -> ')}。`
+                : `- Follow the evidence-backed learning order: ${learningRoute.map((node) => `${node.order}. ${node.title}`).join(' -> ')}.`
+        );
+    }
     if (graphContext && graphContext.relationKinds.includes('prerequisite')) {
         graphActionHints.push(useChinese ? '- 在进入引导学习前，先在聚焦模式查看前置概念。' : '- Inspect prerequisite-linked concepts in focus mode before guided learning.');
     }
@@ -1569,18 +1589,26 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         || reviewGraphAnswerCoverage(answer, publicGraphAnswerPlan || null);
     knowledgeRun.graphAnswerPlan = releasedGraphAnswerPlan;
     knowledgeRun.graphAnswerCoverage = graphAnswerCoverage;
+    knowledgeRun.answerTaskPlan = releasedGraphAnswerPlan.answerTaskPlan;
+    knowledgeRun.answerTaskCoverage = answerReleaseReview.answerTaskCoverage;
     const useChinese = useChineseAnswerLanguage(params);
     const overviewMarkdown = buildScopedConversationOverviewMarkdown(params, graphContext);
     const explanationMarkdown = buildScopedConversationExplanationMarkdown(params, graphContext);
     const evidenceMarkdown = buildScopedConversationEvidenceMarkdown(params);
     const memoryNotice = buildScopedConversationMemoryNotice(params);
-    const actionGuideMarkdown = buildScopedConversationActionGuideMarkdown(params, graphContext);
+    const actionGuideMarkdown = buildScopedConversationActionGuideMarkdown(
+        params,
+        graphContext,
+        releasedGraphAnswerPlan.answerTaskPlan
+    );
 
     blocks.push({
         blockId: params.nextBlockId(),
         type: 'structured_answer',
         title: useChinese ? '可信回答' : 'Grounded Answer',
         directAnswer: answer,
+        answerTaskPlan: releasedGraphAnswerPlan.answerTaskPlan,
+        answerTaskCoverage: answerReleaseReview.answerTaskCoverage,
         overviewMarkdown,
         explanationMarkdown,
         evidenceMarkdown,

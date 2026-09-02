@@ -59,6 +59,17 @@ function normalizeAnswerLanguageValue(value: unknown): AgentConversationRequest[
     return undefined;
 }
 
+function normalizeResponseProfileValue(value: unknown): AgentConversationRequest['responseProfile'] | undefined {
+    const normalized = String(value || '').trim().toLowerCase().replace(/[-\s]+/gu, '_');
+    if (normalized === 'default') {
+        return 'default';
+    }
+    if (normalized === 'mobile_compact' || normalized === 'mobile') {
+        return 'mobile_compact';
+    }
+    return undefined;
+}
+
 function normalizeStringList(values: unknown, options: {
     normalize?: (value: string) => string;
 } = {}): string[] {
@@ -135,12 +146,16 @@ export function normalizeAgentConversationRequestPayload(payload: unknown): Agen
     const answerLanguage = normalizeAnswerLanguageValue(
         readFirstPresentValue(record, ['answerLanguage', 'answer_language', 'responseLanguage', 'response_language'])
     );
+    const responseProfile = normalizeResponseProfileValue(
+        readFirstPresentValue(record, ['responseProfile', 'response_profile', 'profile'])
+    );
     return {
         userId: String(readFirstPresentValue(record, ['userId', 'user_id', 'learnerId']) || '').trim(),
         sessionId: readFirstNonEmptyString(record, ['sessionId', 'session_id']),
         activeTarget: readFirstNonEmptyString(record, ['activeTarget', 'active_target', 'target']),
         message: readFirstNonEmptyString(record, ['message', 'prompt', 'query', 'q', 'text']) || '',
         answerLanguage,
+        responseProfile,
         topK: topKValue > 0 ? topKValue : undefined,
         asOf: readFirstNonEmptyString(record, ['asOf', 'as_of', 'timestamp', 'now']),
         persistMemory: readFirstPresentValue(record, ['persistMemory', 'persist_memory']) !== false,

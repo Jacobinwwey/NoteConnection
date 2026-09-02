@@ -975,6 +975,143 @@ describe('server migration settings routes', () => {
     expect(answer).not.toContain('Key evidence');
   });
 
+  test('conversation route returns a bounded mobile projection without internal diagnostics', async () => {
+    const ingestResponse = await requestJson(port, 'POST', '/api/knowledge/ingest', {
+      incremental: true,
+      documents: [
+        {
+          documentId: 'doc_mobile_amorphous_ice',
+          sourcePath: 'Knowledge_Base/mobile-waterglass/amorphous-ice.md',
+          language: 'en',
+          content: '# Amorphous Ice\nAmorphous ice is a solid form of water without long-range crystalline order.\n\n## Structure\nIts structure is described by the radial distribution function $g(r)$.',
+        },
+      ],
+    });
+    expect(ingestResponse.status).toBe(200);
+
+    const response = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      {
+        userId: 'mobile_projection_user',
+        sessionId: 'mobile_projection_session',
+        message: 'what is amorphous ice?',
+        responseProfile: 'mobile_compact',
+        persistMemory: false,
+      },
+      {
+        'X-Agent-Conversation-Turn-Id': 'turn_mobile_projection',
+      },
+    );
+
+    expect(response.status).toBe(200);
+    const result = response.body.result;
+    expect(result).toEqual(expect.objectContaining({
+      responseProfile: 'mobile_compact',
+      mobileProjection: expect.objectContaining({
+        schemaVersion: 1,
+        primarySubject: expect.stringContaining('Amorphous Ice'),
+        directAnswer: expect.stringContaining('Amorphous ice'),
+      }),
+      assistantBlocks: [],
+      knowledgePoints: [],
+      citations: [],
+      recalledMemories: [],
+      memoryActions: [],
+    }));
+    expect(result.trace).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain('ragContextPack');
+    expect(JSON.stringify(result)).not.toContain('knowledgeRun');
+
+    const jsonReplayResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      {
+        userId: 'mobile_projection_user',
+        sessionId: 'mobile_projection_session',
+        message: 'what is amorphous ice?',
+        responseProfile: 'mobile_compact',
+        persistMemory: false,
+      },
+      {
+        'X-Agent-Conversation-Turn-Id': 'turn_mobile_projection',
+      },
+    );
+    expect(jsonReplayResponse.status).toBe(200);
+    expect(jsonReplayResponse.headers?.['x-agent-conversation-replay']).toBe('hit');
+    expect(jsonReplayResponse.body.result).toEqual(expect.objectContaining({
+      responseProfile: 'mobile_compact',
+      assistantBlocks: [],
+      knowledgePoints: [],
+      citations: [],
+    }));
+    expect(jsonReplayResponse.body.result.trace).toBeUndefined();
+
+    const parseCompletedMobileEvent = (body: unknown) => String(body || '')
+      .split(/\n\n/)
+      .map((eventChunk) => eventChunk.split(/\n/).find((line) => line.startsWith('data: ')))
+      .filter((line): line is string => Boolean(line))
+      .map((line) => JSON.parse(line.slice('data: '.length)))
+      .find((event) => event && event.type === 'turn_completed');
+    const sseInitialResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      {
+        userId: 'mobile_projection_user',
+        sessionId: 'mobile_projection_session',
+        message: 'what is amorphous ice?',
+        responseProfile: 'mobile_compact',
+        persistMemory: false,
+      },
+      {
+        Accept: 'text/event-stream',
+        'X-Agent-Conversation-Turn-Id': 'turn_mobile_projection_sse',
+      },
+    );
+    expect(sseInitialResponse.status).toBe(200);
+    expect(String(sseInitialResponse.headers?.['content-type'] || '')).toContain('text/event-stream');
+    expect(sseInitialResponse.headers?.['x-agent-conversation-replay']).toBe('miss');
+    const sseInitialCompleted = parseCompletedMobileEvent(sseInitialResponse.body);
+    expect(sseInitialCompleted?.result).toEqual(expect.objectContaining({
+      responseProfile: 'mobile_compact',
+      assistantBlocks: [],
+      knowledgePoints: [],
+      citations: [],
+    }));
+    expect(sseInitialCompleted?.result?.trace).toBeUndefined();
+    expect(JSON.stringify(sseInitialCompleted?.result || {})).not.toContain('ragContextPack');
+
+    const sseReplayResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      {
+        userId: 'mobile_projection_user',
+        sessionId: 'mobile_projection_session',
+        message: 'what is amorphous ice?',
+        responseProfile: 'mobile_compact',
+        persistMemory: false,
+      },
+      {
+        Accept: 'text/event-stream',
+        'X-Agent-Conversation-Turn-Id': 'turn_mobile_projection_sse',
+      },
+    );
+    expect(sseReplayResponse.status).toBe(200);
+    expect(sseReplayResponse.headers?.['x-agent-conversation-replay']).toBe('hit');
+    const sseReplayCompleted = parseCompletedMobileEvent(sseReplayResponse.body);
+    expect(sseReplayCompleted?.result).toEqual(expect.objectContaining({
+      responseProfile: 'mobile_compact',
+      assistantBlocks: [],
+      knowledgePoints: [],
+      citations: [],
+    }));
+    expect(sseReplayCompleted?.result?.trace).toBeUndefined();
+  });
+
   test('returns 400 from /api/render/math when expression is empty', async () => {
     const response = await requestJson(port, 'POST', '/api/render/math', {
       expression: '   '

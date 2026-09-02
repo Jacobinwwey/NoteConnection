@@ -239,7 +239,70 @@
                     }
                     return left.id.localeCompare(right.id);
                 })
-                .slice(0, limit);
+                    .slice(0, limit);
+        }
+
+        function isPrerequisiteRouteNeighbor(neighbor) {
+            return neighbor
+                && neighbor.direction === 'incoming'
+                && /prerequisite|precondition|foundation|先修|前置|基础|sequence/iu.test(
+                    String(neighbor.edgeType || '')
+                );
+        }
+
+        function isApplicationRouteNeighbor(neighbor) {
+            return neighbor
+                && neighbor.direction === 'outgoing'
+                && /application|use|performance|应用|用例|性能/iu.test(
+                    String(neighbor.edgeType || '')
+                );
+        }
+
+        function learningRoute(anchorReference, requestedLimit) {
+            const anchorId = resolveNodeReference(anchorReference);
+            if (!anchorId) {
+                return [];
+            }
+            const limit = boundedPositiveInteger(requestedLimit, 6, 8);
+            const anchor = nodeById.get(anchorId);
+            const adjacent = neighbors(anchorId, Math.min(MAX_NEIGHBORS, limit * 3), ['explicit', 'runtime']);
+            const entries = [];
+            const seen = new Set();
+            const append = (neighbor, role, orderingBasis) => {
+                const nodeId = String(neighbor && neighbor.id || '').trim();
+                if (!nodeId || seen.has(nodeId)) {
+                    return;
+                }
+                seen.add(nodeId);
+                entries.push({
+                    nodeId,
+                    title: String(neighbor && (neighbor.label || neighbor.id) || '').trim(),
+                    role,
+                    orderingBasis,
+                });
+            };
+            adjacent
+                .filter(isPrerequisiteRouteNeighbor)
+                .sort((left, right) => String(left.label || left.id || '').localeCompare(String(right.label || right.id || '')))
+                .forEach((neighbor) => append(neighbor, 'prerequisite', 'explicit_prerequisite'));
+            append(anchor, 'core', 'semantic_grouping');
+            adjacent
+                .filter((neighbor) => !isPrerequisiteRouteNeighbor(neighbor))
+                .sort((left, right) => {
+                    const leftApplication = isApplicationRouteNeighbor(left) ? 1 : 0;
+                    const rightApplication = isApplicationRouteNeighbor(right) ? 1 : 0;
+                    return leftApplication - rightApplication
+                        || String(left.label || left.id || '').localeCompare(String(right.label || right.id || ''));
+                })
+                .forEach((neighbor) => append(
+                    neighbor,
+                    isApplicationRouteNeighbor(neighbor) ? 'application' : 'mechanism',
+                    isApplicationRouteNeighbor(neighbor) ? 'explicit_sequence' : 'semantic_grouping'
+                ));
+            return entries.slice(0, limit).map((entry, index) => ({
+                ...entry,
+                order: index + 1,
+            }));
         }
 
         function shortestPath(sourceNodeId, targetNodeId, requestedMaxDepth, requestedMaxVisitedNodes) {
@@ -309,6 +372,7 @@
             projectionVersion: PROJECTION_VERSION,
             searchExact,
             neighbors,
+            learningRoute,
             shortestPath,
             statistics,
         });
