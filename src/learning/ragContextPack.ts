@@ -39,8 +39,8 @@ const ROLE_PRIORITY: Record<RagEvidenceRole, number> = {
 
 export function normalizeRagContextBudget(input?: Partial<RagContextBudget>): RagContextBudget {
     const productCapDisabled = input?.productCapDisabled === true;
-    const maxFragmentsLimit = productCapDisabled ? 4096 : 200;
-    const maxTotalCharsLimit = productCapDisabled ? 512000 : 100000;
+    const maxFragmentsLimit = productCapDisabled ? 4096 : 512;
+    const maxTotalCharsLimit = productCapDisabled ? 512000 : 512000;
     const numberOrDefault = (value: unknown, fallback: number, min: number, max: number): number => {
         const numeric = Number(value);
         if (!Number.isFinite(numeric)) {

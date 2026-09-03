@@ -117,6 +117,10 @@ import {
 import {
     normalizeAgentConversationRequestPayload,
 } from './learning/requestNormalization';
+import {
+    serializeAgentConversationHttpResponse,
+    serializeAgentConversationTurnEvent,
+} from './learning/agentConversationSerialization';
 import { projectAnswerForMobile } from './learning/mobileAnswerProjection';
 import {
     buildKnowledgeSourceInventoryDiff,
@@ -12701,8 +12705,9 @@ function writeSseEvent(res: http.ServerResponse, eventType: string, payload: unk
         return;
     }
     try {
+        const serialized = serializeAgentConversationTurnEvent(eventType, payload);
         res.write(`event: ${eventType}\n`);
-        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+        res.write(`data: ${serialized.json}\n\n`);
     } catch (_error) {
         // Ignore stream write failures when client disconnected mid-stream.
     }
@@ -15221,7 +15226,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             const responseResult = requestPayload.responseProfile === 'mobile_compact'
                                 ? buildMobileAgentConversationResponse(turnRecord.result)
                                 : turnRecord.result;
-                            res.end(JSON.stringify({ success: true, result: responseResult }));
+                            res.end(serializeAgentConversationHttpResponse(responseResult as AgentConversationResponse).json);
                             return;
                         }
                         throwAgentConversationCachedFailure(turnRecord.failure);

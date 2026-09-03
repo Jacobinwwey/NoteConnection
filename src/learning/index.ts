@@ -7,6 +7,7 @@ export * from './queryBackend';
 export * from './vectorAccelerationAdapter';
 export * from './runtimeCapability';
 export * from './conversationComposer';
+export * from './agentConversationSerialization';
 export * from './ragSufficiencyProviderJudge';
 export * from './errors';
 export * from './domains';

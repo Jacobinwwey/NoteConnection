@@ -285,6 +285,28 @@ describe('buildRagContextPack', () => {
         ]));
     });
 
+    test('preserves the configured max tier instead of applying the legacy 200-fragment/100k cap', () => {
+        const pack = buildRagContextPack({
+            query: 'max budget probe',
+            fragments: Array.from({ length: 260 }, (_, index) => makeFragment({
+                fragmentId: `max_tier_${index}`,
+                role: 'direct_support',
+                text: `Max tier evidence ${index}.`,
+                sourceBoundary: 'full_document',
+            })),
+            sourceDecisions: [],
+            budget: {
+                maxFragments: 256,
+                maxCharsPerFragment: 16_000,
+                maxTotalChars: 256_000,
+            },
+        });
+
+        expect(pack.budget.maxFragments).toBe(256);
+        expect(pack.budget.maxTotalChars).toBe(256_000);
+        expect(pack.fragments).toHaveLength(256);
+    });
+
     test('unbounded mode reports a runtime fragment stop instead of silently dropping content', () => {
         const pack = buildRagContextPack({
             query: 'what is water glass?',
