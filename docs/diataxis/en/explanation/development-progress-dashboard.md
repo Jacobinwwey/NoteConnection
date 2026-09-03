@@ -3,6 +3,16 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-09-03 Adaptive Full-Response Budgets
+
+Desktop `full` responses now accept an additive `responseBudgetMode`: `adaptive` (the default) or `unbounded`. `adaptive` selects a server-owned tier from validated host capability hints: `standard` is `120` fragments / `8,000` chars per fragment / `64,000` RAG chars / `48,000` report chars; `extended` is `160` / `12,000` / `128,000` / `80,000`; `max` is `256` / `16,000` / `256,000` / `160,000`. Unknown modes and absent capability resolve to `adaptive + standard`; clients cannot submit arbitrary numeric limits.
+
+`unbounded` disables product-level RAG/report truncation for the scoped desktop corpus. It does not disable runtime safety: finite timeout, processed-fragment, report-character, serialized-byte, and SSE backpressure governors remain active. If a governor stops assembly, the response retains completed sections and exposes `responseTruncated` plus `responseTruncationReason` in summary/trace. The budget mode and capability are part of turn-cache identity, so adaptive and unbounded requests cannot share a replay.
+
+The mobile boundary is unchanged and enforced before budget selection: `responseProfile=mobile_compact` resolves to `slim`, omits desktop budget metadata from JSON/SSE projections, and the UI hides the budget control. Desktop UI persists the adaptive/unbounded preference and sends it only for desktop requests.
+
+Fresh verification after rebuilding `dist`: full Jest and Agent Workspace contracts remain green; adaptive and unbounded fixture browser probes passed; real `waterglass` full adaptive and unbounded Chromium probes each produced `5,425` DOM characters, `5,265` released-answer characters, `86` KaTeX nodes, balanced math, no Mermaid/prompt leakage, and explicit trace tiers (`standard` and `unbounded`).
+
 ## 2026-09-03 Slim/Full Response Modes and Same-Document RAG Fallback
 
 The Agent Workspace now exposes an additive `responseMode` contract. `slim` remains the default and preserves the existing bounded answer shape; the request boundary also accepts `definition`/`compact` as slim aliases and `comprehensive`/`report` as full aliases. The desktop selector persists `slim` or `full` in local storage and sends the selected mode through JSON and SSE. The turn-cache fingerprint includes the normalized mode, so a replay cannot reuse a slim answer for a full request or vice versa.

@@ -1,5 +1,15 @@
 # 解释：开发进度看板
 
+## 2026-09-03 Adaptive Full 回答预算
+
+桌面 `full` 回答现在增加 additive 的 `responseBudgetMode`：`adaptive`（默认）或 `unbounded`。`adaptive` 根据经过校验的宿主能力提示选择服务端拥有的档位：`standard` 为 `120` 个 fragment / 每片 `8,000` 字符 / RAG `64,000` 字符 / 报告 `48,000` 字符；`extended` 为 `160` / `12,000` / `128,000` / `80,000`；`max` 为 `256` / `16,000` / `256,000` / `160,000`。未知模式或缺失能力均回落到 `adaptive + standard`；客户端不能提交任意数字上限。
+
+`unbounded` 取消当前桌面作用域知识库的产品层 RAG/报告截断，但不会关闭运行时安全控制：超时、处理 fragment 数、报告字符数、序列化字节数和 SSE 背压仍为有限值。安全阀停止拼装时，响应保留已完成章节，并在 summary/trace 暴露 `responseTruncated` 与 `responseTruncationReason`。budget mode 与 capability 纳入 turn-cache identity，因此 adaptive 与 unbounded 不会共享 replay。
+
+移动端边界保持不变，并在预算选择前强制执行：`responseProfile=mobile_compact` 解析为 `slim`，JSON/SSE 投影移除桌面预算元数据，UI 隐藏预算控件。桌面 UI 持久化 adaptive/unbounded 选择，且只在桌面请求中发送该字段。
+
+重建 `dist` 后的新鲜验证已通过：完整 Jest 与 Agent Workspace contract 继续通过；adaptive 与 unbounded fixture 浏览器探针通过；真实 `waterglass` full adaptive 与 unbounded Chromium 探针均得到 DOM `5,425` 字符、released answer `5,265` 字符、`86` 个 KaTeX 节点，数学公式成对且无 Mermaid/prompt 泄漏，trace 档位分别为 `standard` 与 `unbounded`。
+
 ## 2026-09-03 Slim/Full 回答模式与同文档 RAG 回退
 
 Agent Workspace 现在提供 additive 的 `responseMode` 契约。`slim` 仍是默认值并保持现有有界回答形状；请求边界同时接受 `definition`/`compact` 作为 slim 别名，以及 `comprehensive`/`report` 作为 full 别名。桌面选择器会在 local storage 持久化 `slim` 或 `full`，并通过 JSON 与 SSE 发送。turn-cache 指纹包含归一化后的 mode，因此 slim 请求不能复用 full 结果，反之亦然。

@@ -31,6 +31,7 @@ function parseArgs(args) {
         serverPort: 0,
         realWaterglass: process.env.NOTE_CONNECTION_BROWSER_REAL_WATERGLASS === '1',
         responseMode: 'slim',
+        responseBudgetMode: 'adaptive',
     };
     for (let index = 0; index < args.length; index += 1) {
         const value = String(args[index] || '');
@@ -46,6 +47,12 @@ function parseArgs(args) {
                 throw new Error(`Unsupported response mode: ${responseMode}`);
             }
             options.responseMode = responseMode;
+        } else if (value === '--response-budget') {
+            const responseBudgetMode = String(args[++index] || '').trim().toLowerCase();
+            if (responseBudgetMode !== 'adaptive' && responseBudgetMode !== 'unbounded') {
+                throw new Error(`Unsupported response budget mode: ${responseBudgetMode}`);
+            }
+            options.responseBudgetMode = responseBudgetMode;
         } else {
             throw new Error(`Unknown argument: ${value}`);
         }
@@ -183,6 +190,7 @@ function buildProbeExpression(options = {}) {
     const query = realWaterglass ? '什么是waterglass?' : 'What is waterglass?';
     const answerLanguage = realWaterglass ? 'zh' : 'en';
     const responseMode = options.responseMode === 'full' ? 'full' : 'slim';
+    const responseBudgetMode = options.responseBudgetMode === 'unbounded' ? 'unbounded' : 'adaptive';
     const documentContent = BROWSER_FORMULA_PROBE_DOCUMENT;
     const documentSetup = realWaterglass
         ? `
@@ -327,7 +335,8 @@ function buildProbeExpression(options = {}) {
             const scopeSelect = document.getElementById('agent-workspace-scope-select');
             const languageSelect = document.getElementById('agent-workspace-answer-language-select');
             const responseModeSelect = document.getElementById('agent-workspace-response-mode-select');
-            if (!scopeSelect || !languageSelect || !responseModeSelect) {
+            const responseBudgetSelect = document.getElementById('agent-workspace-response-budget-select');
+            if (!scopeSelect || !languageSelect || !responseModeSelect || !responseBudgetSelect) {
                 throw new Error('agent workspace scoped controls unavailable');
             }
             const folderApiResponse = await fetch('/api/folders');
@@ -365,6 +374,8 @@ function buildProbeExpression(options = {}) {
             languageSelect.dispatchEvent(new Event('change', { bubbles: true }));
             responseModeSelect.value = ${JSON.stringify(responseMode)};
             responseModeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            responseBudgetSelect.value = ${JSON.stringify(responseBudgetMode)};
+            responseBudgetSelect.dispatchEvent(new Event('change', { bubbles: true }));
             messageInput.value = ${JSON.stringify(query)};
             window.__NC_BROWSER_PRE_SEND = {
                 runtime: window.__NC_SIDECAR_RUNTIME || null,
@@ -376,6 +387,7 @@ function buildProbeExpression(options = {}) {
                 folderValue: folderSelect && folderSelect.value,
                 scopeValue: scopeSelect.value,
                 responseMode: responseModeSelect.value,
+                responseBudgetMode: responseBudgetSelect.value,
                 scopeOptions: Array.from(scopeSelect.options).map((option) => option.value),
             };
             sendButton.click();
@@ -532,6 +544,7 @@ async function runVerification(options) {
                 preSend: window.__NC_BROWSER_PRE_SEND || null,
                 lastResultAnswer: window.__NC_LAST_AGENT_CONVERSATION_RESULT?.answer || '',
                 lastResultTrace: window.__NC_LAST_AGENT_CONVERSATION_RESULT?.trace || null,
+                lastResultBudget: window.__NC_LAST_AGENT_CONVERSATION_RESULT?.responseBudget || null,
                 publicPlanStatements: window.__NC_LAST_AGENT_CONVERSATION_RESULT?.answerReleaseReview?.publicGraphAnswerPlan?.claims
                     ?.map((claim) => claim.statement) || [],
                 auditPlanStatements: window.__NC_LAST_AGENT_CONVERSATION_RESULT?.answerReleaseReview?.auditGraphAnswerPlan?.claims
@@ -548,7 +561,9 @@ async function runVerification(options) {
             captureBeyondViewport: true,
         }, sessionId);
         fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-        const responseModeSuffix = options.responseMode === 'full' ? '-full' : '';
+        const responseModeSuffix = options.responseMode === 'full'
+            ? `-full-${options.responseBudgetMode === 'unbounded' ? 'unbounded' : 'adaptive'}`
+            : '';
         const screenshotPath = path.join(
             OUTPUT_DIR,
             options.realWaterglass
@@ -568,6 +583,7 @@ async function runVerification(options) {
             capturedAt: new Date().toISOString(),
             realWaterglass: options.realWaterglass === true,
             responseMode: options.responseMode,
+            responseBudgetMode: options.responseBudgetMode,
             sourceDocumentCount: options.realWaterglass ? 214 : 1,
             ...report,
             screenshotPath,
@@ -606,6 +622,10 @@ async function runVerification(options) {
             }
         }
         if (options.responseMode === 'full') {
+            const actualBudgetMode = String(report.lastResultBudget?.mode || '');
+            if (actualBudgetMode !== (options.responseBudgetMode === 'unbounded' ? 'unbounded' : 'adaptive')) {
+                failures.push(`responseBudgetMode=${actualBudgetMode}`);
+            }
             if (options.realWaterglass) {
                 if (report.directText.length < 1000) failures.push(`fullDirectTextLength=${report.directText.length}`);
                 if (!/热力学|Thermal/u.test(report.lastResultAnswer)) failures.push('fullThermalSectionMissing');

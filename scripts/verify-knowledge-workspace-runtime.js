@@ -251,6 +251,10 @@ function buildConversationRequest(activeTarget, query, options = {}) {
   if (responseMode === 'slim' || responseMode === 'full') {
     request.responseMode = responseMode;
   }
+  const responseBudgetMode = String(options.responseBudgetMode || '').trim().toLowerCase();
+  if (responseBudgetMode === 'adaptive' || responseBudgetMode === 'unbounded') {
+    request.responseBudgetMode = responseBudgetMode;
+  }
   return request;
 }
 
@@ -1030,6 +1034,13 @@ async function main() {
   if (!['slim', 'full'].includes(requestedResponseMode)) {
     throw new Error(`Unsupported response mode: ${requestedResponseMode}`);
   }
+  const responseBudgetModeArgIndex = args.findIndex((arg) => arg === '--response-budget');
+  const requestedResponseBudgetMode = responseBudgetModeArgIndex >= 0
+    ? String(args[responseBudgetModeArgIndex + 1] || '').trim().toLowerCase()
+    : 'adaptive';
+  if (!['adaptive', 'unbounded'].includes(requestedResponseBudgetMode)) {
+    throw new Error(`Unsupported response budget mode: ${requestedResponseBudgetMode}`);
+  }
   const isRuntimeCaseGroup = args.includes('--runtime-case-group');
   if (
     mode === 'full'
@@ -1092,7 +1103,10 @@ async function main() {
           port,
           'POST',
           '/api/knowledge/conversation',
-          buildConversationRequest(target, query, { responseMode: requestedResponseMode }),
+          buildConversationRequest(target, query, {
+            responseMode: requestedResponseMode,
+            responseBudgetMode: requestedResponseBudgetMode,
+          }),
           90000
         );
         if (conversationResponse.status !== 200 || !conversationResponse.body || !conversationResponse.body.success) {
@@ -1161,6 +1175,13 @@ async function main() {
         });
         if (result.responseMode !== requestedResponseMode) {
           throw new Error(`response mode mismatch for query=${query}: expected=${requestedResponseMode} actual=${result.responseMode}`);
+        }
+        if (requestedResponseMode === 'full') {
+          const expectedBudgetMode = requestedResponseBudgetMode;
+          const actualBudgetMode = String(result.responseBudget?.mode || result.summary?.responseBudgetMode || '');
+          if (actualBudgetMode !== expectedBudgetMode) {
+            throw new Error(`response budget mode mismatch for query=${query}: expected=${expectedBudgetMode} actual=${actualBudgetMode}`);
+          }
         }
         if (requestedResponseMode === 'full' && String(result.answer || '').length < 1000) {
           throw new Error(`full response was unexpectedly short for query=${query}: length=${String(result.answer || '').length}`);
@@ -1240,6 +1261,7 @@ async function main() {
           buildConversationRequest(regressionCase.activeTarget, regressionCase.query, {
             topK: regressionCase.topK,
             responseMode: requestedResponseMode,
+            responseBudgetMode: requestedResponseBudgetMode,
           }),
           90000
         );
