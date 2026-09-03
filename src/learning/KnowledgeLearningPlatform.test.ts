@@ -17,6 +17,73 @@ describe('KnowledgeLearningPlatform', () => {
         platform = new KnowledgeLearningPlatform(() => new Date(nowIso));
     });
 
+    test('resolves adaptive full budgets from validated host capability and projects mobile to slim', async () => {
+        const extendedPlatform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            autoPersist: false,
+            responseBudgetCapability: { memoryClass: 'high', workload: 'large' },
+        });
+        await extendedPlatform.ingestKnowledge({
+            incremental: true,
+            documents: [{
+                documentId: 'doc_adaptive_budget_probe',
+                sourcePath: 'Knowledge_Base/adaptive/budget-probe.md',
+                workspaceId: 'adaptive',
+                corpusId: 'adaptive',
+                language: 'en',
+                content: '# Adaptive Budget Probe\n\nA bounded report budget should select the extended tier for a large high-memory host.',
+            }],
+        });
+        const extendedResponse = await extendedPlatform.agentConversation({
+            userId: 'adaptive-budget-user',
+            sessionId: 'adaptive-budget-extended',
+            message: 'what is adaptive budget probe?',
+            responseMode: 'full',
+            persistMemory: false,
+            scope: {
+                workspaceId: 'adaptive',
+                corpusId: 'adaptive',
+                sourcePathPrefixes: ['Knowledge_Base/adaptive'],
+            },
+        });
+        expect(extendedResponse.responseBudget?.tier).toBe('extended');
+        expect(extendedResponse.trace.responseBudget?.rag?.maxFragments).toBe(160);
+        expect(extendedResponse.summary.responseBudgetTier).toBe('extended');
+
+        const maxPlatform = new KnowledgeLearningPlatform({
+            nowProvider: () => new Date(nowIso),
+            autoPersist: false,
+            responseBudgetCapability: { memoryClass: 'high', workload: 'max' },
+        });
+        const maxResponse = await maxPlatform.agentConversation({
+            userId: 'adaptive-budget-user',
+            sessionId: 'adaptive-budget-max',
+            message: 'what is adaptive budget probe?',
+            responseMode: 'full',
+            persistMemory: false,
+        });
+        expect(maxResponse.responseBudget?.tier).toBe('max');
+        expect(maxResponse.responseBudget?.reportMaxChars).toBe(160_000);
+
+        const mobileResponse = await extendedPlatform.agentConversation({
+            userId: 'adaptive-budget-user',
+            sessionId: 'adaptive-budget-mobile',
+            message: 'what is adaptive budget probe?',
+            responseMode: 'full',
+            responseBudgetMode: 'unbounded',
+            responseProfile: 'mobile_compact',
+            persistMemory: false,
+            scope: {
+                workspaceId: 'adaptive',
+                corpusId: 'adaptive',
+                sourcePathPrefixes: ['Knowledge_Base/adaptive'],
+            },
+        });
+        expect(mobileResponse.responseMode).toBe('slim');
+        expect(mobileResponse.responseBudget?.tier).toBe('standard');
+        expect(mobileResponse.responseBudget?.productCapDisabled).toBe(false);
+    });
+
     test('ingest supports staleness detection and temporal supersede edges', async () => {
         const firstIngest = await platform.ingestKnowledge({
             incremental: true,

@@ -1434,7 +1434,7 @@ export interface AgentConversationBudget {
     mode: AgentConversationResponseBudgetMode;
     tier: AgentConversationBudgetTier;
     productCapDisabled: boolean;
-    rag?: RagContextBudget;
+    rag: RagContextBudget;
     reportMaxChars?: number;
     runtimeGovernor: AgentConversationRuntimeGovernor;
 }
@@ -1901,6 +1901,8 @@ export interface AgentConversationTurnEvent {
         userId?: string;
         sessionId?: string;
         topK?: number;
+        responseMode?: AgentConversationResponseMode;
+        responseBudgetMode?: AgentConversationResponseBudgetMode;
     };
     capabilities?: string[];
     stage?: string;

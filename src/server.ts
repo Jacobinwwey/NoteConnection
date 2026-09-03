@@ -10349,6 +10349,19 @@ function buildAgentConversationRequestFingerprint(requestPayload: AgentConversat
         message: String(requestPayload.message || '').trim(),
         answerLanguage: String(requestPayload.answerLanguage || 'auto').trim(),
         responseMode: String(requestPayload.responseMode || 'slim').trim(),
+        responseBudgetMode: String(requestPayload.responseBudgetMode || 'adaptive').trim(),
+        responseBudgetCapability: requestPayload.responseBudgetCapability
+            ? {
+                memoryClass: String(requestPayload.responseBudgetCapability.memoryClass || '').trim(),
+                workload: String(requestPayload.responseBudgetCapability.workload || '').trim(),
+                maxReportCharsHint: Number.isFinite(Number(requestPayload.responseBudgetCapability.maxReportCharsHint))
+                    ? Math.floor(Number(requestPayload.responseBudgetCapability.maxReportCharsHint))
+                    : null,
+                maxSerializedBytesHint: Number.isFinite(Number(requestPayload.responseBudgetCapability.maxSerializedBytesHint))
+                    ? Math.floor(Number(requestPayload.responseBudgetCapability.maxSerializedBytesHint))
+                    : null,
+            }
+            : null,
         responseProfile: String(requestPayload.responseProfile || 'default').trim(),
         topK: normalizeAgentConversationTopK(requestPayload.topK),
         asOf: String(requestPayload.asOf || '').trim(),
@@ -10482,6 +10495,9 @@ function buildMobileAgentConversationResponse(result: AgentConversationResponse)
             recalledMemoryCount: 0,
             appliedMemoryCount: 0,
             queryEvidenceCoverageRatioPct: summary.queryEvidenceCoverageRatioPct,
+            responseBudgetMode: 'adaptive',
+            responseBudgetTier: 'standard',
+            responseTruncated: false,
         },
     };
 }
@@ -10517,6 +10533,10 @@ function buildAgentConversationInitialTurnEvents(params: {
             request: {
                 userId: params.requestPayload.userId,
                 topK: params.topK,
+                responseMode: params.requestPayload.responseMode === 'full' ? 'full' : 'slim',
+                responseBudgetMode: params.requestPayload.responseBudgetMode === 'unbounded'
+                    ? 'unbounded'
+                    : 'adaptive',
             },
         },
         {

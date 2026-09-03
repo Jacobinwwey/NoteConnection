@@ -938,6 +938,72 @@ describe('server migration settings routes', () => {
     expect(comprehensiveAliasResponse.body.result.answer).toContain('Thermal model');
   });
 
+  test('conversation budget mode is adaptive by default, supports unbounded desktop full, and stays isolated in cache', async () => {
+    const baseRequest = {
+      userId: 'server_response_budget_user',
+      sessionId: 'server_response_budget_session',
+      message: 'what is water glass?',
+      responseMode: 'full',
+      persistMemory: false,
+    };
+    const adaptiveResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      baseRequest,
+      { 'X-Agent-Conversation-Turn-Id': 'turn_response_budget_adaptive' },
+    );
+    expect(adaptiveResponse.status).toBe(200);
+    expect(adaptiveResponse.body.result.responseBudget).toEqual(expect.objectContaining({
+      mode: 'adaptive',
+      tier: 'standard',
+      productCapDisabled: false,
+    }));
+    expect(adaptiveResponse.body.result.summary).toEqual(expect.objectContaining({
+      responseBudgetMode: 'adaptive',
+      responseBudgetTier: 'standard',
+    }));
+
+    const unboundedResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      { ...baseRequest, responseBudgetMode: 'unbounded' },
+      { 'X-Agent-Conversation-Turn-Id': 'turn_response_budget_unbounded' },
+    );
+    expect(unboundedResponse.status).toBe(200);
+    expect(unboundedResponse.body.result.responseBudget).toEqual(expect.objectContaining({
+      mode: 'unbounded',
+      tier: 'unbounded',
+      productCapDisabled: true,
+    }));
+    expect(unboundedResponse.body.result.responseBudget.rag.productCapDisabled).toBe(true);
+    expect(unboundedResponse.body.result.summary.responseBudgetMode).toBe('unbounded');
+
+    const cacheConflict = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      { ...baseRequest, responseBudgetMode: 'unbounded' },
+      { 'X-Agent-Conversation-Turn-Id': 'turn_response_budget_adaptive' },
+    );
+    expect(cacheConflict.status).toBe(422);
+    expect(cacheConflict.body).toEqual(expect.objectContaining({ errorCode: 'turn_id_conflict' }));
+
+    const mobileResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      { ...baseRequest, responseBudgetMode: 'unbounded', responseProfile: 'mobile_compact' },
+      { 'X-Agent-Conversation-Turn-Id': 'turn_response_budget_mobile' },
+    );
+    expect(mobileResponse.status).toBe(200);
+    expect(mobileResponse.body.result.responseMode).toBe('slim');
+    expect(mobileResponse.body.result.responseProfile).toBe('mobile_compact');
+    expect(mobileResponse.body.result.responseBudget).toBeUndefined();
+    expect(mobileResponse.body.result.summary.responseBudgetMode).toBe('adaptive');
+  });
+
   test('conversation JSON and SSE responses preserve an explicit Chinese answer language for an English no-match query', async () => {
     const requestPayload = {
       userId: 'server_language_no_match_user',

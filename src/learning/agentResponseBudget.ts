@@ -151,15 +151,18 @@ function cloneRuntimeGovernor(governor: Readonly<AgentConversationRuntimeGoverno
 }
 
 function cloneRagBudget(rag: Readonly<RagContextBudget>, productCapDisabled = false): RagContextBudget {
-    return {
+    const cloned: RagContextBudget = {
         maxFragments: rag.maxFragments,
         maxCharsPerFragment: rag.maxCharsPerFragment,
         maxTotalChars: rag.maxTotalChars,
-        productCapDisabled,
-        runtimeMaxFragments: rag.runtimeMaxFragments,
-        runtimeMaxCharsPerFragment: rag.runtimeMaxCharsPerFragment,
-        runtimeMaxTotalChars: rag.runtimeMaxTotalChars,
     };
+    if (productCapDisabled) {
+        cloned.productCapDisabled = true;
+        cloned.runtimeMaxFragments = rag.runtimeMaxFragments;
+        cloned.runtimeMaxCharsPerFragment = rag.runtimeMaxCharsPerFragment;
+        cloned.runtimeMaxTotalChars = rag.runtimeMaxTotalChars;
+    }
+    return cloned;
 }
 
 export function resolveAgentResponseBudget(input: ResolveAgentResponseBudgetInput = {}): AgentConversationBudget {
