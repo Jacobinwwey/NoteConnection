@@ -1427,6 +1427,7 @@ export interface AgentConversationRuntimeGovernor {
     timeoutMs: number;
     maxSerializedBytes: number;
     maxFragmentsProcessed: number;
+    maxReportChars: number;
 }
 
 export interface AgentConversationBudget {
