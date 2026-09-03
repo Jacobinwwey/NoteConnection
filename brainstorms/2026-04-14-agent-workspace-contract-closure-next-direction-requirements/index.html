@@ -1,0 +1,3009 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/brainstorms/2026-04-14-agent-workspace-contract-closure-next-direction-requirements/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Agent Workspace 合同收敛与下一阶段方向要求（执行版 v6，2026-04-14） - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#agent-workspace-v62026-04-14" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Agent Workspace 合同收敛与下一阶段方向要求（执行版 v6，2026-04-14）
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#problem-frame" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem Frame
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        增量事实（相对 v5）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        先前方案要求与当前代码事实对比（v6 深度对齐）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        批判性结论（不回避逻辑漏洞）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#approach-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approach Options（下一阶段方向）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Approach Options（下一阶段方向）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-snapshot-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方案 A：继续以 snapshot adapter 渐进硬化
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方案 B：引入“图后端操作语义”适配层（推荐）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方案 C：直接切换到重型外部图数据库依赖
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requirementsv6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements（v6 有效需求）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Requirements（v6 有效需求）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#contract-and-ci-governance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contract And CI Governance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphdb-foundation-closure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GraphDB Foundation Closure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ann-production-connector-closure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ANN Production Connector Closure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execution-discipline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution Discipline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#m104-m106" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        落盘执行方案（M10.4-M10.6）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="落盘执行方案（M10.4-M10.6）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#m104foundation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M10.4（先做）：Foundation 治理控制面对齐
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="M10.4（先做）：Foundation 治理控制面对齐">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#m104-2026-04-14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M10.4 执行进展（2026-04-14 当日补记）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m105graphdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M10.5：GraphDB 操作语义最小闭环
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="M10.5：GraphDB 操作语义最小闭环">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#m105-2026-04-14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M10.5 执行进展（2026-04-14 当日补记）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m106ann" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M10.6：ANN 连接器生产闭环
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="M10.6：ANN 连接器生产闭环">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#m106-2026-04-14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M10.6 执行进展（2026-04-14 当日补记）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#success-criteriav6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Success Criteria（v6）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scope-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope Boundaries
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outstanding-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outstanding Questions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Outstanding Questions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resolve-before-planning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolve Before Planning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deferred-to-planning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred to Planning
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-aid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual Aid
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="agent-workspace-v62026-04-14">Agent Workspace 合同收敛与下一阶段方向要求（执行版 v6，2026-04-14）<a class="headerlink" href="#agent-workspace-v62026-04-14" title="Permanent link">&para;</a></h1>
+<h2 id="problem-frame">Problem Frame<a class="headerlink" href="#problem-frame" title="Permanent link">&para;</a></h2>
+<p>当前目标不是继续堆叠新动作，而是把“已落地能力”转成可持续工程主线，并把 Phase 1 底座推进从“概念正确”推进到“可上线、可回退、可审计”。</p>
+<p>本次对齐输入：</p>
+<ul>
+<li><code>docs/brainstorms/2026-04-11-evolution-progress-alignment-requirements.md</code></li>
+<li><code>docs/brainstorms/2026-04-12-agent-workspace-next-direction-requirements.md</code></li>
+<li><code>docs/brainstorms/2026-04-13-agent-workspace-architecture-progress-and-next-direction-requirements.md</code></li>
+<li><code>docs/diataxis/zh/explanation/development-progress-dashboard.md</code></li>
+<li><code>docs/diataxis/en/explanation/development-progress-dashboard.md</code></li>
+<li><code>src/frontend/agent_workspace.js</code></li>
+<li><code>src/frontend/workspace_panes.js</code></li>
+<li><code>src/agent_workspace.contract.parity.test.ts</code></li>
+<li><code>src/agent_workspace.frontend.test.ts</code></li>
+<li><code>src/agent_workspace.tauri.contract.test.ts</code></li>
+<li><code>.github/workflows/migration-gates.yml</code></li>
+<li><code>src/server.ts</code></li>
+<li><code>src/learning/store.ts</code></li>
+<li><code>src/learning/runtimeCapability.ts</code></li>
+<li><code>src/learning/queryBackend.ts</code></li>
+<li><code>src/learning/vectorAccelerationAdapter.ts</code></li>
+<li><code>src/notemd.server.rollout-boundary.integration.test.ts</code></li>
+</ul>
+<h2 id="v5">增量事实（相对 v5）<a class="headerlink" href="#v5" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A10（agent workspace 合同门禁常态 CI）已收口：<code>migration-gates</code> 已有 <code>agent-workspace-contract-gates</code> 作业并执行 <code>test:agent-workspace:contracts</code> 与 <code>test:conversation-turn-cache:durability</code>。</li>
+<li>graphdb <code>external_http</code> 连接器治理从“可连通”升级到“可观测”：<code>store</code> 诊断新增 connector telemetry（health/circuit/request/correlation）。</li>
+<li>runtime capability 新增 <code>store_graphdb_connector_health</code> 检查并接入 runbook/debug-trace。</li>
+<li>rollout 边界回归中补齐了 graphdb connector 健康路径断言。</li>
+</ul>
+<h2 id="v6">先前方案要求与当前代码事实对比（v6 深度对齐）<a class="headerlink" href="#v6" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Axis</th>
+<th>先前要求</th>
+<th>当前代码证据</th>
+<th>状态</th>
+<th>关键判断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1 对话与 pane 主模型</td>
+<td>conversation 主面 + focus/path 并排可共存</td>
+<td><code>src/frontend/index.html</code>, <code>src/frontend/styles.css</code>, <code>src/frontend/workspace_panes.js</code></td>
+<td>Done</td>
+<td>交互主模型稳定，不是当前主瓶颈</td>
+</tr>
+<tr>
+<td>A2 typed capability 唯一真相源</td>
+<td>禁止 legacy <code>availableActions</code> 双轨</td>
+<td><code>src/learning/types.ts</code>, <code>src/learning/KnowledgeLearningPlatform.ts</code>, <code>src/frontend/workspace_panes.js</code></td>
+<td>Done</td>
+<td>合同源头已收敛</td>
+</tr>
+<tr>
+<td>A3 capability 执行注册表化</td>
+<td>transport/request/presentation/execution-kind 注册表化</td>
+<td><code>src/frontend/agent_workspace.js</code>, <code>src/agent_workspace.contract.parity.test.ts</code></td>
+<td>Done</td>
+<td>扩展路径稳定</td>
+</tr>
+<tr>
+<td>A4 会话卡片语言重渲可持续</td>
+<td>append-kind 与渲染注册表一致性门禁</td>
+<td><code>src/frontend/workspace_panes.js</code>, <code>src/agent_workspace.frontend.test.ts</code></td>
+<td>Done</td>
+<td>前端合同漂移风险下降</td>
+</tr>
+<tr>
+<td>A5 Tauri 生命周期证据链</td>
+<td>rust/window/index/manifest strict gate</td>
+<td><code>scripts/verify-agent-workspace-tauri*.js</code>, <code>.github/workflows/migration-gates.yml</code></td>
+<td>Done</td>
+<td>桌面证据链已常态化</td>
+</tr>
+<tr>
+<td>A6 Tauri smoke 覆盖面</td>
+<td>关键 pane 生命周期 smoke 门禁</td>
+<td><code>scripts/verify-agent-workspace-tauri.js</code></td>
+<td>Done</td>
+<td>smoke 不再是单点样例</td>
+</tr>
+<tr>
+<td>A7 replay auto-execution 安全闭环</td>
+<td><code>autoExecution</code> + blocker 可解释</td>
+<td><code>src/server.ts</code>, <code>src/frontend/path_app.js</code>, <code>src/notemd.server.integration.test.ts</code></td>
+<td>Done</td>
+<td>M9/M9.1 已收口</td>
+</tr>
+<tr>
+<td>A8 Phase 1 graphdb 底座升级</td>
+<td>从 file-backed 过渡到真实图后端</td>
+<td><code>src/learning/store.ts</code>, <code>src/notemd.server.rollout-boundary.integration.test.ts</code></td>
+<td>Partial+</td>
+<td>rollout-safe 边界已明显增强，但仍是 snapshot 持久化语义，不是“图计算后端”</td>
+</tr>
+<tr>
+<td>A9 Phase 1 ANN 生产连接器</td>
+<td>scaffold 升级为生产 ANN</td>
+<td><code>src/learning/queryBackend.ts</code>, <code>src/learning/vectorAccelerationAdapter.ts</code></td>
+<td>Partial</td>
+<td>已有超时/重试/熔断与可观测性，但仍是 prefilter 协议，不是完整向量检索闭环</td>
+</tr>
+<tr>
+<td>A10 CI 常态化覆盖面</td>
+<td>agent workspace 合同门禁必须常态执行</td>
+<td><code>.github/workflows/migration-gates.yml</code></td>
+<td>Done</td>
+<td>v5 的最大 CI 缺口已关闭</td>
+</tr>
+<tr>
+<td>A11 graphdb 连接器治理</td>
+<td>graphdb 连接器应具备健康/熔断/关联遥测</td>
+<td><code>src/learning/store.ts</code>, <code>src/learning/runtimeCapability.ts</code></td>
+<td>Done</td>
+<td>已具备 operator 级可见性</td>
+</tr>
+<tr>
+<td>A12 graphdb 严格路径一致性</td>
+<td>strict 模式下空快照/故障语义需可区分</td>
+<td><code>src/learning/store.ts</code>, <code>src/notemd.server.rollout-boundary.integration.test.ts</code></td>
+<td>Done</td>
+<td>已修正“404 空快照误判为硬故障”语义回归</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_1">批判性结论（不回避逻辑漏洞）<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<ol>
+<li>把 graphdb 从 file adapter 替换成 HTTP snapshot adapter，不等于“真实图后端能力已就绪”。</li>
+<li>当前 <code>store</code> 层仍是“整快照 load/save”，并未把节点/边查询或路径计算下推到图后端。</li>
+<li>
+<p>结论：A8 只能判定为 Partial+，不能判定 Done。</p>
+</li>
+<li>
+<p>当前 ANN external connector 的协议语义是“候选集预筛选”，不是“完整向量检索”。</p>
+</li>
+<li><code>local_vector</code> 仍在本地执行 TF-IDF + overlap + relation bonus 打分，外部仅返回 <code>candidateAtomIds</code>。</li>
+<li>
+<p>结论：A9 若按“生产 ANN 检索系统”定义，仍未闭环。</p>
+</li>
+<li>
+<p>现有 graphdb connector 熔断参数尚未形成 server env 同步控制面。</p>
+</li>
+<li><code>store</code> 侧已有 circuit 参数能力，但 <code>server</code> 环境变量读取未暴露对应 knob。</li>
+<li>
+<p>结论：治理链路仍存在“代码能力 &gt; 运维控制面”的不对称。</p>
+</li>
+<li>
+<p>rollout 边界集成测试未显式作为独立常态门禁作业，存在被大矩阵覆盖稀释的风险。</p>
+</li>
+<li>结论：需要明确把 foundation 关键边界验证提升为可识别的 CI 关卡。</li>
+</ol>
+<h2 id="approach-options">Approach Options（下一阶段方向）<a class="headerlink" href="#approach-options" title="Permanent link">&para;</a></h2>
+<h3 id="a-snapshot-adapter">方案 A：继续以 snapshot adapter 渐进硬化<a class="headerlink" href="#a-snapshot-adapter" title="Permanent link">&para;</a></h3>
+<ul>
+<li>描述：维持当前 snapshot 持久化模型，只补全治理与 CI。</li>
+<li>优点：改动面最小，短期风险低。</li>
+<li>缺点：无法直接带来“图后端真实能力”，A8 会长期停留在 Partial+。</li>
+<li>适用：近期仅追求稳定，不追求底座跃迁。</li>
+</ul>
+<h3 id="b">方案 B：引入“图后端操作语义”适配层（推荐）<a class="headerlink" href="#b" title="Permanent link">&para;</a></h3>
+<ul>
+<li>描述：在不破坏上层 API 的前提下，为 graphdb adapter 增加 capability 协商与操作级语义（不仅是全量 snapshot）。</li>
+<li>优点：可以在 rollout-safe 前提下逐步获得真实后端价值，同时保持回退路径。</li>
+<li>缺点：需要补一层 adapter 能力模型与更多边界测试。</li>
+<li>适用：希望在 1-2 个迭代内把 A8 从 Partial+ 推进到可验收闭环。</li>
+</ul>
+<h3 id="c">方案 C：直接切换到重型外部图数据库依赖<a class="headerlink" href="#c" title="Permanent link">&para;</a></h3>
+<ul>
+<li>描述：直接绑定特定外部图数据库作为主依赖。</li>
+<li>优点：理论能力上限高。</li>
+<li>缺点：跨平台打包、开发环境一致性、离线部署复杂度显著上升，与当前项目“本地优先 + 轻依赖”约束冲突。</li>
+<li>适用：仅当项目目标明确转向集中式服务架构。</li>
+</ul>
+<p>推荐：<strong>方案 B</strong>。它在当前工程约束下的收益/风险比最佳。</p>
+<h2 id="requirementsv6">Requirements（v6 有效需求）<a class="headerlink" href="#requirementsv6" title="Permanent link">&para;</a></h2>
+<h3 id="contract-and-ci-governance">Contract And CI Governance<a class="headerlink" href="#contract-and-ci-governance" title="Permanent link">&para;</a></h3>
+<ul>
+<li>R1. 维持并保护现有 agent workspace 常态 CI 门禁（禁止回退为仅本地验证）。</li>
+<li>R2. rollout 边界关键回归（graphdb/vector strict 行为）应具备可识别的常态 CI 执行入口。</li>
+<li>R3. capability union、operation registry、presentation registry 漂移必须继续 fail-fast。</li>
+<li>R4. append-kind 与前端重渲注册表不一致必须继续 fail-fast。</li>
+<li>R5. Tauri strict 证据作业与前端/合同门禁并行维持，禁止二者互相替代。</li>
+</ul>
+<h3 id="graphdb-foundation-closure">GraphDB Foundation Closure<a class="headerlink" href="#graphdb-foundation-closure" title="Permanent link">&para;</a></h3>
+<ul>
+<li>R6. graphdb 路线从“snapshot 持久化可用”推进到“后端操作语义可用”，并保持 fallback/strict 语义不破坏。</li>
+<li>R7. graphdb adapter 演进不得破坏 <code>src/learning/api.ts</code> 与 <code>src/learning/types.ts</code> 的对上合同。</li>
+<li>R8. server 层暴露 graphdb connector 熔断参数 env 控制面，与 <code>store</code> 能力对齐。</li>
+<li>R9. runtime capability 为 graphdb connector 增加阈值化预算治理（样本量、失败比例、短路比例、连续失败）。</li>
+<li>R10. graphdb connector runbook 必须形成“可执行整改动作 + 可验证回收标准”。</li>
+</ul>
+<h3 id="ann-production-connector-closure">ANN Production Connector Closure<a class="headerlink" href="#ann-production-connector-closure" title="Permanent link">&para;</a></h3>
+<ul>
+<li>R11. ANN 路线从 <code>ann_prefilter + external_*</code> 推进到生产连接器最小闭环（健康、超时、重试、熔断、回退、关联字段）。</li>
+<li>R12. ANN 连接器必须具备表示一致性约束（索引版本、向量维度/模型标识或等效签名）；禁止仅靠 token 预筛选宣称“生产 ANN 已完成”。</li>
+<li>R13. runbook 继续对 <code>prefilter_effectiveness / circuit_state / traceability</code> 做门禁，且阈值可调。</li>
+<li>R14. foundation 改造期间，L4 interaction contract（conversation capability surface）保持向后兼容。</li>
+</ul>
+<h3 id="execution-discipline">Execution Discipline<a class="headerlink" href="#execution-discipline" title="Permanent link">&para;</a></h3>
+<ul>
+<li>R15. 采用“双轨并行 + 单主优先级”：</li>
+<li>轨道 A：foundation 治理闭环（graphdb connector control plane + runtime budget + CI gate）先完成。</li>
+<li>轨道 B：graphdb 操作语义升级与 ANN 连接器闭环随后推进。</li>
+<li>R16. 每个里程碑必须交付三件套：代码证据、测试证据、文档证据。</li>
+<li>R17. 新增动作类需求默认降级优先级，除非直接解除 R6-R13 风险。</li>
+</ul>
+<h2 id="m104-m106">落盘执行方案（M10.4-M10.6）<a class="headerlink" href="#m104-m106" title="Permanent link">&para;</a></h2>
+<h3 id="m104foundation">M10.4（先做）：Foundation 治理控制面对齐<a class="headerlink" href="#m104foundation" title="Permanent link">&para;</a></h3>
+<p>目标：把“已实现能力”变成“可控能力”。</p>
+<ul>
+<li>范围：</li>
+<li>server 环境变量补齐 graphdb connector circuit 参数透传。</li>
+<li>runtime capability 补齐 graphdb connector 阈值预算（warn/fail）。</li>
+<li>runbook/action-queue 增加 graphdb connector 整改动作模板。</li>
+<li>CI 增加 foundation 边界的可识别门禁入口。</li>
+<li>触点：</li>
+<li><code>src/server.ts</code></li>
+<li><code>src/learning/store.ts</code></li>
+<li><code>src/learning/runtimeCapability.ts</code></li>
+<li><code>.github/workflows/migration-gates.yml</code></li>
+<li>验证：</li>
+<li><code>src/learning/runtimeCapability.test.ts</code></li>
+<li><code>src/notemd.server.rollout-boundary.integration.test.ts</code></li>
+<li>新/改 CI 作业执行日志</li>
+</ul>
+<h4 id="m104-2026-04-14">M10.4 执行进展（2026-04-14 当日补记）<a class="headerlink" href="#m104-2026-04-14" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[Done] <code>server</code> 已暴露 graphdb connector circuit 控制面：</li>
+<li><code>NOTE_CONNECTION_KNOWLEDGE_GRAPHDB_HTTP_CIRCUIT_FAILURE_THRESHOLD</code></li>
+<li><code>NOTE_CONNECTION_KNOWLEDGE_GRAPHDB_HTTP_CIRCUIT_COOLDOWN_MS</code></li>
+<li>[Done] <code>runtime capability</code> 新增独立检查 <code>store_graphdb_connector_budget</code>（与 <code>store_graphdb_connector_health</code> 分离）。</li>
+<li>[Done] 新增 graphdb connector runtime budget env 组（<code>NOTE_CONNECTION_RUNTIME_STORE_GRAPHDB_CONNECTOR_*</code>）。</li>
+<li>[Done] contract test 已覆盖上述 server/runtime env wiring 与 check id 信号。</li>
+<li>[Done] CI 新增可识别 gate：<code>foundation-rollout-boundary-suite</code>（<code>npm run test:foundation:rollout-boundary</code>）。</li>
+<li>[Done] 本地验证通过：</li>
+<li><code>npm test -- src/learning/runtimeCapability.test.ts --runInBand</code></li>
+<li><code>npm test -- src/notemd.server.rollout-boundary.integration.test.ts --runInBand</code></li>
+<li><code>npm test -- src/knowledge.api.contract.test.ts --runInBand</code></li>
+<li><code>npm run docs:diataxis:check &amp;&amp; npm run docs:site:build</code></li>
+</ul>
+<p>结论：<code>M10.4</code> 已达到“治理控制面对齐 + 基线可验证”状态，可进入 <code>M10.5</code>（graphdb 操作语义最小闭环）。</p>
+<h3 id="m105graphdb">M10.5：GraphDB 操作语义最小闭环<a class="headerlink" href="#m105graphdb" title="Permanent link">&para;</a></h3>
+<p>目标：把 graphdb 从“快照仓库”升级为“可承载图后端语义的适配层”。</p>
+<ul>
+<li>范围：</li>
+<li>adapter capability 协商（snapshot-only vs ops-capable）。</li>
+<li>保留 snapshot fallback，同时允许操作级读写路径逐步启用。</li>
+<li>fail-open/fail-closed 语义保持现有 contract。</li>
+<li>触点：</li>
+<li><code>src/learning/store.ts</code></li>
+<li><code>src/server.ts</code></li>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+<li>验证：</li>
+<li>store 单测 + rollout 边界集成测试扩展。</li>
+<li>runtime diagnostics 能区分 snapshot 模式与 ops 模式。</li>
+</ul>
+<h4 id="m105-2026-04-14">M10.5 执行进展（2026-04-14 当日补记）<a class="headerlink" href="#m105-2026-04-14" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[Done] 新增 graphdb adapter capability 协商契约：</li>
+<li><code>snapshot_only</code> vs <code>ops_capable</code></li>
+<li>adapter <code>supportedReadOperations</code> / <code>supportedWriteOperations</code></li>
+<li>[Done] 新增 store operation mode：</li>
+<li><code>NOTE_CONNECTION_KNOWLEDGE_GRAPHDB_OPERATION_MODE</code></li>
+<li><code>snapshot_only</code>（默认）/ <code>ops_preferred</code></li>
+<li>[Done] graphdb diagnostics 可区分当前运行路径：</li>
+<li><code>graphDbOperationMode</code></li>
+<li><code>graphDbAdapterCapabilityMode</code></li>
+<li><code>graphDbReadPath</code></li>
+<li><code>graphDbWritePath</code></li>
+<li><code>graphDbSupportedReadOperations</code></li>
+<li><code>graphDbSupportedWriteOperations</code></li>
+<li><code>graphDbLastSnapshotMetadata</code></li>
+<li>[Done] fail-open/fail-closed 语义保持：strict 无 fallback 时仍 fail-closed；ops 协商不改变既有异常边界。</li>
+<li>[Done] 已扩展验证覆盖：</li>
+<li><code>src/learning/store.test.ts</code>（ops-capable 与 snapshot-only 协商分支）</li>
+<li><code>src/notemd.server.rollout-boundary.integration.test.ts</code>（新增 file adapter + ops_preferred 路径）</li>
+<li><code>src/knowledge.api.contract.test.ts</code>（server wiring 与 env contract）</li>
+</ul>
+<p>结论：<code>M10.5</code> 已达到“能力协商 + 运行路径可观测 + 边界语义不回退”的最小闭环，可继续推进 <code>M10.6</code>。</p>
+<h3 id="m106ann">M10.6：ANN 连接器生产闭环<a class="headerlink" href="#m106ann" title="Permanent link">&para;</a></h3>
+<p>目标：把 ANN 从“候选预筛选插件”推进到“生产可运维连接器”。</p>
+<ul>
+<li>范围：</li>
+<li>连接器协议增加表示一致性元信息（版本/模型/签名）。</li>
+<li>连接器健康、超时、重试、熔断、traceability 信号保持可观测。</li>
+<li>prefilter_effectiveness 门禁与语料规模分层阈值校准。</li>
+<li>触点：</li>
+<li><code>src/learning/vectorAccelerationAdapter.ts</code></li>
+<li><code>src/learning/queryBackend.ts</code></li>
+<li><code>src/learning/runtimeCapability.ts</code></li>
+<li><code>src/server.ts</code></li>
+<li>验证：</li>
+<li><code>src/learning/queryBackend.test.ts</code></li>
+<li><code>src/learning/runtimeCapability.test.ts</code></li>
+<li><code>src/notemd.server.rollout-boundary.integration.test.ts</code></li>
+</ul>
+<h4 id="m106-2026-04-14">M10.6 执行进展（2026-04-14 当日补记）<a class="headerlink" href="#m106-2026-04-14" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[Done] <code>query/vector</code> 诊断链路补齐表示一致性元信息（trace + runtime diagnostics）：</li>
+<li><code>representationVersion</code></li>
+<li><code>embeddingModelId</code></li>
+<li><code>embeddingDimension</code></li>
+<li><code>indexSignature</code></li>
+<li><code>representationStatus</code></li>
+<li><code>representationStatusReason</code></li>
+<li>[Done] <code>LocalVectorGraphQueryBackend</code> 已实现表示一致性判定最小闭环：</li>
+<li>本地 adapter 路径强制 <code>aligned</code></li>
+<li>外部 adapter 路径在无显式状态时按 metadata 自动推断 <code>aligned|mismatch|unknown</code></li>
+<li>[Done] <code>external_http</code> acceleration adapter 已接入表示元信息协商：</li>
+<li>请求体上送本地表示元信息</li>
+<li>响应可回传表示状态/原因</li>
+<li>缺省情况下自动推断 mismatch（如版本漂移）并写入 health telemetry</li>
+<li>[Done] runtime capability matrix 已透传 ANN 表示一致性 signals（不破坏现有门禁语义）。</li>
+<li>[Done] 合同与单测覆盖已补齐：</li>
+<li><code>src/learning/queryBackend.test.ts</code></li>
+<li><code>src/learning/vectorAccelerationAdapter.test.ts</code></li>
+<li><code>src/learning/runtimeCapability.test.ts</code></li>
+<li><code>src/knowledge.api.contract.test.ts</code></li>
+<li>[Done] 本地验证通过：</li>
+<li><code>npm test -- src/learning/queryBackend.test.ts --runInBand</code></li>
+<li><code>npm test -- src/learning/vectorAccelerationAdapter.test.ts --runInBand</code></li>
+<li><code>npm test -- src/learning/runtimeCapability.test.ts --runInBand</code></li>
+<li><code>npm test -- src/notemd.server.rollout-boundary.integration.test.ts --runInBand</code></li>
+<li><code>npm test -- src/knowledge.api.contract.test.ts --runInBand</code></li>
+<li><code>npm run docs:diataxis:check &amp;&amp; npm run docs:site:build</code></li>
+</ul>
+<h2 id="success-criteriav6">Success Criteria（v6）<a class="headerlink" href="#success-criteriav6" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A10 持续维持 Done（CI 门禁不回退）。</li>
+<li>A8 从 Partial+ 推进到“后端操作语义可用 + rollout-safe 可回退”。</li>
+<li>A9 从 Partial 推进到“生产连接器最小闭环可验收”。</li>
+<li>runbook 对 graphdb 与 ANN 的故障信号均可形成可执行整改路径。</li>
+</ul>
+<h2 id="scope-boundaries">Scope Boundaries<a class="headerlink" href="#scope-boundaries" title="Permanent link">&para;</a></h2>
+<ul>
+<li>不在本轮引入新的前端框架或独立聊天子应用。</li>
+<li>不在本轮重做 tutor/runtime governance 主体。</li>
+<li>不在本轮将 DeepTutor/MemOS 作为代码迁移源，仅做模式参考。</li>
+</ul>
+<h2 id="outstanding-questions">Outstanding Questions<a class="headerlink" href="#outstanding-questions" title="Permanent link">&para;</a></h2>
+<h3 id="resolve-before-planning">Resolve Before Planning<a class="headerlink" href="#resolve-before-planning" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[Affects R2][CI] foundation 边界验证是并入现有 <code>migration-gates</code> matrix，还是独立 <code>foundation-rollout-boundary-gates</code> job。</li>
+</ul>
+<h3 id="deferred-to-planning">Deferred to Planning<a class="headerlink" href="#deferred-to-planning" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[Affects R6][Technical] graphdb adapter capability 协商的数据结构与回退优先级细则。</li>
+<li>[Affects R12][Technical] ANN 表示一致性字段的最小集合（版本、模型、向量维度、签名策略）。</li>
+</ul>
+<h2 id="visual-aid">Visual Aid<a class="headerlink" href="#visual-aid" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>flowchart LR
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    A[Current State\nA10 Closed, A8 Partial+, A9 Partial] --&gt; B[M10.4\nGovernance Control Plane]
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    B --&gt; C[M10.5\nGraphDB Ops-Capable Adapter]
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    B --&gt; D[M10.6\nANN Production Connector Baseline]
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    C --&gt; E[Foundation Closure]
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    D --&gt; E
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    E --&gt; F[Next Focus\nPerformance + Policy Tuning]
+</code></pre></div>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li>进入 <code>/ce:plan</code>，按 M10.4 -&gt; M10.5 -&gt; M10.6 生成可执行任务分解。</li>
+</ul>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

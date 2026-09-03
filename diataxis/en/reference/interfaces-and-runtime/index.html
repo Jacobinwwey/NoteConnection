@@ -1,0 +1,3072 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/diataxis/en/reference/interfaces-and-runtime/">
+      
+      
+        <link rel="prev" href="../../how-to/godot-notemd-markdown-workflows/">
+      
+      
+        <link rel="next" href="../godot-notemd-markdown-interfaces/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Interfaces and Runtime - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#reference-interfaces-and-runtime-contracts" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Interfaces and Runtime
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#primary-contract-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primary Contract Documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#focused-integration-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Focused Integration References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-baseline-quick-links-v170" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Baseline Quick Links (v1.7.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#learning-platform-contract-surfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning Platform Contract Surfaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-workspace-verification-commands-v170" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Workspace Verification Commands (v1.7.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-runtime-contract-points-v160" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Runtime Contract Points (v1.6.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#startup-perf-telemetry-and-pilot-profile-v170-pilot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Startup Perf Telemetry and Pilot Profile (v1.7.0+ pilot)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#learning-runtime-governance-runbook-v170" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning Runtime Governance Runbook (v1.7.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#learning-path-strategy-contract-v170" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning Path Strategy Contract (v1.7.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mermaid-canonical-baseline-obsidian" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mermaid Canonical Baseline (Obsidian)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#app_config-runtime-contract-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        app_config Runtime Contract Hook
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#policy-gate-families" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Policy Gate Families
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#primary-contract-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primary Contract Documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#focused-integration-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Focused Integration References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-baseline-quick-links-v170" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Baseline Quick Links (v1.7.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#learning-platform-contract-surfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning Platform Contract Surfaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-workspace-verification-commands-v170" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Workspace Verification Commands (v1.7.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-runtime-contract-points-v160" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Runtime Contract Points (v1.6.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#startup-perf-telemetry-and-pilot-profile-v170-pilot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Startup Perf Telemetry and Pilot Profile (v1.7.0+ pilot)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#learning-runtime-governance-runbook-v170" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning Runtime Governance Runbook (v1.7.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#learning-path-strategy-contract-v170" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learning Path Strategy Contract (v1.7.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mermaid-canonical-baseline-obsidian" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mermaid Canonical Baseline (Obsidian)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#app_config-runtime-contract-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        app_config Runtime Contract Hook
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#policy-gate-families" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Policy Gate Families
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="reference-interfaces-and-runtime-contracts">Reference: Interfaces and Runtime Contracts<a class="headerlink" href="#reference-interfaces-and-runtime-contracts" title="Permanent link">&para;</a></h1>
+<p>This reference tracks canonical API/runtime contracts.</p>
+<h2 id="primary-contract-documents">Primary Contract Documents<a class="headerlink" href="#primary-contract-documents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../../../en/Interface%20Document/">docs/en/Interface Document.md</a></li>
+<li><a href="../../../../en/User_Manual/">docs/en/User_Manual.md</a></li>
+</ul>
+<h2 id="focused-integration-references">Focused Integration References<a class="headerlink" href="#focused-integration-references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../godot-notemd-markdown-interfaces/">Godot + NoteMD + Markdown Interfaces</a></li>
+<li><a href="../../how-to/godot-notemd-markdown-workflows/">Godot + NoteMD + Markdown Workflows</a></li>
+</ul>
+<h2 id="development-baseline-quick-links-v170">Development Baseline Quick Links (v1.7.0+)<a class="headerlink" href="#development-baseline-quick-links-v170" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../explanation/knowledge-mastery-evolution-roadmap/">Knowledge Mastery Evolution Roadmap</a></li>
+<li><a href="../../explanation/development-progress-dashboard/">Development Progress Dashboard</a></li>
+<li><a href="../../../../solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02/">Learning Platform Contract and Workbench Baseline</a></li>
+<li><a href="../../../../brainstorms/2026-04-11-evolution-progress-alignment-requirements/">Evolution Progress Alignment Requirements</a></li>
+</ul>
+<h2 id="learning-platform-contract-surfaces">Learning Platform Contract Surfaces<a class="headerlink" href="#learning-platform-contract-surfaces" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Interface contracts:</li>
+<li><code>src/learning/api.ts</code></li>
+<li><code>src/learning/types.ts</code></li>
+<li>Runtime implementation:</li>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+<li><code>src/learning/store.ts</code></li>
+<li><code>src/learning/queryBackend.ts</code></li>
+<li><code>src/learning/runtimeCapability.ts</code></li>
+<li>API wiring and alias normalization:</li>
+<li><code>src/server.ts</code></li>
+<li>Frontend operational integration:</li>
+<li><code>src/frontend/path_app.js</code></li>
+<li>Contract safety net:</li>
+<li><code>src/knowledge.api.contract.test.ts</code></li>
+</ul>
+<h2 id="agent-workspace-verification-commands-v170">Agent Workspace Verification Commands (v1.7.0+)<a class="headerlink" href="#agent-workspace-verification-commands-v170" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Runtime shell and locale checks:</li>
+<li><code>npm run verify:agent-workspace:runtime</code></li>
+<li>Desktop/Tauri contract checks:</li>
+<li><code>npm run verify:agent-workspace:tauri</code></li>
+<li>Browser smoke checks:</li>
+<li><code>npm run verify:agent-workspace:browser</code></li>
+<li>Windows compatibility note:</li>
+<li>Browser smoke runs with relaxed assertions by default on Windows to avoid Playwright CLI path/argument-limit drift.</li>
+<li>Set <code>NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_STRICT=1</code> to enforce strict critical availability assertions.</li>
+<li>Set <code>NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_STRICT=1</code> to enforce deterministic UI assertions (shell text + promotion + localized fallback messages).</li>
+<li>Set <code>NOTE_CONNECTION_AGENT_WORKSPACE_BROWSER_UI_DYNAMIC_STRICT=1</code> together with <code>..._UI_STRICT=1</code> to additionally enforce dynamic conversation/request-card assertions.</li>
+<li>Dynamic strict now blocks on real browser-driven conversation + capability execution evidence: conversation, learning-path, study-session, tutor action, query-backend comparison/history/trend, learning-quality trend/history, session-plan quality trend/history, session history, runtime runbook verify/checks/action queue, and conversation turn-cache alert trend.</li>
+<li>The runtime runbook browser proof is content-aware, not open-card-only: ANN sync-health/counts must appear on the verify card, first-check ANN sync must appear on the checks card, and the action queue must expose the <code>query_vector_acceleration_index_sync_health</code> drilldown plus <code>/api/knowledge/query-backend-diagnostics</code>.</li>
+<li>Locale/runtime hygiene is also gated here now: <code>src/agent_workspace.locale.contract.test.ts</code> blocks missing <code>agentWorkspace.*</code> locale keys referenced by the agent-workspace frontend/backend sources, and the runtime translate helpers avoid calling <code>window.i18n.t()</code> before locale hydration to prevent startup-only false-positive warning noise.</li>
+<li>Modular knowledge-route parity is part of this gate: if <code>/api/knowledge/*</code> route wiring drifts from <code>KnowledgeLearningPlatform</code>, browser strict fails instead of silently falling back to synthetic snapshot data.</li>
+<li>Dynamic recovery remains as a diagnostic fallback, but missing/failed request traces are now treated as hard failures rather than non-blocking variance.</li>
+</ul>
+<h2 id="key-runtime-contract-points-v160">Key Runtime Contract Points (v1.6.0)<a class="headerlink" href="#key-runtime-contract-points-v160" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Frontend runtime hydration invoke contracts:</li>
+<li><code>invoke('get_runtime_capabilities')</code></li>
+<li><code>invoke('get_sidecar_runtime_config')</code></li>
+<li>Rust sidecar runtime config command:</li>
+<li><code>get_sidecar_runtime_config</code></li>
+<li>Rust app runtime config command:</li>
+<li><code>get_app_runtime_config</code></li>
+<li>Runtime bridge readiness sequencing via <code>whenReady()</code>.</li>
+</ul>
+<h2 id="startup-perf-telemetry-and-pilot-profile-v170-pilot">Startup Perf Telemetry and Pilot Profile (v1.7.0+ pilot)<a class="headerlink" href="#startup-perf-telemetry-and-pilot-profile-v170-pilot" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Frontend startup checkpoints are emitted as one-shot logs:</li>
+<li><code>T0 app_boot</code></li>
+<li><code>T1 graph_preprocessed</code></li>
+<li><code>T2 worker_init_sent</code></li>
+<li><code>T3 first_tick_received</code></li>
+<li><code>T4 first_interactive_render</code></li>
+<li><code>T5 stable_layout</code></li>
+<li>Worker startup profile is passed through <code>simulationWorker</code> init payload:</li>
+<li><code>startupProfile.id</code></li>
+<li><code>startupProfile.tickMaxFps</code></li>
+<li><code>startupProfile.lowAlphaTickMaxFps</code></li>
+<li><code>startupProfile.lowAlphaThreshold</code></li>
+<li><code>startupProfile.stableAlphaThreshold</code></li>
+<li><code>startupProfile.stableHoldTicks</code></li>
+<li><code>startupProfile.stableTimeoutMs</code></li>
+<li><code>startupProfile.deltaEnabled</code></li>
+<li><code>startupProfile.deltaEpsilonPx</code></li>
+<li><code>startupProfile.fullSyncEveryTicks</code></li>
+<li><code>startupProfile.lowAlphaDeltaEpsilonMultiplier</code></li>
+<li><code>startupProfile.lowAlphaFullSyncEveryTicks</code></li>
+<li>Worker -&gt; main-thread tick transport contract (Phase 2):</li>
+<li><code>tickMode: 'full' | 'delta'</code></li>
+<li><code>isDelta: boolean</code></li>
+<li><code>nodes: [{ id, i, x, y }]</code> (<code>i</code> is the worker node index fast-path; delta mode only includes changed nodes)</li>
+<li>Startup tick application is frame-coalesced on main thread to reduce redundant repaint pressure.</li>
+<li><code>T5 stable_layout</code> details include <code>tickSummary</code> (<code>fullTicks</code>, <code>deltaTicks</code>, <code>deltaRatio</code>, payload stats).</li>
+<li>Multi-platform startup pilot profiles:</li>
+<li><code>desktop_windows_pilot</code>: <code>26 FPS</code>, <code>400ms</code> edge delay, <code>1500ms</code> SVG cap window (<code>18000</code> links).</li>
+<li><code>desktop_macos_pilot</code>: <code>24 FPS</code>, <code>430ms</code> edge delay, <code>1700ms</code> SVG cap window (<code>15000</code> links).</li>
+<li><code>desktop_linux_pilot</code>: <code>24 FPS</code>, <code>420ms</code> edge delay, <code>1600ms</code> SVG cap window (<code>16000</code> links).</li>
+<li><code>mobile_android_pilot</code>: <code>18 FPS</code>, <code>560ms</code> edge delay, <code>2200ms</code> SVG cap window (<code>7000</code> links), reduced overlay density.</li>
+<li><code>mobile_ios_pilot</code>: <code>17 FPS</code>, <code>600ms</code> edge delay, <code>2300ms</code> SVG cap window (<code>6200</code> links), reduced overlay density.</li>
+<li>Startup visual overlay contract:</li>
+<li>A blurred startup overlay is shown until <code>T5 stable_layout</code> (or safety timeout).</li>
+<li>Core text: <code>等待世界构建</code>.</li>
+<li>Interactive starfield: stars twinkle naturally, and pointer clicks can dim nearby stars.</li>
+<li>Overlay automatically scales down density/animation intensity on mobile and reduced-motion environments.</li>
+<li>Runtime override switch (for rollback/A-B validation):</li>
+<li><code>localStorage['nc.startupPerfProfile'] = 'off'</code> disables pilot behavior.</li>
+<li><code>localStorage['nc.startupPerfProfile'] = 'desktop_windows_pilot'</code> force-enables pilot behavior.</li>
+<li><code>localStorage['nc.startupPerfProfile'] = 'desktop_macos_pilot' | 'desktop_linux_pilot' | 'mobile_android_pilot' | 'mobile_ios_pilot'</code> force-selects the target profile.</li>
+<li>Automated baseline vs pilot summary script:</li>
+<li><code>npm run perf:startup:compare -- --baseline &lt;baseline-log-path&gt; --pilot &lt;pilot-log-path&gt;</code></li>
+<li>Supports file or directory inputs, auto-parses sessions from <code>[Startup Perf]</code> checkpoints, outputs P50/P95 KPI report.</li>
+<li>Automated cross-platform matrix summary script:</li>
+<li><code>npm run perf:startup:matrix -- --root &lt;startup-logs-root&gt; [--out &lt;report-path&gt;]</code></li>
+<li>Recommended layout: <code>&lt;root&gt;/&lt;platform&gt;/baseline|pilot</code> (for example <code>windows</code>, <code>macos</code>, <code>android</code>).</li>
+<li>Backward-compatible single-platform layout: <code>&lt;root&gt;/baseline|pilot</code>, with <code>--single-platform-label &lt;label&gt;</code> as platform tag.</li>
+<li>Near-real-time matrix gate (auto-refresh when logs change):</li>
+<li><code>npm run perf:startup:matrix:watch -- --root &lt;startup-logs-root&gt; --out &lt;report-path&gt; --strict</code></li>
+<li>Recommended same-device dual-phase layout:<ul>
+<li><code>&lt;root&gt;/macos/baseline/*.log</code></li>
+<li><code>&lt;root&gt;/macos/pilot/*.log</code></li>
+<li><code>&lt;root&gt;/android/baseline/*.log</code></li>
+<li><code>&lt;root&gt;/android/pilot/*.log</code></li>
+<li><code>&lt;root&gt;/ios/baseline/*.log</code></li>
+<li><code>&lt;root&gt;/ios/pilot/*.log</code></li>
+</ul>
+</li>
+<li>Fallback flow without multi-device hardware (pipeline validation only):</li>
+<li><code>npm run perf:startup:matrix:simulate -- --seed-root tmp/startup-logs --out-root tmp/startup-logs-simulated</code></li>
+<li><code>npm run perf:startup:matrix -- --root tmp/startup-logs-simulated --out tmp/startup-logs-simulated/report-platform-matrix.md</code></li>
+<li>Note: <code>tmp/startup-logs-simulated</code> is synthetic data and must not be used for release-go performance decisions.</li>
+<li>One-click no-hardware signoff (engineering gate + release gate TODO tracking):</li>
+<li><code>npm run perf:startup:signoff:nohw</code></li>
+<li>This command automatically runs: Windows real-log gates + simulated multi-platform three-cohort gates, then writes a layered signoff report.</li>
+<li>If real multi-device cohort data is missing, release signoff is marked as <code>TODO</code> and moved to future test backlog.</li>
+<li>Three-cohort automatic regression and rollout gate (Phase 4):</li>
+<li><code>npm run perf:startup:cohorts:verify -- --root &lt;cohorts-root&gt; --cohorts small,medium,large --out &lt;report-path&gt; --strict</code></li>
+<li>Directory contract: <code>&lt;cohorts-root&gt;/&lt;cohort&gt;/&lt;platform&gt;/baseline|pilot</code></li>
+<li>Session floor gate is configurable via <code>--min-sessions-per-platform &lt;N&gt;</code></li>
+</ul>
+<h2 id="learning-runtime-governance-runbook-v170">Learning Runtime Governance Runbook (v1.7.0+)<a class="headerlink" href="#learning-runtime-governance-runbook-v170" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Runtime capability matrix endpoint:</li>
+<li><code>GET /api/knowledge/runtime-capability-matrix</code></li>
+<li>Runtime capability runbook endpoints:</li>
+<li><code>GET /api/knowledge/runtime-capability-runbook</code></li>
+<li><code>GET /api/knowledge/runtime-capability-runbook?checkId=&lt;check_id&gt;</code></li>
+<li><code>GET /api/knowledge/runtime-capability-runbook/verify?checkId=&lt;check_id&gt;&amp;limit=&lt;N&gt;</code></li>
+<li><code>GET /api/knowledge/runtime-capability-runbook/history</code></li>
+<li><code>GET /api/knowledge/runtime-capability-runbook/history/checks</code></li>
+<li><code>GET /api/knowledge/runtime-capability-runbook/history/action-queue</code></li>
+<li><code>GET /api/knowledge/runtime-capability-runbook/history/remediation-events</code></li>
+<li><code>POST /api/knowledge/runtime-capability-runbook/remediation-event</code></li>
+<li>Frontend API retry policy keys for runbook GET endpoints (Learning Workbench):</li>
+<li><code>runtime_runbook_get</code> -&gt; <code>GET /api/knowledge/runtime-capability-runbook</code></li>
+<li><code>runtime_runbook_verify_get</code> -&gt; <code>GET /api/knowledge/runtime-capability-runbook/verify</code></li>
+<li><code>runtime_runbook_history_get</code> -&gt; <code>GET /api/knowledge/runtime-capability-runbook/history</code></li>
+<li><code>runtime_runbook_history_checks_get</code> -&gt; <code>GET /api/knowledge/runtime-capability-runbook/history/checks</code></li>
+<li><code>runtime_runbook_action_queue_get</code> -&gt; <code>GET /api/knowledge/runtime-capability-runbook/history/action-queue</code></li>
+<li><code>runtime_runbook_remediation_history_get</code> -&gt; <code>GET /api/knowledge/runtime-capability-runbook/history/remediation-events</code></li>
+<li>Current default policy for the runbook GET family:<ul>
+<li><code>timeoutMs=12000</code></li>
+<li><code>maxRetries=2</code></li>
+<li><code>retryable=true</code></li>
+</ul>
+</li>
+<li>Debugging entry points:<ul>
+<li><code>learningWorkbench.apiRequestTraces[].policyKey</code></li>
+<li><code>GET /api/runtime-request-trace</code> (server-correlated request diagnostics)</li>
+<li><code>GET /api/runtime-request-trace</code> query also supports <code>requestId=&lt;exact_id&gt;</code> for correlation-first drilldown, and echoes <code>summary.requestId</code>.</li>
+</ul>
+</li>
+<li>Tutor routing dynamic alignment governance check:</li>
+<li><code>checkId = tutor_routing_dynamic_mode_alignment</code></li>
+<li>Detects a conflict between pinned <code>preferredMode</code> and adaptive routing dynamic recommendation.</li>
+<li>Emits <code>pass | warn | fail</code> based on conflict severity and routing degradation budgets.</li>
+<li>Orchestration path-strategy alignment governance check:</li>
+<li><code>checkId = orchestration_path_strategy_alignment</code></li>
+<li>Evaluates whether trend-driven path strategy selections remain aligned with mastery outcomes.</li>
+<li>Emits <code>pass | warn | fail</code> based on trend-auto sample size, average mastery delta, and negative-outcome ratio.</li>
+<li>Dynamic routing signal contract:</li>
+<li>Tutor trace fields:<ul>
+<li><code>adapterRoutingDynamicPreferredMode</code></li>
+<li><code>adapterRoutingDynamicModeReason</code></li>
+</ul>
+</li>
+<li>Tutor telemetry summary fields:<ul>
+<li><code>lastRoutingDynamicPreferredMode</code></li>
+<li><code>lastRoutingDynamicModeReason</code></li>
+</ul>
+</li>
+<li>Runtime matrix signal fields:<ul>
+<li><code>tutorRoutingDynamicPreferredMode</code></li>
+<li><code>tutorRoutingDynamicModeReason</code></li>
+<li><code>tutorRoutingDynamicModeSuggestionActive</code></li>
+</ul>
+</li>
+<li>Runbook verification targets for <code>tutor_routing_dynamic_mode_alignment</code> include:</li>
+<li><code>/api/knowledge/session/orchestration/config</code> (reconcile preferred mode policy)</li>
+<li><code>/api/knowledge/tutor/trace-diagnostics/providers/history?source=llm-adapter</code> (confirm mode-conflict trend convergence)</li>
+<li>Runbook verification targets for <code>orchestration_path_strategy_alignment</code> include:</li>
+<li><code>/api/knowledge/session/history?userId=&lt;userId&gt;&amp;pathStrategySelectionSource=strategy_trend&amp;sinceMinutes=10080</code> (verify strategy source vs outcome telemetry convergence)</li>
+<li><code>/api/knowledge/quality/trend</code> (cross-check strategyBreakdown trend consistency)</li>
+<li><code>/api/knowledge/session/orchestration/config</code> (tighten <code>strategyMinConfidence</code> when trend-auto remains negative)</li>
+<li>Runbook history diagnostics add streak visibility:</li>
+<li><code>GET /api/knowledge/runtime-capability-runbook/history</code> summary includes <code>activeRiskStreak</code> and <code>activeFailStreak</code>.</li>
+<li><code>GET /api/knowledge/runtime-capability-runbook/history/checks</code> summary includes:<ul>
+<li><code>dynamicModeAlignmentRecords</code></li>
+<li><code>dynamicModeAlignmentLatestStatus</code></li>
+<li><code>dynamicModeAlignmentConflictStreak</code></li>
+<li><code>dynamicModeAlignmentFailStreak</code></li>
+<li><code>pathStrategyAlignmentRecords</code></li>
+<li><code>pathStrategyAlignmentLatestStatus</code></li>
+<li><code>pathStrategyAlignmentConflictStreak</code></li>
+<li><code>pathStrategyAlignmentFailStreak</code></li>
+<li><code>recommendedFocusEscalation</code></li>
+<li><code>recommendedFocusTopAction</code></li>
+<li><code>actionQueueTotal</code></li>
+<li><code>actionQueueP0</code></li>
+<li><code>actionQueueP1</code></li>
+<li><code>actionQueueP2</code></li>
+<li>remediation aggregates:</li>
+<li><code>remediationRecords</code></li>
+<li><code>remediationChecksWithEvents</code></li>
+<li><code>remediationChecksRegressing</code></li>
+<li><code>remediationChecksImproving</code></li>
+<li><code>remediationChecksStable</code></li>
+<li><code>remediationChecksInsufficientData</code></li>
+<li><code>remediationAppliedRatioPct</code></li>
+<li><code>remediationCooldownRatioPct</code></li>
+<li><code>remediationErrorRatioPct</code></li>
+<li><code>remediationRiskRatioPct</code></li>
+<li><code>remediationLatestRecordedAt</code></li>
+<li><code>recommendedFocusRemediationStatus</code></li>
+<li><code>recommendedFocusRemediationTrendStatus</code></li>
+</ul>
+</li>
+<li><code>history/checks</code> per-check item includes:<ul>
+<li><code>activeRiskStreak</code></li>
+<li><code>activeFailStreak</code></li>
+<li><code>latestEscalation</code></li>
+<li><code>escalationActionItems</code></li>
+<li><code>escalationActions</code></li>
+<li><code>remediation</code> (per-check remediation trend summary, status counts, and streak diagnostics)</li>
+</ul>
+</li>
+<li><code>history/checks</code> top-level includes:<ul>
+<li><code>actionQueue</code> (cross-check prioritized remediation queue with escalation/context metadata)</li>
+</ul>
+</li>
+<li><code>history/action-queue</code> returns a queue-first projection:<ul>
+<li>query filters:</li>
+<li><code>priority=p0|p1|p2</code></li>
+<li><code>category=stabilize|governance|trend|routing|evidence|verify|monitor</code></li>
+<li><code>checkId=&lt;exact_check_id_token&gt;</code></li>
+<li><code>remediationStatus=applied|not_applied|cooldown|error|ignored</code></li>
+<li><code>remediationTrend=improving|stable|regressing|insufficient_data</code></li>
+<li><code>summary</code> (queue totals, filtered queue totals, P0/P1/P2 distribution, recommended focus snapshot, remediation queue risk snapshot via <code>remediationRiskQueueItems</code> / <code>remediationRegressingQueueItems</code> / <code>remediationAverageRiskRatioPct</code> / <code>remediationTopRiskCheckId</code>, and echoed filter state via <code>priorityFilter</code> / <code>categoryFilter</code> / <code>checkIdFilter</code> / <code>remediationStatusFilter</code> / <code>remediationTrendFilter</code>)</li>
+<li><code>actionQueue</code> (priority-sorted actionable items with <code>queueId</code>, check context, and remediation risk fields <code>remediationLatestStatus</code> / <code>remediationTrendStatus</code> / <code>remediationActiveRiskStreak</code> / <code>remediationRiskRatioPct</code>)</li>
+</ul>
+</li>
+<li>Focus recommendation override:<ul>
+<li>When <code>dynamicModeAlignmentConflictStreak &gt;= 2</code> and latest status is <code>warn|fail</code>,
+  <code>recommendedFocusCheckId</code> is pinned to <code>tutor_routing_dynamic_mode_alignment</code>
+  with <code>recommendedFocusReason=dynamic_mode_alignment_conflict_streak</code>.</li>
+<li>When <code>pathStrategyAlignmentConflictStreak &gt;= 2</code> and latest status is <code>warn|fail</code>,
+  <code>recommendedFocusCheckId</code> can be pinned to <code>orchestration_path_strategy_alignment</code>
+  with <code>recommendedFocusReason=path_strategy_alignment_conflict_streak</code>.</li>
+</ul>
+</li>
+<li><code>GET /api/knowledge/runtime-capability-runbook/verify</code> includes extended diagnostics:</li>
+<li><code>selectedCheckHistory</code> (returned records, risk/fail streak, trend, latest timestamp)</li>
+<li><code>selectedCheckRemediation</code> (returned remediation records, normalized status counts, remediation streaks, ratio diagnostics, trend, latest remediation timestamp)</li>
+<li><code>selectedCheckEscalation</code> (<code>normal|watch|high|critical</code>)</li>
+<li><code>selectedCheckEscalationActionItems</code> (structured remediation action items with <code>actionId</code>, <code>priority</code>, <code>category</code>, <code>instruction</code>, endpoint and automation hints)</li>
+<li><code>selectedCheckEscalationActions</code> (ordered actionable remediation checklist for the current escalation level)</li>
+<li><code>dynamicModeAlignment</code> (<code>records</code>, <code>latestStatus</code>, <code>conflictStreak</code>, <code>failStreak</code>, <code>conflictPersistent</code>, focus recommendation hints)</li>
+<li><code>pathStrategyAlignment</code> (<code>records</code>, <code>latestStatus</code>, <code>conflictStreak</code>, <code>failStreak</code>, <code>conflictPersistent</code>, focus recommendation hints)</li>
+<li>Learning workbench refresh degradation telemetry contract:</li>
+<li>Frontend state telemetry fields include:<ul>
+<li><code>workbenchRefreshDegraded</code></li>
+<li><code>workbenchRefreshFailureSources</code></li>
+<li><code>workbenchRefreshFailureCount</code></li>
+<li><code>workbenchRefreshLastFailureSummary</code></li>
+<li><code>workbenchRefreshRecoveredSources</code></li>
+<li><code>workbenchRefreshRecoveredCount</code></li>
+<li><code>workbenchRefreshConsecutiveDegradedCount</code></li>
+<li><code>workbenchRefreshLastDurationMs</code></li>
+<li><code>workbenchRefreshAutoRemediationAt</code></li>
+<li><code>workbenchRefreshAutoRemediationApplied</code></li>
+<li><code>workbenchRefreshAutoRemediationReason</code></li>
+<li><code>workbenchRefreshAutoRemediationCheckId</code></li>
+<li><code>workbenchRefreshAutoRemediationCount</code></li>
+</ul>
+</li>
+<li>Runtime summary <code>workbenchRefresh(...)</code> includes degradation gate and remediation diagnostics:<ul>
+<li><code>gate=ok|warn</code> (<code>warn</code> when degraded streak <code>&gt;= 3</code>)</li>
+<li><code>autoRemediate=idle|attempted|applied</code></li>
+<li><code>autoReason</code></li>
+<li><code>autoCheck</code></li>
+<li><code>autoCount</code></li>
+<li><code>autoAt</code></li>
+</ul>
+</li>
+<li>Auto remediation trigger policy:<ul>
+<li>Triggered when <code>workbenchRefreshConsecutiveDegradedCount &gt;= 3</code></li>
+<li>Applies runbook focus auto-selection (<code>_maybeAutoFocusLearningRuntimeRunbookVerification</code>)</li>
+<li>On successful focus apply, runs trace suggestion workflow (<code>_applyLearningApiTraceSuggestionFromTopRegressingRuntimeCheck</code>)</li>
+</ul>
+</li>
+<li>Auto remediation cooldown policy:<ul>
+<li>If the previous remediation attempt is within <code>120s</code>, remediation actions are skipped for the current refresh cycle.</li>
+<li>Skip reason is recorded as <code>cooldown_active:&lt;remaining_seconds&gt;s</code>.</li>
+</ul>
+</li>
+<li>Preference persistence contract (<code>localStorage['nc_learning_workbench_prefs']</code>) includes remediation telemetry:<ul>
+<li><code>workbenchRefreshAutoRemediationCount</code></li>
+<li><code>workbenchRefreshAutoRemediationAt</code></li>
+<li><code>workbenchRefreshAutoRemediationApplied</code></li>
+<li><code>workbenchRefreshAutoRemediationReason</code></li>
+<li><code>workbenchRefreshAutoRemediationCheckId</code></li>
+</ul>
+</li>
+<li>Workbench runbook filter persistence also includes:<ul>
+<li>action-queue remediation filters:</li>
+<li><code>runtimeRunbookActionQueueRemediationStatusFilter</code></li>
+<li><code>runtimeRunbookActionQueueRemediationTrendFilter</code></li>
+<li>remediation-event history filters:</li>
+<li><code>runtimeRunbookRemediationHistorySinceMinutes</code></li>
+<li><code>runtimeRunbookRemediationHistoryStatusFilter</code></li>
+<li><code>runtimeRunbookRemediationHistorySourceFilter</code></li>
+<li><code>runtimeRunbookRemediationHistoryCheckFilter</code></li>
+<li><code>runtimeRunbookRemediationHistoryLimit</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="learning-path-strategy-contract-v170">Learning Path Strategy Contract (v1.7.0+)<a class="headerlink" href="#learning-path-strategy-contract-v170" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>POST /api/knowledge/path</code> request supports:</li>
+<li><code>strategy=balanced|mastery_recovery|exploration_boost</code></li>
+<li><code>recommendedActionLimit</code> (alias: <code>recommended_action_limit</code>, <code>maxActions</code>, <code>limit</code>)</li>
+<li><code>POST /api/knowledge/session/plan</code> supports path-strategy pass-through:</li>
+<li><code>pathStrategy</code> / <code>path_strategy</code> / <code>learningPathStrategy</code></li>
+<li><code>pathRecommendedActionLimit</code> / <code>path_recommended_action_limit</code></li>
+<li><code>POST /api/knowledge/session/execute</code> supports path-strategy pass-through for on-demand plan build (when <code>sessionPlan</code> is omitted):</li>
+<li><code>pathStrategy</code> / <code>path_strategy</code> / <code>learningPathStrategy</code> / <code>strategy</code></li>
+<li><code>pathRecommendedActionLimit</code> / <code>path_recommended_action_limit</code> / <code>recommendedActionLimit</code> / <code>recommended_action_limit</code></li>
+<li><code>StudySessionResponse.summary</code> includes path telemetry:</li>
+<li><code>pathStrategy</code></li>
+<li><code>pathRecommendedActionLimit</code></li>
+<li><code>pathRecommendedActionCount</code></li>
+<li><code>pathRecommendedMasteryActionCount</code></li>
+<li><code>pathRecommendedDivergenceActionCount</code></li>
+<li><code>pathRecommendedEvidenceCoverageRatioPct</code></li>
+<li><code>StudySessionExecutionRecord</code> and <code>/api/knowledge/session/history</code> records persist the same path telemetry fields for strategy-outcome traceability.</li>
+<li><code>StudySessionExecutionRecord</code> additionally persists strategy-selection decision telemetry:</li>
+<li><code>pathStrategySelectionSource</code></li>
+<li><code>pathStrategySelectionReason</code></li>
+<li>optional trend evidence: <code>pathStrategyTrendStatus</code>, <code>pathStrategyTrendScore</code>, <code>pathStrategyTrendConfidence</code></li>
+<li><code>/api/knowledge/session/history</code> <code>summary</code> now includes strategy source/outcome analytics:</li>
+<li><code>pathStrategySelectionSourceCounts</code></li>
+<li><code>pathStrategySelectionSourceAverageMasteryDeltaPct</code></li>
+<li><code>pathStrategySelectionSourcePositiveRatioPct</code></li>
+<li><code>pathStrategyOutcomeByStrategy[]</code> (includes per-strategy execution count, average delta, positive/negative ratio, and source mix)</li>
+<li><code>/api/knowledge/session/history</code> now supports both <code>POST</code> and <code>GET</code> query mode with shared filters:</li>
+<li>aliases for strategy filter: <code>pathStrategy</code> / <code>path_strategy</code> / <code>learningPathStrategy</code> / <code>strategy</code></li>
+<li>aliases for strategy-source filter: <code>pathStrategySelectionSource</code> / <code>path_strategy_selection_source</code> / <code>selectionSource</code> / <code>strategy_source</code></li>
+<li>aliases for time-window filter: <code>sinceMinutes</code> / <code>since_minutes</code> / <code>windowMinutes</code> / <code>window_minutes</code></li>
+<li><code>summary</code> now echoes <code>matchedRecordsBeforeLimit</code> and <code>appliedFilters</code> (<code>limit</code>, <code>sinceMinutes</code>, <code>pathStrategy</code>, <code>pathStrategySelectionSource</code>)</li>
+<li><code>KnowledgeSystemState</code> now embeds <code>sessionStrategyTelemetry</code> for runtime governance:</li>
+<li>trend-auto share and outcome signals (<code>trendAutoSelectionSharePct</code>, <code>trendAutoAverageMasteryDeltaPct</code>, <code>trendAutoNegativeRatioPct</code>)</li>
+<li>source distribution and per-strategy aggregated outcome breakdown</li>
+<li><code>POST /api/knowledge/quality/snapshot</code> now includes strategy-quality telemetry:</li>
+<li><code>snapshot.pathStrategyExecutionCoveragePct</code></li>
+<li><code>snapshot.pathStrategyAverageMasteryDeltaPct</code></li>
+<li><code>diagnostics.totalSessionExecutions</code></li>
+<li><code>diagnostics.pathStrategyExecutionRecords</code></li>
+<li><code>GET /api/knowledge/quality/trend</code> deltas now include:</li>
+<li><code>pathStrategyExecutionCoverageDeltaPct</code></li>
+<li><code>pathStrategyAverageMasteryDeltaDeltaPct</code></li>
+<li><code>GET /api/knowledge/quality/trend</code> now includes <code>strategyBreakdown[]</code> for strategy-segmented trend diagnostics:</li>
+<li>Core fields: <code>strategy</code>, <code>status</code>, <code>score</code>, <code>confidence</code>, <code>reason</code></li>
+<li>Window snapshots: <code>windows.recent</code> and <code>windows.previous</code> with <code>sampleCount</code>, <code>executionCoveragePct</code>, <code>averageMasteryDeltaPct</code></li>
+<li>Strategy deltas: <code>deltas.executionCoverageDeltaPct</code>, <code>deltas.averageMasteryDeltaDeltaPct</code></li>
+<li>Learning quality baseline management endpoints are now available:</li>
+<li><code>GET /api/knowledge/quality/baseline?userId=&lt;id&gt;</code></li>
+<li><code>POST /api/knowledge/quality/baseline</code> (set/update baseline snapshot)</li>
+<li><code>POST /api/knowledge/quality/baseline/clear</code> (clear baseline snapshot)</li>
+<li><code>POST /api/knowledge/quality/baseline/evaluate</code> (evaluate current quality against stored baseline)</li>
+<li><code>StudySessionResponse.signals.orchestration</code> now includes path-strategy decision telemetry:</li>
+<li><code>recommendedPathStrategy</code></li>
+<li><code>pathStrategySelectionSource=explicit_request|strategy_trend|mode_fallback</code></li>
+<li><code>pathStrategySelectionReason</code></li>
+<li>optional trend evidence: <code>pathStrategyTrendStatus</code>, <code>pathStrategyTrendScore</code>, <code>pathStrategyTrendConfidence</code></li>
+<li><code>StudySessionOrchestrationTrendRuntimeConfig</code> now includes:</li>
+<li><code>strategyAutoPathEnabled</code></li>
+<li><code>strategyMinConfidence</code></li>
+<li><code>POST /api/knowledge/session/orchestration/config</code> alias support:<ul>
+<li><code>strategyAutoPathEnabled</code> / <code>strategy_auto_path_enabled</code> / <code>autoPathEnabled</code></li>
+<li><code>strategyMinConfidence</code> / <code>strategy_min_confidence</code> / <code>autoPathMinConfidence</code></li>
+</ul>
+</li>
+<li>Alias compatibility for strategy:</li>
+<li><code>pathStrategy</code></li>
+<li><code>path_strategy</code></li>
+<li><code>learningStrategy</code></li>
+<li><code>LearningPathResponse.summary</code> includes:</li>
+<li><code>strategy</code></li>
+<li><code>recommendedActionLimit</code></li>
+<li><code>recommendedMasteryActionCount</code></li>
+<li><code>recommendedDivergenceActionCount</code></li>
+<li><code>recommendedEvidenceCoverageRatioPct</code></li>
+</ul>
+<h2 id="mermaid-canonical-baseline-obsidian">Mermaid Canonical Baseline (Obsidian)<a class="headerlink" href="#mermaid-canonical-baseline-obsidian" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Standard compatible format: fenced code block whose opening line is three backticks followed by <code>mermaid</code>, and whose closing line is three backticks.</li>
+<li>Godot runtime rendering remains PNG-first; Mermaid renderer preference should allow fallback (<code>auto</code>) to avoid bridge-only hard failures.</li>
+<li>Detailed field and route contracts:</li>
+<li><a href="../godot-notemd-markdown-interfaces/">Godot + NoteMD + Markdown Interfaces</a></li>
+</ul>
+<h2 id="app_config-runtime-contract-hook">app_config Runtime Contract Hook<a class="headerlink" href="#app_config-runtime-contract-hook" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Frontend app-config hydration command:</li>
+<li><code>invoke('get_app_runtime_config')</code></li>
+<li>Hydrated projection:</li>
+<li><code>window.__NC_APP_CONFIG.language</code></li>
+<li><code>window.__NC_APP_CONFIG.multiWindow.*</code></li>
+<li>Detailed schema reference:</li>
+<li><a href="../app-config-schema/">app_config.toml Schema</a></li>
+</ul>
+<h2 id="policy-gate-families">Policy Gate Families<a class="headerlink" href="#policy-gate-families" title="Permanent link">&para;</a></h2>
+<ul>
+<li>PathBridge strict schema</li>
+<li>Storage provider contracts</li>
+<li>Mobile runtime boundary contracts</li>
+<li>SBOM + attestation policy contracts</li>
+<li>Sidecar signature and privacy manifest contracts</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

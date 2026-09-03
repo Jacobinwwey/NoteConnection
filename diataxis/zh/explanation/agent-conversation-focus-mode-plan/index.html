@@ -1,0 +1,3164 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/diataxis/zh/explanation/agent-conversation-focus-mode-plan/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>解释：Agent 对话与 Focus Mode 主线交付方案 - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#agent-focus-mode" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              解释：Agent 对话与 Focus Mode 主线交付方案
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#2026-05-27-tauri-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-05-27 Tauri-first 回复渲染交付
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-05-27 Tauri-first 回复渲染交付">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        已交付实施方案
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        剩余跟进项
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        本阶段验收标准
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        当前分支状态
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        产品目标
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        交互模型
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        为什么这是当前推进重心
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        交付约束
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        必须保持的约束
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        本切片非目标
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        复杂度控制原则
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        必要架构
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 对话运行时契约
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 前端对话面板
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-focus-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 前端 Focus Mode 交接链路
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-godot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Godot 学习路径窗口
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 数据映射规则
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        实施顺序
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-atyped-conversation-capability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase A：typed conversation capability
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase B：前端对话面板
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-c-focus-mode-helper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase C：前端 Focus Mode 集成交接 helper
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-d-pane-fullscreen-promote" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase D：并行 pane 编排与 fullscreen promote
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-e" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase E：验证与文档
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        风险与坑点
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-atom-id-graph-node-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. atom ID 与 graph node ID 漂移
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 多套编排逻辑并存
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-pane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 并行 pane 协调错误
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-godot_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Godot 面板所有权混乱
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        最佳实践决策
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        当前推进优先级
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        关联页面
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="agent-focus-mode">解释：Agent 对话与 Focus Mode 主线交付方案<a class="headerlink" href="#agent-focus-mode" title="Permanent link">&para;</a></h1>
+<p>本页定义 NoteConnection 当前主线交付重点：</p>
+<ul>
+<li>用户在前端与 agent 聊天，</li>
+<li>前端返回可在本地查看的知识点，</li>
+<li>用户点击知识点后，在对话窗口侧边工作区中显示该节点的 Tauri 图界面 <code>focus mode</code> pane，</li>
+<li>用户点击“学习路径”动作后，在侧边工作区中显示学习路径 pane，</li>
+<li><code>focus mode</code> 与 <code>学习路径</code> 两个 pane 可以并排共存，</li>
+<li>两个 pane 都支持各自独立提升为全屏。</li>
+</ul>
+<h2 id="2026-05-27-tauri-first">2026-05-27 Tauri-first 回复渲染交付<a class="headerlink" href="#2026-05-27-tauri-first" title="Permanent link">&para;</a></h2>
+<p>Tauri-first reply-rendering baseline 现已实现。</p>
+<p>当前已交付：</p>
+<ul>
+<li><code>src/learning/types.ts</code> 与 <code>src/learning/KnowledgeLearningPlatform.ts</code> 现已在保留 legacy <code>assistantMessage</code> 的同时返回向前兼容的 <code>assistantBlocks</code>，</li>
+<li><code>src/frontend/markdown_runtime.js</code> 现已提供一套从 Reader 侧逻辑抽取出来的共享 markdown / math / mermaid runtime，</li>
+<li><code>src/frontend/workspace_panes.js</code> 现已在结构化载荷存在时通过 typed blocks 挂载 assistant reply，而不再只走纯文本，</li>
+<li><code>src/frontend/agent_workspace.js</code> 继续保留 legacy fallback，因此旧的 <code>assistantMessage</code>-only 响应仍可显示，</li>
+<li><code>html_artifact</code> 现已具备 sandboxed preview 路径，而不再需要把任意完整 HTML 直接注入主聊天 DOM。</li>
+</ul>
+<p>如果暂时允许 Tauri 优先、把 Godot 视为后续适配目标，那么架构重心现在已经按预期对齐：</p>
+<ul>
+<li>Tauri 是 rich-render baseline，</li>
+<li>Reader 的 markdown / math / mermaid 管线是主渲染 substrate，</li>
+<li>Godot 未来消费的是降级 / 物化后的输出，而不是继续反向约束当前 Tauri UX。</li>
+</ul>
+<h3 id="_1">已交付实施方案<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>响应契约演进</strong></li>
+<li><code>assistantMessage</code> 继续作为兼容回退字段保留，</li>
+<li><code>assistantBlocks</code> 已作为 typed reply rendering 载体落地，</li>
+<li>当前 block 基线包含：<ul>
+<li><code>main_markdown</code></li>
+<li><code>citations</code></li>
+<li><code>knowledge_actions</code></li>
+<li><code>system_notice</code></li>
+<li>可选 <code>html_artifact</code></li>
+</ul>
+</li>
+<li>
+<p>主要触点：</p>
+<ul>
+<li><code>src/learning/api.ts</code></li>
+<li><code>src/learning/types.ts</code></li>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+<li><code>src/server.ts</code></li>
+</ul>
+</li>
+<li>
+<p><strong>共享渲染运行时抽取</strong></p>
+</li>
+<li>已直接复用 Reader 成熟链路，而不是再造第四套 markdown 路径，</li>
+<li>可复用的 markdown / math / mermaid runtime 已从以下位置抽取：<ul>
+<li><code>src/frontend/reader.js</code></li>
+<li><code>src/frontend/app.js</code></li>
+<li><code>src/reader_renderer.ts</code></li>
+<li><code>src/routes/render.ts</code></li>
+</ul>
+</li>
+<li>
+<p>这套共享 runtime 现已首先服务 browser/Tauri，同时保留未来为 Godot 做物化输出的边界。</p>
+</li>
+<li>
+<p><strong>agent workspace 中的消息块渲染器</strong></p>
+</li>
+<li>结构化载荷存在时，已用 typed block renderer 替换当前的 plain message mounting，</li>
+<li>现有 conversation-card / result-presentation registry 继续保持可用，</li>
+<li>
+<p>assistant-reply renderer 现已落在以下文件中：</p>
+<ul>
+<li><code>src/frontend/agent_workspace.js</code></li>
+<li><code>src/frontend/workspace_panes.js</code></li>
+<li><code>src/frontend/index.html</code></li>
+<li><code>src/frontend/styles.css</code></li>
+</ul>
+</li>
+<li>
+<p><strong>HTML artifact 路径</strong></p>
+</li>
+<li>任意完整 HTML 不会直接注入主聊天 DOM，</li>
+<li>
+<p>较大 HTML 输出会通过 artifact 语义与 sandboxed preview 路径展示。</p>
+</li>
+<li>
+<p><strong>流式输出与迁移安全</strong></p>
+</li>
+<li>当前 SSE + sync fallback 行为已保留，</li>
+<li>结构化回复现已通过 <code>main_markdown</code> block 进入渲染链，而 legacy 回复仍能平滑回退，</li>
+<li>现有 <code>knowledgePoints</code> 与 capability execution 行为保持向前兼容。</li>
+</ol>
+<h3 id="_2">剩余跟进项<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>当更多端点开始返回 richer assistant payload 时，继续扩充 block 覆盖面，</li>
+<li>让新的共享 render substrate 在真实 browser/Tauri 运行时下持续经受验证，</li>
+<li>后续再决定是否让 Reader 本体进一步委托更多内部 helper 给这套共享 runtime，而不是只共享已抽取逻辑。</li>
+</ul>
+<h3 id="_3">本阶段验收标准<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Tauri agent reply 可以稳定渲染 markdown 标题、列表、表格、KaTeX 与 Mermaid，且不会让持久错误遮罩占据可见聊天界面。</li>
+<li>当后端仅返回 legacy <code>assistantMessage</code> 时，reply surface 仍可正常工作。</li>
+<li>现有 <code>knowledgePoints</code>、capability execution 与 card registry 保持向前兼容。</li>
+<li>同一套共享 render substrate 在后续可以被 Godot 物化 / 降级消费，而不是在当前阶段先把 Godot 约束硬塞回 Tauri UX。</li>
+</ol>
+<p>这条主线之所以成为当前优先级，是因为它能把现有学习内核、Path Mode、Godot 学习路径与前端交互收敛成一个单一可发现入口，而不是继续分散在不同工作台与按钮路径中。</p>
+<h2 id="_4">当前分支状态<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p>这一切片已经不再停留在“只有方案”阶段。</p>
+<p>当前已落地：</p>
+<ul>
+<li><code>POST /api/knowledge/conversation</code> 已可从 learning platform 返回可操作的本地知识点；</li>
+<li>主前端已经落入 <code>agent workspace</code> 壳层（<code>src/frontend/index.html</code>）；</li>
+<li>点击 <code>Focus</code> 已会解析 live graph node 并调用现有 graph focus 流程；</li>
+<li>点击 <code>Learning Path</code> 已不再停在文本占位，而是会把现有 path workspace 挂入停靠 pane；</li>
+<li>图谱布局已经为 docked workspace 预留宽度，graph surface 与 agent surface 可以并存。</li>
+<li>graph focus 的 fullscreen 已可提升真实 graph workspace，同时保留一个可恢复的控制卡；</li>
+<li>新壳层静态文案与运行时按钮/空态标签已具备双语覆盖，且已有知识卡片动作按钮与本地化系统消息会在语言切换时重渲；conversation card 的重渲链路也已收敛为 <code>workspace_panes</code> 中的 card-kind 注册表驱动，降低后续漂移风险。</li>
+<li>conversation knowledge point 现在已经具备可执行 typed descriptor：除 <code>focus</code> / <code>learning path</code> 外，已接入 tutor 侧 <code>generate_quiz</code> / <code>recap</code> / <code>generate_transfer</code> / <code>generate_counterexample</code> / <code>follow_up</code>、query 侧 <code>compare_query_backends</code> / <code>inspect_query_backend_diagnostics</code> / <code>inspect_query_backend_comparison_history</code> / <code>inspect_query_backend_comparison_trend</code>、导师诊断侧 <code>inspect_tutor_adapter_telemetry</code> / <code>inspect_tutor_trace_diagnostics</code>、质量/会话诊断侧 <code>inspect_learning_quality_trend</code> / <code>inspect_learning_quality_history</code> / <code>inspect_session_plan_quality_trend</code> / <code>inspect_session_plan_quality_history</code>，并接入 session 侧 <code>inspect_session_history</code> / <code>build_study_session</code>，同时补齐 execution / failure / UI hint 元数据。</li>
+<li>browser smoke 已覆盖真实 <code>conversation/path/query-compare/query-compare-history/query-compare-trend/quality-trend/quality-history/session-plan-quality-trend/session-plan-quality-history/session-plan</code> 后端链路、真实 graph runtime、真实 path runtime，并会输出 screenshot / console / network-summary 证据产物。</li>
+</ul>
+<p>仍未完成：</p>
+<ul>
+<li>Tauri strict 生命周期与窗口证据链在实现层面已经闭环，但在宿主层面仍依赖 Linux/CI 预装 <code>javascriptcoregtk-4.1</code>、<code>libsoup-3.0</code>、<code>webkit2gtk-4.1</code> 才能通过 <code>verify:agent-workspace:tauri:rust:strict</code>、<code>verify:agent-workspace:tauri:window-evidence:strict</code>、<code>verify:agent-workspace:tauri:evidence:index:strict</code>、<code>verify:agent-workspace:tauri:evidence:manifest:strict</code>；当前 Windows 宿主则主要证明 non-strict tauri/runtime 行为与 load-flow parity 路径。</li>
+<li>当前 <code>study_session_card</code> / <code>tutor_action_card</code> / <code>session_history_card</code> / <code>query_backend_comparison_card</code> / <code>query_backend_diagnostics_card</code> / <code>query_backend_comparison_history_card</code> / <code>query_backend_comparison_trend_card</code> / <code>tutor_adapter_telemetry_card</code> / <code>tutor_trace_diagnostics_card</code> / <code>learning_quality_trend_card</code> / <code>learning_quality_history_card</code> / <code>session_plan_quality_trend_card</code> / <code>session_plan_quality_history_card</code> 已支持语言切换后重渲，且已统一走注册表驱动；同时已新增源码级门禁测试校验 append-kind 与注册表键集合一致（<code>src/agent_workspace.frontend.test.ts</code>）。后续新增 card kind 时，需要默认通过该门禁。</li>
+<li>可执行 contract 现已由 <code>src/learning/KnowledgeLearningPlatform.ts</code> 的真实 query-comparison、staleness、learning-quality、session-plan-quality、query-backend-diagnostics 结果面支撑；后续重点不再是“把空占位接通”，而是把这些输出对齐到真实 Phase-1 graphdb/ANN 基线并升级为发布级门禁。</li>
+<li>server bootstrap 现在已经注入默认激活态本地 <code>tutorAdapter</code>，同时保留 <code>local</code> + <code>cloud</code> catalog，因此正常 runtime tutor 执行已可产出 adapter telemetry；后续路由工作是生产级多 provider 策略，而不是基础激活问题。</li>
+</ul>
+<h2 id="_5">产品目标<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<p>目标用户流如下：</p>
+<ol>
+<li>用户在前端对话面板输入请求。</li>
+<li>后端返回：</li>
+<li>正常对话回答，</li>
+<li>可在本地解析的知识点列表，</li>
+<li>可选路径动作。</li>
+<li>当用户点击某个知识点时：</li>
+<li>前端将其解析为本地图中的可定位节点，</li>
+<li>对话主表面保持不变，</li>
+<li>侧边工作区展示该节点对应的 Tauri 图界面 <code>focus mode</code> pane，</li>
+<li>该 pane 可与学习路径 pane 并排存在，</li>
+<li>用户可将该 pane 提升为全屏。</li>
+<li>当用户点击 <code>学习路径</code> 时：</li>
+<li>侧边工作区打开一个学习路径 pane，</li>
+<li>它不需要替换 graph focus pane，</li>
+<li>用户在需要时可将该 pane 提升为全屏工作区。</li>
+</ol>
+<h2 id="_6">交互模型<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<p>正确的 UX 模型应当是：</p>
+<ul>
+<li>主表面：agent conversation，</li>
+<li>次表面：停靠式侧边工作区，</li>
+<li>子 pane：</li>
+<li>graph focus mode，</li>
+<li>learning path，</li>
+<li>升级动作：全屏提升。</li>
+</ul>
+<p>这意味着：</p>
+<ul>
+<li>节点点击不能替换掉对话主界面，</li>
+<li>学习路径不能默认替换 graph focus，</li>
+<li>产品必须支持两个 pane 并排共存，</li>
+<li>全屏只是视图升级，不是默认路径。</li>
+</ul>
+<h2 id="_7">为什么这是当前推进重心<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<p>仓库已经具备核心原语：</p>
+<ul>
+<li>知识查询与 tutor action：</li>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+<li><code>src/server.ts</code></li>
+<li>学习路径生成：</li>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+<li>前端工作台与 bridge 感知 UI：</li>
+<li><code>src/frontend/path_app.js</code></li>
+<li><code>src/frontend/app.js</code></li>
+<li>Tauri 窗口切换：</li>
+<li><code>src-tauri/src/lib.rs</code></li>
+<li>Godot 路径与树面板：</li>
+<li><code>path_mode/scripts/path_renderer.gd</code></li>
+<li><code>path_mode/scripts/path_mode_ui.gd</code></li>
+<li><code>path_mode/scripts/tree_view_panel.gd</code></li>
+<li><code>path_mode/scripts/learning_state_machine.gd</code></li>
+<li>Bridge 消息转发：</li>
+<li><code>src/core/PathBridge.ts</code></li>
+</ul>
+<p>当前缺的不是基础设施，而是 host-owned pane 级别的编排与统一入口。</p>
+<h2 id="_8">交付约束<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<h2 id="_9">必须保持的约束<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<ul>
+<li>以 <code>src/learning/api.ts</code> 为契约真相源，</li>
+<li>保持 agent conversation 是主容器，</li>
+<li>不绕过 <code>PathBridge</code> 直接做 Godot 特判，</li>
+<li>不让 Godot 成为路径选择的真相源，</li>
+<li>不拆出第二套“聊天路径逻辑”，</li>
+<li>保持 Tauri 与浏览器 fallback 行为确定。</li>
+</ul>
+<h2 id="_10">本切片非目标<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<ul>
+<li>不引入第二套 memory platform，</li>
+<li>不引入外部 Python 对话/记忆服务，</li>
+<li>不为聊天单独引入 React/Vue/Electron 子应用，</li>
+<li>不重写当前 tutor/runtime governance，</li>
+<li>不重做 Godot UI 布局系统，</li>
+<li>不上完整多 agent runtime。</li>
+</ul>
+<h2 id="_11">复杂度控制原则<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<p>实现必须优先压低推进复杂度。</p>
+<p>这意味着：</p>
+<ul>
+<li>复用现有 HTML/CSS/JS 前端壳层，</li>
+<li>先扩展当前 sidebar / overlay / panel controller，</li>
+<li>避免为 chat 单独引入新的前端框架，</li>
+<li>外部桌面客户端只作为交互参考，不作为代码捐赠源。</li>
+</ul>
+<p>优先复用的本地前端文件：</p>
+<ul>
+<li><code>src/frontend/index.html</code></li>
+<li><code>src/frontend/styles.css</code></li>
+<li><code>src/frontend/workspace_panes.js</code></li>
+<li><code>src/frontend/agent_workspace.js</code></li>
+<li><code>src/frontend/path_app.js</code></li>
+<li><code>src/frontend/app.js</code></li>
+</ul>
+<p>运行时注意项：</p>
+<ul>
+<li>实时 sidecar/frontend 服务读取的是 <code>dist/src/frontend</code>，因此 <code>src/frontend/*</code> 的修改只有在执行 <code>npm run build</code> 后才会进入真实运行时。</li>
+<li>可通过 <code>npm run verify:agent-workspace:runtime</code> 对复制后的前端壳层做真实临时 sidecar/server 校验，而不是继续依赖手动 <code>npm start</code> 检查。</li>
+<li>可通过 <code>npm run verify:agent-workspace:browser</code> 在真实浏览器中校验渲染后的 shell；该检查会先通过真实 ingest API 预热最小文档，并写入最小 <code>data.js</code> 以启动真实 graph/path runtime，再命中真实 <code>conversation/path/query-compare/quality/session/runbook</code> 后端链路（含 trend + history 诊断，以及 runbook verify/checks/action-queue），覆盖语言切换、本地化卡片/消息重渲、runbook 卡片中的 ANN sync-health 证据，以及 graph focus promotion 状态变化，并输出 screenshot / console / network-summary 证据路径。</li>
+<li>下一阶段的实现重点不再是“证明这条链路能跑”，而是收口 <code>conversation</code> 输出与前端动作编排之间的 capability contract。</li>
+</ul>
+<p>外部交互参考：</p>
+<ul>
+<li>Cherry Studio 官方仓库：<code>https://github.com/CherryHQ/cherry-studio</code></li>
+<li>Chatbox 官方仓库：<code>https://github.com/chatboxai/chatbox</code></li>
+</ul>
+<p>可借鉴的点：</p>
+<ul>
+<li>docked chat + workspace 组合，</li>
+<li>以 message 为中心的动作入口，</li>
+<li>轻量的 pane promote / restore 交互。</li>
+</ul>
+<p>不应直接借鉴的点：</p>
+<ul>
+<li>它们的技术栈，</li>
+<li>它们的状态架构，</li>
+<li>它们的打包与运行模型。</li>
+</ul>
+<h2 id="_12">必要架构<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
+<h2 id="1">1. 对话运行时契约<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<p>现有 learning API 之上已经落入一个面向 conversation 的最小 typed capability 层。
+下一步不是重新发明 UI，而是在不回退到 endpoint-specific UI branching 的前提下继续扩展这套 contract。</p>
+<p>当前最小响应结构已能返回：</p>
+<ul>
+<li>conversational message，</li>
+<li>可绑定证据或本地实体的知识命中，</li>
+<li>本地知识点卡片，</li>
+<li>CTA action：</li>
+<li><code>open_focus_mode</code></li>
+<li><code>open_learning_path</code></li>
+<li><code>generate_quiz</code></li>
+<li><code>recap</code></li>
+<li><code>generate_transfer</code></li>
+<li><code>generate_counterexample</code></li>
+<li><code>follow_up</code></li>
+<li><code>compare_query_backends</code></li>
+<li><code>inspect_query_backend_diagnostics</code></li>
+<li><code>inspect_query_backend_comparison_history</code></li>
+<li><code>inspect_query_backend_comparison_trend</code></li>
+<li><code>inspect_tutor_adapter_telemetry</code></li>
+<li><code>inspect_tutor_trace_diagnostics</code></li>
+<li><code>inspect_learning_quality_trend</code></li>
+<li><code>inspect_learning_quality_history</code></li>
+<li><code>inspect_session_plan_quality_trend</code></li>
+<li><code>inspect_session_plan_quality_history</code></li>
+<li><code>inspect_session_history</code></li>
+<li><code>build_study_session</code></li>
+</ul>
+<p>同时，capability descriptor 现在还应承载：</p>
+<ul>
+<li>execution 语义，</li>
+<li>failure 语义，</li>
+<li>可选 UI hint。</li>
+</ul>
+<p>实现规则：</p>
+<ul>
+<li>本地知识点必须引用真实可解析的 atom/node 标识，</li>
+<li>前端不得渲染无法映射回本地图状态的点击目标。</li>
+</ul>
+<p>预计涉及：</p>
+<ul>
+<li><code>src/learning/api.ts</code></li>
+<li><code>src/learning/types.ts</code></li>
+<li><code>src/server.ts</code></li>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+</ul>
+<h2 id="2">2. 前端对话面板<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<p>前端需要一个专门的 agent chat 入口，而不是继续依赖临时 prompt 或工作台里的零散动作。</p>
+<p>职责包括：</p>
+<ul>
+<li>提交用户消息，</li>
+<li>渲染 agent 输出，</li>
+<li>渲染知识点卡片，</li>
+<li>渲染显式动作按钮，</li>
+<li>管理 host-owned 侧边工作区，可在其中同时承载 graph focus mode 与 learning path 两个 pane，</li>
+<li>将“结果渲染”和“图谱联动”逻辑解耦。</li>
+</ul>
+<p>预计涉及：</p>
+<ul>
+<li><code>src/frontend/path.html</code></li>
+<li><code>src/frontend/path_styles.css</code></li>
+<li><code>src/frontend/path_app.js</code></li>
+</ul>
+<p>最佳实践：</p>
+<ul>
+<li>在 <code>path_app.js</code> 中集中收敛“conversation result -&gt; graph action mapping”，</li>
+<li>增加一个 pane-layout controller 管理 dock / undock / split / fullscreen，</li>
+<li>不要把点击跳转逻辑散落到模板和 bridge 回调里。</li>
+</ul>
+<h2 id="3-focus-mode">3. 前端 Focus Mode 交接链路<a class="headerlink" href="#3-focus-mode" title="Permanent link">&para;</a></h2>
+<p>知识点点击必须复用现有 <code>src/frontend/app.js</code> 中的前端图谱 <code>focus mode</code> 实现，但它应渲染在停靠 pane 中，而不是抢占整个主视图。</p>
+<p>必需行为：</p>
+<ul>
+<li>将知识点解析为 graph node / atom，</li>
+<li>解析出 live graph node instance，</li>
+<li>打开或刷新 graph-focus pane，</li>
+<li>调用现有前端 focus-mode 入口，</li>
+<li>保持 browser 与 Tauri 表现一致，</li>
+<li>知识点点击这条分支不依赖 bridge / Godot。</li>
+</ul>
+<p>关键代码：</p>
+<ul>
+<li><code>src/frontend/app.js</code></li>
+<li><code>src/frontend/path_app.js</code></li>
+</ul>
+<p>坑点：</p>
+<ul>
+<li>如果 conversation 层按 label 而不是稳定 ID 解析，很容易聚焦到错误节点或过期节点对象。</li>
+<li>需要一个事务式 helper，统一做“解析节点 -&gt; 取 live node instance -&gt; 打开/刷新 graph-focus pane -&gt; 调用 <code>enterFocusMode</code>”。</li>
+</ul>
+<h2 id="4-godot">4. Godot 学习路径窗口<a class="headerlink" href="#4-godot" title="Permanent link">&para;</a></h2>
+<p>产品要求是“学习路径也在停靠工作区中展示、可与 graph focus 并排共存、并可提升为全屏”。但这不等于要把 live Godot 直接内嵌到对话侧边栏里；这是一个高风险实现假设，不能直接写死。</p>
+<p>更合理的两层方案是：</p>
+<ul>
+<li>产品契约：停靠 learning-path pane + 全屏提升，</li>
+<li>实现自由度：停靠 pane 优先使用 Tauri 承载的 path preview，全屏时再进入更强的 Godot 工作区。</li>
+</ul>
+<p>关键代码：</p>
+<ul>
+<li><code>path_mode/scripts/path_mode_ui.gd</code></li>
+<li><code>path_mode/scripts/tree_view_panel.gd</code></li>
+<li><code>path_mode/scripts/path_renderer.gd</code></li>
+<li><code>path_mode/scripts/learning_state_machine.gd</code></li>
+</ul>
+<p>本切片只应增加：</p>
+<ul>
+<li>一个由前端持有的 learning-path pane contract，</li>
+<li>一个允许 graph focus 与 learning path 并排存在的 pane-layout contract，</li>
+<li>一个显式的 fullscreen promote 路径，</li>
+<li>一个 bridge-safe 的 Godot 焦点命令，供被提升后的路径工作区使用。</li>
+</ul>
+<p>最佳实践：</p>
+<ul>
+<li>前端持有 pane-layout state，</li>
+<li>Godot 持有全屏路径工作区 state，</li>
+<li>提升消息必须幂等，</li>
+<li>不要把“侧边 pane”误写成“必须内嵌 Godot”。</li>
+</ul>
+<h2 id="5">5. 数据映射规则<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<p>这条主线成立的前提是“知识点”必须等价于稳定、可操作的本地实体。</p>
+<p>规则：</p>
+<ul>
+<li>后端返回稳定 atom/node ID，</li>
+<li>前端按 ID 映射回图节点，</li>
+<li>若映射失败，则降级为纯文本结果而非可点击卡片，</li>
+<li>节点点击仅在映射成功时才进入前端 focus mode，</li>
+<li><code>学习路径</code> CTA 仅在知识点本地可操作时显示，</li>
+<li>两种动作都必须绑定同一个已解析节点标识，</li>
+<li>打开一个 pane 不应使另一个 pane 的 focus 失效。</li>
+</ul>
+<p>不要把模糊 label 匹配当作主键。</p>
+<h2 id="_13">实施顺序<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
+<h2 id="phase-atyped-conversation-capability">Phase A：typed conversation capability<a class="headerlink" href="#phase-atyped-conversation-capability" title="Permanent link">&para;</a></h2>
+<p>先补最小服务端契约：</p>
+<ul>
+<li>request：</li>
+<li><code>userId</code></li>
+<li><code>message</code></li>
+<li>可选 mode/context</li>
+<li>response：</li>
+<li><code>assistantMessage</code></li>
+<li><code>knowledgePoints[]</code></li>
+<li><code>actions[]</code></li>
+</ul>
+<p>这一步必须先于 UI 扩展完成。</p>
+<h2 id="phase-b">Phase B：前端对话面板<a class="headerlink" href="#phase-b" title="Permanent link">&para;</a></h2>
+<p>增加用户可见的 chat surface，并渲染知识点卡片。</p>
+<p>必须包含：</p>
+<ul>
+<li>loading / error / empty state，</li>
+<li>明确可点击的本地知识点，</li>
+<li>side work area，至少支持并排的 graph-focus pane、learning-path pane，以及各自的 fullscreen action，</li>
+<li>点击后进入前端 <code>focus mode</code>，</li>
+<li>每个知识点或当前焦点的 <code>学习路径</code> 动作按钮。</li>
+</ul>
+<h2 id="phase-c-focus-mode-helper">Phase C：前端 Focus Mode 集成交接 helper<a class="headerlink" href="#phase-c-focus-mode-helper" title="Permanent link">&para;</a></h2>
+<p>增加一个统一前端 helper，负责：</p>
+<ul>
+<li>节点解析，</li>
+<li>解析 live graph node，</li>
+<li>打开或刷新 graph-focus pane，</li>
+<li>调用现有前端 focus-mode 入口，</li>
+<li>处理失败降级。</li>
+</ul>
+<p>这个 helper 应成为以下入口的唯一实现：</p>
+<ul>
+<li>对话点击动作，</li>
+<li>后续工作台 focus 动作，</li>
+<li>后续推荐路径动作。</li>
+</ul>
+<h2 id="phase-d-pane-fullscreen-promote">Phase D：并行 pane 编排与 fullscreen promote<a class="headerlink" href="#phase-d-pane-fullscreen-promote" title="Permanent link">&para;</a></h2>
+<p>增加一个 host 级 pane 编排 controller，并提供显式 fullscreen promote 路径。</p>
+<p>推荐姿态：</p>
+<ul>
+<li>graph-focus pane：Tauri-hosted focus mode，</li>
+<li>learning-path pane：优先使用 Tauri 承载的 learning-path experience，</li>
+<li>全屏：提升到 Godot 工作区，</li>
+<li>两者共享同一个 focus identity。</li>
+</ul>
+<p>不要在 v1 就把“停靠 pane”和“全屏 Godot”视为同一渲染面。</p>
+<h2 id="phase-e">Phase E：验证与文档<a class="headerlink" href="#phase-e" title="Permanent link">&para;</a></h2>
+<p>补充测试：</p>
+<ul>
+<li>契约形状，</li>
+<li>前端动作渲染，</li>
+<li>前端 focus-mode helper，</li>
+<li>pane 并排共存与 split-layout 状态切换，</li>
+<li>fullscreen promote 路由，</li>
+<li>学习路径 handoff 命令路由。</li>
+</ul>
+<p>同步更新：</p>
+<ul>
+<li>进度看板，</li>
+<li>路线图，</li>
+<li>若有新增 endpoint / bridge contract，则更新接口文档。</li>
+</ul>
+<h2 id="_14">风险与坑点<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h2>
+<h2 id="1-atom-id-graph-node-id">1. atom ID 与 graph node ID 漂移<a class="headerlink" href="#1-atom-id-graph-node-id" title="Permanent link">&para;</a></h2>
+<p>如果 conversation 层返回的 atom ID 不能稳定映射到图节点，点击链路就会不确定。</p>
+<p>应对：</p>
+<ul>
+<li>明确定义一条 canonical mapping path，并以测试锁定。</li>
+</ul>
+<h2 id="2_1">2. 多套编排逻辑并存<a class="headerlink" href="#2_1" title="Permanent link">&para;</a></h2>
+<p>如果 <code>btn-path-mode</code>、工作台动作和对话动作各自维护一套 Godot 打开逻辑，后续一定会分叉。</p>
+<p>应对：</p>
+<ul>
+<li>收敛为一个共享前端 orchestration helper。</li>
+</ul>
+<h2 id="3-pane">3. 并行 pane 协调错误<a class="headerlink" href="#3-pane" title="Permanent link">&para;</a></h2>
+<p>如果“知识点点击”和“学习路径点击”共用同一条动作路径，产品行为会很快混乱并回归。</p>
+<p>应对：</p>
+<ul>
+<li>明确分支：</li>
+<li>节点点击 -&gt; graph-focus pane</li>
+<li><code>学习路径</code> 点击 -&gt; learning-path pane</li>
+<li>fullscreen -&gt; 提升到路径工作区</li>
+<li>pane 布局状态与 focus 解析状态必须解耦。</li>
+</ul>
+<h2 id="4-godot_1">4. Godot 面板所有权混乱<a class="headerlink" href="#4-godot_1" title="Permanent link">&para;</a></h2>
+<p>如果前端开始直接假设 Godot 面板状态归自己控制，后续 UI 调整会非常脆弱。</p>
+<p>应对：</p>
+<ul>
+<li>前端只发送意图，</li>
+<li>Godot 负责视图状态，</li>
+<li>bridge 消息保持窄接口和幂等语义。</li>
+</ul>
+<h2 id="_15">最佳实践决策<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h2>
+<ul>
+<li>learning platform core 继续做真相源。</li>
+<li>conversation result action 全部走 typed contract。</li>
+<li>本地知识点只有在 graph-mappable 时才可点击。</li>
+<li>节点点击复用现有前端 <code>focus mode</code> 路径。</li>
+<li>复用当前 web UI 壳层，只借鉴 Cherry Studio / Chatbox 的 UX 模式。</li>
+<li>主对话窗口负责 side-work-area 生命周期。</li>
+<li>graph focus 与 learning path 必须可以共存，而不是竞争单个 pane 槽位。</li>
+<li><code>学习路径</code> 的 fullscreen promote 才使用 Tauri + <code>PathBridge</code>。</li>
+<li>Godot 负责被提升后的路径工作区，前端负责默认侧边 pane orchestration。</li>
+</ul>
+<h2 id="_16">当前推进优先级<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h2>
+<p>这条交付链应当替代“泛化对话增强”，成为当前 L4 的第一优先级。</p>
+<p>优先顺序：</p>
+<ol>
+<li>前端 agent conversation 入口，</li>
+<li>本地知识点可操作化，</li>
+<li>并行 graph-focus pane，</li>
+<li>并行 learning-path pane，</li>
+<li>split-layout 与共存契约，</li>
+<li>fullscreen promote 契约，</li>
+<li>之后才是更深的 memory / personalization 工作。</li>
+</ol>
+<h2 id="_17">关联页面<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../development-progress-dashboard/">开发进度看板</a></li>
+<li><a href="../knowledge-mastery-evolution-roadmap/">知识彻底掌握演进路线图</a></li>
+<li><a href="../deeptutor-reuse-assessment/">DeepTutor 复用评估</a></li>
+<li><a href="../memos-reuse-assessment/">MemOS 复用评估</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

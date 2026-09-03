@@ -1,0 +1,3142 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/en/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>NoteConnection - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#noteconnection" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              NoteConnection
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Is
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#homepage-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Homepage Guide
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-architecture-snapshot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Architecture Snapshot
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quick Start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#desktop-system-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Desktop system dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-1-install-a-desktop-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 1: install a desktop release
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-2-run-from-npm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 2: run from npm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-3-install-globally" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 3: install globally
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-4-develop-locally" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 4: develop locally
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-5-android" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 5: Android
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#three-ways-to-use-noteconnection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three Ways to Use NoteConnection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Three Ways to Use NoteConnection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-knowledge-graph-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Knowledge Graph Workspace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-knowledge-workspace-rag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Knowledge Workspace RAG
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-path-mode-and-guided-learning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Path Mode and Guided Learning
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-a-knowledge-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why A Knowledge Graph?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature-tour" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Tour
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Feature Tour">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-visualization-and-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Visualization and layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-intelligence-and-inference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Intelligence and inference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-path-mode-structured-learning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Path Mode: structured learning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-performance-and-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Performance and control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-notemd-ai-document-workbench" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. NoteMD AI Document Workbench
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frontend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#desktop-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Desktop bridge
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#markdown-reader-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Markdown Reader Protocol
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-and-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build And Test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-and-privacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security And Privacy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#release-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acknowledgments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acknowledgments
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="noteconnection">NoteConnection<a class="headerlink" href="#noteconnection" title="Permanent link">&para;</a></h1>
+<div align="center">
+
+<img width="606" height="309" alt="NoteConnection banner" src="https://github.com/user-attachments/assets/92e90de5-2b1a-4398-8e8b-6e142c92b6a2" />
+
+[![npm version](https://badge.fury.io/js/noteconnection.svg)](https://www.npmjs.com/package/noteconnection)
+[![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](https://github.com/Jacobinwwey/NoteConnection/blob/main/LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/Jacobinwwey/NoteConnection?label=release)](https://github.com/Jacobinwwey/NoteConnection/releases/latest)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-2f6f9f)](https://jacobinwwey.github.io/NoteConnection/)
+
+**A local-first knowledge graph, learning workspace, and RAG runtime for Markdown knowledge bases.**
+
+[Root README](https://github.com/Jacobinwwey/NoteConnection/blob/main/README.md) | [中文文档](../zh/README.md) | [中文根 README](https://github.com/Jacobinwwey/NoteConnection/blob/main/README_zh.md) | [Quick Start](#quick-start) | [Feature Tour](#feature-tour) | [Architecture](#architecture) | [CLI](#cli-reference) | [Documentation](#documentation) | [Acknowledgments](#acknowledgments)
+
+</div>
+
+<h2 id="what-it-is">What It Is<a class="headerlink" href="#what-it-is" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Unlock the structure of your knowledge.</strong></p>
+</blockquote>
+<p>NoteConnection is a high-performance standalone system that transforms unstructured Markdown knowledge bases into directed knowledge graphs, learning paths, and grounded answers.</p>
+<p>Unlike traditional network views that show a dense web of links, NoteConnection focuses on <strong>hierarchy</strong>, <strong>learning paths</strong>, <strong>dependency structure</strong>, and <strong>source-grounded exploration</strong>. It is designed for large local knowledge bases, works independently of any specific note-taking app, and now ships as a browser/server runtime, Tauri desktop app, Godot Path Mode renderer, and Tauri Android build.</p>
+<p><img width="2010" height="2011" alt="NoteConnection graph overview" src="https://github.com/user-attachments/assets/fa55676d-f58d-414e-943c-7a10567f88a5" /></p>
+<h2 id="homepage-guide">Homepage Guide<a class="headerlink" href="#homepage-guide" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Start here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Install or run the app</td>
+<td><a href="#quick-start">Quick Start</a></td>
+</tr>
+<tr>
+<td>Understand the main product surfaces</td>
+<td><a href="#three-ways-to-use-noteconnection">Three Ways to Use NoteConnection</a></td>
+</tr>
+<tr>
+<td>See the restored detailed feature walkthrough</td>
+<td><a href="#feature-tour">Feature Tour</a></td>
+</tr>
+<tr>
+<td>Understand the code owners and runtime flow</td>
+<td><a href="#architecture">Architecture</a></td>
+</tr>
+<tr>
+<td>Configure a knowledge base</td>
+<td><a href="#configuration">Configuration</a></td>
+</tr>
+<tr>
+<td>Use the command line</td>
+<td><a href="#cli-reference">CLI Reference</a></td>
+</tr>
+<tr>
+<td>Read long-form docs</td>
+<td><a href="#documentation">Documentation</a></td>
+</tr>
+<tr>
+<td>Check recent releases</td>
+<td><a href="#release-notes">Release Notes</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="current-architecture-snapshot">Current Architecture Snapshot<a class="headerlink" href="#current-architecture-snapshot" title="Permanent link">&para;</a></h2>
+<p>This README is intentionally <strong>not</strong> the mainline architecture ledger. The previous dated architecture-status blocks were removed from the front page so the README stays useful as a product and contributor entry point.</p>
+<p>Current state in brief:</p>
+<ul>
+<li><strong>Knowledge Workspace</strong> uses scoped retrieval, grouped knowledge hits, right-pane source focus, matched-span highlighting, conversation status visibility, and graph-aware answer composition.</li>
+<li><strong>RAG path</strong> is TypeScript-native: retrieval, bounded graph context assembly, sufficiency/release review, citations, memory actions, and public-answer contraction stay inside the local runtime.</li>
+<li><strong>Graph substrate</strong> is real code: <code>KnowledgeAtom</code>, <code>RelationEdge</code>, <code>TemporalEdge</code>, path queries, mastery paths, session state, and export bundles are part of the implementation.</li>
+<li><strong>Compatibility</strong> is preserved through legacy <code>assistantMessage</code>, typed <code>assistantBlocks</code>, <code>app_config.toml</code> migration, Markdown reader fallback, and runtime-first packaging.</li>
+<li><strong>Architecture pressure</strong> remains in large owners such as <code>src/server.ts</code>, <code>src/learning/KnowledgeLearningPlatform.ts</code>, <code>src/frontend/workspace_panes.js</code>, and <code>src/frontend/agent_workspace.js</code>. Future work should extract around real invariants, not import another broad orchestration framework.</li>
+</ul>
+<p>Detailed progress tracking belongs in:</p>
+<ul>
+<li><a href="../diataxis/en/explanation/development-progress-dashboard/">Development Progress Dashboard</a></li>
+<li><a href="../solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20/">Agent Knowledge Workspace Graph Preview and Review Closure</a></li>
+<li><a href="../solutions/knowledge-workspace-dag-alignment-2026-06-10/">Knowledge Workspace and DAG Alignment Plan</a></li>
+</ul>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<h3 id="desktop-system-dependencies">Desktop system dependencies<a class="headerlink" href="#desktop-system-dependencies" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Required dependencies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Linux</strong></td>
+<td><code>libwebkit2gtk-4.1-dev</code>, <code>libgtk-3-dev</code>, <code>libsoup3.0</code>, <code>libjavascriptcoregtk-4.1-0</code> (Ubuntu/Debian: <code>sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev patchelf</code>)</td>
+</tr>
+<tr>
+<td><strong>macOS</strong></td>
+<td>No additional dependencies; system WebKit is included</td>
+</tr>
+<tr>
+<td><strong>Windows</strong></td>
+<td><a href="https://developer.microsoft.com/microsoft-edge/webview2/">Edge WebView2 Runtime</a> (pre-installed on Windows 11; Windows 10 may need manual install)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Linux Wayland users</strong>: Godot Path Mode requires <code>GDK_BACKEND=x11</code> on pure Wayland compositors. The launcher sets this automatically when <code>XDG_SESSION_TYPE=wayland</code> is detected.</p>
+</blockquote>
+<h3 id="option-1-install-a-desktop-release">Option 1: install a desktop release<a class="headerlink" href="#option-1-install-a-desktop-release" title="Permanent link">&para;</a></h3>
+<p>Download the latest installer or package from <a href="https://github.com/Jacobinwwey/NoteConnection/releases/latest">Releases</a>.</p>
+<p>Release assets currently include Windows installers, macOS DMG, Linux AppImage/deb, and Android APK.</p>
+<h3 id="option-2-run-from-npm">Option 2: run from npm<a class="headerlink" href="#option-2-run-from-npm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>npx<span class="w"> </span>noteconnection
+</code></pre></div>
+<h3 id="option-3-install-globally">Option 3: install globally<a class="headerlink" href="#option-3-install-globally" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>npm<span class="w"> </span>install<span class="w"> </span>-g<span class="w"> </span>noteconnection
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>noteconnection
+</code></pre></div>
+<h3 id="option-4-develop-locally">Option 4: develop locally<a class="headerlink" href="#option-4-develop-locally" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Jacobinwwey/NoteConnection.git
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>NoteConnection
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>npm<span class="w"> </span>install
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>npm<span class="w"> </span>start
+</code></pre></div>
+<p>The development server runs at <code>http://localhost:3000</code>.</p>
+<p>For GPU-enabled Tauri development on Windows:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>npm<span class="w"> </span>run<span class="w"> </span>tauri:dev:mini:gpu
+</code></pre></div>
+<p>Use that script instead of appending <code>--gpu</code> to another npm command.</p>
+<h3 id="option-5-android">Option 5: Android<a class="headerlink" href="#option-5-android" title="Permanent link">&para;</a></h3>
+<p>NoteConnection supports Android through <strong>Tauri Android</strong>. The older Capacitor APK path is deprecated and retained only as historical reference.</p>
+<p>Prerequisites:</p>
+<ul>
+<li>Node.js LTS</li>
+<li>Java JDK 21 or newer</li>
+<li>Android SDK configured through <code>ANDROID_HOME</code> or Android Studio</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>npm<span class="w"> </span>run<span class="w"> </span>tauri:android:init
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>npm<span class="w"> </span>run<span class="w"> </span>tauri:android:dev
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>npm<span class="w"> </span>run<span class="w"> </span>tauri:android:build
+</code></pre></div>
+<p>Use <code>npm run mobile:build:release</code> for the primary Android release path. It targets Tauri Android and runs the slim budget and Android prerequisite gates. <code>npm run mobile:build:compatibility</code> remains an explicit compatibility check for the historical Capacitor plus Tauri pair, not a release path.</p>
+<p>For a universal APK:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>npm<span class="w"> </span>run<span class="w"> </span>tauri:android:build:universal
+</code></pre></div>
+<h2 id="three-ways-to-use-noteconnection">Three Ways to Use NoteConnection<a class="headerlink" href="#three-ways-to-use-noteconnection" title="Permanent link">&para;</a></h2>
+<h3 id="1-knowledge-graph-workspace">1. Knowledge Graph Workspace<a class="headerlink" href="#1-knowledge-graph-workspace" title="Permanent link">&para;</a></h3>
+<p>Load a Markdown folder, build a graph, switch between force-directed and DAG views, inspect focus neighborhoods, and open matching source documents.</p>
+<p>Basic workflow:</p>
+<ol>
+<li>Choose a folder from <code>Knowledge_Base</code> or configure your own vault path.</li>
+<li>Click <strong>Load</strong>.</li>
+<li>Use DAG layout for hierarchy, force-directed layout for clusters, and Canvas for large graphs.</li>
+<li>Click a node to enter Focus Mode and inspect its context.</li>
+</ol>
+<h3 id="2-knowledge-workspace-rag">2. Knowledge Workspace RAG<a class="headerlink" href="#2-knowledge-workspace-rag" title="Permanent link">&para;</a></h3>
+<p>Ask scoped questions against the current knowledge base. The answer path uses grouped knowledge points, citations, graph context, sufficiency checks, and release review while keeping the public response to one user-facing answer.</p>
+<p>The current implementation is designed around <strong>RSE-style evidence shaping</strong> and <strong>document augmentation</strong>: matched nodes are not treated as isolated snippets; they can be enriched by bounded neighboring context, source spans, graph paths, and review gates before an answer is released.</p>
+<h3 id="3-path-mode-and-guided-learning">3. Path Mode and Guided Learning<a class="headerlink" href="#3-path-mode-and-guided-learning" title="Permanent link">&para;</a></h3>
+<p>Generate structured learning paths from graph topology. Path Mode can run through the web UI and through the Godot desktop renderer via <code>PathBridge</code> on <code>ws://localhost:9876</code>.</p>
+<h2 id="why-a-knowledge-graph">Why A Knowledge Graph?<a class="headerlink" href="#why-a-knowledge-graph" title="Permanent link">&para;</a></h2>
+<p>Plain keyword search retrieves documents. NoteConnection tries to expose structure:</p>
+<ul>
+<li>prerequisite and successor relationships;</li>
+<li>relation paths between concepts;</li>
+<li>temporal and scoped evidence;</li>
+<li>focus neighborhoods around a selected node;</li>
+<li>learning routes reusable by the UI and agent workflows.</li>
+</ul>
+<p>This makes the graph useful both for visual exploration and for grounded answer construction.</p>
+<h2 id="feature-tour">Feature Tour<a class="headerlink" href="#feature-tour" title="Permanent link">&para;</a></h2>
+<h3 id="1-visualization-and-layout">1. Visualization and layout<a class="headerlink" href="#1-visualization-and-layout" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Structure over chaos</strong>: Switch between <strong>Force-Directed</strong> physics and <strong>DAG</strong> hierarchical layouts. The DAG layout identifies prerequisites and next steps so concepts are arranged in logical layers.</li>
+<li><strong>Dual rendering engine</strong>: Switch between <strong>SVG</strong> for high-fidelity interaction and <strong>Canvas</strong> for large graphs with 10,000+ nodes.</li>
+<li><strong>Interactive Focus Mode</strong>: Click a node to isolate it and its context. Focus Mode supports freeze-on-select behavior, adjustable vertical/horizontal spacing, stable exit behavior, and random focus discovery.</li>
+<li><strong>Offline-first assets</strong>: D3, KaTeX, Marked, Mermaid, JSZip, and related frontend libraries are served from local assets so the core graph reader remains usable without internet access.</li>
+</ul>
+<p><img width="2010" height="2011" alt="Focus and layout example" src="https://github.com/user-attachments/assets/52785445-20bf-4ecc-847a-23863f291b6a" /></p>
+<h3 id="2-intelligence-and-inference">2. Intelligence and inference<a class="headerlink" href="#2-intelligence-and-inference" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Hybrid inference engine</strong>: Combines statistical probability (<code>P(A|B)</code>) and vector similarity (TF-IDF) to infer hidden dependencies without requiring external AI APIs.</li>
+<li><strong>Scalable clustering</strong>: Aggregates thousands of nodes into high-level concept bubbles based on folder structure or tags.</li>
+<li><strong>Graph-aware retrieval</strong>: Knowledge Workspace ranking can use local hybrid signals, vector signals, bounded graph distance, path confidence, temporal invalidity, and relation intent.</li>
+</ul>
+<p><img width="3723" height="1992" alt="Concept cluster overview" src="https://github.com/user-attachments/assets/9e56e567-1742-48cf-b720-cf65a47fd317" /></p>
+<h3 id="3-path-mode-structured-learning">3. Path Mode: structured learning<a class="headerlink" href="#3-path-mode-structured-learning" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Curriculum generation</strong>: Transform a graph into a linear learning path.</li>
+<li><strong>Domain learning</strong>: Master an entire concept cluster through topological ordering.</li>
+<li><strong>Diffusion learning</strong>: Find an efficient path toward a specific target using shortest-path and prerequisite context.</li>
+<li><strong>Hybrid rendering</strong>: Connect the TypeScript graph runtime to a Godot 4.3 desktop renderer through WebSocket while retaining web compatibility.</li>
+<li><strong>Learning strategies</strong>: Choose foundational/base-first or core/importance-first sorting based on learning style.</li>
+</ul>
+<h3 id="4-performance-and-control">4. Performance and control<a class="headerlink" href="#4-performance-and-control" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Parallel processing</strong>: Uses Node.js <code>worker_threads</code> to distribute keyword matching and graph-related heavy work.</li>
+<li><strong>Simulation controls</strong>: Speed/damping sliders and freeze-layout controls keep large graph views inspectable.</li>
+<li><strong>Hover lock</strong>: Hovering over a node temporarily locks its position so connections can be inspected without drift.</li>
+</ul>
+<h3 id="5-notemd-ai-document-workbench">5. NoteMD AI Document Workbench<a class="headerlink" href="#5-notemd-ai-document-workbench" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Integrated NoteMD module</strong>: <code>src/notemd/*</code> provides an Obsidian-decoupled processing stack: LLM provider abstraction, prompt manager, batch/file processors, translation, Mermaid/formula fixers, and duplicate detection.</li>
+<li><strong>One-Click Extract workflow</strong>: The embedded NoteMD window can chain concept extraction, title-based batch generation, and batch Mermaid repair. Generated files land in a KB subfolder named after the source file.</li>
+<li><strong>TOML-backed API profile</strong>: Embedded NoteMD reads and writes API settings through <code>app_config.toml</code> under <code>[notemd]</code> and <code>[notemd.api]</code>.</li>
+<li><strong>CLI compatibility</strong>: Core workflows are available through <code>noteconnection notemd ...</code>, including <code>settings show</code>, <code>settings set-api</code>, <code>one-click-extract</code>, <code>batch-generate</code>, <code>batch-mermaid-fix</code>, and <code>fix-mermaid</code>.</li>
+<li><strong>API surface</strong>: <code>/api/notemd/*</code> covers settings, file/folder processing, workflow orchestration, translation, content generation, concept extraction, duplicate checks, and cancellation.</li>
+<li><strong>Desktop and bridge access</strong>: Tauri menu/IPC and bridge routing open NoteMD from web/Tauri/Godot-connected workflows.</li>
+<li><strong>Safety defaults</strong>: File operations are constrained by KB-root sandbox checks, with SSE progress and cancellation support for long-running work.</li>
+</ul>
+<p><img width="2012" height="2024" alt="Controls and NoteMD workspace" src="https://github.com/user-attachments/assets/e5e4c42d-54a7-463c-bc43-0feb42469a12" /></p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>flowchart LR
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  A["Markdown knowledge base"] --&gt; B["Graph build pipeline"]
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  B --&gt; C["Knowledge graph store"]
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  C --&gt; D["Graph visualization"]
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  C --&gt; E["Scoped retrieval"]
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  E --&gt; F["Graph context assembly"]
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>  F --&gt; G["Answer sufficiency and release review"]
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  G --&gt; H["One public answer with citations"]
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>  C --&gt; I["Path Mode and mastery workflows"]
+</code></pre></div>
+<p>Core owners:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Main paths</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Server and routes</td>
+<td><code>src/server.ts</code>, <code>src/routes/</code></td>
+<td>HTTP API, static serving, diagnostics, modular route dispatch</td>
+</tr>
+<tr>
+<td>Graph core</td>
+<td><code>src/core/</code>, <code>src/backend/</code></td>
+<td>graph construction, layout/path engines, workers, bridge contracts</td>
+</tr>
+<tr>
+<td>Learning runtime</td>
+<td><code>src/learning/</code></td>
+<td>scoped retrieval, conversation, graph context, mastery, quality, memory policy</td>
+</tr>
+<tr>
+<td>Frontend workspace</td>
+<td><code>src/frontend/</code></td>
+<td>graph UI, Knowledge Workspace panes, source focus, runtime bridge</td>
+</tr>
+<tr>
+<td>Desktop/mobile shell</td>
+<td><code>src-tauri/</code>, <code>path_mode/</code></td>
+<td>Tauri packaging, sidecars, Godot Path Mode, Android runtime</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td><code>docs/</code></td>
+<td>Diataxis docs, release notes, bilingual guides, architecture records</td>
+</tr>
+</tbody>
+</table>
+<h3 id="backend">Backend<a class="headerlink" href="#backend" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>GraphBuilder</code> manages the pipeline from file reading to graph construction.</li>
+<li>Worker threads offload keyword matching and text analysis so the main thread stays responsive.</li>
+<li><code>StatisticalAnalyzer</code>, <code>VectorSpace</code>, and <code>HybridEngine</code> combine co-occurrence, TF-IDF, cosine similarity, and directed edge inference.</li>
+</ul>
+<h3 id="frontend">Frontend<a class="headerlink" href="#frontend" title="Permanent link">&para;</a></h3>
+<ul>
+<li>D3/SVG handles high-fidelity interaction.</li>
+<li>Canvas handles large graph rendering.</li>
+<li>Web workers keep path/layout work off the UI thread.</li>
+<li>Knowledge Workspace panes keep source focus, evidence rendering, learning paths, and graph previews in one workspace.</li>
+</ul>
+<h3 id="desktop-bridge">Desktop bridge<a class="headerlink" href="#desktop-bridge" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>PathBridge</code> exposes internal graph state over WebSocket (<code>ws://localhost:9876</code>).</li>
+<li>Godot Path Mode acts as a renderer and interaction surface; heavy graph logic remains in the TypeScript runtime.</li>
+<li>Godot paths must keep PNG/materialized render boundaries and avoid direct SVG assumptions.</li>
+</ul>
+<h2 id="cli-reference">CLI Reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>npm<span class="w"> </span>start<span class="w"> </span>--<span class="w"> </span>--path<span class="w"> </span><span class="s2">"&lt;path_to_knowledge_base&gt;"</span><span class="w"> </span><span class="o">[</span>options<span class="o">]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--path</code></td>
+<td>Absolute path to the folder containing Markdown files</td>
+<td><code>Knowledge_Base</code></td>
+</tr>
+<tr>
+<td><code>--gpu</code></td>
+<td>Enable GPU/WebGL acceleration for layout and vector calculations</td>
+<td>auto when supported</td>
+</tr>
+<tr>
+<td><code>--no-gpu</code></td>
+<td>Disable GPU acceleration and force CPU</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>--static</code></td>
+<td>Enable backend-only static mode with frozen frontend layout</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>--workers</code></td>
+<td>Worker thread count</td>
+<td><code>numCPUs - 1</code></td>
+</tr>
+</tbody>
+</table>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>npm<span class="w"> </span>start<span class="w"> </span>--<span class="w"> </span>--path<span class="w"> </span><span class="s2">"C:/Users/MyName/Documents/MyNotes"</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>npm<span class="w"> </span>start<span class="w"> </span>--<span class="w"> </span>--path<span class="w"> </span><span class="s2">"E:/Knowledge/ObsidianVault"</span><span class="w"> </span>--gpu
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>npm<span class="w"> </span>start<span class="w"> </span>--<span class="w"> </span>--path<span class="w"> </span><span class="s2">"E:/Knowledge/ObsidianVault"</span><span class="w"> </span>--no-gpu
+</code></pre></div>
+<p>CLI runs generate unique data files such as <code>data_cli_{kb_name}_{time}.js</code> to preserve the original <code>data.js</code>. When the server starts, it automatically serves those files to the frontend.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>Runtime configuration is stored in <code>app_config.toml</code>.</p>
+<p>Default Windows path:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>%LOCALAPPDATA%/NoteConnection/app_config.toml
+</code></pre></div>
+<p>Minimal example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">knowledge_base_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"E:/Knowledge_project/NoteConnection_app/Knowledge_Base"</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">user_language</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"en"</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="k">[multi_window]</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">single_window_mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">hide_tauri_when_pathmode_opens</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="n">restore_tauri_when_pathmode_exits</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="n">confirm_before_full_shutdown_from_godot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">sync_language</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="k">[frontend_settings.reading]</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="n">mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"window"</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="n">markdown_engine</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"auto"</span><span class="w"> </span><span class="c1"># "legacy" | "pulldown" | "auto"</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="n">chunk_block_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">36</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="n">prefetch_blocks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="n">index_cache_ttl_sec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1800</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="n">max_doc_bytes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100663296</span>
+</code></pre></div>
+<p>More configuration details:</p>
+<ul>
+<li><a href="app_config.toml_guide/">English app_config guide</a></li>
+<li><a href="../examples/app_config.template.toml">Config template</a></li>
+</ul>
+<h2 id="markdown-reader-protocol">Markdown Reader Protocol<a class="headerlink" href="#markdown-reader-protocol" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>markdown_engine = "auto"</code> prefers <code>pulldown-cmark</code> and falls back to the legacy renderer on failure.</li>
+<li>Tauri reader and Godot reader consume the same sidecar Markdown protocol: <code>index</code>, <code>chunk</code>, <code>resolve-node</code>, and <code>resolve-wiki</code>.</li>
+<li>Large files are loaded incrementally instead of requiring one full Markdown payload.</li>
+<li>Mermaid fences must start on their own line. Use <code>npm run verify:markdown:mermaid:fence -- Knowledge_Base/testconcept</code> before release-sensitive changes.</li>
+</ul>
+<h2 id="build-and-test">Build And Test<a class="headerlink" href="#build-and-test" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>npm<span class="w"> </span>install
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>npm<span class="w"> </span>run<span class="w"> </span>build
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>npm<span class="w"> </span>run<span class="w"> </span>build:vite
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>npm<span class="w"> </span><span class="nb">test</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>npm<span class="w"> </span>run<span class="w"> </span>docs:diataxis:check
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>npm<span class="w"> </span>run<span class="w"> </span>docs:site:build
+</code></pre></div>
+<p>Desktop and mobile builds:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>npm<span class="w"> </span>run<span class="w"> </span>tauri:dev
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>npm<span class="w"> </span>run<span class="w"> </span>tauri:build
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>npm<span class="w"> </span>run<span class="w"> </span>tauri:android:init
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>npm<span class="w"> </span>run<span class="w"> </span>tauri:android:dev
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>npm<span class="w"> </span>run<span class="w"> </span>tauri:android:build
+</code></pre></div>
+<p>Build notes:</p>
+<ul>
+<li>Electron desktop packaging was removed on 2026-03-01.</li>
+<li><code>npm run tauri:build</code> is the default desktop package path.</li>
+<li><code>npm run tauri:build:full</code> is explicit opt-in for packaging generated graph assets.</li>
+<li><code>npm run verify:lfs:policy</code>, <code>npm run verify:sidecar:supply</code>, and SBOM gates protect release packaging.</li>
+</ul>
+<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Documentation hub: <a href="../">../index.md</a></li>
+<li>Root English README: <a href="https://github.com/Jacobinwwey/NoteConnection/blob/main/README.md">README.md</a></li>
+<li>Root Chinese README: <a href="https://github.com/Jacobinwwey/NoteConnection/blob/main/README_zh.md">README_zh.md</a></li>
+<li>Chinese docs mirror: <a href="../zh/">../zh/README.md</a></li>
+<li>User manual: <a href="User_Manual/">User_Manual.md</a> / <a href="../zh/User_Manual/">../zh/User_Manual.md</a></li>
+<li>Interface document: <a href="Interface%20Document/">Interface Document.md</a> / <a href="../zh/Interface%20Document/">../zh/Interface Document.md</a></li>
+<li>Release notes: <a href="../release_notes_v1.8.0/">../release_notes_v1.8.0.md</a></li>
+<li>GitHub Pages docs: <a href="https://jacobinwwey.github.io/NoteConnection/">jacobinwwey.github.io/NoteConnection</a></li>
+</ul>
+<h2 id="security-and-privacy">Security And Privacy<a class="headerlink" href="#security-and-privacy" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Graph building and local retrieval run on the user's machine.</li>
+<li>LLM-backed features use user-configured providers and should be treated as optional runtime integrations.</li>
+<li>Do not commit local vaults, <code>app_config.toml</code>, provider keys, generated private evidence, or machine-specific sidecar overrides.</li>
+<li>Release workflows include SBOM, sidecar, LFS, migration, docs, mobile, and runtime evidence gates.</li>
+</ul>
+<h2 id="release-notes">Release Notes<a class="headerlink" href="#release-notes" title="Permanent link">&para;</a></h2>
+<p>README keeps only a compact release summary. Full release history belongs in <a href="https://github.com/Jacobinwwey/NoteConnection/releases">GitHub Releases</a> and <code>docs/release_notes_*.md</code>.</p>
+<p>Recent releases:</p>
+<ul>
+<li><strong>v1.8.0</strong> - Knowledge Workspace RSE/document-augmented RAG, graph-conditioned answer composition, Agent Workspace UI/status improvements, runtime probes, release governance, and multi-platform assets.</li>
+<li><strong>v1.7.0</strong> - Startup acceleration closure, multi-platform validation, and learning roadmap foundation.</li>
+<li><strong>v1.6.7</strong> - Docs governance cleanup and GitHub Pages stabilization.</li>
+<li><strong>v1.6.6</strong> - Unified provider runtime and TOML settings consolidation.</li>
+</ul>
+<h2 id="acknowledgments">Acknowledgments<a class="headerlink" href="#acknowledgments" title="Permanent link">&para;</a></h2>
+<p>NoteConnection has benefited from many open-source projects and local reference mirrors. These acknowledgments mean design influence, implementation reference, runtime dependency, or tooling inspiration depending on the project; they do not imply endorsement by the listed maintainers.</p>
+<ul>
+<li><a href="https://github.com/abhigyanpatwari/GitNexus">GitNexus</a> - README information architecture, repo context, staleness, and agent-consumable knowledge graph ideas.</li>
+<li><a href="https://github.com/Jacobinwwey/obsidian-NotEMD">obsidian-NotEMD</a> - NoteMD workflows, provider settings, and Markdown enhancement UX.</li>
+<li><a href="https://github.com/brianpetro/obsidian-smart-connections">Obsidian Smart Connections</a> - vault-aware semantic retrieval and local knowledge interaction patterns.</li>
+<li><a href="https://github.com/HKUDS/DeepTutor">DeepTutor</a> - tutor/workspace concepts and agent-native learning product references.</li>
+<li><a href="https://github.com/Mintplex-Labs/anything-llm">AnythingLLM</a> - local RAG workspace and document-chat product references.</li>
+<li><a href="https://github.com/CherryHQ/cherry-studio">Cherry Studio</a> - desktop AI workspace, provider configuration, and user-facing model operations.</li>
+<li><a href="https://github.com/circlemind-ai/fast-graphrag">Fast-GraphRAG</a> - graph-RAG ingestion/query design input.</li>
+<li><a href="https://github.com/getzep/graphiti">Graphiti</a> - temporal knowledge graph and evolving context design input.</li>
+<li><a href="https://github.com/neo4j/neo4j-graphrag-python">Neo4j GraphRAG Python</a> - graph-backed retrieval and explainable query contracts.</li>
+<li><a href="https://github.com/openai/codex">OpenAI Codex</a> - agent workspace, local execution, and tool-bound development workflow references.</li>
+<li><a href="https://github.com/datagallery-lab/enterprise_agent_platform">enterprise_agent_platform</a> - enterprise agent runtime and pipeline separation references.</li>
+<li><a href="https://github.com/AGI-is-going-to-arrive/ahadiff">AhaDiff</a> - diff learning, review, and repository intelligence references.</li>
+<li><a href="https://github.com/stanfordnlp/dspy">DSPy</a> - typed LM programs, evaluation, and optimizer-loop design ideas.</li>
+<li><a href="https://github.com/guidance-ai/guidance">Guidance</a> - constrained generation and structured output contract ideas.</li>
+<li><a href="https://github.com/microsoft/semantic-kernel">Semantic Kernel</a> - plugin/orchestration boundary references.</li>
+<li><a href="https://github.com/langchain-ai/langchain">LangChain</a> - orchestration, tool, and evaluation surface references.</li>
+<li><a href="https://github.com/BerriAI/litellm">LiteLLM</a> - provider routing and gateway design references.</li>
+<li><a href="https://github.com/tauri-apps/tauri">Tauri</a> - desktop and Android application shell.</li>
+<li><a href="https://github.com/godotengine/godot">Godot Engine</a> - Path Mode renderer foundation.</li>
+<li><a href="https://github.com/readest/readest">Readest</a> - cross-platform reader and Tauri product references.</li>
+<li><a href="https://github.com/mbrlabs/Lorien">Lorien</a> - Godot canvas/whiteboard interaction reference.</li>
+<li><a href="https://github.com/d3/d3">D3</a>, <a href="https://github.com/mermaid-js/mermaid">Mermaid</a>, <a href="https://github.com/KaTeX/KaTeX">KaTeX</a>, <a href="https://github.com/markedjs/marked">Marked</a>, and <a href="https://github.com/Stuk/jszip">JSZip</a> - frontend rendering and document-processing foundations.</li>
+</ul>
+<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
+<p>This project is licensed under the <a href="https://github.com/Jacobinwwey/NoteConnection/blob/main/LICENSE">GNU General Public License v3.0</a> (<code>GPL-3.0-only</code>).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

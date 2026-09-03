@@ -1,0 +1,3312 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/en/Interface%20Document/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>2026-04-07 v1.7.0 - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#2026-04-07-v170" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              2026-04-07 v1.7.0
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="2026-04-07-v170">2026-04-07 v1.7.0<a class="headerlink" href="#2026-04-07-v170" title="Permanent link">&para;</a></h1>
+<h1 id="interface-document-v170">Interface Document (v1.7.0)<a class="headerlink" href="#interface-document-v170" title="Permanent link">&para;</a></h1>
+<p>This document is the canonical interface handover for the current codebase.
+It was rebuilt from source verification, not appended to legacy sections.</p>
+<h2 id="2026-07-11-v180-coverage-driven-graph-answer-contracts">2026-07-11 v1.8.0 - Coverage-driven graph answer contracts<a class="headerlink" href="#2026-07-11-v180-coverage-driven-graph-answer-contracts" title="Permanent link">&para;</a></h2>
+<p>The conversation response now exposes two additive contracts:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">AgentConversationResponse</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nx">graphAnswerPlan?</span><span class="o">:</span><span class="w"> </span><span class="kt">GraphAnswerPlan</span><span class="p">;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nx">graphAnswerCoverage?</span><span class="o">:</span><span class="w"> </span><span class="kt">GraphAnswerCoverageReview</span><span class="p">;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">}</span>
+</code></pre></div>
+<p>The same fields are available in <code>AgentConversationTrace</code>, <code>KnowledgeRun</code>, knowledge-run workflow artifacts, and exported <code>knowledgeRunReports</code> summaries.</p>
+<p><code>GraphAnswerPlan</code> contains the anchor, intent/depth, evidence-backed claims, required roles, relation-edge provenance, and omitted candidates. <code>GraphAnswerCoverageReview</code> records required, covered, and missing claim IDs plus a normalized coverage score.</p>
+<p><code>graph_answer_plan_coverage</code> is an additive <code>AnswerReleaseGateId</code>. It may trigger revision when required graph claims are absent. Character count and sentence count are not release gates.</p>
+<p>Public evidence is shaped through <code>src/learning/ragPublicText.ts</code>: authoring/control instructions, Markdown table scaffolding, heading syntax, and fenced renderer source are removed before presentation. This shaping must not remove the factual lead or bypass claim coverage.</p>
+<p>Compatibility: all new response fields remain optional; existing clients may continue consuming <code>assistantMessage</code>, <code>answer</code>, blocks, citations, and release review.</p>
+<h3 id="2026-07-18-calibration-and-expansion-addendum">2026-07-18 calibration and expansion addendum<a class="headerlink" href="#2026-07-18-calibration-and-expansion-addendum" title="Permanent link">&para;</a></h3>
+<p><code>AgentConversationTrace.graphExpansion</code> is an additive replay contract containing <code>enabled</code>, <code>reason</code>, <code>maxSteps</code>, <code>executedSteps</code>, <code>maxNeighbors</code>, <code>selectedNeighborCount</code>, and <code>maxPathDepth</code>. Ordinary queries expose a disabled <code>0</code>-step policy; only explicit deep/research wording enables the bounded <code>1</code>-step policy.</p>
+<p>Required-claim coverage now uses deterministic multilingual concept normalization and clause polarity agreement. It remains a conservative release gate, not an open-ended semantic-entailment service. <code>evaluateGraphAnswerCoverageCalibration()</code> reports precision, recall, and false-positive/false-negative case IDs against the versioned corpus.</p>
+<p>The frontend projects plan, coverage, and expansion summaries only into the Grounding Inspector. The assistant answer renderer does not consume these internal planning fields.</p>
+<h2 id="00-multi-platform-build-contract-addendum-v170">0.0 Multi-Platform Build Contract Addendum (v1.7.0)<a class="headerlink" href="#00-multi-platform-build-contract-addendum-v170" title="Permanent link">&para;</a></h2>
+<p>This addendum captures the build/runtime contracts that now matter to the Git LFS migration and to cross-platform delivery safety.</p>
+<p>Canonical companion docs:</p>
+<ul>
+<li><code>docs/en/lfs_asset_migration_plan.md</code></li>
+<li><code>docs/en/multi_platform_build_flow_audit.md</code></li>
+<li><code>docs/en/sidecar_supply_strategy.md</code></li>
+</ul>
+<p>Current build-contract conclusions:</p>
+<ul>
+<li>The default frontend build contract is runtime-first via <code>npm run build</code>.</li>
+<li>Explicit full-mode is still supported, and desktop <code>tauri:build:full</code> now preserves full-mode through Tauri <code>beforeBuildCommand</code> by routing through <code>scripts/run-tauri-frontend-build.js</code>.</li>
+<li>Android build tooling baseline is JDK 21+ for both local helper verification and current CI/release setup.</li>
+<li>Capacitor packaging and Tauri Android packaging must be treated separately from mobile runtime capability:</li>
+<li>Capacitor native runtime can locally build graph payloads when Filesystem APIs are available.</li>
+<li>Tauri Android runtime exposes native <code>build_graph_runtime</code> and reports <code>supports_build=true</code>.</li>
+<li>Desktop sidecar/bootstrap remains an active build contract; the current migration direction is supply hardening, not architecture deletion.</li>
+<li>Current Godot bootstrap is provider-neutral at the download-contract layer: pinned GitHub Releases URLs and generic HTTPS object-storage mirror URLs both fit the same URL + SHA256 + cache model.</li>
+<li>Release CI now includes a minimal Godot mirror-seeding slice: it maintains a project-controlled GitHub Releases mirror tag and downloads mirror-first while retaining upstream fallback as a transitional safety rail.</li>
+</ul>
+<p>Build-surface files verified for this addendum:</p>
+<ul>
+<li><code>package.json</code></li>
+<li><code>build_apk.bat</code></li>
+<li><code>capacitor.config.ts</code></li>
+<li><code>scripts/copy-assets.js</code></li>
+<li><code>scripts/run-tauri-build.js</code></li>
+<li><code>scripts/run-tauri-frontend-build.js</code></li>
+<li><code>scripts/run-tauri-android.js</code></li>
+<li><code>scripts/verify-tauri-android-prereqs.js</code></li>
+<li><code>src-tauri/tauri.conf.json</code></li>
+<li><code>src-tauri/tauri.android.conf.json</code></li>
+<li><code>src-tauri/src/lib.rs</code></li>
+<li><code>src/frontend/storage_provider.js</code></li>
+<li><code>src/frontend/source_manager.js</code></li>
+<li><code>.github/workflows/release-desktop-multi-os.yml</code></li>
+<li><code>.github/workflows/npm-publish.yml</code></li>
+</ul>
+<h2 id="00a-knowledge-runtime-contract-addendum-2026-06-06">0.0A Knowledge Runtime Contract Addendum (2026-06-06)<a class="headerlink" href="#00a-knowledge-runtime-contract-addendum-2026-06-06" title="Permanent link">&para;</a></h2>
+<p>This addendum records the current code-backed knowledge runtime contracts without changing the public API.</p>
+<p>Current contract surfaces:</p>
+<ul>
+<li><code>KnowledgeQueryRequest.scope</code> accepts <code>KnowledgeCorpusScope</code> with workspace, corpus, document, atom, source-path-prefix, and language constraints.</li>
+<li><code>AgentConversationResponse</code> remains backward-compatible:</li>
+<li><code>assistantMessage</code> is still valid for legacy clients,</li>
+<li><code>answer</code>, <code>citations</code>, <code>knowledgePoints</code>, <code>memoryActions</code>, <code>summary</code>, and <code>trace</code> expose grounded conversation state,</li>
+<li>optional <code>assistantBlocks</code> carries richer typed reply sections for clients that can render them.</li>
+<li><code>AgentConversationKnowledgePoint</code> may now include grouped/document-augmented fields such as <code>atomIds</code>, <code>documentId</code>, <code>sourcePath</code>, <code>citations</code>, <code>matchedSpans</code>, and <code>matchCount</code>.</li>
+<li>Scoped query resolution may now expose <code>scopeSource: planner_scope_recovery</code> when a title-like recovery path intentionally leaves the original explicit corpus boundary and switches to a document-only recovery scope.</li>
+<li><code>/api/knowledge/conversation</code> supports the current conversation path, including stream-first clients and sync fallback behavior.</li>
+<li><code>/api/knowledge/conversation-memory/{list,add,search,delete,feedback}</code> exposes scoped conversation memory operations.</li>
+<li><code>/api/knowledge/workspace-readiness</code> exposes workspace/corpus readiness for scoped runtime decisions.</li>
+<li><code>POST /api/knowledge/export/workspace</code> exposes deterministic workspace export bundles backed by resource, index, workspace, session, workflow, memory, and render-materialization state.</li>
+<li>Runtime governance endpoints and payloads expose graphdb/vector rollout context, including <code>rolloutProfile</code>, graphdb connector health, vector acceleration strictness, and runbook checks.</li>
+<li>The Knowledge Workspace frontend contract now also includes an in-pane scope selector, a compact <code>/api/knowledge/conversation</code> status strip, grouped file-first hit rendering, and matched-span evidence rendering in the focus pane.</li>
+<li><code>assistantBlocks</code> are no longer only thin transport wrappers around the same plain answer string. Tauri-capable clients should now expect intent-aware overview / explanation / evidence / memory / action sections while still treating <code>assistantMessage</code> as the compatibility fallback.</li>
+</ul>
+<h2 id="00b-knowledge-workspace-and-dag-alignment-addendum-2026-06-10">0.0B Knowledge Workspace and DAG Alignment Addendum (2026-06-10)<a class="headerlink" href="#00b-knowledge-workspace-and-dag-alignment-addendum-2026-06-10" title="Permanent link">&para;</a></h2>
+<ul>
+<li>The Knowledge Workspace runtime now includes durable workflow-artifact paths for <code>flashcard_batch</code> and <code>knowledge_run</code>, exposed through <code>/api/knowledge/workflow-artifacts</code> and <code>/api/knowledge/workflow-artifacts/review-follow-up</code>.</li>
+<li>Runtime compatibility remains additive:</li>
+<li><code>assistantMessage</code> stays valid,</li>
+<li><code>answer</code>, <code>assistantBlocks</code>, <code>knowledgeRun</code>, grouped <code>knowledgePoints</code>, citations, memory actions, and trace coexist with legacy clients.</li>
+<li>The codebase already contains a real DAG-backed learning substrate:</li>
+<li><code>KnowledgeAtom</code></li>
+<li><code>RelationEdge</code></li>
+<li><code>TemporalEdge</code></li>
+<li>path queries</li>
+<li>prerequisite-driven mastery/session flows</li>
+<li><code>KnowledgeQueryItem.relationPath</code></li>
+<li>Current architecture reading:</li>
+<li>graph-backed retrieval and learning-path/session logic are implemented,</li>
+<li>graph-native answer planning is not yet complete because retrieval and answer synthesis still lack a dedicated graph-conditioned context-assembly layer.</li>
+<li>Current product-surface reading:</li>
+<li>grouped file-first knowledge hits and right-pane source highlighting are implemented,</li>
+<li>the visible answer area is now contracted at the composer/frontend boundary: <code>answer</code> and <code>directAnswer</code> stay targeted, while graph paths, citations, memory notes, diagnostics, and durable artifacts move to secondary evidence/export surfaces.</li>
+</ul>
+<h2 id="00c-agent-knowledge-dag-answer-contract-addendum-2026-06-17">0.0C Agent Knowledge DAG Answer Contract Addendum (2026-06-17)<a class="headerlink" href="#00c-agent-knowledge-dag-answer-contract-addendum-2026-06-17" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Agent knowledge graph context refers to the project's existing DAG-shaped learning substrate, not a generic graph database replacement.</li>
+<li><code>AgentConversationGraphContext.connectionPaths</code> is an optional additive field for explicit store-backed atom paths.</li>
+<li>Each path carries source/target atom identity, ordered atom IDs/titles, edge relation kinds, and length.</li>
+<li>Clients and exports must continue to accept graph contexts without this field.</li>
+<li>Conversation compatibility remains unchanged: <code>assistantMessage</code> is still valid, while <code>answer</code>, <code>assistantBlocks</code>, grouped <code>knowledgePoints</code>, citations, memory actions, workflow artifacts, and <code>trace.graphContext</code> remain additive.</li>
+<li>Evidence-pane rendering and workspace export may expose connection paths as secondary inspection material; public answer rendering should remain targeted to the user's question.</li>
+<li>Future graph-native answer planning should be implemented as bounded graph-conditioned context assembly between retrieval and answer synthesis, using <code>KnowledgeAtom</code>, <code>RelationEdge</code>, <code>TemporalEdge</code>, evidence spans, and store-level path operations.</li>
+<li>If graph ops are unavailable or fail, the runtime must fail open to the current retrieval-grounded answer path with observable diagnostics.</li>
+</ul>
+<h2 id="00d-final-reply-review-and-evidence-provenance-addendum-2026-06-19">0.0D Final Reply Review and Evidence Provenance Addendum (2026-06-19)<a class="headerlink" href="#00d-final-reply-review-and-evidence-provenance-addendum-2026-06-19" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>AnswerReleaseReview</code> is now a first-class additive runtime contract rather than a planning placeholder.</li>
+<li><code>AnswerReleaseDecision</code> remains <code>release</code> | <code>revise</code> | <code>abstain</code>.</li>
+<li>Gate coverage currently includes <code>evidence_sufficiency</code>, <code>graph_support_sufficiency</code>, <code>claim_grounding_alignment</code>, <code>query_intent_alignment</code>, <code>claim_structured_consistency</code>, <code>claim_attribute_consistency</code>, <code>claim_containment_consistency</code>, <code>claim_composition_consistency</code>, <code>claim_purpose_consistency</code>, <code>claim_dependency_consistency</code>, <code>claim_subject_consistency</code>, <code>claim_state_consistency</code>, <code>claim_polarity_consistency</code>, <code>claim_graph_causal_consistency</code>, <code>claim_graph_order_consistency</code>, <code>claim_graph_comparison_consistency</code>, <code>public_surface_contraction</code>, <code>internal_diagnostic_leakage</code>, and <code>abstention_hygiene</code>.</li>
+<li><code>src/learning/conversationComposer.ts</code> must pass the scoped draft answer, grouped knowledge points, citations, resolved scope, and optional graph context through <code>reviewAnswerRelease(...)</code> before exposing the public <code>answer</code> / <code>directAnswer</code> surface.</li>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code>, workspace export, and frontend reply rendering must treat answer-release telemetry as additive inspection material:</li>
+<li>public answer text,</li>
+<li>review decision,</li>
+<li>failed gate IDs,</li>
+<li>leaked internal fragments,</li>
+<li>per-gate diagnostics.</li>
+<li>Evidence-pane source projection is now explicitly layered:</li>
+<li><code>src/frontend/markdown_runtime.js</code> annotates rendered markdown blocks with <code>data-agent-markdown-source-start-line</code>, <code>data-agent-markdown-source-end-line</code>, and <code>data-agent-markdown-source-kind</code>,</li>
+<li>graph focus prefers <code>source_line_provenance</code> when rendered-node source ranges overlap trusted evidence spans,</li>
+<li>after selecting the node, graph focus projects the matched evidence fragment into inline highlight markup inside that node,</li>
+<li>it falls back to markdown <code>line_window</code> anchors when rendered-source metadata is absent but citation line metadata is still trustworthy,</li>
+<li>it falls back to <code>snippet_fallback</code> when line metadata is stale or low-overlap,</li>
+<li>it exposes additive <code>highlightStrategy</code>, <code>sourceProvenanceBlockCount</code>, <code>sourceProvenanceAttributedNodeCount</code>, and <code>inlineHighlightCount</code> diagnostics instead of pretending the projection is exact.</li>
+<li>The screenshot-backed acceptance path is now part of the formal runtime contract:</li>
+<li>reference failure image: <code>E:\微信传输\WeChat Files\wxid_zywfbxxiwwir22\FileStorage\Temp\1781782257390.jpg</code></li>
+<li>regression case: <code>waterglass_explicit_scope_compact_zh</code></li>
+<li>verifier: <code>scripts/verify-knowledge-workspace-runtime.js</code></li>
+<li>acceptance rule: the public answer must not leak <code>No scoped knowledge points matched</code>, <code>retrieval_candidates_below_threshold</code>, or the meta-documentary fragment <code>本技术文档旨在</code> when scoped evidence exists.</li>
+<li>Remaining architecture gap:</li>
+<li>broaden contradiction coverage from the current lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + location + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity stack into richer claim-vs-citation / claim-vs-evidence contradiction classes,</li>
+<li>push source-to-render provenance beyond the current block-level mapping plus snippet-projected inline highlights so right-pane highlighting can become source-authenticated at the character-offset level rather than merely bounded.</li>
+</ul>
+<p>Compatibility rules:</p>
+<ul>
+<li>New response fields must remain additive and optional.</li>
+<li>Existing endpoint names and legacy fields must remain stable unless a compatibility shim and tests land in the same change.</li>
+<li>Godot/mobile render paths must continue to consume PNG-first materialized artifacts; direct SVG import must not become a required runtime dependency.</li>
+<li>graphdb and ANN status wording must distinguish operational baselines from production closure until release-grade thresholds and repeated evidence exist.</li>
+<li>Release runbooks should use <code>verify:foundation:release-evidence</code> after generating sqlite and ANN release reports to confirm latest evidence freshness, required runtime modes, and release gates before treating host evidence as current. Use <code>verify:foundation:release-evidence:strict</code> when repeated evidence is required, and <code>verify:foundation:release-evidence:multi-host</code> when a release window requires host diversity. Foundation readiness exposes the default and strict commands through <code>foundation_release_evidence_freshness</code> and <code>foundation_release_evidence_history</code>; the current Windows host passes the strict gate with sqlite <code>3/3</code> and ANN <code>3/3</code>, but each release host/window must regenerate enough fresh reports that satisfy the current release contract, and multi-host release windows must cover enough distinct host keys.</li>
+</ul>
+<h2 id="00e-knowledge-workspace-rse-and-hosted-runtime-addendum-2026-07-03">0.0E Knowledge Workspace RSE and Hosted Runtime Addendum (2026-07-03)<a class="headerlink" href="#00e-knowledge-workspace-rse-and-hosted-runtime-addendum-2026-07-03" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Mermaid syntax recovery is now a two-owner contract:</li>
+<li><code>src/notemd/MermaidProcessor.ts</code> may normalize malformed quoted bracketed-node labels while repairing Mermaid blocks at source,</li>
+<li><code>src/reader_renderer.ts</code> may apply the same per-line normalization inside the local fallback renderer path before Mermaid parse/render.</li>
+<li>This quoted-label normalization is intentionally line-scoped. It must not cross line boundaries and must not break the existing dangling-bracket label repair path.</li>
+<li><code>AgentConversationGraphContext</code> may now carry optional <code>anchorGraphProfile</code> with:</li>
+<li><code>atomId</code></li>
+<li><code>title</code></li>
+<li><code>inDegree</code></li>
+<li><code>outDegree</code></li>
+<li><code>centrality</code></li>
+<li><code>predecessorWindow</code> and <code>successorWindow</code> entries may now also carry optional <code>inDegree</code>, <code>outDegree</code>, and <code>centrality</code>.</li>
+<li>Public answer synthesis and deterministic <code>revise</code> flows may now consume bounded graph-derived path and degree context from <code>graphContext</code>, but citation lists, raw diagnostics, and full graph telemetry remain secondary surfaces.</li>
+<li><code>graphContext</code> is now also the bounded RSE/document-augmentation contract for this slice:</li>
+<li>model-visible fields stay limited to <code>evidenceSourceRefs</code>, <code>connectionPaths</code>, <code>anchorGraphProfile</code>, and bounded predecessor/successor windows,</li>
+<li>full graph state, raw diagnostics, and developer telemetry are not part of the main public-answer context budget.</li>
+<li>Hosted Guided Learning may reuse a cached <code>Graph</code> / <code>PathEngine</code> runtime keyed by the current source-graph signature. This is a pane-local performance optimization only:</li>
+<li>it must not change main-graph ownership,</li>
+<li>it must not imply native Godot window embedding,</li>
+<li>cache invalidation remains snapshot/signature-based unless future graph mutation paths require a stronger contract.</li>
+<li><code>src/frontend/hosted_future_path_runtime.js</code> is now the dedicated cache/telemetry owner for hosted Future Path runtime reuse:</li>
+<li>it records cache hit/miss/build counters,</li>
+<li>it records source node/edge counts plus resolve/build timing,</li>
+<li>the latest snapshot is exposed through <code>NoteConnectionWorkspacePanes.getHostedFuturePathRuntimeDiagnostics()</code> and <code>window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_RUNTIME_DIAGNOSTICS</code>.</li>
+<li>Guided Learning pending behavior is now a two-stage contract:</li>
+<li>on first open, if local graph target plus source graph snapshot are already available, the pane may render an immediate hosted Future Path projection before <code>/api/knowledge/path</code> returns,</li>
+<li>the pending status remains visible until the backend response replaces or enriches the pane payload.</li>
+<li><code>src/frontend/agent_workspace.js</code> now dedupes identical in-flight <code>/api/knowledge/path</code> requests by normalized payload while preserving the same pending-pane contract.</li>
+<li>The local references under <code>ref/enterprise_agent_platform</code> and <code>ref/codex</code> are now part of the documented design evidence set for this slice. They remain external references only; no runtime dependency is introduced.</li>
+<li>Boundary rule:</li>
+<li>Mermaid syntax healing stays in <code>MermaidProcessor.ts</code> and <code>reader_renderer.ts</code>, not in <code>PathBridge</code>,</li>
+<li>hosted runtime reuse must not become a mutable cross-graph singleton,</li>
+<li>public answers must not inject unbounded graph telemetry just because richer graph state exists locally.</li>
+<li>Compatibility rule: all graph-profile and runtime-reuse fields remain optional/additive. Clients that ignore them must remain valid.</li>
+</ul>
+<h2 id="0-fast-track-links-godot-notemd-markdown">0. Fast Track Links (Godot + NoteMD + Markdown)<a class="headerlink" href="#0-fast-track-links-godot-notemd-markdown" title="Permanent link">&para;</a></h2>
+<p>Before starting the next integrated feature slice, execute against these docs first:</p>
+<ul>
+<li>Workflow baseline: <a href="../../diataxis/en/how-to/godot-notemd-markdown-workflows/">Diataxis How-To: Godot + NoteMD + Markdown Workflows</a></li>
+<li>Field-level contract baseline: <a href="../../diataxis/en/reference/godot-notemd-markdown-interfaces/">Diataxis Reference: Godot + NoteMD + Markdown Interfaces</a></li>
+</ul>
+<h2 id="0-verification-scope">0. Verification Scope<a class="headerlink" href="#0-verification-scope" title="Permanent link">&para;</a></h2>
+<p>Verified against implementation files:</p>
+<ul>
+<li><code>src/server.ts</code></li>
+<li><code>src/utils/RuntimePaths.ts</code></li>
+<li><code>src/index.ts</code></li>
+<li><code>src/core/NoteConnection.ts</code></li>
+<li><code>src/core/types.ts</code></li>
+<li><code>src/core/Graph.ts</code></li>
+<li><code>src/core/PathEngine.ts</code></li>
+<li><code>src/backend/config.ts</code></li>
+<li><code>src/backend/FileLoader.ts</code></li>
+<li><code>src/backend/GraphBuilder.ts</code></li>
+<li><code>src/backend/utils/frontmatterParser.ts</code></li>
+<li><code>src/backend/utils/WorkerRuntime.ts</code></li>
+<li><code>src/core/PathBridge.ts</code></li>
+<li><code>src-tauri/src/lib.rs</code></li>
+<li><code>src/frontend/source_manager.js</code></li>
+<li><code>src/frontend/path_app.js</code></li>
+<li><code>src/frontend/path_worker.js</code></li>
+<li><code>src/frontend/i18n.js</code></li>
+<li><code>src/frontend/index.html</code></li>
+<li><code>path_mode/scripts/ws_client.gd</code></li>
+<li><code>path_mode/scripts/path_mode_ui.gd</code></li>
+<li><code>path_mode/scripts/path_renderer.gd</code></li>
+<li><code>path_mode/scripts/learning_state_machine.gd</code></li>
+<li><code>path_mode/scripts/tree_view_panel.gd</code></li>
+</ul>
+<p>Audit flow:</p>
+<ol>
+<li>Fully reread previous <code>Interface Document.md</code>.</li>
+<li>Re-extract interfaces from source.</li>
+<li>Remove obsolete items and correct mismatches.</li>
+<li>Rebuild as complete English section followed by complete Chinese section.</li>
+</ol>
+<h2 id="01-rendering-compatibility-constraint-godot-mermaid">0.1 Rendering Compatibility Constraint (Godot + Mermaid)<a class="headerlink" href="#01-rendering-compatibility-constraint-godot-mermaid" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Godot runtime Mermaid consumption is PNG-only for authoritative rendering output.</li>
+<li>SVG payload is retained only for diagnostics/debug snapshots and must not be used as runtime fallback in Godot.</li>
+<li>Reason: current Godot SVG handling can fail non-deterministically (text/layout/raster instability across devices).</li>
+<li>Change-control rule: any future Godot renderer optimization must preserve PNG decode as the primary path (<code>pngBase64</code> required); missing PNG is a hard failure.</li>
+<li>Obsidian compatibility baseline: canonical Mermaid markdown is fenced code whose opening line is three backticks followed by <code>mermaid</code>, and whose closing line is three backticks.</li>
+<li>Any inline-concatenated pattern where a math delimiter is immediately followed by a Mermaid opening fence is malformed input and outside the canonical compatibility baseline.</li>
+<li>Reader runtime guardrail: markdown reader performs a lightweight self-check on open and auto-heals that malformed pattern to newline-split form before parsing/rendering.</li>
+</ul>
+<h2 id="02-notemd-module-interface-contracts-v160">0.2 NoteMD Module Interface Contracts (v1.6.0)<a class="headerlink" href="#02-notemd-module-interface-contracts-v160" title="Permanent link">&para;</a></h2>
+<p>NoteMD is integrated additively and does not replace existing graph/path APIs.</p>
+<h3 id="backend-module-namespace-srcnotemd">Backend module namespace (<code>src/notemd/</code>)<a class="headerlink" href="#backend-module-namespace-srcnotemd" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Core interfaces/constants: <code>types.ts</code>, <code>constants.ts</code></li>
+<li>LLM and prompts: <code>LlmProvider.ts</code>, <code>PromptManager.ts</code></li>
+<li>Processing primitives: <code>FileProcessor.ts</code>, <code>MermaidProcessor.ts</code>, <code>FormulaFixer.ts</code></li>
+<li>Batch/content utilities: <code>Translator.ts</code>, <code>BatchProcessor.ts</code>, <code>DuplicateDetector.ts</code>, <code>ContentGenerator.ts</code></li>
+<li>Facade service: <code>NotemdService.ts</code>, <code>index.ts</code></li>
+</ul>
+<h3 id="http-api-contract-srcserverts">HTTP API contract (<code>src/server.ts</code>)<a class="headerlink" href="#http-api-contract-srcserverts" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>GET /api/notemd/settings</code></li>
+<li><code>POST|PUT /api/notemd/settings</code></li>
+<li><code>POST /api/notemd/process-file</code></li>
+<li><code>POST /api/notemd/process-folder</code></li>
+<li><code>POST /api/notemd/test-llm</code></li>
+<li><code>POST /api/notemd/generate-content</code></li>
+<li><code>POST /api/notemd/translate-file</code></li>
+<li><code>POST /api/notemd/translate-folder</code></li>
+<li><code>POST /api/notemd/fix-mermaid</code></li>
+<li><code>POST /api/notemd/fix-formulas</code></li>
+<li><code>POST /api/notemd/check-duplicates</code></li>
+<li><code>POST /api/notemd/extract-concepts</code></li>
+<li><code>POST /api/notemd/cancel</code></li>
+</ul>
+<h3 id="safety-and-lifecycle-guarantees">Safety and lifecycle guarantees<a class="headerlink" href="#safety-and-lifecycle-guarantees" title="Permanent link">&para;</a></h3>
+<ul>
+<li>KB-root jail validation is enforced for NoteMD file/folder operations.</li>
+<li>Long-running operations support SSE progress and cancellation.</li>
+<li>Tauri/Godot bridge contracts expose <code>open_notemd</code> without changing existing graph bridge semantics.</li>
+</ul>
+<h2 id="03-v160-interface-delta-compared-to-v130">0.3 v1.6.0 Interface Delta (Compared to v1.3.0)<a class="headerlink" href="#03-v160-interface-delta-compared-to-v130" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Added runtime-capability hydration bridge contract in frontend/runtime integration:</li>
+<li><code>invoke('get_runtime_capabilities')</code></li>
+<li><code>invoke('get_sidecar_runtime_config')</code></li>
+<li>Added sidecar runtime config command contract in Rust runtime:</li>
+<li><code>get_sidecar_runtime_config</code></li>
+<li>Added stricter frontend runtime bridge readiness sequencing (<code>whenReady</code>) before path-mode flows.</li>
+<li>Added contract-level policy gates for pathbridge strict schema, storage provider abstraction, mobile runtime capability boundaries, and SBOM/attestation verification scripts.</li>
+</ul>
+<hr />
+<h2 id="2026-07-19-v180-executable-graph-answer-contract">2026-07-19 v1.8.0 Executable Graph Answer Contract<a class="headerlink" href="#2026-07-19-v180-executable-graph-answer-contract" title="Permanent link">&para;</a></h2>
+<p><code>AgentConversationTrace.graphAnswerPlan</code> and <code>graphAnswerCoverage</code> now describe executed behavior, not only diagnostics. In RAG turns, the composer realizes ordered required claims before supplemental RAG clauses. Final coverage is recalculated after release revision, and revision preserves required plan statements.</p>
+<p>Required claims are all nonredundant claims with confidence greater than <code>0.75</code>; a fallback lead claim is required when no claim crosses that boundary. Same-role cardinality is not a deduplication rule. Plan evidence with citation IDs participates in claim-level citation validation.</p>
+<p>Runtime expectations may set <code>requireCompleteGraphAnswerCoverage</code> and <code>requireGraphAnswerPlanOrder</code>. The verifier then requires every required claim ID in final coverage and requires normalized public statements to occur in plan order.</p>
+<h3 id="2026-07-19-final-owner-and-compatibility-clarification">2026-07-19 final owner and compatibility clarification<a class="headerlink" href="#2026-07-19-final-owner-and-compatibility-clarification" title="Permanent link">&para;</a></h3>
+<p>The executable path is owned in sequence by <code>graphContextAssembler.ts</code> (bounded subgraph), <code>graphAnswerPlan.ts</code> (semantic claim contract), <code>conversationComposer.ts</code> (public realization), and <code>answerReleaseReview.ts</code> (final release invariants). <code>graphAnswerFacts.ts</code> is a shared fact-selection policy used by composition and revision; it does not generate prose or add an orchestration layer.</p>
+<p><code>public_surface_contraction</code> remains an <code>AnswerReleaseGateId</code> for wire compatibility. Its current behavior protects public-surface structure and leakage hygiene; it must not be interpreted or reimplemented as a 900-character, fixed-sentence, or single-<code>direct_support</code> limit.</p>
+<p>Clause shaping is owned by <code>ragEvidenceQuality.ts</code> and <code>graphAnswerPlan.ts</code>. Segmentation preserves decimal points and mathematical notation; ranking uses terminal completeness, delimiter balance, math density, documentary penalty, and continuous length decay. The selected public clause may differ from the raw evidence text, but <code>evidenceRefs</code> retain that raw provenance. These scores rank already selected evidence; they do not prove relevance or entailment.</p>
+<p>Supplemental RAG clauses are semantically deduplicated at the composer boundary, while release review removes only literal-equivalent or contained duplicates so conflicting dates, quantities, endpoints, and locations are not silently collapsed. Current verification requires complete required-claim ID coverage, plan order, no repeated long clause, and no public Markdown list/bold scaffolding. The repository-wide baseline is 124/124 Jest suites, 1,155 tests passed, and 26 skipped, with TypeScript, production/Vite build, Water Glass runtime acceptance, Diataxis, MkDocs, and diff hygiene passing.</p>
+<h2 id="1-runtime-and-path-contracts">1. Runtime and Path Contracts<a class="headerlink" href="#1-runtime-and-path-contracts" title="Permanent link">&para;</a></h2>
+<h3 id="11-runtime-path-resolution-srcutilsruntimepathsts">1.1 Runtime path resolution (<code>src/utils/RuntimePaths.ts</code>)<a class="headerlink" href="#11-runtime-path-resolution-srcutilsruntimepathsts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">RuntimePaths</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nx">projectRoot</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nx">frontendDir</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nx">runtimeDataDir</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nx">kbRoot</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span>
+</code></pre></div>
+<p>Resolution priorities:</p>
+<ol>
+<li><code>projectRoot</code> from candidate directories with existence checks.</li>
+<li><code>frontendDir</code>:</li>
+<li><code>NOTE_CONNECTION_FRONTEND_DIR</code></li>
+<li><code>&lt;projectRoot&gt;/dist/src/frontend</code></li>
+<li><code>&lt;projectRoot&gt;/src/frontend</code></li>
+<li><code>kbRoot</code>:</li>
+<li><code>NOTE_CONNECTION_KB_ROOT</code></li>
+<li><code>&lt;projectRoot&gt;/Knowledge_Base</code></li>
+<li>CWD fallbacks</li>
+</ol>
+<h3 id="12-tauri-sidecar-env-injection-src-taurisrclibrs">1.2 Tauri sidecar env injection (<code>src-tauri/src/lib.rs</code>)<a class="headerlink" href="#12-tauri-sidecar-env-injection-src-taurisrclibrs" title="Permanent link">&para;</a></h3>
+<p>Rust sets:</p>
+<ul>
+<li><code>NOTE_CONNECTION_PROJECT_ROOT</code></li>
+<li><code>NOTE_CONNECTION_KB_ROOT</code></li>
+<li><code>NOTE_CONNECTION_FRONTEND_DIR</code></li>
+</ul>
+<p>Effective KB root in this project:</p>
+<ul>
+<li><code>E:\Knowledge_project\NoteConnection_app\Knowledge_Base</code></li>
+</ul>
+<h3 id="13-graph-artifact-paths">1.3 Graph artifact paths<a class="headerlink" href="#13-graph-artifact-paths" title="Permanent link">&para;</a></h3>
+<p>Active graph artifacts:</p>
+<ul>
+<li><code>dist/src/frontend/data.js</code></li>
+<li><code>dist/src/frontend/graph_data.json</code></li>
+</ul>
+<p>Target cache artifacts:</p>
+<ul>
+<li><code>dist/src/frontend/data_&lt;target&gt;.js</code></li>
+<li><code>dist/src/frontend/graph_data_&lt;target&gt;.json</code></li>
+</ul>
+<p>CLI timestamped artifacts:</p>
+<ul>
+<li><code>dist/src/frontend/data_cli_&lt;suffix&gt;.js</code></li>
+<li><code>dist/src/frontend/graph_data_cli_&lt;suffix&gt;.json</code></li>
+</ul>
+<hr />
+<h2 id="2-core-type-interfaces">2. Core Type Interfaces<a class="headerlink" href="#2-core-type-interfaces" title="Permanent link">&para;</a></h2>
+<h3 id="21-graph-types-srccoretypests">2.1 Graph types (<code>src/core/types.ts</code>)<a class="headerlink" href="#21-graph-types-srccoretypests" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">NoteNode</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nx">inDegree</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nx">outDegree</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nx">content?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nx">x?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nx">y?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nx">centrality?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nx">rank?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="nx">clusterId?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nx">metadata</span><span class="o">?:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nx">tags?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="nx">prerequisites?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">    </span><span class="nx">next?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span><span class="nx">filepath?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">    </span><span class="p">[</span><span class="nx">key</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="nx">any</span><span class="p">;</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">  </span><span class="p">};</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="p">}</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">NoteEdge</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">  </span><span class="nx">source</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">  </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">  </span><span class="kr">type</span><span class="nx">?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">  </span><span class="nx">weight?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="p">}</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">GraphData</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">  </span><span class="nx">nodes</span><span class="o">:</span><span class="w"> </span><span class="kt">NoteNode</span><span class="p">[];</span>
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="w">  </span><span class="nx">edges</span><span class="o">:</span><span class="w"> </span><span class="kt">NoteEdge</span><span class="p">[];</span>
+<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="22-build-api-types-srccorenoteconnectionts">2.2 Build API types (<code>src/core/NoteConnection.ts</code>)<a class="headerlink" href="#22-build-api-types-srccorenoteconnectionts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">BuildOptions</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nx">targetPath?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nx">maxWorkers?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nx">enableGPU?</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nx">enableGPULayout?</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nx">memorySavingMode?</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nx">deepDebug?</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nx">projectRoot?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nx">outputPrefix?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="nx">onLog</span><span class="o">?:</span><span class="w"> </span><span class="p">(</span><span class="nx">msg</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">}</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">GraphBuildResult</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">  </span><span class="nx">graph</span><span class="o">:</span><span class="w"> </span><span class="kt">Graph</span><span class="p">;</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">  </span><span class="nx">data</span><span class="o">:</span><span class="w"> </span><span class="kt">any</span><span class="p">;</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">  </span><span class="nx">stats</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span><span class="nx">nodeCount</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">    </span><span class="nx">edgeCount</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">    </span><span class="nx">fileCount</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">  </span><span class="p">};</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="23-backend-config-srcbackendconfigts">2.3 Backend config (<code>src/backend/config.ts</code>)<a class="headerlink" href="#23-backend-config-srcbackendconfigts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">AppConfig</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nx">matchingStrategy</span><span class="o">:</span><span class="w"> </span><span class="s2">"exact-phrase"</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s2">"fuzzy"</span><span class="p">;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nx">clusteringStrategy</span><span class="o">:</span><span class="w"> </span><span class="s2">"label-propagation"</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s2">"folder"</span><span class="p">;</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nx">fuzzyThreshold</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nx">enableTags</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nx">enableStatisticalInference</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="nx">enableVectorSimilarity</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="nx">enableHybridInference</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span><span class="nx">enableGPU</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span><span class="nx">enableGPULayout?</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">  </span><span class="nx">memorySavingMode</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">  </span><span class="nx">deepDebug</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">  </span><span class="nx">maxWorkers?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">  </span><span class="nx">exclusionList</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="24-worker-runtime-resolution-srcbackendutilsworkerruntimets">2.4 Worker runtime resolution (<code>src/backend/utils/WorkerRuntime.ts</code>)<a class="headerlink" href="#24-worker-runtime-resolution-srcbackendutilsworkerruntimets" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">WorkerRuntimeResolution</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nx">workerPath</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nx">isTsNode</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nx">candidates</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="3-build-and-graph-pipeline-interfaces">3. Build and Graph Pipeline Interfaces<a class="headerlink" href="#3-build-and-graph-pipeline-interfaces" title="Permanent link">&para;</a></h2>
+<h3 id="31-file-loading-srcbackendfileloaderts">3.1 File loading (<code>src/backend/FileLoader.ts</code>)<a class="headerlink" href="#31-file-loading-srcbackendfileloaderts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">RawFile</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nx">filepath</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nx">filename</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nx">content</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">}</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nx">FileLoader</span><span class="p">.</span><span class="nx">loadFiles</span><span class="p">(</span><span class="nx">dirPath</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">extensions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">".md"</span><span class="p">])</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">RawFile</span><span class="p">[]</span><span class="o">&gt;</span>
+</code></pre></div>
+<p>Behavior:</p>
+<ul>
+<li>Recursive directory scan.</li>
+<li>Batched concurrent reads.</li>
+<li>Empty array when directory does not exist.</li>
+</ul>
+<h3 id="32-frontmatter-parsing-srcbackendutilsfrontmatterparserts">3.2 Frontmatter parsing (<code>src/backend/utils/frontmatterParser.ts</code>)<a class="headerlink" href="#32-frontmatter-parsing-srcbackendutilsfrontmatterparserts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">ParsedMetadata</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nx">tags</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nx">prerequisites</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nx">next</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="p">[</span><span class="nx">key</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="nx">any</span><span class="p">;</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">}</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="nx">FrontmatterParser</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">content</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nx">ParsedMetadata</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="nx">FrontmatterParser</span><span class="p">.</span><span class="nx">extractTags</span><span class="p">(</span><span class="nx">content</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[]</span>
+</code></pre></div>
+<p>Supported formats: YAML list, inline array, single value, and <code>[[WikiLink]]</code> cleanup.</p>
+<h3 id="33-graph-core-srccoregraphts">3.3 Graph core (<code>src/core/Graph.ts</code>)<a class="headerlink" href="#33-graph-core-srccoregraphts" title="Permanent link">&para;</a></h3>
+<p>Primary methods:</p>
+<ul>
+<li><code>addNode(node)</code></li>
+<li><code>getNode(id)</code></li>
+<li><code>hasNode(id)</code></li>
+<li><code>addEdge(source, target, type?, weight?)</code></li>
+<li><code>getOutgoingEdges(id)</code></li>
+<li><code>getIncomingEdges(id)</code></li>
+<li><code>getNeighbors(id)</code></li>
+<li><code>getNodes()</code></li>
+<li><code>getEdges()</code></li>
+<li><code>toJSON()</code></li>
+<li><code>getPredecessors(id)</code></li>
+<li><code>getSuccessors(id)</code></li>
+<li><code>getShortestPath(source, target)</code></li>
+</ul>
+<h3 id="34-graph-building-orchestration-srcbackendgraphbuilderts">3.4 Graph building orchestration (<code>src/backend/GraphBuilder.ts</code>)<a class="headerlink" href="#34-graph-building-orchestration-srcbackendgraphbuilderts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">GraphBuilder</span><span class="p">.</span><span class="nx">build</span><span class="p">(</span><span class="nx">files</span><span class="p">,</span><span class="w"> </span><span class="nx">layout</span><span class="o">?</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">Graph</span><span class="o">&gt;</span>
+</code></pre></div>
+<p>Pipeline stages:</p>
+<ol>
+<li>Node initialization (+ metadata/tags)</li>
+<li>Explicit dependency edges (<code>prerequisites</code>, <code>next</code>)</li>
+<li>Keyword matching (parallel workers or sequential fallback)</li>
+<li>Statistical inference</li>
+<li>Vector similarity (<code>VectorSpace</code> or <code>VectorSpaceGPU</code>)</li>
+<li>Hybrid inference</li>
+<li>Clustering</li>
+<li>Graph metrics</li>
+<li>Cycle detection + topological rank assignment</li>
+<li>Backend layout compute (<code>LayoutEngine.computeLayout</code>)</li>
+</ol>
+<p>Parallel keyword matching contract:</p>
+<ul>
+<li>Worker path from <code>resolveWorkerRuntimePath</code>.</li>
+<li>Falls back to sequential matching when workers fail/unavailable.</li>
+</ul>
+<h3 id="35-top-level-build-output-srcindexts">3.5 Top-level build output (<code>src/index.ts</code>)<a class="headerlink" href="#35-top-level-build-output-srcindexts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">buildGraph</span><span class="p">(</span><span class="nx">options</span><span class="o">:</span><span class="w"> </span><span class="kt">BuildOptions</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="p">...</span><span class="nx">legacyArgs</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">GraphData</span><span class="o">&gt;</span>
+</code></pre></div>
+<p>Output rules:</p>
+<ul>
+<li>Standard writes active files:</li>
+<li><code>graph_data.json</code></li>
+<li><code>data.js</code> (lite payload)</li>
+<li>Target builds also write cache copies:</li>
+<li><code>data_&lt;target&gt;.js</code></li>
+<li><code>graph_data_&lt;target&gt;.json</code></li>
+<li>CLI mode (<code>outputPrefix</code>) writes <code>data_cli_*</code> and <code>graph_data_cli_*</code> without overwriting active data.</li>
+</ul>
+<hr />
+<h2 id="4-frontend-source-loading-interfaces">4. Frontend Source Loading Interfaces<a class="headerlink" href="#4-frontend-source-loading-interfaces" title="Permanent link">&para;</a></h2>
+<p>Source loader: <code>src/frontend/source_manager.js</code></p>
+<h3 id="41-folder-and-kb-path-loading">4.1 Folder and KB path loading<a class="headerlink" href="#41-folder-and-kb-path-loading" title="Permanent link">&para;</a></h3>
+<p>Primary API path:</p>
+<ul>
+<li><code>GET /api/kb-path</code></li>
+<li><code>GET /api/folders</code></li>
+</ul>
+<p>Tauri fallback path:</p>
+<ul>
+<li><code>invoke("get_kb_path")</code></li>
+<li><code>invoke("get_folders")</code></li>
+</ul>
+<p>Dropdown contract:</p>
+<ul>
+<li>Always includes synthetic <code>ALL_FOLDERS</code>.</li>
+<li>Real options come from directories under current KB root.</li>
+</ul>
+<h3 id="42-cache-checkrestore-modal-contract">4.2 Cache check/restore modal contract<a class="headerlink" href="#42-cache-checkrestore-modal-contract" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Check: <code>GET /api/check-cache?target=&lt;id&gt;</code></li>
+<li>If cache exists, user decision is required:</li>
+<li><code>Load Existing</code></li>
+<li><code>Regenerate</code></li>
+<li>Restore: <code>GET /api/restore-cache?target=&lt;id&gt;</code></li>
+</ul>
+<h3 id="43-single-flight-loadbuild-contract">4.3 Single-flight load/build contract<a class="headerlink" href="#43-single-flight-loadbuild-contract" title="Permanent link">&para;</a></h3>
+<p>Client-side guards:</p>
+<ul>
+<li><code>isLoadInProgress</code></li>
+<li><code>loadBtn.dataset.sourceManagerBound</code></li>
+<li>Session reload guard <code>nc_reload_guard</code></li>
+</ul>
+<p>Build payload:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ALL_FOLDERS | &lt;folderName&gt;"</span><span class="p">,</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">"maxWorkers"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">"enableGPU"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="nt">"enableGPULayout"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span><span class="nt">"memorySavingMode"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span><span class="nt">"deepDebug"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="44-path-mode-ownership-in-tauri-srcfrontendpath_appjs">4.4 Path mode ownership in Tauri (<code>src/frontend/path_app.js</code>)<a class="headerlink" href="#44-path-mode-ownership-in-tauri-srcfrontendpath_appjs" title="Permanent link">&para;</a></h3>
+<p>In Tauri mode:</p>
+<ul>
+<li><code>#path-toolbar</code> is hidden.</li>
+<li>Web Path Mode settings group is hidden.</li>
+<li>Layout is backend/runtime-forced to <code>orbital</code>.</li>
+</ul>
+<p>In browser mode:</p>
+<ul>
+<li>Web toolbar remains active for Mode/Strategy/Layout/Complete/History/Exit.</li>
+</ul>
+<hr />
+<h2 id="5-server-http-api-interfaces-srcserverts">5. Server HTTP API Interfaces (<code>src/server.ts</code>)<a class="headerlink" href="#5-server-http-api-interfaces-srcserverts" title="Permanent link">&para;</a></h2>
+<p>Base URL: <code>http://localhost:3000</code></p>
+<h3 id="51-get-apis">5.1 GET APIs<a class="headerlink" href="#51-get-apis" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Query</th>
+<th>Success Response</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/folders</code></td>
+<td>none</td>
+<td><code>{ "folders": string[] }</code></td>
+<td>Directories under current KB root.</td>
+</tr>
+<tr>
+<td><code>/api/content</code></td>
+<td><code>path</code></td>
+<td><code>{ "content": string }</code></td>
+<td>Reads file content.</td>
+</tr>
+<tr>
+<td><code>/api/kb-path</code></td>
+<td>none</td>
+<td><code>{ "kbPath": string }</code></td>
+<td>Current KB root.</td>
+</tr>
+<tr>
+<td><code>/api/check-cache</code></td>
+<td><code>target</code></td>
+<td><code>null</code> or <code>{ "date": string, "size": number, "source"?: "active" }</code></td>
+<td><code>ALL_FOLDERS</code> checks active cache.</td>
+</tr>
+<tr>
+<td><code>/api/restore-cache</code></td>
+<td><code>target</code></td>
+<td><code>{ "success": boolean, "deduped"?: true, "error"?: string }</code></td>
+<td>Includes short-window dedupe.</td>
+</tr>
+</tbody>
+</table>
+<p>Additional static behavior:</p>
+<ul>
+<li>Non-<code>/api/</code> <code>*.js</code> and <code>*.json</code> paths are served from frontend output dir.</li>
+</ul>
+<h3 id="52-post-apis">5.2 POST APIs<a class="headerlink" href="#52-post-apis" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Body</th>
+<th>Success Response</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/build</code></td>
+<td><code>{ target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug }</code></td>
+<td><code>{ "success": true }</code> or <code>{ "success": true, "deduped": true }</code></td>
+<td>Same in-flight payload dedupes; different payload returns <code>409</code>.</td>
+</tr>
+<tr>
+<td><code>/api/kb-path</code></td>
+<td><code>{ "kbPath": string }</code></td>
+<td><code>{ "success": true, "kbPath": string }</code></td>
+<td>Updates runtime KB root.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-build-dedupe-semantics">5.3 Build dedupe semantics<a class="headerlink" href="#53-build-dedupe-semantics" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Active build + same payload: wait and return deduped success.</li>
+<li>Active build + different payload: <code>409</code> conflict.</li>
+</ul>
+<h3 id="54-cli-option-parsing-notes">5.4 CLI option parsing notes<a class="headerlink" href="#54-cli-option-parsing-notes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Supports <code>--path</code>, <code>--gpu</code>, <code>--no-gpu</code>, <code>--workers</code>.</li>
+<li>Also reads npm env flags and <code>NOTE_CONNECTION_GPU</code>.</li>
+<li>Recommended npm script style for GPU is env flag (<code>NOTE_CONNECTION_GPU=1</code>) to avoid npm unknown-config warnings.</li>
+</ul>
+<hr />
+<h2 id="6-tauri-rust-command-and-event-interfaces-src-taurisrclibrs">6. Tauri Rust Command and Event Interfaces (<code>src-tauri/src/lib.rs</code>)<a class="headerlink" href="#6-tauri-rust-command-and-event-interfaces-src-taurisrclibrs" title="Permanent link">&para;</a></h2>
+<h3 id="61-invokable-commands">6.1 Invokable commands<a class="headerlink" href="#61-invokable-commands" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Signature</th>
+<th>Return</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_kb_path</code></td>
+<td><code>() -&gt; Result&lt;String, String&gt;</code></td>
+<td>Default KB path <code>&lt;projectRoot&gt;/Knowledge_Base</code>.</td>
+</tr>
+<tr>
+<td><code>get_user_language</code></td>
+<td><code>() -&gt; Result&lt;String, String&gt;</code></td>
+<td>Current language (currently defaults to <code>"en"</code>).</td>
+</tr>
+<tr>
+<td><code>get_folders</code></td>
+<td><code>() -&gt; Result&lt;Vec&lt;String&gt;, String&gt;</code></td>
+<td>Sorted KB folder names.</td>
+</tr>
+<tr>
+<td><code>set_user_language</code></td>
+<td><code>(app, lang) -&gt; Result&lt;(), String&gt;</code></td>
+<td>Menu language update with idempotent guard.</td>
+</tr>
+<tr>
+<td><code>check_cache</code></td>
+<td><code>(app, target) -&gt; Result&lt;Option&lt;Value&gt;, String&gt;</code></td>
+<td>Cache metadata or <code>None</code>.</td>
+</tr>
+<tr>
+<td><code>restore_cache</code></td>
+<td><code>(app, target) -&gt; Result&lt;bool, String&gt;</code></td>
+<td><code>true</code> if restore succeeded.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-menu-and-emitted-events">6.2 Menu and emitted events<a class="headerlink" href="#62-menu-and-emitted-events" title="Permanent link">&para;</a></h3>
+<p>Menu actions:</p>
+<ul>
+<li><code>change_kb</code></li>
+<li><code>reset_kb</code></li>
+<li><code>docs</code></li>
+<li><code>about</code></li>
+</ul>
+<p>Emitted frontend event:</p>
+<ul>
+<li><code>kb-path-changed</code> with payload path string</li>
+</ul>
+<h3 id="63-sidecar-and-godot-process-contracts">6.3 Sidecar and Godot process contracts<a class="headerlink" href="#63-sidecar-and-godot-process-contracts" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Sidecar process: <code>server</code></li>
+<li>Godot process launched with:</li>
+<li><code>--path E:\Knowledge_project\NoteConnection_app\path_mode</code></li>
+</ul>
+<hr />
+<h2 id="7-pathbridge-websocket-protocol-srccorepathbridgets">7. PathBridge WebSocket Protocol (<code>src/core/PathBridge.ts</code>)<a class="headerlink" href="#7-pathbridge-websocket-protocol-srccorepathbridgets" title="Permanent link">&para;</a></h2>
+<p>Bridge server: <code>ws://127.0.0.1:9876</code></p>
+<p>Client tagging:</p>
+<ul>
+<li>Query param <code>client</code> is parsed for diagnostics.</li>
+<li>Examples:</li>
+<li><code>ws://127.0.0.1:9876/?client=godot</code></li>
+<li><code>ws://localhost:9876?client=frontend</code></li>
+</ul>
+<p>Message envelope:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;messageType&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nt">"payload"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>Supported message types:</p>
+<ul>
+<li><code>nodeClick</code></li>
+<li><code>requestPath</code></li>
+<li><code>pathResult</code></li>
+<li><code>markComplete</code></li>
+<li><code>switchCenter</code></li>
+<li><code>openReader</code></li>
+<li><code>unmarkComplete</code></li>
+<li><code>completionSync</code></li>
+<li><code>toggleCollapse</code></li>
+<li><code>expandPrereqs</code></li>
+<li><code>collapsePrereqs</code></li>
+<li><code>collapseAll</code></li>
+<li><code>configure</code></li>
+<li><code>exitPathMode</code></li>
+</ul>
+<p>Known payload keys include:</p>
+<ul>
+<li><code>{ nodeId }</code></li>
+<li><code>{ newCenterId, autoReconstruct? }</code></li>
+<li><code>{ completedIds, timestamp? }</code></li>
+</ul>
+<p>Current implementation broadcasts recognized messages to connected clients.</p>
+<hr />
+<h2 id="8-path-worker-and-path-payload-interfaces">8. Path Worker and Path Payload Interfaces<a class="headerlink" href="#8-path-worker-and-path-payload-interfaces" title="Permanent link">&para;</a></h2>
+<h3 id="81-path-worker-srcfrontendpath_workerjs">8.1 Path worker (<code>src/frontend/path_worker.js</code>)<a class="headerlink" href="#81-path-worker-srcfrontendpath_workerjs" title="Permanent link">&para;</a></h3>
+<p>Inbound messages:</p>
+<ul>
+<li><code>initData</code> -&gt; <code>{ nodes, links }</code></li>
+<li><code>computePath</code> -&gt; <code>{ mode, strategy, layout, targetId, centralId, collapsedIds, completedIds, forcedExpansionIds, expansionOrder, stickyClaimEnabled }</code></li>
+</ul>
+<p>Outbound messages:</p>
+<ul>
+<li><code>pathResult</code> -&gt; <code>{ nodes, edges, treeLayout }</code></li>
+</ul>
+<h3 id="82-path-payload-sent-from-web-path-app-to-godot-srcfrontendpath_appjs">8.2 Path payload sent from web path app to Godot (<code>src/frontend/path_app.js</code>)<a class="headerlink" href="#82-path-payload-sent-from-web-path-app-to-godot-srcfrontendpath_appjs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p">{</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pathResult"</span><span class="p">,</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">"payload"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nt">"central"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"label"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"inDegree"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"outDegree"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="nt">"peripherals"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"label"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"relation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"prerequisite|association"</span><span class="w"> </span><span class="p">}],</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="nt">"progress"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"completed"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"total"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="nt">"totalNodes"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="nt">"pathNodes"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"label"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"parentId"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w"> </span><span class="p">}],</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="nt">"treeLayout"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"nodes"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w"> </span><span class="nt">"edges"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span><span class="nt">"completedIds"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">    </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"orbital"</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="p">}</span>
+</code></pre></div>
+<p>When <code>treeLayout</code> is null/empty, Godot falls back to legacy linear rendering path.</p>
+<hr />
+<h2 id="9-godot-interface-contracts">9. Godot Interface Contracts<a class="headerlink" href="#9-godot-interface-contracts" title="Permanent link">&para;</a></h2>
+<h3 id="91-ws-client-path_modescriptsws_clientgd">9.1 WS client (<code>path_mode/scripts/ws_client.gd</code>)<a class="headerlink" href="#91-ws-client-path_modescriptsws_clientgd" title="Permanent link">&para;</a></h3>
+<p>Core constants:</p>
+<ul>
+<li><code>WS_URL = "ws://127.0.0.1:9876/?client=godot"</code></li>
+<li><code>RECONNECT_DELAY = 3.0</code></li>
+</ul>
+<p>Signals:</p>
+<ul>
+<li><code>data_received(data)</code></li>
+<li><code>connected</code></li>
+<li><code>disconnected</code></li>
+<li><code>path_result(data)</code></li>
+<li><code>path_update(data)</code></li>
+<li><code>switch_center(new_center_id)</code></li>
+<li><code>completion_sync(completed_ids, timestamp)</code></li>
+</ul>
+<p>Send helpers:</p>
+<ul>
+<li><code>send_node_click</code></li>
+<li><code>send_mark_complete</code></li>
+<li><code>send_open_reader</code></li>
+<li><code>send_switch_center</code></li>
+<li><code>send_configure</code></li>
+<li><code>send_toggle_collapse</code></li>
+<li><code>send_expand_prereqs</code></li>
+<li><code>send_collapse_prereqs</code></li>
+<li><code>send_collapse_all</code></li>
+<li><code>send_exit_path_mode</code></li>
+</ul>
+<h3 id="92-path-ui-path_modescriptspath_mode_uigd">9.2 Path UI (<code>path_mode/scripts/path_mode_ui.gd</code>)<a class="headerlink" href="#92-path-ui-path_modescriptspath_mode_uigd" title="Permanent link">&para;</a></h3>
+<p>Signals:</p>
+<ul>
+<li><code>mark_complete_pressed</code></li>
+<li><code>sidebar_toggled(visible)</code></li>
+<li><code>completed_node_clicked(node_id)</code></li>
+<li><code>return_pressed</code></li>
+<li><code>return_to_node(node_id)</code></li>
+<li><code>tree_node_clicked(node_id)</code></li>
+<li><code>unmark_requested(node_id)</code></li>
+<li><code>mark_node_requested(node_id)</code></li>
+<li><code>node_toggle_requested(node_id)</code></li>
+<li><code>node_expand_prereqs_requested(node_id)</code></li>
+<li><code>node_collapse_prereqs_requested(node_id)</code></li>
+<li><code>collapse_all_requested()</code></li>
+<li><code>settings_updated(settings)</code></li>
+<li><code>exit_requested</code></li>
+</ul>
+<p>Runtime config emitted to backend:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"domain|diffusion"</span><span class="p">,</span><span class="w"> </span><span class="nt">"strategy"</span><span class="p">:</span><span class="w"> </span><span class="s2">"foundational|core"</span><span class="p">,</span><span class="w"> </span><span class="nt">"layout"</span><span class="p">:</span><span class="w"> </span><span class="s2">"orbital"</span><span class="p">,</span><span class="w"> </span><span class="nt">"targetId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;optional&gt;"</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<h3 id="93-learning-state-machine-path_modescriptslearning_state_machinegd">9.3 Learning state machine (<code>path_mode/scripts/learning_state_machine.gd</code>)<a class="headerlink" href="#93-learning-state-machine-path_modescriptslearning_state_machinegd" title="Permanent link">&para;</a></h3>
+<p>States:</p>
+<ul>
+<li><code>IDLE</code></li>
+<li><code>VIEWING</code></li>
+<li><code>TRANSITIONING</code></li>
+<li><code>READING</code></li>
+</ul>
+<p>Signals:</p>
+<ul>
+<li><code>state_changed</code></li>
+<li><code>central_changed</code></li>
+<li><code>node_completed</code></li>
+<li><code>node_unmarked</code></li>
+<li><code>path_complete</code></li>
+</ul>
+<p>Persistence path:</p>
+<ul>
+<li><code>user://orbital_progress.json</code></li>
+</ul>
+<h3 id="94-path-renderer-path_modescriptspath_renderergd">9.4 Path renderer (<code>path_mode/scripts/path_renderer.gd</code>)<a class="headerlink" href="#94-path-renderer-path_modescriptspath_renderergd" title="Permanent link">&para;</a></h3>
+<p>Signals:</p>
+<ul>
+<li><code>node_clicked(node_id)</code></li>
+<li><code>node_double_clicked(node_id)</code></li>
+<li><code>transition_complete()</code></li>
+</ul>
+<p>Critical handlers:</p>
+<ul>
+<li><code>render_path(path_data)</code></li>
+<li><code>_on_ws_data_received(data)</code></li>
+<li><code>_on_settings_updated(settings)</code> -&gt; sends <code>configure</code></li>
+<li><code>_request_switch_center(target_id)</code> -&gt; sends <code>switchCenter</code></li>
+<li><code>_on_mark_node_requested(node_id)</code> -&gt; sends <code>markComplete</code></li>
+<li><code>_on_unmark_requested(node_id)</code> -&gt; sends <code>unmarkComplete</code></li>
+<li><code>_on_exit_requested()</code> -&gt; sends <code>exitPathMode</code></li>
+</ul>
+<h3 id="95-tree-panel-path_modescriptstree_view_panelgd">9.5 Tree panel (<code>path_mode/scripts/tree_view_panel.gd</code>)<a class="headerlink" href="#95-tree-panel-path_modescriptstree_view_panelgd" title="Permanent link">&para;</a></h3>
+<p>Signals relayed upward:</p>
+<ul>
+<li><code>node_navigate_requested</code></li>
+<li><code>node_mark_complete_requested</code></li>
+<li><code>node_unmark_requested</code></li>
+<li><code>node_toggle_requested</code></li>
+<li><code>node_expand_prereqs_requested</code></li>
+<li><code>node_collapse_prereqs_requested</code></li>
+<li><code>collapse_all_requested</code></li>
+<li><code>fullscreen_requested(expand)</code></li>
+</ul>
+<hr />
+<h2 id="10-web-vs-tauri-path-mode-ownership-matrix">10. Web vs Tauri Path Mode Ownership Matrix<a class="headerlink" href="#10-web-vs-tauri-path-mode-ownership-matrix" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Interface Area</th>
+<th>Browser Mode</th>
+<th>Tauri Mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Path toolbar (<code>#path-toolbar</code>)</td>
+<td>Visible and interactive</td>
+<td>Hidden by <code>path_app.js</code></td>
+</tr>
+<tr>
+<td>Mode control</td>
+<td>Web select (<code>#learning-mode</code>)</td>
+<td>Godot <code>PathModeUI</code></td>
+</tr>
+<tr>
+<td>Strategy control</td>
+<td>Web select (<code>#strategy</code>)</td>
+<td>Godot <code>PathModeUI</code></td>
+</tr>
+<tr>
+<td>Layout control</td>
+<td>Web select (<code>#layout-style</code>)</td>
+<td>Backend/Godot forced to <code>orbital</code></td>
+</tr>
+<tr>
+<td>Diffusion target picker</td>
+<td>Web modal (<code>#node-select-modal</code>)</td>
+<td>Godot target popup</td>
+</tr>
+<tr>
+<td>Complete action</td>
+<td>Web button (<code>#btn-mark-complete</code>)</td>
+<td>Godot button</td>
+</tr>
+<tr>
+<td>History action</td>
+<td>Web sidebar/popup</td>
+<td>Godot history popup</td>
+</tr>
+<tr>
+<td>Exit action</td>
+<td>Web button (<code>#btn-exit-path</code>)</td>
+<td>Godot exit flow + <code>exitPathMode</code> bridge message</td>
+</tr>
+</tbody>
+</table>
+<p>This is the current Bridge-first migration contract.</p>
+<hr />
+<h2 id="11-corrected-removed-legacy-mismatches">11. Corrected / Removed Legacy Mismatches<a class="headerlink" href="#11-corrected-removed-legacy-mismatches" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Removed duplicated mixed-language blocks and rebuilt strict EN/ZH separation.</li>
+<li>Replaced stale API text with exact <code>server.ts</code> contracts.</li>
+<li>Corrected Godot WebSocket URL requirement:</li>
+<li>valid: <code>ws://127.0.0.1:9876/?client=godot</code></li>
+<li>Documented actual build/cache dedupe semantics.</li>
+<li>Documented actual Tauri command names and return shapes.</li>
+<li>Added missing path worker payload and Godot signal contracts.</li>
+<li>Clarified Tauri path-control ownership migration to Godot.</li>
+</ol>
+<hr />
+<h2 id="12-handover-checklist">12. Handover Checklist<a class="headerlink" href="#12-handover-checklist" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Folder list source must be current KB root (<code>/api/folders</code> or Rust fallback).</li>
+<li>Cache choice prompt must appear when target cache exists.</li>
+<li>One click should produce one load/build flow only.</li>
+<li>Active graph files must be read from <code>dist/src/frontend</code>.</li>
+<li>Mode/strategy changes should emit <code>configure</code> and produce <code>pathResult</code>.</li>
+<li>Godot should receive non-empty <code>treeLayout</code> in normal path updates.</li>
+<li>Tauri mode should hide web path toolbar; browser mode should keep it.</li>
+</ol>
+<hr />
+<hr />
+<hr />
+<h2 id="13-interface-update-log-placement">13. Interface Update Log Placement<a class="headerlink" href="#13-interface-update-log-placement" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Canonical bilingual update logs are centrally archived in <a href="../export/"><code>export.md</code></a>.</li>
+<li>This document focuses on interface contracts; historical migration logs are no longer placed at file beginning.</li>
+<li>Related interface delta versions:</li>
+<li><code>2026-03-02 v1.5.1</code>: Interface Delta: Tauri Runtime Parity Update</li>
+</ul>
+<h3 id="archived-interface-delta-block-traceability">Archived Interface Delta Block (traceability)<a class="headerlink" href="#archived-interface-delta-block-traceability" title="Permanent link">&para;</a></h3>
+<h1 id="2026-03-02-v151">2026-03-02 v1.5.1<a class="headerlink" href="#2026-03-02-v151" title="Permanent link">&para;</a></h1>
+<h3 id="interface-delta-tauri-runtime-parity-update">Interface Delta: Tauri Runtime Parity Update<a class="headerlink" href="#interface-delta-tauri-runtime-parity-update" title="Permanent link">&para;</a></h3>
+<p>This section records interface changes added after <code>v1.4.5</code>, keeping all previous handover content unchanged below.</p>
+<h4 id="a-sidecar-http-api-node">A. Sidecar HTTP API (Node)<a class="headerlink" href="#a-sidecar-http-api-node" title="Permanent link">&para;</a></h4>
+<ol>
+<li><code>GET /api/available-targets</code></li>
+<li>Purpose: return selectable learning/build targets merged from:<ul>
+<li>physical subfolders under <code>Knowledge_Base</code></li>
+<li>cached artifacts like <code>data_&lt;target&gt;.js</code>, <code>graph_data_&lt;target&gt;.json</code></li>
+</ul>
+</li>
+<li>Response:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="p">{</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">"targets"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"financial"</span><span class="p">,</span><span class="w"> </span><span class="s2">"legal"</span><span class="p">,</span><span class="w"> </span><span class="s2">"robotics"</span><span class="p">]</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="p">}</span>
+</code></pre></div>
+<h4 id="b-tauri-commands-rust-ipc">B. Tauri Commands (Rust IPC)<a class="headerlink" href="#b-tauri-commands-rust-ipc" title="Permanent link">&para;</a></h4>
+<ol>
+<li><code>get_available_targets() -&gt; string[]</code></li>
+<li>
+<p>Contract: same merged target semantics as <code>/api/available-targets</code>.</p>
+</li>
+<li>
+<p><code>read_node_content(file_path: string) -&gt; Result&lt;string, string&gt;</code></p>
+</li>
+<li>Contract:<ul>
+<li>Accepts relative paths and absolute paths.</li>
+<li>Enforces KB-root boundary (rejects files outside configured <code>Knowledge_Base</code>).</li>
+<li>Supports legacy desktop-style paths containing <code>.../Knowledge_Base/...</code> by rebasing to current configured KB root.</li>
+</ul>
+</li>
+</ol>
+<h4 id="c-runtime-capability-contract-update">C. Runtime Capability Contract Update<a class="headerlink" href="#c-runtime-capability-contract-update" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>get_runtime_capabilities()</code> now returns <code>supports_content_api: true</code> on Android.</li>
+<li>Rationale: content reads are now available through Rust <code>read_node_content</code> command even when sidecar is disabled.</li>
+</ul>
+<h4 id="d-frontend-behavior-contract-changes">D. Frontend Behavior Contract Changes<a class="headerlink" href="#d-frontend-behavior-contract-changes" title="Permanent link">&para;</a></h4>
+<ol>
+<li><code>source_manager.js</code></li>
+<li>Sidecar path prefers <code>/api/available-targets</code> and falls back to <code>/api/folders</code>.</li>
+<li>Rust path prefers <code>get_available_targets</code> and falls back to <code>get_folders</code>.</li>
+<li>
+<p>In <code>supports_build=false</code> runtime (mobile):</p>
+<ul>
+<li>Source list is filtered to cached targets only.</li>
+<li><code>ALL_FOLDERS</code> is shown only if active cache exists.</li>
+<li>Load button is disabled if no cache is available.</li>
+</ul>
+</li>
+<li>
+<p><code>reader.js</code></p>
+</li>
+<li>Content loading fallback order:<ul>
+<li>sidecar <code>/api/content</code> (desktop/web path)</li>
+<li>Rust command <code>read_node_content</code> (Tauri fallback/mobile-safe)</li>
+<li>localized unavailable/error messaging</li>
+</ul>
+</li>
+</ol>
+<h4 id="e-verification-interface-baseline">E. Verification Interface Baseline<a class="headerlink" href="#e-verification-interface-baseline" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>npm run test:migration</code> passed (35 tests).</li>
+<li><code>npm run test:tauri</code> passed (14 tests).</li>
+<li><code>npm run tauri:android:build</code> passed.</li>
+</ul>
+<hr />
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

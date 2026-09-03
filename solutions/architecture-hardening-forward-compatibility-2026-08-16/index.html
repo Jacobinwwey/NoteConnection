@@ -1,0 +1,3594 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/solutions/architecture-hardening-forward-compatibility-2026-08-16/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>2026-08-16 Architecture Hardening and Forward-Compatible Multi-Platform Plan - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#2026-08-16-architecture-hardening-and-forward-compatible-multi-platform-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              2026-08-16 Architecture Hardening and Forward-Compatible Multi-Platform Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#english" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-21-phase-30-graph-conditioned-context-assembly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-21 Phase 30 Graph-Conditioned Context Assembly
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-21 Phase 30 Graph-Conditioned Context Assembly">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-evidence-and-gap-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code evidence and gap matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reference-comparison-without-cargo-culting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference comparison without cargo culting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#target-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Target architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mobile-first-release-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mobile-first release contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#forward-compatible-migration-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Forward-compatible migration sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trade-offs-and-rejected-shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trade-offs and rejected shortcuts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollback-and-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback and observability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#current-progress-after-this-slice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current progress after this slice
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-17-identity-boundary-and-mobile-admission-delta" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-17 Identity Boundary and Mobile Admission Delta
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-21-30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-21 第 30 阶段：图条件上下文装配
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-21 第 30 阶段：图条件上下文装配">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        决策摘要
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        代码证据与缺口矩阵
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        参考仓库的取舍
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        多端/移动端发布契约
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        向前兼容推进顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        当前进度
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-17 身份边界与移动端准入增量
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-17-stable-sourceuri-dual-read-foundation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-17 Stable sourceUri Dual-Read Foundation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-17 Stable sourceUri Dual-Read Foundation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-17-mobile-slim-implementation-closure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-17 Mobile Slim Implementation Closure
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-17 Mobile Slim Implementation Closure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-17-phase-8-follow-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-17 Phase 8 Follow-up
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-17 Phase 8 Follow-up">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-17-phase-10-follow-up-projection-and-host-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-17 Phase 10 Follow-up: Projection and Host Execution
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-17 Phase 10 Follow-up: Projection and Host Execution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-phase-11-follow-up-projection-store-and-android-saf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 Phase 11 Follow-up: Projection Store and Android SAF
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 Phase 11 Follow-up: Projection Store and Android SAF">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-phase-12-follow-up-app-local-projection-replay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 Phase 12 Follow-up: App-Local Projection Replay
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 Phase 12 Follow-up: App-Local Projection Replay">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-phase-14-signed-device-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 Phase 14 Signed Device Evidence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 Phase 14 Signed Device Evidence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-phase-15-native-boundary-and-identity-corpus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 Phase 15 Native Boundary and Identity Corpus
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 Phase 15 Native Boundary and Identity Corpus">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-phase-16-portable-identity-propagation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 Phase 16 Portable Identity Propagation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 Phase 16 Portable Identity Propagation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-phase-17-cross-host-semantic-parity-closure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 Phase 17 Cross-Host Semantic Parity Closure
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 Phase 17 Cross-Host Semantic Parity Closure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-phase-18-native-recovery-state-machine-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 Phase 18 Native Recovery State-Machine Evidence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 Phase 18 Native Recovery State-Machine Evidence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-21-phase-25-collision-safe-identity-transition-and-owner-convergence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-21 Phase 25 Collision-Safe Identity Transition and Owner Convergence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-21 Phase 25 Collision-Safe Identity Transition and Owner Convergence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-21-phase-26-request-level-ingest-atomicity-and-single-writer-serialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-21 Phase 26 Request-Level Ingest Atomicity and Single-Writer Serialization
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-21 Phase 26 Request-Level Ingest Atomicity and Single-Writer Serialization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-21-phase-27-versioned-g4-identity-corpus-replay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-21-phase-28-canonical-id-migration-readiness-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-21 Phase 28 Canonical-ID Migration Readiness Gate
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-21 Phase 28 Canonical-ID Migration Readiness Gate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#english_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-21-phase-29-tauri-primary-mobile-release-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-21 Phase 29 Tauri-Primary Mobile Release Routing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="2026-08-16-architecture-hardening-and-forward-compatible-multi-platform-plan">2026-08-16 Architecture Hardening and Forward-Compatible Multi-Platform Plan<a class="headerlink" href="#2026-08-16-architecture-hardening-and-forward-compatible-multi-platform-plan" title="Permanent link">&para;</a></h1>
+<h2 id="english">English<a class="headerlink" href="#english" title="Permanent link">&para;</a></h2>
+<h2 id="2026-08-21-phase-30-graph-conditioned-context-assembly">2026-08-21 Phase 30 Graph-Conditioned Context Assembly<a class="headerlink" href="#2026-08-21-phase-30-graph-conditioned-context-assembly" title="Permanent link">&para;</a></h2>
+<p>The retrieval boundary now consumes a pre-RAG graph answer plan through a focused <code>graphConditionedContext</code> adapter. It produces deterministic fragment order and an additive <code>RagGraphConditioningTrace</code>; the existing role/score budget remains authoritative, so graph conditioning cannot promote weak evidence over direct support or escape scope. Normal and bounded recovery assembly share the same plan. This closes the graph-to-RAG wiring gap without changing public IDs, IPC, mobile assets, or native evidence claims.</p>
+<h3 id="decision-summary">Decision summary<a class="headerlink" href="#decision-summary" title="Permanent link">&para;</a></h3>
+<p>The current branch is not blocked by a lack of features; it is blocked by ambiguous ownership and unsafe boundaries. The first hardening slice therefore makes three edge invariants executable without changing public graph IDs or snapshot schemas:</p>
+<ol>
+<li>duplicate basename identities fail before graph construction and loaded files retain a normalized workspace-relative path;</li>
+<li>sidecar and HTTP authorization use one strict token decision, while preserving both existing credential headers;</li>
+<li>file snapshot replacement stays atomic under concurrent saves and the in-process cache reflects the committed snapshot immediately.</li>
+</ol>
+<p>The multi-platform decision is equally important: the portable core owns ingest, exact graph projection, bounded indexed query, evidence and export; Node, Tauri, Capacitor and Godot are adapters. Mobile must not run a second business-rule implementation and must not ship desktop sidecars, Godot, or model weights.</p>
+<h3 id="code-evidence-and-gap-matrix">Code evidence and gap matrix<a class="headerlink" href="#code-evidence-and-gap-matrix" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Current code</th>
+<th>Earlier plan expectation</th>
+<th>Current judgement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Resource identity</td>
+<td><code>FileLoader</code> used basename; <code>Graph.addNode()</code> silently ignored duplicate IDs. This slice adds <code>relativePath</code> and <code>assertUniqueLegacyResourceIds()</code>.</td>
+<td>Stable workspace/source URI, alias-aware moves, case/Unicode policy.</td>
+<td><strong>Partial:</strong> data loss is stopped; stable ID migration is still pending.</td>
+</tr>
+<tr>
+<td>HTTP boundary</td>
+<td>Modular registry has 70+ route entries, but <code>server.ts</code> still contains legacy fallback and strict mode is opt-in.</td>
+<td>Registry-first composition root with contract-complete routes.</td>
+<td><strong>Pending:</strong> do not flip default until shadow metrics and legacy URL parity are complete.</td>
+</tr>
+<tr>
+<td>Learning ownership</td>
+<td><code>KnowledgeLearningPlatform.ts</code> still owns persistence, query, conversation, memory, workflow and telemetry orchestration.</td>
+<td>Complete use-case boundaries with narrow ports.</td>
+<td><strong>Pending:</strong> extraction must move invariants, not create wrappers.</td>
+</tr>
+<tr>
+<td>Graph scale</td>
+<td>Explicit prerequisites/next/DAG paths exist, but inferred matching remains pairwise and graph nodes carry content.</td>
+<td>Exact projection first, indexed bounded inference second, content references and compact IDs.</td>
+<td><strong>Pending P1:</strong> more workers do not change O(N²).</td>
+</tr>
+<tr>
+<td>Snapshot persistence</td>
+<td>File store used one fixed temp path and stale cache after save.</td>
+<td>Atomic versioned snapshot pointer and coherent reads.</td>
+<td><strong>Implemented baseline:</strong> unique sibling temp paths and post-commit cache refresh; versioned manifests remain next phase.</td>
+</tr>
+<tr>
+<td>Mobile export</td>
+<td><code>mobile-slim</code> is sidecar-free, PNG-first, deterministic-staged, and exposes bounded local exact query/path calls; workspace export bundles remain deterministic.</td>
+<td>Mobile should analyse its local corpus without desktop runtime dependencies.</td>
+<td><strong>Partial:</strong> callable/static loop is implemented; device RSS/APK evidence and SQLite persistence are still open.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="reference-comparison-without-cargo-culting">Reference comparison without cargo culting<a class="headerlink" href="#reference-comparison-without-cargo-culting" title="Permanent link">&para;</a></h3>
+<ul>
+<li>LearnGraph demonstrates a typed HTTP boundary (FastAPI/Pydantic), explicit request/response models, workspace/tenant scope, and security-conscious tool execution. Adopt the boundary discipline and scoped capability model. Do not import its Docker-only execution, SaaS RBAC, PostgreSQL/RLS assumptions, or network-first deployment model into a local/Tauri/mobile product.</li>
+<li>textbooks demonstrates a clean content package contract (<code>content.md</code>, <code>functions.ts</code>, <code>hints.yaml</code>, styles and translations). Adopt a validated manifest + compiler IR direction. Do not copy the Mathigon Studio DSL or its runtime dependency/licensing posture into the core.</li>
+<li>The correct synthesis is a source package compiler plus a typed, host-neutral runtime, not a monolithic clone of either repository.</li>
+</ul>
+<h3 id="target-architecture">Target architecture<a class="headerlink" href="#target-architecture" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>flowchart TB
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  source["Markdown / course packages / imported files"] --&gt; compiler["Validated ingestion compiler"]
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  compiler --&gt; identity["Canonical resource identity + revision"]
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  identity --&gt; store["SQLite facts: resources, atoms, evidence, relations"]
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  store --&gt; exact["Exact graph projection + compact index"]
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  exact --&gt; query["Bounded local query / evidence assembly"]
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  query --&gt; usecase["Typed application use cases"]
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  usecase --&gt; adapters["HTTP / Tauri IPC / Capacitor bridge"]
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  adapters --&gt; web["Web / Tauri desktop"]
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>  adapters --&gt; mobile["Tauri Android / Capacitor mobile"]
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>  query --&gt; remote["Optional remote ANN/LLM adapter"]
+</code></pre></div>
+<p>The portable core must be deterministic and runnable in a Web Worker/WASM or embedded SQLite host. The remote adapter is an enhancement with timeout, cancellation, capability negotiation and explicit offline fallback; it is never a prerequisite for local ingest/query.</p>
+<h3 id="mobile-first-release-contract">Mobile-first release contract<a class="headerlink" href="#mobile-first-release-contract" title="Permanent link">&para;</a></h3>
+<p>The current generated asset inventory is a warning, not a release baseline: Godot is roughly 172 MB, the Windows/Linux server binaries are roughly 78/108 MB, and the existing Android generated asset directory is roughly 357 MB. A mobile profile that inherits desktop assets will violate both download and low-memory goals.</p>
+<p>The release matrix must enforce:</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Local analysis</th>
+<th>Optional remote</th>
+<th style="text-align: right;">App-owned compressed payload</th>
+<th style="text-align: right;">Peak RSS target</th>
+<th>Corpus gate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile-low</code></td>
+<td>exact graph/index projection, evidence snippets, export; SQLite deferred</td>
+<td>disabled by default</td>
+<td style="text-align: right;">&lt;= 25 MiB</td>
+<td style="text-align: right;">&lt;= 256 MiB</td>
+<td>5,000 docs / 50,000 atoms on 4-core ARM64</td>
+</tr>
+<tr>
+<td><code>mobile-standard</code></td>
+<td>same, plus bounded background indexing</td>
+<td>explicit/cancellable</td>
+<td style="text-align: right;">&lt;= 35 MiB</td>
+<td style="text-align: right;">&lt;= 384 MiB</td>
+<td>20,000 docs / 200,000 atoms on 4-core ARM64</td>
+</tr>
+<tr>
+<td><code>desktop-full</code></td>
+<td>sidecar, full render and streaming</td>
+<td>configured provider</td>
+<td style="text-align: right;">no mobile cap</td>
+<td style="text-align: right;">host budget</td>
+<td>desktop matrix</td>
+</tr>
+</tbody>
+</table>
+<p>Mobile bundles must exclude <code>server-*</code>, <code>godot-*</code>, desktop-only renderer bundles, full source text duplication, and local model weights. This slice ships compact resource metadata and exact-index projections; SQLite/index persistence, content references, and paged source blobs are subsequent phases. The signed APK/AAB and extracted asset tree—not the TypeScript source size—are the authority for size gates.</p>
+<h3 id="forward-compatible-migration-sequence">Forward-compatible migration sequence<a class="headerlink" href="#forward-compatible-migration-sequence" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Boundary hardening (this slice):</strong> identity collision fail-fast, strict shared auth, atomic/coherent file snapshots.</li>
+<li><strong>Budget and capability inventory:</strong> add a deterministic mobile staging command, signed artifact byte manifest, RSS workload runner, and <code>PlatformCapabilities</code> fields (<code>supportsLocalExactQuery</code>, <code>supportsRemoteInference</code>, <code>assetBudgetBytes</code>, <code>maxResidentBytes</code>).</li>
+<li><strong>Portable execution:</strong> move exact ingest/projection/query into a host-neutral package backed by SQLite and bounded Worker/WASM kernels; keep <code>KnowledgeLearningPlatform</code> as an orchestration owner until complete use cases can enforce invariants.</li>
+<li><strong>Mobile bridge:</strong> expose versioned <code>analyze</code>, <code>query</code>, <code>readEvidence</code>, <code>exportBundle</code> operations with correlation IDs, cancellation and capability negotiation. The client never decides graph or memory policy.</li>
+<li><strong>Stable identity dual-read:</strong> introduce <code>sourceUri</code>/revision/alias alongside basename IDs, backfill collision-free workspaces, then switch new projections to stable IDs only after replay and move-file tests pass.</li>
+<li><strong>Projection scale:</strong> split explicit edges from bounded inferred edges; replace pairwise matching with inverted index/BM25/ANN Top-K; store <code>contentRef</code> instead of full text on graph nodes; add 10k/50k corpus benchmarks.</li>
+<li><strong>Registry and domain convergence:</strong> shadow the modular route registry, publish parity metrics, then make it default; extract complete use cases (<code>IngestKnowledge</code>, <code>AnswerKnowledgeQuery</code>, <code>RunLearningConversation</code>, <code>RecordEvidence</code>, <code>RecalculateMastery</code>, <code>ApplyMemoryPolicy</code>) with narrow repositories.</li>
+</ol>
+<h3 id="trade-offs-and-rejected-shortcuts">Trade-offs and rejected shortcuts<a class="headerlink" href="#trade-offs-and-rejected-shortcuts" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Reject “ship the Node sidecar on Android”:</strong> it maximizes code reuse but inflates package size, ABI surface, startup time and memory. A portable exact-query core plus SQLite is more work up front but keeps mobile hardware requirements low.</li>
+<li><strong>Reject “embed an LLM for offline parity”:</strong> model weights dominate size/RAM and make deterministic release gates impossible. Offline mobile should return grounded deterministic evidence/graph answers; remote synthesis is explicit when available.</li>
+<li><strong>Reject “flip strict registry now”:</strong> the registry already has broad coverage, but the remaining inline fallback would turn hidden gaps into production 501s. Shadow and contract parity are safer.</li>
+<li><strong>Reject “add more workers/GPU”:</strong> this hides but does not remove pairwise complexity and can worsen mobile serialization/GC pressure. Indexing and compact representations come first.</li>
+</ul>
+<h3 id="rollback-and-observability">Rollback and observability<a class="headerlink" href="#rollback-and-observability" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Identity guard rollback is code-only; existing basename IDs and layouts continue to read, while ambiguous inputs fail visibly instead of corrupting state.</li>
+<li>Auth rollback is technically possible but reopens an authorization bypass; retain the legacy header rather than weakening the decision.</li>
+<li>Snapshot writes preserve the previous target on failure; unique temp files are cleaned and never treated as source snapshots.</li>
+<li>Every mobile build emits a manifest with profile, capability flags, byte totals, excluded artifact reasons, corpus size, peak RSS, and fallback reason. CI stores the manifest with the APK/AAB evidence.</li>
+</ul>
+<h3 id="current-progress-after-this-slice">Current progress after this slice<a class="headerlink" href="#current-progress-after-this-slice" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Implemented and tested: resource collision guard (<code>src/backend/ResourceIdentity.ts</code>), normalized <code>RawFile.relativePath</code>, shared strict auth (<code>src/middleware/auth.ts</code> + <code>src/server.ts</code>), unique atomic snapshot temp files and cache refresh (<code>src/learning/store.ts</code>).</li>
+<li>Existing targeted verification: identity/graph suites 13/13, auth/server/registry suites 30 passed with 13 existing skips, store/persistence suites 23/23.</li>
+<li>A prior repository baseline recorded 132/132 Jest suites and 1,211 tests, but that full run was not re-established in this slice; do not use it as current release evidence.</li>
+<li>Current phase evidence: TypeScript build, 6 replay/identity suites (35 tests), 12 core/route suites (70 tests), 24 learning suites (501 tests), 9 mobile contract suites (51 tests), Rust (26 tests), <code>npm run docs:diataxis:check</code>, PathBridge strict, and the mobile-slim budget gate passed.</li>
+<li>Known repository-wide gate debt: <code>npm run verify:markdown:mermaid:fence</code> still reports 588 pre-existing inline-fence findings under <code>Knowledge_Base</code>; this slice did not rewrite unrelated corpus files.</li>
+<li>Previously open mobile local analysis/verifier work is now implemented at the callable/static-contract level; device RSS/APK evidence and SQLite persistence remain open. Stable <code>sourceUri</code> migration, strict registry default, complete use-case extraction, indexed graph projection, and Bridge host-adapter integration remain explicit next gates; the transport-only Bridge 2.0 envelope is delivered.</li>
+</ul>
+<h2 id="2026-08-17-identity-boundary-and-mobile-admission-delta">2026-08-17 Identity Boundary and Mobile Admission Delta<a class="headerlink" href="#2026-08-17-identity-boundary-and-mobile-admission-delta" title="Permanent link">&para;</a></h2>
+<p>The additive identity foundation now crosses the learning boundary as well as the graph boundary. <code>FileLoader</code> receives an explicit workspace root, server/modular sync forwards <code>sourceUri</code>/<code>revision</code>/aliases, and snapshots retain those fields for replay. URI/alias deletes resolve persisted documents before the legacy path normalizer. Android admission checks metadata before reads and enforces the <code>mobile-low</code> corpus limits (5,000 docs, 16 MiB per doc, 64 MiB total input, 250,000 edges). These changes reduce cross-target drift and peak-memory risk without changing public IDs or adding mobile runtime dependencies.</p>
+<p>The remaining architectural blocker is intentional: a path-derived URI is not a rename journal. Move/rename events, workspace namespace, old-snapshot replay, Android folder selection, signed artifact extraction, and device RSS evidence must land before canonical-ID cutover or a strict mobile release claim.</p>
+<h2 id="_1">中文<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<h2 id="2026-08-21-30">2026-08-21 第 30 阶段：图条件上下文装配<a class="headerlink" href="#2026-08-21-30" title="Permanent link">&para;</a></h2>
+<p>检索边界现在通过独立的 <code>graphConditionedContext</code> 适配层接收 pre-RAG graph answer plan，生成确定性的 fragment 顺序与 additive <code>RagGraphConditioningTrace</code>。既有 role/score budget 仍是权威排序，因此图条件不会让弱证据压过 direct support，也不会越过 scope。普通与有界恢复共用同一 plan。本阶段只补齐 graph 到 RAG 的接线，不改变 public ID、IPC、移动资源或原生证据结论。</p>
+<h3 id="_2">决策摘要<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<p>当前分支的问题不是功能数量不足，而是边界含义不清和所有权过度集中。本轮先把三个边界不变量变成可执行验证，同时不改变公开节点 ID 与快照 schema：</p>
+<ol>
+<li>重复 basename 在建图前失败，磁盘加载文件同时保留归一化 workspace-relative path；</li>
+<li>Sidecar 与 HTTP 使用同一个严格 token 判定，保留已有两种凭证头；</li>
+<li>文件快照并发替换保持原子，同一进程保存后缓存立即反映已提交快照。</li>
+</ol>
+<p>多端决策同样明确：portable core 负责 ingest、exact graph projection、有界 indexed query、evidence 与 export；Node、Tauri、Capacitor、Godot 只是 adapter。移动端不能再维护一套业务规则，也不能携带桌面 sidecar、Godot 或模型权重。</p>
+<h3 id="_3">代码证据与缺口矩阵<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>领域</th>
+<th>当前代码</th>
+<th>先前方案要求</th>
+<th>当前判断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>资源身份</td>
+<td><code>FileLoader</code> 只用 basename；本轮新增 <code>relativePath</code> 与 <code>assertUniqueLegacyResourceIds()</code>。</td>
+<td>稳定 workspace/source URI、alias、大小写/Unicode 策略。</td>
+<td><strong>部分完成：</strong> 已阻止静默丢数据，稳定 ID 迁移仍待完成。</td>
+</tr>
+<tr>
+<td>HTTP 边界</td>
+<td>modular registry 已有 70+ route，但 <code>server.ts</code> 仍保留 legacy fallback，strict mode 还是 opt-in。</td>
+<td>registry-first composition root 与完整契约。</td>
+<td><strong>待推进：</strong> 先做 shadow metrics 与旧 URL parity，再切默认。</td>
+</tr>
+<tr>
+<td>学习所有权</td>
+<td><code>KnowledgeLearningPlatform.ts</code> 仍承载 persistence、query、conversation、memory、workflow、telemetry 编排。</td>
+<td>完整 use case + 窄 port。</td>
+<td><strong>待推进：</strong> 必须迁移不变量，不能只增加 wrapper。</td>
+</tr>
+<tr>
+<td>图规模</td>
+<td>explicit prerequisite/next/DAG path 存在，但 inferred matching 仍成对扫描，graph node 仍携带 content。</td>
+<td>exact projection 优先、indexed bounded inference、contentRef、紧凑 ID。</td>
+<td><strong>P1 待推进：</strong> 更多 worker 不会改变 O(N²)。</td>
+</tr>
+<tr>
+<td>快照持久化</td>
+<td>固定 <code>.tmp</code> 且 save 后缓存不刷新。</td>
+<td>原子 versioned snapshot 与一致读。</td>
+<td><strong>底线已实现：</strong> 唯一临时文件与提交后 cache refresh；versioned manifest 仍是下一步。</td>
+</tr>
+<tr>
+<td>移动导出</td>
+<td><code>mobile-slim</code> 已 sidecar-free、PNG-first、deterministic staging，并提供有界本地 exact query/path 调用；workspace export bundle 仍 deterministic。</td>
+<td>移动端应不依赖桌面 runtime 完成本地知识库分析。</td>
+<td><strong>部分完成：</strong> 可调用/静态闭环已实现；真机 RSS/APK 证据与 SQLite 持久化仍待完成。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_4">参考仓库的取舍<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>LearnGraph 值得采用的是 FastAPI/Pydantic 的类型化边界、workspace/tenant scope、能力与安全约束；不应把 Docker-only、SaaS RBAC、PostgreSQL/RLS、network-first 部署假设带入本地/Tauri/mobile 产品。</li>
+<li>textbooks 值得采用的是 <code>content.md</code>、<code>functions.ts</code>、<code>hints.yaml</code>、styles/locales 的内容包契约与 compiler IR 方向；不复制依赖 Mathigon Studio 的 DSL 与授权/运行时包袱。</li>
+<li>最优组合是“source package compiler + typed host-neutral runtime”，不是复制任一仓库的整体形状。</li>
+</ul>
+<h3 id="_5">多端/移动端发布契约<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<p>当前资产盘点只是风险信号而非 release baseline：Godot 约 172 MB，Windows/Linux server 约 78/108 MB，现有 Android generated asset 目录约 357 MB。若 mobile 继承桌面产物，必然违反下载体积与低内存目标。</p>
+<table>
+<thead>
+<tr>
+<th>profile</th>
+<th>本地分析</th>
+<th>可选远端</th>
+<th style="text-align: right;">应用自有压缩 payload</th>
+<th style="text-align: right;">RSS 目标</th>
+<th>corpus gate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile-low</code></td>
+<td>exact graph/index projection、evidence snippet、export；SQLite 后续实现</td>
+<td>默认关闭</td>
+<td style="text-align: right;">&lt;= 25 MiB</td>
+<td style="text-align: right;">&lt;= 256 MiB</td>
+<td>4 核 ARM64：5,000 docs / 50,000 atoms</td>
+</tr>
+<tr>
+<td><code>mobile-standard</code></td>
+<td>同上 + 有界后台 indexing</td>
+<td>显式/可取消</td>
+<td style="text-align: right;">&lt;= 35 MiB</td>
+<td style="text-align: right;">&lt;= 384 MiB</td>
+<td>4 核 ARM64：20,000 docs / 200,000 atoms</td>
+</tr>
+<tr>
+<td><code>desktop-full</code></td>
+<td>sidecar、完整渲染、streaming</td>
+<td>provider 配置</td>
+<td style="text-align: right;">不受 mobile cap</td>
+<td style="text-align: right;">宿主预算</td>
+<td>desktop matrix</td>
+</tr>
+</tbody>
+</table>
+<p>移动包必须排除 <code>server-*</code>、<code>godot-*</code>、桌面 renderer bundle、全文重复副本和本地模型权重。本切片只交付紧凑 resource metadata 与 exact-index projection；SQLite/index 持久化、content reference 和分页 source blob 属于后续阶段。签名 APK/AAB 与解包资源树才是体积门禁依据。</p>
+<h3 id="_6">向前兼容推进顺序<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>边界加固（本轮）：</strong> identity collision fail-fast、共享严格 auth、原子/一致快照。</li>
+<li><strong>预算与 capability inventory：</strong> deterministic mobile staging、签名产物 byte manifest、RSS workload runner，以及 <code>supportsLocalExactQuery</code>、<code>supportsRemoteInference</code>、<code>assetBudgetBytes</code>、<code>maxResidentBytes</code>。</li>
+<li><strong>portable execution：</strong> 用 SQLite + 有界 Worker/WASM 把 exact ingest/projection/query 移到 host-neutral package；在完整 use case 能强制不变量前，不急于抽空 <code>KnowledgeLearningPlatform</code>。</li>
+<li><strong>移动 bridge：</strong> 通过 versioned <code>analyze/query/readEvidence/exportBundle</code>、correlation ID、cancel、capability negotiation 提供调用；client 不决定 graph/memory policy。</li>
+<li><strong>稳定身份双读：</strong> 引入 <code>sourceUri</code>/revision/alias，回填无冲突 workspace，完成 replay 与 move-file 测试后新 projection 才切稳定 ID。</li>
+<li><strong>投影规模：</strong> explicit/inferred 分离，inverted index/BM25/ANN Top-K 代替 pairwise matching，graph node 改存 <code>contentRef</code>，加入 10k/50k benchmark。</li>
+<li><strong>registry 与 domain 收敛：</strong> shadow registry、parity metrics 后切默认；抽取 <code>IngestKnowledge</code>、<code>AnswerKnowledgeQuery</code>、<code>RunLearningConversation</code>、<code>RecordEvidence</code>、<code>RecalculateMastery</code>、<code>ApplyMemoryPolicy</code> 等完整 use case 与窄 repository。</li>
+</ol>
+<h3 id="_7">当前进度<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li>已实现并测试：资源冲突 guard、规范化 <code>RawFile.relativePath</code>、共享严格 auth、唯一原子快照临时文件与 cache refresh。</li>
+<li>当前定向证据：identity/graph 13/13，auth/server/registry 30 passed（既有 13 skip），store/persistence 23/23。</li>
+<li>旧仓库基线曾记录 132/132 Jest suites、1,211 tests，但本切片未重新建立该全量结果，不能把它当作当前 release 证据。</li>
+<li>当前阶段证据：TypeScript build、replay/identity 6 suite（35 tests）、core/route 12 suite（70 tests）、learning 24 suite（501 tests）、mobile contract 9 suite（51 tests）、Rust（26 tests）、<code>npm run docs:diataxis:check</code>、PathBridge strict 与 mobile-slim budget gate 通过。</li>
+<li>已知全库门禁债务：<code>npm run verify:markdown:mermaid:fence</code> 仍报告 <code>Knowledge_Base</code> 下 588 条历史 inline-fence；本轮没有借机改写无关语料。</li>
+<li>此前未完成的移动端本地分析/verifier 已在可调用与静态契约层面落地；真机 RSS/APK 证据与 SQLite 持久化仍待完成。稳定 <code>sourceUri</code> 迁移、strict registry 默认、完整 use-case 抽取、indexed graph projection 与 Bridge host adapter 仍是明确后续门禁；transport-only Bridge 2.0 envelope 已交付。</li>
+</ul>
+<h2 id="2026-08-17">2026-08-17 身份边界与移动端准入增量<a class="headerlink" href="#2026-08-17" title="Permanent link">&para;</a></h2>
+<p>本次 additive identity foundation 已跨过 graph boundary 进入 learning boundary。<code>FileLoader</code> 接受显式 workspace root，server/modular sync 传播 <code>sourceUri</code>/<code>revision</code>/alias，快照保留这些字段用于 replay；URI/alias 删除会先解析持久化文档，再回退旧 path normalizer。Android 在读取正文前做 admission check，并执行 <code>mobile-low</code> 语料限制（5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 条边）。这些改动降低跨 target 漂移与峰值内存风险，同时不改变公开 ID，也不增加移动端运行时依赖。</p>
+<p>剩余架构阻塞项是有意保留的：路径派生 URI 不是 rename journal。完成 canonical-ID 切换或声称移动端 release 前，必须补齐 move/rename 事件、workspace namespace、旧 snapshot replay、Android 文件夹选择、签名产物解包和真机 RSS 证据。</p>
+<h2 id="2026-08-17-stable-sourceuri-dual-read-foundation">2026-08-17 Stable sourceUri Dual-Read Foundation<a class="headerlink" href="#2026-08-17-stable-sourceuri-dual-read-foundation" title="Permanent link">&para;</a></h2>
+<h3 id="english_1">English<a class="headerlink" href="#english_1" title="Permanent link">&para;</a></h3>
+<p>This phase adds identity metadata without changing the public <code>NoteNode.id</code> contract:</p>
+<ul>
+<li><code>createResourceIdentity()</code> emits <code>note://workspace/v1/</code> URIs over NFC-normalized, locale-independent lower-case workspace paths with per-segment percent encoding.</li>
+<li><code>revision</code> is a deterministic <code>sha256:&lt;hex&gt;</code> content revision. <code>identityAliases</code> retain the legacy basename and both display/canonical relative-path forms.</li>
+<li><code>FileLoader</code> creates the metadata once at the filesystem boundary. <code>Graph</code> keeps the current ID as the storage key, but resolves source URI, relative path, legacy basename, and case-folded separators through one alias registry; alias collisions fail before mutation.</li>
+<li><code>GraphBuilder</code> copies the additive fields into nodes and metadata, accepts URI/relative/legacy layout keys, and resolves URI frontmatter through the same graph boundary. Existing layouts, edges, and serialized snapshots remain readable.</li>
+<li>The legacy basename collision guard now uses the same case-folding policy, so a graph cannot be valid on POSIX and ambiguous on Windows.</li>
+</ul>
+<p>Verification for this phase: four focused suites passed (15 tests) and <code>npx tsc --noEmit</code> passed. The public ID is deliberately not switched yet; move/rename replay, canonical-ID cutover, strict route registry, indexed graph projection, Bridge v2, and device APK/RSS evidence remain separate gates. The change is additive and has no new mobile-slim runtime dependency; backend identity metadata is not a Node/Godot/LLM requirement for mobile packaging.</p>
+<h3 id="_8">中文<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<p>本阶段只增加身份元数据，不改变公开 <code>NoteNode.id</code> 契约：</p>
+<ul>
+<li><code>createResourceIdentity()</code> 基于 NFC、locale-independent 小写的 workspace 相对路径生成 <code>note://workspace/v1/</code> URI，并对每个路径段做 percent encoding。</li>
+<li><code>revision</code> 是确定性的 <code>sha256:&lt;hex&gt;</code> 内容修订号；<code>identityAliases</code> 保留 legacy basename、显示态相对路径和 canonical 相对路径。</li>
+<li><code>FileLoader</code> 在文件系统边界一次性生成元数据；<code>Graph</code> 仍以当前 ID 作为存储 key，但通过单一 alias registry 解析 source URI、relative path、legacy basename 和大小写/分隔符变体；alias 冲突在写入前 fail-fast。</li>
+<li><code>GraphBuilder</code> 将新增字段写入节点与 metadata，兼容 URI/relative/legacy 布局 key，并通过同一图边界解析 URI frontmatter；现有布局、边和序列化快照继续可读。</li>
+<li>legacy basename collision guard 使用相同大小写折叠策略，避免 POSIX 上有效、Windows 上歧义的图。</li>
+</ul>
+<p>本阶段验证：四个聚焦 suite 共 15 个测试通过，<code>npx tsc --noEmit</code> 通过。当前刻意没有切换公开 ID；文件移动/重命名 replay、canonical ID 切换、strict route registry、indexed graph projection、Bridge v2 以及真机 APK/RSS 证据仍是独立门禁。本次为 additive 改造，不增加 mobile-slim 的 Node/Godot/LLM 运行时依赖。</p>
+<h2 id="2026-08-17-mobile-slim-implementation-closure">2026-08-17 Mobile Slim Implementation Closure<a class="headerlink" href="#2026-08-17-mobile-slim-implementation-closure" title="Permanent link">&para;</a></h2>
+<h3 id="english_2">English<a class="headerlink" href="#english_2" title="Permanent link">&para;</a></h3>
+<p>The previously open mobile runtime/verifier gap is now closed at the static and callable-contract level:</p>
+<ul>
+<li><code>ExportProfile</code> / <code>PlatformCapabilities</code> explicitly expose local ingest, local exact query, optional remote inference, SVG support, asset budget, and resident-memory budget.</li>
+<li><code>src/frontend/mobile_exact_analyzer.js</code> is a host-neutral bounded projection. It indexes IDs, labels, and tags in O(V + E) construction time, bounds matches/neighbors/path traversal, and deliberately drops <code>content</code> from its returned projection. It is loaded before <code>storage_provider.js</code> in both main and Path Mode HTML surfaces.</li>
+<li><code>RuntimeStorageProvider.queryKnowledgeBaseExact()</code> and <code>findKnowledgePath()</code> call the local generated graph asset through the same Tauri/Capacitor storage boundary. They never require a Node sidecar and return <code>remoteInferenceUsed: false</code> for the deterministic path.</li>
+<li><code>prepare-mobile-slim.js</code> creates the only mobile frontend staging directory and a deterministic manifest. <code>verify-mobile-slim-budget.js</code> estimates ZIP-deflate payload bytes, reports largest files, rejects forbidden artifacts, and treats missing RSS evidence as <code>not-measured</code>.</li>
+<li>Capacitor and Tauri Android now consume that staging directory. Tauri Android no longer builds a sidecar on the default mobile path; Godot Pathmode is an explicit extended profile and stale generated Godot files/assets are removed by the default runner.</li>
+<li>Android Rust graph persistence uses the lite projection on <code>target_os = android</code>, releases parsed document bodies before projection, and never constructs <code>full_nodes/full_graph</code> in the low-memory runtime. Desktop retains the full graph contract.</li>
+</ul>
+<p>This is intentionally narrower than the original SQLite/WASM aspiration. The shipped implementation is a versioned, body-free graph/index projection over the existing local builders. SQLite persistence, true device RSS/APK evidence, full agent conversation parity, and cross-host replay remain open gates. Android folder import is now implemented through the additive SAF bridge but still lacks device replay evidence. The current static measurement on this Windows host is 120 staged files, 4,251,345 uncompressed bytes, and 1,545,813 estimated compressed bytes; it is not a signed artifact or device-memory result.</p>
+<p>The reference comparison remains unchanged: LearnGraph contributes typed boundary/workspace validation patterns, and textbooks contributes content-package/compiler discipline. Neither justifies a Docker-only mobile runtime, a SaaS database dependency, Mathigon DSL adoption, or Godot/LLM inclusion in the slim profile.</p>
+<h3 id="_9">中文<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<p>此前未闭环的移动 runtime/verifier 缺口已经在“静态门禁 + 可调用契约”层面收口：</p>
+<ul>
+<li><code>ExportProfile</code> / <code>PlatformCapabilities</code> 明确暴露本地 ingest、本地 exact query、可选远程推理、SVG 能力、资源预算和常驻内存预算。</li>
+<li><code>src/frontend/mobile_exact_analyzer.js</code> 是 host-neutral 的有界 projection。构建时间为 O(V + E)，对匹配数、邻居数和路径遍历设上限，并刻意从返回 projection 中丢弃 <code>content</code>。它在主页面和 Path Mode 页面中都先于 <code>storage_provider.js</code> 加载。</li>
+<li><code>RuntimeStorageProvider.queryKnowledgeBaseExact()</code> 与 <code>findKnowledgePath()</code> 通过同一 Tauri/Capacitor storage boundary 读取本地生成图资源；不要求 Node sidecar，确定性路径返回 <code>remoteInferenceUsed: false</code>。</li>
+<li><code>prepare-mobile-slim.js</code> 生成唯一移动前端 staging 目录和 deterministic manifest。<code>verify-mobile-slim-budget.js</code> 估算 ZIP-deflate payload 字节、报告最大文件、拒绝禁入物；没有 RSS evidence 时明确标记 <code>not-measured</code>。</li>
+<li>Capacitor 与 Tauri Android 现在消费同一 staging 目录。默认 Android 移动路径不再构建 sidecar；Godot Pathmode 变成显式扩展档，默认 runner 会删除旧生成的 Godot 文件和资源。</li>
+<li>Android Rust 在 <code>target_os = android</code> 下持久化 lite projection，会在 projection 前释放已解析正文，并且低内存运行时不会构造 <code>full_nodes/full_graph</code>；桌面仍保持 full graph 契约。</li>
+</ul>
+<p>这比最初的 SQLite/WASM 目标更窄，但更诚实。当前交付的是基于现有本地构建器的版本化、无正文 exact graph/index projection；SQLite 持久化、真实设备 RSS/APK 证据、完整 agent conversation parity 与跨 host replay 仍是开放门禁。Android 文件夹导入已通过 additive SAF bridge 实现，但仍缺真机 replay 证据。本机静态测量为 120 个 staging 文件、未压缩 4,251,345 字节、估算压缩 1,545,813 字节；它不是签名产物或设备内存结果。</p>
+<p>参考仓库的取舍没有改变：LearnGraph 提供类型化边界/工作区校验模式，textbooks 提供内容包/compiler 纪律；二者都不足以证明应把 Docker-only 移动运行时、SaaS 数据库依赖、Mathigon DSL 或 Godot/LLM 带入 slim profile。</p>
+<h2 id="2026-08-17-phase-8-follow-up">2026-08-17 Phase 8 Follow-up<a class="headerlink" href="#2026-08-17-phase-8-follow-up" title="Permanent link">&para;</a></h2>
+<h3 id="english_3">English<a class="headerlink" href="#english_3" title="Permanent link">&para;</a></h3>
+<p>The follow-up closes the first replay and projection gaps without changing public IDs: graph snapshots now have an atomic validated restore path; learning has explicit move/rename journal events (including path-only moves that retain URI/revision); modular ingest applies a bounded identity-preserving schema; keyword matching uses indexed candidates; the mobile projection contract carries URI/revision/aliases, edge provenance, evidence references, and bounded adjacency; Android extracts link candidates while reading instead of retaining the corpus in intermediate drafts; and PathBridge exposes an additive host adapter with correlation, timeout, abort, and cancellation semantics. Current verification includes the TypeScript build, migration matrix 57 suites / 307 passing tests, focused projection/Bridge tests, Rust graph-runtime tests, PathBridge strict, Diataxis, and slim staging at 119 files / 4,242,970 uncompressed bytes / 1,543,913 estimated compressed bytes. The remaining release claims are intentionally unproven until registry shadow parity, signed arm64 APK extraction, device RSS, Android folder import, and cross-host persistence replay evidence exist.</p>
+<h3 id="_10">中文<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<p>本次跟进在不改变公共 ID 的前提下补齐首批 replay 与 projection 缺口：graph snapshot 增加原子校验恢复路径；learning 增加显式 move/rename journal（只提供新路径时仍保留 URI/revision）；模块化 ingest 使用保留身份的有界 schema；keyword matching 使用索引候选；移动 projection 契约携带 URI/revision/alias、边 provenance、evidence reference 与有界 adjacency；Android 读取时提取 link candidate，不在中间 draft 保留整库正文；PathBridge 提供带 correlation、timeout、abort、cancel 的 additive host adapter。当前已验证 TypeScript build、migration matrix 57 suite / 307 个测试、projection/Bridge 定向测试、Rust graph-runtime、PathBridge strict、Diataxis 与 slim staging（119 个文件、未压缩 4,242,970 字节、估算压缩 1,543,913 字节）。registry shadow parity、签名 arm64 APK 解包、真机 RSS、Android 文件夹导入与跨 host replay 证据尚未获得前，不宣称 release 已闭环。</p>
+<h2 id="2026-08-17-phase-10-follow-up-projection-and-host-execution">2026-08-17 Phase 10 Follow-up: Projection and Host Execution<a class="headerlink" href="#2026-08-17-phase-10-follow-up-projection-and-host-execution" title="Permanent link">&para;</a></h2>
+<h3 id="english_4">English<a class="headerlink" href="#english_4" title="Permanent link">&para;</a></h3>
+<p>The follow-up now ships a browser-compatible versioned projection contract and uses it from both Capacitor and Tauri Rust graph writers. Nodes are body-free and carry source URI, revision, aliases, and bounded evidence references; edges carry explicit/inferred/runtime provenance; adjacency is capped at 64 neighbors per direction. <code>PathBridgeHostAdapter</code> is optional and keeps host policy/execution separate from transport correlation, timeout, abort, and cancel handling. Fresh staging is 120 files / 4,251,345 uncompressed bytes / 1,545,813 estimated compressed bytes. Signed arm64 artifact extraction, device RSS, Android folder import, SQLite cross-host replay, and canonical-ID migration remain unproven.</p>
+<h3 id="_11">中文<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
+<p>本次跟进已交付浏览器兼容的版本化 projection 契约，并由 Capacitor 与 Tauri Rust graph writer 共用。节点不保存正文，携带 source URI、revision、alias 和有界 evidence reference；边携带 explicit/inferred/runtime provenance；每方向 adjacency 上限为 64。<code>PathBridgeHostAdapter</code> 为可选能力，将 host policy/执行与 transport correlation、timeout、abort、cancel 分离。最新 staging 为 120 个文件 / 未压缩 4,251,345 / 估算压缩 1,545,813 字节。签名 arm64 产物解包、真机 RSS、Android 文件夹导入、SQLite 跨 host replay 与 canonical-ID 迁移仍未获得证据。</p>
+<h2 id="2026-08-18-phase-11-follow-up-projection-store-and-android-saf">2026-08-18 Phase 11 Follow-up: Projection Store and Android SAF<a class="headerlink" href="#2026-08-18-phase-11-follow-up-projection-store-and-android-saf" title="Permanent link">&para;</a></h2>
+<h3 id="english_5">English<a class="headerlink" href="#english_5" title="Permanent link">&para;</a></h3>
+<p>The persistence boundary is now explicit instead of being repeated in each host: <code>knowledge_projection_store.js</code> wraps the existing versioned contract and offers persistent/read-through plus memory adapters. <code>storage_provider.js</code> uses that boundary for exact mobile analysis, and a fixture matrix confirms identical schema, metadata, exact lookup, neighbor, and path results across Web, Tauri, Capacitor, and Android adapters. Unknown future schemas still fail closed.</p>
+<p>Tauri projection files are written through sibling temporary files and rename. Android slim now includes an additive SAF bridge: Rust requests a tree, generated Kotlin streams Markdown into app-local <code>filesDir/Knowledge_Base</code> under the existing low-memory budgets, and Rust polls a short result marker. The external URI is retained as provenance only; the persisted graph identity remains workspace-scoped. This preserves the low-size/mobile-low contract without shipping Node, Godot, models, SVG, or desktop binaries.</p>
+<p>Evidence is intentionally split. Code and fixture gates pass; a fresh unsigned arm64 APK/AAB now passes central-directory inspection and the mobile artifact verifier under the 25 MiB payload budget (APK 9,433,678 compressed payload bytes; AAB 6,978,122). G2 still lacks signing, online device workload, and RSS JSON. G3 fixture replay passes but real Android storage replay is pending. G4 identity corpus coverage is stronger, yet old-snapshot rollback and move-journal restart evidence still block canonical public-ID migration.</p>
+<h3 id="_12">中文<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h3>
+<p>持久化边界不再由各 host 重复实现：<code>knowledge_projection_store.js</code> 包装既有版本化契约，提供 persistent/read-through 与 memory adapter。<code>storage_provider.js</code> 的移动 exact analysis 经由该边界读取；fixture matrix 已确认 Web、Tauri、Capacitor、Android adapter 的 schema、metadata、exact lookup、neighbor、path 一致，未知未来 schema 继续 fail closed。</p>
+<p>Tauri projection 文件经同目录临时文件 + rename 写入。Android slim 增加 additive SAF bridge：Rust 请求 tree，生成的 Kotlin 在既有低内存预算内把 Markdown 流式复制到 app-local <code>filesDir/Knowledge_Base</code>，Rust 轮询短结果 marker。外部 URI 只作为 provenance，持久化 graph identity 仍是 workspace-scoped；移动包继续不包含 Node、Godot、模型、SVG 或桌面二进制。</p>
+<p>证据必须分层表达：代码与 fixture gate 已通过；新鲜未签名 arm64 APK/AAB 已通过 central-directory 检查和 25 MiB payload budget 下的 mobile artifact verifier（APK 压缩 payload 9,433,678 字节；AAB 6,978,122 字节）。G2 仍缺签名、在线设备 workload 与 RSS JSON；G3 fixture replay 已通过，真实 Android storage replay 待补；G4 identity corpus 已加强，但旧 snapshot rollback 与 move-journal 重启证据仍阻塞 canonical 公共 ID 迁移。</p>
+<h2 id="2026-08-18-phase-12-follow-up-app-local-projection-replay">2026-08-18 Phase 12 Follow-up: App-Local Projection Replay<a class="headerlink" href="#2026-08-18-phase-12-follow-up-app-local-projection-replay" title="Permanent link">&para;</a></h2>
+<h3 id="english_6">English<a class="headerlink" href="#english_6" title="Permanent link">&para;</a></h3>
+<p>The Phase 11 persistence boundary is now restartable at the app-local file level without changing the projection wire shape. <code>knowledge_projection_store.js</code> adds <code>createFileProjectionStore()</code>, which accepts a host-owned <code>readFile(fileName)</code> and optional <code>writeAtomic(fileName, serialized, projection)</code>. Tauri/Rust and Android/Kotlin continue to own filesystem policy and atomic activation; the JavaScript boundary only owns validation, caching, and replay semantics. <code>storage_provider.js</code> selects the new factory for <code>graph_data.json</code> and keeps the legacy generic-store fallback for older hosts.</p>
+<p>The failure contract is now explicit. Read/I/O errors may reuse the last successful projection, but malformed/truncated JSON, oversized payloads, invalid identity/edges, and unknown future schemas fail closed even when an initial or stale cache exists. Initial data is a fallback candidate, not evidence that disk state is current. A failed atomic save leaves the previous committed file and cached projection untouched.</p>
+<p><code>verify-mobile-projection-replay.js</code> provides a durable code-level evidence path. It performs save -&gt; fresh-store reopen in a temporary app-local directory, checks Web/Tauri/Capacitor/Android parity for metadata, exact search, neighbors, and shortest path, and records truncated/unknown-schema rejection in <code>output/verification/mobile-projection-replay/report-latest.json</code>. This closes the code/fixture portion of G3; it does not claim physical Android process-death replay, signed artifact validity, or RSS compliance.</p>
+<p>The post-change static packaging measurement is 120 staged files, 4,253,837 uncompressed bytes, and 1,546,201 estimated compressed bytes. The rebuilt unsigned arm64 APK/AAB compressed payloads are 9,436,196 and 6,983,880 bytes. Both remain under the 25 MiB budget; neither is signed-device or RSS evidence.</p>
+<p>The route-shadow verifier also gained condition-based runtime-manifest stabilization. It waits for three equal snapshots after readiness, preventing asynchronous first-use SQLite initialization from being reported as a route-induced read-only side effect on slower hosts.</p>
+<p>The mobile trade-off remains deliberate: raw versioned JSON plus a bounded body-free exact analyzer is the default because it keeps package/startup/heap costs low and is sufficient for the current workload. SQLite/WASM stays an opt-in future adapter and must first prove measured gains in startup, RSS, query p95, and package budget. Public IDs remain frozen until G4 old-snapshot, move-journal restart, rollback, collision, and cross-root corpora are replayed.</p>
+<h3 id="_13">中文<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h3>
+<p>第 11 阶段的持久化边界现在已经在 app-local 文件层支持重启 replay，同时不改变 projection wire shape。<code>knowledge_projection_store.js</code> 增加 <code>createFileProjectionStore()</code>，接收 host-owned 的 <code>readFile(fileName)</code> 与可选 <code>writeAtomic(fileName, serialized, projection)</code>。Tauri/Rust 与 Android/Kotlin 继续持有文件策略和原子激活；JavaScript 边界只负责校验、cache 与 replay 语义。<code>storage_provider.js</code> 对 <code>graph_data.json</code> 选择新 factory，并为旧 host 保留 generic store fallback。</p>
+<p>失败契约现在明确：读取/I/O 错误可以使用最近一次成功 projection，但非法/截断 JSON、payload 超限、非法 identity/edge 和未知未来 schema 即使存在 initial/stale cache 也必须 fail closed。Initial data 只是 fallback candidate，不代表磁盘状态最新。Atomic save 失败时，上一个 committed file 与 cache 都保持不变。</p>
+<p><code>verify-mobile-projection-replay.js</code> 提供可落盘的代码级证据路径：在临时 app-local 目录执行 save -&gt; 新建 store -&gt; reopen，验证 Web/Tauri/Capacitor/Android 的 metadata、exact search、neighbor、shortest path 等价，并把截断/未知 schema 拒绝写入 <code>output/verification/mobile-projection-replay/report-latest.json</code>。这关闭了 G3 的代码/fixture 部分，但不宣称真实 Android 进程死亡 replay、签名产物有效性或 RSS 合规。</p>
+<p>变更后的静态 packaging 测量为 120 个 staging 文件、未压缩 4,253,837 字节、估算压缩 1,546,201 字节。重新构建的未签名 arm64 APK/AAB 压缩 payload 分别为 9,436,196 与 6,983,880 字节，均低于 25 MiB；两者都不是签名真机或 RSS 证据。</p>
+<p>route-shadow verifier 也增加了基于条件的 runtime manifest 稳定等待：readiness 后连续取得三次相同快照，避免慢宿主上的首次 SQLite 异步初始化被误报为 route 触发的 read-only side effect。</p>
+<p>移动端权衡仍是有意为之：默认使用原始版本化 JSON 与无正文有界 exact analyzer，以保持包体、启动和 heap 成本低，并满足当前 workload。SQLite/WASM 继续作为未来 opt-in adapter，必须先在 startup、RSS、query p95 与 package budget 上证明实测收益。G4 的 old-snapshot、move-journal restart、rollback、collision 与 cross-root 语料完成 replay 前，公共 ID 继续冻结。</p>
+<h2 id="2026-08-18-phase-14-signed-device-evidence">2026-08-18 Phase 14 Signed Device Evidence<a class="headerlink" href="#2026-08-18-phase-14-signed-device-evidence" title="Permanent link">&para;</a></h2>
+<h3 id="english_7">English<a class="headerlink" href="#english_7" title="Permanent link">&para;</a></h3>
+<p>The release boundary now separates static artifact integrity, native device execution, and projection semantics. <code>verify-mobile-artifact.js</code> can require APK/AAB signatures (<code>apksigner</code> for APK, <code>jarsigner</code> for AAB) alongside arm64, payload, and RSS gates. <code>capture-tauri-android-rss-evidence.js</code> is a fail-closed recorder for the ordered <code>saf-import -&gt; graph-build -&gt; exact-query -&gt; path -&gt; continuity</code> workload, force-stop/reopen observation, <code>/proc/&lt;pid&gt;/status:VmRSS</code>, artifact SHA-256, masked device metadata, and a standalone <code>rss.json</code>.</p>
+<p>This does not create device evidence by itself. The current host still lacks a signing keystore, online device/AVD, and workload execution. The design accepts explicit <code>adbArgs</code> rather than arbitrary host shell commands; that reduces convenience but prevents host-side ambiguity and makes the evidence reproducible. Static mobile-slim payload and fixture replay remain lower-level gates. Native replay, G4 identity/edge corpora, and registry shadow parity must close before canonical IDs or SQLite/WASM are promoted.</p>
+<h3 id="_14">中文<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h3>
+<p>release 边界现在分离为静态 artifact 完整性、原生设备执行和 projection 语义三层。<code>verify-mobile-artifact.js</code> 可要求 APK/AAB 签名（APK 使用 <code>apksigner</code>，AAB 使用 <code>jarsigner</code>），并同时检查 arm64、payload 与 RSS。<code>capture-tauri-android-rss-evidence.js</code> 以 fail-closed 方式记录有序 <code>saf-import -&gt; graph-build -&gt; exact-query -&gt; path -&gt; continuity</code> workload、force-stop/reopen、<code>/proc/&lt;pid&gt;/status:VmRSS</code>、artifact SHA-256、脱敏设备信息和独立 <code>rss.json</code>。</p>
+<p>该脚本本身不等于设备证据。当前主机仍没有 signing keystore、在线设备/AVD 或 workload 执行结果。设计只接受显式 <code>adbArgs</code>，不接受任意宿主 shell；便利性较低，但可以避免宿主命令歧义并让证据可复现。静态 mobile-slim payload 与 fixture replay 仍只是低层门禁；原生 replay、G4 identity/edge corpus 与 registry shadow parity 完成前，不提升 canonical ID 或 SQLite/WASM。</p>
+<h2 id="2026-08-18-phase-15-native-boundary-and-identity-corpus">2026-08-18 Phase 15 Native Boundary and Identity Corpus<a class="headerlink" href="#2026-08-18-phase-15-native-boundary-and-identity-corpus" title="Permanent link">&para;</a></h2>
+<h3 id="english_8">English<a class="headerlink" href="#english_8" title="Permanent link">&para;</a></h3>
+<p>The replay verifier now exercises four explicit host boundaries: browser storage, Tauri atomic file replacement, Capacitor chunked filesystem writes, and an Android-style journaled app-local file. Each report entry records <code>adapterKind</code> and <code>evidenceLevel: host-boundary-contract</code>; this removes the previous false parity caused by four labels over one Node <code>fs</code> adapter, but it still does not prove a native process restart.</p>
+<p>Projection nodes now carry additive <code>canonicalId</code> metadata derived from <code>sourceUri</code>. Legacy <code>id</code> remains the public compatibility key, old layouts remain readable, and the exact analyzer resolves either key. Duplicate canonical IDs fail closed. Route shadow expanded to 17 equivalent probes and now aligns malformed JSON status/body/header behavior plus invalid build-mode rejection before graph mutation. The G4 corpus covers same-content isolation, NFC/case collisions, cross-root normalization, legacy snapshot replay, and graph rollback. Android Rust caps file reads before full UTF-8 materialization to prevent a post-admission file growth from bypassing the mobile budget.</p>
+<p>The migration remains deliberately staged: signed-device SAF/query/path, process-death continuity, and RSS &lt;= 256 MiB are still release gates; canonical public IDs, default SQLite/WASM, and stronger mobile claims remain frozen.</p>
+<h3 id="_15">中文<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h3>
+<p>Replay verifier 现在执行四种明确 host boundary：浏览器 storage、Tauri 原子文件替换、Capacitor 分块 filesystem 写入以及 Android 风格的 journaled app-local file。每个报告条目记录 <code>adapterKind</code> 与 <code>evidenceLevel: host-boundary-contract</code>；这消除了“四个标签复用一个 Node <code>fs</code> adapter”造成的假 parity，但仍不能证明原生进程重启。</p>
+<p>Projection node 现在携带由 <code>sourceUri</code> 派生的 additive <code>canonicalId</code>。Legacy <code>id</code> 继续作为公开兼容 key，旧 layout 仍可读取，exact analyzer 支持两类 key；重复 canonical ID 直接 fail closed。Route shadow 扩展到 17 条等价 probe，并对 malformed JSON 的 status/body/header 以及图变更前的非法 build mode 拒绝保持一致。G4 corpus 覆盖同内容隔离、NFC/大小写 collision、跨 root 规范化、legacy snapshot replay 与 graph rollback。Android Rust 在完整 UTF-8 materialize 前限制文件读取，避免 admission 后文件增长绕过移动预算。</p>
+<p>迁移仍按阶段推进：签名真机 SAF/query/path、进程死亡 continuity 与 RSS &lt;= 256 MiB 继续作为 release gate；canonical 公共 ID、SQLite/WASM 默认化和更强移动端结论继续冻结。</p>
+<h2 id="2026-08-18-phase-16-portable-identity-propagation">2026-08-18 Phase 16 Portable Identity Propagation<a class="headerlink" href="#2026-08-18-phase-16-portable-identity-propagation" title="Permanent link">&para;</a></h2>
+<h3 id="english_9">English<a class="headerlink" href="#english_9" title="Permanent link">&para;</a></h3>
+<p><code>canonicalId</code> is now emitted by every current projection producer: the TypeScript resource boundary, desktop <code>GraphBuilder</code>, browser identity contract, Capacitor graph writer, and Android Rust full/lite writer. It is the normalized workspace-relative path without the Markdown extension. <code>id</code> remains the compatibility key and <code>sourceUri</code> remains provenance; schema-1 snapshots and layouts are unchanged.</p>
+<p>This is deliberately not a parity claim. Rust and Capacitor still differ in legacy node-key and link-resolution policy, so the next evidence gate must compare canonical nodes and directed/provenance-aware edges. Raw JSON equality would either reject valid legacy aliases or hide a semantic mismatch. Fresh slim staging now measures 121 files / 4,265,579 uncompressed bytes / 1,549,039 estimated compressed bytes, SHA-256 <code>7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72</code>; RSS remains <code>not measured</code>.</p>
+<h3 id="_16">中文<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h3>
+<p><code>canonicalId</code> 现在由所有当前 projection producer 输出：TypeScript resource boundary、桌面 <code>GraphBuilder</code>、浏览器 identity contract、Capacitor graph writer 和 Android Rust full/lite writer。它定义为去除 Markdown 扩展名的 workspace-relative 规范路径。<code>id</code> 继续是兼容 key，<code>sourceUri</code> 继续是 provenance；schema-1 snapshot 与 layout 不变。</p>
+<p>这不是 parity 已完成的声明。Rust 与 Capacitor 在 legacy node key 和 link resolution 策略上仍有差异，因此下一门禁必须比较 canonical node 以及带方向/provenance 的 edge。直接比较 raw JSON 要么误拒绝合法 legacy alias，要么掩盖语义不一致。本轮源码变更后的 fresh slim staging 为 121 个文件、未压缩 4,265,579、估算压缩 1,549,039 字节，SHA-256 为 <code>7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72</code>；RSS 仍为 <code>not measured</code>。</p>
+<p>本轮源码变更后的 mobile-slim staging 实测为 121 个文件、未压缩 4,263,740、估算压缩 1,548,695 字节。已有 APK/AAB 是更早构建的未签名产物，必须重建后才能与本轮源码关联。</p>
+<h2 id="2026-08-18-phase-17-cross-host-semantic-parity-closure">2026-08-18 Phase 17 Cross-Host Semantic Parity Closure<a class="headerlink" href="#2026-08-18-phase-17-cross-host-semantic-parity-closure" title="Permanent link">&para;</a></h2>
+<h3 id="english_10">English<a class="headerlink" href="#english_10" title="Permanent link">&para;</a></h3>
+<p>The remaining identity gap is now executable rather than descriptive. <code>mobile_semantic_comparator.js</code> is a test-only oracle: it matches canonical nodes and compares normalized URI provenance plus directed edge type/kind/provenance. Capacitor and Rust use the same direct-path, source-relative, unique-stem resolver; ambiguous legacy basenames and duplicate canonical paths fail before graph construction. Rust also decodes percent-encoded Markdown targets and normalizes NFC/lowercase before lookup.</p>
+<p>The verifier writes one corpus with nested paths, relative and Markdown links, duplicate content, and an NFC-normalized path, then runs Capacitor and an ignored Rust Cargo probe. The result is 6 canonical nodes and 4 semantic edges with no mismatch. This closes host-builder semantic evidence while preserving the low-footprint decision: the comparator is not a mobile runtime asset, the projection remains schema-1, and edge provenance is retained even when endpoints coincide.</p>
+<p>Fresh mobile-slim staging excludes the test-only comparator and measures 121 files / 4,274,600 uncompressed bytes / 1,550,561 estimated compressed bytes, SHA-256 <code>c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8</code>; RSS remains <code>not measured</code>.</p>
+<h3 id="_17">中文<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h3>
+<p>剩余的 identity 缺口现在已经从文字描述变成可执行门禁。<code>mobile_semantic_comparator.js</code> 是 test-only oracle：匹配 canonical node，并比较归一化 URI provenance 与带方向的 edge type/kind/provenance。Capacitor 与 Rust 共用 direct-path、source-relative、unique-stem resolver；含糊 legacy basename 与重复 canonical path 在建图前失败。Rust 还会在 lookup 前解码 percent-encoded Markdown target，并执行 NFC/lowercase 归一化。</p>
+<p>Verifier 写入包含 nested path、relative/Markdown link、同内容文档和 NFC 归一化路径的单一 corpus，然后执行 Capacitor 与 ignored Rust Cargo probe。结果为 6 个 canonical node、4 条语义 edge 且无 mismatch。这闭合了 host-builder 语义证据，同时保持低体积决策：comparator 不进入移动运行时 asset，projection 仍为 schema-1，即使 endpoint 相同也保留 edge provenance。</p>
+<p>fresh mobile-slim staging 已排除 test-only comparator，测得 121 个文件 / 未压缩 4,274,600 字节 / 估算压缩 1,550,561 字节，SHA-256 为 <code>c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8</code>；RSS 仍为 <code>not measured</code>。</p>
+<h2 id="2026-08-18-phase-18-native-recovery-state-machine-evidence">2026-08-18 Phase 18 Native Recovery State-Machine Evidence<a class="headerlink" href="#2026-08-18-phase-18-native-recovery-state-machine-evidence" title="Permanent link">&para;</a></h2>
+<h3 id="english_11">English<a class="headerlink" href="#english_11" title="Permanent link">&para;</a></h3>
+<p>The import recovery boundary is now independently replayable on the host. <code>scripts/verify-mobile-native-recovery.js</code> mirrors the Kotlin journal schema and precedence rules in a temporary directory: an existing <code>Knowledge_Base</code> wins, a valid backup restores the previous tree when the target is absent, orphan backups are recovered, and unsafe paths or unknown schemas fail closed. Six scenarios pass through <code>src/mobile.native.recovery.contract.test.ts</code> and the <code>verify:mobile:native-recovery</code> command.</p>
+<p>The report deliberately says <code>evidenceLevel: host-recovery-state-machine</code> and <code>nativeDeviceEvidence: false</code>. This is the correct architectural split: Kotlin owns production recovery and JavaScript owns only a dependency-free CI oracle. It adds no mobile runtime dependency and stays out of <code>mobile-slim</code>, but it introduces a test mirror that must be updated with every journal schema or phase change. The verifier therefore closes deterministic recovery semantics, not Android process-death, SAF UI, storage/permission failure, signed-artifact, or RSS evidence.</p>
+<p>Current post-change evidence is full Jest 146 suites / 1,271 passed / 26 skipped, TypeScript no-emit, Rust 28 passed / 1 ignored probe, four-host projection replay with 6 nodes and 4 edges, and 121-file mobile-slim staging at 1,550,638 estimated compressed bytes (SHA-256 <code>5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38</code>). G2/G3 native execution and G4 public-ID/SQLite-WASM promotion remain gated.</p>
+<h3 id="_18">中文<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h3>
+<p>导入恢复边界现在可以在 host 上独立回放。<code>scripts/verify-mobile-native-recovery.js</code> 在临时目录中镜像 Kotlin journal schema 与优先级：已有 <code>Knowledge_Base</code> 优先；target 不存在时由有效 backup 恢复旧树；孤儿 backup 进入恢复；unsafe path 或 unknown schema fail closed。六个场景已通过 <code>src/mobile.native.recovery.contract.test.ts</code> 与 <code>verify:mobile:native-recovery</code>。</p>
+<p>报告明确写入 <code>evidenceLevel: host-recovery-state-machine</code> 与 <code>nativeDeviceEvidence: false</code>。这是正确的架构分层：Kotlin 拥有生产恢复，JavaScript 只拥有无依赖 CI oracle；它不增加移动运行时依赖并排除出 <code>mobile-slim</code>，但测试镜像必须随每次 journal schema/phase 变更同步更新。因此本轮闭合的是确定性恢复语义，不是 Android 进程死亡、SAF UI、存储/权限失败、签名产物或 RSS 证据。</p>
+<p>本轮证据为全量 Jest 146 suites / 1,271 passed / 26 skipped、TypeScript no-emit、Rust 28 passed / 1 ignored probe、四 host projection replay（6 个节点、4 条边），以及 121 个文件、估算压缩 1,550,638 字节的 mobile-slim staging（SHA-256 为 <code>5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38</code>）。G2/G3 原生执行与 G4 public-ID/SQLite-WASM 提升继续受门禁约束。</p>
+<h2 id="2026-08-21-phase-25-collision-safe-identity-transition-and-owner-convergence">2026-08-21 Phase 25 Collision-Safe Identity Transition and Owner Convergence<a class="headerlink" href="#2026-08-21-phase-25-collision-safe-identity-transition-and-owner-convergence" title="Permanent link">&para;</a></h2>
+<h3 id="english_12">English<a class="headerlink" href="#english_12" title="Permanent link">&para;</a></h3>
+<p>The previous additive <code>sourceUri</code> foundation protected graph and learning snapshots but did not update secondary owners after a path-only move. Phase 25 closes that gap without changing snapshot/projection schemas, public IDs, or mobile assets.</p>
+<p><code>KnowledgeLearningPlatform</code> now preflights a move's complete destination alias set against every other document's current and historical aliases. URI, path, and basename collisions fail closed before document, atom, or evidence mutation. A valid transition keeps the legacy <code>documentId</code>, revision, resource/projection/index IDs, and content hashes, then mirrors the new identity into <code>ResourceRegistry</code>, the workspace binding, and <code>IndexLifecycle</code>.</p>
+<p>The G4 fixture covers both rejected-collision persistence and successful four-owner convergence. Focused evidence is 3 suites / 11 tests, TypeScript no-emit, and <code>git diff --check</code>; full regression is 148 Jest suites / 1,284 passed / 26 skipped, Rust 30 passed / 1 ignored, four-host projection replay passed, and fresh mobile-low budget passed. This is deliberately not advertised as whole-request transaction atomicity: mixed <code>upsert</code>/<code>move</code>/<code>delete</code> operations still need request-level preflight or journaled rollback. Public canonical-ID cutover, default SQLite/WASM, and native G2/G3 release acceptance remain frozen.</p>
+<h3 id="_19">中文<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h3>
+<p>之前的 additive <code>sourceUri</code> 基础保护了 graph 与 learning snapshot，但 path-only move 后没有同步 secondary owner。第 25 阶段在不改变 snapshot/projection schema、公开 ID 或移动 asset 的前提下关闭该缺口。</p>
+<p><code>KnowledgeLearningPlatform</code> 现在会在 move 前，把完整目标 alias 集合与其他文档的当前及历史 alias 对比。URI、path 或 basename collision 会在 document、atom、evidence mutation 前 fail-closed。合法迁移保留旧 <code>documentId</code>、revision、resource/projection/index ID 与 content hash，再把新身份同步到 <code>ResourceRegistry</code>、workspace binding 与 <code>IndexLifecycle</code>。</p>
+<p>G4 fixture 同时覆盖 rejected-collision 持久化状态与成功后的四 owner 收敛。定向证据为 3 suites / 11 tests、TypeScript no-emit 与 <code>git diff --check</code>；全量回归为 148 个 Jest suite / 1,284 passed / 26 skipped、Rust 30 passed / 1 ignored、四 host projection replay 与 fresh mobile-low budget 通过。本阶段有意不宣称 whole-request transaction atomicity：混合 <code>upsert</code>/<code>move</code>/<code>delete</code> 仍需 request-level preflight 或 journaled rollback。public canonical-ID 切换、默认 SQLite/WASM 与原生 G2/G3 release acceptance 继续冻结。</p>
+<h2 id="2026-08-21-phase-26-request-level-ingest-atomicity-and-single-writer-serialization">2026-08-21 Phase 26 Request-Level Ingest Atomicity and Single-Writer Serialization<a class="headerlink" href="#2026-08-21-phase-26-request-level-ingest-atomicity-and-single-writer-serialization" title="Permanent link">&para;</a></h2>
+<h3 id="english_13">English<a class="headerlink" href="#english_13" title="Permanent link">&para;</a></h3>
+<p>Phase 25's remaining partial-commit risk is now closed at the platform boundary. <code>ingestKnowledge</code> is a per-instance single-writer queue. Each request captures a deep pre-image of the existing versioned snapshot before mutation and restores it after operation, relation-recompute, owner-mirror, or atomic-persistence failure. The restore covers the document graph, atom/evidence records, resource/workspace/index owners, identity journal, telemetry, and ID counter together.</p>
+<p>Identity ownership is validated for both <code>upsert</code> and <code>move</code>. Duplicate path/URI/aliases, explicit move source mismatches, ambiguous aliases, and missing owner mirrors fail closed. The mixed-batch G4 regression proves that a successful first move is not observable after a later collision and that the old alias remains usable after rollback.</p>
+<p>This is deliberately implemented by reusing the current snapshot/replay contract. It preserves public IDs, projection schemas, Bridge fields, and the runtime-first mobile package, but adds transient memory and JSON clone/restore latency proportional to graph size. Native low-memory acceptance therefore needs bounded batches and real RSS evidence. Versioned old-snapshot/cross-root/move-journal/collision/rollback manifests remain required before canonical-ID, SQLite/WASM, Godot, budget, or route-registry promotion.</p>
+<h3 id="_20">中文<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h3>
+<p>第 25 阶段剩余的 partial-commit 风险现在在 platform 边界闭合。<code>ingestKnowledge</code> 使用按 instance 的单写者队列；每个请求在 mutation 前保存现有 versioned snapshot 的深拷贝，operation、relation recompute、owner mirror 或 atomic persistence 失败时整体恢复。恢复范围包含 document graph、atom/evidence、resource/workspace/index owner、identity journal、telemetry 与 ID counter。</p>
+<p><code>upsert</code> 与 <code>move</code> 都会验证 identity ownership。重复 path/URI/alias、显式 move source 不匹配、alias 歧义以及 owner mirror 缺失均 fail-closed。mixed-batch G4 回归证明第一步成功但后续 collision 后不可观察到第一步，回滚后旧 alias 仍可继续使用。</p>
+<p>实现复用当前 snapshot/replay contract，保持 public ID、projection schema、Bridge 字段与 runtime-first 移动包不变；代价是与 graph 大小成正比的瞬时内存和 JSON clone/restore 延迟。因此原生低内存验收需要有界 batch 与真实 RSS 证据。在 canonical-ID、SQLite/WASM、Godot、预算或 route-registry 提升前，仍需归档有版本的 old-snapshot/cross-root/move-journal/collision/rollback manifest。</p>
+<p>当前验证：TypeScript no-emit 通过；148 个 Jest suite / 1,287 passed / 26 skipped；Rust 30 passed / 1 ignored；mobile-low staging 122 文件 / 4,283,033 未压缩 / 1,552,689 估算压缩 bytes；4 host projection replay；8 个 native-recovery scenario；Diataxis 与 <code>git diff --check</code> 均通过。</p>
+<h2 id="2026-08-21-phase-27-versioned-g4-identity-corpus-replay">2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay<a class="headerlink" href="#2026-08-21-phase-27-versioned-g4-identity-corpus-replay" title="Permanent link">&para;</a></h2>
+<h3 id="english_14">English<a class="headerlink" href="#english_14" title="Permanent link">&para;</a></h3>
+<p>The G4 identity evidence is now a tracked contract instead of an unbounded collection of test names. <code>config/identity-corpus.v1.json</code> requires eight cases covering legacy snapshot atomic restore, same-content isolation, cross-root NFC identity, NFC/case collision rejection, move-journal restart and old-alias deletion, mixed-batch rollback, four-owner convergence, and upsert alias collision rejection.</p>
+<p><code>scripts/verify-identity-corpus.js</code> executes production TypeScript owners and then invokes the four-host projection replay. The run passed 8 cases and <code>web</code>, <code>tauri</code>, <code>capacitor</code>, and <code>android</code>; result hash <code>4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb</code>. The report is explicitly <code>evidenceLevel: host-code-replay</code>, sets <code>nativeDeviceEvidence: false</code>, and leaves <code>canonicalPublicIdCutover: blocked</code>.</p>
+<p>This closes the versioned host-code corpus gate without changing public IDs, snapshot/projection schemas, Bridge fields, or mobile payloads. It does not close signed-device, process-death, SAF permission/retry, or RSS gates; canonical-ID migration remains an independent review.</p>
+<h3 id="_21">中文<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h3>
+<p>G4 identity 证据现在成为受跟踪的 contract，而不是分散且无上限的测试名称集合。<code>config/identity-corpus.v1.json</code> 要求八个用例，覆盖 legacy snapshot 原子恢复、同内容隔离、跨 root NFC identity、NFC/case collision rejection、move-journal 重启与旧 alias 删除、mixed-batch rollback、四 owner 收敛和 upsert alias collision rejection。</p>
+<p><code>scripts/verify-identity-corpus.js</code> 执行生产 TypeScript owner，再调用四 host projection replay。本次 8 个 case 与 <code>web</code>、<code>tauri</code>、<code>capacitor</code>、<code>android</code> 全部通过；result hash 为 <code>4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb</code>。报告明确标记 <code>evidenceLevel: host-code-replay</code>、<code>nativeDeviceEvidence: false</code>，并保持 <code>canonicalPublicIdCutover: blocked</code>。</p>
+<p>本阶段关闭了版本化 host-code corpus 门禁，但不改变 public ID、snapshot/projection schema、Bridge 字段或移动 payload。签名真机、进程死亡、SAF 权限/重试和 RSS 门禁仍未闭合；canonical-ID 迁移继续独立评审。</p>
+<p>最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay 与 Diataxis 通过。</p>
+<h2 id="2026-08-21-phase-28-canonical-id-migration-readiness-gate">2026-08-21 Phase 28 Canonical-ID Migration Readiness Gate<a class="headerlink" href="#2026-08-21-phase-28-canonical-id-migration-readiness-gate" title="Permanent link">&para;</a></h2>
+<h3 id="english_15">English<a class="headerlink" href="#english_15" title="Permanent link">&para;</a></h3>
+<p>The next identity step is now explicit and non-destructive. <code>scripts/verify-canonical-id-readiness.js</code> replays the versioned G4 corpus, requires all four projection hosts, checks every current <code>canonicalId</code> producer, and verifies that compatibility flags remain unchanged. It contains no public-ID write, feature switch, or layout/snapshot migration.</p>
+<p>The default result is <code>blocked</code> with <code>independentReviewRequired: true</code>; <code>--strict</code> fails closed when native device evidence is absent. This separates an auditable host-code decision from the irreversible canonical-ID migration. Public IDs, schemas, Bridge fields, and mobile payloads remain unchanged.</p>
+<h3 id="_22">中文<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h3>
+<p>下一步 identity 工作现在被明确为非破坏性 gate。<code>scripts/verify-canonical-id-readiness.js</code> 回放 versioned G4 corpus，要求四个 projection host，通过所有当前 <code>canonicalId</code> producer 检查，并确认兼容性 flag 没有变化。它不包含 public-ID 写操作、feature switch 或 layout/snapshot 迁移。</p>
+<p>默认结果为 <code>blocked</code> 并标记 <code>independentReviewRequired: true</code>；缺少原生设备证据时 <code>--strict</code> fail-closed。这样把可审计的 host-code 决策与不可逆 canonical-ID 迁移分离，public ID、schema、Bridge 字段与移动 payload 保持不变。</p>
+<h2 id="2026-08-21-phase-29-tauri-primary-mobile-release-routing">2026-08-21 Phase 29 Tauri-Primary Mobile Release Routing<a class="headerlink" href="#2026-08-21-phase-29-tauri-primary-mobile-release-routing" title="Permanent link">&para;</a></h2>
+<p>The release owner is now explicit: <code>mobile:build:release</code> delegates only to Tauri Android, while <code>mobile:build:compatibility</code> names the historical Capacitor-plus-Tauri validation path. <code>mobile:build:both</code> remains unchanged for backward compatibility. This removes ambiguity from release instructions without deleting the deprecated project or changing any runtime contract. Capacitor removal requires a separate downstream/CI usage audit.</p>
+<p>发布 owner 现在明确：<code>mobile:build:release</code> 只委托 Tauri Android，<code>mobile:build:compatibility</code> 明确历史 Capacitor + Tauri 验证路径，<code>mobile:build:both</code> 为向后兼容保持不变。本阶段只消除 release 指引歧义，不删除 deprecated 工程，也不改变运行时 contract；移除 Capacitor 需另行审计下游与 CI 使用。</p>
+<p>本阶段回归验证为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit、Tauri Rust 30 passed / 1 ignored、Fixrisk FR-001..FR-015 全部通过、Diataxis 与 <code>git diff --check</code> 通过。</p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

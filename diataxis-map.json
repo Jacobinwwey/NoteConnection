@@ -1,0 +1,222 @@
+{
+  "version": "1.0.0",
+  "categories": ["tutorials", "how-to", "reference", "explanation"],
+  "entries": [
+    {
+      "id": "first-run",
+      "category": "tutorials",
+      "en": {
+        "canonical": ["docs/en/README.md"],
+        "diataxis": "docs/diataxis/en/tutorials/first-run.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/README.md"],
+        "diataxis": "docs/diataxis/zh/tutorials/first-run.md"
+      }
+    },
+    {
+      "id": "build-and-export",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/export.md", "docs/en/README.md"],
+        "diataxis": "docs/diataxis/en/how-to/build-and-export.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/export.md", "docs/zh/README.md"],
+        "diataxis": "docs/diataxis/zh/how-to/build-and-export.md"
+      }
+    },
+    {
+      "id": "publish-docs-github-pages",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/docs_release_and_rollback.md", ".github/workflows/docs-github-pages-publish.yml", "mkdocs.yml"],
+        "diataxis": "docs/diataxis/en/how-to/publish-docs-github-pages.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/docs_release_and_rollback.md", ".github/workflows/docs-github-pages-publish.yml", "mkdocs.yml"],
+        "diataxis": "docs/diataxis/zh/how-to/publish-docs-github-pages.md"
+      }
+    },
+    {
+      "id": "single-window-runtime",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/single_window_migration_plan.md", "docs/en/User_Manual.md"],
+        "diataxis": "docs/diataxis/en/how-to/single-window-runtime.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/single_window_migration_plan.md", "docs/zh/User_Manual.md"],
+        "diataxis": "docs/diataxis/zh/how-to/single-window-runtime.md"
+      }
+    },
+    {
+      "id": "configure-app-config",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/app_config.toml_guide.md", "docs/en/User_Manual.md", "docs/en/README.md"],
+        "diataxis": "docs/diataxis/en/how-to/configure-app-config.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/app_config.toml_guide.md", "docs/zh/User_Manual.md", "docs/zh/README.md"],
+        "diataxis": "docs/diataxis/zh/how-to/configure-app-config.md"
+      }
+    },
+    {
+      "id": "godot-notemd-markdown-workflows",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/User_Manual.md", "docs/en/Interface Document.md"],
+        "diataxis": "docs/diataxis/en/how-to/godot-notemd-markdown-workflows.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/User_Manual.md", "docs/zh/Interface Document.md"],
+        "diataxis": "docs/diataxis/zh/how-to/godot-notemd-markdown-workflows.md"
+      }
+    },
+    {
+      "id": "bootstrap-godot-sidecar",
+      "category": "how-to",
+      "en": {
+        "canonical": ["docs/en/lfs_asset_migration_plan.md", "scripts/ensure-godot-sidecar.js", "scripts/tauri-sidecar-utils.js", "scripts/validate-tauri-sidecars.js"],
+        "diataxis": "docs/diataxis/en/how-to/bootstrap-godot-sidecar.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/lfs_asset_migration_plan.md", "scripts/ensure-godot-sidecar.js", "scripts/tauri-sidecar-utils.js", "scripts/validate-tauri-sidecars.js"],
+        "diataxis": "docs/diataxis/zh/how-to/bootstrap-godot-sidecar.md"
+      }
+    },
+    {
+      "id": "interfaces-and-runtime",
+      "category": "reference",
+      "en": {
+        "canonical": ["docs/en/Interface Document.md"],
+        "diataxis": "docs/diataxis/en/reference/interfaces-and-runtime.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/Interface Document.md"],
+        "diataxis": "docs/diataxis/zh/reference/interfaces-and-runtime.md"
+      }
+    },
+    {
+      "id": "godot-notemd-markdown-interfaces",
+      "category": "reference",
+      "en": {
+        "canonical": ["docs/en/Interface Document.md", "docs/en/User_Manual.md"],
+        "diataxis": "docs/diataxis/en/reference/godot-notemd-markdown-interfaces.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/Interface Document.md", "docs/zh/User_Manual.md"],
+        "diataxis": "docs/diataxis/zh/reference/godot-notemd-markdown-interfaces.md"
+      }
+    },
+    {
+      "id": "app-config-schema",
+      "category": "reference",
+      "en": {
+        "canonical": ["docs/en/app_config.toml_guide.md", "docs/en/Interface Document.md"],
+        "diataxis": "docs/diataxis/en/reference/app-config-schema.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/app_config.toml_guide.md", "docs/zh/Interface Document.md"],
+        "diataxis": "docs/diataxis/zh/reference/app-config-schema.md"
+      }
+    },
+    {
+      "id": "release-and-governance",
+      "category": "reference",
+      "en": {
+        "canonical": ["docs/en/release_v1.6.0_report.md", "docs/release_notes_v1.6.0.md"],
+        "diataxis": "docs/diataxis/en/reference/release-and-governance.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/release_v1.6.0_report.md", "docs/release_notes_v1.6.0.md"],
+        "diataxis": "docs/diataxis/zh/reference/release-and-governance.md"
+      }
+    },
+    {
+      "id": "multi-platform-build-flows",
+      "category": "reference",
+      "en": {
+        "canonical": ["docs/en/multi_platform_build_flow_audit.md", "docs/en/lfs_asset_migration_plan.md", "package.json", ".github/workflows/release-desktop-multi-os.yml", ".github/workflows/npm-publish.yml", "build_apk.bat", "capacitor.config.ts", "src-tauri/tauri.conf.json", "src-tauri/tauri.android.conf.json"],
+        "diataxis": "docs/diataxis/en/reference/multi-platform-build-flows.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/multi_platform_build_flow_audit.md", "docs/zh/lfs_asset_migration_plan.md", "package.json", ".github/workflows/release-desktop-multi-os.yml", ".github/workflows/npm-publish.yml", "build_apk.bat", "capacitor.config.ts", "src-tauri/tauri.conf.json", "src-tauri/tauri.android.conf.json"],
+        "diataxis": "docs/diataxis/zh/reference/multi-platform-build-flows.md"
+      }
+    },
+    {
+      "id": "architecture-and-migration",
+      "category": "explanation",
+      "en": {
+        "canonical": ["docs/en/tauri_brainstorming.md", "docs/en/electron_migration_analysis.md"],
+        "diataxis": "docs/diataxis/en/explanation/architecture-and-migration.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/tauri_brainstorming.md", "docs/zh/electron_migration_analysis.md"],
+        "diataxis": "docs/diataxis/zh/explanation/architecture-and-migration.md"
+      }
+    },
+    {
+      "id": "git-lfs-asset-migration",
+      "category": "explanation",
+      "en": {
+        "canonical": ["docs/en/lfs_asset_migration_plan.md", "docs/en/tauri_brainstorming.md", "docs/en/electron_migration_analysis.md"],
+        "diataxis": "docs/diataxis/en/explanation/git-lfs-asset-migration.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/lfs_asset_migration_plan.md", "docs/zh/tauri_brainstorming.md", "docs/zh/electron_migration_analysis.md"],
+        "diataxis": "docs/diataxis/zh/explanation/git-lfs-asset-migration.md"
+      }
+    },
+    {
+      "id": "startup-node-update-acceleration-plan",
+      "category": "explanation",
+      "en": {
+        "canonical": ["docs/en/Interface Document.md", "docs/en/User_Manual.md"],
+        "diataxis": "docs/diataxis/en/explanation/startup-node-update-acceleration-plan.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/Interface Document.md", "docs/zh/User_Manual.md"],
+        "diataxis": "docs/diataxis/zh/explanation/startup-node-update-acceleration-plan.md"
+      }
+    },
+    {
+      "id": "knowledge-mastery-evolution-roadmap",
+      "category": "explanation",
+      "en": {
+        "canonical": ["docs/en/knowledge_mastery_evolution_plan.md"],
+        "diataxis": "docs/diataxis/en/explanation/knowledge-mastery-evolution-roadmap.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/knowledge_mastery_evolution_plan.md"],
+        "diataxis": "docs/diataxis/zh/explanation/knowledge-mastery-evolution-roadmap.md"
+      }
+    },
+    {
+      "id": "development-progress-dashboard",
+      "category": "explanation",
+      "en": {
+        "canonical": ["docs/en/knowledge_mastery_evolution_plan.md", "docs/brainstorms/2026-04-11-evolution-progress-alignment-requirements.md", "docs/solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md", "src/learning/api.ts", "src/server.ts"],
+        "diataxis": "docs/diataxis/en/explanation/development-progress-dashboard.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/knowledge_mastery_evolution_plan.md", "docs/brainstorms/2026-04-11-evolution-progress-alignment-requirements.md", "docs/solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md", "src/learning/api.ts", "src/server.ts"],
+        "diataxis": "docs/diataxis/zh/explanation/development-progress-dashboard.md"
+      }
+    },
+    {
+      "id": "sidecar-supply-feasibility",
+      "category": "explanation",
+      "en": {
+        "canonical": ["docs/en/sidecar_supply_strategy.md", "scripts/tauri-sidecar-utils.js", "scripts/ensure-godot-sidecar.js", "scripts/verify-sidecar-supply-readiness.js", ".github/workflows/release-desktop-multi-os.yml"],
+        "diataxis": "docs/diataxis/en/explanation/sidecar-supply-feasibility.md"
+      },
+      "zh": {
+        "canonical": ["docs/zh/sidecar_supply_strategy.md", "scripts/tauri-sidecar-utils.js", "scripts/ensure-godot-sidecar.js", "scripts/verify-sidecar-supply-readiness.js", ".github/workflows/release-desktop-multi-os.yml"],
+        "diataxis": "docs/diataxis/zh/explanation/sidecar-supply-feasibility.md"
+      }
+    }
+  ]
+}

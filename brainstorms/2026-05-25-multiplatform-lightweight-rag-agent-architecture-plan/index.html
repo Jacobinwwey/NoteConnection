@@ -1,0 +1,4394 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/brainstorms/2026-05-25-multiplatform-lightweight-rag-agent-architecture-plan/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Multiplatform Lightweight RAG and Agent Architecture Plan - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#multiplatform-lightweight-rag-and-agent-architecture-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Multiplatform Lightweight RAG and Agent Architecture Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-base" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence Base
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#english" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="English">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-definitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Definitions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-first-principles-diagnosis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. First-Principles Diagnosis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-what-the-reference-projects-get-right" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. What the Reference Projects Get Right
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. What the Reference Projects Get Right">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#anythingllm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AnythingLLM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cherry-studio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cherry Studio
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deeptutor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DeepTutor
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-current-architectural-gaps-in-noteconnection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Current Architectural Gaps in NoteConnection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Current Architectural Gaps in NoteConnection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gap-a-no-first-class-corpus-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap A: No first-class corpus scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-b-multilingual-retrieval-is-structurally-weak" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap B: Multilingual retrieval is structurally weak
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-c-conversation-is-retrieval-formatting-not-answer-synthesis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap C: Conversation is retrieval formatting, not answer synthesis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-d-memory-is-not-inside-the-main-turn-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap D: Memory is not inside the main turn loop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-e-ingestion-is-not-yet-a-continuous-scoped-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap E: Ingestion is not yet a continuous scoped pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-f-api-semantics-are-too-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap F: API semantics are too split
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-g-platform-shell-and-retrievalruntime-core-are-not-separated-enough" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap G: Platform shell and retrieval/runtime core are not separated enough
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-target-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Target Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-concrete-repair-and-delivery-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Concrete Repair and Delivery Plan
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-0-stop-architectural-drift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 0: Stop architectural drift
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-make-retrieval-correct-before-making-it-smarter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Make retrieval correct before making it smarter
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-build-a-real-lightweight-rag-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Build a real lightweight RAG runtime
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-close-the-memory-and-invocation-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Close the memory and invocation loop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-separate-platform-shell-from-runtime-core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Separate platform shell from runtime core
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-define-the-packaging-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: Define the packaging matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-6-simplify-agent-product-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6: Simplify agent product semantics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 6: Simplify agent product semantics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#7-layer-connections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Layer Connections
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-tradeoffs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Tradeoffs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Tradeoffs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graph-first-vs-chunk-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph-first vs chunk-first
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lightweight-local-index-vs-external-vector-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lightweight local index vs external vector database
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#one-runtime-vs-per-shell-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One runtime vs per-shell logic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#persistent-memory-vs-deterministic-replay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Persistent memory vs deterministic replay
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-common-mistakes-to-avoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Common Mistakes to Avoid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-mental-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Mental Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-real-application-in-this-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Real Application in This Project
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-recommended-execution-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Recommended Execution Order
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-five-point-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Five-Point Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="中文">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 术语定义
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 第一性原理诊断
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 对照项目中真正值得借鉴的部分
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. 对照项目中真正值得借鉴的部分">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#anythingllm_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AnythingLLM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cherry-studio_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cherry Studio
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deeptutor_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DeepTutor
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-noteconnection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 当前 NoteConnection 的核心缺口
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. 当前 NoteConnection 的核心缺口">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-corpusworkspace-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        缺口 A：没有一等公民的 corpus/workspace scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        缺口 B：多语言检索在结构上就偏弱
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-conversation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        缺口 C：当前 conversation 只是检索结果格式化，不是回答综合
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dmemory-turn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        缺口 D：memory 没有进入主 turn 闭环
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eingestion-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        缺口 E：ingestion 还不是持续、分 scope 的正式流水线
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fapi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        缺口 F：API 语义分裂
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        缺口 G：平台壳层与运行时核心分离不够
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 目标架构
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 分阶段推进与修复方案
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. 分阶段推进与修复方案">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 0：先止住架构漂移
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1：先把检索做对，再谈更聪明
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-lightweight-rag-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2：建立真正的 lightweight RAG runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-memory-invocation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3：补上 memory 与 invocation 闭环
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4：将平台壳层从运行时核心中剥离
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5：正式建立导出矩阵
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-6-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6：纠正 agent 产品语义
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. 各层之间如何连接
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. 关键权衡
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. 关键权衡">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graph-first-chunk-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph-first 还是 chunk-first
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        本地轻量索引还是外部向量数据库
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        单一 runtime 还是每个壳层单独逻辑
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-deterministic-replay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        持久 memory 与 deterministic replay
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. 常见误区
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. 最佳实践
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. 心智模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. 在本项目中的真实落地形态
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. 推荐执行顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. 五点总结
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="multiplatform-lightweight-rag-and-agent-architecture-plan">Multiplatform Lightweight RAG and Agent Architecture Plan<a class="headerlink" href="#multiplatform-lightweight-rag-and-agent-architecture-plan" title="Permanent link">&para;</a></h1>
+<h2 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h2>
+<p>This document defines a concrete architecture and repair plan for <code>NoteConnection_app</code>
+across four coupled concerns:</p>
+<ul>
+<li>desktop export for Windows, Linux, and macOS,</li>
+<li>mobile-capable slim export,</li>
+<li>lightweight local RAG,</li>
+<li>real agent/runtime closure over local knowledge.</li>
+</ul>
+<p>It is grounded in the current NoteConnection codebase and local reference projects under <code>ref/</code>:</p>
+<ul>
+<li><code>ref/anything-llm</code></li>
+<li><code>ref/cherry-studio</code></li>
+<li><code>ref/DeepTutor</code></li>
+<li><code>ref/obsidian-NotEMD</code></li>
+</ul>
+<p>This is a planning document, not an implementation diff.</p>
+<h2 id="evidence-base">Evidence Base<a class="headerlink" href="#evidence-base" title="Permanent link">&para;</a></h2>
+<p>Current NoteConnection facts:</p>
+<ul>
+<li><code>src/learning/types.ts</code> already defines strong knowledge primitives such as <code>KnowledgeAtom</code>, <code>EvidenceSpan</code>, <code>RelationEdge</code>, and <code>TemporalEdge</code>.</li>
+<li><code>src/learning/types.ts</code> currently defines <code>KnowledgeQueryRequest</code> with <code>query</code>, <code>topK</code>, <code>asOf</code>, and <code>queryBackend</code>, but no first-class workspace or corpus scope.</li>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code> implements <code>agentConversation()</code> as a thin wrapper over <code>queryKnowledge()</code>, then returns a fixed templated assistant message plus retrieved points.</li>
+<li><code>src/learning/queryBackend.ts</code> normalizes semantic tokens using <code>[a-z0-9]</code>-only cleanup and tokenization, which makes the <code>local_vector</code> path fundamentally weak for Chinese and mixed-language retrieval.</li>
+<li><code>src/routes/knowledge.ts</code> exposes modular knowledge routes, while <code>src/server.ts</code> still carries an inline <code>/api/knowledge/conversation</code> execution path. That split increases contract drift risk.</li>
+<li><code>src/frontend/agent_workspace.js</code> is primarily a UI shell; it does not prove the existence of a complete scoped agent runtime underneath.</li>
+</ul>
+<p>Reference project facts:</p>
+<ul>
+<li><code>ref/anything-llm/server/models/workspace.js</code> shows <code>workspace</code> as a first-class boundary for retrieval, chat, and agent configuration.</li>
+<li><code>ref/anything-llm/server/models/memory.js</code> shows explicit scoped memory (<code>workspace</code> vs <code>global</code>) with limits and lifecycle operations.</li>
+<li><code>ref/anything-llm/server/models/workspaceAgentInvocation.js</code> shows agent invocation persistence as a first-class runtime record.</li>
+<li><code>ref/anything-llm/server/models/vectors.js</code> shows that document-to-vector linkage is persisted explicitly instead of being an implicit side effect.</li>
+<li><code>ref/cherry-studio/package.json</code> and <code>ref/cherry-studio/electron-builder.yml</code> show a strong packaging matrix discipline for Windows, Linux, and macOS, with artifact-specific boundaries and packaging exclusions.</li>
+<li><code>ref/cherry-studio/packages/ai-sdk-provider/src/cherryin-provider.ts</code> shows a provider-registry approach that normalizes OpenAI-compatible, Anthropic-compatible, and Gemini-compatible behaviors behind one typed factory layer.</li>
+<li><code>ref/DeepTutor/deeptutor/agents/chat/agentic_pipeline.py</code> shows a real multi-stage agent runtime: thinking, acting, observing, and responding.</li>
+<li><code>ref/DeepTutor/deeptutor/agents/chat/session_manager.py</code> shows persistent session state as a first-class runtime concept rather than a UI-only transcript.</li>
+</ul>
+<h2 id="english">English<a class="headerlink" href="#english" title="Permanent link">&para;</a></h2>
+<h3 id="1-definitions">1. Definitions<a class="headerlink" href="#1-definitions" title="Permanent link">&para;</a></h3>
+<dl>
+<dt><code>Source</code></dt>
+<dd>A user-owned artifact that can be ingested. In this project that primarily means Markdown notes, attachments, graph metadata, and derived learning state.</dd>
+<dt><code>Canonical unit</code></dt>
+<dd>The smallest persisted retrieval object used by runtime logic. In NoteConnection this should remain graph-aware and evidence-backed, not devolve into anonymous text blobs.</dd>
+<dt><code>Corpus scope</code></dt>
+<dd>A hard execution boundary that says which sources are searchable for a request. This is not a UI filter. It must exist in storage, retrieval, memory, and conversation contracts.</dd>
+<dt><code>Representation</code></dt>
+<dd>The retrieval-ready projection of a canonical unit, such as lexical tokens, embedding vectors, structural graph signals, language metadata, and evidence spans.</dd>
+<dt><code>Retrieval</code></dt>
+<dd>The process that maps a user request to ranked knowledge candidates. It must be scoped, multilingual, explainable, and stable across platforms.</dd>
+<dt><code>Answer synthesis</code></dt>
+<dd>The runtime stage that turns retrieved candidates into a grounded answer with citations and explicit uncertainty. Retrieval alone is not a conversation system.</dd>
+<dt><code>Conversation state</code></dt>
+<dd>The persisted turn-level runtime envelope: message, scope, retrieved evidence, memory inputs, tool calls, outputs, and trace metadata.</dd>
+<dt><code>Memory</code></dt>
+<dd>Persisted user- or session-specific information promoted by policy, not by UI convenience. Memory is distinct from retrieval corpus, but the two interact.</dd>
+<dt><code>Agent runtime</code></dt>
+<dd>The orchestration loop that decides whether to answer directly, retrieve, invoke tools, update memory, and emit a traceable final response.</dd>
+<dt><code>Shell</code></dt>
+<dd>A platform-specific packaging and rendering layer such as Tauri desktop, Godot path mode, browser reader, or mobile runtime.</dd>
+</dl>
+<h3 id="2-first-principles-diagnosis">2. First-Principles Diagnosis<a class="headerlink" href="#2-first-principles-diagnosis" title="Permanent link">&para;</a></h3>
+<p>The current project already has a strong knowledge model, but it does not yet form a closed runtime loop.</p>
+<p>The problem is not missing nouns. The problem is missing boundaries and missing closure.</p>
+<p>Specifically:</p>
+<ul>
+<li>knowledge units exist,</li>
+<li>retrieval APIs exist,</li>
+<li>memory-related surfaces exist,</li>
+<li>platform shells exist,</li>
+<li>but the runtime that connects scope -&gt; retrieval -&gt; synthesis -&gt; memory -&gt; trace is incomplete.</li>
+</ul>
+<p>Today, NoteConnection is closer to a graph-backed search and learning UI than to a complete lightweight RAG and agent system.</p>
+<h3 id="3-what-the-reference-projects-get-right">3. What the Reference Projects Get Right<a class="headerlink" href="#3-what-the-reference-projects-get-right" title="Permanent link">&para;</a></h3>
+<h4 id="anythingllm">AnythingLLM<a class="headerlink" href="#anythingllm" title="Permanent link">&para;</a></h4>
+<p>What is worth reusing conceptually:</p>
+<ul>
+<li><code>workspace</code> as the main boundary for retrieval and agent behavior,</li>
+<li>explicit vector linkage between document and representation,</li>
+<li>explicit scoped memory,</li>
+<li>explicit agent invocation persistence.</li>
+</ul>
+<p>What should not be copied blindly:</p>
+<ul>
+<li>its product shape is workspace-first and chat-first,</li>
+<li>NoteConnection must remain graph-first and evidence-first,</li>
+<li>the retrieval unit in NoteConnection must remain richer than generic chunks.</li>
+</ul>
+<h4 id="cherry-studio">Cherry Studio<a class="headerlink" href="#cherry-studio" title="Permanent link">&para;</a></h4>
+<p>What is worth reusing conceptually:</p>
+<ul>
+<li>packaging discipline per target platform,</li>
+<li>strong provider normalization layer,</li>
+<li>clear separation between provider configuration, runtime wiring, and packaging artifacts.</li>
+</ul>
+<p>What should not be copied blindly:</p>
+<ul>
+<li>Electron-first assumptions,</li>
+<li>heavyweight desktop-only dependency surface,</li>
+<li>UI-driven abstraction without NoteConnection’s graph/runtime constraints.</li>
+</ul>
+<h4 id="deeptutor">DeepTutor<a class="headerlink" href="#deeptutor" title="Permanent link">&para;</a></h4>
+<p>What is worth reusing conceptually:</p>
+<ul>
+<li>turn envelope,</li>
+<li>staged agent runtime,</li>
+<li>persistent session model,</li>
+<li>capability/tool registry mindset.</li>
+</ul>
+<p>What should not be copied blindly:</p>
+<ul>
+<li>Python runtime shape,</li>
+<li>its KB stack as a direct RAG donor,</li>
+<li>in-process long-running orchestration patterns that do not map cleanly onto current TypeScript + Tauri + Godot constraints.</li>
+</ul>
+<h3 id="4-current-architectural-gaps-in-noteconnection">4. Current Architectural Gaps in NoteConnection<a class="headerlink" href="#4-current-architectural-gaps-in-noteconnection" title="Permanent link">&para;</a></h3>
+<h4 id="gap-a-no-first-class-corpus-scope">Gap A: No first-class corpus scope<a class="headerlink" href="#gap-a-no-first-class-corpus-scope" title="Permanent link">&para;</a></h4>
+<p><code>KnowledgeQueryRequest</code> has no workspace/corpus boundary in <code>src/learning/types.ts</code>.</p>
+<p>Consequence:</p>
+<ul>
+<li>retrieval implicitly targets the global atom pool,</li>
+<li>agent answers are not reproducibly scoped,</li>
+<li>memory cannot be tied cleanly to corpus context,</li>
+<li>mobile and desktop exports cannot rely on the same deterministic retrieval contract.</li>
+</ul>
+<h4 id="gap-b-multilingual-retrieval-is-structurally-weak">Gap B: Multilingual retrieval is structurally weak<a class="headerlink" href="#gap-b-multilingual-retrieval-is-structurally-weak" title="Permanent link">&para;</a></h4>
+<p><code>src/learning/queryBackend.ts</code> uses ASCII-only normalization for the <code>local_vector</code> path.</p>
+<p>Consequence:</p>
+<ul>
+<li>Chinese retrieval quality is structurally degraded,</li>
+<li>mixed Chinese/English notes are penalized,</li>
+<li>"local semantic search" is overstated compared with actual runtime behavior.</li>
+</ul>
+<h4 id="gap-c-conversation-is-retrieval-formatting-not-answer-synthesis">Gap C: Conversation is retrieval formatting, not answer synthesis<a class="headerlink" href="#gap-c-conversation-is-retrieval-formatting-not-answer-synthesis" title="Permanent link">&para;</a></h4>
+<p><code>agentConversation()</code> in <code>src/learning/KnowledgeLearningPlatform.ts</code> calls <code>queryKnowledge()</code>, formats the hits, and returns a fixed sentence.</p>
+<p>Consequence:</p>
+<ul>
+<li>no real answer composition,</li>
+<li>no citation-grounded explanation contract,</li>
+<li>no tool arbitration,</li>
+<li>no durable turn trace model comparable to a real agent runtime.</li>
+</ul>
+<h4 id="gap-d-memory-is-not-inside-the-main-turn-loop">Gap D: Memory is not inside the main turn loop<a class="headerlink" href="#gap-d-memory-is-not-inside-the-main-turn-loop" title="Permanent link">&para;</a></h4>
+<p>The codebase has memory-related capabilities, but the main conversation path does not meaningfully:</p>
+<ul>
+<li>read scoped memory as input,</li>
+<li>produce explicit memory candidates,</li>
+<li>apply promotion policy after the answer,</li>
+<li>persist turn-level reasoning trace tied to memory decisions.</li>
+</ul>
+<h4 id="gap-e-ingestion-is-not-yet-a-continuous-scoped-pipeline">Gap E: Ingestion is not yet a continuous scoped pipeline<a class="headerlink" href="#gap-e-ingestion-is-not-yet-a-continuous-scoped-pipeline" title="Permanent link">&para;</a></h4>
+<p>There is ingestion machinery in <code>src/learning/KnowledgeLearningPlatform.ts</code>, but the product-facing runtime still behaves more like point-triggered ingestion than a durable source -&gt; unit -&gt; representation -&gt; index pipeline.</p>
+<p>Consequence:</p>
+<ul>
+<li>retrieval freshness is harder to reason about,</li>
+<li>export targets cannot rely on a compact precomputed retrieval package,</li>
+<li>mobile optimization has no stable ingestion artifact boundary.</li>
+</ul>
+<h4 id="gap-f-api-semantics-are-too-split">Gap F: API semantics are too split<a class="headerlink" href="#gap-f-api-semantics-are-too-split" title="Permanent link">&para;</a></h4>
+<p><code>src/routes/knowledge.ts</code> and <code>src/server.ts</code> both participate in knowledge API behavior, including <code>/api/knowledge/conversation</code>.</p>
+<p>Consequence:</p>
+<ul>
+<li>contract drift risk,</li>
+<li>repeated CORS/header/validation behavior bugs,</li>
+<li>platform shells become sensitive to route-path implementation detail.</li>
+</ul>
+<h4 id="gap-g-platform-shell-and-retrievalruntime-core-are-not-separated-enough">Gap G: Platform shell and retrieval/runtime core are not separated enough<a class="headerlink" href="#gap-g-platform-shell-and-retrievalruntime-core-are-not-separated-enough" title="Permanent link">&para;</a></h4>
+<p>Current renderer, reader, bridge, and sidecar issues show that content rendering and knowledge runtime concerns still bleed into one another.</p>
+<p>Consequence:</p>
+<ul>
+<li>desktop regressions leak into Godot/mobile flows,</li>
+<li>shell-specific bugs can distort system-level architecture choices,</li>
+<li>export complexity remains coupled to business logic.</li>
+</ul>
+<h3 id="5-target-architecture">5. Target Architecture<a class="headerlink" href="#5-target-architecture" title="Permanent link">&para;</a></h3>
+<p>The target architecture should be seven layers:</p>
+<ol>
+<li><code>Source layer</code></li>
+<li>Markdown notes, attachments, graph data, learning state.</li>
+<li><code>Canonicalization layer</code></li>
+<li>Parse sources into <code>KnowledgeDocument</code>, <code>KnowledgeAtom</code>, <code>EvidenceSpan</code>, relation edges, temporal edges.</li>
+<li><code>Representation layer</code></li>
+<li>Build lexical index, multilingual embedding index, graph adjacency signals, freshness/version metadata.</li>
+<li><code>Scoped retrieval layer</code></li>
+<li>Execute retrieval inside an explicit corpus/workspace boundary.</li>
+<li><code>Conversation runtime layer</code></li>
+<li>Turn envelope, retrieval plan, answer synthesis, citation contract, tool execution, trace emission.</li>
+<li><code>Memory and invocation layer</code></li>
+<li>Session memory, promoted memory, invocation records, turn history, replayability.</li>
+<li><code>Platform shell layer</code></li>
+<li>Tauri desktop, browser reader, Godot reader/path mode, mobile slim runtime.</li>
+</ol>
+<p>The shell layer must never be the system of record for retrieval or memory.</p>
+<h3 id="6-concrete-repair-and-delivery-plan">6. Concrete Repair and Delivery Plan<a class="headerlink" href="#6-concrete-repair-and-delivery-plan" title="Permanent link">&para;</a></h3>
+<h2 id="phase-0-stop-architectural-drift">Phase 0: Stop architectural drift<a class="headerlink" href="#phase-0-stop-architectural-drift" title="Permanent link">&para;</a></h2>
+<p>Goal:</p>
+<ul>
+<li>establish one runtime contract before adding more features.</li>
+</ul>
+<p>Implementation units:</p>
+<ul>
+<li>Unify <code>/api/knowledge/conversation</code> ownership under modular routes.</li>
+<li>Reduce <code>src/server.ts</code> knowledge-route duplication.</li>
+<li>Introduce one canonical request/response contract for conversation turns.</li>
+<li>Add a typed <code>ConversationTurnRequest</code> and <code>ConversationTurnResult</code> surface in <code>src/learning/types.ts</code> or <code>src/learning/api.ts</code>.</li>
+</ul>
+<p>Primary files:</p>
+<ul>
+<li><code>src/routes/knowledge.ts</code></li>
+<li><code>src/server.ts</code></li>
+<li><code>src/learning/api.ts</code></li>
+<li><code>src/learning/types.ts</code></li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li><code>src/server.migration.test.ts</code></li>
+<li>add <code>src/routes/knowledge.conversation.test.ts</code></li>
+<li>add <code>src/learning/conversation.contract.test.ts</code></li>
+</ul>
+<p>Exit criteria:</p>
+<ul>
+<li>one POST conversation path,</li>
+<li>one SSE or streaming path,</li>
+<li>one validation and header policy,</li>
+<li>no shell-specific branches inside the conversation contract.</li>
+</ul>
+<h2 id="phase-1-make-retrieval-correct-before-making-it-smarter">Phase 1: Make retrieval correct before making it smarter<a class="headerlink" href="#phase-1-make-retrieval-correct-before-making-it-smarter" title="Permanent link">&para;</a></h2>
+<p>Goal:</p>
+<ul>
+<li>replace the current pseudo-semantic local path with a real multilingual lightweight retrieval stack.</li>
+</ul>
+<p>Decision:</p>
+<ul>
+<li>do not jump directly to an external heavyweight vector database.</li>
+<li>keep a local persistent retrieval index suitable for desktop and mobile exports.</li>
+</ul>
+<p>Implementation units:</p>
+<ul>
+<li>Introduce explicit corpus/workspace scope into <code>KnowledgeQueryRequest</code>.</li>
+<li>Replace ASCII-only semantic tokenization with multilingual-safe lexical handling.</li>
+<li>Add embedding-based retrieval as a first-class representation, not as an implied future backend.</li>
+<li>Keep lexical fallback and graph reranking.</li>
+</ul>
+<p>Primary files:</p>
+<ul>
+<li><code>src/learning/types.ts</code></li>
+<li><code>src/learning/api.ts</code></li>
+<li><code>src/learning/queryBackend.ts</code></li>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+<li>add <code>src/learning/indexing/</code></li>
+</ul>
+<p>Suggested new modules:</p>
+<ul>
+<li><code>src/learning/indexing/CorpusScope.ts</code></li>
+<li><code>src/learning/indexing/LexicalIndex.ts</code></li>
+<li><code>src/learning/indexing/EmbeddingIndex.ts</code></li>
+<li><code>src/learning/indexing/GraphReranker.ts</code></li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li><code>src/learning/KnowledgeLearningPlatform.test.ts</code></li>
+<li>add <code>src/learning/queryBackend.multilingual.test.ts</code></li>
+<li>add <code>src/learning/queryBackend.scope.test.ts</code></li>
+<li>add <code>src/learning/indexing/EmbeddingIndex.test.ts</code></li>
+</ul>
+<p>Exit criteria:</p>
+<ul>
+<li>Chinese and mixed-language queries pass retrieval regression tests,</li>
+<li>every query is scope-bound,</li>
+<li>trace output states which retrieval modes contributed,</li>
+<li>graph rerank remains explainable.</li>
+</ul>
+<h2 id="phase-2-build-a-real-lightweight-rag-runtime">Phase 2: Build a real lightweight RAG runtime<a class="headerlink" href="#phase-2-build-a-real-lightweight-rag-runtime" title="Permanent link">&para;</a></h2>
+<p>Goal:</p>
+<ul>
+<li>turn retrieval hits into grounded answers with citations.</li>
+</ul>
+<p>Decision:</p>
+<ul>
+<li>answer synthesis is a distinct runtime stage, not a side effect of retrieval.</li>
+</ul>
+<p>Implementation units:</p>
+<ul>
+<li>Add a turn executor that does:</li>
+<li>normalize request,</li>
+<li>resolve scope,</li>
+<li>read session memory,</li>
+<li>retrieve candidates,</li>
+<li>synthesize answer,</li>
+<li>emit citations,</li>
+<li>produce memory candidates,</li>
+<li>
+<p>persist turn trace.</p>
+</li>
+<li>
+<p>Define a strict answer contract:</p>
+</li>
+<li><code>answer</code></li>
+<li><code>citations</code></li>
+<li><code>retrievalTrace</code></li>
+<li><code>memoryActions</code></li>
+<li><code>followUpCapabilities</code></li>
+</ul>
+<p>Primary files:</p>
+<ul>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+<li>add <code>src/learning/conversation/TurnExecutor.ts</code></li>
+<li>add <code>src/learning/conversation/AnswerSynthesizer.ts</code></li>
+<li>add <code>src/learning/conversation/CitationBuilder.ts</code></li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>add <code>src/learning/conversation/TurnExecutor.test.ts</code></li>
+<li>add <code>src/learning/conversation/CitationBuilder.test.ts</code></li>
+<li>add <code>src/learning/conversation/AnswerSynthesizer.test.ts</code></li>
+</ul>
+<p>Exit criteria:</p>
+<ul>
+<li>assistant responses are grounded answers instead of fixed template strings,</li>
+<li>citations are evidence-backed,</li>
+<li>no answer is emitted without an explicit trace object.</li>
+</ul>
+<h2 id="phase-3-close-the-memory-and-invocation-loop">Phase 3: Close the memory and invocation loop<a class="headerlink" href="#phase-3-close-the-memory-and-invocation-loop" title="Permanent link">&para;</a></h2>
+<p>Goal:</p>
+<ul>
+<li>make turns durable and replayable.</li>
+</ul>
+<p>Decision:</p>
+<ul>
+<li>memory is policy-governed state, not a free-form transcript dump.</li>
+</ul>
+<p>Implementation units:</p>
+<ul>
+<li>Add first-class session memory and long-term promoted memory scoped by corpus/workspace.</li>
+<li>Add invocation/turn persistence modeled after the useful parts of <code>AnythingLLM</code> and <code>DeepTutor</code>.</li>
+<li>Persist:</li>
+<li>turn id,</li>
+<li>session id,</li>
+<li>workspace/corpus id,</li>
+<li>request,</li>
+<li>retrieval summary,</li>
+<li>citations,</li>
+<li>memory actions,</li>
+<li>final answer,</li>
+<li>failure status.</li>
+</ul>
+<p>Primary files:</p>
+<ul>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+<li><code>src/learning/types.ts</code></li>
+<li>add <code>src/learning/conversation/ConversationStore.ts</code></li>
+<li>add <code>src/learning/memory/MemoryStore.ts</code></li>
+<li>add <code>src/learning/memory/MemoryPolicyEngine.ts</code></li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>add <code>src/learning/conversation/ConversationStore.test.ts</code></li>
+<li>add <code>src/learning/memory/MemoryStore.test.ts</code></li>
+<li>add <code>src/learning/memory/MemoryPolicyEngine.test.ts</code></li>
+</ul>
+<p>Exit criteria:</p>
+<ul>
+<li>every turn can be replayed or inspected,</li>
+<li>memory promotion is explicit and testable,</li>
+<li>workspace/corpus scope is preserved across memory operations.</li>
+</ul>
+<h2 id="phase-4-separate-platform-shell-from-runtime-core">Phase 4: Separate platform shell from runtime core<a class="headerlink" href="#phase-4-separate-platform-shell-from-runtime-core" title="Permanent link">&para;</a></h2>
+<p>Goal:</p>
+<ul>
+<li>make export stability possible across Windows, Linux, macOS, and mobile.</li>
+</ul>
+<p>Decision:</p>
+<ul>
+<li>the retrieval/runtime core stays pure TypeScript and portable.</li>
+<li>shell adapters own rendering, filesystem, IPC, and packaging differences.</li>
+</ul>
+<p>Implementation units:</p>
+<ul>
+<li>Define a <code>platform adapter</code> boundary for:</li>
+<li>filesystem access,</li>
+<li>background indexing triggers,</li>
+<li>asset/materialization strategy,</li>
+<li>
+<p>renderer-specific markdown/mermaid/math output handling.</p>
+</li>
+<li>
+<p>Keep Godot-specific constraints out of core logic.</p>
+</li>
+<li>Because Godot cannot reliably consume SVG, mermaid/math outputs for Godot must be materialized in a non-SVG target format at the shell adapter layer.</li>
+</ul>
+<p>Primary files:</p>
+<ul>
+<li><code>src/utils/RuntimePaths.ts</code></li>
+<li><code>src/core/PathBridge.ts</code></li>
+<li><code>src/routes/render.ts</code></li>
+<li><code>path_mode/scripts/reader_render_client.gd</code></li>
+<li><code>path_mode/scripts/path_mode_ui.gd</code></li>
+<li>add <code>src/platform/</code></li>
+</ul>
+<p>Suggested new modules:</p>
+<ul>
+<li><code>src/platform/PlatformCapabilities.ts</code></li>
+<li><code>src/platform/RenderMaterializer.ts</code></li>
+<li><code>src/platform/ExportProfile.ts</code></li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>add <code>src/platform/PlatformCapabilities.test.ts</code></li>
+<li>add <code>src/platform/RenderMaterializer.test.ts</code></li>
+<li>extend <code>src/pathbridge.handshake.contract.test.ts</code></li>
+</ul>
+<p>Exit criteria:</p>
+<ul>
+<li>shell adapters consume stable runtime outputs,</li>
+<li>Godot rendering no longer dictates retrieval design,</li>
+<li>desktop and mobile export profiles are explicit.</li>
+</ul>
+<h2 id="phase-5-define-the-packaging-matrix">Phase 5: Define the packaging matrix<a class="headerlink" href="#phase-5-define-the-packaging-matrix" title="Permanent link">&para;</a></h2>
+<p>Goal:</p>
+<ul>
+<li>ship intentionally, not incidentally.</li>
+</ul>
+<p>Decision:</p>
+<ul>
+<li>use one core, multiple export profiles.</li>
+</ul>
+<p>Required export profiles:</p>
+<ul>
+<li><code>desktop-full</code></li>
+<li>Tauri desktop for Windows, Linux, macOS</li>
+<li>local sidecar allowed</li>
+<li>
+<p>full retrieval + agent runtime</p>
+</li>
+<li>
+<p><code>desktop-reader</code></p>
+</li>
+<li>Tauri desktop read-only / lighter mode</li>
+<li>
+<p>prebuilt or deferred index loading</p>
+</li>
+<li>
+<p><code>godot-path-mode</code></p>
+</li>
+<li>visualization and reader shell</li>
+<li>no SVG dependence</li>
+<li>
+<p>consumes materialized render artifacts</p>
+</li>
+<li>
+<p><code>mobile-slim</code></p>
+</li>
+<li>corpus-scoped lightweight retrieval only</li>
+<li>compact local index</li>
+<li>bounded memory footprint</li>
+<li>reduced background orchestration</li>
+</ul>
+<p>Primary files:</p>
+<ul>
+<li><code>src-tauri/tauri.windows.conf.json</code></li>
+<li><code>src-tauri/tauri.linux.conf.json</code></li>
+<li><code>src-tauri/tauri.macos.conf.json</code></li>
+<li><code>src-tauri/tauri.android.conf.json</code></li>
+<li><code>scripts/</code></li>
+<li>add <code>docs/solutions/export-profile-matrix.md</code> in implementation phase</li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>add packaging smoke scripts under <code>scripts/</code></li>
+<li>add export profile verification notes in <code>docs/</code></li>
+</ul>
+<p>Exit criteria:</p>
+<ul>
+<li>each build target has an explicit capability matrix,</li>
+<li>no platform implicitly inherits desktop-only assumptions,</li>
+<li>mobile slim mode has its own constraints and validation path.</li>
+</ul>
+<h2 id="phase-6-simplify-agent-product-semantics">Phase 6: Simplify agent product semantics<a class="headerlink" href="#phase-6-simplify-agent-product-semantics" title="Permanent link">&para;</a></h2>
+<p>Goal:</p>
+<ul>
+<li>stop calling a retrieval wrapper an agent.</li>
+</ul>
+<p>Decision:</p>
+<ul>
+<li>product labels must match runtime truth.</li>
+</ul>
+<p>Implementation units:</p>
+<ul>
+<li>Split product concepts into:</li>
+<li><code>Knowledge Search</code></li>
+<li><code>Grounded Conversation</code></li>
+<li><code>Guided Learning</code></li>
+<li>
+<p><code>Autonomous Agent Actions</code> only when tool/action loops actually exist</p>
+</li>
+<li>
+<p>Do not expose agent-facing UI affordances that the runtime cannot honor deterministically.</p>
+</li>
+</ul>
+<p>Primary files:</p>
+<ul>
+<li><code>src/frontend/agent_workspace.js</code></li>
+<li><code>src/frontend/main.mjs</code></li>
+<li><code>src/frontend/i18n.mjs</code></li>
+<li>relevant locale files under <code>src/frontend/locales/</code></li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>add <code>src/frontend/agent_workspace.contract.test.js</code></li>
+<li>add runtime capability integration tests where feasible</li>
+</ul>
+<p>Exit criteria:</p>
+<ul>
+<li>UI vocabulary matches backend truth,</li>
+<li>capability cards reflect actual supported runtime actions,</li>
+<li>agent traces are inspectable.</li>
+</ul>
+<h3 id="7-layer-connections">7. Layer Connections<a class="headerlink" href="#7-layer-connections" title="Permanent link">&para;</a></h3>
+<p>The intended data flow is:</p>
+<p><code>source</code> -&gt; <code>canonical unit</code> -&gt; <code>representation</code> -&gt; <code>scoped retrieval</code> -&gt; <code>answer synthesis</code> -&gt; <code>memory policy</code> -&gt; <code>turn trace</code> -&gt; <code>shell materialization</code></p>
+<p>Each transition needs a stable contract:</p>
+<ul>
+<li>source to canonical unit:</li>
+<li>versioned ingestion metadata</li>
+<li>canonical unit to representation:</li>
+<li>lexical + embedding + graph signals</li>
+<li>representation to retrieval:</li>
+<li>scope id + retrieval policy</li>
+<li>retrieval to synthesis:</li>
+<li>ranked candidates + evidence spans</li>
+<li>synthesis to memory:</li>
+<li>explicit proposed memory actions</li>
+<li>turn trace to shell:</li>
+<li>platform-neutral payload, platform-specific rendering</li>
+</ul>
+<h3 id="8-tradeoffs">8. Tradeoffs<a class="headerlink" href="#8-tradeoffs" title="Permanent link">&para;</a></h3>
+<h4 id="graph-first-vs-chunk-first">Graph-first vs chunk-first<a class="headerlink" href="#graph-first-vs-chunk-first" title="Permanent link">&para;</a></h4>
+<p>Keep graph-first.</p>
+<p>Reason:</p>
+<ul>
+<li>NoteConnection’s advantage is evidence graph structure and learning semantics.</li>
+<li>Chunks should support retrieval, not replace the core model.</li>
+</ul>
+<h4 id="lightweight-local-index-vs-external-vector-database">Lightweight local index vs external vector database<a class="headerlink" href="#lightweight-local-index-vs-external-vector-database" title="Permanent link">&para;</a></h4>
+<p>Prefer local persistent index first.</p>
+<p>Reason:</p>
+<ul>
+<li>desktop export works offline,</li>
+<li>mobile slim mode remains possible,</li>
+<li>lower operational complexity,</li>
+<li>easier deterministic packaging.</li>
+</ul>
+<p>Use an external vector database only when:</p>
+<ul>
+<li>corpus size or concurrency actually exceeds the local design,</li>
+<li>and after scope/version contracts are already stable.</li>
+</ul>
+<h4 id="one-runtime-vs-per-shell-logic">One runtime vs per-shell logic<a class="headerlink" href="#one-runtime-vs-per-shell-logic" title="Permanent link">&para;</a></h4>
+<p>Prefer one core runtime.</p>
+<p>Reason:</p>
+<ul>
+<li>correctness belongs in one place,</li>
+<li>shell-specific forks create drift,</li>
+<li>earlier mermaid/math issues already showed the cost of mixed concerns.</li>
+</ul>
+<h4 id="persistent-memory-vs-deterministic-replay">Persistent memory vs deterministic replay<a class="headerlink" href="#persistent-memory-vs-deterministic-replay" title="Permanent link">&para;</a></h4>
+<p>Keep both, but separate them.</p>
+<ul>
+<li>persistent memory is promoted state,</li>
+<li>deterministic replay is turn history plus trace.</li>
+</ul>
+<p>Do not use memory as a substitute for replayable turn records.</p>
+<h3 id="9-common-mistakes-to-avoid">9. Common Mistakes to Avoid<a class="headerlink" href="#9-common-mistakes-to-avoid" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Adding more provider settings before the retrieval/runtime contract is stable.</li>
+<li>Treating UI capability cards as proof of agent capability.</li>
+<li>Using ASCII tokenization and calling it multilingual semantic retrieval.</li>
+<li>Letting Godot rendering constraints leak back into knowledge/runtime design.</li>
+<li>Mixing ingestion freshness, conversation memory, and answer citations into one implicit state blob.</li>
+<li>Shipping mobile builds that silently depend on desktop-sidecar assumptions.</li>
+<li>Keeping duplicated conversation route logic in more than one server surface.</li>
+</ul>
+<h3 id="10-best-practices">10. Best Practices<a class="headerlink" href="#10-best-practices" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Make <code>corpus/workspace scope</code> mandatory in every retrieval and conversation contract.</li>
+<li>Keep one canonical turn executor.</li>
+<li>Emit citations and retrieval trace together.</li>
+<li>Separate canonical knowledge units from retrieval representations.</li>
+<li>Keep the runtime core portable and deterministic.</li>
+<li>Materialize shell-specific render artifacts only at adapter boundaries.</li>
+<li>Add multilingual regression tests before changing ranking heuristics.</li>
+<li>Persist invocation records for every agent-like operation.</li>
+</ul>
+<h3 id="11-mental-model">11. Mental Model<a class="headerlink" href="#11-mental-model" title="Permanent link">&para;</a></h3>
+<p>The right mental model is:</p>
+<p><code>corpus</code> -&gt; <code>unit</code> -&gt; <code>index</code> -&gt; <code>scope</code> -&gt; <code>turn runtime</code> -&gt; <code>trace</code> -&gt; <code>shell</code></p>
+<p>If any layer is implicit, the system will drift.</p>
+<p>If scope is implicit, retrieval drifts.
+If trace is implicit, agent claims drift.
+If shell behavior is implicit, cross-platform exports drift.</p>
+<h3 id="12-real-application-in-this-project">12. Real Application in This Project<a class="headerlink" href="#12-real-application-in-this-project" title="Permanent link">&para;</a></h3>
+<p>For a note like <code>Knowledge_Base/.../Absorption.md</code>, the correct final behavior is:</p>
+<ul>
+<li>ingestion converts it into canonical atoms, evidence spans, and graph relations,</li>
+<li>scope binding decides which corpus or workspace owns it,</li>
+<li>multilingual lexical and embedding representations are built once and versioned,</li>
+<li>a conversation turn queries only that scope,</li>
+<li>retrieval returns ranked evidence-backed candidates,</li>
+<li>answer synthesis emits a grounded explanation with citations,</li>
+<li>memory policy decides what to retain for the user and that scope,</li>
+<li>Tauri desktop, browser reader, and Godot reader all consume the same turn result,</li>
+<li>Godot receives a shell-safe render materialization, not a raw SVG dependency.</li>
+</ul>
+<h3 id="13-recommended-execution-order">13. Recommended Execution Order<a class="headerlink" href="#13-recommended-execution-order" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Phase 0: unify conversation contract ownership.</li>
+<li>Phase 1: add scope and multilingual retrieval correctness.</li>
+<li>Phase 2: build grounded answer synthesis.</li>
+<li>Phase 3: integrate memory and invocation persistence.</li>
+<li>Phase 4: split runtime core from shell adapters.</li>
+<li>Phase 5: formalize export profiles.</li>
+<li>Phase 6: simplify product semantics so the UI matches runtime truth.</li>
+</ol>
+<h3 id="14-five-point-summary">14. Five-Point Summary<a class="headerlink" href="#14-five-point-summary" title="Permanent link">&para;</a></h3>
+<ol>
+<li>NoteConnection already has a stronger knowledge model than the reference chat products, but it lacks runtime closure.</li>
+<li>The most urgent gap is not more agent UI. It is scoped multilingual retrieval correctness.</li>
+<li><code>AnythingLLM</code> contributes the right ideas for workspace, memory, and invocation persistence; <code>Cherry Studio</code> contributes provider and packaging discipline; <code>DeepTutor</code> contributes staged turn runtime design.</li>
+<li>The correct architecture is one portable TypeScript core with platform-specific shell adapters, not separate runtimes per shell.</li>
+<li>Mobile support becomes realistic only after scope, indexing, conversation, and rendering contracts are explicit and portable.</li>
+</ol>
+<h2 id="_1">中文<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<h3 id="1">1. 术语定义<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
+<dl>
+<dt><code>Source</code></dt>
+<dd>用户拥有、可被摄取的原始对象。在本项目中主要是 Markdown 笔记、附件、图谱元数据以及派生出的学习状态。</dd>
+<dt><code>Canonical unit</code></dt>
+<dd>运行时真正持久化的最小检索单元。对 NoteConnection 而言，它不能退化成匿名文本块，而应继续保持图谱关系和证据约束。</dd>
+<dt><code>Corpus scope</code></dt>
+<dd>检索与对话执行时的硬边界，用来声明“这次请求到底可以搜索哪些源”。这不是 UI 过滤器，而必须贯穿存储、检索、记忆和会话契约。</dd>
+<dt><code>Representation</code></dt>
+<dd>供检索运行时使用的表示层，包括词法索引、向量表示、图结构信号、语言元数据和证据片段。</dd>
+<dt><code>Retrieval</code></dt>
+<dd>将用户请求映射为排序后的知识候选集合的过程。它必须是有 scope 的、支持多语言的、可解释的，并能跨平台保持稳定行为。</dd>
+<dt><code>Answer synthesis</code></dt>
+<dd>将检索候选组织成最终回答并附带引用的运行时阶段。只有检索，没有综合，不构成真正的对话系统。</dd>
+<dt><code>Conversation state</code></dt>
+<dd>按 turn 持久化的运行时信封，至少包括消息、scope、检索证据、记忆输入、工具调用、输出和 trace 元数据。</dd>
+<dt><code>Memory</code></dt>
+<dd>经由策略提升后保留下来的用户/会话状态，不是为了交互方便而堆积的 transcript。Memory 与 retrieval corpus 不同，但两者会发生耦合。</dd>
+<dt><code>Agent runtime</code></dt>
+<dd>决定是否直接回答、是否检索、是否调用工具、是否写回记忆、以及如何输出 trace 的编排闭环。</dd>
+<dt><code>Shell</code></dt>
+<dd>平台相关的打包与渲染层，例如 Tauri 桌面端、Godot path mode、浏览器 reader 或移动端运行时。</dd>
+</dl>
+<h3 id="2">2. 第一性原理诊断<a class="headerlink" href="#2" title="Permanent link">&para;</a></h3>
+<p>当前项目的问题不是“缺少概念”，而是“缺少边界”和“缺少闭环”。</p>
+<p>现在已经有：</p>
+<ul>
+<li>知识单元，</li>
+<li>检索接口，</li>
+<li>记忆相关接口，</li>
+<li>多个平台壳层，</li>
+</ul>
+<p>但还没有真正把：</p>
+<p><code>scope -&gt; retrieval -&gt; synthesis -&gt; memory -&gt; trace</code></p>
+<p>闭合成一个统一运行时。</p>
+<p>因此，当前 NoteConnection 更像是“图谱增强的搜索/学习界面”，而不是“完整的轻量级 RAG + memory + agent runtime 系统”。</p>
+<h3 id="3">3. 对照项目中真正值得借鉴的部分<a class="headerlink" href="#3" title="Permanent link">&para;</a></h3>
+<h4 id="anythingllm_1">AnythingLLM<a class="headerlink" href="#anythingllm_1" title="Permanent link">&para;</a></h4>
+<p>值得借鉴：</p>
+<ul>
+<li><code>workspace</code> 作为一等边界，</li>
+<li>文档到向量表示的显式持久化关系，</li>
+<li>显式分层的 memory，</li>
+<li>显式的 agent invocation 持久化。</li>
+</ul>
+<p>不应直接照搬：</p>
+<ul>
+<li>它是 workspace-first、chat-first 的产品，</li>
+<li>NoteConnection 仍然应该保持 graph-first、evidence-first。</li>
+</ul>
+<h4 id="cherry-studio_1">Cherry Studio<a class="headerlink" href="#cherry-studio_1" title="Permanent link">&para;</a></h4>
+<p>值得借鉴：</p>
+<ul>
+<li>多平台打包矩阵纪律，</li>
+<li>provider 归一化层，</li>
+<li>配置、运行时和打包产物的清晰边界。</li>
+</ul>
+<p>不应直接照搬：</p>
+<ul>
+<li>Electron-first 假设，</li>
+<li>偏桌面端的重量级依赖面。</li>
+</ul>
+<h4 id="deeptutor_1">DeepTutor<a class="headerlink" href="#deeptutor_1" title="Permanent link">&para;</a></h4>
+<p>值得借鉴：</p>
+<ul>
+<li>turn envelope，</li>
+<li>分阶段 agent runtime，</li>
+<li>持久化 session，</li>
+<li>capability/tool registry 思维。</li>
+</ul>
+<p>不应直接照搬：</p>
+<ul>
+<li>Python 运行时形态，</li>
+<li>其知识库/RAG 实现本体，</li>
+<li>进程内长生命周期 orchestration 方式。</li>
+</ul>
+<h3 id="4-noteconnection">4. 当前 NoteConnection 的核心缺口<a class="headerlink" href="#4-noteconnection" title="Permanent link">&para;</a></h3>
+<h4 id="a-corpusworkspace-scope">缺口 A：没有一等公民的 corpus/workspace scope<a class="headerlink" href="#a-corpusworkspace-scope" title="Permanent link">&para;</a></h4>
+<p><code>src/learning/types.ts</code> 中的 <code>KnowledgeQueryRequest</code> 还没有 workspace 或 corpus 边界。</p>
+<p>后果：</p>
+<ul>
+<li>检索默认落在全局 atom 池，</li>
+<li>agent 回答不可复现地漂移，</li>
+<li>memory 无法稳定绑定到语料边界，</li>
+<li>桌面端与移动端无法共享同一个确定性检索契约。</li>
+</ul>
+<h4 id="b">缺口 B：多语言检索在结构上就偏弱<a class="headerlink" href="#b" title="Permanent link">&para;</a></h4>
+<p><code>src/learning/queryBackend.ts</code> 的 <code>local_vector</code> 路径仍然使用 <code>[a-z0-9]</code> 级别的归一化与切词。</p>
+<p>后果：</p>
+<ul>
+<li>中文检索质量会被结构性压制，</li>
+<li>中英混合笔记会显著退化，</li>
+<li>“本地语义检索”这个说法高于实际能力。</li>
+</ul>
+<h4 id="c-conversation">缺口 C：当前 conversation 只是检索结果格式化，不是回答综合<a class="headerlink" href="#c-conversation" title="Permanent link">&para;</a></h4>
+<p><code>src/learning/KnowledgeLearningPlatform.ts</code> 中的 <code>agentConversation()</code> 只是调用 <code>queryKnowledge()</code>，再输出固定模板句。</p>
+<p>后果：</p>
+<ul>
+<li>没有真实回答生成，</li>
+<li>没有证据引用契约，</li>
+<li>没有工具仲裁，</li>
+<li>没有可审计的 turn trace 模型。</li>
+</ul>
+<h4 id="dmemory-turn">缺口 D：memory 没有进入主 turn 闭环<a class="headerlink" href="#dmemory-turn" title="Permanent link">&para;</a></h4>
+<p>虽然代码中有 memory 相关能力，但主对话路径并没有系统性地：</p>
+<ul>
+<li>读取 scoped memory 作为输入，</li>
+<li>生成 memory 候选，</li>
+<li>在回答后执行策略提升，</li>
+<li>将 memory 决策写入 turn trace。</li>
+</ul>
+<h4 id="eingestion-scope">缺口 E：ingestion 还不是持续、分 scope 的正式流水线<a class="headerlink" href="#eingestion-scope" title="Permanent link">&para;</a></h4>
+<p><code>src/learning/KnowledgeLearningPlatform.ts</code> 已有 ingestion 能力，但产品层行为仍更像“点触发式导入”，而不是：</p>
+<p><code>source -&gt; unit -&gt; representation -&gt; index</code></p>
+<p>的正式管线。</p>
+<h4 id="fapi">缺口 F：API 语义分裂<a class="headerlink" href="#fapi" title="Permanent link">&para;</a></h4>
+<p><code>src/routes/knowledge.ts</code> 与 <code>src/server.ts</code> 都在参与知识 API 行为，包括 <code>/api/knowledge/conversation</code>。</p>
+<p>后果：</p>
+<ul>
+<li>契约漂移风险高，</li>
+<li>容易重复出现 CORS、header、validation 侧的偏差，</li>
+<li>平台壳层会被路由实现细节牵着走。</li>
+</ul>
+<h4 id="g">缺口 G：平台壳层与运行时核心分离不够<a class="headerlink" href="#g" title="Permanent link">&para;</a></h4>
+<p>此前 reader、bridge、render 链路的问题已经说明：渲染问题和知识运行时问题仍在互相污染。</p>
+<p>后果：</p>
+<ul>
+<li>桌面端回归会波及 Godot/移动端，</li>
+<li>壳层 bug 会反向扭曲系统架构决策，</li>
+<li>导出复杂度长期无法收敛。</li>
+</ul>
+<h3 id="5">5. 目标架构<a class="headerlink" href="#5" title="Permanent link">&para;</a></h3>
+<p>推荐目标架构分为七层：</p>
+<ol>
+<li><code>Source layer</code></li>
+<li>Markdown、附件、图谱数据、学习状态。</li>
+<li><code>Canonicalization layer</code></li>
+<li>解析为 <code>KnowledgeDocument</code>、<code>KnowledgeAtom</code>、<code>EvidenceSpan</code>、关系边和时间边。</li>
+<li><code>Representation layer</code></li>
+<li>构建词法索引、多语言向量索引、图邻接信号和 freshness/version 元数据。</li>
+<li><code>Scoped retrieval layer</code></li>
+<li>在显式 corpus/workspace 边界内执行检索。</li>
+<li><code>Conversation runtime layer</code></li>
+<li>turn envelope、检索计划、回答综合、引用契约、工具执行、trace 输出。</li>
+<li><code>Memory and invocation layer</code></li>
+<li>session memory、提升后的长期 memory、invocation 记录、turn history、可回放性。</li>
+<li><code>Platform shell layer</code></li>
+<li>Tauri 桌面端、浏览器 reader、Godot reader/path mode、移动端 slim runtime。</li>
+</ol>
+<p>系统记录层必须在 runtime core，而不是在 shell。</p>
+<h3 id="6">6. 分阶段推进与修复方案<a class="headerlink" href="#6" title="Permanent link">&para;</a></h3>
+<h4 id="phase-0">Phase 0：先止住架构漂移<a class="headerlink" href="#phase-0" title="Permanent link">&para;</a></h4>
+<p>目标：</p>
+<ul>
+<li>在继续堆功能之前，先建立唯一的 conversation contract。</li>
+</ul>
+<p>实施要点：</p>
+<ul>
+<li>将 <code>/api/knowledge/conversation</code> 的所有权统一到模块化 route。</li>
+<li>减少 <code>src/server.ts</code> 中的知识路由内联逻辑。</li>
+<li>定义唯一的 <code>ConversationTurnRequest</code> / <code>ConversationTurnResult</code> 契约。</li>
+</ul>
+<p>主文件：</p>
+<ul>
+<li><code>src/routes/knowledge.ts</code></li>
+<li><code>src/server.ts</code></li>
+<li><code>src/learning/api.ts</code></li>
+<li><code>src/learning/types.ts</code></li>
+</ul>
+<p>测试：</p>
+<ul>
+<li><code>src/server.migration.test.ts</code></li>
+<li>新增 <code>src/routes/knowledge.conversation.test.ts</code></li>
+<li>新增 <code>src/learning/conversation.contract.test.ts</code></li>
+</ul>
+<p>退出条件：</p>
+<ul>
+<li>一个 POST 会话入口，</li>
+<li>一个流式入口，</li>
+<li>一套 header/validation 规则，</li>
+<li>conversation contract 内无壳层特判。</li>
+</ul>
+<h4 id="phase-1">Phase 1：先把检索做对，再谈更聪明<a class="headerlink" href="#phase-1" title="Permanent link">&para;</a></h4>
+<p>目标：</p>
+<ul>
+<li>用真正可跨语言、可离线、可跨平台的轻量检索栈，替换现在伪语义化的本地路径。</li>
+</ul>
+<p>关键决策：</p>
+<ul>
+<li>不要立刻引入重型外部向量数据库。</li>
+<li>优先构建本地持久化索引，以便支撑桌面端与移动端 slim mode。</li>
+</ul>
+<p>实施要点：</p>
+<ul>
+<li>在 <code>KnowledgeQueryRequest</code> 中加入强制的 corpus/workspace scope。</li>
+<li>将 ASCII-only 的 token 处理替换为多语言安全的词法层。</li>
+<li>将 embedding retrieval 变成一等表示层能力。</li>
+<li>保留 lexical fallback 和 graph rerank。</li>
+</ul>
+<p>主文件：</p>
+<ul>
+<li><code>src/learning/types.ts</code></li>
+<li><code>src/learning/api.ts</code></li>
+<li><code>src/learning/queryBackend.ts</code></li>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+<li>新增 <code>src/learning/indexing/</code></li>
+</ul>
+<p>建议新模块：</p>
+<ul>
+<li><code>src/learning/indexing/CorpusScope.ts</code></li>
+<li><code>src/learning/indexing/LexicalIndex.ts</code></li>
+<li><code>src/learning/indexing/EmbeddingIndex.ts</code></li>
+<li><code>src/learning/indexing/GraphReranker.ts</code></li>
+</ul>
+<p>测试：</p>
+<ul>
+<li><code>src/learning/KnowledgeLearningPlatform.test.ts</code></li>
+<li>新增 <code>src/learning/queryBackend.multilingual.test.ts</code></li>
+<li>新增 <code>src/learning/queryBackend.scope.test.ts</code></li>
+<li>新增 <code>src/learning/indexing/EmbeddingIndex.test.ts</code></li>
+</ul>
+<p>退出条件：</p>
+<ul>
+<li>中文与中英混合查询有回归用例保护，</li>
+<li>所有查询都在 scope 内执行，</li>
+<li>trace 能解释各检索模式贡献，</li>
+<li>graph rerank 保持可解释性。</li>
+</ul>
+<h4 id="phase-2-lightweight-rag-runtime">Phase 2：建立真正的 lightweight RAG runtime<a class="headerlink" href="#phase-2-lightweight-rag-runtime" title="Permanent link">&para;</a></h4>
+<p>目标：</p>
+<ul>
+<li>把检索候选组织成带引用的 grounded answer。</li>
+</ul>
+<p>关键决策：</p>
+<ul>
+<li>回答综合必须是独立阶段，而不是检索副作用。</li>
+</ul>
+<p>实施要点：</p>
+<ul>
+<li>新建 turn executor，负责：</li>
+<li>归一化请求，</li>
+<li>解析 scope，</li>
+<li>读取 session memory，</li>
+<li>执行 retrieval，</li>
+<li>综合回答，</li>
+<li>输出 citations，</li>
+<li>生成 memory candidates，</li>
+<li>
+<p>持久化 turn trace。</p>
+</li>
+<li>
+<p>定义严格回答契约：</p>
+</li>
+<li><code>answer</code></li>
+<li><code>citations</code></li>
+<li><code>retrievalTrace</code></li>
+<li><code>memoryActions</code></li>
+<li><code>followUpCapabilities</code></li>
+</ul>
+<p>主文件：</p>
+<ul>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+<li>新增 <code>src/learning/conversation/TurnExecutor.ts</code></li>
+<li>新增 <code>src/learning/conversation/AnswerSynthesizer.ts</code></li>
+<li>新增 <code>src/learning/conversation/CitationBuilder.ts</code></li>
+</ul>
+<p>测试：</p>
+<ul>
+<li>新增 <code>src/learning/conversation/TurnExecutor.test.ts</code></li>
+<li>新增 <code>src/learning/conversation/CitationBuilder.test.ts</code></li>
+<li>新增 <code>src/learning/conversation/AnswerSynthesizer.test.ts</code></li>
+</ul>
+<p>退出条件：</p>
+<ul>
+<li>assistant 输出变成 grounded answer，而不是固定模板句，</li>
+<li>所有回答都带 evidence-backed citation，</li>
+<li>无 trace 不出答案。</li>
+</ul>
+<h4 id="phase-3-memory-invocation">Phase 3：补上 memory 与 invocation 闭环<a class="headerlink" href="#phase-3-memory-invocation" title="Permanent link">&para;</a></h4>
+<p>目标：</p>
+<ul>
+<li>让每个 turn 可追踪、可回放、可审计。</li>
+</ul>
+<p>关键决策：</p>
+<ul>
+<li>memory 是策略治理后的状态，而不是 transcript 堆积。</li>
+</ul>
+<p>实施要点：</p>
+<ul>
+<li>引入按 corpus/workspace scope 分层的 session memory 与 promoted memory。</li>
+<li>建立参考 AnythingLLM 与 DeepTutor 的 invocation/turn 持久化模型。</li>
+<li>持久化：</li>
+<li>turn id，</li>
+<li>session id，</li>
+<li>workspace/corpus id，</li>
+<li>request，</li>
+<li>retrieval summary，</li>
+<li>citations，</li>
+<li>memory actions，</li>
+<li>final answer，</li>
+<li>failure status。</li>
+</ul>
+<p>主文件：</p>
+<ul>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code></li>
+<li><code>src/learning/types.ts</code></li>
+<li>新增 <code>src/learning/conversation/ConversationStore.ts</code></li>
+<li>新增 <code>src/learning/memory/MemoryStore.ts</code></li>
+<li>新增 <code>src/learning/memory/MemoryPolicyEngine.ts</code></li>
+</ul>
+<p>测试：</p>
+<ul>
+<li>新增 <code>src/learning/conversation/ConversationStore.test.ts</code></li>
+<li>新增 <code>src/learning/memory/MemoryStore.test.ts</code></li>
+<li>新增 <code>src/learning/memory/MemoryPolicyEngine.test.ts</code></li>
+</ul>
+<p>退出条件：</p>
+<ul>
+<li>每个 turn 都可重放或审计，</li>
+<li>memory 提升动作显式、可测试，</li>
+<li>memory 与 scope 始终绑定。</li>
+</ul>
+<h4 id="phase-4">Phase 4：将平台壳层从运行时核心中剥离<a class="headerlink" href="#phase-4" title="Permanent link">&para;</a></h4>
+<p>目标：</p>
+<ul>
+<li>为 Windows、Linux、macOS 与移动端导出建立稳定基础。</li>
+</ul>
+<p>关键决策：</p>
+<ul>
+<li>retrieval/runtime core 保持纯 TypeScript、可移植。</li>
+<li>shell adapter 只负责渲染、文件系统、IPC 与打包差异。</li>
+</ul>
+<p>实施要点：</p>
+<ul>
+<li>定义平台适配边界：</li>
+<li>文件系统访问，</li>
+<li>后台索引触发，</li>
+<li>产物 materialization，</li>
+<li>
+<p>reader 中 markdown/mermaid/math 的壳层输出处理。</p>
+</li>
+<li>
+<p>Godot 特有约束不能反向污染核心逻辑。</p>
+</li>
+<li>由于 Godot 对 SVG 支持存在缺陷，Godot 侧 mermaid/math 输出必须在 shell adapter 层 materialize 为非 SVG 目标格式。</li>
+</ul>
+<p>主文件：</p>
+<ul>
+<li><code>src/utils/RuntimePaths.ts</code></li>
+<li><code>src/core/PathBridge.ts</code></li>
+<li><code>src/routes/render.ts</code></li>
+<li><code>path_mode/scripts/reader_render_client.gd</code></li>
+<li><code>path_mode/scripts/path_mode_ui.gd</code></li>
+<li>新增 <code>src/platform/</code></li>
+</ul>
+<p>建议新模块：</p>
+<ul>
+<li><code>src/platform/PlatformCapabilities.ts</code></li>
+<li><code>src/platform/RenderMaterializer.ts</code></li>
+<li><code>src/platform/ExportProfile.ts</code></li>
+</ul>
+<p>测试：</p>
+<ul>
+<li>新增 <code>src/platform/PlatformCapabilities.test.ts</code></li>
+<li>新增 <code>src/platform/RenderMaterializer.test.ts</code></li>
+<li>扩展 <code>src/pathbridge.handshake.contract.test.ts</code></li>
+</ul>
+<p>退出条件：</p>
+<ul>
+<li>壳层消费统一运行时输出，</li>
+<li>Godot 渲染约束不再主导知识架构设计，</li>
+<li>桌面端与移动端 profile 明确分离。</li>
+</ul>
+<h4 id="phase-5">Phase 5：正式建立导出矩阵<a class="headerlink" href="#phase-5" title="Permanent link">&para;</a></h4>
+<p>目标：</p>
+<ul>
+<li>让“支持哪些平台、每个平台支持哪些能力”成为明文能力矩阵，而不是隐式结果。</li>
+</ul>
+<p>关键决策：</p>
+<ul>
+<li>一套 core，多个 export profile。</li>
+</ul>
+<p>建议 profile：</p>
+<ul>
+<li><code>desktop-full</code></li>
+<li>Windows / Linux / macOS 的 Tauri 桌面端</li>
+<li>允许本地 sidecar</li>
+<li>
+<p>完整 retrieval + agent runtime</p>
+</li>
+<li>
+<p><code>desktop-reader</code></p>
+</li>
+<li>轻量只读或偏 reader 的桌面形态</li>
+<li>
+<p>支持预构建或延迟加载索引</p>
+</li>
+<li>
+<p><code>godot-path-mode</code></p>
+</li>
+<li>可视化与 reader 壳层</li>
+<li>不依赖 SVG</li>
+<li>
+<p>消费 materialized render artifact</p>
+</li>
+<li>
+<p><code>mobile-slim</code></p>
+</li>
+<li>仅保留 scoped lightweight retrieval</li>
+<li>使用紧凑本地索引</li>
+<li>严格限制内存占用</li>
+<li>降低后台 orchestration 复杂度</li>
+</ul>
+<p>主文件：</p>
+<ul>
+<li><code>src-tauri/tauri.windows.conf.json</code></li>
+<li><code>src-tauri/tauri.linux.conf.json</code></li>
+<li><code>src-tauri/tauri.macos.conf.json</code></li>
+<li><code>src-tauri/tauri.android.conf.json</code></li>
+<li><code>scripts/</code></li>
+</ul>
+<p>测试：</p>
+<ul>
+<li>在 <code>scripts/</code> 下增加 profile smoke check</li>
+<li>在后续实施阶段补 <code>docs/solutions/export-profile-matrix.md</code></li>
+</ul>
+<p>退出条件：</p>
+<ul>
+<li>每个导出目标都有明确 capability matrix，</li>
+<li>移动端不再隐式依赖桌面 sidecar 假设，</li>
+<li>mobile slim mode 有独立验证路径。</li>
+</ul>
+<h4 id="phase-6-agent">Phase 6：纠正 agent 产品语义<a class="headerlink" href="#phase-6-agent" title="Permanent link">&para;</a></h4>
+<p>目标：</p>
+<ul>
+<li>停止把 retrieval wrapper 叫做 agent。</li>
+</ul>
+<p>关键决策：</p>
+<ul>
+<li>产品命名必须与运行时真相一致。</li>
+</ul>
+<p>实施要点：</p>
+<ul>
+<li>将产品概念拆分为：</li>
+<li><code>Knowledge Search</code></li>
+<li><code>Grounded Conversation</code></li>
+<li><code>Guided Learning</code></li>
+<li>
+<p>只有在真实工具闭环存在时才叫 <code>Autonomous Agent Actions</code></p>
+</li>
+<li>
+<p>不要暴露后端无法确定性兑现的 agent UI affordance。</p>
+</li>
+</ul>
+<p>主文件：</p>
+<ul>
+<li><code>src/frontend/agent_workspace.js</code></li>
+<li><code>src/frontend/main.mjs</code></li>
+<li><code>src/frontend/i18n.mjs</code></li>
+<li><code>src/frontend/locales/</code> 下相关文案</li>
+</ul>
+<p>测试：</p>
+<ul>
+<li>新增 <code>src/frontend/agent_workspace.contract.test.js</code></li>
+<li>适度补 runtime capability 集成测试</li>
+</ul>
+<p>退出条件：</p>
+<ul>
+<li>UI 文案与后端能力一致，</li>
+<li>capability card 反映真实可执行动作，</li>
+<li>agent trace 可被检查。</li>
+</ul>
+<h3 id="7">7. 各层之间如何连接<a class="headerlink" href="#7" title="Permanent link">&para;</a></h3>
+<p>理想的数据流应为：</p>
+<p><code>source -&gt; canonical unit -&gt; representation -&gt; scoped retrieval -&gt; answer synthesis -&gt; memory policy -&gt; turn trace -&gt; shell materialization</code></p>
+<p>每一段转换都必须有稳定契约：</p>
+<ul>
+<li>source -&gt; canonical unit</li>
+<li>需要 versioned ingestion metadata</li>
+<li>canonical unit -&gt; representation</li>
+<li>需要 lexical + embedding + graph signals</li>
+<li>representation -&gt; retrieval</li>
+<li>需要 scope id + retrieval policy</li>
+<li>retrieval -&gt; synthesis</li>
+<li>需要 ranked candidate + evidence span</li>
+<li>synthesis -&gt; memory</li>
+<li>需要显式 memory action 提案</li>
+<li>turn trace -&gt; shell</li>
+<li>需要平台无关 payload + 平台相关渲染</li>
+</ul>
+<h3 id="8">8. 关键权衡<a class="headerlink" href="#8" title="Permanent link">&para;</a></h3>
+<h4 id="graph-first-chunk-first">Graph-first 还是 chunk-first<a class="headerlink" href="#graph-first-chunk-first" title="Permanent link">&para;</a></h4>
+<p>保持 graph-first。</p>
+<p>原因：</p>
+<ul>
+<li>NoteConnection 的真正优势在图谱关系、证据与学习语义，</li>
+<li>chunk 只能服务检索，不能取代核心模型。</li>
+</ul>
+<h4 id="_2">本地轻量索引还是外部向量数据库<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
+<p>优先本地持久化索引。</p>
+<p>原因：</p>
+<ul>
+<li>支持离线桌面端，</li>
+<li>支撑移动端 slim mode，</li>
+<li>运维复杂度更低，</li>
+<li>更容易做确定性打包。</li>
+</ul>
+<p>只有当 corpus 规模或并发真实超出本地设计时，再考虑外部向量数据库。</p>
+<h4 id="runtime">单一 runtime 还是每个壳层单独逻辑<a class="headerlink" href="#runtime" title="Permanent link">&para;</a></h4>
+<p>优先单一 runtime core。</p>
+<p>原因：</p>
+<ul>
+<li>正确性只能有一个归属点，</li>
+<li>每个壳层各写一套逻辑只会持续漂移，</li>
+<li>先前 mermaid/math 链路问题已经证明混合关注点的代价。</li>
+</ul>
+<h4 id="memory-deterministic-replay">持久 memory 与 deterministic replay<a class="headerlink" href="#memory-deterministic-replay" title="Permanent link">&para;</a></h4>
+<p>两者都要，但必须分开。</p>
+<ul>
+<li>persistent memory 是提升后的长期状态，</li>
+<li>deterministic replay 是 turn history + trace。</li>
+</ul>
+<p>不能拿 memory 替代 replay。</p>
+<h3 id="9">9. 常见误区<a class="headerlink" href="#9" title="Permanent link">&para;</a></h3>
+<ul>
+<li>在 retrieval/runtime contract 未稳定前继续增加 provider 设置页复杂度。</li>
+<li>把 UI capability card 当成 agent 能力存在的证据。</li>
+<li>用 ASCII tokenization 却自称支持多语言语义检索。</li>
+<li>让 Godot 渲染约束反向主导知识运行时设计。</li>
+<li>把 ingestion freshness、conversation memory 与 answer citations 混成一个隐式状态团。</li>
+<li>发布移动端时默认它能复用桌面 sidecar 假设。</li>
+<li>在多个 server surface 中保留重复 conversation 实现。</li>
+</ul>
+<h3 id="10">10. 最佳实践<a class="headerlink" href="#10" title="Permanent link">&para;</a></h3>
+<ul>
+<li>所有 retrieval 与 conversation contract 强制带 scope。</li>
+<li>只保留一个 canonical turn executor。</li>
+<li>citation 与 retrieval trace 一起输出。</li>
+<li>将 canonical knowledge unit 与 retrieval representation 分层。</li>
+<li>runtime core 保持可移植、可确定复现。</li>
+<li>shell-specific render artifact 只在 adapter 边界 materialize。</li>
+<li>在改 ranking heuristic 前先补多语言回归测试。</li>
+<li>对所有 agent-like 操作持久化 invocation record。</li>
+</ul>
+<h3 id="11">11. 心智模型<a class="headerlink" href="#11" title="Permanent link">&para;</a></h3>
+<p>正确的心智模型是：</p>
+<p><code>corpus -&gt; unit -&gt; index -&gt; scope -&gt; turn runtime -&gt; trace -&gt; shell</code></p>
+<p>任何一层是隐式的，系统就会漂移：</p>
+<ul>
+<li>scope 隐式，检索就会漂移；</li>
+<li>trace 隐式，agent 声称就会漂移；</li>
+<li>shell 行为隐式，多平台导出就会漂移。</li>
+</ul>
+<h3 id="12">12. 在本项目中的真实落地形态<a class="headerlink" href="#12" title="Permanent link">&para;</a></h3>
+<p>以 <code>Knowledge_Base/.../Absorption.md</code> 为例，正确终态应是：</p>
+<ul>
+<li>ingestion 先解析出 canonical atoms、evidence spans 和 graph relations；</li>
+<li>scope binding 明确它属于哪个 corpus/workspace；</li>
+<li>多语言 lexical 与 embedding representation 一次构建并版本化；</li>
+<li>conversation turn 只在该 scope 内检索；</li>
+<li>retrieval 返回排序后的 evidence-backed candidates；</li>
+<li>synthesis 输出 grounded explanation 与 citations；</li>
+<li>memory policy 决定哪些信息对该用户、该 scope 应保留；</li>
+<li>Tauri desktop、browser reader、Godot reader 消费的是同一份 turn result；</li>
+<li>Godot 接收的是 shell-safe materialized render output，而不是直接依赖原始 SVG。</li>
+</ul>
+<h3 id="13">13. 推荐执行顺序<a class="headerlink" href="#13" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Phase 0：统一 conversation contract 所有权。</li>
+<li>Phase 1：补 scope 与多语言检索正确性。</li>
+<li>Phase 2：建立 grounded answer synthesis。</li>
+<li>Phase 3：接入 memory 与 invocation 持久化。</li>
+<li>Phase 4：拆分 runtime core 与 shell adapter。</li>
+<li>Phase 5：固化 export profile。</li>
+<li>Phase 6：收敛产品语义，让 UI 与运行时真相一致。</li>
+</ol>
+<h3 id="14">14. 五点总结<a class="headerlink" href="#14" title="Permanent link">&para;</a></h3>
+<ol>
+<li>NoteConnection 已有比参考聊天产品更强的知识模型，但缺的是运行时闭环。</li>
+<li>最高优先级不是继续堆 agent UI，而是先把 scoped multilingual retrieval 做正确。</li>
+<li><code>AnythingLLM</code> 贡献的是 workspace/memory/invocation 思路，<code>Cherry Studio</code> 贡献的是 provider 与 packaging discipline，<code>DeepTutor</code> 贡献的是 staged turn runtime。</li>
+<li>正确方向是一套可移植的 TypeScript core，加若干平台壳层 adapter，而不是每个平台各跑一套 runtime。</li>
+<li>只有在 scope、index、conversation、render contract 都显式化之后，移动端 slim mode 才真正可交付。</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

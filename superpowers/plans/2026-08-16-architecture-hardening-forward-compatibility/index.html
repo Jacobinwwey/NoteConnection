@@ -1,0 +1,2874 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/superpowers/plans/2026-08-16-architecture-hardening-forward-compatibility/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Architecture Hardening and Forward-Compatibility Implementation Plan - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture-hardening-and-forward-compatibility-implementation-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture Hardening and Forward-Compatibility Implementation Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#global-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Constraints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#english" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="English">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-audit-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Audit Baseline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-1-canonical-resource-boundary-and-collision-guard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 1: Canonical Resource Boundary and Collision Guard
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-2-one-authorization-decision-for-sidecar-and-http-entry-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 2: One Authorization Decision for Sidecar and HTTP Entry Points
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-3-atomic-snapshot-save-and-cache-coherence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 3: Atomic Snapshot Save and Cache Coherence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-4-portable-mobile-analysis-profile-and-packaging-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 4: Portable Mobile Analysis Profile and Packaging Gates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-5-reconcile-progress-documents-and-reference-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 5: Reconcile Progress Documents and Reference Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-6-full-verification-and-mainline-promotion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 6: Full Verification and Mainline Promotion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#acceptance-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acceptance Criteria
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration-and-rollback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration and Rollback
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#explicit-non-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Explicit Non-Goals
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="中文">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        当前审计基线
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        多端与移动端硬约束
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        任务 1：规范资源边界与冲突保护
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-sidecar-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        任务 2：统一 Sidecar 与 HTTP 认证判定
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        任务 3：原子快照保存与缓存一致性
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4portable-mobile-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        任务 4：portable mobile profile 与打包门禁
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        任务 5：进度文档与参考对比对账
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-main" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        任务 6：完整验证并推进 main
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        验收标准
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        迁移、回滚与明确不做
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="architecture-hardening-and-forward-compatibility-implementation-plan">Architecture Hardening and Forward-Compatibility Implementation Plan<a class="headerlink" href="#architecture-hardening-and-forward-compatibility-implementation-plan" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
+</blockquote>
+<p><strong>Goal:</strong> Convert the current architecture audit into a forward-compatible hardening slice that prevents silent data loss, closes a duplicated authentication boundary, and makes snapshot persistence safe under cache reuse and concurrent writes while preserving existing public APIs.</p>
+<p><strong>Architecture:</strong> Keep Markdown and existing runtime payloads as compatibility surfaces, but make resource identity, authorization, and snapshot persistence explicit boundaries. The portable core (ingest, exact graph projection, indexed query, evidence and export) must remain host-neutral; Node/Tauri/Godot/Capacitor are adapters, not alternate business-rule implementations. The first slice is deliberately additive and fail-fast at the edge; larger migrations (strict route registry, graph projection rewrite, domain extraction, Bridge v2) remain gated by contract tests and are documented as subsequent phases rather than mixed into this change.</p>
+<p><strong>Tech Stack:</strong> TypeScript 5.9, Node.js 20+ runtime, Jest 30 with ts-jest, file-backed JSON snapshots, existing modular route registry, bilingual Markdown documentation.</p>
+<h2 id="global-constraints">Global Constraints<a class="headerlink" href="#global-constraints" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Preserve <code>NoteNode.id</code>, legacy <code>RawFile.filename</code>, <code>assistantMessage</code>, and existing HTTP/IPC route paths.</li>
+<li>Validate identity and authorization once at process boundaries; internal graph code may rely on the established invariant.</li>
+<li>Do not introduce a new <code>XxxManager</code>/pass-through wrapper or rewrite <code>GraphBuilder</code>, <code>KnowledgeLearningPlatform</code>, or <code>PathBridge</code> in this slice.</li>
+<li>Use POSIX separators for persisted relative source paths so Windows/POSIX builds produce the same identity input.</li>
+<li>Keep snapshot replacement atomic; a failed write must not remove the last valid snapshot.</li>
+<li>Mobile builds must use the <code>mobile-slim</code> export profile: no Godot binary, no Node sidecar, no bundled LLM weights, PNG/WebP-only assets, and lazy optional capabilities.</li>
+<li>Mobile analysis must work on-device through the portable bounded exact-index path shipped in this slice; SQLite/WASM is a future persistence/acceleration host, not a current capability claim. Remote LLM/ANN calls are optional, explicit, cancellable, and never required for local ingest/query.</li>
+<li>Initial mobile budgets are release gates, not aspirations: app-owned compressed payload &lt;= 25 MiB, low-memory profile peak RSS &lt;= 256 MiB for a 5,000-document/50,000-atom corpus, and standard profile peak RSS &lt;= 384 MiB for a 20,000-document/200,000-atom corpus on a 4-core ARM64 device.</li>
+<li>Do not ship model weights or desktop-only <code>mermaid.min.js</code>/Godot assets in the mobile profile; measure the signed APK/AAB and extracted asset set in CI.</li>
+<li>Every plan/progress/walkthrough document updated in this slice contains separated English and Chinese sections.</li>
+</ul>
+<hr />
+<h2 id="english">English<a class="headerlink" href="#english" title="Permanent link">&para;</a></h2>
+<h3 id="current-audit-baseline">Current Audit Baseline<a class="headerlink" href="#current-audit-baseline" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>FileLoader</code> derives <code>RawFile.filename</code> from basename only, while <code>Graph.addNode()</code> silently ignores duplicate IDs. Two directories containing <code>index.md</code> can therefore merge or drop content without an error.</li>
+<li><code>src/middleware/auth.ts</code> returns <code>true</code> when a sidecar token is configured but the request has no Bearer header. <code>src/server.ts</code> has a second token implementation, so tests of one boundary do not prove the production path.</li>
+<li><code>FileBackedKnowledgeGraphStore</code> writes every concurrent save through the same <code>&lt;file&gt;.tmp</code> name and does not refresh <code>cachedSnapshot</code> after a successful save. A later query can return stale data and concurrent writers can delete each other's temporary file.</li>
+<li>The reference repositories provide useful patterns but are not drop-in architectures: LearnGraph's typed FastAPI/Pydantic boundary is a contract model, while textbooks' content package convention is a source-authoring model. Neither justifies replacing this project's local/Tauri/Godot runtime or introducing an external graph database before invariants are closed.</li>
+</ul>
+<h3 id="task-1-canonical-resource-boundary-and-collision-guard">Task 1: Canonical Resource Boundary and Collision Guard<a class="headerlink" href="#task-1-canonical-resource-boundary-and-collision-guard" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Create: <code>src/backend/ResourceIdentity.ts</code>
+- Modify: <code>src/backend/FileLoader.ts</code>
+- Modify: <code>src/backend/GraphBuilder.ts</code>
+- Test: <code>src/backend/ResourceIdentity.test.ts</code>
+- Test: <code>src/backend/FileLoader.test.ts</code></p>
+<p><strong>Interfaces:</strong>
+- <code>RawFile.relativePath?: string</code> is additive and uses <code>/</code> separators.
+- <code>normalizeResourceRelativePath(rootPath: string, filePath: string): string</code> returns a normalized relative path and rejects paths outside <code>rootPath</code>.
+- <code>assertUniqueLegacyResourceIds(files: ReadonlyArray&lt;Pick&lt;RawFile, 'filepath' | 'filename'&gt;&gt;): void</code> throws an error containing every colliding path.</p>
+<ul>
+<li>[x] <strong>Step 1: Write failing identity tests.</strong> Cover nested duplicate basenames, path separator normalization, and a path escaping the root.</li>
+<li>[x] <strong>Step 2: Run the focused tests and confirm failure.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">test</span> <span class="p">--</span> <span class="p">-</span><span class="n">-runInBand</span> <span class="n">src</span><span class="p">/</span><span class="n">backend</span><span class="p">/</span><span class="n">ResourceIdentity</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">backend</span><span class="p">/</span><span class="n">FileLoader</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span>
+</code></pre></div>
+<p>Expected: FAIL because the identity module, <code>relativePath</code>, and collision guard do not yet exist.</p>
+<ul>
+<li>[x] <strong>Step 3: Implement the edge invariant.</strong> Add <code>relativePath</code> to <code>RawFile</code>; compute it once in <code>FileLoader</code>; call <code>assertUniqueLegacyResourceIds(files)</code> before node initialization in <code>GraphBuilder</code>. Keep the legacy basename ID and layout lookup unchanged so existing saved layouts and links remain readable during migration.</li>
+<li>[x] <strong>Step 4: Run the focused tests and existing graph tests.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">test</span> <span class="p">--</span> <span class="p">-</span><span class="n">-runInBand</span> <span class="n">src</span><span class="p">/</span><span class="n">backend</span><span class="p">/</span><span class="n">ResourceIdentity</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">backend</span><span class="p">/</span><span class="n">FileLoader</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">core</span><span class="p">/</span><span class="n">Graph</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">core</span><span class="p">/</span><span class="n">PathEngine</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span>
+</code></pre></div>
+<p>Expected: all selected suites pass; a duplicate basename is rejected before any graph node is added.</p>
+<ul>
+<li>[x] <strong>Step 5: Commit the identity boundary.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">rtk</span> <span class="n">git</span> <span class="n">add</span> <span class="n">src</span><span class="p">/</span><span class="n">backend</span><span class="p">/</span><span class="n">ResourceIdentity</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">backend</span><span class="p">/</span><span class="n">ResourceIdentity</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">backend</span><span class="p">/</span><span class="n">FileLoader</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">backend</span><span class="p">/</span><span class="n">FileLoader</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">backend</span><span class="p">/</span><span class="n">GraphBuilder</span><span class="p">.</span><span class="n">ts</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">rtk</span> <span class="n">git</span> <span class="n">commit</span> <span class="n">-m</span> <span class="s2">"fix(graph): reject ambiguous legacy resource identities"</span>
+</code></pre></div>
+<h3 id="task-2-one-authorization-decision-for-sidecar-and-http-entry-points">Task 2: One Authorization Decision for Sidecar and HTTP Entry Points<a class="headerlink" href="#task-2-one-authorization-decision-for-sidecar-and-http-entry-points" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>src/middleware/auth.ts</code>
+- Modify: <code>src/middleware/index.ts</code>
+- Modify: <code>src/server.ts</code>
+- Test: <code>src/middleware/auth.test.ts</code></p>
+<p><strong>Interfaces:</strong>
+- <code>isRequestTokenAuthorized(req, expectedToken): boolean</code> accepts the existing <code>Authorization: Bearer ...</code> and <code>X-NoteConnection-Token</code> forms; an expected token requires one valid non-empty credential.
+- <code>isAuthorizedRequest(req)</code> remains the existing sidecar middleware API and delegates to the shared decision.</p>
+<ul>
+<li>[x] <strong>Step 1: Write failing authorization tests.</strong> Cover no configured token, valid Bearer, invalid Bearer, missing Bearer, malformed Bearer, and the legacy <code>X-NoteConnection-Token</code> header.</li>
+<li>[x] <strong>Step 2: Run the focused auth test and confirm the missing-credential case fails under the current implementation.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">test</span> <span class="p">--</span> <span class="p">-</span><span class="n">-runInBand</span> <span class="n">src</span><span class="p">/</span><span class="n">middleware</span><span class="p">/</span><span class="n">auth</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span>
+</code></pre></div>
+<ul>
+<li>[x] <strong>Step 3: Implement the shared token decision.</strong> Normalize header casing, reject missing/malformed credentials when a token is configured, preserve the legacy header for compatibility, and make <code>src/server.ts</code> delegate its protected-request check to the shared function rather than maintaining a second comparison.</li>
+<li>[x] <strong>Step 4: Run auth and server contract tests.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">test</span> <span class="p">--</span> <span class="p">-</span><span class="n">-runInBand</span> <span class="n">src</span><span class="p">/</span><span class="n">middleware</span><span class="p">/</span><span class="n">auth</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">server</span><span class="p">.</span><span class="n">migration</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">routes</span><span class="p">/</span><span class="n">registry</span><span class="p">.</span><span class="n">contract</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span>
+</code></pre></div>
+<ul>
+<li>[x] <strong>Step 5: Commit the authentication boundary.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">rtk</span> <span class="n">git</span> <span class="n">add</span> <span class="n">src</span><span class="p">/</span><span class="n">middleware</span><span class="p">/</span><span class="n">auth</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">middleware</span><span class="p">/</span><span class="n">index</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">middleware</span><span class="p">/</span><span class="n">auth</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">server</span><span class="p">.</span><span class="n">ts</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">rtk</span> <span class="n">git</span> <span class="n">commit</span> <span class="n">-m</span> <span class="s2">"fix(auth): reject missing credentials when sidecar token is set"</span>
+</code></pre></div>
+<h3 id="task-3-atomic-snapshot-save-and-cache-coherence">Task 3: Atomic Snapshot Save and Cache Coherence<a class="headerlink" href="#task-3-atomic-snapshot-save-and-cache-coherence" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>src/learning/store.ts</code>
+- Modify: <code>src/learning/store.test.ts</code></p>
+<p><strong>Interfaces:</strong>
+- <code>FileBackedKnowledgeGraphStore.saveSnapshot()</code> continues to return <code>Promise&lt;void&gt;</code> and retains the existing JSON schema.
+- Temporary files use a unique sibling path; a successful save updates <code>cachedSnapshot</code> to the exact snapshot that was persisted.</p>
+<ul>
+<li>[x] <strong>Step 1: Write failing persistence tests.</strong> Add one test that loads snapshot A, saves snapshot B, then queries B through the same store instance; add one test that performs two saves concurrently and asserts the final file parses as either complete snapshot A or complete snapshot B and no <code>.tmp</code> file remains.</li>
+<li>[x] <strong>Step 2: Run the focused tests and confirm failure.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">test</span> <span class="p">--</span> <span class="p">-</span><span class="n">-runInBand</span> <span class="n">src</span><span class="p">/</span><span class="n">learning</span><span class="p">/</span><span class="n">store</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span>
+</code></pre></div>
+<ul>
+<li>[x] <strong>Step 3: Implement unique temporary paths and cache refresh.</strong> Generate a per-save sibling path using process ID, timestamp, and cryptographic/random entropy available in the runtime; rename it atomically; set <code>cachedSnapshot = snapshot</code> only after rename succeeds; retain cleanup in <code>finally</code>.</li>
+<li>[x] <strong>Step 4: Run store and persistence regression tests.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">test</span> <span class="p">--</span> <span class="p">-</span><span class="n">-runInBand</span> <span class="n">src</span><span class="p">/</span><span class="n">learning</span><span class="p">/</span><span class="n">store</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">learning</span><span class="p">/</span><span class="n">KnowledgeLearningPlatform</span><span class="p">.</span><span class="n">persistence</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span>
+</code></pre></div>
+<ul>
+<li>[x] <strong>Step 5: Commit the persistence hardening.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">rtk</span> <span class="n">git</span> <span class="n">add</span> <span class="n">src</span><span class="p">/</span><span class="n">learning</span><span class="p">/</span><span class="n">store</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">learning</span><span class="p">/</span><span class="n">store</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">rtk</span> <span class="n">git</span> <span class="n">commit</span> <span class="n">-m</span> <span class="s2">"fix(storage): keep file snapshots atomic and cache-coherent"</span>
+</code></pre></div>
+<h3 id="task-4-portable-mobile-analysis-profile-and-packaging-gates">Task 4: Portable Mobile Analysis Profile and Packaging Gates<a class="headerlink" href="#task-4-portable-mobile-analysis-profile-and-packaging-gates" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>src/platform/ExportProfile.ts</code>
+- Modify: <code>src/platform/PlatformCapabilities.ts</code>
+- Modify: <code>src/platform/RenderMaterializer.ts</code>
+- Create: <code>src/frontend/mobile_exact_analyzer.js</code>
+- Modify: <code>src/frontend/storage_provider.js</code>
+- Modify: <code>src/frontend/index.html</code>
+- Modify: <code>src/frontend/path.html</code>
+- Modify: <code>src-tauri/tauri.android.conf.json</code>
+- Modify: <code>src-tauri/src/lib.rs</code>
+- Modify: <code>capacitor.config.ts</code>
+- Modify: <code>build_apk.bat</code>
+- Modify: <code>scripts/run-tauri-android.js</code>
+- Modify: <code>scripts/apply-tauri-android-pathmode.js</code>
+- Create: <code>src/mobile.profile.contract.test.ts</code>
+- Create: <code>scripts/prepare-mobile-slim.js</code>
+- Create: <code>scripts/verify-mobile-slim-budget.js</code>
+- Modify: <code>package.json</code>
+- Modify: <code>docs/diataxis/en/reference/multi-platform-build-flows.md</code>
+- Modify: <code>docs/diataxis/zh/reference/multi-platform-build-flows.md</code></p>
+<p><strong>Interfaces:</strong>
+- <code>mobile-slim</code> remains sidecar-free and exposes <code>supportsLocalExactQuery</code>, <code>supportsRemoteInference</code>, <code>maxResidentBytes</code>, and <code>assetBudgetBytes</code> through the platform capability contract.
+- A mobile workspace bundle contains source metadata, a compact exact graph/index projection, and PNG/WebP assets; it does not contain the desktop server, Godot, full graph text, or model weights. SQLite remains a deferred persistence backend, not a capability claim for this slice.
+- <code>verify-mobile-slim-budget.js</code> measures the staged mobile asset directory and fails with a file-level report when the compressed payload or runtime memory evidence exceeds the profile budget.</p>
+<ul>
+<li>[x] <strong>Step 1: Write failing capability and packaging tests.</strong> Assert that mobile local ingest/query is available without a sidecar, remote inference is optional, SVG is rejected, desktop/Godot binaries are excluded, and the budget verifier rejects an intentionally oversized fixture.</li>
+<li>[x] <strong>Step 2: Run the focused mobile contract test and confirm failure.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">test</span> <span class="p">--</span> <span class="p">-</span><span class="n">-runInBand</span> <span class="n">src</span><span class="p">/</span><span class="n">mobile</span><span class="p">.</span><span class="n">profile</span><span class="p">.</span><span class="n">contract</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span>
+</code></pre></div>
+<ul>
+<li>[x] <strong>Step 3: Implement the profile contract.</strong> Add explicit mobile capability fields and keep graph rules in a bounded portable exact-index core; route mobile ingestion/query through the existing Tauri Rust / Capacitor local graph builders plus the browser-compatible analyzer. Keep remote calls optional, timeout-bounded, cancellable, and explainably offline-degradable. Do not claim SQLite until its mobile runtime is shipped.</li>
+<li>[x] <strong>Step 4: Implement the budget verifier and a deterministic mobile build command.</strong> The command stages only the mobile profile, strips desktop/Godot/LLM assets and desktop-only Mermaid/GPU payloads, emits a deterministic JSON manifest with byte totals and capability flags, and runs before both Capacitor and Tauri Android packaging.</li>
+<li>[x] <strong>Step 5: Run mobile contracts and the existing cross-platform gates.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">test</span> <span class="p">--</span> <span class="p">-</span><span class="n">-runInBand</span> <span class="n">src</span><span class="p">/</span><span class="n">mobile</span><span class="p">.</span><span class="n">profile</span><span class="p">.</span><span class="n">contract</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">platform</span><span class="p">/</span><span class="n">PlatformCapabilities</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">platform</span><span class="p">/</span><span class="n">RenderMaterializer</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">mobile</span><span class="p">.</span><span class="n">pipeline</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">capacitor</span><span class="p">.</span><span class="n">runtime</span><span class="p">.</span><span class="n">contract</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">android</span><span class="p">.</span><span class="n">pathmode</span><span class="p">.</span><span class="n">contract</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">run</span> <span class="n">verify</span><span class="p">:</span><span class="n">mobile</span><span class="p">:</span><span class="n">slim</span><span class="p">:</span><span class="n">budget</span>
+</code></pre></div>
+<ul>
+<li>[x] <strong>Step 6: Commit the portable mobile profile.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">rtk</span> <span class="n">git</span> <span class="n">add</span> <span class="n">src</span><span class="p">/</span><span class="n">platform</span><span class="p">/</span><span class="n">ExportProfile</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">platform</span><span class="p">/</span><span class="n">PlatformCapabilities</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">platform</span><span class="p">/</span><span class="n">RenderMaterializer</span><span class="p">.</span><span class="n">ts</span> <span class="n">src</span><span class="p">/</span><span class="n">frontend</span><span class="p">/</span><span class="n">mobile_exact_analyzer</span><span class="p">.</span><span class="n">js</span> <span class="n">src</span><span class="p">/</span><span class="n">frontend</span><span class="p">/</span><span class="n">storage_provider</span><span class="p">.</span><span class="n">js</span> <span class="n">src</span><span class="p">/</span><span class="n">frontend</span><span class="p">/</span><span class="n">index</span><span class="p">.</span><span class="n">html</span> <span class="n">src</span><span class="p">/</span><span class="n">frontend</span><span class="p">/</span><span class="n">path</span><span class="p">.</span><span class="n">html</span> <span class="n">src-tauri</span><span class="p">/</span><span class="n">tauri</span><span class="p">.</span><span class="n">android</span><span class="p">.</span><span class="n">conf</span><span class="p">.</span><span class="n">json</span> <span class="n">src-tauri</span><span class="p">/</span><span class="n">src</span><span class="p">/</span><span class="n">lib</span><span class="p">.</span><span class="n">rs</span> <span class="n">capacitor</span><span class="p">.</span><span class="n">config</span><span class="p">.</span><span class="n">ts</span> <span class="n">build_apk</span><span class="p">.</span><span class="n">bat</span> <span class="n">scripts</span><span class="p">/</span><span class="n">run-tauri-android</span><span class="p">.</span><span class="n">js</span> <span class="n">scripts</span><span class="p">/</span><span class="n">apply-tauri-android-pathmode</span><span class="p">.</span><span class="n">js</span> <span class="n">src</span><span class="p">/</span><span class="n">mobile</span><span class="p">.</span><span class="n">profile</span><span class="p">.</span><span class="n">contract</span><span class="p">.</span><span class="n">test</span><span class="p">.</span><span class="n">ts</span> <span class="n">scripts</span><span class="p">/</span><span class="n">prepare-mobile-slim</span><span class="p">.</span><span class="n">js</span> <span class="n">scripts</span><span class="p">/</span><span class="n">verify-mobile-slim-budget</span><span class="p">.</span><span class="n">js</span> <span class="n">package</span><span class="p">.</span><span class="n">json</span> <span class="n">docs</span><span class="p">/</span><span class="n">diataxis</span><span class="p">/</span><span class="n">en</span><span class="p">/</span><span class="n">reference</span><span class="p">/</span><span class="n">multi-platform-build-flows</span><span class="p">.</span><span class="nb">md </span><span class="n">docs</span><span class="p">/</span><span class="n">diataxis</span><span class="p">/</span><span class="n">zh</span><span class="p">/</span><span class="n">reference</span><span class="p">/</span><span class="n">multi-platform-build-flows</span><span class="p">.</span><span class="nb">md</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">rtk</span> <span class="n">git</span> <span class="n">commit</span> <span class="n">-m</span> <span class="s2">"feat(mobile): formalize slim local-analysis packaging profile"</span>
+</code></pre></div>
+<h3 id="task-5-reconcile-progress-documents-and-reference-comparison">Task 5: Reconcile Progress Documents and Reference Comparison<a class="headerlink" href="#task-5-reconcile-progress-documents-and-reference-comparison" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Create: <code>docs/solutions/architecture-hardening-forward-compatibility-2026-08-16.md</code>
+- Modify: <code>task.md</code>
+- Modify: <code>implementation_plan.md</code>
+- Modify: <code>walkthrough.md</code>
+- Modify: <code>docs/diataxis/en/explanation/development-progress-dashboard.md</code>
+- Modify: <code>docs/diataxis/zh/explanation/development-progress-dashboard.md</code></p>
+<p><strong>Interfaces:</strong>
+- The new solution note is the dated source of truth for this slice.
+- Root tracker files retain their historical entries and receive one new separated bilingual addendum.
+- English/Chinese Diataxis dashboards receive matching progress facts, not translated guesses.</p>
+<ul>
+<li>[x] <strong>Step 1: Record code-vs-plan status.</strong> Mark identity collision, auth boundary, and snapshot atomicity as implemented only after their tests pass. Keep strict registry defaulting, graph identity migration, graph index/CSR conversion, Bridge v2, and domain extraction explicitly pending.</li>
+<li>[x] <strong>Step 2: Record reference trade-offs.</strong> State which LearnGraph patterns are adopted (typed boundary, workspace scoping, explicit validation) and which are rejected for now (Docker-only execution, SaaS RBAC/PostgreSQL RLS). State which textbooks patterns are adopted (content package manifest and compiler direction) and why Mathigon's runtime DSL is not copied.</li>
+<li>[x] <strong>Step 3: Add bilingual next-phase gates.</strong> Define the next order: canonical <code>sourceUri</code> migration behind dual-read, schema validation at HTTP edges, strict registry shadow metrics then default, graph explicit/inferred projection split, and Bridge protocol negotiation.</li>
+<li>[x] <strong>Step 4: Run documentation checks.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">run</span> <span class="n">docs</span><span class="p">:</span><span class="n">diataxis</span><span class="p">:</span><span class="n">check</span>
+</code></pre></div>
+<ul>
+<li>[x] <strong>Step 5: Commit the progress reconciliation.</strong> The mobile slice and the bilingual tracker reconciliation are promoted together so no document claims a capability before the corresponding code and tests exist.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">rtk</span> <span class="n">git</span> <span class="n">add</span> <span class="n">docs</span><span class="p">/</span><span class="n">solutions</span><span class="p">/</span><span class="n">architecture-hardening-forward-compatibility</span><span class="p">-</span><span class="n">2026</span><span class="p">-</span><span class="n">08</span><span class="p">-</span><span class="n">16</span><span class="p">.</span><span class="nb">md </span><span class="n">task</span><span class="p">.</span><span class="nb">md </span><span class="n">implementation_plan</span><span class="p">.</span><span class="nb">md </span><span class="n">walkthrough</span><span class="p">.</span><span class="nb">md </span><span class="n">docs</span><span class="p">/</span><span class="n">diataxis</span><span class="p">/</span><span class="n">en</span><span class="p">/</span><span class="n">explanation</span><span class="p">/</span><span class="n">development-progress-dashboard</span><span class="p">.</span><span class="nb">md </span><span class="n">docs</span><span class="p">/</span><span class="n">diataxis</span><span class="p">/</span><span class="n">zh</span><span class="p">/</span><span class="n">explanation</span><span class="p">/</span><span class="n">development-progress-dashboard</span><span class="p">.</span><span class="nb">md</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="n">rtk</span> <span class="n">git</span> <span class="n">commit</span> <span class="n">-m</span> <span class="s2">"docs(architecture): record forward-compatible hardening progress"</span>
+</code></pre></div>
+<h3 id="task-6-full-verification-and-mainline-promotion">Task 6: Full Verification and Mainline Promotion<a class="headerlink" href="#task-6-full-verification-and-mainline-promotion" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong> No additional source files; verify the complete diff and generated outputs.</p>
+<ul>
+<li>[x] <strong>Step 1: Run targeted regression tests.</strong></li>
+<li>[x] <strong>Step 2: Run the full Jest suite.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">test</span> <span class="p">--</span> <span class="p">-</span><span class="n">-runInBand</span>
+</code></pre></div>
+<ul>
+<li>[x] <strong>Step 3: Run the TypeScript/build and documentation gates.</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">run</span> <span class="n">build</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="n">rtk</span> <span class="n">proxy</span> <span class="n">npm</span><span class="p">.</span><span class="n">cmd</span> <span class="n">run</span> <span class="n">docs</span><span class="p">:</span><span class="n">diataxis</span><span class="p">:</span><span class="n">check</span>
+</code></pre></div>
+<ul>
+<li>[x] <strong>Step 4: Inspect the diff, status, and generated-file policy.</strong> Do not stage runtime caches, logs, or build products unless already tracked and required by the repository.</li>
+<li>[x] <strong>Step 5: Push the verified commits to <code>origin/main</code> without force.</strong> Confirm the remote tip after push and re-run <code>git status --short --branch</code>.</li>
+</ul>
+<h3 id="acceptance-criteria">Acceptance Criteria<a class="headerlink" href="#acceptance-criteria" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Duplicate legacy basenames fail before graph construction and every <code>RawFile</code> loaded from disk carries a normalized relative path.</li>
+<li>Configured authentication rejects missing, malformed, and invalid credentials while preserving both existing credential header forms.</li>
+<li>Concurrent file saves leave one parseable complete snapshot, and same-process reads see the newly saved snapshot immediately.</li>
+<li>Mobile <code>mobile-slim</code> builds remain sidecar/Godot/model-weight free, provide local exact analysis, and pass the byte/RSS release gates on the low-memory profile.</li>
+<li>Existing graph, learning persistence, route, build, and documentation checks pass.</li>
+<li>The architecture note distinguishes shipped behavior from pending migrations and records rollback points.</li>
+<li><code>origin/main</code> contains the verified commits and the local worktree is clean.</li>
+</ol>
+<h3 id="migration-and-rollback">Migration and Rollback<a class="headerlink" href="#migration-and-rollback" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Identity migration is dual-read: existing basename IDs and saved layouts remain valid; only ambiguous inputs fail instead of silently corrupting the graph. Rollback is a code revert, with no schema rewrite.</li>
+<li>Authentication rollback restores the previous comparison but is not recommended because it reopens an authorization bypass; the legacy header remains available to avoid client breakage.</li>
+<li>Snapshot rollback is file-level: the previous target file remains intact if a write or rename fails. Unique temporary files are cleaned opportunistically and are never read as snapshots.</li>
+<li>The next <code>sourceUri</code> migration must introduce stable IDs and aliases before changing <code>NoteNode.id</code>; it must include case-folding/Unicode tests on Windows and POSIX.</li>
+</ul>
+<h3 id="explicit-non-goals">Explicit Non-Goals<a class="headerlink" href="#explicit-non-goals" title="Permanent link">&para;</a></h3>
+<ul>
+<li>No default strict-registry flip until all legacy URL contracts have modular equivalents.</li>
+<li>No wholesale rewrite of <code>src/server.ts</code> or <code>KnowledgeLearningPlatform.ts</code> in one change.</li>
+<li>No Neo4j/PostgreSQL/Docker runtime dependency for the local/Tauri/mobile product.</li>
+<li>No unbounded Worker/GPU expansion before replacing the current O(N^2) inferred-edge strategy with indexed exact/inferred projections.</li>
+<li>No mobile-local LLM weight packaging; use deterministic local retrieval plus explicit remote inference when available.</li>
+</ul>
+<hr />
+<h2 id="_1">中文<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<h3 id="_2">当前审计基线<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>FileLoader</code> 仅用 basename 派生 <code>RawFile.filename</code>，<code>Graph.addNode()</code> 对重复 ID 静默忽略；不同目录中的 <code>index.md</code> 会发生无告警合并或丢失。</li>
+<li><code>src/middleware/auth.ts</code> 在配置 sidecar token 后，如果请求没有 Bearer 头仍返回 <code>true</code>。<code>src/server.ts</code> 另有一套 token 实现，导致单测一个入口不能证明生产入口。</li>
+<li><code>FileBackedKnowledgeGraphStore</code> 的并发保存共用 <code>&lt;file&gt;.tmp</code>，且成功保存后不刷新 <code>cachedSnapshot</code>；后续查询可能读到旧值，并发写入可能互删临时文件。</li>
+<li>参考仓库只能提供模式而不是整套替换架构：LearnGraph 的 FastAPI/Pydantic 可借鉴为类型化边界，textbooks 的 content package 可借鉴为内容工程边界；二者都不足以证明本项目应替换本地/Tauri/Godot 运行时或提前引入外部图数据库。</li>
+</ul>
+<h3 id="_3">多端与移动端硬约束<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>mobile-slim</code> 必须是不带 Godot、Node sidecar、模型权重的 slim profile，只保留 PNG/WebP、紧凑 exact 索引投影与 portable core 路径；SQLite/WASM 作为后续持久化/加速 host，不能在本切片中冒充已交付。</li>
+<li>移动端必须能在本机完成 ingest、exact graph projection、indexed query、evidence/export；远程 LLM/ANN 只是可取消、可超时、需用户授权的增强，不得成为本地知识库分析的启动依赖。</li>
+<li>初始 release gate：应用自有压缩 payload 不超过 25 MiB；4 核 ARM64、低内存 profile 在 5,000 文档 / 50,000 atom 下峰值 RSS 不超过 256 MiB；standard profile 在 20,000 文档 / 200,000 atom 下不超过 384 MiB。</li>
+<li>CI 必须测量签名 APK/AAB 与解包资源，按文件列出超预算原因；不得把桌面 <code>server</code>、Godot 或完整 <code>mermaid.min.js</code> 偷渡进 mobile bundle。</li>
+</ul>
+<h3 id="1">任务 1：规范资源边界与冲突保护<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
+<p><strong>文件：</strong> 创建 <code>src/backend/ResourceIdentity.ts</code>、<code>src/backend/ResourceIdentity.test.ts</code>、<code>src/backend/FileLoader.test.ts</code>；修改 <code>src/backend/FileLoader.ts</code>、<code>src/backend/GraphBuilder.ts</code>。</p>
+<ul>
+<li>[x] 先写失败测试：嵌套目录 basename 冲突、路径分隔符归一化、越界路径拒绝。</li>
+<li>[x] 运行 <code>rtk proxy npm.cmd test -- --runInBand src/backend/ResourceIdentity.test.ts src/backend/FileLoader.test.ts</code>，确认当前实现失败。</li>
+<li>[x] 在边界一次性计算 <code>relativePath</code>，统一使用 <code>/</code>；在 GraphBuilder 初始化前调用 <code>assertUniqueLegacyResourceIds()</code>，保留旧 basename ID、布局查找和链接兼容性。</li>
+<li>[x] 运行资源身份、FileLoader、Graph、PathEngine 回归测试。</li>
+</ul>
+<h3 id="2-sidecar-http">任务 2：统一 Sidecar 与 HTTP 认证判定<a class="headerlink" href="#2-sidecar-http" title="Permanent link">&para;</a></h3>
+<p><strong>文件：</strong> 修改 <code>src/middleware/auth.ts</code>、<code>src/middleware/index.ts</code>、<code>src/server.ts</code>；创建 <code>src/middleware/auth.test.ts</code>。</p>
+<ul>
+<li>[x] 覆盖无 token、合法/非法 Bearer、缺失/畸形 Bearer、旧 <code>X-NoteConnection-Token</code> 头。</li>
+<li>[x] 配置 token 时缺少凭证的用例必须先在当前实现下失败，再由共享判定函数修复。</li>
+<li>[x] 保留两个既有凭证头格式，拒绝空凭证，并让 server 复用共享判定，消除双实现漂移。</li>
+<li>[x] 运行 auth、server migration、route registry contract 测试。</li>
+</ul>
+<h3 id="3">任务 3：原子快照保存与缓存一致性<a class="headerlink" href="#3" title="Permanent link">&para;</a></h3>
+<p><strong>文件：</strong> 修改 <code>src/learning/store.ts</code>、<code>src/learning/store.test.ts</code>。</p>
+<ul>
+<li>[x] 增加“加载 A、保存 B、同一实例查询 B”和“并发保存两个完整快照”的失败测试。</li>
+<li>[x] 临时文件改为每次保存唯一的同目录文件；rename 成功后才把 <code>cachedSnapshot</code> 更新为已持久化对象；保留 finally 清理。</li>
+<li>[x] 运行 store 与 <code>KnowledgeLearningPlatform.persistence</code> 回归测试。</li>
+</ul>
+<h3 id="4portable-mobile-profile">任务 4：portable mobile profile 与打包门禁<a class="headerlink" href="#4portable-mobile-profile" title="Permanent link">&para;</a></h3>
+<p><strong>文件：</strong> 修改 <code>src/platform/ExportProfile.ts</code>、<code>src/platform/PlatformCapabilities.ts</code>、<code>src/platform/RenderMaterializer.ts</code>、<code>src/frontend/storage_provider.js</code>、<code>src/frontend/index.html</code>、<code>src/frontend/path.html</code>、<code>src-tauri/tauri.android.conf.json</code>、<code>src-tauri/src/lib.rs</code>、<code>capacitor.config.ts</code>、<code>build_apk.bat</code>、<code>scripts/run-tauri-android.js</code>、<code>scripts/apply-tauri-android-pathmode.js</code>、<code>package.json</code>；创建 <code>src/frontend/mobile_exact_analyzer.js</code>、<code>src/mobile.profile.contract.test.ts</code>、<code>scripts/prepare-mobile-slim.js</code>、<code>scripts/verify-mobile-slim-budget.js</code>；更新中英文多端构建参考文档。</p>
+<ul>
+<li>[x] 先写失败契约：mobile 无 sidecar 仍能本地 ingest/query，remote inference 可选，SVG/桌面/Godot/模型权重被排除，超大 fixture 会被预算验证器拒绝。</li>
+<li>[x] 运行 <code>rtk proxy npm.cmd test -- --runInBand src/mobile.profile.contract.test.ts</code> 确认失败。</li>
+<li>[x] 在 platform capability 中显式暴露 <code>supportsLocalExactQuery</code>、<code>supportsRemoteInference</code>、<code>maxResidentBytes</code>、<code>assetBudgetBytes</code>；移动 ingestion/query 走 Tauri Rust/Capacitor 本地建图 + 有界 browser exact-index projection；SQLite/WASM 不在本切片中冒充已交付；远程调用必须有 timeout、cancel 与 offline fallback。</li>
+<li>[x] 新增 deterministic mobile staging/budget 命令，同时供 Capacitor 与 Tauri Android 调用，输出字节与 capability manifest。</li>
+<li>[x] 运行 mobile contract、Platform/Render、现有 Capacitor/Android gate 与 <code>rtk proxy npm.cmd run verify:mobile:slim:budget</code>。</li>
+</ul>
+<h3 id="5">任务 5：进度文档与参考对比对账<a class="headerlink" href="#5" title="Permanent link">&para;</a></h3>
+<p><strong>文件：</strong> 创建 <code>docs/solutions/architecture-hardening-forward-compatibility-2026-08-16.md</code>；更新 <code>task.md</code>、<code>implementation_plan.md</code>、<code>walkthrough.md</code> 及中英文 Diataxis dashboard。</p>
+<ul>
+<li>[x] 只有测试通过后才把身份冲突、认证边界、快照原子性标记为已实现；strict registry 默认切换、稳定 <code>sourceUri</code> 迁移、CSR/索引图、Bridge v2、领域拆分继续标为待推进。</li>
+<li>[x] 明确采用 LearnGraph 的类型化边界/工作区隔离思想，暂不采用 Docker-only、SaaS RBAC、PostgreSQL RLS；采用 textbooks 的内容包/编译器方向，不复制依赖 Mathigon Studio 的 DSL。</li>
+<li>[x] 给出后续顺序：双读 <code>sourceUri</code> 迁移、HTTP schema、strict registry shadow→default、exact/inferred graph projection、Bridge capability negotiation。</li>
+<li>[x] 运行 <code>rtk proxy npm.cmd run docs:diataxis:check</code>。</li>
+</ul>
+<h3 id="6-main">任务 6：完整验证并推进 main<a class="headerlink" href="#6-main" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] 运行定向回归、完整 <code>rtk proxy npm.cmd test -- --runInBand</code>、<code>rtk proxy npm.cmd run build</code>、<code>rtk proxy npm.cmd run docs:diataxis:check</code>。</li>
+<li>[x] 检查 diff、生成物和状态，仅提交源码/测试/文档，不带入日志、缓存和临时构建产物。</li>
+<li>[x] 非强制推送到 <code>origin/main</code>，确认远程 tip，并再次检查工作区 clean。</li>
+</ul>
+<h3 id="_4">验收标准<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<ol>
+<li>重复 basename 在建图前失败，磁盘加载的每个 <code>RawFile</code> 都携带 <code>/</code> 归一化相对路径。</li>
+<li>配置 token 时缺失、畸形、错误凭证均拒绝，同时兼容已有两种凭证头。</li>
+<li>并发保存留下一个可解析的完整快照，同一进程保存后立即读到新快照。</li>
+<li><code>mobile-slim</code> 不带 sidecar/Godot/模型权重，具备本地 exact 分析能力，并通过低内存字节/RSS 门禁。</li>
+<li>现有 Graph、learning persistence、route、build、文档检查通过。</li>
+<li>架构说明严格区分已交付行为、待迁移事项和回滚点。</li>
+<li><code>origin/main</code> 含已验证提交，本地工作区 clean。</li>
+</ol>
+<h3 id="_5">迁移、回滚与明确不做<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>资源身份采用双读过渡：旧 basename ID 与布局继续可读，歧义输入改为失败而非静默损坏；回滚无需改数据格式。</li>
+<li>认证回滚会重新打开越权风险，不建议；保留旧 header 以避免客户端破坏性变更。</li>
+<li>快照写入失败时旧目标文件仍保持有效；唯一临时文件不会作为快照读取。</li>
+<li>后续改变 <code>NoteNode.id</code> 前必须先引入稳定 <code>sourceUri</code>、alias、Windows 大小写与 Unicode 测试。</li>
+<li>本轮不默认切 strict registry、不整体重写超大宿主文件、不引入 Neo4j/PostgreSQL/Docker 依赖，也不以更多 Worker/GPU 掩盖当前 O(N^2) 推断算法。</li>
+<li>不把本地 LLM 权重塞进移动包；移动端默认是 deterministic local retrieval，联网时才显式调用远端推理。</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

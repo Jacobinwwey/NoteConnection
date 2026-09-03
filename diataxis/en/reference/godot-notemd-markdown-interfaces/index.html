@@ -1,0 +1,3225 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/diataxis/en/reference/godot-notemd-markdown-interfaces/">
+      
+      
+        <link rel="prev" href="../interfaces-and-runtime/">
+      
+      
+        <link rel="next" href="../multi-platform-build-flows/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Godot + NoteMD + Markdown Interfaces - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#reference-godot-notemd-markdown-interfaces" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Godot + NoteMD + Markdown Interfaces
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-runtime-contract-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Runtime Contract Boundaries
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-sidecar-and-bridge-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Sidecar and bridge endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-auth-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Auth policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-settings-apis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Settings APIs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#21-notemd-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 NoteMD settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#22-notemd-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 NoteMD workspace
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#23-path-mode-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Path Mode settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#24-frontend-settings-markdown-runtime-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Frontend settings (Markdown runtime source)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-markdown-protocol-apis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Markdown Protocol APIs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#31-post-apimarkdownindex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 POST /api/markdown/index
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#32-post-apimarkdownchunk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 POST /api/markdown/chunk
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#33-post-apimarkdownresolve-node" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 POST /api/markdown/resolve-node
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#34-post-apimarkdownresolve-wiki" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 POST /api/markdown/resolve-wiki
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-notemd-processing-apis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. NoteMD Processing APIs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#41-operation-model-and-cancellation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Operation model and cancellation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#42-streaming-contract-sse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Streaming contract (SSE)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#43-core-notemd-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Core NoteMD endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-reader-render-and-clipboard-apis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Reader Render and Clipboard APIs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#51-post-apirendermath" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 POST /api/render/math
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#52-post-apirendermermaid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 POST /api/render/mermaid
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#53-clipboard-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Clipboard routes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-pathbridge-message-contracts-relevant-to-notemdmarkdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. PathBridge Message Contracts Relevant to NoteMD/Markdown
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-critical-compatibility-invariant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Critical Compatibility Invariant
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-implementation-guardrails-for-interface-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Implementation Guardrails for Interface Changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-runtime-contract-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Runtime Contract Boundaries
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-sidecar-and-bridge-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Sidecar and bridge endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-auth-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Auth policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-settings-apis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Settings APIs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#21-notemd-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 NoteMD settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#22-notemd-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 NoteMD workspace
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#23-path-mode-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Path Mode settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#24-frontend-settings-markdown-runtime-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Frontend settings (Markdown runtime source)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-markdown-protocol-apis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Markdown Protocol APIs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#31-post-apimarkdownindex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 POST /api/markdown/index
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#32-post-apimarkdownchunk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 POST /api/markdown/chunk
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#33-post-apimarkdownresolve-node" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 POST /api/markdown/resolve-node
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#34-post-apimarkdownresolve-wiki" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 POST /api/markdown/resolve-wiki
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-notemd-processing-apis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. NoteMD Processing APIs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#41-operation-model-and-cancellation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Operation model and cancellation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#42-streaming-contract-sse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Streaming contract (SSE)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#43-core-notemd-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Core NoteMD endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-reader-render-and-clipboard-apis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Reader Render and Clipboard APIs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#51-post-apirendermath" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 POST /api/render/math
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#52-post-apirendermermaid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 POST /api/render/mermaid
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#53-clipboard-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Clipboard routes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-pathbridge-message-contracts-relevant-to-notemdmarkdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. PathBridge Message Contracts Relevant to NoteMD/Markdown
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-critical-compatibility-invariant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Critical Compatibility Invariant
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-implementation-guardrails-for-interface-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Implementation Guardrails for Interface Changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="reference-godot-notemd-markdown-interfaces">Reference: Godot + NoteMD + Markdown Interfaces<a class="headerlink" href="#reference-godot-notemd-markdown-interfaces" title="Permanent link">&para;</a></h1>
+<p>This page is the contract-level reference for the integrated runtime among:</p>
+<ul>
+<li>Godot Path Mode client,</li>
+<li>embedded/full NoteMD flows,</li>
+<li>Markdown index/chunk/render pipeline.</li>
+</ul>
+<h2 id="1-runtime-contract-boundaries">1. Runtime Contract Boundaries<a class="headerlink" href="#1-runtime-contract-boundaries" title="Permanent link">&para;</a></h2>
+<h2 id="11-sidecar-and-bridge-endpoints">1.1 Sidecar and bridge endpoints<a class="headerlink" href="#11-sidecar-and-bridge-endpoints" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Sidecar HTTP: <code>http://127.0.0.1:&lt;port&gt;</code> (default <code>3000</code>)</li>
+<li>PathBridge WS: <code>ws://127.0.0.1:&lt;bridgePort&gt;</code> (default <code>9876</code>)</li>
+<li>Runtime manifest fields:</li>
+<li><code>baseUrl</code></li>
+<li><code>bridgeWsUrl</code></li>
+<li><code>authToken</code></li>
+<li><code>port</code></li>
+<li><code>bridgePort</code></li>
+</ul>
+<h2 id="12-auth-policy">1.2 Auth policy<a class="headerlink" href="#12-auth-policy" title="Permanent link">&para;</a></h2>
+<p>If <code>NOTE_CONNECTION_AUTH_TOKEN</code> is configured:</p>
+<ul>
+<li>all <code>/api/*</code> routes are protected,</li>
+<li>generated graph assets are protected,</li>
+<li>token can be supplied by:</li>
+<li><code>X-NoteConnection-Token</code>,</li>
+<li><code>Authorization: Bearer &lt;token&gt;</code>.</li>
+</ul>
+<p>Godot WS identify payload may also carry <code>token</code>.</p>
+<h2 id="2-settings-apis">2. Settings APIs<a class="headerlink" href="#2-settings-apis" title="Permanent link">&para;</a></h2>
+<h2 id="21-notemd-settings">2.1 NoteMD settings<a class="headerlink" href="#21-notemd-settings" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>GET /api/notemd/settings</code></li>
+<li>success:<ul>
+<li><code>success: true</code></li>
+<li><code>settings: NotemdSettings</code></li>
+<li><code>operationSummary: { total, running }</code></li>
+</ul>
+</li>
+<li><code>POST /api/notemd/settings</code></li>
+<li>body: either full settings object, or <code>{ settings: ... }</code></li>
+<li>success: <code>{ success: true, settings }</code></li>
+</ul>
+<h2 id="22-notemd-workspace">2.2 NoteMD workspace<a class="headerlink" href="#22-notemd-workspace" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>GET /api/notemd/workspace</code></li>
+<li>success: <code>{ success: true, workspace }</code></li>
+<li>workspace fields:<ul>
+<li><code>filePath</code></li>
+<li><code>folderPath</code></li>
+<li><code>outputFilePath</code></li>
+<li><code>outputFolderPath</code></li>
+</ul>
+</li>
+<li><code>POST /api/notemd/workspace</code></li>
+<li>body: <code>workspace</code> patch or direct patch object</li>
+<li>accepts camel/snake aliases for workspace keys</li>
+<li>success: <code>{ success: true, workspace }</code></li>
+</ul>
+<h2 id="23-path-mode-settings">2.3 Path Mode settings<a class="headerlink" href="#23-path-mode-settings" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>GET /api/path-mode/settings</code></li>
+<li>success: <code>{ success: true, settings }</code></li>
+<li><code>POST /api/path-mode/settings</code></li>
+<li>body: <code>{ settings: ... }</code> or direct settings object</li>
+<li>success: <code>{ success: true, settings }</code></li>
+</ul>
+<p><code>path_mode</code> normalized constraints:</p>
+<ul>
+<li><code>bg_brightness</code>: <code>0.01..10.0</code></li>
+<li><code>reading_mode</code>: <code>window | fullscreen</code></li>
+<li><code>reader_render_mode</code>: <code>render | source</code></li>
+<li><code>reader_media_scale</code>: <code>0.1..3.0</code></li>
+<li><code>node_spacing</code>: <code>100..600</code></li>
+</ul>
+<h2 id="24-frontend-settings-markdown-runtime-source">2.4 Frontend settings (Markdown runtime source)<a class="headerlink" href="#24-frontend-settings-markdown-runtime-source" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>GET /api/frontend/settings</code></li>
+<li><code>POST /api/frontend/settings</code></li>
+</ul>
+<p><code>frontend_settings.reading</code> normalized constraints:</p>
+<ul>
+<li><code>markdown_engine</code>: <code>legacy | pulldown | auto</code></li>
+<li><code>chunk_block_size</code>: <code>1..4096</code></li>
+<li><code>prefetch_blocks</code>: <code>0..1024</code></li>
+<li><code>index_cache_ttl_sec</code>: <code>5..86400</code></li>
+<li><code>max_doc_bytes</code>: <code>262144..2147483648</code></li>
+</ul>
+<h2 id="3-markdown-protocol-apis">3. Markdown Protocol APIs<a class="headerlink" href="#3-markdown-protocol-apis" title="Permanent link">&para;</a></h2>
+<p>All markdown responses include <code>markdownProtocolVersion</code> (<code>1.0.0</code> at current baseline).</p>
+<h2 id="31-post-apimarkdownindex">3.1 <code>POST /api/markdown/index</code><a class="headerlink" href="#31-post-apimarkdownindex" title="Permanent link">&para;</a></h2>
+<p>Request body:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">"filePath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"E:/.../Knowledge_Base/Topic/a.md"</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">"forceRebuild"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">}</span>
+</code></pre></div>
+<p>Success payload:</p>
+<ul>
+<li><code>success: true</code></li>
+<li><code>indexId</code></li>
+<li><code>filePath</code></li>
+<li><code>fileVersion</code></li>
+<li><code>totalBytes</code></li>
+<li><code>totalLines</code></li>
+<li><code>blocksSummary: { totalBlocks, chunkBlockSize }</code></li>
+<li><code>anchorsSummary: { count }</code></li>
+<li><code>wikiLinksSummary: { count }</code></li>
+<li><code>engine: legacy | pulldown</code></li>
+<li>optional <code>fallbackReason</code></li>
+<li><code>markdownProtocolVersion</code></li>
+</ul>
+<p>Error conditions:</p>
+<ul>
+<li><code>400</code>: missing <code>filePath</code></li>
+<li><code>403</code>: access denied (KB jail/auth)</li>
+<li><code>404</code>: file not found</li>
+<li><code>500</code>: runtime/worker error</li>
+</ul>
+<h2 id="32-post-apimarkdownchunk">3.2 <code>POST /api/markdown/chunk</code><a class="headerlink" href="#32-post-apimarkdownchunk" title="Permanent link">&para;</a></h2>
+<p>Request body:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"indexId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;index-id&gt;"</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">"startBlock"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">"blockCount"</span><span class="p">:</span><span class="w"> </span><span class="mi">36</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">}</span>
+</code></pre></div>
+<p>Success payload:</p>
+<ul>
+<li><code>success: true</code></li>
+<li><code>blocks[]</code> (includes text slice and block ranges)</li>
+<li><code>nextStartBlock</code></li>
+<li><code>hasMore</code></li>
+<li><code>markdownProtocolVersion</code></li>
+</ul>
+<p>Error conditions:</p>
+<ul>
+<li><code>400</code>: missing <code>indexId</code></li>
+<li><code>500</code>: index missing/expired or other server error</li>
+</ul>
+<h2 id="33-post-apimarkdownresolve-node">3.3 <code>POST /api/markdown/resolve-node</code><a class="headerlink" href="#33-post-apimarkdownresolve-node" title="Permanent link">&para;</a></h2>
+<p>Request body:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"nodeId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"vector-space"</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">"currentFilePath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"E:/.../current.md"</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">}</span>
+</code></pre></div>
+<p>Success payload:</p>
+<ul>
+<li><code>success: true</code></li>
+<li><code>filePath</code></li>
+<li><code>indexId</code></li>
+<li><code>targetBlockId</code></li>
+<li><code>startLine</code></li>
+<li><code>endLine</code></li>
+<li>optional <code>anchorId</code></li>
+<li><code>markdownProtocolVersion</code></li>
+</ul>
+<p>Error conditions:</p>
+<ul>
+<li><code>400</code>: missing <code>nodeId</code></li>
+<li><code>403</code>: access denied</li>
+<li><code>404</code>: file not found</li>
+<li><code>500</code>: unresolved node or server error</li>
+</ul>
+<h2 id="34-post-apimarkdownresolve-wiki">3.4 <code>POST /api/markdown/resolve-wiki</code><a class="headerlink" href="#34-post-apimarkdownresolve-wiki" title="Permanent link">&para;</a></h2>
+<p>Request body:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"wikiTarget"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Knowledge Base#Heading|Alias"</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">"currentFilePath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"E:/.../current.md"</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span>
+</code></pre></div>
+<p>Success payload:</p>
+<ul>
+<li><code>success: true</code></li>
+<li><code>filePath</code></li>
+<li><code>indexId</code></li>
+<li>optional <code>targetBlockId</code></li>
+<li>optional <code>anchorId</code></li>
+<li><code>matchType: exact | alias | heading | fallback</code></li>
+<li>optional <code>candidates[]</code></li>
+<li><code>markdownProtocolVersion</code></li>
+</ul>
+<p>Error conditions:</p>
+<ul>
+<li><code>400</code>: missing <code>wikiTarget</code> or <code>currentFilePath</code></li>
+<li><code>403</code>: access denied</li>
+<li><code>404</code>: file not found</li>
+<li><code>500</code>: server error</li>
+</ul>
+<h2 id="4-notemd-processing-apis">4. NoteMD Processing APIs<a class="headerlink" href="#4-notemd-processing-apis" title="Permanent link">&para;</a></h2>
+<h2 id="41-operation-model-and-cancellation">4.1 Operation model and cancellation<a class="headerlink" href="#41-operation-model-and-cancellation" title="Permanent link">&para;</a></h2>
+<p>Long-running operations maintain server operation state:</p>
+<ul>
+<li>operation lifecycle: <code>running -&gt; done | cancelled | error</code></li>
+<li>cancellation endpoint: <code>POST /api/notemd/cancel</code> with <code>operationId</code></li>
+</ul>
+<p>Cancellation responses:</p>
+<ul>
+<li><code>400</code> missing <code>operationId</code></li>
+<li><code>404</code> operation not found</li>
+<li><code>200</code> <code>success: false</code> when operation is no longer running</li>
+<li><code>200</code> <code>success: true</code> when cancellation succeeds</li>
+</ul>
+<h2 id="42-streaming-contract-sse">4.2 Streaming contract (SSE)<a class="headerlink" href="#42-streaming-contract-sse" title="Permanent link">&para;</a></h2>
+<p>Streaming is enabled when either:</p>
+<ul>
+<li>request <code>Accept</code> contains <code>text/event-stream</code>, or</li>
+<li>query has <code>stream=1</code>.</li>
+</ul>
+<p>SSE event types:</p>
+<ul>
+<li><code>operation</code></li>
+<li><code>status</code></li>
+<li><code>log</code></li>
+<li><code>warning</code></li>
+<li><code>error</code></li>
+<li><code>done</code></li>
+</ul>
+<h2 id="43-core-notemd-endpoints">4.3 Core NoteMD endpoints<a class="headerlink" href="#43-core-notemd-endpoints" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>POST /api/notemd/test-llm</code></li>
+<li>body: <code>{ providerName? }</code></li>
+<li><code>POST /api/notemd/process-file</code></li>
+<li>body: <code>{ filePath, outputPath?, createConceptNotes?, dryRun?, operationId? }</code></li>
+<li><code>POST /api/notemd/process-folder</code></li>
+<li>body: <code>{ folderPath, outputFolderPath?, createConceptNotes?, dryRun?, operationId? }</code></li>
+<li><code>POST /api/notemd/generate-content</code></li>
+<li>body: <code>{ title?, filePath?, context?, outputPath? }</code></li>
+<li><code>POST /api/notemd/translate-file</code></li>
+<li>body: <code>{ filePath, targetLanguage?, outputPath? }</code></li>
+<li><code>POST /api/notemd/translate-folder</code></li>
+<li>body: <code>{ folderPath, targetLanguage? }</code></li>
+<li><code>POST /api/notemd/fix-mermaid</code></li>
+<li>body: <code>{ filePath, inPlace? }</code></li>
+<li><code>POST /api/notemd/fix-formulas</code></li>
+<li>body: <code>{ filePath, inPlace? }</code></li>
+<li><code>POST /api/notemd/check-duplicates</code></li>
+<li>body: <code>{ filePath }</code></li>
+<li><code>POST /api/notemd/extract-concepts</code></li>
+<li>body: <code>{ filePath, operationId? }</code>, supports SSE</li>
+<li><code>POST /api/notemd/one-click-extract</code></li>
+<li>body: <code>{ filePath, operationId? }</code></li>
+<li><code>POST /api/notemd/batch-fix-mermaid</code></li>
+<li>body: <code>{ folderPath, inPlace? }</code></li>
+<li><code>POST /api/notemd/generate-folder-content</code></li>
+<li>body: <code>{ folderPath }</code></li>
+</ul>
+<p>Security invariant:</p>
+<ul>
+<li>file/folder paths are validated against KB root jail before I/O.</li>
+</ul>
+<h2 id="5-reader-render-and-clipboard-apis">5. Reader Render and Clipboard APIs<a class="headerlink" href="#5-reader-render-and-clipboard-apis" title="Permanent link">&para;</a></h2>
+<h2 id="51-post-apirendermath">5.1 <code>POST /api/render/math</code><a class="headerlink" href="#51-post-apirendermath" title="Permanent link">&para;</a></h2>
+<p>Body:</p>
+<ul>
+<li><code>source</code> (required)</li>
+<li><code>displayMode</code> (default true)</li>
+<li><code>maxWidth</code>, <code>maxHeight</code>, <code>renderScale</code> (optional)</li>
+</ul>
+<p>Returns rendered image payload with <code>pngBase64</code> and dimensions.</p>
+<h2 id="52-post-apirendermermaid">5.2 <code>POST /api/render/mermaid</code><a class="headerlink" href="#52-post-apirendermermaid" title="Permanent link">&para;</a></h2>
+<p>Body:</p>
+<ul>
+<li><code>source</code> (required)</li>
+<li>optional:</li>
+<li><code>maxWidth</code>, <code>maxHeight</code>, <code>renderScale</code></li>
+<li><code>includeStages</code>, <code>includeSvg</code></li>
+<li><code>renderer</code> (<code>frontend|bridge|local|auto</code>)</li>
+</ul>
+<p>Runtime behavior:</p>
+<ul>
+<li>frontend bridge preferred unless explicitly <code>local</code>,</li>
+<li>auto mode falls back to local <code>resvg</code> when frontend path is unavailable.</li>
+</ul>
+<p>Obsidian compatibility baseline:</p>
+<ul>
+<li>Canonical Mermaid source format is fenced Markdown:</li>
+<li>opening fence on its own line: three backticks followed by <code>mermaid</code></li>
+<li>closing fence on its own line: three backticks</li>
+<li>This baseline must remain compatible in the markdown index/chunk pipeline and in Godot/Web reader rendering flows.</li>
+<li>Inline concatenation patterns where a math delimiter is immediately followed by a Mermaid opening fence are malformed content (not valid canonical fenced start) and are expected to fail block-type detection.</li>
+<li>Recommended remediation: split the math delimiter and Mermaid opening fence into two lines, or run:</li>
+<li><code>npm run fix:markdown:mermaid:fence -- Knowledge_Base/testconcept</code></li>
+<li>Reader-side fast self-check: when opening markdown reader content, runtime applies lightweight auto-heal for the same math-delimiter-plus-Mermaid-fence pattern before block parsing/rendering.</li>
+</ul>
+<h2 id="53-clipboard-routes">5.3 Clipboard routes<a class="headerlink" href="#53-clipboard-routes" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>POST /api/clipboard/image-binary</code></li>
+<li>raw PNG body</li>
+<li>success: <code>{ ok: true, transport: "binary" }</code></li>
+<li><code>POST /api/clipboard/image</code></li>
+<li>JSON <code>{ pngBase64 }</code></li>
+<li>success: <code>{ ok: true }</code></li>
+</ul>
+<h2 id="6-pathbridge-message-contracts-relevant-to-notemdmarkdown">6. PathBridge Message Contracts Relevant to NoteMD/Markdown<a class="headerlink" href="#6-pathbridge-message-contracts-relevant-to-notemdmarkdown" title="Permanent link">&para;</a></h2>
+<p>Accepted/normalized types include:</p>
+<ul>
+<li><code>openNotemd</code> / <code>open_notemd</code> -&gt; broadcast <code>openNotemd</code></li>
+<li><code>exitPathMode</code> -&gt; broadcast <code>exitPathMode</code></li>
+<li><code>requestAppShutdown</code> / <code>request_app_shutdown</code> -&gt; broadcast <code>requestAppShutdown</code></li>
+<li><code>setWindowVisible</code> -&gt; broadcast <code>setWindowVisible</code></li>
+</ul>
+<p>Frontend <code>path_app.js</code> actions:</p>
+<ul>
+<li><code>openNotemd</code> triggers embedded/full NoteMD open path.</li>
+<li><code>exitPathMode</code> restores graph/main view (and Tauri window when configured).</li>
+<li><code>requestAppShutdown</code> invokes Tauri shutdown command when available.</li>
+</ul>
+<h2 id="7-critical-compatibility-invariant">7. Critical Compatibility Invariant<a class="headerlink" href="#7-critical-compatibility-invariant" title="Permanent link">&para;</a></h2>
+<p>Godot Mermaid consumption must remain PNG-first:</p>
+<ul>
+<li><code>pngBase64</code> is required for runtime display path,</li>
+<li>SVG can be preserved for diagnostics only,</li>
+<li>no SVG-only fallback path is allowed for Godot runtime rendering.</li>
+</ul>
+<p>This is a hard compatibility rule due Godot SVG instability across devices/runtime variants.</p>
+<h2 id="8-implementation-guardrails-for-interface-changes">8. Implementation Guardrails for Interface Changes<a class="headerlink" href="#8-implementation-guardrails-for-interface-changes" title="Permanent link">&para;</a></h2>
+<p>When changing any endpoint/message above:</p>
+<ol>
+<li>update both EN and ZH docs in <code>docs/diataxis</code>,</li>
+<li>keep request/response examples versioned with actual fields,</li>
+<li>preserve KB jail validation on file/folder inputs,</li>
+<li>preserve auth-token behavior for protected routes,</li>
+<li>preserve NoteMD cancellation + SSE semantics for long operations,</li>
+<li>preserve markdown protocol version field in responses.</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,3185 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/en/lfs_asset_migration_plan/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>2026-04-07 v1.7.0 - Git LFS Asset Migration Plan - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#2026-04-07-v170-git-lfs-asset-migration-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              2026-04-07 v1.7.0 - Git LFS Asset Migration Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status-update-2026-04-07-phase-1-contract-slice-landed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Update (2026-04-07, Phase 1 Contract Slice Landed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status-update-2026-04-07-phase-2-bootstrap-slice-landed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Update (2026-04-07, Phase 2 Bootstrap Slice Landed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status-update-2026-04-07-guardrail-slice-landed-without-ci-workflow-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Update (2026-04-07, Guardrail Slice Landed Without CI Workflow Changes)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status-update-2026-04-07-phase-1-repo-head-cleanup-landed-for-graph-payloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Update (2026-04-07, Phase 1 Repo-Head Cleanup Landed For Graph Payloads)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status-update-2026-04-07-mobile-release-reality-revalidated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Update (2026-04-07, Mobile Release Reality Revalidated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-code-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Code Baseline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Current Code Baseline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-runtime-graph-loading-is-already-runtime-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Runtime graph loading is already runtime-first
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-build-and-packaging-had-legacy-static-asset-assumptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Build and packaging had legacy static-asset assumptions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-release-automation-already-avoids-lfs-checkout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Release automation already avoids LFS checkout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-npm-publish-is-now-semantically-aligned-but-still-redundant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. npm publish is now semantically aligned, but still redundant
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-sidecar-generation-is-already-partly-localon-demand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Sidecar generation is already partly local/on-demand
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Principles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-remove-bundled-graph-payloads-from-the-default-build-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Remove Bundled Graph Payloads From the Default Build Path
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 1: Remove Bundled Graph Payloads From the Default Build Path">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#goal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#required-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#engineering-risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Engineering Risks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-runtime-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User / Runtime Impact
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mitigations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mitigations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-remove-repository-stored-sidecar-binaries-from-the-default-branch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Remove Repository-Stored Sidecar Binaries From the Default Branch
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 2: Remove Repository-Stored Sidecar Binaries From the Default Branch">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#goal_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-support_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#required-changes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#engineering-risks_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Engineering Risks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-runtime-impact_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User / Runtime Impact
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mitigations_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mitigations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verification_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollback_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-remove-lfs-tracking-and-clean-history-only-after-runtime-independence-is-proven" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Remove LFS Tracking and Clean History Only After Runtime Independence Is Proven
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 3: Remove LFS Tracking and Clean History Only After Runtime Independence Is Proven">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#goal_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#required-changes_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#engineering-risks_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Engineering Risks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-project-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User / Project Impact
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mitigations_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mitigations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verification_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollback_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-rollout-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Rollout Order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#go-no-go-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Go / No-Go Criteria
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="2026-04-07-v170-git-lfs-asset-migration-plan">2026-04-07 v1.7.0 - Git LFS Asset Migration Plan<a class="headerlink" href="#2026-04-07-v170-git-lfs-asset-migration-plan" title="Permanent link">&para;</a></h1>
+<h2 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Remove Git LFS from the repository's default delivery path without breaking the current runtime model, npm publish flow, or desktop/mobile release automation.</li>
+<li>Cover the two asset classes that currently drive bandwidth usage:</li>
+<li>generated graph payloads under <code>src/frontend/</code></li>
+<li>desktop sidecar binaries under <code>src-tauri/bin/</code></li>
+<li>Keep the plan grounded in the current codebase. Every migration action below maps to existing files, scripts, runtime fallbacks, or tests.</li>
+<li>Use <code>docs/en/multi_platform_build_flow_audit.md</code> as the companion evidence matrix for cross-platform build/release behavior.</li>
+<li>Use <code>docs/en/sidecar_supply_strategy.md</code> for the anti-fragile supply ladder that rejects a pure download-only replacement for desktop sidecars.</li>
+</ul>
+<h2 id="status-update-2026-04-07-phase-1-contract-slice-landed">Status Update (2026-04-07, Phase 1 Contract Slice Landed)<a class="headerlink" href="#status-update-2026-04-07-phase-1-contract-slice-landed" title="Permanent link">&para;</a></h2>
+<p>The repository now has the first runtime-first contract cleanup in place:</p>
+<ul>
+<li><code>scripts/copy-assets.js</code> now excludes generated graph payloads by default.</li>
+<li>explicit full-graph opt-in now lives behind <code>build:full</code> and <code>tauri:build:full</code>.</li>
+<li>Git LFS pointer placeholders are skipped even in explicit full mode, preventing accidental packaging of pointer stubs from <code>lfs: false</code> checkouts.</li>
+<li><code>package.json</code> no longer declares <code>data.js</code> / <code>graph_data.json</code> in <code>pkg.assets</code>.</li>
+<li><code>prepublishOnly</code> now aligns with the default runtime-first build path instead of reintroducing a separate mini-only semantic.</li>
+</ul>
+<p>This means Phase 1 is no longer only a proposal. The remaining Phase 1 work is mostly broader regression coverage and contributor-flow cleanup.</p>
+<h2 id="status-update-2026-04-07-phase-2-bootstrap-slice-landed">Status Update (2026-04-07, Phase 2 Bootstrap Slice Landed)<a class="headerlink" href="#status-update-2026-04-07-phase-2-bootstrap-slice-landed" title="Permanent link">&para;</a></h2>
+<p>The repository now also has the first local-bootstrap hardening slice for Godot sidecars:</p>
+<ul>
+<li><code>scripts/tauri-sidecar-utils.js</code> centralizes host binary resolution, validation, cache-path resolution, and pinned download bootstrap.</li>
+<li><code>scripts/ensure-godot-sidecar.js</code> can now materialize a host Godot binary from cache or a pinned download URL.</li>
+<li><code>scripts/validate-tauri-sidecars.js</code> now validates the host-specific Godot binary name instead of only the Windows filename.</li>
+<li>the new contract test <code>src/godot.sidecar.bootstrap.contract.test.ts</code> covers download, cache reuse, checksum mismatch, and host-specific validation.</li>
+</ul>
+<p>This still does not remove repository-stored sidecars yet. It closes the bootstrap gap that had to be solved first.</p>
+<p>Local smoke verification on the current Linux audit host also confirms the remaining developer-bootstrap boundary:</p>
+<ul>
+<li><code>npm run prepare:godot:bin</code> now emits the expected strategy guidance and exits <code>0</code> on a raw checkout when no host Godot is available.</li>
+<li><code>npm run verify:tauri:bin</code> now fails more accurately on the same raw checkout because the host <code>server-*</code> file is still only a Git LFS pointer placeholder and the host <code>markdown-worker-*</code> / <code>godot-*</code> binaries have not been materialized yet.</li>
+</ul>
+<p>That result is important for migration planning: the repo-head graph payload cleanup does not create this failure mode, but the later sidecar-removal phase must treat fresh developer bootstrap as a first-class rollout risk.</p>
+<h2 id="status-update-2026-04-07-guardrail-slice-landed-without-ci-workflow-changes">Status Update (2026-04-07, Guardrail Slice Landed Without CI Workflow Changes)<a class="headerlink" href="#status-update-2026-04-07-guardrail-slice-landed-without-ci-workflow-changes" title="Permanent link">&para;</a></h2>
+<p>The repository now also has a local/future-CI guardrail for protected LFS paths:</p>
+<ul>
+<li><code>scripts/verify-lfs-asset-policy.js</code> evaluates Git LFS usage under <code>src/frontend/</code> and <code>src-tauri/bin/</code>.</li>
+<li><code>npm run verify:lfs:policy</code> passes only when no new protected LFS drift is detected beyond the temporary legacy allowlist.</li>
+<li><code>npm run verify:lfs:policy:strict</code> is ready for the later no-LFS end state, but is not wired into CI yet.</li>
+<li>the dead <code>src-tauri/bin/node-x86_64-pc-windows-msvc.exe</code> LFS tracking residue was removed from <code>.gitattributes</code> and from the working tree.</li>
+</ul>
+<p>This keeps the current CI design unchanged while adding a concrete enforcement primitive for the later migration phases.</p>
+<h2 id="status-update-2026-04-07-phase-1-repo-head-cleanup-landed-for-graph-payloads">Status Update (2026-04-07, Phase 1 Repo-Head Cleanup Landed For Graph Payloads)<a class="headerlink" href="#status-update-2026-04-07-phase-1-repo-head-cleanup-landed-for-graph-payloads" title="Permanent link">&para;</a></h2>
+<p>The repository head no longer carries the old bundled graph payload LFS residues:</p>
+<ul>
+<li><code>src/frontend/data.js</code> and <code>src/frontend/graph_data.json</code> were removed from <code>.gitattributes</code>.</li>
+<li>the same two pointer files were removed from the working tree.</li>
+<li><code>npm run build:full</code> still remains valid, but now only includes graph payloads when real locally generated files are present.</li>
+<li><code>verify:lfs:policy</code> no longer treats bundled graph payloads as legacy exemptions.</li>
+</ul>
+<p>This is the first actual head cleanup step, not just a contract rewrite. It remains low-risk because the runtime and default build path were already moved to runtime-first before the files were removed.</p>
+<h2 id="status-update-2026-04-07-mobile-release-reality-revalidated">Status Update (2026-04-07, Mobile Release Reality Revalidated)<a class="headerlink" href="#status-update-2026-04-07-mobile-release-reality-revalidated" title="Permanent link">&para;</a></h2>
+<p>The current mobile release behavior was rechecked against real code and the latest published Android artifact:</p>
+<ul>
+<li>the latest public Android asset is <code>v1.7.0</code> <code>app-universal-release-unsigned.apk</code></li>
+<li><code>.github/workflows/release-desktop-multi-os.yml</code> builds that artifact through <code>NOTE_CONNECTION_TAURI_ANDROID_TARGET=universal npm run tauri:android:build</code></li>
+<li>inspecting the published APK shows <code>assets/path_mode/...</code>, but no bundled <code>data.js</code>, <code>graph_data.json</code>, <code>data_&lt;target&gt;.js</code>, <code>graph_data_&lt;target&gt;.json</code>, or <code>Knowledge_Base</code></li>
+</ul>
+<p>That result matters because it corrects an easy but wrong inference:</p>
+<ul>
+<li>current mobile release packaging does not appear to ship prebuilt graph cache files</li>
+<li>but mobile runtime is not limited to cache-restore only anymore</li>
+<li>Capacitor native runtime can scan markdown under <code>Knowledge_Base</code>, build graph data locally, and write <code>data.js</code> / <code>graph_data.json</code> through the Filesystem bridge</li>
+<li>Tauri Android runtime reports <code>supports_build=true</code> and routes build requests to Rust <code>build_graph_runtime</code>, which writes runtime graph artifacts into <code>runtime_data/</code></li>
+</ul>
+<p>Migration consequence:</p>
+<ul>
+<li>removing repository-head bundled graph payload LFS files does not newly break current mobile release semantics</li>
+<li>the real mobile risk surface is runtime content availability, storage permissions, dataset-size ceilings, and build UX parity, not "APK must contain prebuilt graph cache files"</li>
+</ul>
+<h2 id="current-code-baseline">Current Code Baseline<a class="headerlink" href="#current-code-baseline" title="Permanent link">&para;</a></h2>
+<h3 id="1-runtime-graph-loading-is-already-runtime-first">1. Runtime graph loading is already runtime-first<a class="headerlink" href="#1-runtime-graph-loading-is-already-runtime-first" title="Permanent link">&para;</a></h3>
+<p>The codebase already supports running without bundled graph payloads:</p>
+<ul>
+<li><code>src/index.ts</code> writes <code>graph_data.json</code> and <code>data.js</code> into <code>runtimeDataDir</code> during graph generation.</li>
+<li><code>src/server.ts</code> resolves generated assets from <code>runtime_data</code> first, then falls back to bundled frontend files.</li>
+<li><code>src-tauri/src/lib.rs</code> mirrors the same runtime-first behavior for Tauri IPC and cache restore.</li>
+<li><code>src/frontend/source_manager.js</code> and <code>src/frontend/app.js</code> already tolerate missing <code>data.js</code> and continue in mini/first-run mode.</li>
+</ul>
+<p>This means the product model has already moved toward "generate at runtime, bundle less".</p>
+<p>The same statement now applies to mobile with more nuance than before:</p>
+<ul>
+<li>Capacitor native runtime can locally build graph payloads when Filesystem APIs are available.</li>
+<li>Tauri Android runtime can locally build graph payloads through <code>build_graph_runtime</code>.</li>
+<li>the current release APK still appears to ship without prebuilt graph cache files, so mobile packaging and mobile runtime capability must be discussed separately.</li>
+</ul>
+<h3 id="2-build-and-packaging-had-legacy-static-asset-assumptions">2. Build and packaging had legacy static-asset assumptions<a class="headerlink" href="#2-build-and-packaging-had-legacy-static-asset-assumptions" title="Permanent link">&para;</a></h3>
+<p>The runtime was ahead of the build contract:</p>
+<ul>
+<li><code>scripts/copy-assets.js</code> used to copy <code>data.js</code> and <code>graph_data.json</code> in normal mode and exclude them only in <code>--mini</code> mode.</li>
+<li><code>package.json</code> used to define <code>tauri:dev</code> and <code>tauri:build</code> as "full asset" paths, while <code>tauri:dev:mini</code> and <code>tauri:build:mini</code> used the runtime-first path.</li>
+<li><code>package.json</code> used to list <code>data.js</code> and <code>graph_data.json</code> in <code>pkg.assets</code>.</li>
+<li><code>src/pkg.sidecar.contract.test.ts</code> used to assert that <code>pkg.assets</code> contained <code>data.js</code> and <code>graph_data.json</code>.</li>
+</ul>
+<p>This was the main engineering risk area for migration: removing LFS assets would not primarily break end users; it would break stale build assumptions unless the contract was updated first. The new runtime-first default closes the first half of that gap.</p>
+<h3 id="3-release-automation-already-avoids-lfs-checkout">3. Release automation already avoids LFS checkout<a class="headerlink" href="#3-release-automation-already-avoids-lfs-checkout" title="Permanent link">&para;</a></h3>
+<p>Current release automation shows that production packaging is already close to the target state:</p>
+<ul>
+<li><code>.github/workflows/release-desktop-multi-os.yml</code> checks out the repository with <code>lfs: false</code>.</li>
+<li>The same workflow now seeds a project-controlled GitHub Releases mirror tag for Godot archives, then downloads mirror-first per runner with upstream fallback.</li>
+<li>Desktop release jobs build via <code>npm run tauri:build:mini</code>.</li>
+</ul>
+<p>This is strong evidence that sidecar and graph payload migration can be made safe for production releases.</p>
+<h3 id="4-npm-publish-is-now-semantically-aligned-but-still-redundant">4. npm publish is now semantically aligned, but still redundant<a class="headerlink" href="#4-npm-publish-is-now-semantically-aligned-but-still-redundant" title="Permanent link">&para;</a></h3>
+<p><code>.github/workflows/npm-publish.yml</code> also checks out with <code>lfs: false</code>, and now both the workflow <code>Build</code> step and <code>prepublishOnly</code> use the same runtime-first build semantic.</p>
+<p>That closes the old mismatch, but the pipeline still performs the build twice:</p>
+<ol>
+<li>run <code>npm run build</code> in the workflow</li>
+<li>run <code>npm run build</code> again through <code>prepublishOnly</code></li>
+</ol>
+<p>This is now safe from an LFS-contract perspective, but it is still worth simplifying later if publish duration becomes a concern. For now, the CI design can remain unchanged.</p>
+<h3 id="5-sidecar-generation-is-already-partly-localon-demand">5. Sidecar generation is already partly local/on-demand<a class="headerlink" href="#5-sidecar-generation-is-already-partly-localon-demand" title="Permanent link">&para;</a></h3>
+<p>The repository does not need precommitted server sidecars in order to function:</p>
+<ul>
+<li><code>scripts/build-sidecar.js</code> builds host/selected <code>server-*</code> binaries into <code>src-tauri/bin</code>.</li>
+<li><code>scripts/ensure-sidecar-ready.js</code> rebuilds sidecars when they are missing or stale.</li>
+<li><code>scripts/validate-tauri-sidecars.js</code> validates expected binaries.</li>
+</ul>
+<p>The remaining gap is Godot on local developer machines:</p>
+<ul>
+<li><code>scripts/ensure-godot-sidecar.js</code> can copy from env vars and search paths.</li>
+<li>On Windows, missing Godot is currently fail-fast by default.</li>
+</ul>
+<p>This means the sidecar migration is feasible, but local developer bootstrap needs to be upgraded before removing repository-stored binaries.</p>
+<h2 id="migration-principles">Migration Principles<a class="headerlink" href="#migration-principles" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Prefer runtime generation over repository-bundled payloads.</li>
+<li>Prefer reproducible local bootstrap over repository-stored executables.</li>
+<li>Separate "safe behavior change" from "history rewrite". The repo should stop depending on LFS before any Git history cleanup starts.</li>
+<li>Preserve current end-user behavior wherever it is already working, especially first-run, cache restore, release packaging, and Tauri mini startup.</li>
+</ul>
+<h2 id="phase-1-remove-bundled-graph-payloads-from-the-default-build-path">Phase 1: Remove Bundled Graph Payloads From the Default Build Path<a class="headerlink" href="#phase-1-remove-bundled-graph-payloads-from-the-default-build-path" title="Permanent link">&para;</a></h2>
+<h3 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h3>
+<p>Make runtime-first / mini semantics the default for source builds, development runs, and package publishing.</p>
+<h3 id="code-support">Code Support<a class="headerlink" href="#code-support" title="Permanent link">&para;</a></h3>
+<p>The following files already support this direction:</p>
+<ul>
+<li><code>src/index.ts</code></li>
+<li><code>src/server.ts</code></li>
+<li><code>src-tauri/src/lib.rs</code></li>
+<li><code>src/frontend/source_manager.js</code></li>
+<li><code>src/frontend/app.js</code></li>
+<li><code>docs/en/TEST_REPORT.md</code> documents that mini build first-run behavior has already been fixed</li>
+</ul>
+<h3 id="required-changes">Required Changes<a class="headerlink" href="#required-changes" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Normalize the build contract around runtime-first assets.</li>
+<li>Modify <code>scripts/copy-assets.js</code> so that the current "mini" behavior becomes the default-safe behavior.</li>
+<li>
+<p>Replace the current "full build" default with an explicit opt-in mode such as a demo build or legacy static build.</p>
+</li>
+<li>
+<p>Make <code>package.json</code> reflect the new default.</p>
+</li>
+<li>Repoint <code>build</code>, <code>tauri:dev</code>, and any packaging-facing scripts to the runtime-first asset flow.</li>
+<li>
+<p>Keep an explicit opt-in script only if a prebundled demo graph is still required for internal QA.</p>
+</li>
+<li>
+<p>Remove hardcoded static graph assumptions from pkg packaging.</p>
+</li>
+<li>Update <code>package.json</code> <code>pkg.assets</code>.</li>
+<li>
+<p>Update <code>src/pkg.sidecar.contract.test.ts</code> so the contract becomes "runtime data is generated/read safely" rather than "bundle these two giant files".</p>
+</li>
+<li>
+<p>Strengthen runtime-first tests.</p>
+</li>
+<li>Extend <code>src/server.migration.test.ts</code> to cover the case where no bundled <code>data.js</code> or <code>graph_data.json</code> exists.</li>
+<li>
+<p>Extend startup/loadflow tests so "mini/no-prebundled-graph" remains the primary supported path, not a secondary path.</p>
+</li>
+<li>
+<p>Preserve user-visible default/demo behavior intentionally.</p>
+</li>
+<li>If "Reset to Default" depends on bundled demo notes rather than bundled graph payloads, keep the demo notes.</li>
+<li>Do not silently remove first-run guidance or fallback content.</li>
+</ol>
+<h3 id="engineering-risks">Engineering Risks<a class="headerlink" href="#engineering-risks" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>build</code> currently means "copy all frontend assets", while the runtime already tolerates missing graph payloads. Changing <code>build</code> is a contract change for contributors and CI.</li>
+<li>Some internal scripts or ad-hoc workflows may still assume a preloaded graph exists on first launch.</li>
+<li>If <code>Reset to Default</code> implicitly depends on a bundled graph payload, users may land in an emptier first-run state than before.</li>
+<li>For mobile, the meaningful risk is not "no <code>data.js</code> inside the APK". The real risk is whether the runtime can actually reach a valid <code>Knowledge_Base</code> and complete local build within platform limits.</li>
+</ul>
+<h3 id="user-runtime-impact">User / Runtime Impact<a class="headerlink" href="#user-runtime-impact" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Existing installed desktop releases should not be affected by this phase.</li>
+<li>Future desktop releases should remain safe because release automation already builds with <code>tauri:build:mini</code>.</li>
+<li>Current Android release behavior is also compatible with this phase because the latest published APK already appears to omit prebuilt graph cache assets.</li>
+<li>Developers are the main affected group:</li>
+<li><code>npm run tauri:dev</code> will behave more like today's mini build</li>
+<li>first-run may show an empty state until a Knowledge Base is selected</li>
+<li>Mobile-specific runtime caveat remains:</li>
+<li>Capacitor local build is bounded by in-app file-count and payload-size limits.</li>
+<li>Tauri Android local build still depends on runtime access to the selected Knowledge Base.</li>
+</ul>
+<h3 id="mitigations">Mitigations<a class="headerlink" href="#mitigations" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Keep a small demo Knowledge Base if the product still needs a non-empty first-run.</li>
+<li>Rename or document scripts clearly so developers know whether a run is runtime-first or demo-prebundled.</li>
+<li>Update docs before removing the LFS files so contributors do not misread the new behavior as a regression.</li>
+<li>For mobile QA, verify runtime graph build against realistic datasets instead of treating bundled graph payload presence as the safety signal.</li>
+</ul>
+<h3 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>npm run build:mini</code></li>
+<li><code>npm run tauri:dev:mini</code></li>
+<li><code>npm run tauri:build:mini</code></li>
+<li>npm publish dry-run with an <code>lfs: false</code> checkout</li>
+<li>Startup path where no bundled <code>data.js</code> exists</li>
+<li>Cache restore path for <code>data.js</code> / <code>graph_data.json</code></li>
+</ul>
+<h3 id="rollback">Rollback<a class="headerlink" href="#rollback" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Restore the old <code>copy-assets.js</code> semantics.</li>
+<li>Restore the old <code>pkg.assets</code> entries and contract test expectations.</li>
+<li>Reintroduce bundled graph payloads temporarily without touching Git history yet.</li>
+</ul>
+<h2 id="phase-2-remove-repository-stored-sidecar-binaries-from-the-default-branch">Phase 2: Remove Repository-Stored Sidecar Binaries From the Default Branch<a class="headerlink" href="#phase-2-remove-repository-stored-sidecar-binaries-from-the-default-branch" title="Permanent link">&para;</a></h2>
+<h3 id="goal_1">Goal<a class="headerlink" href="#goal_1" title="Permanent link">&para;</a></h3>
+<p>Stop storing large <code>src-tauri/bin/*</code> executables in Git LFS while preserving local developer bootstrap and release reproducibility.</p>
+<h3 id="code-support_1">Code Support<a class="headerlink" href="#code-support_1" title="Permanent link">&para;</a></h3>
+<p>The current codebase already contains the primitives needed for this migration:</p>
+<ul>
+<li><code>scripts/build-sidecar.js</code> builds server sidecars locally</li>
+<li><code>scripts/ensure-sidecar-ready.js</code> rebuilds or refreshes missing/stale sidecars</li>
+<li><code>scripts/validate-tauri-sidecars.js</code> verifies required binaries</li>
+<li><code>.github/workflows/release-desktop-multi-os.yml</code> downloads Godot per runner and does not need repository-stored Godot binaries</li>
+</ul>
+<h3 id="required-changes_1">Required Changes<a class="headerlink" href="#required-changes_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Keep server sidecars local-build/on-demand only.</li>
+<li>Remove the expectation that <code>server-*</code> binaries are committed assets.</li>
+<li>
+<p>Let <code>scripts/ensure-sidecar-ready.js</code> and <code>scripts/build-sidecar.js</code> own server sidecar materialization.</p>
+</li>
+<li>
+<p>Upgrade Godot bootstrap for local developers.</p>
+</li>
+<li>Extend <code>scripts/ensure-godot-sidecar.js</code> so it can optionally download and cache a host-appropriate Godot binary when it is not found locally.</li>
+<li>
+<p>Preserve <code>NOTE_CONNECTION_GODOT_EXE</code> and search-dir overrides as the manual escape hatch.</p>
+</li>
+<li>
+<p>Make validation reflect the new ownership model.</p>
+</li>
+<li>
+<p><code>scripts/validate-tauri-sidecars.js</code> should validate "materialized locally" sidecars, not "must already exist in git checkout".</p>
+</li>
+<li>
+<p>Document local bootstrap explicitly.</p>
+</li>
+<li>Contributors need a clear path for Windows, Linux, and macOS host setup once the repository no longer provides large binaries.</li>
+</ol>
+<h3 id="engineering-risks_1">Engineering Risks<a class="headerlink" href="#engineering-risks_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Windows developer bootstrap is the highest-risk segment because missing Godot currently fails hard by default.</li>
+<li>Auto-download introduces new failure modes:</li>
+<li>offline development</li>
+<li>upstream release URL drift</li>
+<li>checksum / integrity handling</li>
+<li>antivirus or quarantine issues on Windows/macOS</li>
+<li>If sidecar validation is updated too early without a reliable materialization path, local <code>tauri:dev</code> and <code>tauri:build</code> can become flaky.</li>
+</ul>
+<h3 id="user-runtime-impact_1">User / Runtime Impact<a class="headerlink" href="#user-runtime-impact_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Existing end users should not be affected because installed releases already contain built artifacts.</li>
+<li>Release CI should remain stable or improve, because it already downloads Godot explicitly.</li>
+<li>Developers are again the main affected group:</li>
+<li>first local build may need a bootstrap/download step</li>
+<li>offline development requires a documented manual override path</li>
+<li>a fresh raw checkout can still fail <code>npm run verify:tauri:bin</code> until host <code>server-*</code> LFS residues are replaced and host <code>markdown-worker-*</code> / <code>godot-*</code> binaries are materialized</li>
+</ul>
+<h3 id="mitigations_1">Mitigations<a class="headerlink" href="#mitigations_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Add checksum verification for downloaded Godot artifacts.</li>
+<li>Cache downloaded binaries outside the repository working tree.</li>
+<li>Preserve environment-variable overrides and documented manual placement paths.</li>
+<li>Roll this out only after Windows bootstrap is verified end to end.</li>
+</ul>
+<h3 id="verification_1">Verification<a class="headerlink" href="#verification_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>npm run tauri:dev:mini</code> on Windows/Linux/macOS hosts</li>
+<li><code>npm run tauri:build:mini</code></li>
+<li><code>npm run verify:tauri:bin</code></li>
+<li>Desktop release workflow on all runner types</li>
+<li>Android/Tauri workflows that depend on <code>build:sidecar</code></li>
+</ul>
+<h3 id="rollback_1">Rollback<a class="headerlink" href="#rollback_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Restore repository-side binary fallback temporarily.</li>
+<li>Keep bootstrap download logic, but allow committed binaries to satisfy validation while stabilizing the new path.</li>
+</ul>
+<h2 id="phase-3-remove-lfs-tracking-and-clean-history-only-after-runtime-independence-is-proven">Phase 3: Remove LFS Tracking and Clean History Only After Runtime Independence Is Proven<a class="headerlink" href="#phase-3-remove-lfs-tracking-and-clean-history-only-after-runtime-independence-is-proven" title="Permanent link">&para;</a></h2>
+<h3 id="goal_2">Goal<a class="headerlink" href="#goal_2" title="Permanent link">&para;</a></h3>
+<p>After the repository no longer depends on committed graph payloads or sidecar binaries, clean up LFS usage and add guardrails so the problem does not return.</p>
+<h3 id="required-changes_2">Required Changes<a class="headerlink" href="#required-changes_2" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p>Remove now-obsolete LFS tracking rules from <code>.gitattributes</code>.</p>
+</li>
+<li>
+<p>Perform controlled repository cleanup.</p>
+</li>
+<li>Use <code>git lfs migrate export</code> or <code>git filter-repo</code> in a coordinated maintenance window.</li>
+<li>
+<p>Announce the rewrite, freeze open branches, and give contributors a reclone/rebase playbook.</p>
+</li>
+<li>
+<p>Add budget guardrails.</p>
+</li>
+<li>Add a CI script that fails if new LFS objects appear under:<ul>
+<li><code>src/frontend/</code></li>
+<li><code>src-tauri/bin/</code></li>
+</ul>
+</li>
+<li>
+<p>Add a size-budget check for large generated/demo assets.</p>
+</li>
+<li>
+<p>Audit the docs and contributor flows.</p>
+</li>
+<li>Remove outdated advice that implies cloning the repo should materialize giant runtime payloads.</li>
+</ol>
+<h3 id="engineering-risks_2">Engineering Risks<a class="headerlink" href="#engineering-risks_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>History rewrite is the only phase that disrupts collaborators directly.</li>
+<li>Open PRs, forks, local branches, and automation that pins old SHAs can all be affected.</li>
+<li>If tags/releases are not handled carefully, downstream references may become confusing.</li>
+</ul>
+<h3 id="user-project-impact">User / Project Impact<a class="headerlink" href="#user-project-impact" title="Permanent link">&para;</a></h3>
+<ul>
+<li>End users of existing release artifacts should still be unaffected.</li>
+<li>Contributors and maintainers will be affected during the rewrite window.</li>
+<li>This phase should be treated as repository maintenance, not as a runtime feature rollout.</li>
+</ul>
+<h3 id="mitigations_2">Mitigations<a class="headerlink" href="#mitigations_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Do not start this phase until Phases 1 and 2 have already shipped safely.</li>
+<li>Create a migration tag / archival branch before rewriting.</li>
+<li>Publish exact recovery steps for contributors.</li>
+</ul>
+<h3 id="verification_2">Verification<a class="headerlink" href="#verification_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Fresh clone after rewrite</li>
+<li>npm publish dry-run</li>
+<li>desktop release workflow dry-run</li>
+<li>no LFS objects reported in protected paths</li>
+</ul>
+<h3 id="rollback_2">Rollback<a class="headerlink" href="#rollback_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Keep an archival remote or pre-rewrite mirror.</li>
+<li>If the rewrite causes unacceptable disruption, stop at "no new LFS usage" and defer history cleanup.</li>
+</ul>
+<h2 id="recommended-rollout-order">Recommended Rollout Order<a class="headerlink" href="#recommended-rollout-order" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Phase 1 first.</li>
+<li>Lowest end-user risk</li>
+<li>Highest leverage on LFS bandwidth</li>
+<li>
+<p>Mostly a build-contract cleanup</p>
+</li>
+<li>
+<p>Phase 2 second.</p>
+</li>
+<li>Necessary before the repository can fully stop storing giant binaries</li>
+<li>
+<p>Main challenge is developer bootstrap, not product runtime</p>
+</li>
+<li>
+<p>Phase 3 last.</p>
+</li>
+<li>Maintenance-only</li>
+<li>Should not begin until the codebase has already proven it no longer depends on those assets</li>
+</ol>
+<h2 id="go-no-go-criteria">Go / No-Go Criteria<a class="headerlink" href="#go-no-go-criteria" title="Permanent link">&para;</a></h2>
+<p>Proceed to history cleanup only if all of the following are true:</p>
+<ul>
+<li><code>tauri:build:mini</code> is the stable default release path</li>
+<li>local developer bootstrap works without repository-stored sidecar binaries</li>
+<li>npm publish no longer relies on a full-build step against an <code>lfs: false</code> checkout</li>
+<li>startup, cache restore, and first-run flows pass without bundled graph payloads</li>
+<li>contributor documentation has been updated</li>
+</ul>
+<h2 id="recommendation">Recommendation<a class="headerlink" href="#recommendation" title="Permanent link">&para;</a></h2>
+<p>This migration is worth doing, but it should be treated as a contract migration, not a file deletion task.</p>
+<p>The safest path is:</p>
+<ul>
+<li>first make runtime-first graph loading the default build contract</li>
+<li>then move sidecar provisioning to reproducible local/bootstrap logic</li>
+<li>only then remove LFS tracking and consider history cleanup</li>
+</ul>
+<p>That sequence minimizes end-user risk while directly addressing the root cause of the Git LFS bandwidth warning.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

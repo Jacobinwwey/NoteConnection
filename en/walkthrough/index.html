@@ -1,0 +1,2674 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/en/walkthrough/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>2026-03-04 v1.5.13 - Tauri/Godot Migration Walkthrough Addendum - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#2026-03-04-v1513-taurigodot-migration-walkthrough-addendum" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              2026-03-04 v1.5.13 - Tauri/Godot Migration Walkthrough Addendum
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#english-document" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English Document
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="English Document">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#2026-06-10-knowledge-workspace-runtime-walkthrough" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-06-10 Knowledge Workspace Runtime Walkthrough
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-this-means-now" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What This Means Now
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-walkthrough-current" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime Walkthrough (Current)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-working" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Is Working
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-still-needs-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Still Needs Verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation Checklist
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="2026-03-04-v1513-taurigodot-migration-walkthrough-addendum">2026-03-04 v1.5.13 - Tauri/Godot Migration Walkthrough Addendum<a class="headerlink" href="#2026-03-04-v1513-taurigodot-migration-walkthrough-addendum" title="Permanent link">&para;</a></h1>
+<h2 id="english-document">English Document<a class="headerlink" href="#english-document" title="Permanent link">&para;</a></h2>
+<h3 id="2026-06-10-knowledge-workspace-runtime-walkthrough">2026-06-10 Knowledge Workspace Runtime Walkthrough<a class="headerlink" href="#2026-06-10-knowledge-workspace-runtime-walkthrough" title="Permanent link">&para;</a></h3>
+<ol>
+<li>The user selects or inherits a scoped workspace/corpus target.</li>
+<li><code>agent_workspace.js</code> sends the conversation request with <code>activeTarget</code> and <code>scope</code>.</li>
+<li><code>KnowledgeLearningPlatform.agentConversation()</code> resolves scoped retrieval, grouped knowledge points, citations, memory actions, and a durable <code>knowledgeRun</code>.</li>
+<li><code>conversationComposer.ts</code> organizes the grounded reply into structured blocks while preserving legacy <code>assistantMessage</code>.</li>
+<li>The frontend renders the reply and presents grouped file-first knowledge hits.</li>
+<li>Source markdown can be opened in the graph-focus pane, where matched spans are highlighted in-place.</li>
+<li>Durable workflow artifacts such as <code>flashcard_batch</code> and <code>knowledge_run</code> can be queried and followed up through dedicated runtime endpoints.</li>
+</ol>
+<h3 id="what-this-means-now">What This Means Now<a class="headerlink" href="#what-this-means-now" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Structured grounded conversation is operational.</li>
+<li>Graph focus is already a reader-aligned evidence surface.</li>
+<li>Durable artifact-backed review loops now exist in the runtime.</li>
+<li>The current DAG-backed learning substrate is real, but answer planning still lacks a dedicated graph-conditioned context layer.</li>
+</ul>
+<h3 id="runtime-walkthrough-current">Runtime Walkthrough (Current)<a class="headerlink" href="#runtime-walkthrough-current" title="Permanent link">&para;</a></h3>
+<p>This addendum documents the current Bridge-first runtime flow after migration progress:</p>
+<ol>
+<li>Tauri launches the Rust host process.</li>
+<li>Rust spawns the Node sidecar and Godot executable.</li>
+<li>Godot connects to PathBridge (<code>ws://127.0.0.1:9876</code>).</li>
+<li>Backend receives configuration/path actions through bridge messages.</li>
+<li>Graph data is restored from cache or rebuilt and then synchronized to frontend/Godot consumers.</li>
+</ol>
+<h3 id="what-is-working">What Is Working<a class="headerlink" href="#what-is-working" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Sidecar startup and graph build pipeline execute successfully in Tauri mini GPU runs.</li>
+<li>Worker-thread graph stages (keyword/statistical/layout workers) resolve from runtime paths correctly in sidecar execution.</li>
+<li>Path Mode control migration is operational with Godot-driven settings and actions.</li>
+</ul>
+<h3 id="what-still-needs-verification">What Still Needs Verification<a class="headerlink" href="#what-still-needs-verification" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Existing-data prompt behavior must consistently ask users to reuse cache or rebuild before load.</li>
+<li>Startup should avoid duplicate load execution after a single load action.</li>
+<li>WebSocket startup sequencing should avoid redundant early disconnect/reconnect cycles.</li>
+<li>History recording should capture center-node switching triggered by double-click navigation in Godot.</li>
+</ul>
+<h3 id="validation-checklist">Validation Checklist<a class="headerlink" href="#validation-checklist" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Run <code>npm run tauri:dev:mini:gpu</code>.</li>
+<li>Select a source that already has cached data.</li>
+<li>Confirm exactly one prompt appears and exactly one load path executes.</li>
+<li>Confirm no duplicate build/restore in sidecar logs.</li>
+<li>Confirm History list updates when switching central nodes in Godot.</li>
+</ol>
+<hr />
+<h1 id="path-mode-improvements-walkthrough">Path Mode Improvements Walkthrough<a class="headerlink" href="#path-mode-improvements-walkthrough" title="Permanent link">&para;</a></h1>
+<h2 id="1-critical-fix-navigation-failure">1. Critical Fix: Navigation Failure<a class="headerlink" href="#1-critical-fix-navigation-failure" title="Permanent link">&para;</a></h2>
+<p><strong>Issue</strong>: When double-clicking a node or switching the center, the Tree View would crash and revert to a linear list because the <code>treeLayout</code> data was missing from the update payload.
+<strong>Fix</strong>: Updated <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js">path_app.js</a>'s <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#1004-1014">switchCentral</a> function to explicitly call <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#539-566">triggerUpdate()</a>. This forces the Web Worker to re-calculate the full <code>treeLayout</code> (including correct levels and connections) for the new central node before sending it to Godot.</p>
+<h2 id="2-visual-enhancements-godot">2. Visual Enhancements (Godot)<a class="headerlink" href="#2-visual-enhancements-godot" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <strong>In-Degree Display Setting</strong>: Added option to toggle between "Visible" (default) and "Total" In-Degree counts in Node Popup.</li>
+<li>[x] <strong>Godot Lazy Loading</strong>: Implemented "Expand (+)" and "Collapse (-)" buttons in Godot Tree View to manage prerequisite visibility.</li>
+<li>[x] <strong>i18n Fixes</strong>: Added missing keys <code>focus_inbound</code>/<code>focus_outbound</code> to English and Chinese locales.</li>
+</ul>
+<h3 id="godot-tree-view-features">Godot Tree View Features<a class="headerlink" href="#godot-tree-view-features" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Visuals ("Zen Mode")</strong>: Simplified view removing all extra buttons. Only nodes and connections are visible.</li>
+<li><strong>Interactions</strong>:</li>
+<li><strong>Double Click / Right Click</strong>: Toggle Context (Expand/Collapse prerequisites).</li>
+<li><strong>Long Press (Left)</strong>: Navigate to Node (Switch Central). Visualized by a progress ring overlay.</li>
+<li><strong>Middle Click</strong>: Collapse All nodes (Reset view).</li>
+<li><strong>Focus Mode</strong>:</li>
+<li>Toggle via Settings ("Focus on this node").</li>
+<li>Highlights the Central Node and its direct incoming prerequisites.</li>
+<li>Dims all other nodes to reduce clutter and focus on immediate dependencies.</li>
+<li>This creates a cleaner, less cluttered tree where lines only connect direct neighbors (Level 1 → Level 2), as requested.</li>
+</ul>
+<p><strong>Last Node Cleanup</strong>:</p>
+<ul>
+<li>The "Expand" button logic relies on data validation. With the <code>treeLayout</code> now correctly re-computing, the "Target" node (which corresponds to the end of the chain) correctly reports <code>0</code> children in the layout, so the expand button will automatically be hidden.</li>
+</ul>
+<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Navigation</strong>: Double-clicking nodes in Tree View now correctly keeps the Tree View active and re-centers the graph.</li>
+<li><strong>Aesthetics</strong>: Long, confusing Bezier curves skipping levels are gone.</li>
+<li><strong>Data</strong>: In-degree numbers are visible.</li>
+</ul>
+<h2 id="3-bug-fixes-interaction-data">3. Bug Fixes (Interaction &amp; Data)<a class="headerlink" href="#3-bug-fixes-interaction-data" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Missing Edges</strong>: Fixed <code>treeLayout</code> having 0 edges by sanitizing data in <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js">path_app.js</a> (converting Object references back to ID strings for the worker).</li>
+<li><strong>Right-Click Toggle</strong>: Fixed "Cannot Collapse" bug by:</li>
+<li>Patching <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js">path_core.js</a> to correctly pass <code>isExpanded</code> state.</li>
+<li>Updating <a href="file:///e:/Knowledge_project/NoteConnection_app/src/core/PathBridge.ts">PathBridge.ts</a> to relay <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#247-254">collapsePrereqs</a> messages (which were previously dropped).</li>
+<li><strong>Collapse All</strong>:</li>
+<li>Added a visible <code>[-]</code> button to the Godot UI.</li>
+<li>Updated <a href="file:///e:/Knowledge_project/NoteConnection_app/src/core/PathBridge.ts">PathBridge.ts</a> to relay the <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261">collapseAll</a> message.</li>
+</ul>
+<h2 id="-">---<a class="headerlink" href="#-" title="Permanent link">&para;</a></h2>
+<h1 id="v143-9-rule-tree-layout-engine-walkthrough-2026-02-26">v1.4.3 - 9-Rule Tree Layout Engine Walkthrough (2026-02-26)<a class="headerlink" href="#v143-9-rule-tree-layout-engine-walkthrough-2026-02-26" title="Permanent link">&para;</a></h1>
+<h2 id="analysis-summary">Analysis Summary<a class="headerlink" href="#analysis-summary" title="Permanent link">&para;</a></h2>
+<p>Performed comprehensive gap analysis between <code>tree_path_mockup.html</code> (702 lines, 9 rules) and production code.</p>
+<h3 id="files-analyzed">Files Analyzed<a class="headerlink" href="#files-analyzed" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lines</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tree_path_mockup.html</code></td>
+<td>702</td>
+<td>Reference implementation with all 9 rules</td>
+</tr>
+<tr>
+<td><code>path_core.js</code></td>
+<td>1375</td>
+<td>Production core algorithm (<code>getTreeLayout()</code> L742-1133)</td>
+</tr>
+<tr>
+<td><code>tree_renderer.gd</code></td>
+<td>531</td>
+<td>Godot tree visualization</td>
+</tr>
+<tr>
+<td><code>tree_view_panel.gd</code></td>
+<td>159</td>
+<td>Godot panel controller</td>
+</tr>
+<tr>
+<td><code>path_app.js</code></td>
+<td>1166</td>
+<td>Frontend bridge and interaction handler</td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-findings">Key Findings<a class="headerlink" href="#key-findings" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>8 of 9 rules</strong> are completely missing from production</li>
+<li><strong>5 core concepts</strong> absent: ownership, expansion order, effective index, visibility chain, hull collision avoidance</li>
+<li><strong>7 existing features</strong> preserved: spine ID, contour collision, tributary placement, hull drawing, collapse state, WebSocket bridge, tree renderer</li>
+<li><strong>Production code is geometrically correct</strong> but lacks the semantic claiming/ownership layer</li>
+</ul>
+<h3 id="documents-updated">Documents Updated<a class="headerlink" href="#documents-updated" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="file:///e:/Knowledge_project/NoteConnection_app/implementation_plan.md">implementation_plan.md</a> — Phase 3 with 13 steps</li>
+<li><a href="file:///e:/Knowledge_project/NoteConnection_app/brainstorming.md">brainstorming.md</a> — Session 6: Ownership Engine design</li>
+<li><a href="file:///e:/Knowledge_project/NoteConnection_app/task.md">task.md</a> — v1.4.3 checklist (EN + ZH)</li>
+<li><a href="file:///e:/Knowledge_project/NoteConnection_app/TODO.md">TODO.md</a> — v1.4.3 implementation checklist</li>
+</ul>
+<h3 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h3>
+<p>Implementation of 13 steps across 4 components (Core Algorithm, Frontend Bridge, Godot Renderer, Worker Communication).</p>
+<h2 id="2026-08-17-identity-and-mobile-guardrail-walkthrough">2026-08-17 Identity and Mobile Guardrail Walkthrough<a class="headerlink" href="#2026-08-17-identity-and-mobile-guardrail-walkthrough" title="Permanent link">&para;</a></h2>
+<p>The target/data build and <code>NoteConnection</code> pass <code>kbRoot</code> into <code>FileLoader</code>, so full-workspace and subdirectory scans emit the same <code>relativePath</code> and <code>sourceUri</code>; callers that omit the root remain compatibility-only. Learning ingest keeps identity fields optional, path-only moves retain URI/revision, and URI/alias deletes resolve before the legacy path normalizer. Android checks metadata sizes before reading bodies and rejects over-budget document, byte, or edge counts; link candidates are extracted at read time so the intermediate projection does not retain document bodies. This is an admission guard, not device RSS evidence.</p>
+<hr />
+<ul>
+<li>Phase 8 replay validates a temporary graph before swapping it in, records explicit document moves, and preserves aliases for old layouts and deletes. Mobile exact analysis now resolves URI/alias references and reports explicit versus inferred edge provenance without document bodies. Bridge 2.0 capability and cancellation fields are additive; full device/APK and registry-parity evidence remains open. Current evidence is 35 replay/identity tests, 70 core/route tests, 501 learning tests, 51 mobile contract tests, and 26 Rust tests.</li>
+</ul>
+<h2 id="2026-08-17-phase-9-verification">2026-08-17 Phase 9 Verification<a class="headerlink" href="#2026-08-17-phase-9-verification" title="Permanent link">&para;</a></h2>
+<p>The route shadow run passed with 14 legacy-equivalent and 6 registry-only probes. It caught and fixed response-shape and error-status drift instead of normalizing those differences away. <code>NOTE_CONNECTION_ROUTE_DISPATCH_MODE=legacy</code> remains available for rollback diagnosis.</p>
+<p>The APK/AAB verifier is static and tooling-light: it reads ZIP central-directory metadata, requires arm64 in release mode, rejects Godot/sidecar/model/SVG leakage, enforces profile payload budgets, and requires an explicit RSS JSON. SQLite now has a close/reopen replay fixture, while graph restore has an atomic rollback fixture. Signed arm64 artifacts, device RSS, cross-host replay, and canonical-ID cutover remain open.</p>
+<h2 id="2026-08-17-phase-10-projection-and-host-adapter-walkthrough">2026-08-17 Phase 10 Projection and Host Adapter Walkthrough<a class="headerlink" href="#2026-08-17-phase-10-projection-and-host-adapter-walkthrough" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>knowledge_projection_contract.js</code> is loaded before the mobile analyzer and storage provider, so Capacitor and browser replay use the same body-free schema.</li>
+<li>Tauri Rust writes schema <code>1</code> identity metadata and bounded adjacency; Android continues to clear document bodies after link extraction.</li>
+<li><code>PathBridgeHostAdapter</code> is opt-in and preserves legacy relay semantics when absent. Adapter execution returns correlated results and handles timeout, disconnect, abort, and cancel propagation.</li>
+<li>Verification passed: <code>build:mini</code>, mobile-slim staging (120 files / 4,251,345 uncompressed / 1,545,813 estimated compressed), migration matrix (57 suites / 307 tests), focused projection/Bridge tests, <code>cargo check</code>, and targeted Rust tests. <code>rustfmt</code> is unavailable locally; signed arm64 APK/AAB and device RSS remain open.</li>
+</ul>
+<h2 id="2026-08-18-projection-store-and-saf-walkthrough">2026-08-18 Projection Store and SAF Walkthrough<a class="headerlink" href="#2026-08-18-projection-store-and-saf-walkthrough" title="Permanent link">&para;</a></h2>
+<p>The runtime path is now <code>graph_data.json</code> -&gt; <code>knowledge_projection_store.js</code> -&gt; versioned projection contract -&gt; <code>mobile_exact_analyzer</code>. Persistent hosts can provide <code>read/write</code>; a memory adapter preserves the last successful projection during a transient storage failure and still rejects unknown future schemas.</p>
+<p>Android uses an asynchronous SAF state machine: Rust requests <code>ACTION_OPEN_DOCUMENT_TREE</code>, Kotlin streams Markdown files into app-local <code>filesDir/Knowledge_Base</code> within the existing 16 MiB/document and 64 MiB/total budgets, then Rust polls a short result marker and persists only the app-local path. The external URI remains provenance, not identity. This keeps mobile packages sidecar/Godot/model/SVG free while supporting user-selected knowledge bases.</p>
+<p>Verification: 24 focused Jest tests, TypeScript no-emit, and 26 Rust tests pass. Generated Android patching is idempotent; a fresh arm64 slim build produced an unsigned APK (9,555,787 bytes) and AAB (7,179,228 bytes), and static artifact verification passed with no forbidden entries. Signed arm64, device import, and RSS evidence remain open.</p>
+<h2 id="2026-08-18-phase-12-app-local-replay-walkthrough">2026-08-18 Phase 12 App-Local Replay Walkthrough<a class="headerlink" href="#2026-08-18-phase-12-app-local-replay-walkthrough" title="Permanent link">&para;</a></h2>
+<p>The mobile load path now has an explicit file boundary:</p>
+<p><code>graph_data.json</code> -&gt; <code>createFileProjectionStore()</code> -&gt; versioned projection contract -&gt; <code>mobile_exact_analyzer</code>.</p>
+<p><code>createFileProjectionStore()</code> takes a host-owned <code>readFile(fileName)</code> and an optional <code>writeAtomic(fileName, serialized, projection)</code>. It deliberately stores the existing raw schema-1 projection rather than a new envelope, so Tauri/Rust and Android/Kotlin writers remain compatible. <code>storage_provider.js</code> selects this factory when available and falls back to the legacy generic store for older runtimes.</p>
+<p>The store distinguishes I/O failure from data incompatibility. A read failure can reuse the last successful value; malformed JSON, a future schema, invalid node/edge identity, or a size violation is surfaced and blocks analysis. The first load still reads the file even when an initial projection is supplied, so a stale bootstrap value cannot mask a newer app-local projection.</p>
+<p>Run the deterministic evidence command:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>npm run verify:mobile:projection-replay
+</code></pre></div>
+<p>It performs an atomic save in a temporary app-local directory, drops the first store instance, recreates a read-through store for Web/Tauri/Capacitor/Android, and compares metadata, exact search, neighbors, and shortest path. It then writes <code>output/verification/mobile-projection-replay/report-latest.json</code> and verifies truncated JSON and unknown schema fail closed. The output directory is ignored and is not a source artifact.</p>
+<p>After this change, <code>mobile:prepare:slim</code> stages 120 files (4,253,837 uncompressed; 1,546,201 estimated compressed). The rebuilt unsigned arm64 APK/AAB static payloads are 9,436,196 and 6,983,880 bytes; both remain below the 25 MiB budget and neither measurement includes device RSS.</p>
+<p>The route-shadow gate also waits for three consecutive stable runtime-directory manifests after readiness. This is required because the registry backend may finish its first SQLite initialization asynchronously after <code>/api/knowledge/state</code> returns; without the wait, a slow host can produce a false read-only side-effect failure.</p>
+<p>This closes code-level G3 replay evidence, not the device gate. A signed arm64 artifact, physical Android process-death/SAF import/query/path run, and peak RSS &lt;= 256 MiB are still required. SQLite/WASM remains an opt-in future adapter because the current bounded exact workload does not justify its mobile size, startup, and heap costs.</p>
+<h2 id="2026-08-18-phase-13-native-import-recovery-walkthrough">2026-08-18 Phase 13 Native Import Recovery Walkthrough<a class="headerlink" href="#2026-08-18-phase-13-native-import-recovery-walkthrough" title="Permanent link">&para;</a></h2>
+<p>The Android SAF import now has a restart-safe transaction boundary:</p>
+<p><code>ACTION_OPEN_DOCUMENT_TREE</code> -&gt; bounded staging tree -&gt; import journal -&gt; backup/activate -&gt; atomic result marker.</p>
+<p><code>KnowledgeBasePickerBridge</code> writes <code>knowledge_base_import_journal.v1.json</code> beside the app-local knowledge base. The journal records only app-local transaction names and an explicit phase. <code>MainActivity.onCreate()</code> calls recovery before the picker is exposed. A target that already exists wins cleanup; a missing target with a backup restores the previous knowledge base; abandoned staging is deleted. Invalid schema or path-escaping journal data fails closed.</p>
+<p>The result marker keeps the existing Rust request/poll contract, but now uses a sibling temporary file, <code>fsync</code>, and rename. This prevents a process death from turning a partially written marker into a false <code>completed</code> state. The journal is an internal durability mechanism, not a projection-schema change, so older clients and public IDs remain compatible.</p>
+<p>Verification for this increment: the Android picker contract suite, mobile profile/artifact contract suites, TypeScript no-emit, the 57-suite migration matrix (307 passed, 13 skipped), and <code>app:compileArm64ReleaseKotlin</code> pass. The current host has no online Android device, configured AVD, signing keystore, or RSS capture; G2/G3 native device evidence remains open.</p>
+<h2 id="2026-08-18-phase-14-signed-device-evidence-walkthrough">2026-08-18 Phase 14 Signed Device Evidence Walkthrough<a class="headerlink" href="#2026-08-18-phase-14-signed-device-evidence-walkthrough" title="Permanent link">&para;</a></h2>
+<p>The release path is now explicit:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>signed arm64 APK
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>-&gt; verify ZIP/arm64/signature/budget
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>-&gt; install on selected Android device
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>-&gt; SAF import -&gt; graph build -&gt; exact query -&gt; path
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>-&gt; force-stop -&gt; relaunch -&gt; continuity query
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>-&gt; sample /proc/&lt;pid&gt;/status:VmRSS
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>-&gt; write manifest + rss.json + logcat tail
+</code></pre></div>
+<p><code>capture-tauri-android-rss-evidence.js</code> accepts only a schema-1 workload spec with explicit <code>adbArgs</code>. It requires the five ordered phases, rejects duplicate or missing steps, masks serials, records artifact SHA-256 and signature metadata, and fails without an observed process death or RSS sample. The recorder is an evidence boundary, not a UI automation claim: SAF taps and continuity assertions must be supplied by the device-lab workload.</p>
+<p>The current host can run the parser and contract tests, but has no signing keystore, online device, configured AVD, or workload spec. Therefore no <code>latest.json</code> is produced and G2/G3 remain pending. Static slim size and unsigned arm64 checks continue to be reported separately.</p>
+<h2 id="2026-08-18-phase-15-native-boundary-and-identity-corpus-walkthrough">2026-08-18 Phase 15 Native Boundary and Identity Corpus Walkthrough<a class="headerlink" href="#2026-08-18-phase-15-native-boundary-and-identity-corpus-walkthrough" title="Permanent link">&para;</a></h2>
+<p>The projection replay report now exercises four distinct host boundaries:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Web storage -&gt; projection store
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Tauri atomic file -&gt; temporary file + rename
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Capacitor filesystem -&gt; bounded chunk writer + rename
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>Android app-local file -&gt; journaled backup/activation
+</code></pre></div>
+<p>Each host entry records its adapter kind and <code>host-boundary-contract</code> evidence level. This closes the previous false signal where four labels all called the same Node <code>fs</code> adapter, while keeping device-only claims pending.</p>
+<p>The graph projection now carries <code>canonicalId</code> as additive metadata derived from <code>sourceUri</code>. Legacy <code>id</code> remains unchanged, old layouts remain readable, and the exact analyzer resolves both IDs. Duplicate canonical IDs are rejected before analysis; no public-ID cutover is performed.</p>
+<p>Route shadow expanded to 17 equivalent probes. Malformed JSON now yields the same 400 body and <code>X-Error-Code: invalid_json</code> on both dispatch paths, and inline <code>/api/build</code> rejects unsupported recompute modes before graph mutation. The G4 corpus covers same-content isolation, NFC/case collision, cross-root normalization, legacy snapshot replay, and atomic rollback.</p>
+<p>Android graph loading now caps each file before full UTF-8 materialization, so a file changed after directory enumeration cannot bypass the mobile memory budget. Verification remains split: host contract tests may pass locally, but signed-device SAF, process-death continuity, and RSS &lt;= 256 MiB are still required for G2/G3.</p>
+<p>The current post-change slim staging measures 121 files, 4,263,740 uncompressed bytes, and 1,548,695 estimated compressed bytes. Existing APK/AAB files are older unsigned outputs and must be rebuilt before they can be attributed to this source revision.</p>
+<p>Verification snapshot: full Jest 144 suites / 1,263 passed / 26 skipped; TypeScript no-emit, Rust host and Android arm64 checks, projection replay, route shadow (17 + 6 probes), slim budget, and Diataxis all pass. Real signed-device evidence remains unavailable.</p>
+<h2 id="2026-08-18-phase-16-portable-identity-propagation-walkthrough">2026-08-18 Phase 16 Portable Identity Propagation Walkthrough<a class="headerlink" href="#2026-08-18-phase-16-portable-identity-propagation-walkthrough" title="Permanent link">&para;</a></h2>
+<p><code>canonicalId</code> now travels through every current projection producer. TypeScript identity generation, <code>FileLoader</code>, and desktop <code>GraphBuilder</code> emit it additively; the browser identity contract and Capacitor graph use the same normalized path rule; Android Rust emits the same field from its normalized relative path. Legacy <code>id</code> remains the graph key, so old layout and snapshot replay are unchanged.</p>
+<p>The important boundary is semantic, not cosmetic: <code>canonicalId</code> is the cross-host comparison key, while <code>sourceUri</code> remains the portable provenance and <code>id</code> remains the compatibility alias. Duplicate canonical identities still fail closed. This lets the next corpus compare node and edge meaning without forcing a public-ID migration.</p>
+<h2 id="2026-08-18-phase-17-cross-host-semantic-parity-walkthrough">2026-08-18 Phase 17 Cross-Host Semantic Parity Walkthrough<a class="headerlink" href="#2026-08-18-phase-17-cross-host-semantic-parity-walkthrough" title="Permanent link">&para;</a></h2>
+<p>The parity boundary is now executable. <code>mobile_semantic_comparator.js</code> ignores host-specific legacy IDs and compares normalized canonical nodes plus directed edges with endpoint URI, type, kind, and provenance. It rejects duplicate semantic identities so a collision cannot be hidden by ordering.</p>
+<p>Capacitor link resolution now follows the Rust policy: direct canonical path, source-relative path, then unique stem fallback. Both worker and single-thread paths use the same resolver. Rust decodes percent-encoded Markdown targets, normalizes NFC/lowercase, and rejects duplicate canonical paths and ambiguous legacy basenames. The projection contract preserves distinct provenance when two mechanisms connect the same endpoints.</p>
+<p><code>verify-mobile-projection-replay.js</code> creates one temporary corpus containing nested paths, relative and Markdown links, same-content documents, and an NFC-normalized percent-encoded path. It builds the corpus through Capacitor and an actual ignored Rust Cargo probe, then reports semantic equality (<code>6</code> nodes, <code>4</code> edges). This is stronger code-level evidence than raw JSON equality, but it remains below signed-device, SAF UI, process-death, and RSS acceptance.</p>
+<p>The forward-compatible decision is unchanged: keep <code>id</code> and schema-1 snapshots stable, keep the comparator out of the mobile runtime bundle, and defer public canonical-ID or SQLite/WASM promotion until native replay, rollback, move-journal, collision, and RSS evidence are archived.</p>
+<p>Full verification passes 146 Jest suites / 1,271 passed / 26 skipped, TypeScript no-emit, and 28 Rust host tests plus 1 ignored probe. Focused parity coverage is 3 suites / 12 tests; the new recovery contract is an additional 1 suite / 1 test. Fresh <code>mobile-slim</code> staging is 121 files / 4,275,083 uncompressed bytes / 1,550,638 estimated compressed bytes with SHA-256 <code>5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38</code>; the test-only comparator and recovery verifier are excluded and RSS remains <code>not measured</code>. Code-level semantic parity and host recovery replay pass; signed-device SAF/query/path, process-death continuity, and RSS &lt;= 256 MiB remain open gates.</p>
+<h2 id="2026-08-18-phase-18-native-recovery-state-machine-walkthrough">2026-08-18 Phase 18 Native Recovery State-Machine Walkthrough<a class="headerlink" href="#2026-08-18-phase-18-native-recovery-state-machine-walkthrough" title="Permanent link">&para;</a></h2>
+<p><code>verify-mobile-native-recovery.js</code> replays the production Kotlin journal contract in a temporary host directory. The six scenarios are state-oriented: an existing target wins over staging/backup artifacts; a missing target is restored from a valid backup; orphan backups are recovered; unsafe journal paths and unknown schemas fail closed.</p>
+<p>The contract test emits schema-1 evidence with <code>evidenceLevel: host-recovery-state-machine</code> and <code>nativeDeviceEvidence: false</code>. This is a deterministic host mirror and CI drift detector, not Android process-death, SAF UI, storage/permission failure, signed artifact, or RSS evidence. The mobile runtime remains Kotlin-owned and the verifier is excluded from mobile-slim.</p>
+<p>The next gate is still native: signed arm64 execution, SAF import/query/path, force-stop/reopen continuity, failure-path replay, and RSS &lt;= 256 MiB on representative low-memory hardware. Public-ID and SQLite/WASM promotion remain frozen until those artifacts and the old-snapshot/move-journal/collision/rollback corpus are archived.</p>
+<h2 id="2026-08-18-phase-19-native-import-failure-path-retention-walkthrough">2026-08-18 Phase 19 Native Import Failure-Path Retention Walkthrough<a class="headerlink" href="#2026-08-18-phase-19-native-import-failure-path-retention-walkthrough" title="Permanent link">&para;</a></h2>
+<p>The Android import failure boundary now follows this state rule:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>failure -&gt; delete staging
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>        -&gt; backup absent: clear journal
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>        -&gt; backup present: retain backup + journal for next bind recovery
+</code></pre></div>
+<p>The old unconditional cleanup could delete the only known-good corpus after a failed activation and failed rollback. The contract assertion is scoped to that catch block, while successful replacement and recovery cleanup remain valid. Result markers and Rust polling are unchanged, and no runtime dependency enters <code>mobile-slim</code>.</p>
+<p>This remains code-level evidence. Signed arm64 rollback/recovery, SAF and permission failures, force-stop continuity, signed artifacts, and RSS &lt;= 256 MiB still require native execution.</p>
+<h2 id="2026-08-18-phase-20-recovery-retry-and-fresh-arm64-artifact-walkthrough">2026-08-18 Phase 20 Recovery Retry and Fresh Arm64 Artifact Walkthrough<a class="headerlink" href="#2026-08-18-phase-20-recovery-retry-and-fresh-arm64-artifact-walkthrough" title="Permanent link">&para;</a></h2>
+<p>Startup recovery now preserves a journaled backup when rename fails and reports <code>import_recovery_pending</code>; orphan recovery reports <code>orphan_recovery_pending</code>. The host verifier covers 8 scenarios, including deterministic retry retention, while remaining explicitly non-native evidence.</p>
+<p>The fresh slim arm64 build passed static verification for an unsigned universal APK (<code>9,576,838</code> compressed payload bytes, SHA-256 <code>eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6</code>) and AAB (<code>7,055,579</code> compressed payload bytes, SHA-256 <code>ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934</code>). Both are below 25 MiB; signature, device continuity, and RSS remain open.</p>
+<h2 id="2026-08-18-phase-21-host-gate-reconciliation-walkthrough">2026-08-18 Phase 21 Host Gate Reconciliation Walkthrough<a class="headerlink" href="#2026-08-18-phase-21-host-gate-reconciliation-walkthrough" title="Permanent link">&para;</a></h2>
+<p>The post-Phase-20 host check is reproducible: Android prerequisites, TypeScript no-emit, the 8 recovery scenarios, and the 4-host projection replay pass. Generated reports are ignored and <code>git status</code> remains clean.</p>
+<p>The available AVD is <code>Medium_Phone_API_36.1</code> at <code>E:\Android\avd\Medium_Phone.avd</code>, Android <code>36.1</code> / Play Store / <code>x86_64</code>, with 2 GiB RAM. <code>adb devices -l</code> has no online target. It is a tooling smoke target only, not arm64 release evidence. No approved <code>.jks</code>, <code>.keystore</code>, or <code>.p12</code> was found, so unsigned artifacts remain static evidence and <code>--require-signed</code> must fail before device execution.</p>
+<p>Next run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>CI ephemeral signing -&gt; signed arm64 APK/AAB
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>-&gt; approved arm64 low-memory device
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>-&gt; SAF import -&gt; graph build -&gt; exact query -&gt; path
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>-&gt; force-stop -&gt; relaunch -&gt; continuity
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>-&gt; storage/permission retry -&gt; VmRSS samples
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>-&gt; manifest + rss.json + artifact hash + logcat
+</code></pre></div>
+<p>X86_64 rebuilds, local debug keystores, and emulator-only evidence are explicitly not release substitutes. Public-ID cutover, default SQLite/WASM, and budget changes remain frozen.</p>
+<h2 id="2026-08-18-phase-22-ci-signing-gate-and-mobile-budget-reconciliation-walkthrough">2026-08-18 Phase 22 CI Signing Gate and Mobile Budget Reconciliation Walkthrough<a class="headerlink" href="#2026-08-18-phase-22-ci-signing-gate-and-mobile-budget-reconciliation-walkthrough" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>CI secrets -&gt; ephemeral release.jks
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>-&gt; slim aarch64 build
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>-&gt; signed APK/AAB verification (--require-arm64 --require-signed)
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>-&gt; publish verified artifacts + remove keystore
+</code></pre></div>
+<p>Local builds remain unsigned. AAB status <code>4</code> is accepted only for a signed archive with an untrusted/self-signed chain. The local smoke payloads were APK <code>9,576,838</code> and AAB <code>7,140,668</code> compressed bytes; they are not release provenance.</p>
+<p>The slim manifest is 121 files / <code>4,275,083</code> uncompressed / <code>1,550,638</code> estimated compressed bytes. The arm64 Rust library is the largest APK item. Runtime proof still requires bounded content reads, SAF staging/retry behavior, and native RSS. The <code>universal</code> label remains unproven because only <code>arm64-v8a</code> native payload was observed; rename or verify per ABI before claiming it.</p>
+<p>Native acceptance remains:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>approved key + online arm64 device
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>-&gt; SAF import -&gt; graph build -&gt; exact query -&gt; path
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>-&gt; force-stop -&gt; reopen -&gt; continuity
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>-&gt; storage/permission retry -&gt; VmRSS samples
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>-&gt; manifest + rss.json + artifact hash + logcat
+</code></pre></div>
+<p>Missing evidence or RSS above 256 MiB fails closed. Public-ID, SQLite/WASM defaulting, Godot inclusion, and budget changes remain frozen.</p>
+<h2 id="2026-08-18-phase-23-versioned-mobile-budget-contract-and-arm64-truthfulness">2026-08-18 Phase 23 Versioned Mobile Budget Contract and Arm64 Truthfulness<a class="headerlink" href="#2026-08-18-phase-23-versioned-mobile-budget-contract-and-arm64-truthfulness" title="Permanent link">&para;</a></h2>
+<p>The manifest now records schema-1 artifact/RSS/runtime budgets from <code>config/mobile-budget.v1.json</code>. Rust rejects serialized projections over 48 MiB before atomic replacement and reuses the 16 MiB bounded reader for Android content. The release job builds <code>aarch64</code>, requires exactly <code>arm64-v8a</code>, and publishes <code>noteconnection-arm64-release.apk/.aab</code>; it no longer labels the artifact universal. These are additive guards; native SAF/restart/RSS evidence is still required.</p>
+<h2 id="2026-08-21-phase-24-cross-host-runtime-budget-projection-and-native-evidence-separation">2026-08-21 Phase 24 Cross-Host Runtime Budget Projection and Native Evidence Separation<a class="headerlink" href="#2026-08-21-phase-24-cross-host-runtime-budget-projection-and-native-evidence-separation" title="Permanent link">&para;</a></h2>
+<p><code>mobile_budget_runtime.js</code> is loaded before the storage provider and projects the versioned limits into WebView/Capacitor without adding a runtime dependency. Capacitor now checks UTF-8 bytes, performs a filesystem-size preflight when available, and rejects over-depth entries before reading them. Tauri applies the same projection ceiling before bootstrap/IPC reads.</p>
+<p>The release workflow separates packaging from acceptance: signed arm64 APK/AAB are first workflow artifacts, while GitHub Release upload requires the self-hosted arm64 workload, force-stop/reopen continuity, and measurable RSS evidence. Static staging is 122 files / 4,283,033 uncompressed bytes / 1,552,689 estimated compressed bytes / SHA-256 <code>c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c</code>; native G2/G3 is still pending.</p>
+<h2 id="2026-08-21-phase-25-collision-safe-identity-transition-and-owner-convergence-walkthrough">2026-08-21 Phase 25 Collision-Safe Identity Transition and Owner Convergence Walkthrough<a class="headerlink" href="#2026-08-21-phase-25-collision-safe-identity-transition-and-owner-convergence-walkthrough" title="Permanent link">&para;</a></h2>
+<p><code>move</code>/<code>rename</code> now checks the complete destination alias set before mutation. Current path, current URI, and every retained alias of every other document participate in collision detection, so a rejected move cannot silently steal a compatibility lookup.</p>
+<p>After a valid move, <code>KnowledgeLearningPlatform</code> preserves the legacy <code>documentId</code> and content revision, updates atoms/evidence, and mirrors the new identity into <code>ResourceRegistry</code>, its workspace binding, and <code>IndexLifecycle</code>. Existing resource/projection/index IDs and content hashes remain stable. The persisted G4 fixture verifies both rejected collision state and successful four-owner convergence.</p>
+<p>This is an in-process owner-convergence boundary, not a full transaction engine. A mixed ingest request can still expose partial state if a later operation fails; whole-request preflight or journaled rollback is the next reliability slice. No mobile dependency, database, model, Godot asset, budget, or public-ID change was introduced. Focused verification is 3 suites / 11 tests plus TypeScript no-emit and <code>git diff --check</code>; full regression is 148 Jest suites / 1,284 passed / 26 skipped, Rust 30 passed / 1 ignored, and four-host projection replay plus fresh mobile-low budget pass. Native G2/G3 remains open.</p>
+<h2 id="2026-08-21-phase-26-request-level-ingest-atomicity-and-single-writer-serialization-walkthrough">2026-08-21 Phase 26 Request-Level Ingest Atomicity and Single-Writer Serialization Walkthrough<a class="headerlink" href="#2026-08-21-phase-26-request-level-ingest-atomicity-and-single-writer-serialization-walkthrough" title="Permanent link">&para;</a></h2>
+<p><code>ingestKnowledge</code> is now serialized per platform instance. Before a request mutates the graph, it captures a deep copy of the versioned snapshot. If an operation, relation recompute, owner mirror, or atomic save fails, document/atom/evidence state, secondary registries, index state, identity journal, telemetry, and the ID counter restore together. A second import cannot interleave with that restore.</p>
+<p>The boundary validates <code>upsert</code> and <code>move</code> ownership: duplicate path/URI/aliases, an explicit move whose <code>from*</code> alias belongs elsewhere, ambiguous source aliases, and missing owners are rejected. The mixed-batch fixture verifies unchanged persisted bytes after a later collision and then proves the original alias remains usable for a subsequent move.</p>
+<p>The implementation reuses the existing snapshot/replay contract, leaving public IDs, projection schemas, Bridge fields, and the runtime-first mobile package unchanged. Transient memory and JSON clone/restore latency grow with the current graph, so low-memory native acceptance must use bounded batches and record RSS. Versioned G4 manifests and signed arm64 evidence remain release gates.</p>
+<p>Current verification is 148 Jest suites / 1,287 passed / 26 skipped, Rust 30 passed / 1 ignored, TypeScript no-emit, 122-file mobile-low staging, four-host projection replay, eight native-recovery scenarios, Diataxis, and <code>git diff --check</code>.</p>
+<h2 id="2026-08-21-phase-27-versioned-g4-identity-corpus-replay-walkthrough">2026-08-21 Phase 27 Versioned G4 Identity Corpus Replay Walkthrough<a class="headerlink" href="#2026-08-21-phase-27-versioned-g4-identity-corpus-replay-walkthrough" title="Permanent link">&para;</a></h2>
+<p><code>config/identity-corpus.v1.json</code> defines the tracked G4 contract. The verifier runs eight production-path cases: legacy snapshot atomic restore, same-content isolation, cross-root NFC normalization, NFC/case collision rejection, move-journal restart plus old-alias deletion, mixed-batch rollback, four-owner convergence, and upsert alias collision rejection. It then requires the existing Web/Tauri/Capacitor/Android projection replay.</p>
+<p>All 8 cases and 4 hosts passed. The stable result hash is <code>4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb</code>. The report is <code>host-code-replay</code> with <code>nativeDeviceEvidence: false</code>, so it is not a signed-device, process-death, or RSS claim. Public-ID migration remains a separate review; G2/G3 still require signed arm64 hardware, SAF/retry/continuity, and RSS evidence.</p>
+<p>Final regression is 149 Jest suites / 1,289 passed / 26 skipped; TypeScript no-emit, Rust 30 passed / 1 ignored, mobile-low budget, native recovery, projection replay, Diataxis, and <code>git diff --check</code> passed.</p>
+<h2 id="2026-08-21-phase-28-canonical-id-migration-readiness-gate-walkthrough">2026-08-21 Phase 28 Canonical-ID Migration Readiness Gate Walkthrough<a class="headerlink" href="#2026-08-21-phase-28-canonical-id-migration-readiness-gate-walkthrough" title="Permanent link">&para;</a></h2>
+<p>Run <code>npm run verify:canonical:id:readiness</code> for the non-destructive audit. It replays the versioned corpus, checks all four projection hosts and current <code>canonicalId</code> producers, then emits a structured <code>blocked</code> report while <code>NoteNode.id</code>, layouts, snapshots, APIs, and mobile payloads remain unchanged. The default success means the audit ran; it does not mean migration is approved.</p>
+<p>Run the same command with <code>--strict</code> in a release workflow. It fails closed until native device evidence exists, preventing host-only replay from being treated as signed Android acceptance.</p>
+<h2 id="2026-08-21-phase-29-tauri-primary-mobile-release-routing">2026-08-21 Phase 29 Tauri-Primary Mobile Release Routing<a class="headerlink" href="#2026-08-21-phase-29-tauri-primary-mobile-release-routing" title="Permanent link">&para;</a></h2>
+<p>Use <code>npm run mobile:build:release</code> for the documented Android release path. It delegates to Tauri Android and keeps the slim/prerequisite gates in one owner. <code>npm run mobile:build:compatibility</code> is the explicit legacy Capacitor-plus-Tauri check; <code>mobile:build:both</code> remains unchanged for callers that already depend on it.</p>
+<p>Regression verification is 150 Jest suites / 1,291 passed / 26 skipped; TypeScript no-emit, Tauri Rust 30 passed / 1 ignored, Fixrisk FR-001..FR-015, Diataxis, and <code>git diff --check</code> passed.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

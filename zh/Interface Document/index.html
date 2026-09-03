@@ -1,0 +1,3310 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/zh/Interface%20Document/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>2026-04-07 v1.7.0 - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#2026-04-07-v170" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              2026-04-07 v1.7.0
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="2026-04-07-v170">2026-04-07 v1.7.0<a class="headerlink" href="#2026-04-07-v170" title="Permanent link">&para;</a></h1>
+<h1 id="v170">接口文档 (v1.7.0)<a class="headerlink" href="#v170" title="Permanent link">&para;</a></h1>
+<p>本文件是当前代码状态下的权威接口交接文档。</p>
+<h2 id="2026-07-11-v180-coverage-driven">2026-07-11 v1.8.0 - Coverage-driven 图回答契约<a class="headerlink" href="#2026-07-11-v180-coverage-driven" title="Permanent link">&para;</a></h2>
+<p>Conversation response 现在新增两个 additive contract：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">AgentConversationResponse</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nx">graphAnswerPlan?</span><span class="o">:</span><span class="w"> </span><span class="kt">GraphAnswerPlan</span><span class="p">;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nx">graphAnswerCoverage?</span><span class="o">:</span><span class="w"> </span><span class="kt">GraphAnswerCoverageReview</span><span class="p">;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">}</span>
+</code></pre></div>
+<p>相同字段也存在于 <code>AgentConversationTrace</code>、<code>KnowledgeRun</code>、knowledge-run workflow artifact 和导出的 <code>knowledgeRunReports</code> 摘要中。</p>
+<p><code>GraphAnswerPlan</code> 包含 anchor、intent/depth、有证据的 claim、required role、关系边 provenance 和 omitted candidate。<code>GraphAnswerCoverageReview</code> 记录 required、covered、missing claim ID 与归一化 coverage score。</p>
+<p><code>graph_answer_plan_coverage</code> 是新增的 <code>AnswerReleaseGateId</code>。必要图 claim 缺失时可触发 revision。字符数和句数不再是发布 gate。</p>
+<p>公开证据统一通过 <code>src/learning/ragPublicText.ts</code> shaping：展示前移除 authoring/control instruction、Markdown 表格脚手架、标题语法和 fenced renderer source。该 shaping 不得删除事实引导句，也不得绕过 claim coverage。</p>
+<p>兼容性：所有新增 response 字段保持 optional；旧客户端仍可继续消费 <code>assistantMessage</code>、<code>answer</code>、blocks、citations 和 release review。</p>
+<h3 id="2026-07-18">2026-07-18 校准与扩展补充契约<a class="headerlink" href="#2026-07-18" title="Permanent link">&para;</a></h3>
+<p><code>AgentConversationTrace.graphExpansion</code> 是 additive replay contract，包含 <code>enabled</code>、<code>reason</code>、<code>maxSteps</code>、<code>executedSteps</code>、<code>maxNeighbors</code>、<code>selectedNeighborCount</code> 和 <code>maxPathDepth</code>。普通查询暴露禁用的 <code>0</code> 步策略；只有显式 deep/research 表述才启用有界 <code>1</code> 步策略。</p>
+<p>Required-claim coverage 现在使用确定性的多语言概念归一化与分句极性一致性。它仍是保守发布 gate，不是开放式语义蕴含服务。<code>evaluateGraphAnswerCoverageCalibration()</code> 会针对版本化语料报告 precision、recall 与 false-positive/false-negative case ID。</p>
+<p>前端只在 Grounding Inspector 中投影 plan、coverage 与 expansion 摘要。Assistant answer renderer 不消费这些内部规划字段。
+本版不是在旧文档上追加，而是按源码核对后重建。</p>
+<h2 id="00-v170">0.0 多平台构建契约补充（v1.7.0）<a class="headerlink" href="#00-v170" title="Permanent link">&para;</a></h2>
+<p>本补充段专门固化当前 Git LFS 迁移和跨平台交付安全所依赖的构建/运行时契约。</p>
+<p>配套权威文档：</p>
+<ul>
+<li><code>docs/zh/lfs_asset_migration_plan.md</code></li>
+<li><code>docs/zh/multi_platform_build_flow_audit.md</code></li>
+<li><code>docs/zh/sidecar_supply_strategy.md</code></li>
+</ul>
+<p>当前构建契约结论：</p>
+<ul>
+<li>默认前端构建契约已经是 <code>npm run build</code> 对应的 runtime-first。</li>
+<li>显式 full-mode 仍被支持，而且桌面 <code>tauri:build:full</code> 现在会通过 <code>scripts/run-tauri-frontend-build.js</code> 穿过 Tauri <code>beforeBuildCommand</code> 保留 full-mode。</li>
+<li>Android 构建工具链的当前基线是 JDK 21+，无论是本地 helper 校验还是 CI/release 都以此为准。</li>
+<li>Capacitor 打包与 Tauri Android 打包必须和“移动端运行时能力”分开看：</li>
+<li>在具备 Filesystem API 时，Capacitor 原生运行时可本地图谱构建。</li>
+<li>Tauri Android 运行时暴露原生命令 <code>build_graph_runtime</code>，并上报 <code>supports_build=true</code>。</li>
+<li>桌面 sidecar/bootstrap 仍是当前有效的构建契约；现阶段迁移方向是加固供给链，而不是删除这套架构。</li>
+<li>当前 Godot bootstrap 在下载契约层已经是 provider-neutral：固定摘要的 GitHub Releases URL 与通用 HTTPS 对象存储镜像 URL 都能落在同一套 URL + SHA256 + cache 模型中。</li>
+<li>release CI 现在也加入了一个最小 Godot 镜像切片：会维护项目自控的 GitHub Releases 镜像 tag，并以“镜像优先、上游回退”方式下载，作为迁移期的安全护栏。</li>
+</ul>
+<p>本补充段已核对的构建面文件：</p>
+<ul>
+<li><code>package.json</code></li>
+<li><code>build_apk.bat</code></li>
+<li><code>capacitor.config.ts</code></li>
+<li><code>scripts/copy-assets.js</code></li>
+<li><code>scripts/run-tauri-build.js</code></li>
+<li><code>scripts/run-tauri-frontend-build.js</code></li>
+<li><code>scripts/run-tauri-android.js</code></li>
+<li><code>scripts/verify-tauri-android-prereqs.js</code></li>
+<li><code>src-tauri/tauri.conf.json</code></li>
+<li><code>src-tauri/tauri.android.conf.json</code></li>
+<li><code>src-tauri/src/lib.rs</code></li>
+<li><code>src/frontend/storage_provider.js</code></li>
+<li><code>src/frontend/source_manager.js</code></li>
+<li><code>.github/workflows/release-desktop-multi-os.yml</code></li>
+<li><code>.github/workflows/npm-publish.yml</code></li>
+</ul>
+<h2 id="00a-2026-06-06">0.0A 知识运行时契约补充（2026-06-06）<a class="headerlink" href="#00a-2026-06-06" title="Permanent link">&para;</a></h2>
+<p>本补充段记录当前已经有代码支撑的知识运行时契约，不改变公开 API。</p>
+<p>当前契约面：</p>
+<ul>
+<li><code>KnowledgeQueryRequest.scope</code> 接受 <code>KnowledgeCorpusScope</code>，支持 workspace、corpus、document、atom、source-path-prefix 与 language 约束。</li>
+<li><code>AgentConversationResponse</code> 保持向前兼容：</li>
+<li><code>assistantMessage</code> 对旧客户端仍有效，</li>
+<li><code>answer</code>、<code>citations</code>、<code>knowledgePoints</code>、<code>memoryActions</code>、<code>summary</code>、<code>trace</code> 暴露 grounded conversation 状态，</li>
+<li>可选 <code>assistantBlocks</code> 为能渲染 typed reply 的客户端提供 richer 分块回复。</li>
+<li><code>AgentConversationKnowledgePoint</code> 现在还可以携带按知识点/文档聚合后的字段，例如 <code>atomIds</code>、<code>documentId</code>、<code>sourcePath</code>、<code>citations</code>、<code>matchedSpans</code> 与 <code>matchCount</code>。</li>
+<li>scoped query 解析现在也可能返回 <code>scopeSource: planner_scope_recovery</code>：当 title-like recovery 故意离开原始显式 corpus 边界、切到 document-only recovery scope 时，会通过该字段显式暴露。</li>
+<li><code>/api/knowledge/conversation</code> 支持当前会话路径，包括 stream-first 客户端与 sync fallback 行为。</li>
+<li><code>/api/knowledge/conversation-memory/{list,add,search,delete,feedback}</code> 暴露 scoped conversation memory 操作。</li>
+<li><code>/api/knowledge/workspace-readiness</code> 暴露用于 scoped runtime 决策的 workspace/corpus readiness。</li>
+<li><code>POST /api/knowledge/export/workspace</code> 暴露 deterministic workspace export bundle，其数据来自 resource、index、workspace、session、workflow、memory 与 render-materialization 状态。</li>
+<li>运行时治理端点与 payload 暴露 graphdb/vector rollout 上下文，包括 <code>rolloutProfile</code>、graphdb connector health、vector acceleration strictness 与 runbook checks。</li>
+<li>Knowledge Workspace 前端契约现在也包括工作区内 scope 切换器、紧凑的 <code>/api/knowledge/conversation</code> 状态条、按文件优先的 grouped hit 渲染，以及 focus pane 中的 matched-span 证据渲染。</li>
+<li><code>assistantBlocks</code> 已不再只是对同一段 plain answer 的薄运输包装。对于支持 Tauri rich reply 的客户端，现在应预期 intent-aware 的 overview / explanation / evidence / memory / action 分块，同时继续把 <code>assistantMessage</code> 视为兼容性 fallback。</li>
+</ul>
+<h2 id="00b-dag-2026-06-10">0.0B 知识工作区与 DAG 对齐补充（2026-06-10）<a class="headerlink" href="#00b-dag-2026-06-10" title="Permanent link">&para;</a></h2>
+<ul>
+<li>当前 Knowledge Workspace 运行时现在已经包含 durable workflow-artifact 路径：<code>flashcard_batch</code> 与 <code>knowledge_run</code>，并通过 <code>/api/knowledge/workflow-artifacts</code> 与 <code>/api/knowledge/workflow-artifacts/review-follow-up</code> 暴露。</li>
+<li>运行时兼容性仍保持 additive：</li>
+<li><code>assistantMessage</code> 继续有效，</li>
+<li><code>answer</code>、<code>assistantBlocks</code>、<code>knowledgeRun</code>、按文档聚合的 <code>knowledgePoints</code>、citations、memory actions 与 trace 与旧客户端共存。</li>
+<li>当前代码已经具备真实的 DAG 学习底座：</li>
+<li><code>KnowledgeAtom</code></li>
+<li><code>RelationEdge</code></li>
+<li><code>TemporalEdge</code></li>
+<li>path query</li>
+<li>prerequisite 驱动 mastery/session 流</li>
+<li><code>KnowledgeQueryItem.relationPath</code></li>
+<li>当前架构判断：</li>
+<li>graph-backed retrieval 与 learning-path/session logic 已实现，</li>
+<li>graph-native answer planning 仍未完成，因为 retrieval 与 answer synthesis 之间还缺 dedicated graph-conditioned context-assembly layer。</li>
+<li>当前产品面判断：</li>
+<li>按文件优先的 grouped knowledge hit 与右侧原文高亮阅读已经实现，</li>
+<li>用户可见回答区现在已在 composer/frontend 边界收缩：<code>answer</code> 与 <code>directAnswer</code> 保持 targeted，graph path、citation、memory note、diagnostic 与 durable artifact 进入次级 evidence/export surface。</li>
+</ul>
+<h2 id="00c-agent-knowledge-dag-2026-06-17">0.0C Agent Knowledge DAG 回答契约补充（2026-06-17）<a class="headerlink" href="#00c-agent-knowledge-dag-2026-06-17" title="Permanent link">&para;</a></h2>
+<ul>
+<li>agent knowledge graph context 指本项目现有 DAG 形态的学习底座，不是泛化图数据库替换方案。</li>
+<li><code>AgentConversationGraphContext.connectionPaths</code> 是可选 additive 字段，用于显式 store-backed atom paths。</li>
+<li>每条路径携带 source/target atom 身份、有序 atom ID/title、边关系类型与长度。</li>
+<li>客户端与导出路径必须继续接受不包含该字段的 graph context。</li>
+<li>conversation 兼容性不变：<code>assistantMessage</code> 仍有效，<code>answer</code>、<code>assistantBlocks</code>、按文档聚合的 <code>knowledgePoints</code>、citations、memory actions、workflow artifacts 与 <code>trace.graphContext</code> 继续作为增量字段共存。</li>
+<li>evidence pane 渲染与 workspace export 可以把 connection paths 暴露为次级 inspection material；公开回答渲染应继续只针对用户问题。</li>
+<li>后续 graph-native answer planning 应在 retrieval 与 answer synthesis 之间实现有界 graph-conditioned context assembly，并使用 <code>KnowledgeAtom</code>、<code>RelationEdge</code>、<code>TemporalEdge</code>、evidence spans 与 store-level path operations。</li>
+<li>graph ops 不可用或失败时，运行时必须带 diagnostics fail open 到当前 retrieval-grounded answer 路径。</li>
+</ul>
+<h2 id="00d-2026-06-19">0.0D 最终回答审核与证据投影补充（2026-06-19）<a class="headerlink" href="#00d-2026-06-19" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>AnswerReleaseReview</code> 现在已经是一级运行时契约，而不是方案占位。</li>
+<li><code>AnswerReleaseDecision</code> 继续保持 <code>release</code> | <code>revise</code> | <code>abstain</code>。</li>
+<li>当前 gate 覆盖 <code>evidence_sufficiency</code>、<code>graph_support_sufficiency</code>、<code>claim_grounding_alignment</code>、<code>query_intent_alignment</code>、<code>claim_structured_consistency</code>、<code>claim_attribute_consistency</code>、<code>claim_containment_consistency</code>、<code>claim_composition_consistency</code>、<code>claim_purpose_consistency</code>、<code>claim_dependency_consistency</code>、<code>claim_subject_consistency</code>、<code>claim_state_consistency</code>、<code>claim_polarity_consistency</code>、<code>claim_graph_causal_consistency</code>、<code>claim_graph_order_consistency</code>、<code>claim_graph_comparison_consistency</code>、<code>public_surface_contraction</code>、<code>internal_diagnostic_leakage</code> 与 <code>abstention_hygiene</code>。</li>
+<li><code>src/learning/conversationComposer.ts</code> 在对外暴露 public <code>answer</code> / <code>directAnswer</code> 之前，必须把 scoped draft answer、按文档聚合的 knowledge points、citations、resolved scope 与可选 graph context 一并送入 <code>reviewAnswerRelease(...)</code>。</li>
+<li><code>src/learning/KnowledgeLearningPlatform.ts</code>、workspace export 与前端 reply 渲染必须把 answer-release telemetry 视为 additive inspection material：</li>
+<li>public answer text，</li>
+<li>review decision，</li>
+<li>failed gate IDs，</li>
+<li>leaked internal fragments，</li>
+<li>per-gate diagnostics。</li>
+<li>右侧 evidence pane 的 source projection 现在明确采用分层策略：</li>
+<li><code>src/frontend/markdown_runtime.js</code> 会给渲染后的 markdown block 标注 <code>data-agent-markdown-source-start-line</code>、<code>data-agent-markdown-source-end-line</code> 与 <code>data-agent-markdown-source-kind</code>，</li>
+<li>当渲染节点 source range 与可信 evidence span 重叠时，graph focus 优先使用 <code>source_line_provenance</code>，</li>
+<li>节点选中之后，graph focus 还会在该节点内部把命中的 evidence fragment 投影成内联高亮，</li>
+<li>当渲染 provenance 暂不可用，但 citation 行号仍可信时，回退到 markdown <code>line_window</code> 锚点，</li>
+<li>当行号陈旧或重叠度过低时，再退回 <code>snippet_fallback</code>，</li>
+<li>并通过 additive <code>highlightStrategy</code>、<code>sourceProvenanceBlockCount</code>、<code>sourceProvenanceAttributedNodeCount</code> 与 <code>inlineHighlightCount</code> diagnostics 显式暴露策略，而不是伪装成绝对精确投影。</li>
+<li>截图回归路径现在已进入正式运行时契约：</li>
+<li>参考失败截图：<code>E:\微信传输\WeChat Files\wxid_zywfbxxiwwir22\FileStorage\Temp\1781782257390.jpg</code></li>
+<li>回归用例：<code>waterglass_explicit_scope_compact_zh</code></li>
+<li>验证脚本：<code>scripts/verify-knowledge-workspace-runtime.js</code></li>
+<li>验收规则：只要 scoped evidence 存在，public answer 就不得泄漏 <code>No scoped knowledge points matched</code>、<code>retrieval_candidates_below_threshold</code>，也不得继续输出 <code>本技术文档旨在</code> 这类文档自述片段。</li>
+<li>当前剩余架构缺口：</li>
+<li>把 contradiction coverage 从当前 lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + location + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity 栈扩展到更广的 claim-vs-citation / claim-vs-evidence 级别，</li>
+<li>把 source-to-render provenance 推进到当前 block-level mapping 与 snippet-projected 内联高亮之上，使右侧高亮进一步提升到 source-authenticated 的字符级确定性投影。</li>
+</ul>
+<p>兼容性规则：</p>
+<ul>
+<li>新响应字段必须保持 additive 且 optional。</li>
+<li>除非同一变更同时落地兼容 shim 与测试，否则不得改变现有 endpoint 名称与 legacy 字段。</li>
+<li>Godot/mobile 渲染路径必须继续消费 PNG-first materialized artifacts；直接 SVG 导入不能成为必需运行时依赖。</li>
+<li>graphdb 与 ANN 状态描述必须区分 operational baseline 与 production closure；没有发布级阈值与多轮证据时不得宣称生产闭环。</li>
+<li>发布 runbook 应在生成 sqlite 与 ANN release 报告后执行 <code>verify:foundation:release-evidence</code>，先确认 latest evidence 新鲜、必需 runtime mode 存在且 release gates 通过，再把该宿主证据作为当前有效证据。需要 repeated evidence 时使用 <code>verify:foundation:release-evidence:strict</code>；release window 需要宿主多样性时使用 <code>verify:foundation:release-evidence:multi-host</code>。Foundation readiness 现在通过 <code>foundation_release_evidence_freshness</code> 与 <code>foundation_release_evidence_history</code> 暴露默认与严格命令；当前 Windows 宿主已以 sqlite <code>3/3</code> 与 ANN <code>3/3</code> 通过严格门禁，但每个发布宿主 / release window 仍必须重新生成足够数量、且满足当前 release contract 的新鲜报告；多宿主 release window 还必须覆盖足够不同的 host key。</li>
+</ul>
+<h2 id="00e-knowledge-workspace-rse-hosted-runtime-2026-07-03">0.0E Knowledge Workspace RSE 与 Hosted Runtime 补充（2026-07-03）<a class="headerlink" href="#00e-knowledge-workspace-rse-hosted-runtime-2026-07-03" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Mermaid 语法恢复现在是双 owner 契约：</li>
+<li><code>src/notemd/MermaidProcessor.ts</code> 可以在源 Mermaid block 修复阶段归一化畸形带引号的 bracketed-node label，</li>
+<li><code>src/reader_renderer.ts</code> 可以在本地 fallback renderer 路径里，在 Mermaid parse/render 之前执行同一套逐行归一化。</li>
+<li>这条 quoted-label 归一化刻意保持为“按行”工作。它不能跨行扩散，也不能破坏原有 dangling-bracket label repair。</li>
+<li><code>AgentConversationGraphContext</code> 现在可以携带可选 <code>anchorGraphProfile</code>，包含：</li>
+<li><code>atomId</code></li>
+<li><code>title</code></li>
+<li><code>inDegree</code></li>
+<li><code>outDegree</code></li>
+<li><code>centrality</code></li>
+<li><code>predecessorWindow</code> 与 <code>successorWindow</code> 的节点项现在也可以携带可选 <code>inDegree</code>、<code>outDegree</code> 与 <code>centrality</code>。</li>
+<li>公开回答合成与确定性 <code>revise</code> 路径现在可以消费 <code>graphContext</code> 中有界的图路径与度数上下文，但 citation list、原始 diagnostics 与完整图遥测仍然属于次级 surface。</li>
+<li><code>graphContext</code> 现在也是本切片中“有界 RSE / document augmentation 契约”的承载体：</li>
+<li>对模型可见的字段仅限于 <code>evidenceSourceRefs</code>、<code>connectionPaths</code>、<code>anchorGraphProfile</code> 以及有界 predecessor/successor window，</li>
+<li>完整图状态、原始 diagnostics 与 developer telemetry 不属于主公开回答的上下文预算。</li>
+<li>Hosted Guided Learning 现在可以按当前 source-graph signature 复用缓存的 <code>Graph</code> / <code>PathEngine</code> runtime。这只是 pane-local 性能优化：</li>
+<li>不改变主图 owner，</li>
+<li>不意味着嵌入 Godot 原生窗口，</li>
+<li>除非未来真实 graph mutation 路径要求更强契约，否则缓存失效仍按 snapshot/signature 处理。</li>
+<li><code>src/frontend/hosted_future_path_runtime.js</code> 现在已经成为 hosted Future Path runtime 复用的专属 cache/telemetry owner：</li>
+<li>负责记录 cache hit/miss/build 计数，</li>
+<li>负责记录 source node/edge 数量与 resolve/build 时延，</li>
+<li>最近一次诊断快照会通过 <code>NoteConnectionWorkspacePanes.getHostedFuturePathRuntimeDiagnostics()</code> 与 <code>window.__NC_LAST_AGENT_GODOT_FUTURE_PATH_RUNTIME_DIAGNOSTICS</code> 暴露。</li>
+<li>Guided Learning 的 pending 行为现在是一个两阶段契约：</li>
+<li>首次打开时，只要本地 graph target 与 source graph snapshot 已可用，pane 就可以在 <code>/api/knowledge/path</code> 返回前先渲染 hosted Future Path 投影，</li>
+<li>pending 状态提示会继续保留，直到后端响应替换或补全该 pane payload。</li>
+<li><code>src/frontend/agent_workspace.js</code> 现在会按归一化 payload 对相同的 <code>/api/knowledge/path</code> 在途请求做 dedupe，同时保持相同的 pending-pane 契约。</li>
+<li><code>ref/enterprise_agent_platform</code> 与 <code>ref/codex</code> 现在已进入本切片的文档化设计证据集，但它们仍只是外部参考，不引入运行时依赖。</li>
+<li>边界规则：</li>
+<li>Mermaid 语法自愈继续留在 <code>MermaidProcessor.ts</code> 与 <code>reader_renderer.ts</code>，而不是迁移到 <code>PathBridge</code>，</li>
+<li>hosted runtime 复用不能演化成跨图共享的可变全局单例，</li>
+<li>不能因为本地有更丰富的图状态，就把无界图遥测直接注入公开回答。</li>
+<li>兼容性规则：所有 graph-profile 与 runtime-reuse 字段都必须保持 optional/additive。忽略这些字段的客户端仍必须有效。</li>
+</ul>
+<h2 id="0-godot-notemd-markdown">0. 开发前速查入口（Godot + NoteMD + Markdown）<a class="headerlink" href="#0-godot-notemd-markdown" title="Permanent link">&para;</a></h2>
+<p>进入下一阶段集成功能开发前，请先以以下文档为执行基线：</p>
+<ul>
+<li>工作流基线：<a href="../../diataxis/zh/how-to/godot-notemd-markdown-workflows/">Diataxis 操作指南：Godot + NoteMD + Markdown 工作流</a></li>
+<li>字段级契约基线：<a href="../../diataxis/zh/reference/godot-notemd-markdown-interfaces/">Diataxis 参考：Godot + NoteMD + Markdown 接口</a></li>
+</ul>
+<h2 id="0">0. 核对范围<a class="headerlink" href="#0" title="Permanent link">&para;</a></h2>
+<p>已逐一对照以下文件：</p>
+<ul>
+<li><code>src/server.ts</code></li>
+<li><code>src/utils/RuntimePaths.ts</code></li>
+<li><code>src/index.ts</code></li>
+<li><code>src/core/NoteConnection.ts</code></li>
+<li><code>src/core/types.ts</code></li>
+<li><code>src/core/Graph.ts</code></li>
+<li><code>src/core/PathEngine.ts</code></li>
+<li><code>src/backend/config.ts</code></li>
+<li><code>src/backend/FileLoader.ts</code></li>
+<li><code>src/backend/GraphBuilder.ts</code></li>
+<li><code>src/backend/utils/frontmatterParser.ts</code></li>
+<li><code>src/backend/utils/WorkerRuntime.ts</code></li>
+<li><code>src/core/PathBridge.ts</code></li>
+<li><code>src-tauri/src/lib.rs</code></li>
+<li><code>src/frontend/source_manager.js</code></li>
+<li><code>src/frontend/path_app.js</code></li>
+<li><code>src/frontend/path_worker.js</code></li>
+<li><code>src/frontend/i18n.js</code></li>
+<li><code>src/frontend/index.html</code></li>
+<li><code>path_mode/scripts/ws_client.gd</code></li>
+<li><code>path_mode/scripts/path_mode_ui.gd</code></li>
+<li><code>path_mode/scripts/path_renderer.gd</code></li>
+<li><code>path_mode/scripts/learning_state_machine.gd</code></li>
+<li><code>path_mode/scripts/tree_view_panel.gd</code></li>
+</ul>
+<p>核对流程：</p>
+<ol>
+<li>先完整重读旧版 <code>Interface Document.md</code>。</li>
+<li>从源码重新提取接口。</li>
+<li>删除过期项并修正不一致。</li>
+<li>重建为完整英文部分 + 完整中文部分。</li>
+</ol>
+<h2 id="01-godot-mermaid">0.1 渲染兼容性约束（Godot + Mermaid）<a class="headerlink" href="#01-godot-mermaid" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Godot 运行时中的 Mermaid 正式渲染链路仅允许 PNG（权威输出）。</li>
+<li>SVG 仅保留用于诊断/调试快照，不得作为 Godot 运行时回退路径。</li>
+<li>原因：当前 Godot 的 SVG 处理存在非确定性失败（跨设备文本/布局/栅格不稳定）。</li>
+<li>变更规则：后续 Godot 渲染优化必须保持 PNG 解码主路径（<code>pngBase64</code> 必填）；缺失 PNG 视为失败。</li>
+<li>Obsidian 兼容性基线：Mermaid 的标准 Markdown 输入为 fenced code，起始行为三个反引号后接 <code>mermaid</code>，结束行为三个反引号，且两者必须各自独占一行。</li>
+<li>任意将数学分隔符与 Mermaid 起始 fence 同行拼接的模式都属于 malformed 输入，不在标准兼容基线内。</li>
+<li>Reader 运行时护栏：打开 Markdown 阅读器时执行轻量自检，并在解析/渲染前自动将这类 malformed 模式修复为换行分隔形式。</li>
+</ul>
+<h2 id="02-notemd-v160">0.2 NoteMD 模块接口契约（v1.6.0）<a class="headerlink" href="#02-notemd-v160" title="Permanent link">&para;</a></h2>
+<p>NoteMD 以增量方式接入，不替代现有图谱/路径 API。</p>
+<h3 id="srcnotemd">后端模块命名空间（<code>src/notemd/</code>）<a class="headerlink" href="#srcnotemd" title="Permanent link">&para;</a></h3>
+<ul>
+<li>核心接口与常量：<code>types.ts</code>、<code>constants.ts</code></li>
+<li>LLM 与提示词：<code>LlmProvider.ts</code>、<code>PromptManager.ts</code></li>
+<li>处理核心：<code>FileProcessor.ts</code>、<code>MermaidProcessor.ts</code>、<code>FormulaFixer.ts</code></li>
+<li>批处理与生成能力：<code>Translator.ts</code>、<code>BatchProcessor.ts</code>、<code>DuplicateDetector.ts</code>、<code>ContentGenerator.ts</code></li>
+<li>服务聚合：<code>NotemdService.ts</code>、<code>index.ts</code></li>
+</ul>
+<h3 id="http-api-srcserverts">HTTP API 契约（<code>src/server.ts</code>）<a class="headerlink" href="#http-api-srcserverts" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>GET /api/notemd/settings</code></li>
+<li><code>POST|PUT /api/notemd/settings</code></li>
+<li><code>POST /api/notemd/process-file</code></li>
+<li><code>POST /api/notemd/process-folder</code></li>
+<li><code>POST /api/notemd/test-llm</code></li>
+<li><code>POST /api/notemd/generate-content</code></li>
+<li><code>POST /api/notemd/translate-file</code></li>
+<li><code>POST /api/notemd/translate-folder</code></li>
+<li><code>POST /api/notemd/fix-mermaid</code></li>
+<li><code>POST /api/notemd/fix-formulas</code></li>
+<li><code>POST /api/notemd/check-duplicates</code></li>
+<li><code>POST /api/notemd/extract-concepts</code></li>
+<li><code>POST /api/notemd/cancel</code></li>
+</ul>
+<h3 id="_1">安全与生命周期保证<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>NoteMD 文件/目录操作统一执行 KB 根路径沙箱校验。</li>
+<li>长任务支持 SSE 进度回传与显式取消。</li>
+<li>Tauri/Godot 桥接新增 <code>open_notemd</code>，且不改变既有图谱桥协议语义。</li>
+</ul>
+<h2 id="03-v160-v130">0.3 v1.6.0 接口增量（相对 v1.3.0）<a class="headerlink" href="#03-v160-v130" title="Permanent link">&para;</a></h2>
+<ul>
+<li>前端运行时桥接增加运行时能力水合契约：</li>
+<li><code>invoke('get_runtime_capabilities')</code></li>
+<li><code>invoke('get_sidecar_runtime_config')</code></li>
+<li>Rust 运行时新增 sidecar 运行时配置命令契约：</li>
+<li><code>get_sidecar_runtime_config</code></li>
+<li>前端 runtime bridge 增加 <code>whenReady</code> 顺序保证，用于 Path Mode 入口前的能力就绪。</li>
+<li>增加 pathbridge 严格 schema、存储提供者抽象、移动端运行时能力边界、SBOM/attestation 校验等合约门禁链路。</li>
+</ul>
+<hr />
+<h2 id="1">1. 运行时与路径契约<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11-srcutilsruntimepathsts">1.1 运行时路径解析（<code>src/utils/RuntimePaths.ts</code>）<a class="headerlink" href="#11-srcutilsruntimepathsts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">RuntimePaths</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nx">projectRoot</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nx">frontendDir</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nx">runtimeDataDir</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nx">kbRoot</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span>
+</code></pre></div>
+<p>优先级：</p>
+<ol>
+<li><code>projectRoot</code> 由候选路径 + 目录存在性判定。</li>
+<li><code>frontendDir</code>：</li>
+<li><code>NOTE_CONNECTION_FRONTEND_DIR</code></li>
+<li><code>&lt;projectRoot&gt;/dist/src/frontend</code></li>
+<li><code>&lt;projectRoot&gt;/src/frontend</code></li>
+<li><code>kbRoot</code>：</li>
+<li><code>NOTE_CONNECTION_KB_ROOT</code></li>
+<li><code>&lt;projectRoot&gt;/Knowledge_Base</code></li>
+<li>CWD 回退路径</li>
+</ol>
+<h3 id="12-tauri-sidecar-src-taurisrclibrs">1.2 Tauri sidecar 环境注入（<code>src-tauri/src/lib.rs</code>）<a class="headerlink" href="#12-tauri-sidecar-src-taurisrclibrs" title="Permanent link">&para;</a></h3>
+<p>Rust 启动 sidecar 时注入：</p>
+<ul>
+<li><code>NOTE_CONNECTION_PROJECT_ROOT</code></li>
+<li><code>NOTE_CONNECTION_KB_ROOT</code></li>
+<li><code>NOTE_CONNECTION_FRONTEND_DIR</code></li>
+</ul>
+<p>当前项目实际 KB 根路径：</p>
+<ul>
+<li><code>E:\Knowledge_project\NoteConnection_app\Knowledge_Base</code></li>
+</ul>
+<h3 id="13">1.3 图谱文件路径<a class="headerlink" href="#13" title="Permanent link">&para;</a></h3>
+<p>活动图谱文件：</p>
+<ul>
+<li><code>dist/src/frontend/data.js</code></li>
+<li><code>dist/src/frontend/graph_data.json</code></li>
+</ul>
+<p>目标缓存文件：</p>
+<ul>
+<li><code>dist/src/frontend/data_&lt;target&gt;.js</code></li>
+<li><code>dist/src/frontend/graph_data_&lt;target&gt;.json</code></li>
+</ul>
+<p>CLI 时间戳文件：</p>
+<ul>
+<li><code>dist/src/frontend/data_cli_&lt;suffix&gt;.js</code></li>
+<li><code>dist/src/frontend/graph_data_cli_&lt;suffix&gt;.json</code></li>
+</ul>
+<hr />
+<h2 id="2">2. 核心类型接口<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21-srccoretypests">2.1 图结构类型（<code>src/core/types.ts</code>）<a class="headerlink" href="#21-srccoretypests" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">NoteNode</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nx">inDegree</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nx">outDegree</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nx">content?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nx">x?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nx">y?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nx">centrality?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nx">rank?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="nx">clusterId?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nx">metadata</span><span class="o">?:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nx">tags?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="nx">prerequisites?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">    </span><span class="nx">next?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span><span class="nx">filepath?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">    </span><span class="p">[</span><span class="nx">key</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="nx">any</span><span class="p">;</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">  </span><span class="p">};</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="p">}</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">NoteEdge</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">  </span><span class="nx">source</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">  </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">  </span><span class="kr">type</span><span class="nx">?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">  </span><span class="nx">weight?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="p">}</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">GraphData</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">  </span><span class="nx">nodes</span><span class="o">:</span><span class="w"> </span><span class="kt">NoteNode</span><span class="p">[];</span>
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="w">  </span><span class="nx">edges</span><span class="o">:</span><span class="w"> </span><span class="kt">NoteEdge</span><span class="p">[];</span>
+<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="22-api-srccorenoteconnectionts">2.2 构建 API 类型（<code>src/core/NoteConnection.ts</code>）<a class="headerlink" href="#22-api-srccorenoteconnectionts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">BuildOptions</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nx">targetPath?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nx">maxWorkers?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nx">enableGPU?</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nx">enableGPULayout?</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nx">memorySavingMode?</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nx">deepDebug?</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nx">projectRoot?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nx">outputPrefix?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="nx">onLog</span><span class="o">?:</span><span class="w"> </span><span class="p">(</span><span class="nx">msg</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">}</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">GraphBuildResult</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">  </span><span class="nx">graph</span><span class="o">:</span><span class="w"> </span><span class="kt">Graph</span><span class="p">;</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">  </span><span class="nx">data</span><span class="o">:</span><span class="w"> </span><span class="kt">any</span><span class="p">;</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">  </span><span class="nx">stats</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span><span class="nx">nodeCount</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">    </span><span class="nx">edgeCount</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">    </span><span class="nx">fileCount</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">  </span><span class="p">};</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="23-srcbackendconfigts">2.3 后端配置（<code>src/backend/config.ts</code>）<a class="headerlink" href="#23-srcbackendconfigts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">AppConfig</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nx">matchingStrategy</span><span class="o">:</span><span class="w"> </span><span class="s2">"exact-phrase"</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s2">"fuzzy"</span><span class="p">;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nx">clusteringStrategy</span><span class="o">:</span><span class="w"> </span><span class="s2">"label-propagation"</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s2">"folder"</span><span class="p">;</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nx">fuzzyThreshold</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nx">enableTags</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nx">enableStatisticalInference</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="nx">enableVectorSimilarity</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="nx">enableHybridInference</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span><span class="nx">enableGPU</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span><span class="nx">enableGPULayout?</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">  </span><span class="nx">memorySavingMode</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">  </span><span class="nx">deepDebug</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">  </span><span class="nx">maxWorkers?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">  </span><span class="nx">exclusionList</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="24-worker-srcbackendutilsworkerruntimets">2.4 Worker 运行时解析（<code>src/backend/utils/WorkerRuntime.ts</code>）<a class="headerlink" href="#24-worker-srcbackendutilsworkerruntimets" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">WorkerRuntimeResolution</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nx">workerPath</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nx">isTsNode</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nx">candidates</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="3">3. 构建与图谱流水线接口<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31-srcbackendfileloaderts">3.1 文件加载（<code>src/backend/FileLoader.ts</code>）<a class="headerlink" href="#31-srcbackendfileloaderts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">RawFile</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nx">filepath</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nx">filename</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nx">content</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">}</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nx">FileLoader</span><span class="p">.</span><span class="nx">loadFiles</span><span class="p">(</span><span class="nx">dirPath</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">extensions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">".md"</span><span class="p">])</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">RawFile</span><span class="p">[]</span><span class="o">&gt;</span>
+</code></pre></div>
+<p>行为：</p>
+<ul>
+<li>递归扫描目录。</li>
+<li>分批并发读取。</li>
+<li>目录不存在时返回空数组。</li>
+</ul>
+<h3 id="32-frontmatter-srcbackendutilsfrontmatterparserts">3.2 Frontmatter 解析（<code>src/backend/utils/frontmatterParser.ts</code>）<a class="headerlink" href="#32-frontmatter-srcbackendutilsfrontmatterparserts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">ParsedMetadata</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nx">tags</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nx">prerequisites</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nx">next</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="p">[</span><span class="nx">key</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="nx">any</span><span class="p">;</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">}</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="nx">FrontmatterParser</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">content</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nx">ParsedMetadata</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="nx">FrontmatterParser</span><span class="p">.</span><span class="nx">extractTags</span><span class="p">(</span><span class="nx">content</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[]</span>
+</code></pre></div>
+<p>支持 YAML 列表、行内数组、单值和 <code>[[WikiLink]]</code> 清洗。</p>
+<h3 id="33-srccoregraphts">3.3 图核心（<code>src/core/Graph.ts</code>）<a class="headerlink" href="#33-srccoregraphts" title="Permanent link">&para;</a></h3>
+<p>主方法：</p>
+<ul>
+<li><code>addNode(node)</code></li>
+<li><code>getNode(id)</code></li>
+<li><code>hasNode(id)</code></li>
+<li><code>addEdge(source, target, type?, weight?)</code></li>
+<li><code>getOutgoingEdges(id)</code></li>
+<li><code>getIncomingEdges(id)</code></li>
+<li><code>getNeighbors(id)</code></li>
+<li><code>getNodes()</code></li>
+<li><code>getEdges()</code></li>
+<li><code>toJSON()</code></li>
+<li><code>getPredecessors(id)</code></li>
+<li><code>getSuccessors(id)</code></li>
+<li><code>getShortestPath(source, target)</code></li>
+</ul>
+<h3 id="34-srcbackendgraphbuilderts">3.4 图构建编排（<code>src/backend/GraphBuilder.ts</code>）<a class="headerlink" href="#34-srcbackendgraphbuilderts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">GraphBuilder</span><span class="p">.</span><span class="nx">build</span><span class="p">(</span><span class="nx">files</span><span class="p">,</span><span class="w"> </span><span class="nx">layout</span><span class="o">?</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">Graph</span><span class="o">&gt;</span>
+</code></pre></div>
+<p>阶段：</p>
+<ol>
+<li>节点初始化（含 metadata/tag）</li>
+<li>显式依赖边（<code>prerequisites</code>、<code>next</code>）</li>
+<li>关键词匹配（并行 worker 或顺序回退）</li>
+<li>统计推断</li>
+<li>向量相似度（<code>VectorSpace</code> 或 <code>VectorSpaceGPU</code>）</li>
+<li>混合推断</li>
+<li>聚类</li>
+<li>图指标</li>
+<li>环检测 + 拓扑排名</li>
+<li>后端布局计算（<code>LayoutEngine.computeLayout</code>）</li>
+</ol>
+<p>并行关键词匹配契约：</p>
+<ul>
+<li>worker 路径由 <code>resolveWorkerRuntimePath</code> 解析。</li>
+<li>worker 不可用/失败时回退顺序匹配。</li>
+</ul>
+<h3 id="35-srcindexts">3.5 顶层构建输出（<code>src/index.ts</code>）<a class="headerlink" href="#35-srcindexts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">buildGraph</span><span class="p">(</span><span class="nx">options</span><span class="o">:</span><span class="w"> </span><span class="kt">BuildOptions</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="p">...</span><span class="nx">legacyArgs</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">GraphData</span><span class="o">&gt;</span>
+</code></pre></div>
+<p>输出规则：</p>
+<ul>
+<li>标准模式写入活动文件：</li>
+<li><code>graph_data.json</code></li>
+<li><code>data.js</code></li>
+<li>指定目标目录时写入缓存副本：</li>
+<li><code>data_&lt;target&gt;.js</code></li>
+<li><code>graph_data_&lt;target&gt;.json</code></li>
+<li>CLI 模式写入 <code>data_cli_*</code> 与 <code>graph_data_cli_*</code>，不覆盖活动文件。</li>
+</ul>
+<hr />
+<h2 id="4">4. 前端加载接口<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
+<p>加载入口：<code>src/frontend/source_manager.js</code></p>
+<h3 id="41-kb">4.1 目录与 KB 路径获取<a class="headerlink" href="#41-kb" title="Permanent link">&para;</a></h3>
+<p>主路径：</p>
+<ul>
+<li><code>GET /api/kb-path</code></li>
+<li><code>GET /api/folders</code></li>
+</ul>
+<p>Tauri 回退：</p>
+<ul>
+<li><code>invoke("get_kb_path")</code></li>
+<li><code>invoke("get_folders")</code></li>
+</ul>
+<p>下拉契约：</p>
+<ul>
+<li>永远包含 <code>ALL_FOLDERS</code>。</li>
+<li>真实选项来自当前 KB 根目录子目录。</li>
+</ul>
+<h3 id="42">4.2 缓存检查/恢复弹窗<a class="headerlink" href="#42" title="Permanent link">&para;</a></h3>
+<ul>
+<li>检查：<code>GET /api/check-cache?target=&lt;id&gt;</code></li>
+<li>命中缓存时必须二选一：</li>
+<li><code>Load Existing</code></li>
+<li><code>Regenerate</code></li>
+<li>恢复：<code>GET /api/restore-cache?target=&lt;id&gt;</code></li>
+</ul>
+<h3 id="43">4.3 加载单飞契约<a class="headerlink" href="#43" title="Permanent link">&para;</a></h3>
+<p>前端防重：</p>
+<ul>
+<li><code>isLoadInProgress</code></li>
+<li><code>loadBtn.dataset.sourceManagerBound</code></li>
+<li>会话重载防抖键 <code>nc_reload_guard</code></li>
+</ul>
+<p>构建请求载荷：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ALL_FOLDERS | &lt;folderName&gt;"</span><span class="p">,</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">"maxWorkers"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">"enableGPU"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="nt">"enableGPULayout"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span><span class="nt">"memorySavingMode"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span><span class="nt">"deepDebug"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="44-tauri-path-srcfrontendpath_appjs">4.4 Tauri 下 Path 控件归属（<code>src/frontend/path_app.js</code>）<a class="headerlink" href="#44-tauri-path-srcfrontendpath_appjs" title="Permanent link">&para;</a></h3>
+<p>Tauri 模式：</p>
+<ul>
+<li><code>#path-toolbar</code> 隐藏。</li>
+<li>Web Path Mode 设置组隐藏。</li>
+<li>布局强制为 <code>orbital</code>。</li>
+</ul>
+<p>浏览器模式：</p>
+<ul>
+<li>Web toolbar 仍负责 Mode/Strategy/Layout/Complete/History/Exit。</li>
+</ul>
+<hr />
+<h2 id="5-http-apisrcserverts">5. 服务端 HTTP API（<code>src/server.ts</code>）<a class="headerlink" href="#5-http-apisrcserverts" title="Permanent link">&para;</a></h2>
+<p>基础地址：<code>http://localhost:3000</code></p>
+<h3 id="51-get">5.1 GET 接口<a class="headerlink" href="#51-get" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Query</th>
+<th>成功响应</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/folders</code></td>
+<td>无</td>
+<td><code>{ "folders": string[] }</code></td>
+<td>当前 KB 根目录下子目录。</td>
+</tr>
+<tr>
+<td><code>/api/content</code></td>
+<td><code>path</code></td>
+<td><code>{ "content": string }</code></td>
+<td>文件内容读取。</td>
+</tr>
+<tr>
+<td><code>/api/kb-path</code></td>
+<td>无</td>
+<td><code>{ "kbPath": string }</code></td>
+<td>当前 KB 根路径。</td>
+</tr>
+<tr>
+<td><code>/api/check-cache</code></td>
+<td><code>target</code></td>
+<td><code>null</code> 或 <code>{ "date": string, "size": number, "source"?: "active" }</code></td>
+<td><code>ALL_FOLDERS</code> 检查活动缓存。</td>
+</tr>
+<tr>
+<td><code>/api/restore-cache</code></td>
+<td><code>target</code></td>
+<td><code>{ "success": boolean, "deduped"?: true, "error"?: string }</code></td>
+<td>内置短窗去重。</td>
+</tr>
+</tbody>
+</table>
+<p>附加静态行为：</p>
+<ul>
+<li>非 <code>/api/</code> 的 <code>*.js</code> / <code>*.json</code> 从 frontend 输出目录读取。</li>
+</ul>
+<h3 id="52-post">5.2 POST 接口<a class="headerlink" href="#52-post" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Body</th>
+<th>成功响应</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/build</code></td>
+<td><code>{ target, maxWorkers, enableGPU, enableGPULayout, memorySavingMode, deepDebug }</code></td>
+<td><code>{ "success": true }</code> 或 <code>{ "success": true, "deduped": true }</code></td>
+<td>相同参数并发合并；不同参数并发返回 <code>409</code>。</td>
+</tr>
+<tr>
+<td><code>/api/kb-path</code></td>
+<td><code>{ "kbPath": string }</code></td>
+<td><code>{ "success": true, "kbPath": string }</code></td>
+<td>更新运行时 KB 根路径。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53">5.3 构建去重语义<a class="headerlink" href="#53" title="Permanent link">&para;</a></h3>
+<ul>
+<li>在途构建 + 相同参数：等待并返回去重成功。</li>
+<li>在途构建 + 不同参数：返回 <code>409</code>。</li>
+</ul>
+<h3 id="54-cli">5.4 CLI 参数说明<a class="headerlink" href="#54-cli" title="Permanent link">&para;</a></h3>
+<ul>
+<li>支持 <code>--path</code>、<code>--gpu</code>、<code>--no-gpu</code>、<code>--workers</code>。</li>
+<li>同时读取 npm 环境参数和 <code>NOTE_CONNECTION_GPU</code>。</li>
+<li>npm 脚本建议用环境变量启用 GPU（<code>NOTE_CONNECTION_GPU=1</code>）。</li>
+</ul>
+<hr />
+<h2 id="6-tauri-rust-src-taurisrclibrs">6. Tauri Rust 命令与事件接口（<code>src-tauri/src/lib.rs</code>）<a class="headerlink" href="#6-tauri-rust-src-taurisrclibrs" title="Permanent link">&para;</a></h2>
+<h3 id="61">6.1 可调用命令<a class="headerlink" href="#61" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>命令</th>
+<th>签名</th>
+<th>返回</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_kb_path</code></td>
+<td><code>() -&gt; Result&lt;String, String&gt;</code></td>
+<td>默认 KB 路径 <code>&lt;projectRoot&gt;/Knowledge_Base</code>。</td>
+</tr>
+<tr>
+<td><code>get_user_language</code></td>
+<td><code>() -&gt; Result&lt;String, String&gt;</code></td>
+<td>当前语言（现默认 <code>"en"</code>）。</td>
+</tr>
+<tr>
+<td><code>get_folders</code></td>
+<td><code>() -&gt; Result&lt;Vec&lt;String&gt;, String&gt;</code></td>
+<td>KB 子目录排序结果。</td>
+</tr>
+<tr>
+<td><code>set_user_language</code></td>
+<td><code>(app, lang) -&gt; Result&lt;(), String&gt;</code></td>
+<td>菜单语言幂等更新。</td>
+</tr>
+<tr>
+<td><code>check_cache</code></td>
+<td><code>(app, target) -&gt; Result&lt;Option&lt;Value&gt;, String&gt;</code></td>
+<td>缓存信息或 <code>None</code>。</td>
+</tr>
+<tr>
+<td><code>restore_cache</code></td>
+<td><code>(app, target) -&gt; Result&lt;bool, String&gt;</code></td>
+<td>恢复成功返回 <code>true</code>。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62">6.2 菜单与事件<a class="headerlink" href="#62" title="Permanent link">&para;</a></h3>
+<p>菜单动作：</p>
+<ul>
+<li><code>change_kb</code></li>
+<li><code>reset_kb</code></li>
+<li><code>docs</code></li>
+<li><code>about</code></li>
+</ul>
+<p>发给前端的事件：</p>
+<ul>
+<li><code>kb-path-changed</code>（payload 为路径字符串）</li>
+</ul>
+<h3 id="63-sidecar-godot">6.3 Sidecar 与 Godot 进程契约<a class="headerlink" href="#63-sidecar-godot" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Sidecar 进程：<code>server</code></li>
+<li>Godot 启动参数：</li>
+<li><code>--path E:\Knowledge_project\NoteConnection_app\path_mode</code></li>
+</ul>
+<hr />
+<h2 id="7-pathbridge-websocket-srccorepathbridgets">7. PathBridge WebSocket 协议（<code>src/core/PathBridge.ts</code>）<a class="headerlink" href="#7-pathbridge-websocket-srccorepathbridgets" title="Permanent link">&para;</a></h2>
+<p>Bridge 地址：<code>ws://127.0.0.1:9876</code></p>
+<p>客户端标识：</p>
+<ul>
+<li>通过 query 参数 <code>client</code> 标记来源。</li>
+<li>示例：</li>
+<li><code>ws://127.0.0.1:9876/?client=godot</code></li>
+<li><code>ws://localhost:9876?client=frontend</code></li>
+</ul>
+<p>消息包格式：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;messageType&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nt">"payload"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>支持的消息类型：</p>
+<ul>
+<li><code>nodeClick</code></li>
+<li><code>requestPath</code></li>
+<li><code>pathResult</code></li>
+<li><code>markComplete</code></li>
+<li><code>switchCenter</code></li>
+<li><code>openReader</code></li>
+<li><code>unmarkComplete</code></li>
+<li><code>completionSync</code></li>
+<li><code>toggleCollapse</code></li>
+<li><code>expandPrereqs</code></li>
+<li><code>collapsePrereqs</code></li>
+<li><code>collapseAll</code></li>
+<li><code>configure</code></li>
+<li><code>exitPathMode</code></li>
+</ul>
+<p>常见 payload 键：</p>
+<ul>
+<li><code>{ nodeId }</code></li>
+<li><code>{ newCenterId, autoReconstruct? }</code></li>
+<li><code>{ completedIds, timestamp? }</code></li>
+</ul>
+<p>当前实现会将识别消息广播给已连接客户端。</p>
+<hr />
+<h2 id="8-path-worker">8. Path Worker 与路径载荷接口<a class="headerlink" href="#8-path-worker" title="Permanent link">&para;</a></h2>
+<h3 id="81-path-workersrcfrontendpath_workerjs">8.1 Path worker（<code>src/frontend/path_worker.js</code>）<a class="headerlink" href="#81-path-workersrcfrontendpath_workerjs" title="Permanent link">&para;</a></h3>
+<p>入站消息：</p>
+<ul>
+<li><code>initData</code> -&gt; <code>{ nodes, links }</code></li>
+<li><code>computePath</code> -&gt; <code>{ mode, strategy, layout, targetId, centralId, collapsedIds, completedIds, forcedExpansionIds, expansionOrder, stickyClaimEnabled }</code></li>
+</ul>
+<p>出站消息：</p>
+<ul>
+<li><code>pathResult</code> -&gt; <code>{ nodes, edges, treeLayout }</code></li>
+</ul>
+<h3 id="82-web-pathapp-godot-srcfrontendpath_appjs">8.2 Web PathApp 发给 Godot 的路径载荷（<code>src/frontend/path_app.js</code>）<a class="headerlink" href="#82-web-pathapp-godot-srcfrontendpath_appjs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p">{</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pathResult"</span><span class="p">,</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">"payload"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nt">"central"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"label"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"inDegree"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"outDegree"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="nt">"peripherals"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"label"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"relation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"prerequisite|association"</span><span class="w"> </span><span class="p">}],</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="nt">"progress"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"completed"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"total"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="nt">"totalNodes"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="nt">"pathNodes"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"label"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"parentId"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w"> </span><span class="p">}],</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="nt">"treeLayout"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"nodes"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w"> </span><span class="nt">"edges"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span><span class="nt">"completedIds"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">    </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"orbital"</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="p">}</span>
+</code></pre></div>
+<p>当 <code>treeLayout</code> 为空时，Godot 会回退到 legacy 线性渲染流程。</p>
+<hr />
+<h2 id="9-godot">9. Godot 接口契约<a class="headerlink" href="#9-godot" title="Permanent link">&para;</a></h2>
+<h3 id="91-ws-path_modescriptsws_clientgd">9.1 WS 客户端（<code>path_mode/scripts/ws_client.gd</code>）<a class="headerlink" href="#91-ws-path_modescriptsws_clientgd" title="Permanent link">&para;</a></h3>
+<p>关键常量：</p>
+<ul>
+<li><code>WS_URL = "ws://127.0.0.1:9876/?client=godot"</code></li>
+<li><code>RECONNECT_DELAY = 3.0</code></li>
+</ul>
+<p>Signals：</p>
+<ul>
+<li><code>data_received(data)</code></li>
+<li><code>connected</code></li>
+<li><code>disconnected</code></li>
+<li><code>path_result(data)</code></li>
+<li><code>path_update(data)</code></li>
+<li><code>switch_center(new_center_id)</code></li>
+<li><code>completion_sync(completed_ids, timestamp)</code></li>
+</ul>
+<p>发送方法：</p>
+<ul>
+<li><code>send_node_click</code></li>
+<li><code>send_mark_complete</code></li>
+<li><code>send_open_reader</code></li>
+<li><code>send_switch_center</code></li>
+<li><code>send_configure</code></li>
+<li><code>send_toggle_collapse</code></li>
+<li><code>send_expand_prereqs</code></li>
+<li><code>send_collapse_prereqs</code></li>
+<li><code>send_collapse_all</code></li>
+<li><code>send_exit_path_mode</code></li>
+</ul>
+<h3 id="92-path-uipath_modescriptspath_mode_uigd">9.2 Path UI（<code>path_mode/scripts/path_mode_ui.gd</code>）<a class="headerlink" href="#92-path-uipath_modescriptspath_mode_uigd" title="Permanent link">&para;</a></h3>
+<p>Signals：</p>
+<ul>
+<li><code>mark_complete_pressed</code></li>
+<li><code>sidebar_toggled(visible)</code></li>
+<li><code>completed_node_clicked(node_id)</code></li>
+<li><code>return_pressed</code></li>
+<li><code>return_to_node(node_id)</code></li>
+<li><code>tree_node_clicked(node_id)</code></li>
+<li><code>unmark_requested(node_id)</code></li>
+<li><code>mark_node_requested(node_id)</code></li>
+<li><code>node_toggle_requested(node_id)</code></li>
+<li><code>node_expand_prereqs_requested(node_id)</code></li>
+<li><code>node_collapse_prereqs_requested(node_id)</code></li>
+<li><code>collapse_all_requested()</code></li>
+<li><code>settings_updated(settings)</code></li>
+<li><code>exit_requested</code></li>
+</ul>
+<p>发送到后端的运行时配置：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"domain|diffusion"</span><span class="p">,</span><span class="w"> </span><span class="nt">"strategy"</span><span class="p">:</span><span class="w"> </span><span class="s2">"foundational|core"</span><span class="p">,</span><span class="w"> </span><span class="nt">"layout"</span><span class="p">:</span><span class="w"> </span><span class="s2">"orbital"</span><span class="p">,</span><span class="w"> </span><span class="nt">"targetId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;可选&gt;"</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<h3 id="93-path_modescriptslearning_state_machinegd">9.3 学习状态机（<code>path_mode/scripts/learning_state_machine.gd</code>）<a class="headerlink" href="#93-path_modescriptslearning_state_machinegd" title="Permanent link">&para;</a></h3>
+<p>状态：</p>
+<ul>
+<li><code>IDLE</code></li>
+<li><code>VIEWING</code></li>
+<li><code>TRANSITIONING</code></li>
+<li><code>READING</code></li>
+</ul>
+<p>Signals：</p>
+<ul>
+<li><code>state_changed</code></li>
+<li><code>central_changed</code></li>
+<li><code>node_completed</code></li>
+<li><code>node_unmarked</code></li>
+<li><code>path_complete</code></li>
+</ul>
+<p>持久化路径：</p>
+<ul>
+<li><code>user://orbital_progress.json</code></li>
+</ul>
+<h3 id="94-path-path_modescriptspath_renderergd">9.4 Path 渲染器（<code>path_mode/scripts/path_renderer.gd</code>）<a class="headerlink" href="#94-path-path_modescriptspath_renderergd" title="Permanent link">&para;</a></h3>
+<p>Signals：</p>
+<ul>
+<li><code>node_clicked(node_id)</code></li>
+<li><code>node_double_clicked(node_id)</code></li>
+<li><code>transition_complete()</code></li>
+</ul>
+<p>关键处理器：</p>
+<ul>
+<li><code>render_path(path_data)</code></li>
+<li><code>_on_ws_data_received(data)</code></li>
+<li><code>_on_settings_updated(settings)</code> -&gt; 发送 <code>configure</code></li>
+<li><code>_request_switch_center(target_id)</code> -&gt; 发送 <code>switchCenter</code></li>
+<li><code>_on_mark_node_requested(node_id)</code> -&gt; 发送 <code>markComplete</code></li>
+<li><code>_on_unmark_requested(node_id)</code> -&gt; 发送 <code>unmarkComplete</code></li>
+<li><code>_on_exit_requested()</code> -&gt; 发送 <code>exitPathMode</code></li>
+</ul>
+<h3 id="95-path_modescriptstree_view_panelgd">9.5 树面板（<code>path_mode/scripts/tree_view_panel.gd</code>）<a class="headerlink" href="#95-path_modescriptstree_view_panelgd" title="Permanent link">&para;</a></h3>
+<p>上抛信号：</p>
+<ul>
+<li><code>node_navigate_requested</code></li>
+<li><code>node_mark_complete_requested</code></li>
+<li><code>node_unmark_requested</code></li>
+<li><code>node_toggle_requested</code></li>
+<li><code>node_expand_prereqs_requested</code></li>
+<li><code>node_collapse_prereqs_requested</code></li>
+<li><code>collapse_all_requested</code></li>
+<li><code>fullscreen_requested(expand)</code></li>
+</ul>
+<hr />
+<h2 id="10-web-tauri-path">10. Web 与 Tauri 的 Path 控件归属矩阵<a class="headerlink" href="#10-web-tauri-path" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>接口区域</th>
+<th>浏览器模式</th>
+<th>Tauri 模式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Path toolbar（<code>#path-toolbar</code>）</td>
+<td>显示且可交互</td>
+<td>被 <code>path_app.js</code> 隐藏</td>
+</tr>
+<tr>
+<td>Mode 控制</td>
+<td>Web 下拉（<code>#learning-mode</code>）</td>
+<td>Godot <code>PathModeUI</code></td>
+</tr>
+<tr>
+<td>Strategy 控制</td>
+<td>Web 下拉（<code>#strategy</code>）</td>
+<td>Godot <code>PathModeUI</code></td>
+</tr>
+<tr>
+<td>Layout 控制</td>
+<td>Web 下拉（<code>#layout-style</code>）</td>
+<td>后端/Godot 固定 <code>orbital</code></td>
+</tr>
+<tr>
+<td>Diffusion 目标选择</td>
+<td>Web modal（<code>#node-select-modal</code>）</td>
+<td>Godot 目标弹窗</td>
+</tr>
+<tr>
+<td>Complete 操作</td>
+<td>Web 按钮（<code>#btn-mark-complete</code>）</td>
+<td>Godot 按钮</td>
+</tr>
+<tr>
+<td>History 操作</td>
+<td>Web 侧栏/弹窗</td>
+<td>Godot 历史弹窗</td>
+</tr>
+<tr>
+<td>Exit 操作</td>
+<td>Web 按钮（<code>#btn-exit-path</code>）</td>
+<td>Godot 退出流程 + <code>exitPathMode</code></td>
+</tr>
+</tbody>
+</table>
+<p>这就是当前 Bridge-first 迁移契约。</p>
+<hr />
+<h2 id="11">11. 已修正 / 已移除的不一致项<a class="headerlink" href="#11" title="Permanent link">&para;</a></h2>
+<ol>
+<li>删除中英混排与重复段落，重建为严格 EN/ZH 分离结构。</li>
+<li>用 <code>server.ts</code> 实际实现替换过期 API 描述。</li>
+<li>修正 Godot WS URL 约束：</li>
+<li>正确：<code>ws://127.0.0.1:9876/?client=godot</code></li>
+<li>明确当前 build/cache 去重语义。</li>
+<li>明确当前 Tauri 命令名与返回结构。</li>
+<li>补齐 Path worker 载荷与 Godot signals 契约。</li>
+<li>明确 Tauri 下 Path 控件归属已迁移到 Godot。</li>
+</ol>
+<hr />
+<h2 id="12">12. 交接检查清单<a class="headerlink" href="#12" title="Permanent link">&para;</a></h2>
+<ol>
+<li>目录来源必须是当前 KB 根（<code>/api/folders</code> 或 Rust 回退）。</li>
+<li>存在缓存时必须先出现“加载缓存/重新生成”选择。</li>
+<li>单次点击只触发一次 load/build。</li>
+<li>活动图谱文件必须来自 <code>dist/src/frontend</code>。</li>
+<li>模式/策略变更应触发 <code>configure</code> 并得到 <code>pathResult</code>。</li>
+<li>正常路径更新时 Godot 应收到非空 <code>treeLayout</code>。</li>
+<li>Tauri 模式隐藏 Web path toolbar；浏览器模式保留。</li>
+</ol>
+<hr />
+<hr />
+<h2 id="13_1">13. 接口更新日志归位说明<a class="headerlink" href="#13_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>规范的双语更新日志统一归档在 <a href="../export/"><code>export.md</code></a>。</li>
+<li>本文档聚焦接口契约，历史迁移日志不再前置于文件开头。</li>
+<li>相关接口增量版本：</li>
+<li><code>2026-03-02 v1.5.1</code>：接口增量：Tauri 运行时能力对齐更新</li>
+</ul>
+<h3 id="_2">已归档接口增量日志块（可追溯）<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<h1 id="2026-03-02-v151">2026-03-02 v1.5.1<a class="headerlink" href="#2026-03-02-v151" title="Permanent link">&para;</a></h1>
+<h3 id="tauri">接口增量：Tauri 运行时能力对齐更新<a class="headerlink" href="#tauri" title="Permanent link">&para;</a></h3>
+<p>本节记录 <code>v1.4.5</code> 之后新增的接口变化，下方历史交接内容保持不变。</p>
+<h4 id="a-sidecar-http-apinode">A. Sidecar HTTP API（Node）<a class="headerlink" href="#a-sidecar-http-apinode" title="Permanent link">&para;</a></h4>
+<ol>
+<li><code>GET /api/available-targets</code></li>
+<li>用途：返回可选择的学习/构建目标，来源合并：<ul>
+<li><code>Knowledge_Base</code> 下实际子目录</li>
+<li>缓存产物（如 <code>data_&lt;target&gt;.js</code>、<code>graph_data_&lt;target&gt;.json</code>）</li>
+</ul>
+</li>
+<li>响应示例：</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="p">{</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">"targets"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"financial"</span><span class="p">,</span><span class="w"> </span><span class="s2">"legal"</span><span class="p">,</span><span class="w"> </span><span class="s2">"robotics"</span><span class="p">]</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="p">}</span>
+</code></pre></div>
+<h4 id="b-tauri-rust-ipc">B. Tauri 命令（Rust IPC）<a class="headerlink" href="#b-tauri-rust-ipc" title="Permanent link">&para;</a></h4>
+<ol>
+<li><code>get_available_targets() -&gt; string[]</code></li>
+<li>
+<p>契约：与 <code>/api/available-targets</code> 保持同样的目标合并语义。</p>
+</li>
+<li>
+<p><code>read_node_content(file_path: string) -&gt; Result&lt;string, string&gt;</code></p>
+</li>
+<li>契约：<ul>
+<li>支持相对路径与绝对路径输入。</li>
+<li>严格限制在配置的 <code>Knowledge_Base</code> 根目录内（越界文件直接拒绝）。</li>
+<li>对包含 <code>.../Knowledge_Base/...</code> 的旧桌面路径可自动重定位到当前 KB 根目录。</li>
+</ul>
+</li>
+</ol>
+<h4 id="c">C. 运行时能力契约更新<a class="headerlink" href="#c" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>get_runtime_capabilities()</code> 在 Android 端现在返回 <code>supports_content_api: true</code>。</li>
+<li>原因：即使 sidecar 关闭，也可通过 Rust <code>read_node_content</code> 完成内容读取。</li>
+</ul>
+<h4 id="d">D. 前端行为契约更新<a class="headerlink" href="#d" title="Permanent link">&para;</a></h4>
+<ol>
+<li><code>source_manager.js</code></li>
+<li>sidecar 路径优先调用 <code>/api/available-targets</code>，失败时回退到 <code>/api/folders</code>。</li>
+<li>Rust 路径优先调用 <code>get_available_targets</code>，失败时回退到 <code>get_folders</code>。</li>
+<li>
+<p>在 <code>supports_build=false</code>（移动端）场景：</p>
+<ul>
+<li>下拉列表仅保留有缓存的目标。</li>
+<li><code>ALL_FOLDERS</code> 仅在存在活动缓存时显示。</li>
+<li>无可用缓存时，加载按钮禁用。</li>
+</ul>
+</li>
+<li>
+<p><code>reader.js</code></p>
+</li>
+<li>内容加载回退顺序：<ul>
+<li>sidecar <code>/api/content</code>（桌面/网页路径）</li>
+<li>Rust <code>read_node_content</code>（Tauri 回退/移动端可用）</li>
+<li>本地化错误或不可用提示</li>
+</ul>
+</li>
+</ol>
+<h4 id="e">E. 验证基线<a class="headerlink" href="#e" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>npm run test:migration</code> 通过（35 项）。</li>
+<li><code>npm run test:tauri</code> 通过（14 项）。</li>
+<li><code>npm run tauri:android:build</code> 通过。</li>
+</ul>
+<h2 id="2026-07-19-v180">2026-07-19 v1.8.0 可执行图回答契约<a class="headerlink" href="#2026-07-19-v180" title="Permanent link">&para;</a></h2>
+<p><code>AgentConversationTrace.graphAnswerPlan</code> 与 <code>graphAnswerCoverage</code> 现在描述实际执行行为，而不只是诊断信息。RAG turn 中，composer 先实现有序 required claims，再补充 RAG clause。release revision 后重新计算最终 coverage，且 revision 必须保留 required plan statement。</p>
+<p>所有置信度大于 <code>0.75</code> 且未被判定为冗余的 claim 均为 required；若没有 claim 越过该边界，则 lead claim 作为 fallback required。相同 role 的数量不再构成去重依据。带 citation ID 的 plan evidence 会参与 claim-level citation 校验。</p>
+<p>运行时期望可启用 <code>requireCompleteGraphAnswerCoverage</code> 与 <code>requireGraphAnswerPlanOrder</code>。验证器随后要求最终 coverage 包含全部 required claim ID，并要求规范化 public statement 按 plan 顺序出现。</p>
+<h3 id="2026-07-19-owner">2026-07-19 最终 owner 与兼容性说明<a class="headerlink" href="#2026-07-19-owner" title="Permanent link">&para;</a></h3>
+<p>可执行链路依次由 <code>graphContextAssembler.ts</code>（有界子图）、<code>graphAnswerPlan.ts</code>（语义 claim 契约）、<code>conversationComposer.ts</code>（公开回答实现）和 <code>answerReleaseReview.ts</code>（最终发布不变量）负责。<code>graphAnswerFacts.ts</code> 是 composition 与 revision 共用的 fact-selection 策略，不生成 prose，也不新增编排层。</p>
+<p><code>public_surface_contraction</code> 作为 <code>AnswerReleaseGateId</code> 为保持 wire compatibility 继续存在。其当前行为保护公开表面的结构与泄漏卫生，不得被解释或重新实现为 900 字符、固定句数或单条 <code>direct_support</code> 限制。</p>
+<p>Clause shaping 由 <code>ragEvidenceQuality.ts</code> 与 <code>graphAnswerPlan.ts</code> 负责。分句会保留小数点和数学记号；排序信号包括句末完整性、delimiter 平衡、数学密度、文档元叙述惩罚与连续长度衰减。最终公开 clause 可以不同于 raw evidence 文本，但 <code>evidenceRefs</code> 必须保留原始 provenance。这些 score 只排序已选证据，不证明 relevance 或 entailment。</p>
+<p>Supplemental RAG clause 在 composer 边界做语义去重；release review 只移除字面等价或包含型重复，避免冲突日期、数值、endpoint 或 location 被静默折叠。当前验证要求 required claim ID 完整覆盖、保持 plan 顺序、无重复长 clause，并且公开回答无 Markdown list/bold 脚手架。全仓基线为 Jest 124/124 个 suite、1,155 个测试通过、26 个跳过，同时 TypeScript、production/Vite build、Water Glass 运行时验收、Diataxis、MkDocs 与 diff hygiene 均通过。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,4600 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/zh/implementation_plan/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>2026-05-12 v1.7.0 - HEAD 现实对齐实施计划 - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#2026-05-12-v170-head" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              2026-05-12 v1.7.0 - HEAD 现实对齐实施计划
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文文档
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="中文文档">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#2026-08-21-30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-21 第 30 阶段：图条件上下文装配
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2026-06-21-agent-knowledge-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-06-21 Agent Knowledge Workspace 运行时复用实施计划
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-06-21 Agent Knowledge Workspace 运行时复用实施计划">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目标
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        当前代码真相
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        执行顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        验收标准
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2026-06-18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-06-18 最终回复审核鲁棒性实施计划
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-06-18 最终回复审核鲁棒性实施计划">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目标
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        当前代码真相
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        下一步执行顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        验收标准
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2026-06-17-agent-knowledge-dag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-06-17 Agent Knowledge DAG 实施计划
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-06-17 Agent Knowledge DAG 实施计划">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目标
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        当前代码真相
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        下一步执行顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        验收标准
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2026-06-10-dag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-06-10 知识工作区与 DAG 实施计划
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-06-10 知识工作区与 DAG 实施计划">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目标
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        当前代码真相
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        下一步执行顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2026-06-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-06-06 主线架构对齐实施计划
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-06-06 主线架构对齐实施计划">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目标
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        当前代码真相
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#main" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        从当前 main 出发的执行顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        验收标准
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2026-06-06-p1-foundation-release-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-06-06 P1 Foundation Release Evidence 新鲜度与历史证据切片
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-06-06 P1 Foundation Release Evidence 新鲜度与历史证据切片">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目标
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        已落地代码路径
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        证据契约
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        当前证据位置
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#p1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        剩余 P1 推进方向
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2026-05-27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-05-27 工作流真相同步与后续主线重对齐
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-05-27 工作流真相同步与后续主线重对齐">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_24" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目标
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        根因与修正
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#head" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        从当前 HEAD 出发的下一步执行顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2026-05-27-tauri-first-agent-reply-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-05-27 Tauri-first Agent Reply Rendering 现实对齐
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-05-27 Tauri-first Agent Reply Rendering 现实对齐">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目标
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        代码 / 方案现实
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        下一步执行顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        验收标准
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2026-05-12-2026-05-13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-05-12 到 2026-05-13 本轮实现增量
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-17-9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-17 第 9 阶段推进状态
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 第 12 阶段 向前兼容的移动持久化计划
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 第 12 阶段 向前兼容的移动持久化计划">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        第 11 阶段后的当前代码真相
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        修正后的失败语义
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        移动架构与权衡
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_32" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        当前起点后的执行顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_33" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        验收门禁
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 第 15 阶段 原生边界与身份语料加固
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 第 15 阶段 原生边界与身份语料加固">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_34" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        本轮已实现
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_35" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        权衡
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_36" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        后续门禁
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-16-portable-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 第 16 阶段 Portable Identity 传播
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 第 16 阶段 Portable Identity 传播">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_37" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        已实现
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_38" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        架构约束
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_39" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        后续门禁
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-17-host-parity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 第 17 阶段：跨 Host 语义 Parity 闭环
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 第 17 阶段：跨 Host 语义 Parity 闭环">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_40" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        已实现
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_41" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        权衡与约束
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_42" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        验证与下一道门禁
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 第 19 阶段：原生导入失败路径保留
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 第 19 阶段：原生导入失败路径保留">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_43" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        实施
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_44" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        权衡与门禁
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-08-18-20-arm64" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-18 第 20 阶段：恢复重试与新鲜 arm64 产物证据
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026-08-18 第 20 阶段：恢复重试与新鲜 arm64 产物证据">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        代码 vs 方案现状矩阵
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_45" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        执行顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_46" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        验收标准
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="2026-05-12-v170-head">2026-05-12 v1.7.0 - HEAD 现实对齐实施计划<a class="headerlink" href="#2026-05-12-v170-head" title="Permanent link">&para;</a></h1>
+<h2 id="_1">中文文档<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<h3 id="2026-08-21-30">2026-08-21 第 30 阶段：图条件上下文装配<a class="headerlink" href="#2026-08-21-30" title="Permanent link">&para;</a></h3>
+<p>pre-RAG graph answer plan 现在通过确定性的 fragment-order 适配层参与证据选择。role 与 score 仍是权威排序，图命中只在同一证据优先级内打破平局。<code>RagContextPack.graphConditioning</code> 使选择可审计，普通与有界恢复装配共用同一 plan。public ID、IPC、移动 payload 与原生证据门禁保持不变。</p>
+<h3 id="2026-06-21-agent-knowledge-workspace">2026-06-21 Agent Knowledge Workspace 运行时复用实施计划<a class="headerlink" href="#2026-06-21-agent-knowledge-workspace" title="Permanent link">&para;</a></h3>
+<h4 id="_2">目标<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
+<p>通过复用本项目现有的 DAG 支撑运行时，收口 Knowledge Workspace 剩余的图动作缺陷，避免继续维护与主运行时分叉的预览逻辑。</p>
+<h4 id="_3">当前代码真相<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>关联聚焦</code> 现在复用主图面的 graph-view Focus-mode snapshot/runtime 路径；relation edge 与后端 debug 细节只有 Developer Mode 开启时才显示。</li>
+<li><code>学习路径</code> 现在把现有 Path workspace/runtime（<code>path-container</code>、path sidebars、<code>path_app.js</code>）挂入右侧停靠 pane，而不是渲染手写的 prerequisite/anchor/next DOM 假预览。</li>
+<li>学习路径目标会基于真实 DAG source graph 按稳定节点 ID、人类可读 label 与 source basename 做一致性解析。worker 收到真实图节点 ID；UI 展示 <code>water glass</code> 这类解析后的 label。</li>
+<li><code>agent_workspace.js</code> 现在会从 knowledge point 顶层字段、matched spans 与 citation payload 透传 <code>sourcePath</code>，让图目标解析拥有持久的 source-path 信号。</li>
+<li><code>path_app.js</code> 在语义 live-region 被节流时会延迟刷新，避免有效路径已经算出后仍残留 <code>focus none</code> / <code>0 of 0 nodes</code> 文案。</li>
+<li><code>scripts/verify-agent-workspace-browser.js</code> 现在围绕 <code>water glass</code> 播种真实 DAG 邻域，并断言已挂载的 Path runtime 节点数大于 0、语义文本包含 <code>water glass</code>、不泄漏 <code>atom_h</code>、不出现 <code>focus none</code>、也不出现 <code>0 of 0 nodes completed</code>。</li>
+<li><code>src/agent_workspace.frontend.test.ts</code> 固定关键不变量：运行时配置可以使用 DAG ID（fixture 中为 <code>atom_h</code>），但右侧 pane UI 必须显示节点 label（<code>water glass</code>），不能暴露内部 ID。</li>
+<li>命中文件帮助入口继续保持为紧凑的 hover/focus 问号控件；左侧命中区域保持可滚动，动作按钮保持可达。</li>
+<li>兼容性保持 additive：没有把既有 response shape 改成强制字段，并继续接受 legacy <code>performance.deepDebug</code> 作为 Developer Mode 兼容键。</li>
+</ul>
+<h4 id="_4">执行顺序<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
+<ol>
+<li>图目标解析保留在 workspace/path 边界，不从展示字符串里反推运行时语义。</li>
+<li>保持 Path runtime 作为 diffusion/path 语义的唯一 owner，不再引入手写 preview graph。</li>
+<li>Focus 默认输出保持面向用户且克制；relation 列表与后端诊断只放在 Developer Mode 后。</li>
+<li>保持 strict browser verification 作为截图问题的可执行验收面，尤其是 <code>water glass.md</code>。</li>
+<li>只有新模块持有真实不变量时才继续拆分 owner；避免只转发 graph payload 的 pass-through adapter。</li>
+</ol>
+<h4 id="_5">验收标准<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h4>
+<ol>
+<li>点击 <code>学习路径</code> 会挂载真实 Path workspace，并从所选 DAG 节点计算出非空路径。</li>
+<li>Path worker 收到有效图节点 ID，同时右侧 pane 的可见标签优先使用人类可读节点名。</li>
+<li>点击 <code>关联聚焦</code> 会显示所选节点的 Focus-mode 图状态，默认不显示后端 / relation debug 列表。</li>
+<li>命中文件列表可纵向滚动，能显示 <code>water glass.md</code>，并保持 <code>学习路径</code> / <code>关联聚焦</code> 按钮可交互。</li>
+<li>如果用户可见的 path pane 中重新出现 <code>atom_h</code>、<code>focus none</code> 或 <code>0 of 0 nodes</code>，strict browser verifier 必须失败。</li>
+</ol>
+<h3 id="2026-06-18">2026-06-18 最终回复审核鲁棒性实施计划<a class="headerlink" href="#2026-06-18" title="Permanent link">&para;</a></h3>
+<h4 id="_6">目标<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h4>
+<p>在回答合成与公开释放之间补上一层确定性的 final-answer release-review owner，让 agent 在把答案发给用户前，先决定应该直接放行、收缩改写，还是降级 abstain。</p>
+<h4 id="_7">当前代码真相<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>waterglass</code> 的 compact/spaced alias 归一化问题已经在 planner/retrieval 边界修复。</li>
+<li>项目已经有 <code>src/learning/graphContextAssembler.ts</code> 作为 graph-conditioned context assembly owner，因此当前缺口不是图检索，而是公开回答发布前的最终审核 owner。</li>
+<li>本轮已新增 <code>src/learning/answerReleaseReview.ts</code>，专门负责 <code>release</code> / <code>revise</code> / <code>abstain</code> 决策。</li>
+<li><code>src/learning/types.ts</code> 现在以 additive 方式把 <code>AnswerReleaseReview</code> 接到 response、trace 与 <code>KnowledgeRun</code>。</li>
+<li><code>conversationComposer.ts</code> 现在先产出草稿回答，再把最终公开回答交给 reviewer 决定，而不是直接放出 draft。</li>
+<li>reviewer 现在也会执行 <code>claim_grounding_alignment</code>：即便已经有 grounded evidence，只要草稿回答与 citation/knowledge point 的主支撑发生漂移，仍会强制改写。</li>
+<li>reviewer 现在还会执行 <code>claim_structured_consistency</code>：即使 topical lexical overlap 还算合理，只要草稿里的数值或年份这类结构化事实与 citation/knowledge point 支撑冲突，也会被确定性改写。</li>
+<li>reviewer 现在还会执行 <code>claim_structured_comparison_consistency</code>：当 <code>higher/lower</code>、<code>greater/less</code>、<code>高于/低于</code> 这类显式比较与“同一属性、同一单位”的支撑事实顺序相反时，也会在 release 前被确定性改写。</li>
+<li>reviewer 现在还会执行 <code>claim_attribute_consistency</code>：即使主体保持不变，只要显式 <code>has</code> / <code>have</code> / <code>具有</code> 属性断言把支撑属性从 <code>中等热绝缘性能</code> 之类偷换成 <code>高热绝缘性能</code>，也会被确定性改写。</li>
+<li>reviewer 现在还会执行 <code>claim_containment_consistency</code>：即使 grounded subject 保持不变，只要草稿在显式内容/容纳关系里把 <code>contains water</code> 这类被容纳内容偷换成 <code>contains oil</code>，也会被确定性改写。</li>
+<li>reviewer 现在还会执行 <code>claim_composition_consistency</code>：即使 grounded subject 保持不变，只要草稿在显式 <code>由...组成</code> / <code>composed of</code> 关系里把 <code>water and a glass cup</code> 这类支撑组件偷换成 <code>oil and a plastic cup</code>，也会被确定性改写。</li>
+<li>reviewer 现在还会执行 <code>claim_purpose_consistency</code>：即使 grounded subject 保持不变，只要草稿在显式 <code>used for</code> / <code>用于</code> 关系里把 <code>drinking water</code> 这类支撑用途偷换成 <code>storing motor oil</code>，也会被确定性改写。</li>
+<li>reviewer 现在还会执行 <code>claim_dependency_consistency</code>：即使 grounded subject 保持不变，只要草稿在显式 <code>depends on</code> / <code>requires</code> / <code>依赖</code> / <code>前置条件</code> 关系里把 <code>基线测量和传感器校准</code> 这类支撑依赖偷换成 <code>最终报告</code>，也会被确定性改写。</li>
+<li>reviewer 现在还会执行 <code>claim_location_consistency</code>：即使 grounded subject 保持不变，只要草稿在显式 <code>located in</code> / <code>位于</code> 框架里把 <code>主舱室</code> 这类支撑位置偷换成 <code>辅助舱室</code>，也会被确定性改写。</li>
+<li>reviewer 现在还会执行 <code>claim_subject_consistency</code>：即使事实尾部仍然与支撑一致，只要草稿把 grounded subject 从 <code>Water density</code> 偷换成 <code>Glass density</code> 这类别的主体，也会被确定性改写。</li>
+<li>reviewer 现在还会执行 <code>claim_state_consistency</code>：即使 topical lexical overlap 仍然通过，只要同一主体的定义/系词型状态断言与支撑冲突，例如 <code>open system</code> vs <code>closed system</code>，也会在中英文路径上被确定性改写。</li>
+<li><code>located in</code> / <code>位于</code> 这类位置谓词现在已从 <code>claim_state_consistency</code> 的 frame 抽取中显式排除，因此位置断言会由 location slice 持有，而不会误报成 state contradiction。</li>
+<li>reviewer 现在还会执行 <code>query_intent_alignment</code>：当 <code>what is</code> / <code>什么是</code> 类问题已经命中定义证据，但草稿回答仍然停留在“本文档旨在……”这类文档自述时，会在 release 前被确定性改写成直接定义句。</li>
+<li>reviewer 现在还会执行 <code>claim_polarity_consistency</code>：即使 topical lexical overlap 仍然通过，只要草稿把 support 明确说反（正反断言反转），也会被确定性改写。</li>
+<li>reviewer 现在还会执行 <code>claim_graph_causal_consistency</code>：利用 <code>connectionPaths</code>、<code>knowledgePointRelations</code>、<code>predecessorWindow</code> 与 <code>successorWindow</code> 检查 <code>causal</code> 方向是否被说反，并在冲突时输出 DAG 支撑的纠正句。</li>
+<li>reviewer 现在还会执行 <code>claim_graph_order_consistency</code>：利用 <code>connectionPaths</code>、<code>knowledgePointRelations</code>、<code>predecessorWindow</code> 与 <code>successorWindow</code> 检查 <code>prerequisite</code> / <code>sequence</code> 方向是否被说反，并在冲突时输出 DAG 支撑的纠正句。</li>
+<li>reviewer 现在还会执行 <code>claim_graph_comparison_consistency</code>：利用已装配图证据，在同一 title pair 只支撑单一 <code>contrast</code> / <code>analogy</code> 家族时，拦截把两者说反的草稿。</li>
+<li>reviewer 现在还会执行 <code>claim_temporal_validity_consistency</code>：直接消费 <code>graphContext.temporalValidity</code>；当 grounded evidence 带有时序警告时，未显式加时间限定的“当前结论”草稿会在 release 前被改写，带明确时间限定的答案仍可放行，而仅有 <code>supersedes</code> 血缘本身不会误触发门禁。</li>
+<li>cross-language abstention hygiene 现在已显式化：中文 scoped miss 不再退化成 English diagnostic-heavy abstention。</li>
+<li><code>KnowledgeLearningPlatform.ts</code> 现在会把 review 决策写入 response、trace 与 workflow artifact。</li>
+<li>运维检查面现在已经能查看 reviewer 状态，但不会重新挤占主回答区：<code>src/frontend/agent_workspace.js</code> 会映射并净化 <code>answerReleaseReview</code>，<code>src/frontend/workspace_panes.js</code> 会在 <code>knowledge_run</code> 明细 / 历史卡片中渲染 release-review 结果。</li>
+<li><code>WorkspaceExportBundle.ts</code> 现在会把紧凑 reviewer 摘要投影到 <code>runtime.knowledgeRunReports[*].answerReleaseReview</code>，因此 export/replay 面也能审计 release decision，而不必重复携带完整回答文本。</li>
+<li><code>WorkspaceExportBundle.ts</code> 现在还会在 <code>runtime.knowledgeRunAnswerReleaseAuditSummary</code> 中派生一份 durable 的聚合 reviewer 审计摘要，覆盖 reviewed/unreviewed 计数、decision bucket、改写次数、failed-gate 次数、泄漏次数与最近审核时间。</li>
+<li>聚合 reviewer 审计现在还会补出 <code>reviewTrend</code> 趋势窗口与 <code>failedGateAging</code> 门禁老化摘要，两者都继续复用同一条 reviewer telemetry 路径，而不是再引入第二个审计 owner。</li>
+<li>运维侧的 <code>knowledge_run</code> history 现在会渲染同一套长周期 release-audit 形态，包括 review trend window 与 gate-aging 摘要，因此多次运行之间的 reviewer 漂移已经可见，同时不扩大主回答区，也不再发明第二条 telemetry 路径。</li>
+<li>同一条聚合审计路径现在还会继续派生 compare-ready drilldown：近期/前序已审窗口的指标差值、按 gate 的窗口变化，以及最近两次已审运行的 delta；<code>knowledge_run</code> compare 卡片也会在原有质量/图信号对比之外补出 answer-release 对比。</li>
+<li><code>scripts/verify-knowledge-workspace-runtime.js</code> 现在已经把 reviewer 存在性与主回答卫生要求纳入 <code>waterglass</code> 截图场景的正式运行时验收，其中也包括拒绝 <code>本技术文档旨在</code> 这类文档自述片段进入主回答。</li>
+<li>共享的确定性 alias/scope 回归语料现在已经落在 <code>src/learning/KnowledgeWorkspaceConversationRegression.ts</code>：既覆盖截图派生的 <code>waterglass</code> compact/spaced 用例，也覆盖 <code>financial</code> 下的跨 scope 恢复用例；Jest 与运行时 verifier 复用同一份数据集。</li>
+<li>这份共享语料现在也明确区分“跨语料稳定的不变量”和“依赖真实文档措辞的中间草稿行为”：</li>
+<li>对内存态 Jest fixture，只要最终公开回答已经 grounded 且收缩，<code>release</code> 与 <code>revise</code> 都是允许结果，</li>
+<li>对真实截图派生的运行时用例 <code>waterglass_explicit_scope_compact_zh</code>，则继续强制要求 <code>revise</code>，并要求 failed gate 中出现 <code>query_intent_alignment</code>。</li>
+<li>这份语料还暴露了 <code>KnowledgeLearningPlatform.ts</code> 中的一个 soft-miss 检索缺陷：planner scope recovery 先前只会在 0 结果 miss 时触发，现在改为在“scope 内 rerank 噪声候选仍在，但没有任何 planner title-hit 文档幸存”时也会触发。</li>
+<li><code>src/learning/answerReleaseReview.test.ts</code> 现在已经钉住确定性的 structured contradiction 用例：数值冲突、年份冲突，以及“支撑里有多个候选值但其中一个就是正确值”的防误报场景。</li>
+<li><code>src/learning/answerReleaseReview.test.ts</code> 现在还固定了确定性的 structured-comparison 用例：英文反转、中文反转、被支撑比较直放行，以及 mixed-property 防误报控制。</li>
+<li><code>src/learning/answerReleaseReview.test.ts</code> 现在还固定了确定性的 polarity contradiction 用例：英文反转、中文反转，以及“support 带有无关否定句但不能误报”的防误报场景。</li>
+<li>2026-06-19 的一次运行时复核还确认了一个操作约束：reviewer gate 变更必须对着新鲜构建的 <code>dist</code> 产物验证。第一次在陈旧编译输出上跑 verifier 时，新 gate 清单被暂时遮蔽；执行 <code>npm run build:mini</code> 后再次验证，运行时 reviewer 面才与源码重新对齐。</li>
+<li>右侧文件预览/高亮链路与最终回答审核仍是两个独立 owner，但当前 graph-focus 契约已经超过单纯 payload 加固：<code>src/frontend/markdown_runtime.js</code> 会给渲染后的 markdown block 标注 source-line 元数据，<code>src/frontend/workspace_panes.js</code> 会在渲染节点 range 与可信 span 重叠时优先使用 <code>source_line_provenance</code>，并在已认证 block 内优先使用 snippet 尺度的 source-fragment projection，之后才回退到 <code>line_window</code>、<code>snippet_fallback</code> 与 broad text search；additive 诊断也会同时暴露节点高亮策略、内联高亮策略与 provenance 覆盖度。</li>
+<li><code>src/agent_workspace.frontend.test.ts</code> 现在已经固定“重复 snippet 仍要命中正确段落”“行号不可用时必须正确回退”“单行段落不能整行过高亮”以及“嵌套 inline 节点必须命中精确片段”四类关键失败场景，因此右侧证据预览不再只依赖脆弱的 snippet-only 启发式。</li>
+<li>2026-06-19 的复审已经确认：缺失 owner 这一阶段性问题已经关闭；当前活跃缺口已经转移到超出 lexical + query-intent + structured + structured-comparison + attribute + containment + composition + purpose + dependency + location + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity 栈的更广 claim-vs-citation / claim-vs-evidence 矛盾检测，以及通过显式 offset 或更丰富 AST provenance 解决“同一已认证渲染 block 内重复片段去歧义”的剩余缺口，而不是继续讨论 prompt framework 是否要引入。</li>
+</ul>
+<h4 id="_8">下一步执行顺序<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h4>
+<ol>
+<li>保持 reviewer 窄口径，只拥有 release invariant，不让 prompt template 重新接管 release policy。</li>
+<li>基于这份显式 alias/scope 回归语料以及当前 query-intent + structured-fact + structured-comparison + attribute + containment + composition + purpose + dependency + location + subject + state + polarity + graph-causal + graph-order + graph-comparison + temporal-validity reviewer 切片，继续把 lexical grounding check 扩展到更深的 claim-vs-citation / claim-vs-evidence 矛盾检测，同时控制 false positive；其中 structured-comparison 切片继续只接受“同一属性、同一单位”的保守可比对。</li>
+<li>把当前 block-level markdown source mapping 与 <code>source_line_provenance</code> -&gt; source-fragment projection -&gt; <code>line_window</code> -&gt; <code>snippet_fallback</code> -&gt; 内联片段高亮栈视为已落地基线；下一步不是重新发明前端 release policy，而是用显式 offset 或更丰富 AST provenance 继续解决重复片段去歧义。</li>
+<li>持续扩充共享语料，覆盖更多真实的跨 scope、紧凑别名与同义表达失败场景，并保持 Jest 与运行时 verifier 的确定性预期一致。</li>
+<li>继续做 owner reduction，但前提仍然是“新 owner 持有真实决策或不变量”。</li>
+</ol>
+<h4 id="_9">验收标准<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h4>
+<ol>
+<li>不支持的草稿回答不能再把 <code>No scoped knowledge points matched</code> 或 <code>retrieval_candidates_below_threshold</code> 这类内部诊断泄漏到主回答区。</li>
+<li>对于 grounded draft 中与证据冲突的结构化数值 / 年份事实，系统必须在 release 前改写，而不能仅因 lexical overlap 还在就放行。</li>
+<li>对于 grounded draft 中把被支撑的“同一属性、同一单位”比较方向说反的断言，系统必须在 release 前改写，避免把 <code>Water density is higher than glass density</code> 这类顺序漂移公开放行。</li>
+<li>对于 grounded draft 中“主体没变、显式内容/容纳关系没变，但被容纳内容被偷换”的断言，系统必须在 release 前改写，避免 <code>contains water</code> -&gt; <code>contains oil</code> 这类内容漂移进入公开回答。</li>
+<li>对于 grounded draft 中“主体没变、显式 <code>由...组成</code> / <code>composed of</code> 关系没变，但支撑组件被偷换”的断言，系统必须在 release 前改写，避免 <code>water and a glass cup</code> -&gt; <code>oil and a plastic cup</code> 这类组成关系漂移进入公开回答。</li>
+<li>对于 grounded draft 中“主体没变、显式 <code>used for</code> / <code>用于</code> 关系没变，但支撑用途被偷换”的断言，系统必须在 release 前改写，避免 <code>drinking water</code> -&gt; <code>storing motor oil</code> 这类用途漂移进入公开回答。</li>
+<li>对于 grounded draft 中“主体没变、显式 <code>located in</code> / <code>位于</code> 关系没变，但支撑位置被偷换”的断言，系统必须在 release 前改写，避免 <code>主舱室</code> -&gt; <code>辅助舱室</code> 这类位置漂移进入公开回答，同时这类位置句型不得误触发 state gate。</li>
+<li>对于 grounded draft 中“事实尾部还对、但 grounded subject 被偷换”的断言，系统必须在 release 前改写，避免实体 / 主体漂移进入公开回答。</li>
+<li>对于 grounded draft 中同主体但状态说反的断言，系统必须在 release 前改写，避免把 <code>open system</code> vs <code>closed system</code> 这类矛盾公开放行。</li>
+<li>对于 grounded draft 中把支撑明确说反的正反断言，系统必须在 release 前改写，而不能仅因 lexical overlap 还在就放行。</li>
+<li>对于 grounded draft 中把 DAG 支撑的因果方向说反的断言，系统必须在 release 前改写，而不能把反向因果公开放行。</li>
+<li>对于 grounded draft 中把已装配 DAG 的 <code>prerequisite</code> 或 <code>sequence</code> 方向说反的断言，系统必须在 release 前改写，而不能把反向顺序公开放行。</li>
+<li>对于 grounded draft 中把 DAG 只支撑单一对比分支的 title pair（仅 <code>contrast</code> 或仅 <code>analogy</code>）说成相反对比语义的断言，系统必须在 release 前改写，而不能把 comparison branch 漂移公开放行。</li>
+<li>对于 grounded draft 中把带时序警告的 DAG 证据直接发布成“当前结论”的断言，系统必须在 release 前改写；如果公开回答已经显式带时间限定，则允许放行，而仅有 <code>supersedes</code> 血缘本身不得触发该 gate。</li>
+<li><code>AgentConversationResponse</code>、trace 与 <code>KnowledgeRun</code> 都必须保留 additive 的 <code>answerReleaseReview</code> 状态。</li>
+<li>运维检查面必须能渲染 reviewer decision、failed gates 与 original/public answer 差异，同时不扩大主回答区。</li>
+<li>Workspace export 的 knowledge-run report 必须能为 <code>release</code> / <code>revise</code> 流程保留紧凑 reviewer 摘要，并在 review 数据缺失时保持向前兼容。</li>
+<li>Workspace export 还必须在 <code>runtime.knowledgeRunAnswerReleaseAuditSummary</code> 中保留 additive 的聚合 reviewer 审计摘要，以及同一路径派生出的 review-trend / gate-aging / compare-ready drilldown 摘要；运维 history 卡片与 compare 卡片都必须消费同一套 reviewer telemetry，而不扩大主回答区。</li>
+<li>右侧文件命中预览必须基于稳定 payload 字段解析原文与命中高亮；即使 top-level hit 字段不完整，也必须能消费 citation-backed path/snippet；渲染后的 markdown block 必须保留 source-line 元数据，在渲染节点 range 与可信 span 重叠时优先使用 <code>source_line_provenance</code>，并在已认证 block 内优先投影 snippet 尺度的 source-fragment 内联高亮，否则再回退到 <code>line_window</code> / <code>snippet_fallback</code> / text search，同时保留运维诊断。</li>
+<li>共享 alias/scope Jest 语料在最终公开回答已经 grounded 且收缩时允许 <code>release</code> 或 <code>revise</code>；而截图派生的运行时用例 <code>waterglass_explicit_scope_compact_zh</code> 仍必须触发 <code>revise</code>，且 failed gate 必须包含 <code>query_intent_alignment</code>。</li>
+<li>reviewer gate 变更后的运行时验证必须对着新鲜构建产物执行，因此在 <code>npm run verify:knowledge-workspace:runtime</code> 前必须先刷新 <code>dist</code>（例如执行 <code>npm run build:mini</code>）。</li>
+<li><code>npm run verify:knowledge-workspace:runtime</code> 必须通过共享 alias/scope 回归语料，包括截图派生的 <code>waterglass</code> compact/spaced 双查询与 <code>financial</code> 下的跨 scope 恢复双查询，并确认 reviewer/public-answer 一致性。</li>
+<li>现有 <code>assistantMessage</code>、<code>answer</code>、<code>assistantBlocks</code> 与下游 client 必须保持向前兼容。</li>
+</ol>
+<h3 id="2026-06-17-agent-knowledge-dag">2026-06-17 Agent Knowledge DAG 实施计划<a class="headerlink" href="#2026-06-17-agent-knowledge-dag" title="Permanent link">&para;</a></h3>
+<h4 id="_10">目标<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h4>
+<p>将已澄清的 DAG 要求转成可执行顺序：使用现有 learning graph 作为 answer-planning substrate，同时保持公开回答聚焦与运行时兼容。</p>
+<h4 id="_11">当前代码真相<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h4>
+<ul>
+<li>当前图底座是项目内部已有结构：<code>KnowledgeAtom</code>、<code>RelationEdge</code>、<code>TemporalEdge</code>、evidence spans、store ops 与 <code>findPath</code>。</li>
+<li>当前切片已经有一等 graph-conditioned context assembler：<code>src/learning/graphContextAssembler.ts</code> 会在回答合成前选择 anchor、重排 support node、保留显式 <code>connectionPaths</code>，并补有界 predecessor/successor window 与 graph diagnostics。</li>
+<li>当前持久化会在自动保存重建 snapshot 时保留仍然有效的 store 侧 relation/temporal edges，避免 read-side query/conversation 流程在装配 <code>connectionPaths</code> 前丢掉外部增强 DAG 结构。</li>
+<li>当前 retrieval 路径已经使用有界 graph-aware ranking signal，而不再主要依赖 relation degree；剩余工作转为更广的真实回归校准。</li>
+<li>retrieval 侧的 graph intent detection 现在已经补齐中文 compare/how-to/explain 标记，并对 direct compare branch 相对 reference-only note 做了显式结构性加权。</li>
+<li><code>graph_comparison_branch</code> 质量门禁现在已经对假阳性做了校准：compare intent 不会再仅凭 reference-only support 就通过，而必须出现 contrast/analogy 或多分支结构。</li>
+<li>当前运维可见诊断已经有三个具体面：右侧 graph-focus 的路径回退诊断、durable <code>knowledge_run</code> 卡片中的 graph context / graph diagnostics 检查面，以及 knowledge-run history/compare 流程中的紧凑 graph telemetry。</li>
+<li>有价值的 graph-focus diagnostics 现在也已经跨过运行时边界：agent workspace 会把它们写入 session state，后续 conversation/study-session 写入会保留这段历史，workspace export 则会派生 durable <code>runtime.graphFocusReports</code>。</li>
+<li>prompt-framework 研究应指导 contract 与 evaluation，不应把 Python framework 拉入 app runtime。</li>
+<li>2026-06-18 的截图驱动运行时回归说明：<code>什么是waterglass?</code> 这类紧凑混合 query 上，planner 的 alias normalization 与 retrieval scoring 曾经发生漂移；当前切片已通过把 planner-derived query variants 显式下发到 retrieval，并把 compact/spaced <code>waterglass</code> 双查询提升为运行时 verifier，修复这一缺口。</li>
+<li>运行时 verifier 现在不再只硬编码 <code>waterglass</code> 双查询：默认无 <code>--query</code> 路径会加载共享 alias/scope 回归语料，对应的 Jest 套件也会在刻意注入 <code>financial</code> 噪声文档的前提下复用同一份预期。</li>
+<li>这份共享语料还暴露了第二个检索契约缺口：planner scope recovery 必须响应 soft miss，而不只是 0 结果 miss，因此现在只要 rerank 后没有任何 planner-compatible title-hit 文档幸存，就会触发恢复。</li>
+</ul>
+<h4 id="_12">下一步执行顺序<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h4>
+<ol>
+<li>保持新的 assembler surface additive，并继续保证向前兼容。</li>
+<li>保持 planner 与 retrieval 的 query normalization 由同一契约拥有，避免“文档标题已命中但证据检索仍断开”的问题再次出现。</li>
+<li>保持 graph-aware ranking 有界，并用回归用例持续校准，避免回到 degree-driven hub 排序。</li>
+<li>现在 <code>knowledge_run</code> history/compare telemetry 已通过 <code>runtime.knowledgeRunReports</code>、graph-focus diagnostics 也已通过 <code>runtime.graphFocusReports</code> 进入 export，下一步转为校准这些 replay/export-oriented 运维检查面的信号质量。</li>
+<li>将 graph/debug/evidence 细节留在 evidence/export surface，而不是公开回答区。</li>
+<li>继续校准新的图专项回答质量门禁，并补更多回归证据与运维证据。</li>
+<li>只有当新模块拥有真实决策、状态或不变量时，才继续做 owner reduction；避免新增泛化 panel-state 透传端点。</li>
+</ol>
+<h4 id="_13">验收标准<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h4>
+<ol>
+<li><code>assistantMessage</code> 与现有 conversation client 仍然有效。</li>
+<li>graph ops 失败时能带 diagnostics 回退到当前 retrieval-grounded behavior。</li>
+<li>右侧文件命中继续保留 source markdown 与 matched-span highlight 行为。</li>
+<li>不向 Tauri/Node runtime 引入新的宽 prompt-framework 依赖。</li>
+<li><code>npm run verify:knowledge-workspace:runtime</code> 必须通过默认 alias/scope 回归语料：既包括 <code>什么是waterglass?</code> / <code>什么是water glass</code>，也包括 <code>financial</code> scope 下的 <code>what is water glass?</code> / <code>what is waterglass?</code>，并且不能出现 0 citations 或 <code>retrieval_candidates_below_threshold</code>。</li>
+</ol>
+<h3 id="2026-06-10-dag">2026-06-10 知识工作区与 DAG 实施计划<a class="headerlink" href="#2026-06-10-dag" title="Permanent link">&para;</a></h3>
+<h4 id="_14">目标<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h4>
+<p>在现有主线对齐计划基础上，补充一层专门面向知识工作区与现有 DAG 学习底座的代码现实判断。</p>
+<h4 id="_15">当前代码真相<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h4>
+<ul>
+<li>当前分支已经具备结构化 grounded conversation、按文档聚合的 knowledge point、durable <code>flashcard_batch</code> / <code>knowledge_run</code> artifact，以及 workflow-artifact review follow-up。</li>
+<li>当前 DAG 学习底座已经在代码中落地：<code>KnowledgeAtom</code>、<code>RelationEdge</code>、<code>TemporalEdge</code>、path query 与 prerequisite 驱动学习流都已存在。</li>
+<li>先前最主要缺层 retrieval 与 answer synthesis 之间的 graph-conditioned context assembly，现已落地为 <code>src/learning/graphContextAssembler.ts</code>。</li>
+<li>主回答区收缩切片已经在 composer/frontend 边界落地；剩余产品面缺口主要是 right-pane-first 知识阅读与 durable evidence review。</li>
+</ul>
+<h4 id="_16">下一步执行顺序<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h4>
+<ol>
+<li>让新的 2026-06-10 知识工作区 / DAG 对齐文档持续同步到所有活跃入口文档。</li>
+<li>保持已收缩的用户可见回答契约，同时把 supporting graph/evidence data 路由到次级表面。</li>
+<li>让左侧 knowledge hit 收敛为 right-pane-first 阅读模型。</li>
+<li>把 <code>knowledge_run</code> 与 <code>flashcard_batch</code> 视为第一批 durable evidence surface。</li>
+<li>在新的 assembler + graph-aware ranking 边界之上继续扩展右侧 / 运维诊断，并校准图专项质量门禁。</li>
+<li>继续缩减主要 server 与 frontend host 文件的所有权压力。</li>
+</ol>
+<h3 id="2026-06-06">2026-06-06 主线架构对齐实施计划<a class="headerlink" href="#2026-06-06" title="Permanent link">&para;</a></h3>
+<h4 id="_17">目标<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h4>
+<p>将当前代码 / 方案评估落入活跃实施计划，同时保持仓库位于 <code>main</code> 并保持向前兼容。初始对齐切片仅更新文档；后续 P1 证据切片可以调整 release verifier tooling，但不得改变公开运行时 API。</p>
+<h4 id="_18">当前代码真相<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Scoped retrieval 已有代码支撑：<code>KnowledgeQueryRequest.scope</code>、<code>KnowledgeCorpusScope</code>、workspace readiness、miss diagnostics、active-target hydration 与 workspace/export substrate 已存在。</li>
+<li>Grounded conversation 已进入 operational 状态：<code>AgentConversationResponse</code> 携带 <code>answer</code>、citation、memory action、trace 和可选 <code>assistantBlocks</code>；legacy <code>assistantMessage</code> 仍有效。</li>
+<li>Program A-F 底座已在 <code>src/resources/</code>、<code>src/indexing/</code>、<code>src/workspace/</code>、<code>src/session/</code>、<code>src/workflows/</code>、<code>src/memory/</code>、<code>src/export/</code> 中实现。</li>
+<li>平台 / 导出边界已通过 <code>PlatformCapabilities</code>、<code>RenderMaterializer</code>、render routes 与 deterministic workspace export bundle 显式化。</li>
+<li>graphdb/sqlite 与 ANN/external connector 目前是 operational baseline；生产闭环仍需要 soak、多轮主机证据、工作负载阈值、recall/latency 校准与 strict rollout 证明。</li>
+<li>架构缩减仍落后于目标：<code>src/server.ts</code> 与 <code>src/learning/KnowledgeLearningPlatform.ts</code> 仍是最主要的实现重心。</li>
+</ul>
+<h4 id="main">从当前 <code>main</code> 出发的执行顺序<a class="headerlink" href="#main" title="Permanent link">&para;</a></h4>
+<ol>
+<li><strong>P0：文档真相同步</strong></li>
+<li>保持 2026-06-06 solution note、development progress dashboard、task、TODO、README、interface docs 使用同一口径。</li>
+<li>没有发布级证据时，不把 operational-baseline 表述改写为 production-closed。</li>
+<li><strong>P1：release-grade graphdb/ANN 闭环</strong></li>
+<li>将 sqlite soak verifier 推进为多轮证据。</li>
+<li>收紧 graphdb connector health/budget 阈值。</li>
+<li>完成 ANN recall/latency 校准后，再把 Phase-2 diagnostics 升级为发布门禁。</li>
+<li><strong>P2：<code>server.ts</code> 所有权缩减</strong></li>
+<li>将 turn-cache、alert-trend、runbook bridge、rollout-profile、connector helper 等逻辑迁入明确模块。</li>
+<li>在迁移所有权时保留 endpoint 名称与响应兼容性。</li>
+<li><code>src/routes/runtimeRunbookRouteOps.ts</code> 现在负责 runtime runbook 的 modular-route operation assembly；后续 P2 应继续把 route-layer composition 从 <code>server.ts</code> 中剥离出来，但不要给有状态逻辑加只转发的 facade。</li>
+<li>对于体量过大的学习运行时 helper，同样适用这一规则：纯数据组装逻辑不应永久内联在 KLP 中，agent conversation reply composition 已经进入可独立模块化的边界。</li>
+<li><strong>P3：学习平台领域拆分</strong></li>
+<li>只有当新 owner 能隐藏状态或强制不变量时，才继续拆分 ingest/query/conversation/mastery/quality/tutor/memory 所有权。</li>
+<li>避免给 <code>KnowledgeLearningPlatform.ts</code> 包一层只转发的 facade。</li>
+<li><strong>P4：Agent Workspace 合同加固</strong></li>
+<li>保持 stream-first + sync fallback + replay 兼容。</li>
+<li>只通过可选 payload 与 parity-tested capability 扩展 typed <code>assistantBlocks</code> 覆盖面。</li>
+<li>将 evidence rendering 与 evidence persistence 分开推进：当前 graph-focus pane 已经能在原文中高亮命中段落，但后续仍需要 durable evidence / claim surface，而不是只停留在单轮 snippet 载荷里。</li>
+<li><strong>P5：平台 / 导出兼容性</strong></li>
+<li>保持 Godot/mobile PNG-first materialization 与 export profile 语义显式化。</li>
+<li>保持核心 retrieval/synthesis 不包含 shell-specific 分支。</li>
+</ol>
+<h4 id="_19">验收标准<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h4>
+<ol>
+<li>活跃规划文档都指向同一份 2026-06-06 状态与后续顺序。</li>
+<li>当前对齐与 release-evidence 切片不修改任何公开运行时 API。</li>
+<li>后续代码工作可以按明确优先级启动：先发布级底座闭环，再所有权缩减，再 richer agent output。</li>
+<li>文档提交后工作区保持 clean。</li>
+</ol>
+<h3 id="2026-06-06-p1-foundation-release-evidence">2026-06-06 P1 Foundation Release Evidence 新鲜度与历史证据切片<a class="headerlink" href="#2026-06-06-p1-foundation-release-evidence" title="Permanent link">&para;</a></h3>
+<h4 id="_20">目标<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h4>
+<p>把 sqlite 与 ANN 的 release evidence 路径从“各自产出报告”推进为一个统一的发布侧新鲜度校验入口，并提供更严格的 repeated evidence 审计；该审计命令本身不重新执行重型 runtime 验证，也不把当前 baseline 宣称为 production closure。</p>
+<h4 id="_21">已落地代码路径<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h4>
+<ul>
+<li>新增 <code>scripts/verify-foundation-release-evidence.js</code>。</li>
+<li>新增 <code>npm run verify:foundation:release-evidence</code>。</li>
+<li>新增 <code>npm run verify:foundation:release-evidence:strict</code>，它会用 <code>--min-report-count 3</code> 执行同一个校验器。</li>
+<li>新增 <code>npm run verify:foundation:release-evidence:multi-host</code>，它会用 <code>--min-report-count 3 --min-host-count 2</code> 执行同一个校验器。</li>
+<li>新增 <code>src/foundation.release.evidence.contract.test.ts</code>，并纳入 <code>test:migration</code>。</li>
+<li>在 <code>getFoundationReadiness().mandatoryChecks</code> 中新增 <code>foundation_release_evidence_freshness</code>。</li>
+<li>在 <code>getFoundationReadiness().mandatoryChecks</code> 中新增 <code>foundation_release_evidence_history</code>，指向 <code>npm run verify:foundation:release-evidence:strict</code>，同时保留既有 freshness 门禁。</li>
+<li>通过 <code>--min-report-count</code> 与 <code>NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_REPORT_COUNT</code> 新增 repeated evidence 的 CLI/env 控制。</li>
+<li>通过 <code>--min-host-count</code> 与 <code>NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MIN_HOST_COUNT</code> 新增 host-diversity evidence 的 CLI/env 控制。</li>
+<li>新增对 <code>foundation-sqlite-runtime-report-*.json</code> 与 <code>foundation-ann-runtime-report-*.json</code> 时间戳历史报告的扫描。</li>
+</ul>
+<h4 id="_22">证据契约<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h4>
+<p>默认新鲜度校验器读取：</p>
+<ul>
+<li><code>output/verification/foundation-sqlite-runtime/foundation-sqlite-runtime-report-latest.json</code></li>
+<li><code>output/verification/foundation-ann-runtime/foundation-ann-runtime-report-latest.json</code></li>
+</ul>
+<p>它会验证：</p>
+<ul>
+<li>通过 <code>NOTE_CONNECTION_FOUNDATION_RELEASE_EVIDENCE_MAX_AGE_HOURS</code> 执行有界新鲜度校验；</li>
+<li>sqlite 必须是 <code>suiteKind: soak</code>，包含 heavy profile、<code>dist_node_runtime</code>、<code>packaged_sidecar</code>、正数 soak cycles、通过的 soak gates 与 query samples；</li>
+<li>ANN 必须是 <code>suiteKind: matrix</code>，<code>releaseGatesEnabled: true</code>，包含 <code>smoke</code> / <code>medium</code> / <code>heavy</code>、两条 runtime mode、通过的 release gates、query samples，并且 expected recall 不低于报告阈值。</li>
+</ul>
+<p>默认命令保持向前兼容：每个组件至少需要 1 份有效且新鲜的 release-contract 报告和 1 个 host key；旧的过期或非 release 历史文件只作为 warning 忽略。严格命令要求每个组件至少有 3 份有效新鲜报告后才会通过。opt-in 多宿主命令还要求每个组件至少覆盖 2 个不同 host key；host key 优先来自报告中的显式宿主标识，缺省时退回 <code>platform/arch</code>。</p>
+<h4 id="_23">当前证据位置<a class="headerlink" href="#_23" title="Permanent link">&para;</a></h4>
+<p>当前 Windows 宿主已经具备通过的严格 repeated-evidence 审计：</p>
+<ul>
+<li>sqlite release 报告刷新于 <code>2026-06-06T03:17:45.083Z</code>；</li>
+<li>ANN release-gate 报告刷新于 <code>2026-06-06T03:19:22.368Z</code>；</li>
+<li><code>verify:foundation:release-evidence:strict</code> 于 <code>2026-06-06T03:21:04.144Z</code> 校验通过，sqlite 为 <code>3/3</code>，ANN 为 <code>3/3</code>。</li>
+</ul>
+<p>这只关闭当前宿主的 repeated-evidence 门禁。多宿主审计工具现在已经可执行，但当前 Windows 证据仍是单宿主证据。这不关闭多宿主证据、ANN 阈值收敛、connector budget 校准或 production closure。</p>
+<h4 id="p1">剩余 P1 推进方向<a class="headerlink" href="#p1" title="Permanent link">&para;</a></h4>
+<p>本切片让 release evidence 更容易审计，也给发布 runbook 增加了严格 repeated evidence 与 opt-in 多宿主门禁。Foundation readiness 现在同时把默认 freshness 审计与严格 history 审计暴露为 mandatory checks。当前 Windows 宿主已满足严格 repeated-evidence 门禁，因此下一步 P1 转向真实多宿主证据收集、ANN 阈值收敛、connector budget 校准，并且只有在 graphdb/ANN baseline 达到发布级之后，才推进 Phase-2 gate promotion。</p>
+<h3 id="2026-05-27">2026-05-27 工作流真相同步与后续主线重对齐<a class="headerlink" href="#2026-05-27" title="Permanent link">&para;</a></h3>
+<h4 id="_24">目标<a class="headerlink" href="#_24" title="Permanent link">&para;</a></h4>
+<p>让实施计划重新与 <code>main</code> 上的真实状态对齐，重点覆盖三层真相：</p>
+<ul>
+<li>仓库自有 GitHub workflow 基线其实已经是 <code>actions/setup-node@v4</code> + <code>node-version: "24"</code>，</li>
+<li>旧的 <code>FORCE_JAVASCRIPT_ACTIONS_TO_NODE24</code> 过渡覆盖变量其实已经从 workflow 中移除，</li>
+<li>但 <code>scripts/verify-fixrisk-issues.js</code> 仍在校验这个已移除的过渡变量，而不是当前基线，因此 <code>FR-010</code> 会在“工作流已迁移”的前提下依旧失败。</li>
+</ul>
+<h4 id="_25">根因与修正<a class="headerlink" href="#_25" title="Permanent link">&para;</a></h4>
+<ul>
+<li>先前期望：</li>
+<li>FR-010 的闭环仍绑定在过渡期兼容覆盖变量上。</li>
+<li>当前代码真相：</li>
+<li>workflow YAML 已经迁移到“不依赖覆盖变量”的 Node 24 基线，</li>
+<li>剩余的 Node 20 弃用注解来自 artifact/release helper 这类 marketplace action 运行时，而不是仓库自有 <code>setup-node</code> 配置。</li>
+<li>本轮修正：</li>
+<li><code>scripts/verify-fixrisk-issues.js</code> 现在显式校验 <code>actions/setup-node@v4</code>，</li>
+<li>在使用 <code>setup-node</code> 的 workflow 中强制 <code>node-version: "24"</code>，</li>
+<li>同时把“必须存在 <code>FORCE_JAVASCRIPT_ACTIONS_TO_NODE24</code>”改成“必须移除该过时过渡变量”。</li>
+</ul>
+<h4 id="head">从当前 HEAD 出发的下一步执行顺序<a class="headerlink" href="#head" title="Permanent link">&para;</a></h4>
+<ol>
+<li><strong>P0：持续保持 workflow 真相、verifier 真相、docs 真相一致</strong></li>
+<li>不再让过渡期假设重新进入 CI 门禁，</li>
+<li>fixrisk 的闭环标准始终绑定仓库可控现实。</li>
+<li><strong>P1：release-grade graph/store 加固</strong></li>
+<li>把当前 <code>graphdb/sqlite</code> operational baseline 从重启/工作负载证明继续推进到 soak 与性能闭环，</li>
+<li>保留独立的主机级 soak 门禁（<code>verify:foundation:sqlite-runtime:soak</code>），避免把发布级证据稀释到较轻量的矩阵验证里。</li>
+<li><strong>P2：release-grade ANN 校准</strong></li>
+<li>保持 <code>external_http</code> connector 在 workload proof 下稳定，再收口 recall/latency 阈值校准。</li>
+<li><strong>P3：Tauri-first reply/render surface 扩展</strong></li>
+<li>继续以共享的 Reader-derived runtime 作为 Tauri 基线，</li>
+<li>把 <code>assistantBlocks</code> 从“legacy answer 的薄包装层”推进为真正的回复组织层，</li>
+<li>在不破坏兼容性的前提下继续扩展 typed block 使用面。</li>
+<li><strong>P4：tutor routing 与 orchestration 加固</strong></li>
+<li>从已激活的 local-first 路由推进到生产级多 provider 策略。</li>
+<li><strong>P5：架构压力缩减</strong></li>
+<li>在保持向前兼容性的前提下，继续压缩 <code>server.ts</code>、<code>KnowledgeLearningPlatform.ts</code> 和大型前端宿主文件。</li>
+</ol>
+<h3 id="2026-05-27-tauri-first-agent-reply-rendering">2026-05-27 Tauri-first Agent Reply Rendering 现实对齐<a class="headerlink" href="#2026-05-27-tauri-first-agent-reply-rendering" title="Permanent link">&para;</a></h3>
+<h4 id="_26">目标<a class="headerlink" href="#_26" title="Permanent link">&para;</a></h4>
+<p>让当前活跃实施计划重新与代码现实对齐：</p>
+<ul>
+<li>scoped knowledge-workspace grounding 已是真实能力，</li>
+<li>provider / TOML settings 交付已是真实能力，</li>
+<li>Reader 的 markdown / math / mermaid 加固已是真实能力，</li>
+<li>但 Tauri agent reply area 仍停留在纯文本，因此它已成为当前最直观的未完成交互缺口。</li>
+</ul>
+<h4 id="_27">代码 / 方案现实<a class="headerlink" href="#_27" title="Permanent link">&para;</a></h4>
+<ul>
+<li>代码中已完成：</li>
+<li>active-target-aware workspace hydration 与 title-like selective document hydration，</li>
+<li>conversation trace 中的 workspace readiness 与 miss diagnostics，</li>
+<li>面向 <code>app_config.toml</code> 的 provider preset / template 流程，</li>
+<li>conversation turn / resume 头的 CORS 闭环，</li>
+<li>Reader 侧 Mermaid / KaTeX 加固与 leaked-error suppression，</li>
+<li>一等的 Tauri runtime / webview / window debug capture 脚本，</li>
+<li>仓库自有 workflow 已迁移到“不依赖过渡覆盖变量”的 Node 24 基线，FR-010 现按 <code>setup-node@v4</code> + <code>node-version: "24"</code> 的当前真相进行门禁校验。</li>
+<li>本轮已新落地：</li>
+<li>Tauri agent workspace 中的 typed reply-rendering model，</li>
+<li>Reader render substrate 在 agent reply surface 中的共享复用，</li>
+<li>面向大型 HTML assistant output 的 artifact-style 隔离路径（sandboxed preview）。</li>
+<li>assistant 输出现在按 overview / explanation / evidence summary / memory notice / action guidance 分块组织，而不再只是单个 markdown answer 的包装。</li>
+<li>这些 section 现在也具备更实在的语义内容：explanation 会锚定最强 scoped knowledge point，evidence summary 会反映真实 scoped citation，next-action guidance 也会吸收 scoped node 与 memory action 的 follow-through 建议。</li>
+<li>reply composition 现在也具备 query intent awareness：comparison-style 与 how-to-style prompt 不再复用与普通 explanatory prompt 完全相同的 explanation / action phrasing。</li>
+<li>reply composition 的所有权现在也已明确进入可抽取架构面：<code>conversationComposer</code> 模块边界用于降低 <code>KnowledgeLearningPlatform.ts</code> 重力井，同时不改变公开响应契约。</li>
+<li>grouped knowledge point 与 scoped reply section 的组装路径现在已有显式代码 owner：<code>src/learning/conversationComposer.ts</code>，因此 <code>KnowledgeLearningPlatform.ts</code> 不再需要在同一文件里同时承载 session/runtime state 与 reply-composition 细节。</li>
+</ul>
+<h4 id="_28">下一步执行顺序<a class="headerlink" href="#_28" title="Permanent link">&para;</a></h4>
+<ol>
+<li><strong>P0：文档真相同步</strong></li>
+<li>保持 <code>development-progress-dashboard</code>、<code>agent-conversation-focus-mode-plan</code>、<code>implementation_plan</code>、<code>tauri_tasks</code> 与当前代码一致，而不再停留在 Program F-only 视角。</li>
+<li><strong>P1-P4：当前代码已交付</strong></li>
+<li>在保留 <code>assistantMessage</code> 的同时，引入了向前兼容的 <code>assistantBlocks</code>，</li>
+<li>已从 Reader / runtime 路径抽取可复用的 markdown / math / mermaid 渲染逻辑，</li>
+<li>在 agent workspace 中，结构化载荷已由 typed block renderer 替换纯文本挂载，</li>
+<li>完整 HTML 输出已进入 sandboxed artifact preview，而不是直接进入主聊天 DOM。</li>
+<li><strong>P5：兼容性 + 验证</strong></li>
+<li>保留 legacy fallback，</li>
+<li>保持现有 knowledge-point / capability orchestration 稳定，</li>
+<li>在渲染升级后补齐 docs / frontend contract / build-runtime 证明。</li>
+<li><strong>P6：CI 加固跟进</strong></li>
+<li>持续保持 <code>Migration Gates</code> 与 <code>Fixrisk Operational Readiness</code> 在 <code>main</code> 上为绿，</li>
+<li>把未来 workflow / runtime 漂移当作实现面的一部分处理，而不是事后补锅。</li>
+</ol>
+<h4 id="_29">验收标准<a class="headerlink" href="#_29" title="Permanent link">&para;</a></h4>
+<ol>
+<li>Tauri agent reply area 可以通过共享的 Reader-aligned 渲染链显示 markdown、KaTeX 与 Mermaid。</li>
+<li>仅有 <code>assistantMessage</code> 的旧路径在迁移期间仍可工作。</li>
+<li>现有 <code>knowledgePoints</code>、capability execution 与 conversation card 保持向前兼容。</li>
+<li>新渲染路径为后续 Godot 降级 / 物化保留明确边界，而不是在当前阶段让 Godot 约束反向主导 Tauri-first UX。</li>
+</ol>
+<p>在当前分支已经出现真实 Phase-3 切片、但 Phase-1 / Phase-2 仍存在关键缺口的背景下，把代码真相、活跃进度文档、以及后续执行顺序重新对齐。</p>
+<h3 id="2026-05-12-2026-05-13">2026-05-12 到 2026-05-13 本轮实现增量<a class="headerlink" href="#2026-05-12-2026-05-13" title="Permanent link">&para;</a></h3>
+<ul>
+<li>本轮代码已完成：</li>
+<li><code>store.ts</code> 已新增 embedded SQLite graphdb adapter/provider，<code>server.ts</code> 默认 runtime 也已从 <code>local-file-graphdb</code> 切到 <code>graphdb/sqlite</code>，同时保留显式 file fallback。</li>
+<li><code>KnowledgeLearningPlatform.ts</code> 已补齐 query-backend comparison/history/trend、staleness diagnostics/rebuild planning、learning-quality history/trend、session-plan quality evaluate/history/trend/runtime-threshold diagnostics、query-backend config、query-backend diagnostics 的真实实现。</li>
+<li><code>queryKnowledge()</code> 已改为遵循当前配置的 backend，并保留显式 runtime fallback 语义。</li>
+<li>foundation readiness 与 backend baseline sufficiency 已改为根据真实 store/query/vector 信号判定，而不再是静态占位返回。</li>
+<li><code>server.ts</code> 现已注入默认激活态本地 <code>tutorAdapter</code>，同时保留 <code>local</code> + <code>cloud</code> adapter catalog。</li>
+<li>embedded sqlite 生命周期已补齐：server shutdown 会显式关闭 graph store，sqlite adapter 也能在同进程后续运行中安全重开。</li>
+<li><code>src/notemd.server.integration.test.ts</code> 现已证明 A8 的重启耐久性：覆盖 ingest -&gt; shutdown -&gt; fresh module reload -&gt; store diagnostics/query/readiness 连续性。</li>
+<li><code>scripts/verify-foundation-sqlite-runtime.js</code> 现已在当前 Windows 宿主上通过 <code>dist</code> runtime + packaged sidecar 双路径证明同一条 embedded sqlite 基线：覆盖 ingest -&gt; store diagnostics/foundation readiness -&gt; restart -&gt; query 连续性。</li>
+<li><code>scripts/verify-foundation-sqlite-runtime.js --matrix</code> 现在也会在同样两条 runtime 路径上把主机级证明扩成 <code>smoke</code> / <code>medium</code> / <code>heavy</code> workload matrix：snapshot metadata、restart 连续性与多点 query 连续性都会持续为绿。</li>
+<li><code>verify:foundation:sqlite-runtime:release</code> 现在为既有 sqlite soak 门禁提供稳定的 release 命名别名；foundation readiness mandatory checks 也已把 sqlite release proof 与 ANN matrix release proof 同较轻量的 baseline / matrix 命令一起暴露。</li>
+<li><code>local_vector</code> 的 external HTTP 加速已不再只是查询侧脚手架：适配器现已支持远端索引同步，在 diagnostics 中暴露 sync telemetry，并保留严格的 <code>fail_closed</code> 与 representation-alignment 语义。</li>
+<li><code>src/query_backend.external_http.integration.test.ts</code> 现已证明一条真实的 <code>external_http</code> connector 路径：覆盖 ingest -&gt; 远端索引同步 -&gt; query -&gt; diagnostics。</li>
+<li><code>scripts/verify-foundation-ann-runtime.js</code> 现已在当前 Windows 宿主上通过 <code>dist</code> runtime + packaged sidecar 双路径证明同一条 <code>external_http</code> connector baseline：覆盖 ingest -&gt; live query-backend diagnostics -&gt; restart -&gt; query 连续性。</li>
+<li><code>scripts/verify-foundation-ann-runtime.js --matrix</code> 现在也会在同样两条 runtime 路径上把 ANN 主机级证明扩成 <code>smoke</code> / <code>medium</code> / <code>heavy</code> workload matrix：sync/select telemetry、aligned representation metadata 与 restart 连续性都会持续为绿。</li>
+<li><code>scripts/verify-foundation-ann-runtime.js --release-gates</code> 现在会把结构化 JSON 证据写入 <code>output/verification/foundation-ann-runtime/</code>，并对 startup、ingest、diagnostics、query latency 与 targeted-query recall 执行门禁。<code>npm run verify:foundation:ann-runtime:release</code> 已在当前 Windows 宿主上通过完整 matrix 发布级门禁路径。</li>
+<li>runtime capability 治理现在也把 ANN 远端索引同步当成一等检查：matrix/runbook 已新增 <code>query_vector_acceleration_index_sync_health</code>，与 health、traceability、prefilter、circuit 同级。</li>
+<li><code>server.ts</code> 现已把这条新门禁接入完整 runbook 闭环：ANN index-sync health 已进入 verification escalation、remediation action queue、以及 per-check history summary。</li>
+<li>runtime capability 治理现在也有了显式的 ANN 校准前提门禁：<code>query_vector_acceleration_calibration_readiness</code> 会在同一运行时窗口内缺少 sync telemetry、稳定 connector、prefilter 样本就绪、可评估 candidate ratio、或外部 traceability 信号时阻断发布级阈值校准。</li>
+<li>agent workspace 的 runtime runbook 界面现已在 verify/checks/action-queue 三条链路中展示 ANN sync-health 指标，而且 verify/checks 卡片还进一步前推了 ANN 熔断预算、可追踪性、预筛选摘要以及阈值/信号钻取、校准就绪态和显式门禁 <code>query_vector_acceleration_calibration_readiness</code>，运维侧的 ANN 治理视图已不再停留在 <code>index_sync_health</code>。</li>
+</ul>
+<h2 id="2026-08-17-9">2026-08-17 第 9 阶段推进状态<a class="headerlink" href="#2026-08-17-9" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>G1 route parity：通过。</strong> <code>verify:route:shadow</code> 对 14 条 legacy-equivalent probe 与 6 条 registry-only probe 比较 status、body、headers 和持久化副作用。</li>
+<li><strong>G2 移动产物/RSS：静态通过，真机待补。</strong> <code>verify-mobile-artifact.js</code> 检查 APK/AAB entry，release 模式要求 arm64，并执行 profile budget；同时要求 RSS JSON。</li>
+<li><strong>G3 持久化 projection：本机 replay 通过。</strong> SQLite close/reopen/load/query/metadata fixture 已通过；跨 host replay 仍待补，内存 projection 继续作为 fallback。</li>
+<li><strong>G4 canonical ID：保护中。</strong> 原子 restore、alias、move journal 基础已通过；corpus replay 记录完成前保持公开 ID 不变。</li>
+</ul>
+<p>后续顺序：为两种 dispatch 模式建立 CI 矩阵，固化版本化 projection-store 契约，实现 host-owned PathBridge adapter，两条移动 packaging 共用一份 staging，最后再以证据驱动 identity cutover。</p>
+<h2 id="2026-08-18-12">2026-08-18 第 12 阶段 向前兼容的移动持久化计划<a class="headerlink" href="#2026-08-18-12" title="Permanent link">&para;</a></h2>
+<h3 id="11">第 11 阶段后的当前代码真相<a class="headerlink" href="#11" title="Permanent link">&para;</a></h3>
+<p>此前方案正确地把 canonical graph identity 与移动 projection 分开，但 G3 的措辞过宽，把 fixture replay 近似成了 Android 进程重启证明。当前代码已经收敛为可测试的窄契约：</p>
+<ul>
+<li><code>knowledge_projection_contract.js</code> 继续作为 schema owner，限制 node、edge、evidence reference、adjacency 与身份元数据，不保留正文。</li>
+<li><code>knowledge_projection_store.js</code> 是持久化边界。<code>createProjectionStore()</code> 保持兼容入口，<code>createFileProjectionStore()</code> 明确 app-local 文件语义，但不改变序列化 projection 形状。</li>
+<li><code>storage_provider.js</code> 通过文件边界读取 <code>graph_data.json</code>；对于尚未提供新 factory 的 runtime，仍保留旧 generic store 路径。</li>
+<li><code>src-tauri/src/lib.rs</code> 已经通过同目录临时文件与 rename 写入 graph projection。Android 持久化 lite projection，并在 projection 前释放解析正文。因此 JavaScript adapter 消费 host-owned atomic primitive，不重复实现 Rust/Kotlin 文件策略。</li>
+<li><code>scripts/verify-mobile-projection-replay.js</code> 在真实临时目录中执行 save/reopen，并写出结构化报告。四个 host label 使用同一 fixture，验证 schema、metadata、exact search、neighbor、shortest path，而不只是 JSON 相等。</li>
+<li><code>verify-route-registry-shadow.js</code> 现在在 readiness 后等待三次连续稳定的 runtime manifest，修复异步 SQLite 初始化被误判为 read-only route side effect 的 verifier race。</li>
+<li>adapter 变更后的 mobile-slim staging 仍在预算内：120 个文件、未压缩 4,253,837 字节、估算压缩 1,546,201 字节；新鲜未签名 arm64 APK/AAB 的压缩 payload 分别为 9,436,196 与 6,983,880 字节。这些是静态 artifact 测量，不是 RSS 证据。</li>
+</ul>
+<h3 id="_30">修正后的失败语义<a class="headerlink" href="#_30" title="Permanent link">&para;</a></h3>
+<p>旧 store 会对所有异常返回 initial/stale projection，包括 JSON 损坏或未知未来 schema。这会破坏向前兼容：schema 不兼容必须暴露给 host 处理迁移或 abstain。新规则如下：</p>
+<table>
+<thead>
+<tr>
+<th>边界失败</th>
+<th>行为</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>app-local read/I/O 错误</td>
+<td>有最近成功 projection 时使用它</td>
+<td>短暂存储故障不应清空当前会话</td>
+</tr>
+<tr>
+<td>截断/非法 JSON</td>
+<td>fail closed</td>
+<td>不能对部分状态运行分析</td>
+</tr>
+<tr>
+<td>未知 schema 或非法 identity/edge</td>
+<td>fail closed</td>
+<td>不能静默降级未来数据</td>
+</tr>
+<tr>
+<td>atomic write 错误</td>
+<td>保留上一个 committed file 与 cache</td>
+<td>save 必须是 commit-or-no-change</td>
+</tr>
+</tbody>
+</table>
+<p>这样保留既有 memory fallback，同时移除 stale-cache masking bug。Initial data 只是 fallback candidate，不代表磁盘状态最新；首次 load 仍会先尝试 host read。</p>
+<h3 id="_31">移动架构与权衡<a class="headerlink" href="#_31" title="Permanent link">&para;</a></h3>
+<p>默认移动路径继续使用无正文 JSON projection 与有界 exact analyzer。当前 workload 只是本地 exact lookup、有界 neighbor 和有界 shortest path，因此不把 SQLite/WASM 置为默认抽象。现在提升会增加 APK/AAB 体积、冷启动工作、heap 常驻和迁移面，却不会关闭尚未获得的 release gate。这个决策可逆：store 契约已经版本化且 host-neutral，未来 SQLite/WASM adapter 可以实现同一组 <code>load/save/metadata</code>，而无需改变 <code>storage_provider.js</code> 或公共 ID。</p>
+<p>Adapter 不拥有平台文件策略。Android SAF 继续由 Kotlin/Rust 持有，Tauri 由 Rust 持有，Web/Capacitor 以后再接入各自 native atomic writer。这避免泄漏跨平台 path abstraction，但在开放并发后台导入前必须建立 single-writer 规则，并补齐进程死亡、URI 权限持续性和 import/query/path continuity 的真机证据。</p>
+<h3 id="_32">当前起点后的执行顺序<a class="headerlink" href="#_32" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>G2 真机证据</strong>：生成签名 arm64 APK/AAB，在低硬件设备上执行 SAF import -&gt; graph build -&gt; exact query -&gt; path，采集 peak RSS；任何 <code>not-measured</code> 结果都不能作为 release 证据。</li>
+<li><strong>G3 host 矩阵</strong>：在 CI 对 Tauri 与 Capacitor 两条 packaging path 运行 replay script 与 native adapter，并至少在一个 Android API/ABI 目标上补进程死亡/重开证据。</li>
+<li><strong>G4 identity 语料</strong>：重放 old snapshot、move journal、rollback、同内容/NFC collision 与 cross-root 用例，全部在 restart 后验证；结果确定前冻结公共 ID。</li>
+<li><strong>证据之后再做</strong>：把 SQLite/WASM 作为大语料 opt-in adapter 评估，必须以 startup、RSS、query p95、package budget 的实测收益为晋级依据。</li>
+<li><strong>架构减重</strong>：继续从 <code>server.ts</code> 与 <code>KnowledgeLearningPlatform.ts</code> 抽取 owner，但只有新模块真正持有 state/invariant 才允许拆分，不给 projection store 增加 pass-through facade。</li>
+</ol>
+<h3 id="_33">验收门禁<a class="headerlink" href="#_33" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>npm run verify:mobile:projection-replay</code> 生成新鲜报告，包含四 host pass 与 fail-closed failure mode。</li>
+<li>Full Jest、TypeScript no-emit、Rust tests、mobile slim budget、artifact inspection、route shadow、Diataxis 均保持通过。</li>
+<li>签名真机 RSS 与 SAF workload 证据必须与静态 APK/AAB 体积证据分开报告。</li>
+<li>所有检查完成后才允许保持 <code>main</code> clean 并 push。</li>
+</ul>
+<h2 id="2026-08-18-15">2026-08-18 第 15 阶段 原生边界与身份语料加固<a class="headerlink" href="#2026-08-18-15" title="Permanent link">&para;</a></h2>
+<h3 id="_34">本轮已实现<a class="headerlink" href="#_34" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>verify-mobile-projection-replay.js</code> 现在执行四种明确 host boundary，不再用一个 Node 文件 adapter 换四个标签。报告标记为 contract evidence，不宣称 Android 进程死亡或 RSS 验收。</li>
+<li><code>canonicalId</code> 是由 portable URI 派生的 additive 元数据。legacy <code>id</code> 继续作为兼容 key；重复 canonical ID fail closed，exact analyzer 支持 canonical ID 作为 lookup/path 输入。</li>
+<li>route shadow 覆盖 malformed JSON 与非法 build default。inline <code>/api/build</code> 在图变更前校验 <code>relationRecomputeMode</code>，registry 路径对 invalid JSON 输出一致的 status、body 与 <code>X-Error-Code</code>。当前为 17 条等价 probe 加 6 条 registry-only probe。</li>
+<li>G4 测试覆盖同内容隔离、NFC/大小写 collision、跨 root 规范化、legacy snapshot replay 与原子 rollback。Android graph read 在完整正文 materialize 前被限制上限。</li>
+</ol>
+<p>本次变更后的 mobile-slim staging 为 121 个文件 / 未压缩 4,263,740 字节 / 估算压缩 1,548,695 字节。仓库中已有的 APK/AAB 是更早构建生成的未签名产物，必须在本次源码变更后重新构建；它们不能作为本轮 release evidence。</p>
+<h3 id="_35">权衡<a class="headerlink" href="#_35" title="Permanent link">&para;</a></h3>
+<p>Additive <code>canonicalId</code> 避免用 flag 驱动公开 ID 切换，并保持旧 layout/local-storage key 有效。Host-specific persistence 仍在边界处显式实现，序列化 projection 保持 schema-1；在真实跨 host corpus 证据完成前，迁移成本是同时携带两种 ID。</p>
+<h3 id="_36">后续门禁<a class="headerlink" href="#_36" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>G2：</strong> 签名 arm64 APK/AAB、SAF import -&gt; graph -&gt; exact query -&gt; path、进程死亡 continuity 与 RSS &lt;= 256 MiB 实测。</li>
+<li><strong>G3：</strong> 使用真实 Tauri、Capacitor、Android native adapter 回放同一语料；host-boundary 报告是必要条件但不是充分证据。</li>
+<li><strong>G4：</strong> 在任何 public-ID 切换前完成 move journal 重启、旧 snapshot、rollback failure、同内容/NFC collision 与 cross-root 回放。</li>
+<li><strong>默认开关：</strong> 在门禁记录完成前保持 legacy ID、内存 projection fallback 与 opt-in SQLite/WASM。</li>
+</ul>
+<h2 id="2026-08-18-16-portable-identity">2026-08-18 第 16 阶段 Portable Identity 传播<a class="headerlink" href="#2026-08-18-16-portable-identity" title="Permanent link">&para;</a></h2>
+<h3 id="_37">已实现<a class="headerlink" href="#_37" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>ResourceIdentity</code> 现在返回 additive <code>canonicalId</code>（去除 <code>.md</code>/<code>.markdown</code> 的 workspace-relative 规范路径）。<code>FileLoader</code> 与桌面 <code>GraphBuilder</code> 传播该字段，不改变 legacy <code>id</code>。</li>
+<li>浏览器 identity contract 与 Capacitor projection 输出同一字段。Android Rust 从规范化 relative path 派生它，并同时写入 full/lite projection。</li>
+<li>定向断言覆盖所有 producer。序列化 projection 仍为 schema-1；旧 snapshot、layout key 与 exact lookup alias 继续有效。</li>
+</ol>
+<h3 id="_38">架构约束<a class="headerlink" href="#_38" title="Permanent link">&para;</a></h3>
+<p><code>canonicalId</code> 是语义比较 key，不是 public-ID 开关；<code>sourceUri</code> 继续承担 provenance，legacy <code>id</code> 继续承担兼容 key。这样不需要 mode flag，也不会在证据不足时触发不可逆迁移。</p>
+<h3 id="_39">后续门禁<a class="headerlink" href="#_39" title="Permanent link">&para;</a></h3>
+<ul>
+<li>建立共享 corpus comparator：按 <code>canonicalId</code> 匹配节点，按 canonical endpoint、方向和 provenance 匹配边；raw node ID 不能作为 parity oracle。</li>
+<li>在宣称原生语义 parity 前，解决或显式版本化 Rust/Capacitor 在 link extraction 与 legacy key resolution 上的差异。</li>
+<li>本轮源码变更后的 fresh <code>mobile-slim</code> staging 为 121 个文件 / 未压缩 4,265,579 字节 / 估算压缩 1,549,039 字节，SHA-256 为 <code>7a62a376e05228e326732db0e1d76e9eedb84d7d344f862df8ee259a42d7bb72</code>；RSS 仍为 <code>not measured</code>。</li>
+<li>继续阻塞签名真机 SAF/query/path、进程死亡 continuity、RSS &lt;= 256 MiB、public-ID 迁移和默认 SQLite/WASM 提升。</li>
+</ul>
+<h2 id="2026-08-18-17-host-parity">2026-08-18 第 17 阶段：跨 Host 语义 Parity 闭环<a class="headerlink" href="#2026-08-18-17-host-parity" title="Permanent link">&para;</a></h2>
+<h3 id="_40">已实现<a class="headerlink" href="#_40" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>mobile_semantic_comparator.js</code> 是无依赖、仅用于测试的 UMD oracle。节点按归一化 <code>canonicalId</code> 匹配（缺失时仅对 legacy fixture 回退到版本化 URI），边按 canonical 方向、endpoint URI、<code>type</code>、<code>kind</code> 与 <code>provenance</code> 匹配；重复语义 identity 直接拒绝，不静默择一。</li>
+<li>Capacitor 只建立一次 canonical path index，并与 Rust 使用相同 link resolution 顺序：direct path、source-relative path、unique stem。worker 与 single-thread 路径保持同一策略。重复 legacy basename fail-closed，这是有意的保守约束，因为 legacy public ID 无法消歧。</li>
+<li>Rust 在 lookup 前将 percent-encoded Markdown target 归一化为 NFC/lowercase，并拒绝重复 canonical path 与含糊 legacy stem。schema-1 projection 保留同 endpoint 不同 provenance 的边。</li>
+<li><code>verify-mobile-projection-replay.js</code> 写入真实临时 corpus，并通过 Cargo 调用 ignored Rust builder probe。Capacitor 与 Rust 使用同一 corpus 做语义比较；报告记录 <code>6</code> 个节点、<code>4</code> 条边且无 mismatch，但仍明确标记为代码级证据。</li>
+</ol>
+<h3 id="_41">权衡与约束<a class="headerlink" href="#_41" title="Permanent link">&para;</a></h3>
+<ul>
+<li>保留 <code>id</code> 作为运行时 key 避免 layout/snapshot 破坏，但移动端因此不能接受重复 basename。只有在 alias 与 rollback 证据完成后，未来 canonical-ID 迁移才可放宽该限制。</li>
+<li>comparator 不进入移动运行时 asset，成本只在验证阶段；Capacitor resolver 使用有界 map（建索引/建图为 <code>O(V + E)</code>），不引入 pairwise path scan。</li>
+<li>同一 endpoint 的不同 link mechanism 会增加 projection 边数，因为 provenance 不能再被静默丢弃；现有 edge 与 total-input budget 仍是硬上限。</li>
+</ul>
+<h3 id="_42">验证与下一道门禁<a class="headerlink" href="#_42" title="Permanent link">&para;</a></h3>
+<ul>
+<li>聚焦 Jest：semantic comparator、Capacitor graph、projection contract 共 <code>12</code> 个测试通过。Rust host suite 为 <code>28</code> passed、<code>1</code> ignored probe。</li>
+<li>staging 已排除 test-only comparator；fresh <code>mobile-slim</code> 为 121 个文件 / 未压缩 4,274,600 字节 / 估算压缩 1,550,561 字节，SHA-256 为 <code>c62d4eec6b1b66d66466b74f1b24ddb49d0c004795a16366f9018337c417baf8</code>；RSS 仍为 <code>not measured</code>。</li>
+<li><code>verify:mobile:projection-replay</code> 已通过四种 storage boundary 与真实 Rust probe，但这不是签名 APK、Android 进程死活、SAF UI 或 RSS 证据。</li>
+<li>merge 前重新执行 TypeScript no-emit、全量 Jest、Rust tests、mobile-slim budget 与 Diataxis 检查。</li>
+<li>G2/G3 原生工作仍未闭环：签名 arm64 产物、低内存设备 SAF import -&gt; graph -&gt; exact query -&gt; path、force-stop/reopen continuity 与 RSS <code>&lt;= 256 MiB</code>。</li>
+<li>在原生 replay、rollback/move-journal、old-snapshot 与 collision corpus 归档前，不提升 public canonical ID、SQLite/WASM 或移动端 corpus 上限。</li>
+</ul>
+<h2 id="2026-08-18-19">2026-08-18 第 19 阶段：原生导入失败路径保留<a class="headerlink" href="#2026-08-18-19" title="Permanent link">&para;</a></h2>
+<h3 id="_43">实施<a class="headerlink" href="#_43" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Android import transaction 的生产 owner 继续是 Kotlin。外层失败边界始终删除 <code>stagingRoot</code>；仅当 <code>backupRoot</code> 不存在时清理 <code>journalFile</code>。backup 与 journal 仍存在时，保留它们等待下一次 <code>bindActivity()</code> recovery。</li>
+<li>保持 Rust request/poll/result-marker 行为、journal schema-1 字段、legacy ID 与 <code>mobile-slim</code> export profile 不变。本轮是 additive durability 修正，不增加移动运行时 JavaScript 或数据库依赖。</li>
+<li>契约测试只检查准确的 import-failure catch。成功替换与 recovery 分支中的清理仍然合法，不与破坏性失败序列混淆。</li>
+</ol>
+<h3 id="_44">权衡与门禁<a class="headerlink" href="#_44" title="Permanent link">&para;</a></h3>
+<p>保留一组 backup/journal 会在恢复前占用有界 app-local 磁盘，但急于清理可能在 rollback failure 后删除唯一可用知识库。调用方仍立即收到 <code>failed</code>，不会产生假成功；后续 recovery 可复用既有 <code>recovered_previous</code> detail。picker 定向契约与 TypeScript no-emit 已通过。签名 arm64 rollback/recovery、SAF/存储权限失败、force-stop continuity 与 RSS <code>&lt;= 256 MiB</code> 仍是原生门禁；public-ID、默认 SQLite/WASM 与预算上调继续冻结。</p>
+<h2 id="2026-08-18-20-arm64">2026-08-18 第 20 阶段：恢复重试与新鲜 arm64 产物证据<a class="headerlink" href="#2026-08-18-20-arm64" title="Permanent link">&para;</a></h2>
+<ul>
+<li>启动恢复在 <code>renameTo(targetRoot)</code> 失败时保留 journaled backup，只删除 staging，并写入 <code>import_recovery_pending</code>；孤儿 backup 失败写入 <code>orphan_recovery_pending</code>。</li>
+<li>Host mirror 覆盖 8 个确定性场景，包含注入的 journaled/orphan backup rename failure 与保留语义；仍仅用于测试并声明 <code>nativeDeviceEvidence: false</code>。</li>
+<li>新鲜 slim arm64 Android 构建通过静态验证。未签名 universal APK 压缩 payload 为 <code>9,576,838</code> 字节（文件 SHA-256：<code>eb5f63697c6a3e33f3c54659a530f9ed014c600181067ee95684e2377610fbc6</code>）；AAB 为 <code>7,055,579</code> 字节（文件 SHA-256：<code>ee3e9b9451e2afeeb861a4a81311d9caccf9cd64d7871e206453bac3d42f2934</code>）。</li>
+<li>两者均低于 25 MiB 且包含 arm64，但签名、真机 workload、进程死亡/存储重试与 RSS 证据仍缺失。</li>
+<li><code>runtime-capability-runbook/*</code> 这组 modular knowledge route 现已改为接入真实 server 侧 runbook ops，而不再返回 KLP placeholder payload；route 层现在也会保留 <code>checkId</code> / <code>sinceMinutes</code> / queue-filter 这类 query 参数，不再静默丢弃。</li>
+<li>真实浏览器 smoke 门禁现在也会端到端证明这三条链路：严格浏览器证据必须能看到 ANN sync-health verify 卡、新增的 verify/checks ANN 熔断/可追踪性/预筛选钻取、首个检查的 ANN sync 指标，以及 index-sync action-queue 钻取，而不再只是证明卡片“能打开”。</li>
+<li>agent-workspace 的 locale 加固现在也覆盖了当前真实暴露出来的诊断卡片/消息空间：源码里引用到的 <code>agentWorkspace.*</code> key 已由 <code>src/agent_workspace.locale.contract.test.ts</code> 做门禁，双语 locale bundle 现已补齐 strict browser smoke 实际触达的 query/quality/runbook 卡片标签，并且启动期 <code>translate()</code> 会等 locale 完成初始化后再调用 <code>window.i18n.t()</code>，避免在 locale hydrate 前产生误报式 missing-key warning。</li>
+<li>这会改变执行重心：</li>
+<li>P3 的“placeholder 替换”在当前 runtime 面上已经完成实现；</li>
+<li>P4 的“默认 tutor-routing 激活”在本地优先基线上已经完成实现；</li>
+<li>A8 剩余缺口已经收窄为：主机级 dist/runtime + packaged sidecar 证明已具备，而且 <code>smoke</code> / <code>medium</code> / <code>heavy</code> workload matrix 也已具备，剩下的是 soak、长时段与性能级加固；</li>
+<li>A9 剩余缺口现在也已收窄：主机级 dist/runtime + packaged sidecar 证明已具备，<code>smoke</code> / <code>medium</code> / <code>heavy</code> workload matrix 也已具备，并且已有 matrix release-gate 证据；剩下的是多轮阈值收敛与多宿主校准；</li>
+<li>这个工作之后的下一阶段仍然是发布级 Phase-2 门禁加固，但本轮完成的是“可观测性闭环”而不是“校准闭环”：首个 ANN 门禁族群已经具备 server 侧 runbook/action-queue/history 闭环，<code>prefilter</code> 也已进入 ANN 快速升级路径，并在前端 verify/checks 中显式暴露 index-sync、熔断、可追踪性、预筛选治理摘要及阈值/信号上下文和校准就绪态；同时并行继续 A8 的 soak / 长时段 / 性能闭环和 A9 的阈值收敛。</li>
+</ul>
+<h3 id="vs">代码 vs 方案现状矩阵<a class="headerlink" href="#vs" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>区域</th>
+<th>方案期望</th>
+<th>当前 HEAD 现实</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase-1 A8 graph backend</td>
+<td>生产级本地图后端</td>
+<td>ops 语义已存在，默认 runtime 已切到 embedded <code>graphdb/sqlite</code> 并保留显式 file fallback，重启耐久性已有集成证明，主机级 <code>dist</code> runtime + packaged sidecar 证明已自动化，而且 <code>smoke</code> / <code>medium</code> / <code>heavy</code> 主机端 workload matrix 已存在；但 soak、长时段与性能级加固仍未完成</td>
+<td>Operational baseline</td>
+</tr>
+<tr>
+<td>Phase-1 A9 ANN connector</td>
+<td>生产级 ANN connector</td>
+<td><code>external_http</code> 现已支持远端索引同步，并在严格 failure/representation 语义下通过真实端到端 query 证明；主机级 <code>dist</code> runtime + packaged sidecar 证明和 <code>smoke</code> / <code>medium</code> / <code>heavy</code> workload matrix 也已具备，但 recall/latency 阈值收敛与发布级校准仍未完成</td>
+<td>Operational baseline</td>
+</tr>
+<tr>
+<td>Phase-2 quality gates</td>
+<td>真实掌握闭环 / 发散质量门禁</td>
+<td>query-backend comparison、staleness、learning-quality、session-plan-quality 运行面已在 <code>KnowledgeLearningPlatform.ts</code> 中接通真实实现；面向运维的 ANN 治理也已通过 runbook verify/checks 显式暴露 index-sync、熔断、可追踪性、预筛选摘要以及阈值/信号钻取和校准就绪态，且 runtime 已具备显式门禁 <code>query_vector_acceleration_calibration_readiness</code>；但整套门禁仍需要建立在当前 graph/ANN operational baseline 之上的发布级校准</td>
+<td>Operational baseline</td>
+</tr>
+<tr>
+<td>Phase-3 tutor + memory</td>
+<td>导师与记忆操作层真实落地</td>
+<td>tutor telemetry / trace-provider trend / conversation memory / memory-policy diagnostics 已真实，且默认 runtime 已注入本地 tutor adapter；生产级多 provider 路由仍待闭环</td>
+<td>Operational baseline</td>
+</tr>
+<tr>
+<td>架构缩减</td>
+<td>主单体下降到可持续体量</td>
+<td><code>server.ts</code> 14,992、<code>KnowledgeLearningPlatform.ts</code> 7,706、<code>path_app.js</code> 4,649、<code>app.js</code> 4,713、<code>routes/knowledge.ts</code> 690</td>
+<td>Open</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_45">执行顺序<a class="headerlink" href="#_45" title="Permanent link">&para;</a></h3>
+<ol>
+<li>P0：真相校正与门禁重分级</li>
+<li>先让进度文档与代码现状一致，</li>
+<li>不再把 placeholder 返回或 catalog-only wiring 视为“已完成”。</li>
+<li>P1：真实 graph backend 闭环</li>
+<li>保持新的 embedded <code>graphdb/sqlite</code> 主机级 <code>dist</code> runtime + packaged sidecar 验证持续为绿，</li>
+<li>保持新的主机级 workload matrix 验证持续为绿，</li>
+<li>保留 fallback，</li>
+<li>在已证明的重启生命周期与 workload matrix 之外，继续补齐 soak、长时段耐久性/性能与 adapter / fallback 一致性验证。</li>
+<li>P2：基于新 live connector baseline 的 ANN 工作负载与 rollout 闭环</li>
+<li>让新的 sync-backed <code>external_http</code> connector 在真实流量下持续稳定，</li>
+<li>保持新的主机级 ANN runtime + workload matrix 验证持续为绿，</li>
+<li>校准 recall / latency 阈值并收敛发布级校准，再谈 ANN 层生产闭环。</li>
+<li>P3：这个工作之后的下一阶段 - Phase-2 quality gate 加固</li>
+<li>让新接通的 query/staleness/learning-quality/session-plan-quality 诊断面始终与同一份 runtime 真相对齐，</li>
+<li>把当前已前推到 verify/checks 的 ANN index-sync、熔断、可追踪性、预筛选预算从“可见”推进到“可校准”，完成工作负载与阈值闭环，</li>
+<li>让 ANN 治理持续覆盖远端 index-sync、health、prefilter、traceability、circuit 这些显式检查面，</li>
+<li>只有在 graph/ANN 基线达到发布级而不只是 operational baseline 后，才把它们升级为发布级门禁。</li>
+<li>P4：Phase-3 tutor routing 加固</li>
+<li>保持当前已激活的默认 <code>tutorAdapter</code> 可观测，</li>
+<li>从 local-first 继续推进到生产级多 provider 路由策略。</li>
+<li>P5：继续降低架构压力</li>
+<li>继续拆 <code>routes/knowledge.ts</code>，</li>
+<li>持续压缩 <code>server.ts</code>、<code>KnowledgeLearningPlatform.ts</code>、<code>path_app.js</code>、<code>app.js</code>。</li>
+</ol>
+<h3 id="_46">验收标准<a class="headerlink" href="#_46" title="Permanent link">&para;</a></h3>
+<ol>
+<li>默认 graph backend 不再是 <code>local-file-graphdb</code>，且 embedded <code>graphdb/sqlite</code> 基线已能在 shutdown/restart 后保持 query/store diagnostics 连续性。</li>
+<li>至少一条 ANN connector 路径超出脚手架阶段，并在真实 sync/query 流量下得到证明，同时把剩余工作负载/阈值校准显式保留在计划中。</li>
+<li><code>KnowledgeLearningPlatform.ts</code> 不再对 query compare、staleness、learning-quality、session-plan-quality 返回 placeholder。</li>
+<li>默认 runtime tutor 执行在真实 server 路径下能产生非零 adapter telemetry。</li>
+<li>每个里程碑后都能通过 <code>docs:diataxis:check</code>、<code>docs:site:build</code>、<code>build:with-vite</code>、严格 <code>verify:agent-workspace:browser</code> 证明、以及 targeted agent-workspace / KLP tests。</li>
+</ol>
+<hr />
+<h1 id="2026-03-10-v1538-wasm">2026-03-10 v1.5.38 - 多终端 WASM 等价实施计划（移动端固有瓶颈收口）<a class="headerlink" href="#2026-03-10-v1538-wasm" title="Permanent link">&para;</a></h1>
+<h3 id="_47">目标<a class="headerlink" href="#_47" title="Permanent link">&para;</a></h3>
+<p>通过统一的 WASM 计算策略，缓解移动端固有瓶颈，并在桌面 Web、Tauri 桌面、Capacitor 移动端、Tauri Android 多终端之间保持可预测的一致行为。</p>
+<h3 id="_48">当前移动端固有问题<a class="headerlink" href="#_48" title="Permanent link">&para;</a></h3>
+<ol>
+<li>重图计算/布局计算容易占用主线程，导致交互卡顿。</li>
+<li>在稀疏图场景下，Worker 启动与 JS 序列化开销可能高于实际计算收益。</li>
+<li>受限设备上内存压力与 GC 抖动更明显，稳定性风险更高。</li>
+<li>不同 WebView 运行时能力差异较大，若缺少显式探测会造成行为不确定。</li>
+</ol>
+<h3 id="_49">多终端统一策略<a class="headerlink" href="#_49" title="Permanent link">&para;</a></h3>
+<ol>
+<li>统一能力契约：</li>
+<li>运行时暴露 <code>supports_mobile_wasm_compute</code> 与 <code>mobile_wasm_reason</code>。</li>
+<li>计算路由保留明确的回退原因，保证可诊断性。</li>
+<li>统一计算路由模型：</li>
+<li>首选：<code>wasm-adapter</code></li>
+<li>回退：<code>worker</code></li>
+<li>最终回退：<code>single-thread</code></li>
+<li>统一工件治理链路：</li>
+<li>标准 WASM 工件探针 + 严格门禁脚本 + CI 回归屏障。</li>
+</ol>
+<h3 id="_50">分阶段执行计划<a class="headerlink" href="#_50" title="Permanent link">&para;</a></h3>
+<ol>
+<li>阶段 A（能力探测与诊断）[基线已完成]：</li>
+<li>增加移动端 WASM 就绪探测。</li>
+<li>在 runtime caps 中暴露能力与原因。</li>
+<li>能力不可用时保持既有行为不变。</li>
+<li>阶段 B（路由集成）[进行中]：</li>
+<li>将移动端 WASM 能力信号接入本地构建统计。</li>
+<li>增加移动构建模式细分标签（<code>worker-wasm-ready</code>、<code>worker-wasm-not-ready</code>、回退原因）。</li>
+<li>保持确定性回退链路。</li>
+<li>阶段 C（内核扩展）：</li>
+<li>将更多重计算内核迁移到 WASM，并以契约验证正确性。</li>
+<li>优先处理当前移动端 CPU 占用最高的图构建热点。</li>
+<li>阶段 D（多终端工件落地）：</li>
+<li>分别验证以下终端的工件打包与加载路径：<ul>
+<li>桌面 Web 资源包</li>
+<li>Tauri 桌面 sidecar/运行时路径</li>
+<li>Capacitor 移动端资源/运行时路径</li>
+<li>Tauri Android 运行时路径</li>
+</ul>
+</li>
+<li>阶段 E（性能与稳定性硬门禁）：</li>
+<li>对移动端典型负载执行 p95/p99 门禁约束。</li>
+<li>强制 worker 与 WASM 输出一致性无回归。</li>
+</ol>
+<h3 id="_51">验收标准<a class="headerlink" href="#_51" title="Permanent link">&para;</a></h3>
+<ol>
+<li>移动端必须能明确解释 WASM 启用/禁用原因（<code>mobile_wasm_reason</code>）。</li>
+<li>WASM 不可用时移动端构建链路仍可工作（确定性回退已验证）。</li>
+<li>每一轮路由调整后，迁移门禁套件保持全绿。</li>
+<li>所有计划/TODO/测试报告的中英文文档保持同步更新。</li>
+</ol>
+<hr />
+<h3 id="_52">范围对齐<a class="headerlink" href="#_52" title="Permanent link">&para;</a></h3>
+<p>本次更新将实施计划与当前 Electron 到 Tauri 的迁移策略对齐：</p>
+<ul>
+<li>以 Tauri 作为桌面主壳层。</li>
+<li>以 Godot 作为 Path Mode 交互界面。</li>
+<li>以 Node Sidecar 作为图构建与运行时服务。</li>
+<li>默认采用 Bridge-first 消息链路（<code>Godot &lt;-&gt; PathBridge &lt;-&gt; Backend</code>）。</li>
+</ul>
+<h3 id="_53">当前迁移周期已完成项<a class="headerlink" href="#_53" title="Permanent link">&para;</a></h3>
+<ul>
+<li>已完成 Sidecar 运行路径与前端资源路径的统一，提升桌面运行一致性。</li>
+<li>已稳定 Worker 路径解析，避免打包 Sidecar 下线程出现 <code>MODULE_NOT_FOUND</code>。</li>
+<li>Knowledge Base 文件夹加载已锚定到配置的项目根路径，不再依赖 Electron 专属假设。</li>
+<li><code>Path Mode</code> 关键配置已迁移到 Godot 侧 UI，同时保留浏览器模式下 Web 工具栏行为。</li>
+</ul>
+<h3 id="_54">仍需收敛的缺口与风险<a class="headerlink" href="#_54" title="Permanent link">&para;</a></h3>
+<ul>
+<li>在 Tauri mini GPU 运行中，缓存存在时“复用或重建”提示流程仍需严格回归验证。</li>
+<li>需要持续防止单次点击触发重复加载（重复 build/restore）。</li>
+<li>WebSocket 客户端生命周期仍需加固，避免启动阶段时序竞争导致早期重复连接/断开。</li>
+<li>Godot 中心节点切换的 History 记录仍需最终行为验收。</li>
+</ul>
+<h3 id="_55">下一步执行<a class="headerlink" href="#_55" title="Permanent link">&para;</a></h3>
+<ol>
+<li>通过专用回归测试锁定缓存提示与单次执行语义。</li>
+<li>完成 websocket 生命周期防护与启动时序收敛。</li>
+<li>完成 Electron IPC 替代项的逐任务一致性核验，并移除残余隐式 Electron 依赖。</li>
+<li>保持移动端双输出策略：继续保留 Capacitor，同时并行支持 Tauri Android 产物链路。</li>
+</ol>
+<hr />
+<h1 id="implementation-plan-implementing-lazy-loading-for-prerequisites">Implementation Plan - Implementing Lazy Loading for Prerequisites<a class="headerlink" href="#implementation-plan-implementing-lazy-loading-for-prerequisites" title="Permanent link">&para;</a></h1>
+<p>The goal is to allow users to investigate incomplete In-Degree information by explicitly expanding the context of a specific node, without overloading the view with the entire graph.</p>
+<h2 id="proposed-changes">Proposed Changes<a class="headerlink" href="#proposed-changes" title="Permanent link">&para;</a></h2>
+<h3 id="1-backend-logic-srcfrontendlibspath_corejs">1. Backend Logic (<a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js">src/frontend/libs/path_core.js</a>)<a class="headerlink" href="#1-backend-logic-srcfrontendlibspath_corejs" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Unrestricted Context Expansion</strong>:</li>
+<li>In <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#253-422">diffusionLearning</a>, iterate through <code>forcedExpansionSet</code>.</li>
+<li>For each node in the set, retrieve <strong>all</strong> incoming edges (<a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#120-128">getIncomingEdges</a>), regardless of their completion status or relevance to the original path.</li>
+<li>Add the source nodes of these edges to the <code>finalPathNodes</code> list.</li>
+<li><strong>Constraint</strong>: Do not recursively fetch parents of these new nodes (Level -1 only).</li>
+<li><strong>Flagging</strong>: Mark the expanded target node with <code>isExpanded: true</code> in the output.</li>
+</ul>
+<h3 id="2-data-bridge-srcfrontendpath_workerjs">2. Data Bridge (<a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_worker.js">src/frontend/path_worker.js</a>)<a class="headerlink" href="#2-data-bridge-srcfrontendpath_workerjs" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pass State Flags</strong>:</li>
+<li>Ensure the <code>isExpanded</code> flag matches the <code>forcedExpansionSet</code> state.</li>
+<li>Pass this flag to the Godot client in the <code>treeLayout</code> payload.</li>
+</ul>
+<h3 id="3-visualization-state-machine-path_modescriptstree_renderergd">3. Visualization State Machine (<a href="file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd">path_mode/scripts/tree_renderer.gd</a>)<a class="headerlink" href="#3-visualization-state-machine-path_modescriptstree_renderergd" title="Permanent link">&para;</a></h3>
+<h3 id="3-visualization-state-machine-path_modescriptstree_renderergd_1">3. Visualization State Machine (<a href="file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd">path_mode/scripts/tree_renderer.gd</a>)<a class="headerlink" href="#3-visualization-state-machine-path_modescriptstree_renderergd_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Smart Toggle Logic (Left Side)</strong>:</li>
+<li><strong>Pre-calculation</strong>: At the start of <code>_draw_layout_mode</code>, iterate <code>_layout_edges</code> to build a <code>visible_in_counts</code> dictionary (NodeID -&gt; Count).</li>
+<li><strong>Decision Logic (in Node Loop)</strong>:<ul>
+<li>Let <code>global_in</code> = <code>node.inDegree</code> (from backend).</li>
+<li>Let <code>visible_in</code> = <code>visible_in_counts[node.id]</code>.</li>
+<li>Let <code>is_expanded</code> = <code>node.isExpanded</code> (flag from backend).</li>
+</ul>
+</li>
+<li><strong>States</strong>:<ol>
+<li><strong>Expanded State</strong>: If <code>is_expanded</code> is true:<ul>
+<li>Draw <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(-)</a> button.</li>
+<li>Click Action: Emit <code>node_collapse_prereqs_requested</code>.</li>
+</ul>
+</li>
+<li><strong>Expandable State</strong>: Else if <code>visible_in &lt; global_in</code>:<ul>
+<li>Draw <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(+)</a> button.</li>
+<li>Click Action: Emit <code>node_expand_prereqs_requested</code>.</li>
+</ul>
+</li>
+<li><strong>Complete State</strong>: Else (Visible == Global):<ul>
+<li>Draw nothing (or disabled indicator).</li>
+</ul>
+</li>
+</ol>
+</li>
+</ul>
+<h3 id="4-interaction-logic-tree_view_panelgd-path_appjs">4. Interaction Logic (<a href="file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_view_panel.gd">tree_view_panel.gd</a> &amp; <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js">path_app.js</a>)<a class="headerlink" href="#4-interaction-logic-tree_view_panelgd-path_appjs" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Collapse Handling</strong>:</li>
+<li>Implement <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#247-254">collapsePrereqs(nodeId)</a> in <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js">path_app.js</a>: Remove ID from <code>forcedExpansionSet</code> and trigger update.</li>
+<li>Wire up the new Godot signal to this backend method.</li>
+</ul>
+<h2 id="ui-inconsistency-fixes">UI Inconsistency Fixes<a class="headerlink" href="#ui-inconsistency-fixes" title="Permanent link">&para;</a></h2>
+<h3 id="1-statistics-panel-resizing">1. Statistics Panel Resizing<a class="headerlink" href="#1-statistics-panel-resizing" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Problem</strong>: The "Incoming" and "Outgoing" lists in the Node Statistics Popup do not resize proportionally when the popup is resized using the drag handle.</li>
+<li><strong>Fix</strong>: Modify <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/styles.css">src/frontend/styles.css</a>.</li>
+<li>Change <code>.stat-lists</code> from fixed <code>height: 150px</code> to <code>flex: 1; min-height: 150px</code>.</li>
+<li>Ensure parent containers (<code>.popup-content</code>) allow expansion.</li>
+</ul>
+<h3 id="2-edge-visibility">2. Edge Visibility<a class="headerlink" href="#2-edge-visibility" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Problem</strong>: Edges are visible by default on load, creating clutter.</li>
+<li><strong>Fix</strong>:</li>
+<li>in <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/styles.css">src/frontend/styles.css</a>: Set <code>.link</code> default <code>stroke-opacity</code> to <code>0</code>.</li>
+<li>in <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/app.js">src/frontend/app.js</a>: Ensure <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/app.js#1717-1747">updateVisibility()</a> is called immediately after graph initialization to enforce the visibility logic (hiding edges unless focused/hovered).</li>
+</ul>
+<h3 id="3-in-degree-number-mismatch">3. In-Degree Number Mismatch<a class="headerlink" href="#3-in-degree-number-mismatch" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Problem</strong>: The number displayed next to "In-Degree" (Red) in the popup often differs from the count of items in the "Incoming" list.</li>
+<li><strong>Verification</strong>: Locate <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/app.js#1083-1154">showNodePopup</a> in <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/app.js">app.js</a> to see if it uses <code>node.inDegree</code> (metadata) vs <code>node.incoming</code> (actual edges).</li>
+<li><strong>Fix</strong>:</li>
+<li>If the metadata is correct (global truth), keep it.</li>
+<li>If the list is incomplete (due to filtering/culling), add a label "(Visible: X)" or ensure the list matches filters.</li>
+<li><em>Current hypothesis</em>: The metadata <code>inDegree</code> is the ground truth from the backend, while the client-side <code>links</code> array might be filtered or optimized (limit 20000 edges), causing a mismatch. functionality to show "Total" vs "Visible".</li>
+</ul>
+<h3 id="4-in-degree-display-setting-electron">4. In-Degree Display Setting (Electron)<a class="headerlink" href="#4-in-degree-display-setting-electron" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Goal</strong>: Allow user to toggle between showing "Visible Inbound Nodes" (calculated from current graph) or "Total Statistical Inbound" (from backend metadata).</li>
+<li><strong>Default</strong>: Visible Inbound Nodes.</li>
+<li><strong>Changes</strong>:</li>
+<li><strong><a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/index.html">src/frontend/index.html</a></strong>: Add a toggle/select in the Settings Modal (e.g., "Degree Count: Visible | Total").</li>
+<li>
+<p><strong><a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/app.js">src/frontend/app.js</a></strong>:</p>
+<ul>
+<li>Update <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/app.js#1083-1154">showNodePopup</a> to check <code>settingsManager.get('visuals', 'degreeMode')</code>.</li>
+<li>If 'visible': Show <code>inNeighbors.length</code>.</li>
+<li>If 'total': Show <code>node.inDegree</code> (with <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(visible)</a> suffix if different? Or just strict switch?). User asked for "whether the inbound count should be shown as the number of nodes or the statistical number". I will implement a strict switch but maybe keep the tooltip or subtle indicator if they differ significantly.</li>
+<li>Wire up the new setting in <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/app.js#2644-2880">initSettingsUI</a>.</li>
+</ul>
+</li>
+<li>
+<p>[ ] <strong>Simplify Lazy Loading UI (Godot)</strong></p>
+</li>
+<li>[ ] Update <a href="file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd">tree_renderer.gd</a>:<ul>
+<li>[ ] Remove separate <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(+)</a>/<a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(-)</a> buttons.</li>
+<li>[ ] Implement unified <code>[ Count ]</code> button (e.g., circle with number).</li>
+<li>[ ] Button toggles <code>forcedExpansion</code> state.</li>
+<li>[ ] Default state is collapsed (colored/styled to indicate expandable).</li>
+</ul>
+</li>
+<li>
+<p>[ ] Ensure <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js">path_app.js</a> handles the toggle correctly (clear vs add to <code>forcedExpansionNodes</code>).</p>
+</li>
+<li>
+<p>[ ] <strong>Tree View Visual &amp; Interaction Overhaul</strong></p>
+</li>
+<li>[ ] <strong>Visual Cleanup (Godot)</strong><ul>
+<li>[ ] Remove <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(+)</a>/<a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(-)</a> and <code>[Count]</code> buttons from <a href="file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd">tree_renderer.gd</a>.</li>
+<li>[ ] Remove separate click areas for these buttons.</li>
+</ul>
+</li>
+<li>[ ] <strong>Interaction Update (Godot)</strong><ul>
+<li>[ ] <strong>Double Click</strong>: Change to Toggle Expansion (Emit <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#239-246">expand</a>/<a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261">collapse</a>).</li>
+<li>[ ] <strong>Right Click</strong>: Toggle Expansion (Same as Dbl Click).</li>
+<li>[ ] <strong>Middle Click</strong>: Collapse All (Emit new signal <code>collapse_all_requested</code>).</li>
+<li>[ ] <strong>Long Press</strong>: Implement Navigation (Switch Central).</li>
+<li>[ ] Add <code>_process</code> check for hold duration.</li>
+<li>[ ] Draw Progress Ring during hold.</li>
+<li>[ ] Trigger navigation on completion.</li>
+</ul>
+</li>
+<li>[ ] <strong>Focus Mode (Godot)</strong><ul>
+<li>[ ] Add "Focus on this node" checkbox to <a href="file:///e:/Knowledge_project/NoteConnection_app/path_mode/scenes/settings_panel.tscn">settings_panel.tscn</a>.</li>
+<li>[ ] Implement <code>focus_node_id</code> state in <a href="file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd">tree_renderer.gd</a>.</li>
+<li>[ ] Update <code>_draw</code> to dim nodes/edges not connected to <code>focus_node_id</code> when enabled.</li>
+</ul>
+</li>
+<li>[x] <strong>Backend Updates</strong><ul>
+<li>[x] Add <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261">collapseAll</a> handler in <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js">path_app.js</a>.</li>
+</ul>
+</li>
+</ul>
+<h2 id="data-validation">Data Validation<a class="headerlink" href="#data-validation" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <strong>Disable Path Mode if No Data</strong>:</li>
+<li>[x] Update <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/app.js">app.js</a> to check <code>graphDataExists</code> or <code>nodes.length</code> before entering Path Mode.</li>
+<li>[x] Show alert if data missing.</li>
+</ul>
+<h2 id="bug-fixes">Bug Fixes<a class="headerlink" href="#bug-fixes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] <strong>Fix Missing Edges in Tree Layout</strong>:</li>
+<li>[ ] <strong>Cause</strong>: <code>d3.forceSimulation</code> in <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/app.js">app.js</a> mutates <code>graphData.links</code>, replacing ID strings with Node Objects.</li>
+<li>[ ] <strong>Effect</strong>: <code>Graph.js</code> in <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_worker.js">path_worker.js</a> uses these Objects as keys/IDs, breaking adjacency map lookups (which expect strings).</li>
+<li>[ ] <strong>Fix</strong>: In <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js">path_app.js</a>, sanitize links before sending to worker: <code>l.source.id || l.source</code>.</li>
+</ul>
+<h2 id="verification-plan">Verification Plan<a class="headerlink" href="#verification-plan" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Initial State Check</strong>:</li>
+<li>Navigate to a node with high In-Degree (e.g., "Beta", In-Degree 18).</li>
+<li>Verify the unified <code>[ Count ]</code> button appears on the left if &lt; 18 lines are visible.</li>
+<li><strong>Expansion Test</strong>:</li>
+<li>Click the <code>[ Count ]</code> button.</li>
+<li>Verify the tree rebuilds.</li>
+<li>Verify previously hidden nodes (e.g., "Fair Value") appear as prerequisites.</li>
+<li>Verify the <code>[ Count ]</code> button changes its state/appearance to indicate expansion.</li>
+<li><strong>Collapse Test</strong>:</li>
+<li>[x] Click <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(-)</a>.</li>
+<li>[x] Verify the extra nodes disappear and view returns to original state.</li>
+</ol>
+<h2 id="bug-fixes_1">Bug Fixes<a class="headerlink" href="#bug-fixes_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <strong>Fix Missing Edges in Tree Layout</strong>:</li>
+<li>[x] <strong>Fix</strong>: In <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js">path_app.js</a>, sanitize links before sending to worker.</li>
+<li>[ ] <strong>Fix Tree View Interactions</strong>:</li>
+<li>[ ] <strong>Right-Click Toggle</strong>: Ensure <code>isExpanded</code> is passed from <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js">path_core.js</a> to visual node.</li>
+<li>[x] <strong>Collapse All</strong>: Update <a href="file:///e:/Knowledge_project/NoteConnection_app/src/core/PathBridge.ts">PathBridge.ts</a> to relay <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#255-261">collapseAll</a> message. Add UI button.</li>
+</ul>
+<h1 id="phase-2-spine-tributaries-layout-v142">Phase 2: Spine &amp; Tributaries Layout (v1.4.2)<a class="headerlink" href="#phase-2-spine-tributaries-layout-v142" title="Permanent link">&para;</a></h1>
+<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
+<p>Implement a stable, tree-like layout where the "Main Learning Path" (Spine) remains linear and stationary, while prerequisites (Tributaries) expand laterally without disrupting the spine.</p>
+<h2 id="proposed-changes_1">Proposed Changes<a class="headerlink" href="#proposed-changes_1" title="Permanent link">&para;</a></h2>
+<h3 id="1-core-algorithm-srcfrontendlibspath_corejs">1. Core Algorithm (<a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js">src/frontend/libs/path_core.js</a>)<a class="headerlink" href="#1-core-algorithm-srcfrontendlibspath_corejs" title="Permanent link">&para;</a></h3>
+<h4 id="gettreelayoutcentralid-learningpath"><a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#707-884">getTreeLayout(centralId, learningPath)</a><a class="headerlink" href="#gettreelayoutcentralid-learningpath" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Step 1: Identify Spine</strong>:</li>
+<li>Determine the "Critical Path" from <code>learningPath.nodes</code> (using <code>isCritical</code> flag or <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#253-422">diffusionLearning</a> result).</li>
+<li>Assign <code>Level</code> (X-coordinate) to Spine nodes based on distance from Start.</li>
+<li>Fix Spine <code>Y</code> coordinates to <code>0</code>.</li>
+</ul>
+<h4 id="assigntributarypositionsspinenodes-allnodes"><code>assignTributaryPositions(spineNodes, allNodes)</code><a class="headerlink" href="#assigntributarypositionsspinenodes-allnodes" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Step 2: Slot Management</strong>:</li>
+<li>Create a <code>SlotManager</code> to track occupied <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(X, Y)</a> positions.</li>
+<li>Mark key Spine positions as occupied.</li>
+<li><strong>Step 3: Lateral Expansion</strong>:</li>
+<li>Iterate through nodes in <strong>Topological Order</strong> (or Spine Order).</li>
+<li>For each node <code>N</code>, identify its unplaced prerequisites <code>P</code>.</li>
+<li><strong>Placement Logic</strong>:<ul>
+<li><code>Target X</code>: <code>N.Level - 1</code> (Standard dependency inflow).</li>
+<li><code>Target Y</code>: Find nearest available vertical slot relative to <code>N.Y</code>.</li>
+<li>Preference: Alternating Up/Down (<code>+1, -1, +2, -2...</code>) * <code>Y_SPACING</code>.</li>
+<li><strong>Stability</strong>: Once placed, a node's position is locked (<code>isPlaced = true</code>) and will not be moved by subsequent expansions.</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-frontend-integration">2. Frontend Integration<a class="headerlink" href="#2-frontend-integration" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Ensure <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#893-900">switchCentral</a> triggers a re-layout using the new algorithm.</li>
+<li>Pass the stable layout to <code>Graph.js</code> / Godot via <a href="file:///e:/Knowledge_project/NoteConnection_app/dist/src/core/PathBridge.js#5-134">PathBridge</a>.</li>
+</ul>
+<h2 id="verification-plan_1">Verification Plan<a class="headerlink" href="#verification-plan_1" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Spine Stability</strong>:</li>
+<li>Load a path. Center on a Spine node.</li>
+<li>Expand a prerequisite.</li>
+<li>Verify the Spine node DOES NOT move.</li>
+<li><strong>Lateral Unfolding</strong>:</li>
+<li>Verify prerequisites appear above/below the spine, not inline.</li>
+<li><strong>Complex Chain</strong>:</li>
+<li>Expand a prerequisite's prerequisite.</li>
+<li>Verify it flows backwards (Left) and finds a clear slot.</li>
+</ol>
+<hr />
+<h1 id="-implementation-plan-implementing-lazy-loading-for-prerequisites">实施计划 - 实现前置节点懒加载 (Implementation Plan - Implementing Lazy Loading for Prerequisites)<a class="headerlink" href="#-implementation-plan-implementing-lazy-loading-for-prerequisites" title="Permanent link">&para;</a></h1>
+<p>目标是允许用户通过显式扩展特定节点的上下文来调查不完整的入度信息，而无需加载整个图表。</p>
+<h2 id="proposed-changes_2">建议更改 (Proposed Changes)<a class="headerlink" href="#proposed-changes_2" title="Permanent link">&para;</a></h2>
+<h3 id="1-srcfrontendlibspath_corejs">1. 后端逻辑 (<a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js">src/frontend/libs/path_core.js</a>)<a class="headerlink" href="#1-srcfrontendlibspath_corejs" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>无限制上下文扩展</strong>:</li>
+<li>在 <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#253-422">diffusionLearning</a> 中，迭代 <code>forcedExpansionSet</code>。</li>
+<li>对于集合中的每个节点，检索 <strong>所有</strong> 入边 (<a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#120-128">getIncomingEdges</a>)，无论其完成状态或与原始路径的相关性如何。</li>
+<li>将这些边缘的源节点添加到 <code>finalPathNodes</code> 列表中。</li>
+<li><strong>约束</strong>: 不要递归获取这些新节点的父节点（仅限 Level -1）。</li>
+<li><strong>标记</strong>: 在输出中用 <code>isExpanded: true</code> 标记已扩展的目标节点。</li>
+</ul>
+<h3 id="2-srcfrontendpath_workerjs">2. 数据桥接 (<a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_worker.js">src/frontend/path_worker.js</a>)<a class="headerlink" href="#2-srcfrontendpath_workerjs" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>传递状态标志</strong>:</li>
+<li>确保 <code>isExpanded</code> 标志与 <code>forcedExpansionSet</code> 状态匹配。</li>
+<li>在 <code>treeLayout</code>以此传递此标志给 Godot 客户端。</li>
+</ul>
+<h3 id="3-path_modescriptstree_renderergd">3. 可视化状态机 (<a href="file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd">path_mode/scripts/tree_renderer.gd</a>)<a class="headerlink" href="#3-path_modescriptstree_renderergd" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>智能切换逻辑 (左侧)</strong>:</li>
+<li><strong>预计算</strong>: 在 <code>_draw_layout_mode</code> 开始时，迭代 <code>_layout_edges</code> 以构建 <code>visible_in_counts</code> 字典。</li>
+<li><strong>决策逻辑</strong>:<ul>
+<li><code>global_in</code> = <code>node.inDegree</code> (来自后端)。</li>
+<li><code>visible_in</code> = <code>visible_in_counts[node.id]</code>.</li>
+<li><code>is_expanded</code> = <code>node.isExpanded</code>.</li>
+</ul>
+</li>
+<li><strong>状态</strong>:<ol>
+<li><strong>已展开</strong>: 如果 <code>is_expanded</code> 为真：绘制 <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(-)</a> 按钮。点击发射 <code>node_collapse_prereqs_requested</code>。</li>
+<li><strong>可展开</strong>: 否则如果 <code>visible_in &lt; global_in</code>：绘制 <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(+)</a> 按钮。点击发射 <code>node_expand_prereqs_requested</code>。</li>
+<li><strong>完整</strong>: 否则（可见 == 全局）：绘制无（或禁用）。</li>
+</ol>
+</li>
+</ul>
+<h3 id="4-tree_view_panelgd-path_appjs">4. 交互逻辑 (<a href="file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_view_panel.gd">tree_view_panel.gd</a> &amp; <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js">path_app.js</a>)<a class="headerlink" href="#4-tree_view_panelgd-path_appjs" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>折叠处理</strong>:</li>
+<li>在 <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js">path_app.js</a> 中实现 <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#247-254">collapsePrereqs(nodeId)</a>：从 <code>forcedExpansionSet</code> 中移除 ID 并触发更新。</li>
+<li>将新的 Godot 信号连接到此后端方法。</li>
+</ul>
+<h2 id="ui-ui-inconsistency-fixes">UI 不一致修复 (UI Inconsistency Fixes)<a class="headerlink" href="#ui-ui-inconsistency-fixes" title="Permanent link">&para;</a></h2>
+<h3 id="1">1. 统计面板调整大小<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>修复</strong>: 修改 <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/styles.css">src/frontend/styles.css</a>，使用 <code>flex: 1</code> 确保列表按比例调整大小。</li>
+</ul>
+<h3 id="2">2. 边缘可见性<a class="headerlink" href="#2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>修复</strong>: 默认隐藏边缘，仅在悬停/聚焦时显示。</li>
+</ul>
+<h3 id="3">3. 入度数字不匹配<a class="headerlink" href="#3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>修复</strong>: 添加设置以切换“可见”与“总计”入度显示。</li>
+</ul>
+<h2 id="phase-2-spine-tributaries-layout-v142_1">第二阶段：主干与支流布局 (Phase 2: Spine &amp; Tributaries Layout) (v1.4.2)<a class="headerlink" href="#phase-2-spine-tributaries-layout-v142_1" title="Permanent link">&para;</a></h2>
+<h3 id="_56">目标<a class="headerlink" href="#_56" title="Permanent link">&para;</a></h3>
+<p>实现稳定的树状布局，其中“主要学习路径”（主干）保持线性和静止，而前置节点（支流）在不破坏主干的情况下横向扩展。</p>
+<h3 id="_57">建议更改<a class="headerlink" href="#_57" title="Permanent link">&para;</a></h3>
+<h4 id="1-srcfrontendlibspath_corejs_1">1. 核心算法 (<a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js">src/frontend/libs/path_core.js</a>)<a class="headerlink" href="#1-srcfrontendlibspath_corejs_1" title="Permanent link">&para;</a></h4>
+<h5 id="gettreelayoutcentralid-learningpath_1"><a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js#707-884">getTreeLayout(centralId, learningPath)</a><a class="headerlink" href="#gettreelayoutcentralid-learningpath_1" title="Permanent link">&para;</a></h5>
+<ul>
+<li><strong>步骤 1: 识别主干</strong>:</li>
+<li>从 <code>learningPath.nodes</code> 确定“关键路径”。</li>
+<li>根据与起点的距离为主干节点分配 <code>Level</code> (X坐标)。</li>
+<li>将主干 <code>Y</code> 坐标固定为 <code>0</code>。</li>
+</ul>
+<h5 id="assigntributarypositionsspinenodes-allnodes_1"><code>assignTributaryPositions(spineNodes, allNodes)</code><a class="headerlink" href="#assigntributarypositionsspinenodes-allnodes_1" title="Permanent link">&para;</a></h5>
+<ul>
+<li><strong>步骤 2: 插槽管理</strong>:</li>
+<li>创建 <code>SlotManager</code> 以跟踪占用的 <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/source_manager.js#51-53">(X, Y)</a> 位置。</li>
+<li>标记关键主干位置为已占用。</li>
+<li><strong>步骤 3: 横向扩展</strong>:</li>
+<li>按 <strong>拓扑顺序</strong> 迭代节点。</li>
+<li>对于每个节点 <code>N</code>，识别其未放置的前置节点 <code>P</code>。</li>
+<li><strong>放置逻辑</strong>:<ul>
+<li><code>Target X</code>: <code>N.Level - 1</code>。</li>
+<li><code>Target Y</code>: 相对于 <code>N.Y</code> 找到最近的可用垂直插槽。</li>
+<li>偏好: 交替上/下 (<code>+1, -1, +2, -2...</code>) * <code>Y_SPACING</code>。</li>
+<li><strong>稳定性</strong>: 节点一旦放置，其位置即被锁定 (<code>isPlaced = true</code>)。</li>
+</ul>
+</li>
+</ul>
+<h3 id="2_1">2. 前端集成<a class="headerlink" href="#2_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>确保 <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js#893-900">switchCenter</a> 使用新算法触发重新布局。</li>
+<li>通过 <a href="file:///e:/Knowledge_project/NoteConnection_app/dist/src/core/PathBridge.js#5-134">PathBridge</a> 将稳定布局传递给 Godot。</li>
+</ul>
+<h3 id="_58">验证计划<a class="headerlink" href="#_58" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>主干稳定性</strong>: 加载路径，居中主干节点，展开前置节点。验证主干节点 <strong>不移动</strong>。</li>
+<li><strong>横向展开</strong>: 验证前置节点出现在主干的上方/下方，而不是内联。</li>
+<li><strong>复杂链</strong>: 展开前置的前置，验证其向后（左）流动并找到清晰的插槽。</li>
+</ol>
+<hr />
+<h1 id="phase-3-9-rule-tree-layout-engine-v143">Phase 3: 9-Rule Tree Layout Engine (v1.4.3)<a class="headerlink" href="#phase-3-9-rule-tree-layout-engine-v143" title="Permanent link">&para;</a></h1>
+<p><strong>Date</strong>: 2026-02-26</p>
+<h2 id="goal_1">Goal<a class="headerlink" href="#goal_1" title="Permanent link">&para;</a></h2>
+<p>Port the 9-rule expansion/claiming/visibility engine from <code>tree_path_mockup.html</code> into production code (<code>path_core.js</code>, <code>tree_renderer.gd</code>, <code>path_app.js</code>). This replaces the simple contour-based layout with a full ownership/claiming system for intelligent node management.</p>
+<h2 id="gap-analysis-mockup-vs-production">Gap Analysis: Mockup vs Production<a class="headerlink" href="#gap-analysis-mockup-vs-production" title="Permanent link">&para;</a></h2>
+<h3 id="missing-rules">Missing Rules<a class="headerlink" href="#missing-rules" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Rule</th>
+<th>Mockup Function</th>
+<th>Production Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Expansion Order</strong> (FIFO claiming)</td>
+<td><code>processExpansions()</code> + <code>expansionOrder[]</code></td>
+<td>❌ Missing</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Preceding Immunity</strong> (effective index)</td>
+<td><code>tryClaim()</code> + <code>getEffectiveSpineIndex()</code></td>
+<td>❌ Missing</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Following Migration</strong> (spine+followers)</td>
+<td><code>claimSpineChain()</code></td>
+<td>❌ Missing</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Single Appearance</strong> (owner-based)</td>
+<td><code>currentOwner</code> priority check</td>
+<td>⚠️ Partial (<code>placedNodeIds</code>)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Cross-Tributary Isolation</strong> (edge filter)</td>
+<td><code>drawEdges()</code> owner check</td>
+<td>❌ Missing</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Spine Always Visible</strong> (return on collapse)</td>
+<td><code>determineVisibility()</code> spine pass</td>
+<td>❌ Missing</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Sticky Claim</strong> (configurable)</td>
+<td><code>stickyClaimEnabled</code> toggle</td>
+<td>❌ Missing</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Unit Migration</strong> (recursive claim)</td>
+<td><code>claim()</code> recursive tributaries</td>
+<td>❌ Missing</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Tributary Hierarchy Immunity</strong></td>
+<td><code>getTributaryRootSpineIndex()</code></td>
+<td>❌ Missing</td>
+</tr>
+</tbody>
+</table>
+<h3 id="missing-concepts">Missing Concepts<a class="headerlink" href="#missing-concepts" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Mockup</th>
+<th>Production</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Node Ownership</strong></td>
+<td><code>currentOwner</code>, <code>ownerPriority</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>Expansion Order</strong></td>
+<td><code>expansionOrder[]</code> (ordered)</td>
+<td><code>forcedExpansionNodes</code> (unordered Set)</td>
+</tr>
+<tr>
+<td><strong>Effective Spine Index</strong></td>
+<td><code>getEffectiveSpineIndex()</code></td>
+<td>Fixed <code>spineIndex</code> only</td>
+</tr>
+<tr>
+<td><strong>Visibility Chain</strong></td>
+<td><code>isOwnerChainVisible()</code> recursive</td>
+<td>Binary collapsed/expanded</td>
+</tr>
+<tr>
+<td><strong>Hull-Node Avoidance</strong></td>
+<td>Convex hull with padding</td>
+<td>Basic hull, no collision check</td>
+</tr>
+</tbody>
+</table>
+<h3 id="existing-features-to-preserve">Existing Features to Preserve<a class="headerlink" href="#existing-features-to-preserve" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Spine identification via <code>isCritical</code> flag</li>
+<li>✅ Contour-based collision avoidance for spine spacing</li>
+<li>✅ Recursive tributary placement</li>
+<li>✅ Hull/bubble drawing around tributary groups</li>
+<li>✅ Collapsed/expanded state per node</li>
+<li>✅ Godot WebSocket bridge communication</li>
+<li>✅ Tree renderer with bezier edges, styled nodes, pan/zoom</li>
+</ul>
+<h2 id="proposed-changes-13-steps">Proposed Changes (13 Steps)<a class="headerlink" href="#proposed-changes-13-steps" title="Permanent link">&para;</a></h2>
+<h3 id="component-1-core-algorithm">Component 1: Core Algorithm<a class="headerlink" href="#component-1-core-algorithm" title="Permanent link">&para;</a></h3>
+<h4 id="modify-path_corejs">[MODIFY] <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/libs/path_core.js">path_core.js</a><a class="headerlink" href="#modify-path_corejs" title="Permanent link">&para;</a></h4>
+<p><strong>Step 1</strong>: Add expansion order tracking to <code>getTreeLayout()</code> (L742-1133)</p>
+<ul>
+<li>Add <code>expansionOrder</code> parameter (ordered array of expanded node IDs)</li>
+<li>Replace unordered <code>collapsedSet</code> with ordered <code>expansionOrder</code> for FIFO claiming</li>
+</ul>
+<p><strong>Step 2</strong>: Implement node ownership system</p>
+<ul>
+<li>Add <code>currentOwner</code>, <code>ownerPriority</code>, <code>_isOnSpine</code> to each layout node</li>
+<li>Track claims during <code>processExpansions()</code> matching mockup logic</li>
+</ul>
+<p><strong>Step 3</strong>: Implement <code>tryClaim()</code> with all 9 rules</p>
+<ul>
+<li>Rule 1: Owner priority check</li>
+<li>Rule 2: <code>getEffectiveSpineIndex()</code> comparison (inherits owner index)</li>
+<li>Rule 3+8: <code>claimSpineChain()</code> for following migration</li>
+<li>Rule 4: Single appearance via owner check</li>
+<li>Rule 5: Cross-tributary edge filtering</li>
+<li>Rule 6: Spine always visible on collapse</li>
+<li>Rule 7: Sticky claim toggle</li>
+<li>Rule 9: <code>getTributaryRootSpineIndex()</code> for hierarchy immunity</li>
+</ul>
+<p><strong>Step 4</strong>: Implement <code>determineVisibility()</code> + <code>isOwnerChainVisible()</code></p>
+<ul>
+<li>Two-pass: spine always visible, non-spine follows recursive owner chain</li>
+</ul>
+<p><strong>Step 5</strong>: Update edge generation — filter edges between different owners (Rule 5)</p>
+<p><strong>Step 6</strong>: Update hull generation to group by owner</p>
+<h3 id="component-2-frontend-bridge">Component 2: Frontend Bridge<a class="headerlink" href="#component-2-frontend-bridge" title="Permanent link">&para;</a></h3>
+<h4 id="modify-path_appjs">[MODIFY] <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_app.js">path_app.js</a><a class="headerlink" href="#modify-path_appjs" title="Permanent link">&para;</a></h4>
+<p><strong>Step 7</strong>: Track expansion ORDER (not just Set)</p>
+<ul>
+<li><code>forcedExpansionNodes: new Set()</code> → <code>expansionOrder: []</code></li>
+<li>Update <code>expandPrereqs()</code>, <code>collapsePrereqs()</code>, <code>collapseAll()</code></li>
+<li>Pass <code>expansionOrder</code> to worker</li>
+</ul>
+<p><strong>Step 8</strong>: Add sticky claim setting + pass to worker</p>
+<h3 id="component-3-godot-tree-renderer">Component 3: Godot Tree Renderer<a class="headerlink" href="#component-3-godot-tree-renderer" title="Permanent link">&para;</a></h3>
+<h4 id="modify-tree_renderergd">[MODIFY] <a href="file:///e:/Knowledge_project/NoteConnection_app/path_mode/scripts/tree_renderer.gd">tree_renderer.gd</a><a class="headerlink" href="#modify-tree_renderergd" title="Permanent link">&para;</a></h4>
+<p><strong>Step 9</strong>: Edge rendering — skip edges where <code>src.currentOwner != tgt.currentOwner</code></p>
+<p><strong>Step 10</strong>: Hull collision avoidance with rounded padding</p>
+<p><strong>Step 11</strong>: Node type coloring (spine=green, tributary=blue, shared=purple, migrated=orange)</p>
+<p><strong>Step 12</strong>: Expansion indicator badge (in-degree count circle)</p>
+<h3 id="component-4-worker-communication">Component 4: Worker Communication<a class="headerlink" href="#component-4-worker-communication" title="Permanent link">&para;</a></h3>
+<h4 id="modify-path_workerjs">[MODIFY] <a href="file:///e:/Knowledge_project/NoteConnection_app/src/frontend/path_worker.js">path_worker.js</a><a class="headerlink" href="#modify-path_workerjs" title="Permanent link">&para;</a></h4>
+<p><strong>Step 13</strong>: Pass <code>expansionOrder</code> and <code>stickyClaimEnabled</code> to <code>getTreeLayout()</code></p>
+<h2 id="verification-plan_2">Verification Plan<a class="headerlink" href="#verification-plan_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Expand Calculus → verify Optimization migrates (Rule 3)</li>
+<li>Expand Optimization → verify Diff Eq cannot claim Calculus (Rule 2+9)</li>
+<li>Collapse Calculus → verify spine nodes return (Rule 6)</li>
+<li>Toggle sticky claim → verify non-spine revert/persist (Rule 7)</li>
+<li>Check hull boundaries don't overlap nodes</li>
+</ol>
+<hr />
+<h1 id="9-v143">第三阶段：9 规则树形布局引擎 (v1.4.3)<a class="headerlink" href="#9-v143" title="Permanent link">&para;</a></h1>
+<p><strong>日期</strong>: 2026-02-26</p>
+<h2 id="_59">目标<a class="headerlink" href="#_59" title="Permanent link">&para;</a></h2>
+<p>将 <code>tree_path_mockup.html</code> 中的 9 规则展开/认领/可见性引擎移植到生产代码（<code>path_core.js</code>、<code>tree_renderer.gd</code>、<code>path_app.js</code>）中。用完整的所有权/认领系统替换简单的基于轮廓的布局。</p>
+<h2 id="vs_1">差距分析：原型 vs 生产代码<a class="headerlink" href="#vs_1" title="Permanent link">&para;</a></h2>
+<h3 id="_60">缺失规则<a class="headerlink" href="#_60" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>规则</th>
+<th>原型函数</th>
+<th>生产代码状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>展开顺序</strong>（FIFO 认领）</td>
+<td><code>processExpansions()</code></td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>前置免疫</strong>（有效索引）</td>
+<td><code>tryClaim()</code> + <code>getEffectiveSpineIndex()</code></td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>后续迁移</strong>（脊柱+后续）</td>
+<td><code>claimSpineChain()</code></td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>单次出现</strong>（基于所有者）</td>
+<td><code>currentOwner</code> 优先级检查</td>
+<td>⚠️ 部分存在</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>跨支流隔离</strong>（边过滤）</td>
+<td><code>drawEdges()</code> 所有者检查</td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>脊柱始终可见</strong>（折叠时返回）</td>
+<td><code>determineVisibility()</code></td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>粘性认领</strong>（可配置）</td>
+<td><code>stickyClaimEnabled</code> 开关</td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>单元迁移</strong>（递归认领）</td>
+<td><code>claim()</code> 递归支流</td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>支流层级免疫</strong></td>
+<td><code>getTributaryRootSpineIndex()</code></td>
+<td>❌ 缺失</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_61">缺失概念<a class="headerlink" href="#_61" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>原型</th>
+<th>生产代码</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>节点所有权</strong></td>
+<td><code>currentOwner</code>, <code>ownerPriority</code></td>
+<td>无</td>
+</tr>
+<tr>
+<td><strong>展开顺序</strong></td>
+<td><code>expansionOrder[]</code>（有序）</td>
+<td><code>forcedExpansionNodes</code>（无序 Set）</td>
+</tr>
+<tr>
+<td><strong>有效脊柱索引</strong></td>
+<td><code>getEffectiveSpineIndex()</code></td>
+<td>固定 <code>spineIndex</code></td>
+</tr>
+<tr>
+<td><strong>可见性链</strong></td>
+<td><code>isOwnerChainVisible()</code> 递归</td>
+<td>二元折叠/展开</td>
+</tr>
+<tr>
+<td><strong>Hull-节点避让</strong></td>
+<td>凸包 + 填充</td>
+<td>基础 hull，无碰撞检查</td>
+</tr>
+</tbody>
+</table>
+<h2 id="13">建议更改（13 个步骤）<a class="headerlink" href="#13" title="Permanent link">&para;</a></h2>
+<h3 id="1-path_corejs-1-6">组件 1: 核心算法 — <code>path_core.js</code>（步骤 1-6）<a class="headerlink" href="#1-path_corejs-1-6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>步骤 1</strong>: 添加展开顺序追踪</li>
+<li><strong>步骤 2</strong>: 实现节点所有权系统</li>
+<li><strong>步骤 3</strong>: 实现 <code>tryClaim()</code> 包含所有 9 条规则</li>
+<li><strong>步骤 4</strong>: 实现 <code>determineVisibility()</code> + <code>isOwnerChainVisible()</code></li>
+<li><strong>步骤 5</strong>: 更新边生成 — 基于所有者过滤</li>
+<li><strong>步骤 6</strong>: 更新 hull 生成 — 按所有者分组</li>
+</ul>
+<h3 id="2-path_appjs-7-8">组件 2: 前端桥接 — <code>path_app.js</code>（步骤 7-8）<a class="headerlink" href="#2-path_appjs-7-8" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>步骤 7</strong>: 有序展开追踪</li>
+<li><strong>步骤 8</strong>: 添加粘性认领设置</li>
+</ul>
+<h3 id="3-godot-tree_renderergd-9-12">组件 3: Godot 树渲染器 — <code>tree_renderer.gd</code>（步骤 9-12）<a class="headerlink" href="#3-godot-tree_renderergd-9-12" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>步骤 9</strong>: 跨所有者边过滤</li>
+<li><strong>步骤 10</strong>: Hull 碰撞避让</li>
+<li><strong>步骤 11</strong>: 节点类型着色</li>
+<li><strong>步骤 12</strong>: 展开指示器徽章</li>
+</ul>
+<h3 id="4-worker-path_workerjs-13">组件 4: Worker 通信 — <code>path_worker.js</code>（步骤 13）<a class="headerlink" href="#4-worker-path_workerjs-13" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>步骤 13</strong>: 传递 <code>expansionOrder</code> 和 <code>stickyClaimEnabled</code></li>
+</ul>
+<h2 id="_62">验证计划<a class="headerlink" href="#_62" title="Permanent link">&para;</a></h2>
+<ol>
+<li>展开"微积分" → 验证"优化"迁移（规则3）</li>
+<li>展开"优化" → 验证"微分方程"不能认领"微积分"（规则2+9）</li>
+<li>折叠"微积分" → 验证脊柱节点返回（规则6）</li>
+<li>切换粘性认领 → 验证非脊柱节点还原/保持（规则7）</li>
+<li>检查 Hull 边界不与节点重叠</li>
+</ol>
+<h2 id="2026-08-17">2026-08-17 身份边界与移动端预算计划<a class="headerlink" href="#2026-08-17" title="Permanent link">&para;</a></h2>
+<ol>
+<li>通过 <code>FileLoader</code> 传递显式 workspace root；保留可选参数，保证旧调用方源码兼容。</li>
+<li>在学习摄入与快照中传播可选 <code>sourceUri</code>、<code>revision</code>、<code>identityAliases</code>；删除先按 URI/alias 解析，再回退旧 path。</li>
+<li>在读取正文前执行 Android admission limit：5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 条边；读取时提取 link candidate，中间 draft 不保留文档正文。</li>
+<li>在完成 move/rename replay、旧 snapshot fixture、HTTP schema parity 与跨端 Bridge replay 前，保持 canonical-ID 切换冻结。</li>
+<li>2026-08-17 第 8 阶段已交付原子 graph replay 入口、显式 learning move/rename journal、有界模块化 ingest 校验、indexed keyword candidate、带身份的移动 exact projection，以及 additive Bridge 2.0 capability/cancellation envelope。</li>
+<li>后续门禁是 registry response/status shadow parity、新鲜 arm64 APK/RSS 证据、置于 export 契约后的版本化 SQLite/WASM 持久化，最后才允许 canonical 公共 ID 迁移。</li>
+</ol>
+<h2 id="2026-08-17-10-projection-host">2026-08-17 第 10 阶段：版本化 Projection 与 Host 执行<a class="headerlink" href="#2026-08-17-10-projection-host" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>knowledge_projection_contract.js</code> 是移动端 canonical wire shape：schema <code>1</code>、无正文节点、身份元数据、explicit/inferred/runtime provenance、有界 evidence reference 与有界 adjacency。</li>
+<li>Capacitor 生成 graph 经过契约归一化；Tauri Rust 输出相同 schema 与身份字段，同时保持 Android 无正文内存路径。</li>
+<li><code>PathBridgeHostAdapter</code> 让执行与策略留在 host；Bridge 负责 correlation、timeout、abort、断连清理和 legacy transport fallback。</li>
+<li>剩余门禁是新鲜签名 arm64 产物/RSS、Android Storage Access Framework 导入、跨 host replay 以及旧 snapshot/move/rename/collision 证据。</li>
+</ol>
+<h3 id="_63">证据边界<a class="headerlink" href="#_63" title="Permanent link">&para;</a></h3>
+<p>静态 staging 不能替代签名产物与真机 RSS；<code>not-measured</code> 继续保持未测状态，canonical 公共 ID 迁移继续冻结。</p>
+<h2 id="2026-08-18-11-projection-store-android-saf">2026-08-18 第 11 阶段：Projection Store 与 Android SAF<a class="headerlink" href="#2026-08-18-11-projection-store-android-saf" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>knowledge_projection_store.js</code> 成为 host-neutral 持久化边界，提供 persistent/read-through 与 memory adapter、有界 metadata，以及成功读取后的 last-known fallback。</li>
+<li>移动 exact analysis 经 store 读取；同一 fixture 已对 Web、Tauri、Capacitor、Android adapter replay schema、metadata、exact lookup、neighbor 与 path。</li>
+<li>Tauri projection 写入使用同目录临时文件 + rename。Android slim 增加 additive SAF bridge，在 app-local staging tree 中流式导入 Markdown，执行文档数/深度/单文档/总字节预算，成功后原子切换知识库，失败保留旧目录，并通过 request/poll IPC 回报完成。</li>
+<li>identity corpus 增加同内容文档、move/rename alias 与 NFC collision；public ID 不变。</li>
+<li>G2 已有部分证据：新鲜 arm64 slim 构建生成未签名 APK（9,555,787 字节）与 AAB（7,179,228 字节）；静态 verifier 测得压缩 payload 分别为 9,433,678 与 6,978,122 字节，且没有 Godot/sidecar/model/SVG 条目。签名产物、在线设备导入/query 与 RSS JSON 仍待完成；当前 Android 工具链 Kotlin 编译已通过。G3 fixture replay 已通过，真实 Android storage replay 与 G4 canonical-ID 切换仍冻结。</li>
+</ol>
+<h3 id="2026-08-18">2026-08-18 验证追记<a class="headerlink" href="#2026-08-18" title="Permanent link">&para;</a></h3>
+<p><code>mobile:prepare:slim</code> 当前 staging 为 120 个文件（未压缩 4,251,345 字节；估算压缩 1,545,813 字节）。新鲜 arm64 APK/AAB 已通过 ZIP 检查和 25 MiB payload budget 下的 mobile artifact verifier。这里只关闭静态打包证据；签名、真机 SAF replay 与峰值 RSS 仍是 release 门禁。</p>
+<h2 id="2026-08-18-13-host">2026-08-18 第 13 阶段：原生导入恢复与跨 Host 闭环<a class="headerlink" href="#2026-08-18-13-host" title="Permanent link">&para;</a></h2>
+<h3 id="_64">架构增量<a class="headerlink" href="#_64" title="Permanent link">&para;</a></h3>
+<ol>
+<li>继续把原始 schema-1 projection 作为移动持久化格式并保留 memory fallback；没有实测包体、启动与 heap 收益时，不提升 SQLite/WASM。</li>
+<li>增加 Android 内部 import journal，使用同目录临时文件原子写入。journal 不进入公共 projection contract，只记录 app-local staging/backup 名称与阶段。</li>
+<li>在 activity 启动时恢复：新 target 已存在时安全清理；若停在旧 target 已移走阶段则恢复 backup；只有 staging 时清理并报告 failed/recovered import；损坏或路径逃逸 journal fail closed。</li>
+<li>Phase 12 的四 host replay 只计作契约证据。canonical-ID 迁移前，必须统一 Tauri、Capacitor、Android 与 TypeScript identity boundary 的 namespace、NFC、SHA-256 revision、边方向与 alias 历史。</li>
+<li>移动预算继续作为 admission guard：5,000 文档、单文档 16 MiB、总输入 64 MiB、250,000 边、depth 64。下一轮 Android 证据必须证明中间 draft 无正文并测量瞬时读取/RSS，之后才可提高预算。</li>
+</ol>
+<h3 id="_65">门禁状态<a class="headerlink" href="#_65" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>G2：</strong> 当前静态 slim 证据为 120 个文件 / 未压缩 4,253,837 字节 / 估算压缩 1,546,201 字节；未签名 APK/AAB 压缩 payload 为 9,436,196 / 6,983,880 字节。签名、真机 SAF workload、进程死亡 replay 与 RSS <code>&lt;= 256 MiB</code> 仍开放。</li>
+<li><strong>G3：</strong> 原生 journal/recovery、原子 marker、fixture replay 与 arm64 Kotlin 编译属于代码级证据；真实 Android 进程死亡、存储损坏与权限失败仍未验证。</li>
+<li><strong>G4：</strong> 公共 ID 继续冻结。必需语料包括旧 snapshot restore、move-journal restart、rollback、same-content/NFC collision、cross-root load 与 delete/restore alias continuity。</li>
+</ul>
+<h3 id="_66">后续顺序<a class="headerlink" href="#_66" title="Permanent link">&para;</a></h3>
+<ol>
+<li>增加只从 CI secret 注入的签名流程与设备 RSS/workload 记录器；缺设备或缺 RSS 必须让 release verifier 失败。</li>
+<li>增加 Tauri/Capacitor/Android 原生 adapter replay，对比 graph metadata、exact search、neighbors、path、edge provenance 与 import status。</li>
+<li>验证 Android ingest 在读取时提取 link candidate、保持 draft 无正文，并记录瞬时读取/RSS 证据。</li>
+<li>关闭 identity corpus 与 registry response/status shadow parity；之后才评估数据库 adapter 或 canonical public-ID 切换。</li>
+</ol>
+<h3 id="_67">本轮验证<a class="headerlink" href="#_67" title="Permanent link">&para;</a></h3>
+<p><code>src/android.knowledgebase.picker.contract.test.ts</code>、mobile profile/artifact contract、TypeScript no-emit、57 suite migration matrix（307 passed、13 skipped）与 <code>app:compileArm64ReleaseKotlin</code> 已通过。当前宿主没有在线 Android 设备、已配置 AVD、签名 keystore 或 RSS JSON。</p>
+<h2 id="2026-08-18-14-replay">2026-08-18 第 14 阶段：签名设备证据与原生 Replay<a class="headerlink" href="#2026-08-18-14-replay" title="Permanent link">&para;</a></h2>
+<h3 id="_68">架构增量<a class="headerlink" href="#_68" title="Permanent link">&para;</a></h3>
+<p>release 边界现在拆成三层、分别验收：
+1. <strong>产物完整性</strong>：<code>verify-mobile-artifact.js</code> 检查 ZIP entry、arm64 payload、profile budget、可选 RSS，以及 release 模式下的 APK/AAB 签名。未签名 payload 只能通过静态层。
+2. <strong>设备执行</strong>：<code>capture-tauri-android-rss-evidence.js</code> 在指定设备安装一个明确产物，启动 Tauri package，执行有界 workload spec，观察进程死亡与重启，并采样 <code>/proc/&lt;pid&gt;/status:VmRSS</code>。
+3. <strong>Projection 语义</strong>：workload 必须证明 SAF 导入、构图、exact query、path 与重启后的连续性。采集器把这些结果与产物体积分开记录，避免 size gate 通过掩盖原生 projection 失败。
+workload spec 采用声明式、禁止 host shell 的契约，固定为有序的 <code>saf-import</code>、<code>graph-build</code>、<code>exact-query</code>、<code>path</code>、<code>continuity</code> 步骤，并只接受显式 <code>adbArgs</code>。重复/缺失步骤、宿主命令插值、RSS 缺失或进程死亡不可观测时全部 fail closed；同时写出可被 artifact verifier 复用的独立 <code>rss.json</code>。</p>
+<h3 id="_69">当前真实进展与权衡<a class="headerlink" href="#_69" title="Permanent link">&para;</a></h3>
+<ul>
+<li>identity contract 改动后的 staging 为 121 个文件 / 未压缩 4,263,740 字节 / 估算压缩 1,548,695 字节；重新构建的未签名 arm64 APK/AAB 当前压缩 payload 为 9,570,708 / 7,052,404 字节，这些只是静态测量。</li>
+<li>签名校验已经实现，但当前主机没有 signing keystore，因此没有签名证据；release 脚本现在拒绝未签名产物，不再把它当作 release candidate。</li>
+<li>采集器与契约测试已落盘，但当前没有在线设备/AVD，也没有执行 workload spec。因此 G2 与原生 G3 仍为 pending，harness 本身不等于设备验收。</li>
+<li>显式 <code>adbArgs</code> 比任意脚本不方便，但证据可审阅，也避免误读宿主机文件；SAF UI 驱动继续由设备实验室负责。</li>
+</ul>
+<h3 id="_70">后续执行顺序<a class="headerlink" href="#_70" title="Permanent link">&para;</a></h3>
+<ol>
+<li>通过 CI secret 生成签名 arm64 APK/AAB，不提交 keystore；执行 <code>--require-signed --require-arm64 --require-rss</code>。</li>
+<li>在低内存 arm64 硬件运行 harness，归档 manifest、RSS JSON、logcat 尾部与 artifact hash；release 不接受仅 emulator 证据。</li>
+<li>用同一 projection corpus 执行 Tauri、Capacitor、Android 原生 adapter matrix，覆盖 force-stop/reopen 与权限/存储故障路径。</li>
+<li>完成 G4 identity/edge corpus 与 registry response/status shadow parity；之后再评估 canonical ID、带 <code>contentRef</code> 的 indexed projection 或 SQLite/WASM。</li>
+</ol>
+<h2 id="2026-08-18-18">2026-08-18 第 18 阶段：原生恢复状态机证据<a class="headerlink" href="#2026-08-18-18" title="Permanent link">&para;</a></h2>
+<h3 id="_71">实施内容<a class="headerlink" href="#_71" title="Permanent link">&para;</a></h3>
+<ol>
+<li>新增 <code>scripts/verify-mobile-native-recovery.js</code>，作为 Kotlin import journal 的无依赖 host verifier。它镜像 <code>staging</code>、<code>target-backed-up</code>、<code>target-activated</code> 三个 phase；已有 target 优先于过期事务 artifact；target 不存在时恢复有效 backup；unsafe path 或未知 schema 则 fail closed。</li>
+<li>回放六个场景：staging 且 target 已存在、target-backed-up 恢复、target-activated 的 target 优先、孤儿 backup 恢复、unsafe journal 拒绝与 unknown schema 拒绝。报告使用 schema-1 evidence，标记 <code>evidenceLevel: host-recovery-state-machine</code> 与 <code>nativeDeviceEvidence: false</code>。</li>
+<li>verifier 与唯一的 Jest 契约测试均排除出 <code>mobile-slim</code>。Kotlin 仍是运行时 owner；host mirror 有意只作为漂移探测器，不形成第二套生产实现。</li>
+</ol>
+<h3 id="_72">架构边界与权衡<a class="headerlink" href="#_72" title="Permanent link">&para;</a></h3>
+<p>本轮在不改变 Rust request/poll API、result marker 字段、projection schema 或移动包体的前提下，闭合了确定性的代码级恢复契约。代价是测试镜像可能在 journal 契约变化时漂移；缓解方式是要求 Kotlin bridge、verifier、契约测试与双语证据条目在同一变更中同步更新。该报告不能证明 Android 进程死亡、SAF UI 执行、存储/权限失败处理、签名产物完整性或 RSS。</p>
+<h3 id="_73">验证与下一道门禁<a class="headerlink" href="#_73" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Recovery verifier：6 个场景通过；恢复契约定向测试：1 个测试通过。</li>
+<li>全量 Jest：146 suites / 1,271 passed / 26 skipped。TypeScript no-emit 通过。Rust：28 passed / 1 ignored probe。</li>
+<li>Projection replay：4 个 host boundary、6 个节点、4 条边且无语义 mismatch。Mobile-slim：121 个文件 / 未压缩 4,275,083 字节 / 估算压缩 1,550,638 字节，SHA-256 为 <code>5d5bafa20770bf42531b2e39ec62364537e0eade83b29a9aa2209f4f03bf7c38</code>；RSS 仍为 <code>not measured</code>。</li>
+<li>G2/G3 下一步：签名 arm64 APK/AAB、SAF import/query/path、force-stop/reopen continuity、存储与权限失败 replay，以及代表性低内存硬件上的 RSS <code>&lt;= 256 MiB</code>。</li>
+<li>在原生 replay 与 old-snapshot、move-journal、collision、rollback corpus 归档前，继续冻结 public-ID 迁移、默认 SQLite/WASM 与移动端预算上调。</li>
+</ul>
+<h2 id="2026-08-18-21">2026-08-18 第 21 阶段：宿主门禁对账<a class="headerlink" href="#2026-08-18-21" title="Permanent link">&para;</a></h2>
+<h3 id="_74">证据<a class="headerlink" href="#_74" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Android prerequisite、TypeScript no-emit、8 场景 native-recovery mirror 与 4-host projection replay 均通过。报告属于被忽略的 verification output，工作区保持 clean。</li>
+<li>唯一已配置 AVD 为 <code>Medium_Phone_API_36.1</code>，路径 <code>E:\Android\avd\Medium_Phone.avd</code>：Android <code>36.1</code>、Play Store image、<code>x86_64</code>、2 GiB RAM；<code>adb devices -l</code> 没有 online target。它只能用于工具链 smoke test，不能作为 arm64 release 证据。</li>
+<li>仓库/宿主搜索没有获批 <code>.jks</code>、<code>.keystore</code> 或 <code>.p12</code>。新鲜 APK/AAB 仍是未签名静态证据，release verification 必须继续要求 <code>--require-signed --require-arm64 --require-rss</code>。</li>
+</ul>
+<h3 id="_75">下一步执行<a class="headerlink" href="#_75" title="Permanent link">&para;</a></h3>
+<ol>
+<li>CI 临时签名现有 slim <code>aarch64</code> 构建，发布签名产物与 provenance，不发布 keystore。</li>
+<li>在获批 arm64 低内存设备上执行 schema-1 声明式 workload：<code>saf-import -&gt; graph-build -&gt; exact-query -&gt; path -&gt; continuity</code>，并覆盖存储/权限重试。</li>
+<li>recorder 归档 artifact hash/signature、脱敏设备信息、force-stop/reopen 观察、workload 结果、logcat 与 <code>/proc/&lt;pid&gt;/status:VmRSS</code>；缺证据或 RSS 超过 256 MiB 必须 fail closed。</li>
+<li>在归档完成前继续冻结 canonical public-ID、默认 SQLite/WASM 与移动预算变化。重建 x86_64、生成本地 debug keystore 或接受 emulator-only/unsigned 证据均是拒绝的捷径。</li>
+</ol>
+<h2 id="2026-08-18-22-ci">2026-08-18 第 22 阶段：CI 签名门禁与移动预算对账<a class="headerlink" href="#2026-08-18-22-ci" title="Permanent link">&para;</a></h2>
+<h3 id="_76">实施<a class="headerlink" href="#_76" title="Permanent link">&para;</a></h3>
+<ol>
+<li>保持签名逻辑由 <code>scripts/configure-tauri-android-signing.js</code> 拥有：本地清理旧 marker 并保持 unsigned；CI 只有在四项 signing value 与真实 keystore 齐全时才注入。</li>
+<li>keystore 只在 release job 临时落盘；沿用 slim <code>aarch64</code> 构建，验证签名 arm64 APK/AAB，只发布已验证产物并删除 key。</li>
+<li>AAB <code>jarsigner</code> 返回码 <code>4</code> 仅对确实已签名且证书链不受信任/自签的归档有效；unsigned 或损坏归档继续 fail closed。</li>
+<li>将产物事实与 release acceptance 分开记录：本地 smoke 的 APK 为 <code>9,576,838</code>、AAB 为 <code>7,140,668</code> 压缩字节；slim staging 为 121 个文件 / 未压缩 <code>4,275,083</code> / 估算压缩 <code>1,550,638</code> 字节。</li>
+</ol>
+<h3 id="_77">向前计划与权衡<a class="headerlink" href="#_77" title="Permanent link">&para;</a></h3>
+<ul>
+<li>当前 <code>universal</code> 名称没有证据支撑，只发现 <code>arm64-v8a</code> native payload。应改名为 <code>arm64</code>，或在声明 universal 前增加逐 ABI manifest 与安装校验。</li>
+<li>input、projection、native output、staging 磁盘与 RSS 必须是独立预算。完整 Markdown 读取、JSON 重复驻留、Map 与 SAF backup/staging 可能在 admission 通过后仍超 RSS 或磁盘上限。</li>
+<li>下一次运行固定为 CI 签名 arm64 -&gt; 获批低内存设备 -&gt; <code>saf-import -&gt; graph-build -&gt; exact-query -&gt; path -&gt; continuity</code> -&gt; 存储/权限重试 -&gt; force-stop/reopen -&gt; <code>manifest + rss.json + artifact hash + logcat</code>。任何缺证据或 RSS 超过 256 MiB 都失败。</li>
+<li>在原生证据归档与有界 content-read 测量前，不提升 SQLite/WASM、Godot、canonical public ID 或语料预算。这样牺牲功能晋级速度，但保护包体与硬件要求。</li>
+</ul>
+<h2 id="2026-08-18-23-arm64">2026-08-18 第 23 阶段：版本化移动预算契约与 arm64 语义对齐<a class="headerlink" href="#2026-08-18-23-arm64" title="Permanent link">&para;</a></h2>
+<p>checked-in 的 <code>config/mobile-budget.v1.json</code> 现在由 slim verifier、artifact verifier 与 staging manifest 共用。Rust 为保持 native runtime 独立继续保留常量，同时由 Rust contract test 解析同一文件防止漂移。Android serialized projection 超过 48 MiB 会在 atomic replacement 前拒绝，content read 超过 16 MiB 会在返回大 String 前拒绝。release workflow 改为 <code>aarch64</code>，强制精确 <code>arm64-v8a</code> ABI 集合，并发布 <code>noteconnection-arm64-release.apk/.aab</code>；universal 仅保留本地 opt-in。Projection schema、public ID 与 IPC contract 不变；真机/RSS 门禁仍开放。</p>
+<h2 id="2026-08-21-24-host-runtime-budget">2026-08-21 第 24 阶段：跨 host runtime budget 投影与原生证据隔离<a class="headerlink" href="#2026-08-21-24-host-runtime-budget" title="Permanent link">&para;</a></h2>
+<p>第 23 阶段统一了 build-time budget，但 browser constants 仍有重复，Capacitor 仍是读后计量。第 24 阶段增加 <code>mobile_budget_runtime.js</code> 作为小型 WebView projection，改用 UTF-8 字节计量，并在可用时先做 <code>stat</code> 预检、再以 decoded text 兜底。所有枚举 entry 都执行深度检查，worker 与 single-thread 构图共用边数/projection 校验。</p>
+<p>Tauri 在 bootstrap/IPC read 前拒绝超限 generated asset。Android evidence harness 要求精确 <code>arm64-v8a</code>、可测且不超过 profile ceiling 的 RAM，并记录 ABI/RAM provenance。CI 只先暴露签名 arm64 workflow artifact；只有 self-hosted workload 与真实 RSS 证据成功后才上传 GitHub Release。Projection/IPC/public-ID contract 保持不变，移动包继续 runtime-first。</p>
+<p>当前静态 staging 为 122 文件 / 未压缩 <code>4,283,033</code> / 估算压缩 <code>1,552,689</code> bytes / SHA-256 <code>c60fe683957faf8fcf88a34b1c766740340c2cdd005bc526cc4efe13befbf77c</code>。边界 contract、TypeScript、Rust、slim budget 与 Diataxis 通过；当前宿主没有获批 signing key 或在线获批 arm64 设备，原生 G2/G3 仍待完成。</p>
+<h2 id="2026-08-21-25-owner">2026-08-21 第 25 阶段：冲突安全的身份迁移与 owner 收敛<a class="headerlink" href="#2026-08-21-25-owner" title="Permanent link">&para;</a></h2>
+<p>身份迁移边界现在会在修改 document、atom 或 evidence 前预检完整目标 alias 集合。历史 alias 仍是兼容查询入口，因此其他文档已经拥有的 URI、path 或 basename 会直接 fail-closed。合法 move 会原地把 path/URI/revision/alias 同步到 <code>ResourceRegistry</code>、workspace binding 与 <code>IndexLifecycle</code>；resource/projection/index ID、旧 <code>documentId</code>、content hash 与 segment 保持稳定。</p>
+<p>本阶段关闭了此前 additive <code>sourceUri</code> 留下的 secondary-owner 缺口，但不改变 snapshot/projection schema、公开 ID 或移动端运行时资产。LearnGraph 的 typed boundary 纪律被落实为 identity contract；textbooks 的 package/compiler 方向仍保留给后续 ingestion 边界，二者都不足以证明应把数据库、Node sidecar、Godot runtime 或模型加入 <code>mobile-slim</code>。</p>
+<p>新增 G4 fixture 验证 rejected-collision 状态与持久化后的四 owner 收敛。定向验证为 3 suites / 11 tests、TypeScript no-emit 与 <code>git diff --check</code>；全量回归为 148 个 Jest suite / 1,284 passed / 26 skipped、Rust 30 passed / 1 ignored、四 host projection replay 与 fresh mobile-low budget 通过。这还不是完整 ingest transaction：混合请求可能在后续 operation 失败前产生部分 mutation。下一步是 whole-request preflight 或 journaled rollback，再归档有版本的 G4 manifest；public-ID 与 SQLite/WASM 提升继续等待 replay 与原生 RSS 证据。</p>
+<h2 id="2026-08-21-26-ingest">2026-08-21 第 26 阶段：请求级 ingest 原子性与单写者串行化<a class="headerlink" href="#2026-08-21-26-ingest" title="Permanent link">&para;</a></h2>
+<p><code>ingestKnowledge</code> 现在使用按 platform instance 的单写者队列。每个请求在 mutation 前保存 versioned graph snapshot 的深拷贝；operation、relation recompute、owner mirror 或 atomic persistence 失败时，document/atom/evidence、secondary registry、index、identity journal、telemetry 与 <code>idCounter</code> 一起恢复。</p>
+<p>identity ownership 在 <code>upsert</code> 与 <code>move</code> 的边界统一校验。path/URI/alias collision、显式 move ID 与 <code>from*</code> alias 不属于同一文档、source alias 歧义以及 owner mirror 缺失都会 fail-closed。mixed-batch G4 fixture 证明第一步成功但后续 collision 后第一步不可见，原始 alias 仍可继续使用。</p>
+<p>本阶段关闭 Phase 25 的 partial-commit 缺口，不改变 public ID、snapshot/projection schema、Bridge 字段或 runtime-first 移动包。代价是与 graph 成比例的瞬时内存及 JSON clone/restore 延迟；低内存验收必须使用有界 batch 实测。在 public-ID、SQLite/WASM、Godot、预算或 strict-default route 提升前，仍需有版本 old-snapshot/cross-root/move-journal/collision/rollback manifest 与原生签名 arm64/RSS 证据。</p>
+<p>当前验证：TypeScript no-emit 通过；148 个 Jest suite 通过，1,287 passed、26 skipped；Rust 通过，30 passed、1 ignored；mobile-low staging 通过，为 122 文件 / 未压缩 4,283,033 / 估算压缩 1,552,689 bytes；projection replay 通过（4 hosts）；native recovery 通过（8 scenarios）；Diataxis 通过（18 entries / 36 paths / 64 canonical references）；<code>git diff --check</code> 通过。</p>
+<h2 id="2026-08-21-27-g4-identity-corpus">2026-08-21 第 27 阶段：版本化 G4 identity corpus 回放<a class="headerlink" href="#2026-08-21-27-g4-identity-corpus" title="Permanent link">&para;</a></h2>
+<p><code>config/identity-corpus.v1.json</code> 现在是受跟踪的八用例 corpus contract，覆盖 legacy snapshot restore、same-content isolation、cross-root NFC identity、NFC/case collision rejection、move-journal restart + old-alias deletion、mixed-batch rollback、four-owner convergence 与 upsert alias collision rejection。<code>scripts/verify-identity-corpus.js</code> 执行生产 <code>Graph</code>、<code>ResourceIdentity</code>、<code>KnowledgeLearningPlatform</code> 与 file store 路径，再强制执行四 host projection replay。</p>
+<p>报告明确标记为 <code>host-code-replay</code>、<code>nativeDeviceEvidence: false</code>、<code>canonicalPublicIdCutover: blocked</code>。本次 8 个 case 与 4 个 projection host 通过，result hash 为 <code>4274a5a2d087875d309fdef9dd4232f5704103b9496ee5524744229bf550b5bb</code>；manifest contract 通过 2 tests。这是 release evidence boundary，不是 Android 真机验收。Public-ID 迁移仍需独立评审；G2/G3 仍需签名 arm64、SAF/重试/continuity 与 RSS 证据。</p>
+<p>最终回归为 149 个 Jest suite / 1,289 passed / 26 skipped；TypeScript no-emit、Rust 30 passed / 1 ignored、mobile-low budget、native recovery、projection replay 与 Diataxis 通过。</p>
+<h2 id="2026-08-21-28-canonical-id-readiness-gate">2026-08-21 第 28 阶段：Canonical-ID 迁移 readiness gate<a class="headerlink" href="#2026-08-21-28-canonical-id-readiness-gate" title="Permanent link">&para;</a></h2>
+<p><code>scripts/verify-canonical-id-readiness.js</code> 是只读 dry-run，检查 versioned G4 corpus、四个 projection host 与全部当前 <code>canonicalId</code> producer。它确认 public ID、snapshot/projection schema、Bridge 字段与移动运行时保持不变，且不包含迁移操作。</p>
+<p>默认命令输出 <code>blocked</code> 并带 <code>independentReviewRequired: true</code>；<code>nativeDeviceEvidence=false</code> 时 <code>--strict</code> fail-closed。Corpus、host replay、producer surface 与兼容性检查通过。本阶段不改变 <code>NoteNode.id</code>、layout、snapshot 或 API；独立迁移评审与原生 G2/G3 证据仍需完成。</p>
+<p>本阶段回归验证为 150 个 Jest suite / 1,291 passed / 26 skipped；TypeScript no-emit、Tauri Rust 30 passed / 1 ignored、Fixrisk FR-001..FR-015 全部通过、Diataxis 与 <code>git diff --check</code> 通过。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
