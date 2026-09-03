@@ -11,6 +11,7 @@ import type {
     AgentConversationMemoryAction,
     AgentConversationMemoryRecord,
     AgentConversationRequest,
+    AgentConversationResponseMode,
     AgentConversationResponse,
     AgentConversationSessionRecord,
     AgentConversationTurnRecord,
@@ -445,6 +446,14 @@ const AGENT_RAG_CAUSAL_CONTEXT_BUDGET: RagContextBudget = {
     maxTotalChars: 7600,
 };
 
+const AGENT_RAG_FULL_CONTEXT_BUDGET: RagContextBudget = {
+    // Full is a desktop/report contract. It remains bounded, but must leave
+    // room for every selected document section instead of direct-hit noise.
+    maxFragments: 80,
+    maxCharsPerFragment: 5000,
+    maxTotalChars: 30000,
+};
+
 const AGENT_RAG_BASE_GRAPH_NEIGHBOR_LIMIT = 6;
 const AGENT_RAG_CAUSAL_GRAPH_NEIGHBOR_LIMIT = 8;
 const AGENT_RAG_DEEP_GRAPH_NEIGHBOR_LIMIT = 8;
@@ -572,7 +581,18 @@ function tokenize(text: string): string[] {
     return Array.from(new Set(normalized));
 }
 
-function resolveAgentRagEvidenceProfile(message: string, expansionPolicy: GraphExpansionPolicy): AgentRagEvidenceProfile {
+function resolveAgentRagEvidenceProfile(
+    message: string,
+    expansionPolicy: GraphExpansionPolicy,
+    responseMode: AgentConversationResponseMode = 'slim'
+): AgentRagEvidenceProfile {
+    if (responseMode === 'full') {
+        return {
+            budget: { ...AGENT_RAG_FULL_CONTEXT_BUDGET },
+            graphNeighborLimit: AGENT_RAG_DEEP_GRAPH_NEIGHBOR_LIMIT,
+            paragraphWindow: 20,
+        };
+    }
     const normalizedMessage = normalizeWhitespace(String(message || '')).toLowerCase();
     const causalExplanationSignal = Boolean(
         /\b(?:why|cause|causes|caused|causal|because|reason|mechanism|mechanisms)\b/i.test(normalizedMessage)
@@ -10342,7 +10362,19 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const answerLanguage = request.answerLanguage === 'zh' || request.answerLanguage === 'en'
             ? request.answerLanguage
             : 'auto';
-        const topK = clamp(Math.floor(Number(request.topK) || 6), 1, 18);
+        const responseMode: AgentConversationResponseMode = request.responseMode === 'full' ? 'full' : 'slim';
+        const responseProfile = request.responseProfile === 'mobile_compact'
+            ? 'mobile_compact' as const
+            : undefined;
+        const effectiveResponseMode: AgentConversationResponseMode = responseProfile === 'mobile_compact'
+            ? 'slim'
+            : responseMode;
+        const requestedTopK = Math.floor(Number(request.topK) || 6);
+        const topK = clamp(
+            Math.max(requestedTopK, effectiveResponseMode === 'full' ? 12 : 1),
+            1,
+            18
+        );
         const generatedAt = this.resolveTimestamp(request.asOf);
         const namespace = this.normalizeConversationMemoryNamespace(request.memoryNamespace);
         const queryResult = await this.queryKnowledge({
@@ -10451,7 +10483,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         });
         const conversationKnowledgePoints = assembledConversation.knowledgePoints;
         const graphContext = assembledConversation.graphContext;
-        const ragEvidenceProfile = resolveAgentRagEvidenceProfile(message, graphExpansionPolicy);
+        const ragEvidenceProfile = resolveAgentRagEvidenceProfile(
+            message,
+            graphExpansionPolicy,
+            effectiveResponseMode
+        );
         const graphNeighborItems = this.buildRagGraphNeighborQueryItems(
             graphContext,
             conversationKnowledgePoints,
@@ -10534,6 +10570,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const reply = buildScopedConversationReply({
             message,
             answerLanguage,
+            responseMode: effectiveResponseMode,
             knowledgePoints: conversationKnowledgePoints,
             citations,
             recalledMemories,
@@ -10558,14 +10595,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             pack: ragContextPack,
             invocationId,
         });
-        const responseProfile = request.responseProfile === 'mobile_compact'
-            ? 'mobile_compact' as const
-            : undefined;
         const response: AgentConversationResponse = {
             userId,
             sessionId,
             assistantMessage: reply.answer,
             answer: reply.answer,
+            responseMode: effectiveResponseMode,
             ...(responseProfile ? { responseProfile } : {}),
             answerReleaseReview: reply.answerReleaseReview,
             graphAnswerPlan: reply.graphAnswerPlan,

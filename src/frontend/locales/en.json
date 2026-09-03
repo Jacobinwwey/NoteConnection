@@ -400,6 +400,14 @@
       "summaryEnglish": "English answer",
       "summaryChinese": "Chinese answer"
     },
+    "responseMode": {
+      "label": "Answer detail",
+      "slim": "Slim",
+      "full": "Full report",
+      "summary": "Short grounded answer",
+      "summarySlim": "Short grounded answer",
+      "summaryFull": "Complete evidence-bounded technical report"
+    },
     "userId": "Learner ID",
     "inputLabel": "Ask the scoped knowledge corpus",
     "inputPlaceholder": "Ask about a concept, citation, prerequisite, or study step...",

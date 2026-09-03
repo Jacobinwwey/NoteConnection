@@ -200,6 +200,14 @@
                 </select>
                 <div id="agent-workspace-answer-language-summary" class="agent-answer-language-summary" data-i18n="agentWorkspace.answerLanguage.summary">Matches software language</div>
               </div>
+              <div class="agent-response-mode-control">
+                <label for="agent-workspace-response-mode-select" data-i18n="agentWorkspace.responseMode.label">Answer detail</label>
+                <select id="agent-workspace-response-mode-select" aria-describedby="agent-workspace-response-mode-summary">
+                  <option value="slim" data-i18n="agentWorkspace.responseMode.slim">Slim</option>
+                  <option value="full" data-i18n="agentWorkspace.responseMode.full">Full report</option>
+                </select>
+                <div id="agent-workspace-response-mode-summary" class="agent-response-mode-summary" data-i18n="agentWorkspace.responseMode.summary">Short grounded answer</div>
+              </div>
               <div class="agent-pane-field">
                 <label for="agent-workspace-user-id" data-i18n="agentWorkspace.userId">Learner ID</label>
                 <input id="agent-workspace-user-id" type="text" value="path_user_default" />

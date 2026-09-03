@@ -33,4 +33,29 @@ describe('agent conversation request normalization', () => {
             message: 'what is water glass?',
         }).responseProfile).toBeUndefined();
     });
+
+    test.each([
+        [undefined, undefined],
+        ['slim', 'slim'],
+        ['definition', 'slim'],
+        ['compact', 'slim'],
+        ['full', 'full'],
+        ['comprehensive', 'full'],
+        ['unsupported-mode', undefined],
+    ])('normalizes answer response mode %s to %s', (responseMode, expectedMode) => {
+        expect(normalizeAgentConversationRequestPayload({
+            message: 'what is water glass?',
+            responseMode,
+        }).responseMode).toBe(expectedMode);
+    });
+
+    test('keeps response mode independent from the mobile response profile', () => {
+        const request = normalizeAgentConversationRequestPayload({
+            message: 'what is water glass?',
+            response_mode: 'full',
+            response_profile: 'mobile',
+        });
+        expect(request.responseMode).toBe('full');
+        expect(request.responseProfile).toBe('mobile_compact');
+    });
 });

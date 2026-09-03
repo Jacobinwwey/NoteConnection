@@ -858,6 +858,86 @@ describe('server migration settings routes', () => {
     }));
   });
 
+  test('conversation turn cache separates full and slim response modes', async () => {
+    const ingestResponse = await requestJson(port, 'POST', '/api/knowledge/ingest', {
+      incremental: true,
+      documents: [{
+        documentId: 'doc_server_response_mode',
+        sourcePath: 'Knowledge_Base/response-mode/mode.md',
+        language: 'en',
+        workspaceId: 'response-mode',
+        corpusId: 'response-mode',
+        content: '# Response Mode Probe\nA response mode probe is a bounded technical fixture used to verify answer detail selection.\n\n## Thermal model\nThe temperature field follows $$\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T$$.',
+      }],
+    });
+    expect(ingestResponse.status).toBe(200);
+
+    const baseRequest = {
+      userId: 'server_response_mode_user',
+      sessionId: 'server_response_mode_session',
+      message: 'what is response mode probe?',
+      scope: {
+        workspaceId: 'response-mode',
+        corpusId: 'response-mode',
+        sourcePathPrefixes: ['Knowledge_Base/response-mode'],
+      },
+      persistMemory: false,
+    };
+    const fullResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      { ...baseRequest, responseMode: 'full' },
+      { 'X-Agent-Conversation-Turn-Id': 'turn_response_mode_full' },
+    );
+    expect(fullResponse.status).toBe(200);
+    expect(fullResponse.body.result.responseMode).toBe('full');
+    expect(fullResponse.body.result.answer).toContain('Thermal model');
+
+    const slimResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      { ...baseRequest, responseMode: 'slim' },
+      { 'X-Agent-Conversation-Turn-Id': 'turn_response_mode_slim' },
+    );
+    expect(slimResponse.status).toBe(200);
+    expect(slimResponse.body.result.responseMode).toBe('slim');
+    expect(slimResponse.body.result.answer).not.toContain('## Thermal model');
+
+    const fullReplay = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      { ...baseRequest, responseMode: 'full' },
+      { 'X-Agent-Conversation-Turn-Id': 'turn_response_mode_full' },
+    );
+    expect(fullReplay.status).toBe(200);
+    expect(fullReplay.headers?.['x-agent-conversation-replay']).toBe('hit');
+    expect(fullReplay.body.result.responseMode).toBe('full');
+
+    const definitionAliasResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      { ...baseRequest, response_mode: 'definition' },
+      { 'X-Agent-Conversation-Turn-Id': 'turn_response_mode_definition_alias' },
+    );
+    expect(definitionAliasResponse.status).toBe(200);
+    expect(definitionAliasResponse.body.result.responseMode).toBe('slim');
+
+    const comprehensiveAliasResponse = await requestJson(
+      port,
+      'POST',
+      '/api/knowledge/conversation',
+      { ...baseRequest, detailMode: 'comprehensive' },
+      { 'X-Agent-Conversation-Turn-Id': 'turn_response_mode_comprehensive_alias' },
+    );
+    expect(comprehensiveAliasResponse.status).toBe(200);
+    expect(comprehensiveAliasResponse.body.result.responseMode).toBe('full');
+    expect(comprehensiveAliasResponse.body.result.answer).toContain('Thermal model');
+  });
+
   test('conversation JSON and SSE responses preserve an explicit Chinese answer language for an English no-match query', async () => {
     const requestPayload = {
       userId: 'server_language_no_match_user',
@@ -997,6 +1077,7 @@ describe('server migration settings routes', () => {
         userId: 'mobile_projection_user',
         sessionId: 'mobile_projection_session',
         message: 'what is amorphous ice?',
+        responseMode: 'full',
         responseProfile: 'mobile_compact',
         persistMemory: false,
       },
@@ -1008,6 +1089,7 @@ describe('server migration settings routes', () => {
     expect(response.status).toBe(200);
     const result = response.body.result;
     expect(result).toEqual(expect.objectContaining({
+      responseMode: 'slim',
       responseProfile: 'mobile_compact',
       mobileProjection: expect.objectContaining({
         schemaVersion: 1,
@@ -1032,6 +1114,7 @@ describe('server migration settings routes', () => {
         userId: 'mobile_projection_user',
         sessionId: 'mobile_projection_session',
         message: 'what is amorphous ice?',
+        responseMode: 'full',
         responseProfile: 'mobile_compact',
         persistMemory: false,
       },
@@ -1042,6 +1125,7 @@ describe('server migration settings routes', () => {
     expect(jsonReplayResponse.status).toBe(200);
     expect(jsonReplayResponse.headers?.['x-agent-conversation-replay']).toBe('hit');
     expect(jsonReplayResponse.body.result).toEqual(expect.objectContaining({
+      responseMode: 'slim',
       responseProfile: 'mobile_compact',
       assistantBlocks: [],
       knowledgePoints: [],
@@ -1063,6 +1147,7 @@ describe('server migration settings routes', () => {
         userId: 'mobile_projection_user',
         sessionId: 'mobile_projection_session',
         message: 'what is amorphous ice?',
+        responseMode: 'full',
         responseProfile: 'mobile_compact',
         persistMemory: false,
       },
@@ -1076,6 +1161,7 @@ describe('server migration settings routes', () => {
     expect(sseInitialResponse.headers?.['x-agent-conversation-replay']).toBe('miss');
     const sseInitialCompleted = parseCompletedMobileEvent(sseInitialResponse.body);
     expect(sseInitialCompleted?.result).toEqual(expect.objectContaining({
+      responseMode: 'slim',
       responseProfile: 'mobile_compact',
       assistantBlocks: [],
       knowledgePoints: [],
@@ -1092,6 +1178,7 @@ describe('server migration settings routes', () => {
         userId: 'mobile_projection_user',
         sessionId: 'mobile_projection_session',
         message: 'what is amorphous ice?',
+        responseMode: 'full',
         responseProfile: 'mobile_compact',
         persistMemory: false,
       },
@@ -1104,6 +1191,7 @@ describe('server migration settings routes', () => {
     expect(sseReplayResponse.headers?.['x-agent-conversation-replay']).toBe('hit');
     const sseReplayCompleted = parseCompletedMobileEvent(sseReplayResponse.body);
     expect(sseReplayCompleted?.result).toEqual(expect.objectContaining({
+      responseMode: 'slim',
       responseProfile: 'mobile_compact',
       assistantBlocks: [],
       knowledgePoints: [],

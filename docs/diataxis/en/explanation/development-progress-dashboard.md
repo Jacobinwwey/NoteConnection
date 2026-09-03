@@ -3,6 +3,18 @@
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
+## 2026-09-03 Slim/Full Response Modes and Same-Document RAG Fallback
+
+The Agent Workspace now exposes an additive `responseMode` contract. `slim` remains the default and preserves the existing bounded answer shape; the request boundary also accepts `definition`/`compact` as slim aliases and `comprehensive`/`report` as full aliases. The desktop selector persists `slim` or `full` in local storage and sends the selected mode through JSON and SSE. The turn-cache fingerprint includes the normalized mode, so a replay cannot reuse a slim answer for a full request or vice versa.
+
+`full` is a desktop/report profile, not an unbounded dump. Retrieval is capped at 80 fragments, 5,000 characters per fragment, and 30,000 total characters; public assembly is capped again at 24 selected sections and 24,000 characters. Mermaid and prompt scaffolding are removed, Markdown tables/headings are retained, and math blocks must remain balanced. `responseProfile=mobile_compact` is an explicit resource boundary: it forces the effective response mode to slim and returns the existing bounded mobile projection, even when a caller requests full.
+
+Full section selection now accepts `graph_neighbor_support` only when its `documentId` and `sourcePath` match the anchor document identity. Section priority is `parent_context`, `adjacent_context`, `graph_neighbor_support`, `direct_support`, then `conflict`; this allows a missing optical or mechanism section to recover from same-document graph context without leaking unrelated documents. The fallback is covered by a regression that includes a cross-document decoy.
+
+Fresh verification after rebuilding `dist`: TypeScript no-emit; five mode/release/HTTP/frontend Jest suites (`249` passed, `13` skipped); real waterglass Chromium full (`86` KaTeX nodes, `5,425` DOM text characters and `5,265` released-answer characters) and slim (`5` KaTeX nodes, `345` characters); synthetic formula full/slim probes (`4` KaTeX nodes each); and direct HTTP/runtime full (`2` queries, both `responseMode=full`) all passed. The real full answer contains the thermal equation, Snell-law equation, material/flow/optics/thermal sections, quantitative pressure and reliability analysis, and the comparison model, with no Mermaid, prompt scaffolding, or dangling trailing heading. The runtime verifier applies the legacy list/bold contraction gate only to slim, while full still enforces grounding, duplicate-clause, formula, and internal-leakage checks. Slim retains the legacy evidence boundary and filenames.
+
+This slice does not claim native Android device acceptance. Signed arm64 installation, SAF import, force-stop/reopen continuity, and peak RSS still require an online target and remain separate release gates.
+
 ## 2026-09-03 Packaged Sidecar Content-Fingerprint Freshness
 
 The SQLite matrix found one real packaged-runtime regression that mtime checks could not detect: an existing Windows sidecar carried an older server payload while its binary timestamp was newer than the checked-out inputs. A forced rebuild restored the expected `requestedProvider=sqlite` diagnostics and SQLite restart continuity. `scripts/sidecar-build-fingerprint.js` now hashes the packaged `dist/src` tree plus package/build inputs into an ignored manifest beside the host sidecar. `build-sidecar.js` writes that manifest after a successful build; `ensure-sidecar-ready.js` requires a matching digest and target entry before it can skip a rebuild, while missing, stale, unreadable, or target-mismatched manifests fail closed into rebuild.

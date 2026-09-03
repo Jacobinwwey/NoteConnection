@@ -1133,6 +1133,14 @@ function createWorkspaceHtml() {
                     </select>
                     <div id="agent-workspace-answer-language-summary"></div>
                   </div>
+                  <div class="agent-response-mode-control">
+                    <label for="agent-workspace-response-mode-select">Answer detail</label>
+                    <select id="agent-workspace-response-mode-select">
+                      <option value="slim">Slim</option>
+                      <option value="full">Full report</option>
+                    </select>
+                    <div id="agent-workspace-response-mode-summary"></div>
+                  </div>
                   <input id="agent-workspace-user-id" value="path_user_default" />
                   <div id="agent-workspace-chat-messages"></div>
                   <div id="agent-workspace-knowledge-points"></div>
@@ -6500,6 +6508,60 @@ describe('agent workspace learning-path integration', () => {
         input.value = 'what is water glass?';
         await (window as any).NoteConnectionAgentWorkspace.sendConversation();
         expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body || '{}')).answerLanguage).toBe('en');
+    });
+
+    test('persists slim/full answer detail and sends the selected mode', async () => {
+        const { document, window, fetchMock } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+        const response = () => createSseResponse([
+            {
+                event: 'turn_completed',
+                payload: {
+                    type: 'turn_completed',
+                    turnId: 'turn_response_mode',
+                    emittedAt: '2026-09-03T00:00:00.000Z',
+                    result: {
+                        responseMode: 'full',
+                        assistantMessage: 'full report',
+                        answer: 'full report',
+                        citations: [],
+                        recalledMemories: [],
+                        memoryActions: [],
+                        knowledgePoints: [],
+                        summary: {
+                            generatedAt: '2026-09-03T00:00:00.000Z',
+                            topK: 6,
+                            returnedKnowledgePoints: 0,
+                            returnedCitations: 0,
+                            recalledMemoryCount: 0,
+                            queryEvidenceCoverageRatioPct: 0,
+                        },
+                    },
+                },
+            },
+        ]);
+        fetchMock.mockImplementationOnce(async () => response());
+        fetchMock.mockImplementationOnce(async () => response());
+
+        const selector = document.getElementById('agent-workspace-response-mode-select') as HTMLSelectElement;
+        expect(selector.value).toBe('slim');
+        selector.value = 'full';
+        selector.dispatchEvent(new window.Event('change', { bubbles: true }));
+        expect(window.localStorage.getItem('nc_agent_response_mode')).toBe('full');
+        expect(String(document.getElementById('agent-workspace-response-mode-summary')?.textContent || '')).toContain('Complete');
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'what is water glass?';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+        expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body || '{}')).responseMode).toBe('full');
+
+        selector.value = 'slim';
+        selector.dispatchEvent(new window.Event('change', { bubbles: true }));
+        input.value = 'what is water glass?';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+        expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body || '{}')).responseMode).toBe('slim');
     });
 
     test('uses the bounded local exact path on native mobile and exposes only the compact projection', async () => {

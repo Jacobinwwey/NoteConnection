@@ -247,6 +247,10 @@ function buildConversationRequest(activeTarget, query, options = {}) {
   if (Number.isInteger(topK) && topK > 0) {
     request.topK = topK;
   }
+  const responseMode = String(options.responseMode || '').trim().toLowerCase();
+  if (responseMode === 'slim' || responseMode === 'full') {
+    request.responseMode = responseMode;
+  }
   return request;
 }
 
@@ -1019,6 +1023,13 @@ async function main() {
     ? String(args[targetArgIndex + 1]).trim()
     : 'waterglass';
   const explicitQueries = collectFlagValues(args, '--query');
+  const responseModeArgIndex = args.findIndex((arg) => arg === '--response-mode');
+  const requestedResponseMode = responseModeArgIndex >= 0
+    ? String(args[responseModeArgIndex + 1] || '').trim().toLowerCase()
+    : 'slim';
+  if (!['slim', 'full'].includes(requestedResponseMode)) {
+    throw new Error(`Unsupported response mode: ${requestedResponseMode}`);
+  }
   const isRuntimeCaseGroup = args.includes('--runtime-case-group');
   if (
     mode === 'full'
@@ -1081,7 +1092,7 @@ async function main() {
           port,
           'POST',
           '/api/knowledge/conversation',
-          buildConversationRequest(target, query),
+          buildConversationRequest(target, query, { responseMode: requestedResponseMode }),
           90000
         );
         if (conversationResponse.status !== 200 || !conversationResponse.body || !conversationResponse.body.success) {
@@ -1137,16 +1148,23 @@ async function main() {
           answerMustNotContain: [
             'No scoped knowledge points matched',
             'retrieval_candidates_below_threshold',
-            ...(String(target || '').trim().toLowerCase() === 'waterglass'
+            ...(String(target || '').trim().toLowerCase() === 'waterglass' && requestedResponseMode === 'slim'
               ? ['库朗数', '特征速度', '网格尺寸']
               : []),
           ],
           answerMustContain: String(target || '').trim().toLowerCase() === 'waterglass'
             ? ['\\frac{\\partial T}{\\partial t}', 'n_1 \\sin(\\theta_1)']
             : undefined,
-          requirePublicAnswerScaffoldingHygiene: String(target || '').trim().toLowerCase() === 'waterglass',
+          requirePublicAnswerScaffoldingHygiene: String(target || '').trim().toLowerCase() === 'waterglass'
+            && requestedResponseMode === 'slim',
           requireNoDuplicatePublicClauses: String(target || '').trim().toLowerCase() === 'waterglass',
         });
+        if (result.responseMode !== requestedResponseMode) {
+          throw new Error(`response mode mismatch for query=${query}: expected=${requestedResponseMode} actual=${result.responseMode}`);
+        }
+        if (requestedResponseMode === 'full' && String(result.answer || '').length < 1000) {
+          throw new Error(`full response was unexpectedly short for query=${query}: length=${String(result.answer || '').length}`);
+        }
         conversations.push(summary);
       }
 
@@ -1221,6 +1239,7 @@ async function main() {
           '/api/knowledge/conversation',
           buildConversationRequest(regressionCase.activeTarget, regressionCase.query, {
             topK: regressionCase.topK,
+            responseMode: requestedResponseMode,
           }),
           90000
         );

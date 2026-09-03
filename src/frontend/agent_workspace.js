@@ -38,6 +38,7 @@
 
     const ACTIVE_SOURCE_TARGET_STORAGE_KEY = 'nc_last_target';
     const ANSWER_LANGUAGE_STORAGE_KEY = 'nc_agent_answer_language';
+    const RESPONSE_MODE_STORAGE_KEY = 'nc_agent_response_mode';
     const ACTIVE_SOURCE_TARGET_EVENT = 'noteconnection:active-target-changed';
     const AGENT_CONVERSATION_ENDPOINT = '/api/knowledge/conversation';
     const GRAPH_FOCUS_DIAGNOSTICS_EVENT = 'noteconnection:agent-graph-focus-diagnostics';
@@ -634,6 +635,68 @@
                 if (!hasExplicitChoice) {
                     renderAnswerLanguageSelector();
                 }
+            });
+        }
+    }
+
+    function normalizeResponseMode(value) {
+        return String(value || '').trim().toLowerCase() === 'full' ? 'full' : 'slim';
+    }
+
+    function getResponseMode() {
+        const selector = getElement('agent-workspace-response-mode-select');
+        const selected = selector && typeof selector.value === 'string' ? selector.value : '';
+        if (selected === 'slim' || selected === 'full') {
+            return selected;
+        }
+        if (typeof localStorage !== 'undefined') {
+            const stored = normalizeResponseMode(localStorage.getItem(RESPONSE_MODE_STORAGE_KEY));
+            if (stored) {
+                return stored;
+            }
+        }
+        return 'slim';
+    }
+
+    function updateResponseModeSummary(mode) {
+        const summary = getElement('agent-workspace-response-mode-summary');
+        if (!summary) {
+            return;
+        }
+        summary.textContent = mode === 'full'
+            ? translate('agentWorkspace.responseMode.summaryFull', 'Complete evidence-bounded technical report')
+            : translate('agentWorkspace.responseMode.summarySlim', 'Short grounded answer');
+    }
+
+    function renderResponseModeSelector() {
+        const selector = getElement('agent-workspace-response-mode-select');
+        if (!selector) {
+            return;
+        }
+        const stored = typeof localStorage !== 'undefined'
+            ? normalizeResponseMode(localStorage.getItem(RESPONSE_MODE_STORAGE_KEY))
+            : 'slim';
+        selector.value = stored;
+        updateResponseModeSummary(stored);
+    }
+
+    function bindResponseModeSelector() {
+        const selector = getElement('agent-workspace-response-mode-select');
+        if (!selector || selector.getAttribute('data-agent-response-mode-bound') === 'true') {
+            return;
+        }
+        selector.setAttribute('data-agent-response-mode-bound', 'true');
+        selector.addEventListener('change', function () {
+            const mode = normalizeResponseMode(selector.value);
+            selector.value = mode;
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem(RESPONSE_MODE_STORAGE_KEY, mode);
+            }
+            updateResponseModeSummary(mode);
+        });
+        if (window.i18n && typeof window.i18n.onLanguageChange === 'function') {
+            window.i18n.onLanguageChange(function () {
+                updateResponseModeSummary(getResponseMode());
             });
         }
     }
@@ -5565,6 +5628,9 @@
                 activeTarget: requestContext.activeTarget,
                 message,
                 answerLanguage: getAnswerLanguage(),
+                // Native mobile always consumes the bounded projection; a
+                // desktop full-report preference must not inflate the APK path.
+                responseMode: isMobileNativeRuntime() ? 'slim' : getResponseMode(),
                 topK: 6,
                 ...(isMobileNativeRuntime() ? { responseProfile: 'mobile_compact' } : {}),
                 memoryNamespace: 'conversation',
@@ -5746,9 +5812,11 @@
         bindWorkspaceDrawerChrome();
         bindWorkspaceScopeSelector();
         bindAnswerLanguageSelector();
+        bindResponseModeSelector();
         observeGlobalScopeOptions();
         renderWorkspaceScopeSelector();
         renderAnswerLanguageSelector();
+        renderResponseModeSelector();
         updateConversationApiStatus({
             state: 'idle',
             endpoint: AGENT_CONVERSATION_ENDPOINT,

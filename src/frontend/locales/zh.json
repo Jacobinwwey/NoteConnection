@@ -400,6 +400,14 @@
       "summaryEnglish": "使用英文回答",
       "summaryChinese": "使用中文回答"
     },
+    "responseMode": {
+      "label": "回答详略",
+      "slim": "简洁",
+      "full": "完整报告",
+      "summary": "简洁的依据型回答",
+      "summarySlim": "简洁的依据型回答",
+      "summaryFull": "完整且受证据约束的技术报告"
+    },
     "userId": "学习者 ID",
     "inputLabel": "向当前限定知识域提问",
     "inputPlaceholder": "可以询问概念、引用依据、先修依赖或学习步骤...",

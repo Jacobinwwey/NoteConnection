@@ -5,6 +5,7 @@ import type {
     AgentConversationKnowledgePoint,
     AgentConversationMemoryAction,
     AgentConversationMemoryRecord,
+    AgentConversationResponseMode,
     AnswerReleaseReview,
     KnowledgeQueryTemporalDetail,
     KnowledgeAtom,
@@ -43,6 +44,7 @@ export type BuildAgentWorkspaceCapabilities = (atomId: string) => unknown[];
 export type ScopedConversationReplyParams = {
     message: string;
     answerLanguage?: 'auto' | 'en' | 'zh';
+    responseMode?: AgentConversationResponseMode;
     knowledgePoints: AgentConversationKnowledgePoint[];
     citations: KnowledgeCitation[];
     recalledMemories: AgentConversationMemoryRecord[];
@@ -55,6 +57,332 @@ export type ScopedConversationReplyParams = {
     ragContextPack?: RagContextPack;
     ragSufficiencyReview?: RagSufficiencyReview;
 };
+
+const FULL_RESPONSE_MAX_CHARS = 24000;
+const FULL_RESPONSE_MAX_FRAGMENTS = 24;
+const FULL_REPORT_FRAGMENT_ROLES = new Set([
+    'direct_support',
+    'parent_context',
+    'adjacent_context',
+    'graph_neighbor_support',
+    'conflict',
+]);
+
+type FullReportFragment = RagContextPack['fragments'][number];
+type FullReportSourceIdentity = {
+    documentId: string;
+    sourcePath: string;
+};
+
+function isFullResponseMode(params: ScopedConversationReplyParams): boolean {
+    return params.responseMode === 'full';
+}
+
+function normalizeSourcePathForComparison(value: string): string {
+    return String(value || '')
+        .trim()
+        .replace(/\\/gu, '/')
+        .replace(/\/{2,}/gu, '/')
+        .replace(/\/+$/gu, '')
+        .toLowerCase();
+}
+
+function resolveFullReportAnchorSource(params: ScopedConversationReplyParams): FullReportSourceIdentity {
+    const anchorAtomId = normalizeWhitespace(String(params.graphContext?.anchorAtomId || ''));
+    const anchorDocumentId = normalizeWhitespace(String(params.graphContext?.anchorDocumentId || ''));
+    const knowledgePoints = Array.isArray(params.knowledgePoints) ? params.knowledgePoints : [];
+    const anchorPoint = knowledgePoints.find((point) => {
+        const pointAtomId = normalizeWhitespace(String(point.atomId || ''));
+        const pointAtomIds = Array.isArray(point.atomIds) ? point.atomIds.map((atomId) => normalizeWhitespace(String(atomId || ''))) : [];
+        return Boolean(anchorAtomId && (pointAtomId === anchorAtomId || pointAtomIds.includes(anchorAtomId)));
+    })
+        || knowledgePoints.find((point) => anchorDocumentId && normalizeWhitespace(String(point.documentId || '')) === anchorDocumentId)
+        || knowledgePoints[0];
+    const documentId = anchorDocumentId || normalizeWhitespace(String(anchorPoint?.documentId || ''));
+    let sourcePath = normalizeSourcePathForComparison(String(anchorPoint?.sourcePath || ''));
+    if (!sourcePath && documentId) {
+        const sourceFragment = (params.ragContextPack?.fragments || []).find((fragment) => (
+            fragment.role !== 'graph_neighbor_support'
+            && normalizeWhitespace(String(fragment.documentId || '')) === documentId
+            && normalizeSourcePathForComparison(String(fragment.sourcePath || ''))
+        ));
+        sourcePath = normalizeSourcePathForComparison(String(sourceFragment?.sourcePath || ''));
+    }
+    return { documentId, sourcePath };
+}
+
+function isFullReportGraphNeighborFromAnchorSource(
+    fragment: FullReportFragment,
+    anchorSource: FullReportSourceIdentity
+): boolean {
+    if (fragment.role !== 'graph_neighbor_support') {
+        return true;
+    }
+    const fragmentDocumentId = normalizeWhitespace(String(fragment.documentId || ''));
+    const fragmentSourcePath = normalizeSourcePathForComparison(String(fragment.sourcePath || ''));
+    if (!anchorSource.documentId && !anchorSource.sourcePath) {
+        return false;
+    }
+    if (anchorSource.documentId && fragmentDocumentId !== anchorSource.documentId) {
+        return false;
+    }
+    if (anchorSource.sourcePath && fragmentSourcePath !== anchorSource.sourcePath) {
+        return false;
+    }
+    return Boolean(fragmentDocumentId || fragmentSourcePath);
+}
+
+function hasFullReportBodyOutsideMermaid(fragment: FullReportFragment): boolean {
+    const source = stripFullReportMermaid(String(fragment.text || ''))
+        .replace(/^#{1,6}\s+[^\n]*$/gmu, '')
+        .trim();
+    return Boolean(source) && !isFullReportInternalBlock(source);
+}
+
+function selectFullReportFragments(params: ScopedConversationReplyParams): RagContextPack['fragments'] {
+    const fragments = params.ragContextPack?.fragments || [];
+    const anchorSource = resolveFullReportAnchorSource(params);
+    const candidates = fragments
+        .filter((fragment) => {
+            const title = normalizeWhitespace(String(fragment.title || '')).toLowerCase();
+            const headingPath = (Array.isArray(fragment.headingPath) ? fragment.headingPath : [])
+                .map((heading) => normalizeWhitespace(String(heading || '')).toLowerCase())
+                .join(' ');
+            const mermaidMarked = title.includes('mermaid') || headingPath.includes('mermaid');
+            return !title.includes('preamble')
+                && (!mermaidMarked || hasFullReportBodyOutsideMermaid(fragment))
+                && !headingPath.includes('preamble')
+                && (!headingPath.includes('mermaid') || hasFullReportBodyOutsideMermaid(fragment));
+        })
+        .filter((fragment) => (
+            FULL_REPORT_FRAGMENT_ROLES.has(fragment.role)
+            && isFullReportGraphNeighborFromAnchorSource(fragment, anchorSource)
+        ));
+    const selected: RagContextPack['fragments'] = [];
+    const selectedSections = new Set<string>();
+    let usedChars = 0;
+    const sectionKey = (fragment: RagContextPack['fragments'][number]): string => {
+        const path = Array.isArray(fragment.headingPath) ? fragment.headingPath : [];
+        const leaf = normalizeWhitespace(String(path[path.length - 1] || fragment.title || ''))
+            .replace(/^#+\s*/u, '')
+            .replace(/\s*\((?:mermaid|code|diagram)\s+block\)\s*$/iu, '')
+            .toLowerCase();
+        return `${fragment.documentId}:${leaf}`;
+    };
+    const appendCandidate = (fragment: RagContextPack['fragments'][number]): void => {
+        if (selected.length >= FULL_RESPONSE_MAX_FRAGMENTS || usedChars >= FULL_RESPONSE_MAX_CHARS) {
+            return;
+        }
+        const text = String(fragment.text || '').trim();
+        if (
+            !text
+            || !FULL_REPORT_FRAGMENT_ROLES.has(fragment.role)
+            || !isFullReportGraphNeighborFromAnchorSource(fragment, anchorSource)
+            || (fragment.truncated && !hasBalancedMathDelimiters(text))
+        ) {
+            return;
+        }
+        const remaining = FULL_RESPONSE_MAX_CHARS - usedChars;
+        if (text.length > remaining) {
+            return;
+        }
+        const key = sectionKey(fragment);
+        if (selectedSections.has(key)) {
+            return;
+        }
+        selected.push({
+            ...fragment,
+            text,
+            charCount: text.length,
+        });
+        usedChars += text.length;
+        selectedSections.add(key);
+    };
+    const rolePriority: Record<string, number> = {
+        parent_context: 0,
+        adjacent_context: 1,
+        graph_neighbor_support: 2,
+        direct_support: 3,
+        conflict: 4,
+    };
+    const grouped = new Map<string, RagContextPack['fragments']>();
+    candidates.forEach((fragment) => {
+        const key = sectionKey(fragment);
+        const group = grouped.get(key) || [];
+        group.push(fragment);
+        grouped.set(key, group);
+    });
+    const sectionCandidates = Array.from(grouped.values())
+        .map((group) => group.sort((left, right) => {
+            const roleDelta = (rolePriority[left.role] ?? 9) - (rolePriority[right.role] ?? 9);
+            if (roleDelta !== 0) {
+                return roleDelta;
+            }
+            const boundaryDelta = Number(right.sourceBoundary === 'full_document') - Number(left.sourceBoundary === 'full_document');
+            if (boundaryDelta !== 0) {
+                return boundaryDelta;
+            }
+            const lengthDelta = String(right.text || '').length - String(left.text || '').length;
+            if (lengthDelta !== 0) {
+                return lengthDelta;
+            }
+            const leftLine = Number.isFinite(Number(left.startLine)) ? Number(left.startLine) : Number.MAX_SAFE_INTEGER;
+            const rightLine = Number.isFinite(Number(right.startLine)) ? Number(right.startLine) : Number.MAX_SAFE_INTEGER;
+            return leftLine - rightLine;
+        }))
+        .sort((left, right) => {
+            const leftFragment = left[0];
+            const rightFragment = right[0];
+            const leftLine = Number.isFinite(Number(leftFragment?.startLine)) ? Number(leftFragment?.startLine) : Number.MAX_SAFE_INTEGER;
+            const rightLine = Number.isFinite(Number(rightFragment?.startLine)) ? Number(rightFragment?.startLine) : Number.MAX_SAFE_INTEGER;
+            if (leftFragment?.documentId !== rightFragment?.documentId) {
+                return String(leftFragment?.documentId || '').localeCompare(String(rightFragment?.documentId || ''));
+            }
+            return leftLine - rightLine;
+        });
+    sectionCandidates.forEach((group) => appendCandidate(group[0]));
+    return selected;
+}
+
+function hasBalancedMathDelimiters(value: string): boolean {
+    const source = String(value || '');
+    const displayCount = (source.match(/(?<!\\)\$\$/gu) || []).length;
+    if (displayCount % 2 !== 0) {
+        return false;
+    }
+    const inlineSource = source.replace(/(?<!\\)\$\$/gu, '');
+    return ((inlineSource.match(/(?<!\\)\$/gu) || []).length % 2) === 0;
+}
+
+function isFullReportInternalBlock(value: string): boolean {
+    const normalized = normalizeWhitespace(value);
+    return !normalized
+        || /(?:遵从.{0,20}(?:指示|要求)|仅基于标题|所有推理过程|推理过程以英文|最终输出|输出为简体中文|本技术文档旨在|本文档旨在|we will|based only on the title|final output|all reasoning)/iu.test(normalized)
+        || /(?:grounded by|key evidence|missDiagnostics|workspaceReadiness|matchedAtomCount|titleLikeQueries|retrieval_candidates_below_threshold|rag context pack|planner)/iu.test(normalized);
+}
+
+function stripFullReportMermaid(value: string): string {
+    return String(value || '')
+        .replace(/```mermaid[\s\S]*?(?:```|$)/giu, '')
+        .replace(/```(?:graphviz|dot)[\s\S]*?(?:```|$)/giu, '')
+        .trim();
+}
+
+function sanitizeFullReportBlock(value: string): string {
+    const source = String(value || '').replace(/\r\n?/gu, '\n').trim();
+    if (!source) {
+        return '';
+    }
+    const lines = source.split('\n');
+    const sanitizedLines: string[] = [];
+    lines.forEach((line) => {
+        const normalizedLine = line.trim();
+        if (!normalizedLine) {
+            return;
+        }
+        if (/^#{1,6}\s+/u.test(normalizedLine) || /^\s*\|/u.test(normalizedLine)) {
+            if (!isFullReportInternalBlock(normalizedLine)) {
+                sanitizedLines.push(normalizedLine);
+            }
+            return;
+        }
+        const clauses = normalizedLine
+            .split(/(?<=[.!?。！？；;])(?:\s+|(?=[\p{L}]))/u)
+            .map((clause) => clause.trim())
+            .filter((clause) => clause && !isFullReportInternalBlock(clause));
+        if (clauses.length > 0) {
+            sanitizedLines.push(clauses.join(' '));
+        }
+    });
+    return sanitizedLines.join('\n').trim();
+}
+
+type FullReportLength = {
+    value: number;
+    keys: Set<string>;
+};
+
+function isStandaloneFullReportHeading(value: string): boolean {
+    return /^#{1,6}\s+\S[^\n]*$/u.test(String(value || '').trim());
+}
+
+function appendFullReportBlock(
+    lines: string[],
+    block: string,
+    currentLength: FullReportLength,
+    dedupeValue = block
+): boolean {
+    const normalized = sanitizeFullReportBlock(block);
+    if (!normalized || isFullReportInternalBlock(normalized) || !hasBalancedMathDelimiters(normalized)) {
+        return false;
+    }
+    const separatorLength = lines.length > 0 ? 2 : 0;
+    if (currentLength.value + separatorLength + normalized.length > FULL_RESPONSE_MAX_CHARS) {
+        return false;
+    }
+    const key = normalizeWhitespace(dedupeValue).toLowerCase();
+    if (!key || currentLength.keys.has(key)) {
+        return false;
+    }
+    lines.push(normalized);
+    currentLength.value += separatorLength + normalized.length;
+    currentLength.keys.add(key);
+    return true;
+}
+
+function buildFullTechnicalReport(
+    params: ScopedConversationReplyParams,
+    graphContext: AgentConversationGraphContext | null,
+    graphAnswerPlan: GraphAnswerPlan
+): string {
+    const useChinese = useChineseAnswerLanguage(params);
+    const fragments = selectFullReportFragments(params);
+    if (fragments.length <= 0) {
+        return buildScopedConversationAnswer({ ...params, responseMode: 'slim' }, graphContext, graphAnswerPlan);
+    }
+    const reportBlocks: string[] = [];
+    const reportLength: FullReportLength = { value: 0, keys: new Set<string>() };
+    fragments.forEach((fragment) => {
+        const source = stripFullReportMermaid(fragment.text);
+        let pendingHeading = '';
+        source
+            .split(/\n{2,}/u)
+            .map((block) => block.trim())
+            .filter(Boolean)
+            .forEach((block) => {
+                const normalizedBlock = block
+                    .replace(/^#{1,6}\s+Water Glass\s*$/imu, '')
+                    .trim();
+                if (!normalizedBlock) {
+                    return;
+                }
+                if (isStandaloneFullReportHeading(normalizedBlock)) {
+                    pendingHeading = normalizedBlock;
+                    return;
+                }
+                const sectionBlock = pendingHeading
+                    ? `${pendingHeading}\n\n${normalizedBlock}`
+                    : normalizedBlock;
+                appendFullReportBlock(
+                    reportBlocks,
+                    sectionBlock,
+                    reportLength,
+                    pendingHeading ? normalizedBlock : sectionBlock
+                );
+                pendingHeading = '';
+            });
+    });
+    const directClaims = graphAnswerPlan.claims
+        .filter((claim) => claim.required || claim.role === 'definition')
+        .map((claim) => normalizeWhitespace(naturalizeRagPublicEvidenceClause(claim.statement)))
+        .filter(Boolean);
+    if (directClaims.length > 0 && !directClaims.some((claim) => reportBlocks.some((block) => normalizeWhitespace(block).toLowerCase().includes(claim.toLowerCase())))) {
+        const heading = useChinese ? '## 核心定义' : '## Definition';
+        appendFullReportBlock(reportBlocks, heading, reportLength);
+        directClaims.forEach((claim) => appendFullReportBlock(reportBlocks, claim, reportLength));
+    }
+    return reportBlocks.join('\n\n').trim() || buildScopedConversationAnswer({ ...params, responseMode: 'slim' }, graphContext, graphAnswerPlan);
+}
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -707,6 +1035,9 @@ function buildScopedConversationAnswer(
     graphContext: AgentConversationGraphContext | null,
     graphAnswerPlan: GraphAnswerPlan
 ): string {
+    if (isFullResponseMode(params)) {
+        return buildFullTechnicalReport(params, graphContext, graphAnswerPlan);
+    }
     const useChinese = useChineseAnswerLanguage(params);
     if (params.knowledgePoints.length <= 0) {
         const query = normalizeWhitespace(String(params.message || '')) || (useChinese ? '当前问题' : 'your query');
@@ -1565,6 +1896,7 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     const answerReleaseReview = reviewAnswerRelease({
         message: params.message,
         answerLanguage: params.answerLanguage,
+        responseMode: params.responseMode === 'full' ? 'full' : 'slim',
         draftAnswer,
         knowledgePoints: params.knowledgePoints,
         citations: params.citations,

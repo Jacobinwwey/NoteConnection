@@ -1,6 +1,7 @@
 import type {
     AgentConversationGraphContext,
     AgentConversationKnowledgePoint,
+    AgentConversationResponseMode,
     AnswerReleaseDecision,
     AnswerReleaseGate,
     AnswerReleaseGateId,
@@ -35,6 +36,7 @@ import {
 export interface AnswerReleaseReviewContext {
     message: string;
     answerLanguage?: 'auto' | 'en' | 'zh';
+    responseMode?: AgentConversationResponseMode;
     draftAnswer: string;
     knowledgePoints: AgentConversationKnowledgePoint[];
     citations: KnowledgeCitation[];
@@ -1874,17 +1876,29 @@ function stripLearningRoutePresentation(value: string): string {
         .trim();
 }
 
-function extractPolaritySentences(value: string): PolaritySentence[] {
+function extractPolaritySentences(
+    value: string,
+    responseMode: AgentConversationResponseMode = 'slim'
+): PolaritySentence[] {
     return stripLearningRoutePresentation(value)
         .split(POLARITY_SENTENCE_SPLIT_PATTERN)
         .map((sentence) => normalizeWhitespace(sentence))
         .filter((sentence) => sentence.length >= 8)
+        .filter((sentence) => responseMode !== 'full' || !isMarkdownLabelOnlySentence(sentence))
         .map((sentence) => ({
             surface: sentence,
             polarity: classifySentencePolarity(sentence),
             comparableFeatures: buildPolarityComparableFeatures(sentence),
         }))
         .filter((sentence) => sentence.comparableFeatures.length >= 2);
+}
+
+function isMarkdownLabelOnlySentence(value: string): boolean {
+    const normalized = normalizeWhitespace(String(value || ''));
+    if (!normalized) {
+        return true;
+    }
+    return /^(?:#{1,6}\s*|[|]\s*|[-*+]\s+)?(?:\*\*)?[^.!?\u3002\uFF01\uFF1F]{2,}(?:\*\*)?[:：]\s*$/u.test(normalized);
 }
 
 function computePolarityFeatureOverlap(
@@ -4678,7 +4692,10 @@ function evaluateQueryIntentAlignment(
         };
     }
     return {
-        passed: !isMetaDocumentaryAnswer(context.draftAnswer),
+        // Full mode intentionally emits a report preface and section headers;
+        // those are allowed as long as the answer also contains the grounded
+        // definition frame. Slim mode keeps the stricter documentary guard.
+        passed: context.responseMode === 'full' || !isMetaDocumentaryAnswer(context.draftAnswer),
         applicable: true,
         comparableFrameCount: supportFrames.length,
         supportFrame: primarySupportFrame,
@@ -5529,7 +5546,7 @@ function evaluatePolarityConsistency(context: AnswerReleaseReviewContext): {
     comparableSentenceCount: number;
     conflicts: PolaritySentenceConflict[];
 } {
-    const answerSentences = extractPolaritySentences(context.draftAnswer);
+    const answerSentences = extractPolaritySentences(context.draftAnswer, context.responseMode);
     if (answerSentences.length <= 0) {
         return {
             passed: true,
@@ -5538,7 +5555,7 @@ function evaluatePolarityConsistency(context: AnswerReleaseReviewContext): {
         };
     }
     const supportSentences = buildSupportCandidates(context).flatMap((candidate) => (
-        extractPolaritySentences(candidate.text).map((sentence) => ({
+        extractPolaritySentences(candidate.text, context.responseMode).map((sentence) => ({
             ...sentence,
             label: candidate.label,
         }))
@@ -5754,16 +5771,22 @@ function evaluateTemporalValidityConsistency(
     };
 }
 
-function checkPublicSurfaceContraction(answer: string): boolean {
+function checkPublicSurfaceContraction(
+    answer: string,
+    responseMode: AgentConversationResponseMode = 'slim'
+): boolean {
     // Learning-route bullets are an explicit typed deliverable, not internal
     // diagnostics. Exclude that section from the legacy contraction heuristic.
     const normalizedAnswer = stripLearningRoutePresentation(String(answer || ''));
-    return !(
+    const forbiddenScaffolding = (
         /\bGrounded by\b/i.test(normalizedAnswer)
         || /\bKey evidence\b/i.test(normalizedAnswer)
         || /\bCitations?:\b/i.test(normalizedAnswer)
-        || /\n\s*[-*]\s+/u.test(normalizedAnswer)
     );
+    if (forbiddenScaffolding) {
+        return false;
+    }
+    return responseMode === 'full' || !/\n\s*[-*]\s+/u.test(normalizedAnswer);
 }
 
 function finalPublicAnswerPassesSemanticSafety(context: AnswerReleaseReviewContext, answer: string): boolean {
@@ -5793,10 +5816,11 @@ function finalPublicAnswerPassesSemanticSafety(context: AnswerReleaseReviewConte
 function finalPublicAnswerPassesReleaseContract(
     context: AnswerReleaseReviewContext,
     answer: string,
-    requireSemanticSafety: boolean
+    requireSemanticSafety: boolean,
+    responseMode: AgentConversationResponseMode = 'slim'
 ): boolean {
     return hasBalancedPublicMathDelimiters(answer)
-        && checkPublicSurfaceContraction(answer)
+        && checkPublicSurfaceContraction(answer, responseMode)
         && (!requireSemanticSafety || finalPublicAnswerPassesSemanticSafety(context, answer));
 }
 
@@ -6187,7 +6211,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     const draftGraphAnswerPlanCoverage: GraphAnswerCoverageReview = groundedEvidenceAvailable
         ? reviewGraphAnswerCoverage(draftAnswer, publicGraphAnswerPlan)
         : reviewGraphAnswerCoverage('', null);
-    const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer);
+    const publicSurfaceContracted = checkPublicSurfaceContraction(draftAnswer, context.responseMode);
     const graphSupportCount = context.graphContext
         ? (
             (Array.isArray(context.graphContext.relationSummaries) ? context.graphContext.relationSummaries.length : 0)
@@ -6227,7 +6251,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     const primaryGraphComparisonConflict = graphComparisonConsistency.conflicts[0];
     const primaryStructuredComparisonConflict = structuredComparisonConsistency.conflicts[0];
     const primaryTemporalValidityConflict = temporalValidityConsistency.conflict;
-    const revisedPublicAnswer =
+    let revisedPublicAnswer =
         draftDecision === 'abstain'
             ? buildAbstentionAnswer(context)
             : draftDecision === 'revise'
@@ -6276,6 +6300,17 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         graphComparisonConsistency.passed,
         temporalValidityConsistency.passed,
     ].some((passed) => !passed);
+    if (
+        context.responseMode === 'full'
+        && !requiresSafetyCorrection
+        && leakedInternalFragments.length <= 0
+        && hasBalancedPublicMathDelimiters(draftAnswer)
+    ) {
+        // Full mode owns the report surface. A non-safety gate (for example a
+        // slim projection coverage heuristic) must not collapse it back to a
+        // single definition sentence.
+        revisedPublicAnswer = draftAnswer;
+    }
     const candidatePublicPlanCoverage: GraphAnswerCoverageReview = groundedEvidenceAvailable
         ? reviewGraphAnswerCoverage(revisedPublicAnswer, publicGraphAnswerPlan)
         : reviewGraphAnswerCoverage('', null);
@@ -6291,6 +6326,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         publicGraphAnswerPlan
         && definitionProjectionIntegrityPassed
         && !requiresSafetyCorrection
+        && context.responseMode !== 'full'
         && (
             requiresDefinitionProjection
             || (context.ragContextPack?.fragments || []).length > 0
@@ -6309,10 +6345,12 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
     ) {
         decision = 'revise';
     }
-    let publicAnswer = preservePlannedGraphAnswerClaims(
-        revisedPublicAnswer,
-        shouldPreservePublicPlan ? effectivePublicGraphAnswerPlan : null
-    );
+    let publicAnswer = context.responseMode === 'full'
+        ? revisedPublicAnswer
+        : preservePlannedGraphAnswerClaims(
+            revisedPublicAnswer,
+            shouldPreservePublicPlan ? effectivePublicGraphAnswerPlan : null
+        );
     if (decision !== 'abstain') {
         publicAnswer = appendAnswerTaskDeliverables(
             publicAnswer,
@@ -6334,6 +6372,9 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
         && graphAnswerPlanCoverage.applicable
         && !graphAnswerPlanCoverage.passed
     ) {
+        if (context.responseMode === 'full') {
+            decision = decision === 'abstain' ? 'abstain' : 'revise';
+        } else {
         const coveragePreservingAnswer = preservePlannedGraphAnswerClaims('', effectivePublicGraphAnswerPlan);
         const coveragePreservingReview = reviewGraphAnswerCoverage(coveragePreservingAnswer, effectivePublicGraphAnswerPlan);
         if (coveragePreservingReview.passed) {
@@ -6344,6 +6385,7 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             publicAnswer = buildAbstentionAnswer(context);
             graphAnswerPlanCoverage = reviewGraphAnswerCoverage(publicAnswer, effectivePublicGraphAnswerPlan);
             decision = 'abstain';
+        }
         }
     }
     if (
@@ -6356,12 +6398,13 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
                 && effectivePublicGraphAnswerPlan
                 && effectivePublicGraphAnswerPlan.claims.length > 0
                 && !verifiedRagConflictDisclosurePlan
-            )
+            ),
+            context.responseMode
         )
     ) {
         const correctedAnswer = normalizeWhitespace(revisedPublicAnswer);
         effectivePublicGraphAnswerPlan = createEmptyPublicGraphAnswerPlan(context.graphAnswerPlan);
-        if (correctedAnswer && finalPublicAnswerPassesReleaseContract(context, correctedAnswer, false)) {
+        if (correctedAnswer && finalPublicAnswerPassesReleaseContract(context, correctedAnswer, false, context.responseMode)) {
             publicAnswer = correctedAnswer;
             graphAnswerPlanCoverage = reviewGraphAnswerCoverage(publicAnswer, effectivePublicGraphAnswerPlan);
             decision = 'revise';

@@ -1398,6 +1398,9 @@ export type AnswerTaskDepth = 'compact' | 'standard' | 'deep';
 
 export type AgentConversationResponseProfile = 'default' | 'mobile_compact';
 
+/** Public answer-shape contract. `slim` is the backward-compatible default. */
+export type AgentConversationResponseMode = 'slim' | 'full';
+
 export type LearningRouteRole = 'prerequisite' | 'core' | 'mechanism' | 'application';
 
 export type LearningRouteOrderingBasis =
@@ -1569,6 +1572,8 @@ export interface AgentConversationRequest {
     activeTarget?: string;
     message?: string;
     answerLanguage?: 'auto' | 'en' | 'zh';
+    /** Additive answer detail mode; omitted requests resolve to `slim`. */
+    responseMode?: AgentConversationResponseMode;
     /** Additive response shaping hint; default keeps the complete desktop contract. */
     responseProfile?: AgentConversationResponseProfile;
     topK?: number;
@@ -1811,6 +1816,8 @@ export interface AgentConversationResponse {
     sessionId: string;
     assistantMessage: string;
     answer: string;
+    /** Effective public answer detail mode. Mobile projection may force `slim`. */
+    responseMode?: AgentConversationResponseMode;
     responseProfile?: AgentConversationResponseProfile;
     mobileProjection?: MobileAnswerProjection;
     answerReleaseReview?: AnswerReleaseReview;

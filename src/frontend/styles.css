@@ -1705,6 +1705,29 @@ body.agent-workspace-open .agent-workspace-drawer {
   color: var(--text-muted, #758195);
 }
 
+.agent-response-mode-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 12px;
+  color: var(--text-secondary, #9aa4b2);
+  font-size: 0.78rem;
+}
+
+.agent-response-mode-control select {
+  min-width: 112px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-subtle, #3d4652);
+  border-radius: 4px;
+  background: var(--surface-input, #1c232d);
+  color: var(--text-primary, #e8edf3);
+}
+
+.agent-response-mode-summary {
+  color: var(--text-muted, #758195);
+  overflow-wrap: anywhere;
+}
+
 .agent-chat-structured-answer-next-actions-toggle {
   width: 26px;
   height: 26px;

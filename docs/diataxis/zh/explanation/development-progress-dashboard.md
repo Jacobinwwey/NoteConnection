@@ -1,5 +1,17 @@
 # 解释：开发进度看板
 
+## 2026-09-03 Slim/Full 回答模式与同文档 RAG 回退
+
+Agent Workspace 现在提供 additive 的 `responseMode` 契约。`slim` 仍是默认值并保持现有有界回答形状；请求边界同时接受 `definition`/`compact` 作为 slim 别名，以及 `comprehensive`/`report` 作为 full 别名。桌面选择器会在 local storage 持久化 `slim` 或 `full`，并通过 JSON 与 SSE 发送。turn-cache 指纹包含归一化后的 mode，因此 slim 请求不能复用 full 结果，反之亦然。
+
+`full` 是桌面/报告 profile，不是无界转储。检索上限为 80 个 fragment、每个 5,000 字符、总计 30,000 字符；public assembly 再限制为最多 24 个章节、24,000 字符。Mermaid 与提示词脚手架会被移除，Markdown 表格/标题保留，数学块必须保持分隔符平衡。`responseProfile=mobile_compact` 是明确的资源边界：即使调用方请求 full，也会把 effective response mode 强制为 slim，并返回原有有界移动投影。
+
+full 章节选择现在只接受与 anchor 文档 `documentId` 和 `sourcePath` 同时匹配的 `graph_neighbor_support`。章节优先级为 `parent_context`、`adjacent_context`、`graph_neighbor_support`、`direct_support`、`conflict`；因此缺失的光学或机制章节可以从同文档图邻居恢复，同时不会泄漏无关文档。回归测试包含跨文档诱饵片段，验证该边界。
+
+重建 `dist` 后的新鲜验证已通过：TypeScript no-emit；五个 mode/release/HTTP/frontend Jest 套件（`249` passed，`13` skipped）；真实 waterglass Chromium full（`86` 个 KaTeX 节点、DOM 文本 `5,425` 字符、发布答案 `5,265` 字符）与 slim（`5` 个 KaTeX 节点、`345` 字符）；合成公式 full/slim 探针（各 `4` 个 KaTeX 节点）；以及直接 HTTP/runtime full（`2` 个查询，均为 `responseMode=full`）。真实 full 回答包含热传导方程、斯涅尔定律、材料/流体/光学/热力学章节、静水压力与可靠性定量分析和技术比较模型，没有 Mermaid、提示词脚手架或尾部悬空标题。runtime verifier 只对 slim 启用旧的列表/粗体收缩门禁；full 仍强制 grounding、重复句、公式和内部泄漏检查。slim 保持旧的证据边界与文件名兼容性。
+
+本阶段不宣称 Android 真机验收。签名 arm64 安装、SAF 导入、force-stop/reopen 连续性与峰值 RSS 仍需要在线设备，继续作为独立 release gate。
+
 ## 2026-09-03 打包 Sidecar 内容指纹新鲜度
 
 SQLite 矩阵找到一个 mtime 检查无法识别的真实 packaged runtime 回归：现有 Windows sidecar 内容是旧 server payload，但二进制时间戳比当前 checkout 输入更新。强制重建后，`requestedProvider=sqlite` 诊断与 SQLite 重启连续性恢复正常。现在 `scripts/sidecar-build-fingerprint.js` 对 packaged `dist/src` 树以及 package/build 输入进行内容哈希，在 host sidecar 旁的 ignored manifest 中记录指纹。`build-sidecar.js` 仅在成功构建后写入 manifest；`ensure-sidecar-ready.js` 必须在指纹、target 记录同时匹配时才允许跳过重建，缺失、过期、不可读或 target 不匹配都会 fail-closed 进入重建。

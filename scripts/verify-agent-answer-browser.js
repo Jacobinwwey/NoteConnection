@@ -30,6 +30,7 @@ function parseArgs(args) {
         cdpPort: parsePositivePort(process.env.NOTE_CONNECTION_BROWSER_CDP_PORT, DEFAULT_CDP_PORT),
         serverPort: 0,
         realWaterglass: process.env.NOTE_CONNECTION_BROWSER_REAL_WATERGLASS === '1',
+        responseMode: 'slim',
     };
     for (let index = 0; index < args.length; index += 1) {
         const value = String(args[index] || '');
@@ -39,6 +40,12 @@ function parseArgs(args) {
             options.serverPort = parsePositivePort(args[++index], 0);
         } else if (value === '--real-waterglass') {
             options.realWaterglass = true;
+        } else if (value === '--response-mode') {
+            const responseMode = String(args[++index] || '').trim().toLowerCase();
+            if (responseMode !== 'slim' && responseMode !== 'full') {
+                throw new Error(`Unsupported response mode: ${responseMode}`);
+            }
+            options.responseMode = responseMode;
         } else {
             throw new Error(`Unknown argument: ${value}`);
         }
@@ -175,6 +182,7 @@ function buildProbeExpression(options = {}) {
     const realWaterglass = options.realWaterglass === true;
     const query = realWaterglass ? '什么是waterglass?' : 'What is waterglass?';
     const answerLanguage = realWaterglass ? 'zh' : 'en';
+    const responseMode = options.responseMode === 'full' ? 'full' : 'slim';
     const documentContent = BROWSER_FORMULA_PROBE_DOCUMENT;
     const documentSetup = realWaterglass
         ? `
@@ -318,7 +326,8 @@ function buildProbeExpression(options = {}) {
             }
             const scopeSelect = document.getElementById('agent-workspace-scope-select');
             const languageSelect = document.getElementById('agent-workspace-answer-language-select');
-            if (!scopeSelect || !languageSelect) {
+            const responseModeSelect = document.getElementById('agent-workspace-response-mode-select');
+            if (!scopeSelect || !languageSelect || !responseModeSelect) {
                 throw new Error('agent workspace scoped controls unavailable');
             }
             const folderApiResponse = await fetch('/api/folders');
@@ -354,6 +363,8 @@ function buildProbeExpression(options = {}) {
             scopeSelect.dispatchEvent(new Event('change', { bubbles: true }));
             languageSelect.value = ${JSON.stringify(answerLanguage)};
             languageSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            responseModeSelect.value = ${JSON.stringify(responseMode)};
+            responseModeSelect.dispatchEvent(new Event('change', { bubbles: true }));
             messageInput.value = ${JSON.stringify(query)};
             window.__NC_BROWSER_PRE_SEND = {
                 runtime: window.__NC_SIDECAR_RUNTIME || null,
@@ -364,6 +375,7 @@ function buildProbeExpression(options = {}) {
                 activeTarget: window.__NC_ACTIVE_SOURCE_TARGET || null,
                 folderValue: folderSelect && folderSelect.value,
                 scopeValue: scopeSelect.value,
+                responseMode: responseModeSelect.value,
                 scopeOptions: Array.from(scopeSelect.options).map((option) => option.value),
             };
             sendButton.click();
@@ -536,24 +548,26 @@ async function runVerification(options) {
             captureBeyondViewport: true,
         }, sessionId);
         fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+        const responseModeSuffix = options.responseMode === 'full' ? '-full' : '';
         const screenshotPath = path.join(
             OUTPUT_DIR,
             options.realWaterglass
-                ? 'agent-answer-real-waterglass-latest.png'
-                : 'agent-answer-formula-render-latest.png'
+                ? `agent-answer-real-waterglass${responseModeSuffix}-latest.png`
+                : `agent-answer-formula-render${responseModeSuffix}-latest.png`
         );
         fs.writeFileSync(screenshotPath, Buffer.from(String(screenshot.data || ''), 'base64'));
         const reportPath = path.join(
             OUTPUT_DIR,
             options.realWaterglass
-                ? 'agent-answer-real-waterglass-latest.json'
-                : 'agent-answer-formula-render-latest.json'
+                ? `agent-answer-real-waterglass${responseModeSuffix}-latest.json`
+                : `agent-answer-formula-render${responseModeSuffix}-latest.json`
         );
         fs.writeFileSync(reportPath, `${JSON.stringify({
             requestedUrl: `http://${LOOPBACK_HOST}:${serverPort}/`,
             verifiedCdpPort: options.cdpPort,
             capturedAt: new Date().toISOString(),
             realWaterglass: options.realWaterglass === true,
+            responseMode: options.responseMode,
             sourceDocumentCount: options.realWaterglass ? 214 : 1,
             ...report,
             screenshotPath,
@@ -576,19 +590,32 @@ async function runVerification(options) {
         if (report.nextActionsExpanded !== 'false') failures.push(`nextActionsExpanded=${report.nextActionsExpanded}`);
         if (report.nextActionsPanelPresent) failures.push('nextActionsPanelPresent=true');
         if (report.directText.length < 140) failures.push(`directTextLength=${report.directText.length}`);
-        if (options.realWaterglass) {
+        if (options.realWaterglass && options.responseMode === 'slim') {
             if ((report.lastResultAnswer.match(/此处的“水杯”被定义为/gu) || []).length !== 1) {
                 failures.push('duplicatePublicDefinition');
             }
             if (/库朗数|特征速度|网格尺寸/u.test(report.lastResultAnswer)) {
                 failures.push('unrelatedCflGlossaryReleased');
             }
-        } else {
+        } else if (options.responseMode === 'slim') {
             if ((report.lastResultAnswer.match(/Water glass is a bounded physical system/gu) || []).length !== 1) {
                 failures.push('duplicatePublicDefinition');
             }
             if (/\bacross\s+t\s+Water glass\b/u.test(report.lastResultAnswer)) {
                 failures.push('truncatedDefinitionPrefix');
+            }
+        }
+        if (options.responseMode === 'full') {
+            if (options.realWaterglass) {
+                if (report.directText.length < 1000) failures.push(`fullDirectTextLength=${report.directText.length}`);
+                if (!/热力学|Thermal/u.test(report.lastResultAnswer)) failures.push('fullThermalSectionMissing');
+                if (!/光学|Optical|斯涅尔|Snell/u.test(report.lastResultAnswer)) failures.push('fullOpticalSectionMissing');
+                if (!/静水压力|威布尔|性能特征|技术规格/u.test(report.lastResultAnswer)) {
+                    failures.push('fullWaterglassTechnicalSectionsMissing');
+                }
+            }
+            if (/遵从您的指示|仅基于标题|所有推理过程|最终输出|```mermaid/iu.test(report.lastResultAnswer)) {
+                failures.push('fullInternalPromptOrMermaidLeakage');
             }
         }
         if (!report.lastResultAnswer || !report.lastResultAnswer.includes('\\frac{\\partial T}{\\partial t}')) {

@@ -1103,6 +1103,281 @@ describe('conversationComposer', () => {
         expect(structuredBlock && 'directAnswer' in structuredBlock ? structuredBlock.directAnswer : '').toBe(reply.answer);
     });
 
+    test('full response mode releases a bounded technical report while slim remains concise', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_full_water_glass',
+                documentId: 'doc_full_water_glass',
+                sourcePath: 'Knowledge_Base/test/full-water-glass.md',
+                title: 'Water Glass',
+                content: 'A water glass is a transparent drinking vessel that contains water.',
+            },
+            evidence: {
+                id: 'evidence_full_water_glass',
+                snippet: 'A water glass is a transparent drinking vessel that contains water.',
+                startLine: 4,
+                endLine: 4,
+            },
+            score: 0.96,
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const citations = knowledgePoints[0].citations || [];
+        const ragContextPack: RagContextPack = {
+            query: 'what is water glass?',
+            generatedAt: '2026-09-03T00:00:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 8,
+                maxCharsPerFragment: 1600,
+                maxTotalChars: 6400,
+            },
+            fragments: [
+                {
+                    fragmentId: 'rag_full_definition',
+                    role: 'parent_context',
+                    text: [
+                        '# Water Glass',
+                        '',
+                        'A water glass is a transparent drinking vessel that contains water.',
+                        '',
+                        '## Thermal model',
+                        '',
+                        'The temperature field follows:',
+                        '',
+                        '$$\n\\frac{\\partial T}{\\partial t} = \\alpha \\nabla^2 T\n$$',
+                    ].join('\n'),
+                    atomId: item.atom.id,
+                    documentId: item.atom.documentId,
+                    sourcePath: item.atom.sourcePath,
+                    title: item.atom.title,
+                    headingPath: ['Water Glass'],
+                    startLine: 1,
+                    endLine: 10,
+                    charCount: 260,
+                    tokenEstimate: 65,
+                    truncated: false,
+                    citationIds: ['evidence_full_water_glass'],
+                    sourceBoundary: 'full_document',
+                },
+                {
+                    fragmentId: 'rag_full_optics',
+                    role: 'parent_context',
+                    text: [
+                        '## Optical model',
+                        '',
+                        'At an interface, refraction follows Snell law:',
+                        '',
+                        '$$\nn_1 \\sin(\\theta_1) = n_2 \\sin(\\theta_2)\n$$',
+                    ].join('\n'),
+                    atomId: item.atom.id,
+                    documentId: item.atom.documentId,
+                    sourcePath: item.atom.sourcePath,
+                    title: item.atom.title,
+                    headingPath: ['Water Glass', 'Optical model'],
+                    startLine: 12,
+                    endLine: 18,
+                    charCount: 150,
+                    tokenEstimate: 38,
+                    truncated: false,
+                    citationIds: ['evidence_full_water_glass'],
+                    sourceBoundary: 'full_document',
+                },
+                {
+                    fragmentId: 'rag_full_comparison',
+                    role: 'parent_context',
+                    text: [
+                        '## Material comparison',
+                        '',
+                        '```mermaid',
+                        'graph LR',
+                        '    A[Glass] --> B[Water]',
+                        '```',
+                        '',
+                        'The comparison model relates material conductivity to heat loss.',
+                        '',
+                        '| Material | Thermal conductivity |',
+                        '| --- | --- |',
+                        '| Soda-lime glass | 1.0 W/(m·K) |',
+                        '| PET plastic | 0.2 W/(m·K) |',
+                    ].join('\n'),
+                    atomId: item.atom.id,
+                    documentId: item.atom.documentId,
+                    sourcePath: item.atom.sourcePath,
+                    title: 'Material comparison (mermaid block)',
+                    headingPath: ['Water Glass', 'Material comparison'],
+                    startLine: 20,
+                    endLine: 26,
+                    charCount: 150,
+                    tokenEstimate: 38,
+                    truncated: false,
+                    citationIds: ['evidence_full_water_glass'],
+                    sourceBoundary: 'full_document',
+                },
+                {
+                    fragmentId: 'rag_full_orphan_heading',
+                    role: 'parent_context',
+                    text: '### References',
+                    atomId: item.atom.id,
+                    documentId: item.atom.documentId,
+                    sourcePath: item.atom.sourcePath,
+                    title: item.atom.title,
+                    headingPath: ['Water Glass', 'References'],
+                    startLine: 30,
+                    endLine: 30,
+                    charCount: 15,
+                    tokenEstimate: 4,
+                    truncated: false,
+                    citationIds: ['evidence_full_water_glass'],
+                    sourceBoundary: 'full_document',
+                },
+            ],
+            sourceDecisions: [],
+            totalCharCount: 560,
+            tokenEstimate: 141,
+        };
+        const ragSufficiencyReview: RagSufficiencyReview = {
+            reviewedAt: '2026-09-03T00:00:00.000Z',
+            status: 'sufficient',
+            score: 0.98,
+            reasons: [],
+            deterministic: true,
+            degradationState: 'none',
+        };
+
+        const makeReply = (responseMode?: 'slim' | 'full') => buildScopedConversationReply({
+            message: 'what is water glass?',
+            responseMode,
+            knowledgePoints,
+            citations,
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-09-03T00:00:00.000Z',
+            nextBlockId: (() => {
+                let blockCounter = 0;
+                return () => `assistant_block_${++blockCounter}`;
+            })(),
+            ragContextPack,
+            ragSufficiencyReview,
+        });
+
+        const slimReply = makeReply('slim');
+        const fullReply = makeReply('full');
+        expect(slimReply.answer).not.toContain('## Material comparison');
+        expect(fullReply.answer).toContain('## Thermal model');
+        expect(fullReply.answer).toContain('## Optical model');
+        expect(fullReply.answer).toContain('## Material comparison');
+        expect(fullReply.answer).toContain('comparison model relates material conductivity');
+        expect(fullReply.answer).toContain('Soda-lime glass');
+        expect(fullReply.answer).not.toMatch(/### References\s*$/u);
+        expect(fullReply.answer).toContain('\\frac{\\partial T}{\\partial t}');
+        expect(fullReply.answer).toContain('n_1 \\sin(\\theta_1)');
+        expect(fullReply.answer.match(/\$\$/gu)?.length).toBe(4);
+        expect(fullReply.answer).not.toContain('Grounded by');
+        expect(fullReply.answerReleaseReview.decision).not.toBe('abstain');
+    });
+
+    test('uses same-document graph-neighbor fragments as full-report section fallbacks', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_graph_fallback_water_glass',
+                documentId: 'doc_graph_fallback_water_glass',
+                sourcePath: 'Knowledge_Base/test/graph-fallback-water-glass.md',
+                title: 'Water Glass',
+                content: 'A water glass is a transparent drinking vessel that contains water.',
+            },
+            evidence: {
+                id: 'evidence_graph_fallback_water_glass',
+                snippet: 'A water glass is a transparent drinking vessel that contains water.',
+                startLine: 3,
+                endLine: 3,
+            },
+            score: 0.95,
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const citations = knowledgePoints[0].citations || [];
+        const makeFragment = (overrides: Partial<RagContextPack['fragments'][number]>): RagContextPack['fragments'][number] => ({
+            fragmentId: String(overrides.fragmentId || 'fragment'),
+            role: overrides.role || 'parent_context',
+            text: String(overrides.text || ''),
+            atomId: overrides.atomId || item.atom.id,
+            documentId: String(overrides.documentId || item.atom.documentId),
+            sourcePath: String(overrides.sourcePath || item.atom.sourcePath),
+            title: String(overrides.title || item.atom.title),
+            headingPath: Array.isArray(overrides.headingPath) ? overrides.headingPath : ['Water Glass'],
+            startLine: overrides.startLine || 1,
+            endLine: overrides.endLine || 4,
+            charCount: Number(overrides.charCount || String(overrides.text || '').length),
+            tokenEstimate: Number(overrides.tokenEstimate || 10),
+            truncated: overrides.truncated === true,
+            citationIds: Array.isArray(overrides.citationIds) ? overrides.citationIds : ['evidence_graph_fallback_water_glass'],
+            sourceBoundary: overrides.sourceBoundary || 'full_document',
+        });
+        const ragContextPack: RagContextPack = {
+            query: 'what is water glass?',
+            generatedAt: '2026-09-03T00:00:00.000Z',
+            sourceBoundary: 'full_document',
+            budget: {
+                maxFragments: 6,
+                maxCharsPerFragment: 1200,
+                maxTotalChars: 3600,
+            },
+            fragments: [
+                makeFragment({
+                    fragmentId: 'rag_graph_fallback_definition',
+                    role: 'parent_context',
+                    text: '## Definition\n\nA water glass is a transparent drinking vessel that contains water.',
+                    headingPath: ['Water Glass', 'Definition'],
+                }),
+                makeFragment({
+                    fragmentId: 'rag_graph_fallback_optics',
+                    role: 'graph_neighbor_support',
+                    text: '## Optical model\n\nRefraction follows Snell law.\n\n$$\nn_1 \\sin(\\theta_1) = n_2 \\sin(\\theta_2)\n$$',
+                    headingPath: ['Water Glass', 'Optical model'],
+                }),
+                makeFragment({
+                    fragmentId: 'rag_graph_fallback_unrelated',
+                    role: 'graph_neighbor_support',
+                    documentId: 'doc_unrelated_graph_neighbor',
+                    sourcePath: 'Knowledge_Base/test/unrelated.md',
+                    text: '## Unrelated model\n\nThis cross-document marker must not leak into the water-glass report.',
+                    headingPath: ['Unrelated', 'Unrelated model'],
+                }),
+            ],
+            sourceDecisions: [],
+            totalCharCount: 300,
+            tokenEstimate: 75,
+        };
+        const reply = buildScopedConversationReply({
+            message: 'what is water glass?',
+            responseMode: 'full',
+            knowledgePoints,
+            citations,
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-09-03T00:00:00.000Z',
+            nextBlockId: (() => {
+                let blockCounter = 0;
+                return () => `assistant_block_${++blockCounter}`;
+            })(),
+            ragContextPack,
+            ragSufficiencyReview: {
+                reviewedAt: '2026-09-03T00:00:00.000Z',
+                status: 'sufficient',
+                score: 0.95,
+                reasons: [],
+                deterministic: true,
+                degradationState: 'none',
+            },
+        });
+
+        expect(reply.answer).toContain('## Optical model');
+        expect(reply.answer).toContain('n_1 \\sin(\\theta_1)');
+        expect(reply.answer).not.toContain('cross-document marker');
+        expect(reply.answerReleaseReview.decision).not.toBe('abstain');
+    });
+
     test('keeps decimal numeric evidence intact in RAG public answers', () => {
         const item = makeQueryItem({
             atom: {
