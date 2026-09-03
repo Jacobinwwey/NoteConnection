@@ -721,6 +721,26 @@
         return 'adaptive';
     }
 
+    function getResponseBudgetCapability() {
+        if (isMobileNativeRuntime()) {
+            return undefined;
+        }
+        const navigatorObject = window && window.navigator ? window.navigator : null;
+        const deviceMemory = Number(navigatorObject && navigatorObject.deviceMemory);
+        const hardwareConcurrency = Number(navigatorObject && navigatorObject.hardwareConcurrency);
+        const memoryClass = Number.isFinite(deviceMemory) && deviceMemory > 0
+            ? (deviceMemory >= 8 ? 'high' : deviceMemory >= 4 ? 'standard' : 'low')
+            : 'standard';
+        const workload = memoryClass === 'high'
+            && Number.isFinite(hardwareConcurrency)
+            && hardwareConcurrency >= 8
+            ? 'max'
+            : getResponseMode() === 'full'
+                ? 'large'
+                : 'normal';
+        return { memoryClass, workload };
+    }
+
     function updateResponseBudgetSummary(mode) {
         const summary = getElement('agent-workspace-response-budget-summary');
         if (!summary) {
@@ -5700,6 +5720,7 @@
                 // desktop full-report preference must not inflate the APK path.
                 responseMode: isMobileNativeRuntime() ? 'slim' : getResponseMode(),
                 ...(isMobileNativeRuntime() ? {} : { responseBudgetMode: getResponseBudgetMode() }),
+                ...(isMobileNativeRuntime() ? {} : { responseBudgetCapability: getResponseBudgetCapability() }),
                 topK: 6,
                 ...(isMobileNativeRuntime() ? { responseProfile: 'mobile_compact' } : {}),
                 memoryNamespace: 'conversation',

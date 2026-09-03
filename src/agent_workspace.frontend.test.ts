@@ -6551,7 +6551,6 @@ describe('agent workspace learning-path integration', () => {
             },
         ]);
         fetchMock.mockImplementationOnce(async () => response());
-        fetchMock.mockImplementationOnce(async () => response());
 
         const selector = document.getElementById('agent-workspace-response-mode-select') as HTMLSelectElement;
         expect(selector.value).toBe('slim');
@@ -6604,6 +6603,8 @@ describe('agent workspace learning-path integration', () => {
             },
         }]);
         fetchMock.mockImplementationOnce(async () => response());
+        Object.defineProperty(window.navigator, 'deviceMemory', { configurable: true, value: 8 });
+        Object.defineProperty(window.navigator, 'hardwareConcurrency', { configurable: true, value: 8 });
 
         const budgetSelector = document.getElementById('agent-workspace-response-budget-select') as HTMLSelectElement;
         expect(budgetSelector.value).toBe('adaptive');
@@ -6616,6 +6617,7 @@ describe('agent workspace learning-path integration', () => {
         await (window as any).NoteConnectionAgentWorkspace.sendConversation();
         const desktopRequest = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body || '{}'));
         expect(desktopRequest.responseBudgetMode).toBe('unbounded');
+        expect(desktopRequest.responseBudgetCapability).toEqual({ memoryClass: 'high', workload: 'max' });
 
         (window as any).__NC_RUNTIME_CAPS = { platform: 'capacitor-android', supports_sidecar: false };
         fetchMock.mockImplementationOnce(async () => response());
