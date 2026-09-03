@@ -398,6 +398,12 @@ export interface RagContextBudget {
     maxFragments: number;
     maxCharsPerFragment: number;
     maxTotalChars: number;
+    /** Product truncation may be disabled only for a desktop unbounded request. */
+    productCapDisabled?: boolean;
+    /** Host-owned safety limits used when product caps are disabled. */
+    runtimeMaxFragments?: number;
+    runtimeMaxCharsPerFragment?: number;
+    runtimeMaxTotalChars?: number;
 }
 
 export interface RagEvidenceFragment {
@@ -1401,6 +1407,37 @@ export type AgentConversationResponseProfile = 'default' | 'mobile_compact';
 /** Public answer-shape contract. `slim` is the backward-compatible default. */
 export type AgentConversationResponseMode = 'slim' | 'full';
 
+/** Product-level full-response budget policy. Runtime safety limits remain enabled. */
+export type AgentConversationResponseBudgetMode = 'adaptive' | 'unbounded';
+
+export type AgentConversationBudgetTier = 'standard' | 'extended' | 'max' | 'unbounded';
+
+export type AgentConversationBudgetMemoryClass = 'low' | 'standard' | 'high';
+
+export type AgentConversationBudgetWorkload = 'normal' | 'large' | 'max';
+
+export interface AgentConversationResponseBudgetCapability {
+    memoryClass?: AgentConversationBudgetMemoryClass;
+    workload?: AgentConversationBudgetWorkload;
+    maxReportCharsHint?: number;
+    maxSerializedBytesHint?: number;
+}
+
+export interface AgentConversationRuntimeGovernor {
+    timeoutMs: number;
+    maxSerializedBytes: number;
+    maxFragmentsProcessed: number;
+}
+
+export interface AgentConversationBudget {
+    mode: AgentConversationResponseBudgetMode;
+    tier: AgentConversationBudgetTier;
+    productCapDisabled: boolean;
+    rag?: RagContextBudget;
+    reportMaxChars?: number;
+    runtimeGovernor: AgentConversationRuntimeGovernor;
+}
+
 export type LearningRouteRole = 'prerequisite' | 'core' | 'mechanism' | 'application';
 
 export type LearningRouteOrderingBasis =
@@ -1564,6 +1601,9 @@ export interface AgentConversationTrace {
     answerTaskPlan?: AnswerTaskPlan;
     answerTaskCoverage?: AnswerTaskCoverageReview;
     answerReleaseReview?: AnswerReleaseReview;
+    responseBudget?: AgentConversationBudget;
+    responseTruncated?: boolean;
+    responseTruncationReason?: string;
 }
 
 export interface AgentConversationRequest {
@@ -1576,6 +1616,10 @@ export interface AgentConversationRequest {
     responseMode?: AgentConversationResponseMode;
     /** Additive response shaping hint; default keeps the complete desktop contract. */
     responseProfile?: AgentConversationResponseProfile;
+    /** Desktop full-response product budget policy. Unknown values resolve to adaptive. */
+    responseBudgetMode?: AgentConversationResponseBudgetMode;
+    /** Host capability hint used only to select a server-owned budget tier. */
+    responseBudgetCapability?: AgentConversationResponseBudgetCapability;
     topK?: number;
     asOf?: string;
     scope?: KnowledgeCorpusScope;
@@ -1819,6 +1863,7 @@ export interface AgentConversationResponse {
     /** Effective public answer detail mode. Mobile projection may force `slim`. */
     responseMode?: AgentConversationResponseMode;
     responseProfile?: AgentConversationResponseProfile;
+    responseBudget?: AgentConversationBudget;
     mobileProjection?: MobileAnswerProjection;
     answerReleaseReview?: AnswerReleaseReview;
     graphAnswerPlan?: GraphAnswerPlan;
@@ -1839,6 +1884,10 @@ export interface AgentConversationResponse {
         recalledMemoryCount: number;
         appliedMemoryCount: number;
         queryEvidenceCoverageRatioPct: number;
+        responseBudgetMode?: AgentConversationResponseBudgetMode;
+        responseBudgetTier?: AgentConversationBudgetTier;
+        responseTruncated?: boolean;
+        responseTruncationReason?: string;
     };
     trace: AgentConversationTrace;
 }

@@ -58,4 +58,50 @@ describe('agent conversation request normalization', () => {
         expect(request.responseMode).toBe('full');
         expect(request.responseProfile).toBe('mobile_compact');
     });
+
+    test.each([
+        [undefined, 'adaptive'],
+        ['adaptive', 'adaptive'],
+        ['unbounded', 'unbounded'],
+        ['no-cap', 'unbounded'],
+        ['no_cap', 'unbounded'],
+        ['unsupported-budget', 'adaptive'],
+    ])('normalizes response budget mode %s to %s', (responseBudgetMode, expectedMode) => {
+        expect(normalizeAgentConversationRequestPayload({
+            message: 'what is water glass?',
+            responseBudgetMode,
+        }).responseBudgetMode).toBe(expectedMode);
+    });
+
+    test('normalizes and clamps response budget capability hints at the boundary', () => {
+        const request = normalizeAgentConversationRequestPayload({
+            message: 'what is water glass?',
+            response_budget_mode: 'unbounded',
+            response_budget_capability: {
+                memoryClass: 'HIGH',
+                workload: 'max',
+                maxReportCharsHint: 999999999,
+                maxSerializedBytesHint: -4,
+                ignored: 'field',
+            },
+        });
+        expect(request.responseBudgetMode).toBe('unbounded');
+        expect(request.responseBudgetCapability).toEqual({
+            memoryClass: 'high',
+            workload: 'max',
+            maxReportCharsHint: 999999999,
+        });
+    });
+
+    test('keeps budget mode additive when mobile projection is requested', () => {
+        const request = normalizeAgentConversationRequestPayload({
+            message: 'what is water glass?',
+            response_mode: 'full',
+            response_budget_mode: 'unbounded',
+            response_profile: 'mobile',
+        });
+        expect(request.responseMode).toBe('full');
+        expect(request.responseBudgetMode).toBe('unbounded');
+        expect(request.responseProfile).toBe('mobile_compact');
+    });
 });

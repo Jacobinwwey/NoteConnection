@@ -81,6 +81,57 @@ function normalizeResponseModeValue(value: unknown): AgentConversationRequest['r
     return undefined;
 }
 
+function normalizeResponseBudgetModeValue(value: unknown): AgentConversationRequest['responseBudgetMode'] {
+    const normalized = String(value || '').trim().toLowerCase().replace(/[-\s]+/gu, '_');
+    if (!normalized || ['adaptive', 'default', 'standard', 'auto'].includes(normalized)) {
+        return 'adaptive';
+    }
+    if (['unbounded', 'no_cap', 'nocap', 'no_limit', 'nolimit', 'unlimited'].includes(normalized)) {
+        return 'unbounded';
+    }
+    return 'adaptive';
+}
+
+function normalizeResponseBudgetCapabilityValue(
+    value: unknown
+): AgentConversationRequest['responseBudgetCapability'] | undefined {
+    if (!isObjectRecord(value)) {
+        return undefined;
+    }
+    const memoryClass = String(value.memoryClass || value.memory_class || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[-\s]+/gu, '_');
+    const workload = String(value.workload || value.workload_class || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[-\s]+/gu, '_');
+    const normalizePositiveHint = (hint: unknown): number | undefined => {
+        const numeric = Number(hint);
+        return Number.isFinite(numeric) && numeric > 0 ? Math.floor(numeric) : undefined;
+    };
+    const normalized: NonNullable<AgentConversationRequest['responseBudgetCapability']> = {};
+    if (['low', 'standard', 'high'].includes(memoryClass)) {
+        normalized.memoryClass = memoryClass as NonNullable<typeof normalized.memoryClass>;
+    }
+    if (['normal', 'large', 'max'].includes(workload)) {
+        normalized.workload = workload as NonNullable<typeof normalized.workload>;
+    }
+    const maxReportCharsHint = normalizePositiveHint(
+        value.maxReportCharsHint ?? value.max_report_chars_hint
+    );
+    if (maxReportCharsHint !== undefined) {
+        normalized.maxReportCharsHint = maxReportCharsHint;
+    }
+    const maxSerializedBytesHint = normalizePositiveHint(
+        value.maxSerializedBytesHint ?? value.max_serialized_bytes_hint
+    );
+    if (maxSerializedBytesHint !== undefined) {
+        normalized.maxSerializedBytesHint = maxSerializedBytesHint;
+    }
+    return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
 function normalizeStringList(values: unknown, options: {
     normalize?: (value: string) => string;
 } = {}): string[] {
@@ -163,6 +214,22 @@ export function normalizeAgentConversationRequestPayload(payload: unknown): Agen
     const responseMode = normalizeResponseModeValue(
         readFirstPresentValue(record, ['responseMode', 'response_mode', 'answerMode', 'answer_mode', 'detailMode', 'detail_mode'])
     );
+    const responseBudgetMode = normalizeResponseBudgetModeValue(
+        readFirstPresentValue(record, [
+            'responseBudgetMode',
+            'response_budget_mode',
+            'budgetMode',
+            'budget_mode',
+        ])
+    );
+    const responseBudgetCapability = normalizeResponseBudgetCapabilityValue(
+        readFirstPresentValue(record, [
+            'responseBudgetCapability',
+            'response_budget_capability',
+            'budgetCapability',
+            'budget_capability',
+        ])
+    );
     return {
         userId: String(readFirstPresentValue(record, ['userId', 'user_id', 'learnerId']) || '').trim(),
         sessionId: readFirstNonEmptyString(record, ['sessionId', 'session_id']),
@@ -170,6 +237,8 @@ export function normalizeAgentConversationRequestPayload(payload: unknown): Agen
         message: readFirstNonEmptyString(record, ['message', 'prompt', 'query', 'q', 'text']) || '',
         answerLanguage,
         responseMode,
+        responseBudgetMode,
+        responseBudgetCapability,
         responseProfile,
         topK: topKValue > 0 ? topKValue : undefined,
         asOf: readFirstNonEmptyString(record, ['asOf', 'as_of', 'timestamp', 'now']),
