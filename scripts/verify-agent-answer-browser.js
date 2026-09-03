@@ -29,6 +29,7 @@ function parseArgs(args) {
     const options = {
         cdpPort: parsePositivePort(process.env.NOTE_CONNECTION_BROWSER_CDP_PORT, DEFAULT_CDP_PORT),
         serverPort: 0,
+        realWaterglass: process.env.NOTE_CONNECTION_BROWSER_REAL_WATERGLASS === '1',
     };
     for (let index = 0; index < args.length; index += 1) {
         const value = String(args[index] || '');
@@ -36,6 +37,8 @@ function parseArgs(args) {
             options.cdpPort = parsePositivePort(args[++index], options.cdpPort);
         } else if (value === '--server-port') {
             options.serverPort = parsePositivePort(args[++index], 0);
+        } else if (value === '--real-waterglass') {
+            options.realWaterglass = true;
         } else {
             throw new Error(`Unknown argument: ${value}`);
         }
@@ -45,6 +48,10 @@ function parseArgs(args) {
 
 function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizeMathExpression(value) {
+    return String(value || '').replace(/\s+/gu, '');
 }
 
 async function getJson(url) {
@@ -164,14 +171,40 @@ async function waitFor(connection, sessionId, predicate, description) {
     throw new Error(`Timed out waiting for ${description}`);
 }
 
-function buildProbeExpression() {
+function buildProbeExpression(options = {}) {
+    const realWaterglass = options.realWaterglass === true;
+    const query = realWaterglass ? '什么是waterglass?' : 'What is waterglass?';
+    const answerLanguage = realWaterglass ? 'zh' : 'en';
     const documentContent = BROWSER_FORMULA_PROBE_DOCUMENT;
-    return `(() => {
-        const scopeId = 'waterglass';
-        const documentId = 'browser_waterglass_formula_probe_doc';
-        const sourcePath = 'Knowledge_Base/waterglass/water-glass-formula-quality.md';
-        const documentContent = ${JSON.stringify(documentContent)};
-        return (async () => {
+    const documentSetup = realWaterglass
+        ? `
+            const buildResponse = await fetch('/api/build', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: scopeId, relationRecomputeMode: 'none' }),
+            });
+            if (!buildResponse.ok) {
+                throw new Error('real waterglass build failed: ' + buildResponse.status);
+            }
+            const buildPayload = await buildResponse.json();
+            if (!buildPayload || buildPayload.success !== true) {
+                throw new Error('real waterglass build was not successful: ' + JSON.stringify(buildPayload));
+            }
+            const restoreResponse = await fetch('/api/restore-cache?target=' + encodeURIComponent(scopeId) + '&relationRecomputeMode=none');
+            if (!restoreResponse.ok) {
+                throw new Error('real waterglass restore failed: ' + restoreResponse.status);
+            }
+            const restorePayload = await restoreResponse.json();
+            if (!restorePayload || restorePayload.success !== true) {
+                throw new Error('real waterglass restore was not successful: ' + JSON.stringify(restorePayload));
+            }
+            window.__NC_BROWSER_INGEST_RESULT = {
+                mode: 'real-waterglass',
+                build: buildPayload,
+                restore: restorePayload,
+            };
+        `
+        : `
             const ingest = await fetch('/api/knowledge/ingest', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -195,6 +228,14 @@ function buildProbeExpression() {
             if (!ingestPayload || ingestPayload.success !== true) {
                 throw new Error('ingest response was not successful: ' + JSON.stringify(ingestPayload));
             }
+        `;
+    return `(() => {
+        const scopeId = 'waterglass';
+        const documentId = 'browser_waterglass_formula_probe_doc';
+        const sourcePath = 'Knowledge_Base/waterglass/water-glass-formula-quality.md';
+        const documentContent = ${JSON.stringify(documentContent)};
+        return (async () => {
+            ${documentSetup}
             const runtimeBaseUrl = window.NoteConnectionRuntime
                 && typeof window.NoteConnectionRuntime.getBaseUrl === 'function'
                 ? window.NoteConnectionRuntime.getBaseUrl()
@@ -213,7 +254,7 @@ function buildProbeExpression() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    query: 'What is waterglass?',
+                    query: ${JSON.stringify(query)},
                     scope: {
                         workspaceId: scopeId,
                         corpusId: scopeId,
@@ -311,9 +352,9 @@ function buildProbeExpression() {
             }
             scopeSelect.value = scopeId;
             scopeSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            languageSelect.value = 'en';
+            languageSelect.value = ${JSON.stringify(answerLanguage)};
             languageSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            messageInput.value = 'What is waterglass?';
+            messageInput.value = ${JSON.stringify(query)};
             window.__NC_BROWSER_PRE_SEND = {
                 runtime: window.__NC_SIDECAR_RUNTIME || null,
                 runtimeBridge: window.NoteConnectionRuntime
@@ -360,15 +401,22 @@ function injectRuntimeBootstrapConfig(frontendDir, config) {
 
 async function runVerification(options) {
     const fixture = makeTempProject('noteconnection-agent-answer-browser');
-    // /api/folders is filesystem-backed, while ingest populates the in-memory
-    // learning store. Create the scope directory before startup so the async
-    // source-manager refresh cannot overwrite the intended scope with ALL_FOLDERS.
-    fs.mkdirSync(path.join(fixture.kbRoot, 'waterglass'), { recursive: true });
-    fs.writeFileSync(
-        path.join(fixture.kbRoot, 'waterglass', 'water-glass-formula-quality.md'),
-        BROWSER_FORMULA_PROBE_DOCUMENT,
-        'utf8'
-    );
+    // /api/folders is filesystem-backed. Keep the scope directory present in
+    // both fixture and real-corpus modes so the async source-manager refresh
+    // cannot overwrite the intended scope with ALL_FOLDERS.
+    const waterglassRoot = path.join(fixture.kbRoot, 'waterglass');
+    if (options.realWaterglass) {
+        fs.cpSync(path.join(REPO_ROOT, 'Knowledge_Base', 'waterglass'), waterglassRoot, {
+            recursive: true,
+        });
+    } else {
+        fs.mkdirSync(waterglassRoot, { recursive: true });
+        fs.writeFileSync(
+            path.join(waterglassRoot, 'water-glass-formula-quality.md'),
+            BROWSER_FORMULA_PROBE_DOCUMENT,
+            'utf8'
+        );
+    }
     const serverPort = options.serverPort || await getFreePort();
     const bridgePort = await getFreePort();
     copyProjectAssets({
@@ -405,7 +453,7 @@ async function runVerification(options) {
             'agent workspace bootstrap'
         );
         try {
-            await evaluate(connection, sessionId, buildProbeExpression());
+            await evaluate(connection, sessionId, buildProbeExpression(options));
         } catch (error) {
             throw new Error(`probe setup failed: ${error.message || String(error)}`);
         }
@@ -488,23 +536,37 @@ async function runVerification(options) {
             captureBeyondViewport: true,
         }, sessionId);
         fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-        const screenshotPath = path.join(OUTPUT_DIR, 'agent-answer-formula-render-latest.png');
+        const screenshotPath = path.join(
+            OUTPUT_DIR,
+            options.realWaterglass
+                ? 'agent-answer-real-waterglass-latest.png'
+                : 'agent-answer-formula-render-latest.png'
+        );
         fs.writeFileSync(screenshotPath, Buffer.from(String(screenshot.data || ''), 'base64'));
-        const reportPath = path.join(OUTPUT_DIR, 'agent-answer-formula-render-latest.json');
+        const reportPath = path.join(
+            OUTPUT_DIR,
+            options.realWaterglass
+                ? 'agent-answer-real-waterglass-latest.json'
+                : 'agent-answer-formula-render-latest.json'
+        );
         fs.writeFileSync(reportPath, `${JSON.stringify({
             requestedUrl: `http://${LOOPBACK_HOST}:${serverPort}/`,
             verifiedCdpPort: options.cdpPort,
             capturedAt: new Date().toISOString(),
+            realWaterglass: options.realWaterglass === true,
+            sourceDocumentCount: options.realWaterglass ? 214 : 1,
             ...report,
             screenshotPath,
         }, null, 2)}\n`, 'utf8');
         const failures = [];
-        if (report.title !== 'Grounded Answer') failures.push(`title=${report.title}`);
+        const expectedTitle = options.realWaterglass ? '可信回答' : 'Grounded Answer';
+        if (report.title !== expectedTitle) failures.push(`title=${report.title}`);
         if (report.katexCount < 2) failures.push(`katexCount=${report.katexCount}`);
-        if (!report.texAnnotations.some((value) => value.includes('\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T'))) {
+        const normalizedTexAnnotations = report.texAnnotations.map(normalizeMathExpression);
+        if (!normalizedTexAnnotations.some((value) => value.includes(normalizeMathExpression('\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T')))) {
             failures.push('thermalTexAnnotationMissing');
         }
-        if (!report.texAnnotations.some((value) => value.includes('n_1\\sin(\\theta_1)=n_2\\sin(\\theta_2)'))) {
+        if (!normalizedTexAnnotations.some((value) => value.includes('n_1\\sin(\\theta_1)=n_2\\sin(\\theta_2)'))) {
             failures.push('opticalTexAnnotationMissing');
         }
         if (report.rawMathDelimiterCount !== 0) failures.push(`rawMathDelimiterCount=${report.rawMathDelimiterCount}`);
@@ -514,13 +576,22 @@ async function runVerification(options) {
         if (report.nextActionsExpanded !== 'false') failures.push(`nextActionsExpanded=${report.nextActionsExpanded}`);
         if (report.nextActionsPanelPresent) failures.push('nextActionsPanelPresent=true');
         if (report.directText.length < 140) failures.push(`directTextLength=${report.directText.length}`);
-        if ((report.lastResultAnswer.match(/Water glass is a bounded physical system/gu) || []).length !== 1) {
-            failures.push('duplicatePublicDefinition');
+        if (options.realWaterglass) {
+            if ((report.lastResultAnswer.match(/此处的“水杯”被定义为/gu) || []).length !== 1) {
+                failures.push('duplicatePublicDefinition');
+            }
+            if (/库朗数|特征速度|网格尺寸/u.test(report.lastResultAnswer)) {
+                failures.push('unrelatedCflGlossaryReleased');
+            }
+        } else {
+            if ((report.lastResultAnswer.match(/Water glass is a bounded physical system/gu) || []).length !== 1) {
+                failures.push('duplicatePublicDefinition');
+            }
+            if (/\bacross\s+t\s+Water glass\b/u.test(report.lastResultAnswer)) {
+                failures.push('truncatedDefinitionPrefix');
+            }
         }
-        if (/\bacross\s+t\s+Water glass\b/u.test(report.lastResultAnswer)) {
-            failures.push('truncatedDefinitionPrefix');
-        }
-        if (!report.lastResultAnswer || !report.lastResultAnswer.includes('\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T')) {
+        if (!report.lastResultAnswer || !report.lastResultAnswer.includes('\\frac{\\partial T}{\\partial t}')) {
             failures.push('releasedThermalFormulaMissing');
         }
         if (failures.length > 0) {

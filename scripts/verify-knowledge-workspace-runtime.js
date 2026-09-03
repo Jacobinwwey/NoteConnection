@@ -1137,7 +1137,13 @@ async function main() {
           answerMustNotContain: [
             'No scoped knowledge points matched',
             'retrieval_candidates_below_threshold',
+            ...(String(target || '').trim().toLowerCase() === 'waterglass'
+              ? ['库朗数', '特征速度', '网格尺寸']
+              : []),
           ],
+          answerMustContain: String(target || '').trim().toLowerCase() === 'waterglass'
+            ? ['\\frac{\\partial T}{\\partial t}', 'n_1 \\sin(\\theta_1)']
+            : undefined,
           requirePublicAnswerScaffoldingHygiene: String(target || '').trim().toLowerCase() === 'waterglass',
           requireNoDuplicatePublicClauses: String(target || '').trim().toLowerCase() === 'waterglass',
         });

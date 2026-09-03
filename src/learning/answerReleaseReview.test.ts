@@ -1385,6 +1385,206 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).not.toContain('across t Water glass');
     });
 
+    test('does not publish an unrelated CFL variable glossary in a waterglass definition', () => {
+        const point = makeKnowledgePoint({
+            title: '水杯 (water glass)',
+            summary: '此处的“水杯”被定义为一个由水和玻璃杯组成的物理系统。',
+            evidenceSnippet: '此处的“水杯”被定义为一个由水和玻璃杯组成的物理系统。',
+        });
+        const sourcePath = point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md';
+        const graphAnswerPlan: GraphAnswerPlan = {
+            intent: 'definition',
+            depth: 'standard',
+            anchorAtomId: point.atomId,
+            leadClaimId: 'waterglass_definition',
+            requiredRoles: ['definition', 'attribute'],
+            omittedCandidates: [],
+            claims: [
+                {
+                    claimId: 'waterglass_definition',
+                    role: 'definition',
+                    required: true,
+                    priority: 100,
+                    statement: '此处的“水杯”被定义为一个由水和玻璃杯组成的物理系统。',
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{
+                        evidenceId: 'waterglass_definition',
+                        atomId: point.atomId,
+                        sourcePath,
+                        citationIds: [],
+                        text: '此处的“水杯”被定义为一个由水和玻璃杯组成的物理系统。',
+                    }],
+                    confidence: 0.99,
+                },
+                {
+                    claimId: 'cfl_variable_glossary',
+                    role: 'attribute',
+                    required: true,
+                    priority: 88,
+                    statement: '其中 $C$ 是库朗数，$u$ 是特征速度，$\\Delta x$ 是网格尺寸。',
+                    subjectAtomId: point.atomId,
+                    supportingAtomIds: [],
+                    supportingEdgeIds: [],
+                    evidenceRefs: [{
+                        evidenceId: 'cfl_variable_glossary',
+                        atomId: point.atomId,
+                        sourcePath,
+                        citationIds: [],
+                        text: '其中 $C$ 是库朗数，$u$ 是特征速度，$\\Delta x$ 是网格尺寸。',
+                    }],
+                    confidence: 0.98,
+                },
+            ],
+        };
+        const review = reviewAnswerRelease({
+            message: '什么是waterglass?',
+            draftAnswer: '此处的“水杯”被定义为一个由水和玻璃杯组成的物理系统。',
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext(),
+            graphAnswerPlan,
+            ragContextPack: {
+                query: '什么是waterglass?',
+                generatedAt: '2026-08-25T00:00:00.000Z',
+                sourceBoundary: 'full_document',
+                budget: { maxFragments: 2, maxCharsPerFragment: 600, maxTotalChars: 1200 },
+                fragments: [{
+                    fragmentId: 'waterglass_full_document',
+                    role: 'direct_support',
+                    text: '此处的“水杯”被定义为一个由水和玻璃杯组成的物理系统。实现考量中的CFL变量 glossary 不属于定义。',
+                    atomId: point.atomId,
+                    documentId: point.documentId || 'doc_water_glass',
+                    sourcePath,
+                    title: point.title,
+                    headingPath: [point.title],
+                    charCount: 100,
+                    tokenEstimate: 25,
+                    truncated: false,
+                    citationIds: [point.citation?.citationId || 'citation_water_glass'],
+                    sourceBoundary: 'full_document',
+                }],
+                sourceDecisions: [],
+                totalCharCount: 100,
+                tokenEstimate: 25,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-08-25T00:00:00.000Z',
+                status: 'sufficient',
+                score: 0.95,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+            reviewedAt: '2026-08-25T00:00:00.000Z',
+        });
+
+        expect(review.publicAnswer).toContain('水杯”被定义');
+        expect(review.publicAnswer).not.toContain('库朗数');
+        expect(review.publicAnswer).not.toContain('网格尺寸');
+        expect(review.publicGraphAnswerPlan?.claims.map((claim) => claim.claimId)).toEqual([
+            'waterglass_definition',
+        ]);
+    });
+
+    test('keeps a CFL variable glossary when the query explicitly asks about CFL', () => {
+        const point = makeKnowledgePoint({
+            title: 'CFL stability condition',
+            summary: 'The CFL stability condition bounds the time step.',
+            evidenceSnippet: 'The CFL stability condition bounds the time step.',
+        });
+        const sourcePath = point.sourcePath || 'Knowledge_Base/waterglass/water-glass.md';
+        const glossary = 'where $C$ is the Courant number, $u$ is the characteristic velocity, and $\\Delta x$ is the grid size.';
+        const review = reviewAnswerRelease({
+            message: 'What is the CFL stability condition?',
+            draftAnswer: `The CFL stability condition bounds the time step. ${glossary}`,
+            knowledgePoints: [point],
+            citations: [point.citation as KnowledgeCitation],
+            usedScope: scopedWaterglass,
+            graphContext: makeGraphContext({ anchorTitle: 'CFL stability condition' }),
+            graphAnswerPlan: {
+                intent: 'definition',
+                depth: 'standard',
+                anchorAtomId: point.atomId,
+                leadClaimId: 'cfl_definition',
+                requiredRoles: ['definition', 'attribute'],
+                omittedCandidates: [],
+                claims: [
+                    {
+                        claimId: 'cfl_definition',
+                        role: 'definition',
+                        required: true,
+                        priority: 100,
+                        statement: 'The CFL stability condition bounds the time step.',
+                        subjectAtomId: point.atomId,
+                        supportingAtomIds: [],
+                        supportingEdgeIds: [],
+                        evidenceRefs: [{ evidenceId: 'cfl_definition', atomId: point.atomId, sourcePath, citationIds: [], text: 'The CFL stability condition bounds the time step.' }],
+                        confidence: 0.99,
+                    },
+                    {
+                        claimId: 'cfl_glossary',
+                        role: 'attribute',
+                        required: true,
+                        priority: 88,
+                        statement: glossary,
+                        subjectAtomId: point.atomId,
+                        supportingAtomIds: [],
+                        supportingEdgeIds: [],
+                        evidenceRefs: [{ evidenceId: 'cfl_glossary', atomId: point.atomId, sourcePath, citationIds: [], text: glossary }],
+                        confidence: 0.98,
+                    },
+                ],
+            },
+            ragContextPack: {
+                query: 'What is the CFL stability condition?',
+                generatedAt: '2026-08-25T00:00:00.000Z',
+                sourceBoundary: 'full_document',
+                budget: { maxFragments: 1, maxCharsPerFragment: 600, maxTotalChars: 600 },
+                fragments: [{
+                    fragmentId: 'cfl_full_document',
+                    role: 'direct_support',
+                    text: `The CFL stability condition bounds the time step. ${glossary}`,
+                    atomId: point.atomId,
+                    documentId: point.documentId || 'doc_water_glass',
+                    sourcePath,
+                    title: point.title,
+                    headingPath: [point.title],
+                    charCount: 140,
+                    tokenEstimate: 35,
+                    truncated: false,
+                    citationIds: [point.citation?.citationId || 'citation_water_glass'],
+                    sourceBoundary: 'full_document',
+                }],
+                sourceDecisions: [],
+                totalCharCount: 140,
+                tokenEstimate: 35,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-08-25T00:00:00.000Z',
+                status: 'sufficient',
+                score: 0.95,
+                reasons: [],
+                deterministic: true,
+                recoveryAttempted: false,
+                llmJudgeUsed: false,
+                degradationState: 'none',
+            },
+            reviewedAt: '2026-08-25T00:00:00.000Z',
+        });
+
+        expect(review.publicAnswer).toContain('Courant number');
+        expect(review.publicAnswer).toContain('grid size');
+        expect(review.publicGraphAnswerPlan?.claims.map((claim) => claim.claimId)).toEqual([
+            'cfl_definition',
+            'cfl_glossary',
+        ]);
+    });
+
     test('honors an explicit Chinese answer language for English no-evidence abstentions', () => {
         const review = reviewAnswerRelease({
             message: 'what is water glass?',

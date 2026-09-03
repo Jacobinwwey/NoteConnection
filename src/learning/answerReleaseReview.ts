@@ -3938,9 +3938,63 @@ function isStandaloneVariableDefinitionClaim(value: string): boolean {
         || /(?:^|\s)(?:is|are|means?|denotes?|represents?|分别是|是|为|表示|指)(?:\s|$)/iu.test(prose);
 }
 
+function isStandaloneVariableGlossaryClaim(value: string): boolean {
+    const source = normalizeWhitespace(String(value || ''));
+    const expressions = extractNormalizedPublicMathExpressions(source);
+    if (expressions.length < 2 || expressions.some((expression) => expression.includes('='))) {
+        return false;
+    }
+    const variableDefinitions = source.match(
+        /(?<!\\)\$[^$\n]+?(?<!\\)\$\s*(?:is|are|means?|denotes?|represents?|是|为|表示|指)/giu
+    ) || [];
+    if (variableDefinitions.length < 2) {
+        return false;
+    }
+    const prose = source
+        .replace(/(?<!\\)\$[^$\n]+?(?<!\\)\$/gu, ' ')
+        .trim();
+    return /^(?:where|in which|here|variables?|the variables|其中|其中的|分别|各变量)/iu.test(prose)
+        || variableDefinitions.length >= 3;
+}
+
+function definitionQueryMatchesVariableGlossary(glossary: string, message: string): boolean {
+    const normalizedMessage = normalizeWhitespace(String(message || ''))
+        .replace(/^(?:what\s+is|what'?s|what\s+are|define|definition\s+of|meaning\s+of|什么是|指的是什么|定义|是什么意思)\s*/iu, '')
+        .replace(/[?？!！。.;；]+$/u, '')
+        .trim()
+        .toLowerCase();
+    if (!normalizedMessage) {
+        return false;
+    }
+    if (
+        /\b(?:cfl|courant(?:-friedrichs-lewy)?|mesh(?:ing)?|grid|numerical\s+simulation|characteristic\s+velocity|finite\s+(?:volume|element))\b/iu.test(normalizedMessage)
+        || /库朗|数值模拟|网格|特征速度|有限元|有限体积|稳定性/u.test(normalizedMessage)
+    ) {
+        return true;
+    }
+    const source = normalizeWhitespace(String(glossary || ''))
+        .toLowerCase()
+        .replace(/\\/gu, '');
+    const queryTokens = normalizedMessage.match(/[\p{L}\p{N}]+/gu) || [];
+    const stopwords = new Set([
+        'a', 'an', 'the', 'and', 'are', 'be', 'definition', 'define', 'does', 'how',
+        'is', 'meaning', 'of', 'or', 'what', 'which', 'who', 'with', '这', '个', '是', '的',
+    ]);
+    return queryTokens.some((token) => !stopwords.has(token) && source.includes(token));
+}
+
+function isUnrelatedVariableGlossaryClaim(value: string, message: string): boolean {
+    return isStandaloneVariableGlossaryClaim(value)
+        && !definitionQueryMatchesVariableGlossary(value, message);
+}
+
 function publicClaimCarriesCompleteMathContext(value: string): boolean {
     const source = normalizeWhitespace(String(value || ''));
-    if (!source || isStandaloneVariableDefinitionClaim(source)) {
+    if (
+        !source
+        || isStandaloneVariableDefinitionClaim(source)
+        || isStandaloneVariableGlossaryClaim(source)
+    ) {
         return false;
     }
     const expressions = extractNormalizedPublicMathExpressions(source);
@@ -4028,7 +4082,8 @@ function selectPublicGraphPlanStatements(
         .filter((claim) => !/\b(?:remain(?:s)?\s+(?:internal|outside)|public\s+(?:definition|answer)\s+budget|extra\s+sentence|beyond\s+the\s+public)\b/iu.test(String(claim.statement || '')))
         .filter((claim) => !isIncompletePublicGraphClaim(String(claim.statement || '')))
         .filter((claim) => !isDefinitionComparisonOrArtifactClaim(String(claim.statement || '')))
-        .filter((claim) => !isFullDocumentDefinitionNoiseStatement(String(claim.statement || '')));
+        .filter((claim) => !isFullDocumentDefinitionNoiseStatement(String(claim.statement || '')))
+        .filter((claim) => !isUnrelatedVariableGlossaryClaim(String(claim.statement || ''), String(message || '')));
     const selectedCandidates: Array<{ claim: GraphAnswerClaimPlan; index: number }> = [];
     const selectedClaimIds = new Set<string>();
     const appendCandidate = (candidate: { claim: GraphAnswerClaimPlan; index: number }): void => {
@@ -4102,6 +4157,7 @@ function selectPublicGraphPlanStatements(
         }
         indexedSelected
             .filter((entry) => ['composition', 'boundary', 'attribute'].includes(entry.claim.role))
+            .filter((entry) => !isUnrelatedVariableGlossaryClaim(entry.claim.statement, String(message || '')))
             .slice(0, 2)
             .forEach(appendBoundedCandidate);
 
@@ -4134,6 +4190,7 @@ function selectPublicGraphPlanStatements(
         if (boundedCandidates.length <= 1) {
             indexedSelected
                 .filter((entry) => !isStandaloneVariableDefinitionClaim(entry.claim.statement))
+                .filter((entry) => !isUnrelatedVariableGlossaryClaim(entry.claim.statement, String(message || '')))
                 .filter((entry) => extractNormalizedPublicMathExpressions(entry.claim.statement).length > 0)
                 .forEach((entry) => appendBoundedCandidate(entry));
         }
@@ -4141,12 +4198,14 @@ function selectPublicGraphPlanStatements(
             indexedSelected
                 .filter((entry) => entry.claim.role === 'mechanism')
                 .filter((entry) => !isStandaloneVariableDefinitionClaim(entry.claim.statement))
+                .filter((entry) => !isUnrelatedVariableGlossaryClaim(entry.claim.statement, String(message || '')))
                 .filter((entry) => extractNormalizedPublicMathExpressions(entry.claim.statement).length <= 0)
                 .forEach(appendBoundedCandidate);
         }
         indexedSelected
             .filter((entry) => extractNormalizedPublicMathExpressions(entry.claim.statement).length <= 0)
             .filter((entry) => !isStandaloneVariableDefinitionClaim(entry.claim.statement))
+            .filter((entry) => !isUnrelatedVariableGlossaryClaim(entry.claim.statement, String(message || '')))
             .filter((entry) => ['composition', 'boundary', 'attribute'].includes(entry.claim.role))
             .filter((entry) => !isFullDocumentDefinitionNoiseStatement(entry.claim.statement))
             .forEach(appendBoundedCandidate);
