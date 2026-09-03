@@ -39,6 +39,7 @@
     const ACTIVE_SOURCE_TARGET_STORAGE_KEY = 'nc_last_target';
     const ANSWER_LANGUAGE_STORAGE_KEY = 'nc_agent_answer_language';
     const RESPONSE_MODE_STORAGE_KEY = 'nc_agent_response_mode';
+    const RESPONSE_BUDGET_MODE_STORAGE_KEY = 'nc_agent_response_budget_mode';
     const ACTIVE_SOURCE_TARGET_EVENT = 'noteconnection:active-target-changed';
     const AGENT_CONVERSATION_ENDPOINT = '/api/knowledge/conversation';
     const GRAPH_FOCUS_DIAGNOSTICS_EVENT = 'noteconnection:agent-graph-focus-diagnostics';
@@ -697,6 +698,73 @@
         if (window.i18n && typeof window.i18n.onLanguageChange === 'function') {
             window.i18n.onLanguageChange(function () {
                 updateResponseModeSummary(getResponseMode());
+            });
+        }
+    }
+
+    function normalizeResponseBudgetMode(value) {
+        const normalized = String(value || '').trim().toLowerCase().replace(/[-\s]+/gu, '_');
+        return ['unbounded', 'no_cap', 'nocap', 'no_limit', 'nolimit', 'unlimited'].includes(normalized)
+            ? 'unbounded'
+            : 'adaptive';
+    }
+
+    function getResponseBudgetMode() {
+        const selector = getElement('agent-workspace-response-budget-select');
+        const selected = selector && typeof selector.value === 'string' ? selector.value : '';
+        if (selected === 'adaptive' || selected === 'unbounded') {
+            return selected;
+        }
+        if (typeof localStorage !== 'undefined') {
+            return normalizeResponseBudgetMode(localStorage.getItem(RESPONSE_BUDGET_MODE_STORAGE_KEY));
+        }
+        return 'adaptive';
+    }
+
+    function updateResponseBudgetSummary(mode) {
+        const summary = getElement('agent-workspace-response-budget-summary');
+        if (!summary) {
+            return;
+        }
+        summary.textContent = mode === 'unbounded'
+            ? translate('agentWorkspace.responseBudget.summaryUnbounded', 'Product cap disabled; runtime safety limits remain')
+            : translate('agentWorkspace.responseBudget.summaryAdaptive', 'Host-adaptive report budget');
+    }
+
+    function renderResponseBudgetSelector() {
+        const selector = getElement('agent-workspace-response-budget-select');
+        const control = selector && selector.closest('[data-agent-desktop-only]');
+        if (!selector) {
+            return;
+        }
+        const mobile = isMobileNativeRuntime();
+        if (control) {
+            control.hidden = mobile;
+        }
+        const stored = typeof localStorage !== 'undefined'
+            ? normalizeResponseBudgetMode(localStorage.getItem(RESPONSE_BUDGET_MODE_STORAGE_KEY))
+            : 'adaptive';
+        selector.value = stored;
+        updateResponseBudgetSummary(stored);
+    }
+
+    function bindResponseBudgetSelector() {
+        const selector = getElement('agent-workspace-response-budget-select');
+        if (!selector || selector.getAttribute('data-agent-response-budget-bound') === 'true') {
+            return;
+        }
+        selector.setAttribute('data-agent-response-budget-bound', 'true');
+        selector.addEventListener('change', function () {
+            const mode = normalizeResponseBudgetMode(selector.value);
+            selector.value = mode;
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem(RESPONSE_BUDGET_MODE_STORAGE_KEY, mode);
+            }
+            updateResponseBudgetSummary(mode);
+        });
+        if (window.i18n && typeof window.i18n.onLanguageChange === 'function') {
+            window.i18n.onLanguageChange(function () {
+                updateResponseBudgetSummary(getResponseBudgetMode());
             });
         }
     }
@@ -5631,6 +5699,7 @@
                 // Native mobile always consumes the bounded projection; a
                 // desktop full-report preference must not inflate the APK path.
                 responseMode: isMobileNativeRuntime() ? 'slim' : getResponseMode(),
+                ...(isMobileNativeRuntime() ? {} : { responseBudgetMode: getResponseBudgetMode() }),
                 topK: 6,
                 ...(isMobileNativeRuntime() ? { responseProfile: 'mobile_compact' } : {}),
                 memoryNamespace: 'conversation',
@@ -5813,10 +5882,12 @@
         bindWorkspaceScopeSelector();
         bindAnswerLanguageSelector();
         bindResponseModeSelector();
+        bindResponseBudgetSelector();
         observeGlobalScopeOptions();
         renderWorkspaceScopeSelector();
         renderAnswerLanguageSelector();
         renderResponseModeSelector();
+        renderResponseBudgetSelector();
         updateConversationApiStatus({
             state: 'idle',
             endpoint: AGENT_CONVERSATION_ENDPOINT,

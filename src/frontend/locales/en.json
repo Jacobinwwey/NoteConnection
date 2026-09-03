@@ -408,6 +408,14 @@
       "summarySlim": "Short grounded answer",
       "summaryFull": "Complete evidence-bounded technical report"
     },
+    "responseBudget": {
+      "label": "Full report budget",
+      "adaptive": "Adaptive",
+      "unbounded": "No product cap",
+      "summary": "Host-adaptive report budget",
+      "summaryAdaptive": "Host-adaptive report budget",
+      "summaryUnbounded": "Product cap disabled; runtime safety limits remain"
+    },
     "userId": "Learner ID",
     "inputLabel": "Ask the scoped knowledge corpus",
     "inputPlaceholder": "Ask about a concept, citation, prerequisite, or study step...",

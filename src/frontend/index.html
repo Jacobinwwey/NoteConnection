@@ -208,6 +208,14 @@
                 </select>
                 <div id="agent-workspace-response-mode-summary" class="agent-response-mode-summary" data-i18n="agentWorkspace.responseMode.summary">Short grounded answer</div>
               </div>
+              <div class="agent-response-budget-control" data-agent-desktop-only="true">
+                <label for="agent-workspace-response-budget-select" data-i18n="agentWorkspace.responseBudget.label">Full report budget</label>
+                <select id="agent-workspace-response-budget-select" aria-describedby="agent-workspace-response-budget-summary">
+                  <option value="adaptive" data-i18n="agentWorkspace.responseBudget.adaptive">Adaptive</option>
+                  <option value="unbounded" data-i18n="agentWorkspace.responseBudget.unbounded">No product cap</option>
+                </select>
+                <div id="agent-workspace-response-budget-summary" class="agent-response-budget-summary" data-i18n="agentWorkspace.responseBudget.summary">Host-adaptive report budget</div>
+              </div>
               <div class="agent-pane-field">
                 <label for="agent-workspace-user-id" data-i18n="agentWorkspace.userId">Learner ID</label>
                 <input id="agent-workspace-user-id" type="text" value="path_user_default" />

@@ -1141,6 +1141,14 @@ function createWorkspaceHtml() {
                     </select>
                     <div id="agent-workspace-response-mode-summary"></div>
                   </div>
+                  <div class="agent-response-budget-control" data-agent-desktop-only="true">
+                    <label for="agent-workspace-response-budget-select">Full report budget</label>
+                    <select id="agent-workspace-response-budget-select">
+                      <option value="adaptive">Adaptive</option>
+                      <option value="unbounded">No product cap</option>
+                    </select>
+                    <div id="agent-workspace-response-budget-summary"></div>
+                  </div>
                   <input id="agent-workspace-user-id" value="path_user_default" />
                   <div id="agent-workspace-chat-messages"></div>
                   <div id="agent-workspace-knowledge-points"></div>
@@ -6562,6 +6570,63 @@ describe('agent workspace learning-path integration', () => {
         input.value = 'what is water glass?';
         await (window as any).NoteConnectionAgentWorkspace.sendConversation();
         expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body || '{}')).responseMode).toBe('slim');
+    });
+
+    test('persists adaptive/unbounded full-report budget and sends it only on desktop', async () => {
+        const { document, window, fetchMock } = loadAgentWorkspaceHarness({ withI18n: true });
+        if (!fetchMock) {
+            throw new Error('expected fetch mock');
+        }
+        const response = () => createSseResponse([{
+            event: 'turn_completed',
+            payload: {
+                type: 'turn_completed',
+                turnId: 'turn_response_budget_ui',
+                emittedAt: '2026-09-03T00:00:00.000Z',
+                result: {
+                    responseMode: 'full',
+                    responseBudget: { mode: 'unbounded', tier: 'unbounded', productCapDisabled: true },
+                    assistantMessage: 'full report',
+                    answer: 'full report',
+                    citations: [],
+                    recalledMemories: [],
+                    memoryActions: [],
+                    knowledgePoints: [],
+                    summary: {
+                        generatedAt: '2026-09-03T00:00:00.000Z',
+                        topK: 6,
+                        returnedKnowledgePoints: 0,
+                        returnedCitations: 0,
+                        recalledMemoryCount: 0,
+                        queryEvidenceCoverageRatioPct: 0,
+                    },
+                },
+            },
+        }]);
+        fetchMock.mockImplementationOnce(async () => response());
+
+        const budgetSelector = document.getElementById('agent-workspace-response-budget-select') as HTMLSelectElement;
+        expect(budgetSelector.value).toBe('adaptive');
+        budgetSelector.value = 'unbounded';
+        budgetSelector.dispatchEvent(new window.Event('change', { bubbles: true }));
+        expect(window.localStorage.getItem('nc_agent_response_budget_mode')).toBe('unbounded');
+
+        const input = document.getElementById('agent-workspace-chat-input') as HTMLTextAreaElement;
+        input.value = 'what is water glass?';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+        const desktopRequest = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body || '{}'));
+        expect(desktopRequest.responseBudgetMode).toBe('unbounded');
+
+        (window as any).__NC_RUNTIME_CAPS = { platform: 'capacitor-android', supports_sidecar: false };
+        fetchMock.mockImplementationOnce(async () => response());
+        (window as any).NoteConnectionAgentWorkspace.init();
+        const control = budgetSelector.closest('[data-agent-desktop-only]') as HTMLElement;
+        expect(control.hidden).toBe(true);
+        input.value = 'what is water glass?';
+        await (window as any).NoteConnectionAgentWorkspace.sendConversation();
+        const mobileRequest = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body || '{}'));
+        expect(mobileRequest.responseBudgetMode).toBeUndefined();
+        expect(mobileRequest.responseProfile).toBe('mobile_compact');
     });
 
     test('uses the bounded local exact path on native mobile and exposes only the compact projection', async () => {
