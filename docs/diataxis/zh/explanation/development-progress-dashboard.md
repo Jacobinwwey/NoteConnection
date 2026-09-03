@@ -8,6 +8,8 @@ Agent Workspace 现在提供 additive 的 `responseMode` 契约。`slim` 仍是�
 
 full 章节选择现在只接受与 anchor 文档 `documentId` 和 `sourcePath` 同时匹配的 `graph_neighbor_support`。章节优先级为 `parent_context`、`adjacent_context`、`graph_neighbor_support`、`direct_support`、`conflict`；因此缺失的光学或机制章节可以从同文档图邻居恢复，同时不会泄漏无关文档。回归测试包含跨文档诱饵片段，验证该边界。
 
+报告组装器还会归一化 `### Section body...` 这类扁平化 source fragment：根据 `headingPath` 恢复标题/正文边界；真正只有标题的 block 会暂存，直到遇到正文才提交。因此 source-window 截断不会再造成技术内容丢失或尾部悬空标题。
+
 重建 `dist` 后的新鲜验证已通过：TypeScript no-emit；五个 mode/release/HTTP/frontend Jest 套件（`249` passed，`13` skipped）；真实 waterglass Chromium full（`86` 个 KaTeX 节点、DOM 文本 `5,425` 字符、发布答案 `5,265` 字符）与 slim（`5` 个 KaTeX 节点、`345` 字符）；合成公式 full/slim 探针（各 `4` 个 KaTeX 节点）；以及直接 HTTP/runtime full（`2` 个查询，均为 `responseMode=full`）。真实 full 回答包含热传导方程、斯涅尔定律、材料/流体/光学/热力学章节、静水压力与可靠性定量分析和技术比较模型，没有 Mermaid、提示词脚手架或尾部悬空标题。runtime verifier 只对 slim 启用旧的列表/粗体收缩门禁；full 仍强制 grounding、重复句、公式和内部泄漏检查。slim 保持旧的证据边界与文件名兼容性。
 
 本阶段不宣称 Android 真机验收。签名 arm64 安装、SAF 导入、force-stop/reopen 连续性与峰值 RSS 仍需要在线设备，继续作为独立 release gate。

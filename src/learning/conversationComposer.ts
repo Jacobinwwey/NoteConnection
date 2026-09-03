@@ -306,6 +306,31 @@ function isStandaloneFullReportHeading(value: string): boolean {
     return /^#{1,6}\s+\S[^\n]*$/u.test(String(value || '').trim());
 }
 
+function splitFullReportHeadingBody(
+    value: string,
+    headingPath: string[]
+): { heading: string; body: string } {
+    const normalized = String(value || '').trim();
+    const headingName = normalizeWhitespace(String(headingPath[headingPath.length - 1] || ''))
+        .replace(/^#+\s*/u, '')
+        .trim();
+    if (!normalized || !headingName || !/^#{1,6}\s+/u.test(normalized)) {
+        return { heading: '', body: normalized };
+    }
+    const escapedHeadingName = headingName.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    const headingMatch = normalized.match(new RegExp(
+        `^(#{1,6})\\s+${escapedHeadingName}(?:\\s+|$)([\\s\\S]*)$`,
+        'iu'
+    ));
+    if (!headingMatch) {
+        return { heading: '', body: normalized };
+    }
+    return {
+        heading: `${headingMatch[1]} ${headingName}`,
+        body: String(headingMatch[2] || '').trim(),
+    };
+}
+
 function appendFullReportBlock(
     lines: string[],
     block: string,
@@ -354,6 +379,20 @@ function buildFullTechnicalReport(
                     .replace(/^#{1,6}\s+Water Glass\s*$/imu, '')
                     .trim();
                 if (!normalizedBlock) {
+                    return;
+                }
+                const headingBody = splitFullReportHeadingBody(
+                    normalizedBlock,
+                    Array.isArray(fragment.headingPath) ? fragment.headingPath : []
+                );
+                if (headingBody.heading && headingBody.body) {
+                    appendFullReportBlock(
+                        reportBlocks,
+                        `${headingBody.heading}\n\n${headingBody.body}`,
+                        reportLength,
+                        headingBody.body
+                    );
+                    pendingHeading = '';
                     return;
                 }
                 if (isStandaloneFullReportHeading(normalizedBlock)) {

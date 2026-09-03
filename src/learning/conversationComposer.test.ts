@@ -1230,6 +1230,23 @@ describe('conversationComposer', () => {
                     citationIds: ['evidence_full_water_glass'],
                     sourceBoundary: 'full_document',
                 },
+                {
+                    fragmentId: 'rag_full_flattened_section',
+                    role: 'direct_support',
+                    text: '### Flattened section The fallback must retain this body when a source window is flattened.',
+                    atomId: item.atom.id,
+                    documentId: item.atom.documentId,
+                    sourcePath: item.atom.sourcePath,
+                    title: 'Flattened section',
+                    headingPath: ['Water Glass', 'Flattened section'],
+                    startLine: 31,
+                    endLine: 31,
+                    charCount: 86,
+                    tokenEstimate: 22,
+                    truncated: false,
+                    citationIds: ['evidence_full_water_glass'],
+                    sourceBoundary: 'direct_span_only',
+                },
             ],
             sourceDecisions: [],
             totalCharCount: 560,
@@ -1270,6 +1287,7 @@ describe('conversationComposer', () => {
         expect(fullReply.answer).toContain('comparison model relates material conductivity');
         expect(fullReply.answer).toContain('Soda-lime glass');
         expect(fullReply.answer).not.toMatch(/### References\s*$/u);
+        expect(fullReply.answer).toContain('fallback must retain this body');
         expect(fullReply.answer).toContain('\\frac{\\partial T}{\\partial t}');
         expect(fullReply.answer).toContain('n_1 \\sin(\\theta_1)');
         expect(fullReply.answer.match(/\$\$/gu)?.length).toBe(4);
