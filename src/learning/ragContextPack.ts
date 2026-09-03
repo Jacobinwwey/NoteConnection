@@ -38,6 +38,9 @@ const ROLE_PRIORITY: Record<RagEvidenceRole, number> = {
 };
 
 export function normalizeRagContextBudget(input?: Partial<RagContextBudget>): RagContextBudget {
+    const productCapDisabled = input?.productCapDisabled === true;
+    const maxFragmentsLimit = productCapDisabled ? 4096 : 200;
+    const maxTotalCharsLimit = productCapDisabled ? 512000 : 100000;
     const numberOrDefault = (value: unknown, fallback: number, min: number, max: number): number => {
         const numeric = Number(value);
         if (!Number.isFinite(numeric)) {
@@ -46,14 +49,35 @@ export function normalizeRagContextBudget(input?: Partial<RagContextBudget>): Ra
         return Math.floor(Math.max(min, Math.min(max, numeric)));
     };
     return {
-        maxFragments: numberOrDefault(input?.maxFragments, DEFAULT_RAG_CONTEXT_BUDGET.maxFragments, 1, 200),
+        maxFragments: numberOrDefault(input?.maxFragments, DEFAULT_RAG_CONTEXT_BUDGET.maxFragments, 1, maxFragmentsLimit),
         maxCharsPerFragment: numberOrDefault(
             input?.maxCharsPerFragment,
             DEFAULT_RAG_CONTEXT_BUDGET.maxCharsPerFragment,
             80,
             20000
         ),
-        maxTotalChars: numberOrDefault(input?.maxTotalChars, DEFAULT_RAG_CONTEXT_BUDGET.maxTotalChars, 120, 100000),
+        maxTotalChars: numberOrDefault(input?.maxTotalChars, DEFAULT_RAG_CONTEXT_BUDGET.maxTotalChars, 120, maxTotalCharsLimit),
+        ...(productCapDisabled ? {
+            productCapDisabled: true,
+            runtimeMaxFragments: numberOrDefault(
+                input?.runtimeMaxFragments,
+                input?.maxFragments ?? DEFAULT_RAG_CONTEXT_BUDGET.maxFragments,
+                1,
+                4096
+            ),
+            runtimeMaxCharsPerFragment: numberOrDefault(
+                input?.runtimeMaxCharsPerFragment,
+                input?.maxCharsPerFragment ?? DEFAULT_RAG_CONTEXT_BUDGET.maxCharsPerFragment,
+                80,
+                20000
+            ),
+            runtimeMaxTotalChars: numberOrDefault(
+                input?.runtimeMaxTotalChars,
+                input?.maxTotalChars ?? DEFAULT_RAG_CONTEXT_BUDGET.maxTotalChars,
+                120,
+                64 * 1024 * 1024
+            ),
+        } : {}),
     };
 }
 
@@ -240,26 +264,41 @@ function applyContextBudget(
 ): RagEvidenceFragment[] {
     const selected: RagEvidenceFragment[] = [];
     let usedChars = 0;
+    const productCapDisabled = budget.productCapDisabled === true;
+    const maxFragments = productCapDisabled
+        ? budget.runtimeMaxFragments || budget.maxFragments
+        : budget.maxFragments;
+    const maxCharsPerFragment = productCapDisabled
+        ? budget.runtimeMaxCharsPerFragment || budget.maxCharsPerFragment
+        : budget.maxCharsPerFragment;
+    const maxTotalChars = productCapDisabled
+        ? budget.runtimeMaxTotalChars || budget.maxTotalChars
+        : budget.maxTotalChars;
     sortFragmentsForBudget(fragments, fragmentOrder).forEach((fragment) => {
-        if (selected.length >= budget.maxFragments) {
+        if (selected.length >= maxFragments) {
             decisions.push({
                 documentId: fragment.documentId,
                 sourcePath: fragment.sourcePath,
                 sourceBoundary: fragment.sourceBoundary,
                 status: 'fragment_dropped',
-                reason: 'max_fragments_exceeded',
+                reason: productCapDisabled ? 'runtime_fragment_limit_exceeded' : 'max_fragments_exceeded',
             });
             return;
         }
-        let candidate = withBudgetedText(fragment, budget.maxCharsPerFragment, 'max_chars_per_fragment_exceeded', query);
-        const remainingChars = budget.maxTotalChars - usedChars;
+        let candidate = withBudgetedText(
+            fragment,
+            maxCharsPerFragment,
+            productCapDisabled ? 'runtime_max_chars_per_fragment_exceeded' : 'max_chars_per_fragment_exceeded',
+            query
+        );
+        const remainingChars = maxTotalChars - usedChars;
         if (remainingChars <= 0) {
             decisions.push({
                 documentId: fragment.documentId,
                 sourcePath: fragment.sourcePath,
                 sourceBoundary: fragment.sourceBoundary,
                 status: 'fragment_dropped',
-                reason: 'max_total_chars_exceeded',
+                reason: productCapDisabled ? 'runtime_total_chars_exceeded' : 'max_total_chars_exceeded',
             });
             return;
         }
@@ -274,7 +313,12 @@ function applyContextBudget(
                 });
                 return;
             }
-            candidate = withBudgetedText(candidate, remainingChars, 'max_total_chars_exceeded', query);
+            candidate = withBudgetedText(
+                candidate,
+                remainingChars,
+                productCapDisabled ? 'runtime_total_chars_exceeded' : 'max_total_chars_exceeded',
+                query
+            );
         }
         selected.push(candidate);
         usedChars += candidate.charCount;

@@ -256,4 +256,62 @@ describe('buildRagContextPack', () => {
             'graph-unmatched',
         ]);
     });
+
+    test('unbounded product mode ignores product caps while retaining explicit runtime limits', () => {
+        const pack = buildRagContextPack({
+            query: 'what is water glass?',
+            fragments: Array.from({ length: 4 }, (_, index) => makeFragment({
+                fragmentId: `unbounded_${index}`,
+                role: 'parent_context',
+                text: `Section ${index}: ${'water glass evidence '.repeat(12)}`,
+                sourceBoundary: 'full_document',
+            })),
+            sourceDecisions: [],
+            budget: {
+                maxFragments: 1,
+                maxCharsPerFragment: 100,
+                maxTotalChars: 120,
+                productCapDisabled: true,
+                runtimeMaxFragments: 8,
+                runtimeMaxCharsPerFragment: 900,
+                runtimeMaxTotalChars: 10_000,
+            },
+        });
+
+        expect(pack.fragments).toHaveLength(4);
+        expect(pack.budget.productCapDisabled).toBe(true);
+        expect(pack.sourceDecisions).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ reason: 'max_fragments_exceeded' }),
+        ]));
+    });
+
+    test('unbounded mode reports a runtime fragment stop instead of silently dropping content', () => {
+        const pack = buildRagContextPack({
+            query: 'what is water glass?',
+            fragments: Array.from({ length: 4 }, (_, index) => makeFragment({
+                fragmentId: `runtime_limited_${index}`,
+                role: 'parent_context',
+                text: `Runtime section ${index}: water glass evidence.`,
+                sourceBoundary: 'full_document',
+            })),
+            sourceDecisions: [],
+            budget: {
+                maxFragments: 1,
+                maxCharsPerFragment: 100,
+                maxTotalChars: 120,
+                productCapDisabled: true,
+                runtimeMaxFragments: 2,
+                runtimeMaxCharsPerFragment: 900,
+                runtimeMaxTotalChars: 10_000,
+            },
+        });
+
+        expect(pack.fragments).toHaveLength(2);
+        expect(pack.sourceDecisions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                status: 'fragment_dropped',
+                reason: 'runtime_fragment_limit_exceeded',
+            }),
+        ]));
+    });
 });

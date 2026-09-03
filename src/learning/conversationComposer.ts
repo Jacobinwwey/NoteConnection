@@ -1,5 +1,6 @@
 import type {
     AgentConversationAssistantBlock,
+    AgentConversationBudget,
     AgentConversationGraphConnectionPath,
     AgentConversationGraphContext,
     AgentConversationKnowledgePoint,
@@ -45,6 +46,7 @@ export type ScopedConversationReplyParams = {
     message: string;
     answerLanguage?: 'auto' | 'en' | 'zh';
     responseMode?: AgentConversationResponseMode;
+    responseBudget?: AgentConversationBudget;
     knowledgePoints: AgentConversationKnowledgePoint[];
     citations: KnowledgeCitation[];
     recalledMemories: AgentConversationMemoryRecord[];
@@ -58,8 +60,8 @@ export type ScopedConversationReplyParams = {
     ragSufficiencyReview?: RagSufficiencyReview;
 };
 
-const FULL_RESPONSE_MAX_CHARS = 24000;
-const FULL_RESPONSE_MAX_FRAGMENTS = 24;
+const LEGACY_FULL_RESPONSE_MAX_CHARS = 24000;
+const LEGACY_FULL_RESPONSE_MAX_FRAGMENTS = 24;
 const FULL_REPORT_FRAGMENT_ROLES = new Set([
     'direct_support',
     'parent_context',
@@ -139,9 +141,41 @@ function hasFullReportBodyOutsideMermaid(fragment: FullReportFragment): boolean 
     return Boolean(source) && !isFullReportInternalBlock(source);
 }
 
-function selectFullReportFragments(params: ScopedConversationReplyParams): RagContextPack['fragments'] {
+function fullReportProductCaps(params: ScopedConversationReplyParams): {
+    maxFragments: number;
+    maxChars: number;
+    productCapDisabled: boolean;
+} {
+    const budget = params.responseBudget;
+    const productCapDisabled = budget?.productCapDisabled === true;
+    if (!budget) {
+        return {
+            maxFragments: LEGACY_FULL_RESPONSE_MAX_FRAGMENTS,
+            maxChars: LEGACY_FULL_RESPONSE_MAX_CHARS,
+            productCapDisabled: false,
+        };
+    }
+    return {
+        maxFragments: productCapDisabled
+            ? budget.runtimeGovernor.maxFragmentsProcessed
+            : (budget.rag?.maxFragments || LEGACY_FULL_RESPONSE_MAX_FRAGMENTS),
+        maxChars: productCapDisabled
+            ? budget.runtimeGovernor.maxReportChars
+            : (budget.reportMaxChars || LEGACY_FULL_RESPONSE_MAX_CHARS),
+        productCapDisabled,
+    };
+}
+
+function selectFullReportFragments(params: ScopedConversationReplyParams): {
+    fragments: RagContextPack['fragments'];
+    truncated: boolean;
+    truncationReason?: string;
+} {
     const fragments = params.ragContextPack?.fragments || [];
     const anchorSource = resolveFullReportAnchorSource(params);
+    const caps = fullReportProductCaps(params);
+    let truncated = false;
+    let truncationReason: string | undefined;
     const candidates = fragments
         .filter((fragment) => {
             const title = normalizeWhitespace(String(fragment.title || '')).toLowerCase();
@@ -170,7 +204,11 @@ function selectFullReportFragments(params: ScopedConversationReplyParams): RagCo
         return `${fragment.documentId}:${leaf}`;
     };
     const appendCandidate = (fragment: RagContextPack['fragments'][number]): void => {
-        if (selected.length >= FULL_RESPONSE_MAX_FRAGMENTS || usedChars >= FULL_RESPONSE_MAX_CHARS) {
+        if (selected.length >= caps.maxFragments || usedChars >= caps.maxChars) {
+            truncated = true;
+            truncationReason = caps.productCapDisabled
+                ? (selected.length >= caps.maxFragments ? 'runtime_fragment_limit' : 'runtime_report_chars_limit')
+                : (selected.length >= caps.maxFragments ? 'product_fragment_limit' : 'product_report_chars_limit');
             return;
         }
         const text = String(fragment.text || '').trim();
@@ -182,7 +220,7 @@ function selectFullReportFragments(params: ScopedConversationReplyParams): RagCo
         ) {
             return;
         }
-        const remaining = FULL_RESPONSE_MAX_CHARS - usedChars;
+        const remaining = caps.maxChars - usedChars;
         if (text.length > remaining) {
             return;
         }
@@ -239,9 +277,13 @@ function selectFullReportFragments(params: ScopedConversationReplyParams): RagCo
                 return String(leftFragment?.documentId || '').localeCompare(String(rightFragment?.documentId || ''));
             }
             return leftLine - rightLine;
-        });
+    });
     sectionCandidates.forEach((group) => appendCandidate(group[0]));
-    return selected;
+    if (selected.length < sectionCandidates.length && !truncated) {
+        truncated = true;
+        truncationReason = caps.productCapDisabled ? 'runtime_report_chars_limit' : 'product_report_chars_limit';
+    }
+    return { fragments: selected, truncated, truncationReason };
 }
 
 function hasBalancedMathDelimiters(value: string): boolean {
@@ -335,14 +377,17 @@ function appendFullReportBlock(
     lines: string[],
     block: string,
     currentLength: FullReportLength,
-    dedupeValue = block
+    dedupeValue = block,
+    maxChars = LEGACY_FULL_RESPONSE_MAX_CHARS,
+    onLimit?: (reason: string) => void
 ): boolean {
     const normalized = sanitizeFullReportBlock(block);
     if (!normalized || isFullReportInternalBlock(normalized) || !hasBalancedMathDelimiters(normalized)) {
         return false;
     }
     const separatorLength = lines.length > 0 ? 2 : 0;
-    if (currentLength.value + separatorLength + normalized.length > FULL_RESPONSE_MAX_CHARS) {
+    if (currentLength.value + separatorLength + normalized.length > maxChars) {
+        onLimit?.('report_chars_limit');
         return false;
     }
     const key = normalizeWhitespace(dedupeValue).toLowerCase();
@@ -355,19 +400,48 @@ function appendFullReportBlock(
     return true;
 }
 
-function buildFullTechnicalReport(
+export type FullReportAssemblyState = {
+    truncated: boolean;
+    truncationReason?: string;
+    selectedFragmentCount: number;
+    acceptedBlockCount: number;
+};
+
+type FullReportAssemblyResult = {
+    answer: string;
+    state: FullReportAssemblyState;
+};
+
+function buildFullTechnicalReportResult(
     params: ScopedConversationReplyParams,
     graphContext: AgentConversationGraphContext | null,
     graphAnswerPlan: GraphAnswerPlan
-): string {
+): FullReportAssemblyResult {
     const useChinese = useChineseAnswerLanguage(params);
-    const fragments = selectFullReportFragments(params);
-    if (fragments.length <= 0) {
-        return buildScopedConversationAnswer({ ...params, responseMode: 'slim' }, graphContext, graphAnswerPlan);
+    const selection = selectFullReportFragments(params);
+    const caps = fullReportProductCaps(params);
+    if (selection.fragments.length <= 0) {
+        return {
+            answer: buildScopedConversationAnswer({ ...params, responseMode: 'slim' }, graphContext, graphAnswerPlan),
+            state: {
+                truncated: selection.truncated,
+                truncationReason: selection.truncationReason,
+                selectedFragmentCount: 0,
+                acceptedBlockCount: 0,
+            },
+        };
     }
     const reportBlocks: string[] = [];
     const reportLength: FullReportLength = { value: 0, keys: new Set<string>() };
-    fragments.forEach((fragment) => {
+    let truncated = selection.truncated;
+    let truncationReason = selection.truncationReason;
+    const markLimit = (reason: string): void => {
+        truncated = true;
+        if (!truncationReason) {
+            truncationReason = caps.productCapDisabled ? `runtime_${reason}` : `product_${reason}`;
+        }
+    };
+    selection.fragments.forEach((fragment) => {
         const source = stripFullReportMermaid(fragment.text);
         let pendingHeading = '';
         source
@@ -390,7 +464,9 @@ function buildFullTechnicalReport(
                         reportBlocks,
                         `${headingBody.heading}\n\n${headingBody.body}`,
                         reportLength,
-                        headingBody.body
+                        headingBody.body,
+                        caps.maxChars,
+                        markLimit
                     );
                     pendingHeading = '';
                     return;
@@ -406,7 +482,9 @@ function buildFullTechnicalReport(
                     reportBlocks,
                     sectionBlock,
                     reportLength,
-                    pendingHeading ? normalizedBlock : sectionBlock
+                    pendingHeading ? normalizedBlock : sectionBlock,
+                    caps.maxChars,
+                    markLimit
                 );
                 pendingHeading = '';
             });
@@ -417,10 +495,28 @@ function buildFullTechnicalReport(
         .filter(Boolean);
     if (directClaims.length > 0 && !directClaims.some((claim) => reportBlocks.some((block) => normalizeWhitespace(block).toLowerCase().includes(claim.toLowerCase())))) {
         const heading = useChinese ? '## 核心定义' : '## Definition';
-        appendFullReportBlock(reportBlocks, heading, reportLength);
-        directClaims.forEach((claim) => appendFullReportBlock(reportBlocks, claim, reportLength));
+        appendFullReportBlock(reportBlocks, heading, reportLength, heading, caps.maxChars, markLimit);
+        directClaims.forEach((claim) => appendFullReportBlock(reportBlocks, claim, reportLength, claim, caps.maxChars, markLimit));
     }
-    return reportBlocks.join('\n\n').trim() || buildScopedConversationAnswer({ ...params, responseMode: 'slim' }, graphContext, graphAnswerPlan);
+    const answer = reportBlocks.join('\n\n').trim()
+        || buildScopedConversationAnswer({ ...params, responseMode: 'slim' }, graphContext, graphAnswerPlan);
+    return {
+        answer,
+        state: {
+            truncated,
+            truncationReason,
+            selectedFragmentCount: selection.fragments.length,
+            acceptedBlockCount: reportBlocks.length,
+        },
+    };
+}
+
+function buildFullTechnicalReport(
+    params: ScopedConversationReplyParams,
+    graphContext: AgentConversationGraphContext | null,
+    graphAnswerPlan: GraphAnswerPlan
+): string {
+    return buildFullTechnicalReportResult(params, graphContext, graphAnswerPlan).answer;
 }
 
 function normalizeWhitespace(value: string): string {
@@ -1921,6 +2017,7 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
     answerReleaseReview: AnswerReleaseReview;
     graphAnswerPlan: GraphAnswerPlan;
     graphAnswerCoverage: ReturnType<typeof reviewGraphAnswerCoverage>;
+    fullReportAssembly?: FullReportAssemblyState;
 } {
     const blocks: AgentConversationAssistantBlock[] = [];
     const graphContext = params.graphContext || buildAgentConversationGraphContextFromKnowledgePoints(params.knowledgePoints);
@@ -1930,7 +2027,11 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         graphContext,
         ragContextPack: params.ragContextPack,
     });
-    const draftAnswer = buildScopedConversationAnswer(params, graphContext, auditGraphAnswerPlan);
+    const fullReportAssembly = params.responseMode === 'full'
+        ? buildFullTechnicalReportResult(params, graphContext, auditGraphAnswerPlan)
+        : undefined;
+    const draftAnswer = fullReportAssembly?.answer
+        || buildScopedConversationAnswer(params, graphContext, auditGraphAnswerPlan);
     const knowledgeRun = buildKnowledgeRun(params, graphContext);
     const answerReleaseReview = reviewAnswerRelease({
         message: params.message,
@@ -2025,5 +2126,6 @@ export function buildScopedConversationReply(params: ScopedConversationReplyPara
         answerReleaseReview,
         graphAnswerPlan: releasedGraphAnswerPlan,
         graphAnswerCoverage,
+        ...(fullReportAssembly ? { fullReportAssembly: fullReportAssembly.state } : {}),
     };
 }

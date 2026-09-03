@@ -5,6 +5,7 @@ import {
 } from './conversationComposer';
 import type {
     AgentConversationGraphContext,
+    AgentConversationBudget,
     AgentConversationKnowledgePoint,
     AgentConversationMemoryAction,
     AgentConversationMemoryRecord,
@@ -1394,6 +1395,218 @@ describe('conversationComposer', () => {
         expect(reply.answer).toContain('n_1 \\sin(\\theta_1)');
         expect(reply.answer).not.toContain('cross-document marker');
         expect(reply.answerReleaseReview.decision).not.toBe('abstain');
+    });
+
+    test('full report uses the injected max-tier budget instead of the legacy 24k cap', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_adaptive_max_report',
+                documentId: 'doc_adaptive_max_report',
+                sourcePath: 'Knowledge_Base/test/adaptive-max-report.md',
+                title: 'Adaptive Max Report',
+                content: 'Adaptive max report content.',
+            },
+            evidence: {
+                id: 'evidence_adaptive_max_report',
+                snippet: 'Adaptive max report content.',
+                startLine: 2,
+                endLine: 2,
+            },
+            score: 0.99,
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const largeSections = Array.from({ length: 18 }, (_, index) => ({
+            fragmentId: `adaptive_section_${index}`,
+            role: 'parent_context' as const,
+            text: `## Section ${index}\n\n${`Section ${index} preserves complete technical evidence. `.repeat(160)}`,
+            atomId: item.atom.id,
+            documentId: item.atom.documentId,
+            sourcePath: item.atom.sourcePath,
+            title: `Section ${index}`,
+            headingPath: ['Adaptive Max Report', `Section ${index}`],
+            startLine: index * 10 + 1,
+            endLine: index * 10 + 8,
+            charCount: 0,
+            tokenEstimate: 0,
+            truncated: false,
+            citationIds: ['evidence_adaptive_max_report'],
+            sourceBoundary: 'full_document' as const,
+        })).map((fragment) => ({
+            ...fragment,
+            charCount: fragment.text.length,
+            tokenEstimate: Math.ceil(fragment.text.length / 4),
+        }));
+        const budget: AgentConversationBudget = {
+            mode: 'adaptive',
+            tier: 'max',
+            productCapDisabled: false,
+            rag: {
+                maxFragments: 256,
+                maxCharsPerFragment: 16_000,
+                maxTotalChars: 256_000,
+            },
+            reportMaxChars: 160_000,
+            runtimeGovernor: {
+                timeoutMs: 120_000,
+                maxSerializedBytes: 32 * 1024 * 1024,
+                maxFragmentsProcessed: 2_048,
+                maxReportChars: 160_000,
+            },
+        };
+        const reply = buildScopedConversationReply({
+            message: 'what is adaptive max report?',
+            responseMode: 'full',
+            responseBudget: budget,
+            knowledgePoints,
+            citations: knowledgePoints[0].citations || [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-09-03T00:00:00.000Z',
+            nextBlockId: (() => {
+                let blockCounter = 0;
+                return () => `adaptive_max_block_${++blockCounter}`;
+            })(),
+            ragContextPack: {
+                query: 'what is adaptive max report?',
+                generatedAt: '2026-09-03T00:00:00.000Z',
+                sourceBoundary: 'full_document',
+                budget: budget.rag,
+                fragments: [
+                    {
+                        fragmentId: 'adaptive_definition',
+                        role: 'parent_context',
+                        text: '# Adaptive Max Report\n\nAdaptive max report content.',
+                        atomId: item.atom.id,
+                        documentId: item.atom.documentId,
+                        sourcePath: item.atom.sourcePath,
+                        title: item.atom.title,
+                        headingPath: ['Adaptive Max Report'],
+                        startLine: 1,
+                        endLine: 3,
+                        charCount: 55,
+                        tokenEstimate: 14,
+                        truncated: false,
+                        citationIds: ['evidence_adaptive_max_report'],
+                        sourceBoundary: 'full_document',
+                    },
+                    ...largeSections,
+                ],
+                sourceDecisions: [],
+                totalCharCount: largeSections.reduce((sum, fragment) => sum + fragment.charCount, 55),
+                tokenEstimate: 0,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-09-03T00:00:00.000Z',
+                status: 'sufficient',
+                score: 1,
+                reasons: [],
+                deterministic: true,
+            },
+        });
+
+        expect(reply.answer.length).toBeGreaterThan(24_000);
+        expect(reply.answer.length).toBeLessThanOrEqual(160_000);
+        expect(reply.fullReportAssembly?.truncated).toBe(false);
+    });
+
+    test('unbounded report retains safe sections and reports runtime truncation explicitly', () => {
+        const item = makeQueryItem({
+            atom: {
+                id: 'atom_unbounded_report',
+                documentId: 'doc_unbounded_report',
+                sourcePath: 'Knowledge_Base/test/unbounded-report.md',
+                title: 'Unbounded Report',
+                content: 'Unbounded report content.',
+            },
+            evidence: {
+                id: 'evidence_unbounded_report',
+                snippet: 'Unbounded report content.',
+                startLine: 2,
+                endLine: 2,
+            },
+            score: 0.99,
+        });
+        const knowledgePoints = mergeAgentConversationKnowledgePoints([item], () => []);
+        const makeFragment = (index: number) => ({
+            fragmentId: `unbounded_report_${index}`,
+            role: 'parent_context' as const,
+            text: `## Safe section ${index}\n\nThis section ${index} remains available under product-unbounded mode. ${'Additional bounded evidence. '.repeat(20)}`,
+            atomId: item.atom.id,
+            documentId: item.atom.documentId,
+            sourcePath: item.atom.sourcePath,
+            title: `Safe section ${index}`,
+            headingPath: ['Unbounded Report', `Safe section ${index}`],
+            startLine: index + 1,
+            endLine: index + 4,
+            charCount: 0,
+            tokenEstimate: 0,
+            truncated: false,
+            citationIds: ['evidence_unbounded_report'],
+            sourceBoundary: 'full_document' as const,
+        });
+        const fragments = Array.from({ length: 5 }, (_, index) => {
+            const fragment = makeFragment(index);
+            return { ...fragment, charCount: fragment.text.length, tokenEstimate: Math.ceil(fragment.text.length / 4) };
+        });
+        const budget: AgentConversationBudget = {
+            mode: 'unbounded',
+            tier: 'unbounded',
+            productCapDisabled: true,
+            rag: {
+                maxFragments: 4096,
+                maxCharsPerFragment: 16_000,
+                maxTotalChars: 320_000,
+                productCapDisabled: true,
+                runtimeMaxFragments: 4096,
+                runtimeMaxCharsPerFragment: 16_000,
+                runtimeMaxTotalChars: 64 * 1024 * 1024,
+            },
+            runtimeGovernor: {
+                timeoutMs: 180_000,
+                maxSerializedBytes: 64 * 1024 * 1024,
+                maxFragmentsProcessed: 2,
+                maxReportChars: 320_000,
+            },
+        };
+        const reply = buildScopedConversationReply({
+            message: 'what is unbounded report?',
+            responseMode: 'full',
+            responseBudget: budget,
+            knowledgePoints,
+            citations: knowledgePoints[0].citations || [],
+            recalledMemories: [],
+            memoryActions: [],
+            usedScope: globalScope,
+            generatedAt: '2026-09-03T00:00:00.000Z',
+            nextBlockId: (() => {
+                let blockCounter = 0;
+                return () => `unbounded_block_${++blockCounter}`;
+            })(),
+            ragContextPack: {
+                query: 'what is unbounded report?',
+                generatedAt: '2026-09-03T00:00:00.000Z',
+                sourceBoundary: 'full_document',
+                budget: budget.rag,
+                fragments,
+                sourceDecisions: [],
+                totalCharCount: fragments.reduce((sum, fragment) => sum + fragment.charCount, 0),
+                tokenEstimate: 0,
+            },
+            ragSufficiencyReview: {
+                reviewedAt: '2026-09-03T00:00:00.000Z',
+                status: 'sufficient',
+                score: 1,
+                reasons: [],
+                deterministic: true,
+            },
+        });
+
+        expect(reply.answer).toContain('Safe section 0');
+        expect(reply.answer).toContain('Safe section 1');
+        expect(reply.answer).not.toContain('Safe section 2');
+        expect(reply.fullReportAssembly?.truncated).toBe(true);
+        expect(reply.fullReportAssembly?.truncationReason).toBe('runtime_fragment_limit');
     });
 
     test('keeps decimal numeric evidence intact in RAG public answers', () => {

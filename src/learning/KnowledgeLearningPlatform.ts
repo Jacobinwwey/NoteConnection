@@ -6,11 +6,13 @@ import { projectAnswerForMobile } from './mobileAnswerProjection';
 import type {
     AgentConversationAnswerClaimCitation,
     AgentConversationAssistantBlock,
+    AgentConversationBudget,
     AgentConversationInvocationRecord,
     AgentConversationKnowledgePoint,
     AgentConversationMemoryAction,
     AgentConversationMemoryRecord,
     AgentConversationRequest,
+    AgentConversationResponseBudgetCapability,
     AgentConversationResponseMode,
     AgentConversationResponse,
     AgentConversationSessionRecord,
@@ -157,6 +159,7 @@ import {
 } from './evidenceContextAssembler';
 import { reviewRagContextSufficiency, type RagSufficiencyLlmJudge } from './ragSufficiencyJudge';
 import { deriveKnowledgeTargetLookupQueries } from './workspaceHydration';
+import { resolveAgentResponseBudget } from './agentResponseBudget';
 
 type ParsedAtomDraft = {
     stableKey: string;
@@ -412,6 +415,7 @@ export type KnowledgeLearningPlatformOptions = {
     studySessionOrchestrationMemorySignalConfig?: Record<string, number>;
     studySessionOrchestrationTutorRoutingConfig?: Record<string, unknown>;
     ragSufficiencyLlmJudge?: RagSufficiencyLlmJudge;
+    responseBudgetCapability?: AgentConversationResponseBudgetCapability;
 }
 
 const STOPWORDS = new Set<string>([
@@ -584,11 +588,14 @@ function tokenize(text: string): string[] {
 function resolveAgentRagEvidenceProfile(
     message: string,
     expansionPolicy: GraphExpansionPolicy,
-    responseMode: AgentConversationResponseMode = 'slim'
+    responseMode: AgentConversationResponseMode = 'slim',
+    responseBudget?: AgentConversationBudget
 ): AgentRagEvidenceProfile {
     if (responseMode === 'full') {
         return {
-            budget: { ...AGENT_RAG_FULL_CONTEXT_BUDGET },
+            budget: responseBudget?.rag
+                ? { ...responseBudget.rag }
+                : { ...AGENT_RAG_FULL_CONTEXT_BUDGET },
             graphNeighborLimit: AGENT_RAG_DEEP_GRAPH_NEIGHBOR_LIMIT,
             paragraphWindow: 20,
         };
@@ -743,6 +750,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private readonly ragSufficiencyLlmJudge: RagSufficiencyLlmJudge | null;
 
+    private readonly responseBudgetCapability: AgentConversationResponseBudgetCapability | undefined;
+
     private currentGraphQueryBackendType: GraphQueryBackendType;
 
     private graphQueryBackend: GraphQueryBackend;
@@ -788,6 +797,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             this.studySessionOrchestrationMemorySignalConfig = {};
             this.studySessionOrchestrationTutorRoutingConfig = {};
             this.ragSufficiencyLlmJudge = null;
+            this.responseBudgetCapability = undefined;
             this.currentGraphQueryBackendType = 'local_hybrid';
             this.graphQueryBackendFactoryOptions = {
                 backend: this.currentGraphQueryBackendType,
@@ -828,6 +838,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         this.ragSufficiencyLlmJudge = typeof nowProviderOrOptions.ragSufficiencyLlmJudge === 'function'
             ? nowProviderOrOptions.ragSufficiencyLlmJudge
             : null;
+        this.responseBudgetCapability = nowProviderOrOptions.responseBudgetCapability
+            ? { ...nowProviderOrOptions.responseBudgetCapability }
+            : undefined;
         const inferredBackendType = normalizeGraphQueryBackendType(
             nowProviderOrOptions.graphQueryBackendFactoryOptions?.backend
             || this.inferGraphQueryBackendTypeFromId(nowProviderOrOptions.graphQueryBackend?.id)
@@ -10369,6 +10382,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const effectiveResponseMode: AgentConversationResponseMode = responseProfile === 'mobile_compact'
             ? 'slim'
             : responseMode;
+        const responseBudget = resolveAgentResponseBudget({
+            responseMode: effectiveResponseMode,
+            responseBudgetMode: request.responseBudgetMode,
+            capability: request.responseBudgetCapability || this.responseBudgetCapability,
+            mobile: responseProfile === 'mobile_compact',
+        });
         const requestedTopK = Math.floor(Number(request.topK) || 6);
         const topK = clamp(
             Math.max(requestedTopK, effectiveResponseMode === 'full' ? 12 : 1),
@@ -10486,7 +10505,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         const ragEvidenceProfile = resolveAgentRagEvidenceProfile(
             message,
             graphExpansionPolicy,
-            effectiveResponseMode
+            effectiveResponseMode,
+            responseBudget
         );
         const graphNeighborItems = this.buildRagGraphNeighborQueryItems(
             graphContext,
@@ -10535,8 +10555,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 graphContext,
                 graphAnswerPlan: preRagGraphAnswerPlan,
                 generatedAt,
-                budget: AGENT_RAG_RECOVERY_CONTEXT_BUDGET,
-                paragraphWindow: AGENT_RAG_RECOVERY_PARAGRAPH_WINDOW,
+                budget: effectiveResponseMode === 'full' && responseBudget.rag
+                    ? { ...responseBudget.rag }
+                    : AGENT_RAG_RECOVERY_CONTEXT_BUDGET,
+                paragraphWindow: effectiveResponseMode === 'full'
+                    ? 20
+                    : AGENT_RAG_RECOVERY_PARAGRAPH_WINDOW,
             });
             ragRecovery = this.buildRagEvidenceRecoveryTrace({
                 beforePack: ragContextPack,
@@ -10571,6 +10595,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             message,
             answerLanguage,
             responseMode: effectiveResponseMode,
+            responseBudget,
             knowledgePoints: conversationKnowledgePoints,
             citations,
             recalledMemories,
@@ -10602,6 +10627,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             answer: reply.answer,
             responseMode: effectiveResponseMode,
             ...(responseProfile ? { responseProfile } : {}),
+            responseBudget,
             answerReleaseReview: reply.answerReleaseReview,
             graphAnswerPlan: reply.graphAnswerPlan,
             graphAnswerCoverage: reply.graphAnswerCoverage,
@@ -10623,6 +10649,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 queryEvidenceCoverageRatioPct: Number(
                     (Number(queryResult.trace?.evidenceCoverageRatio || 0) * 100).toFixed(2)
                 ),
+                responseBudgetMode: responseBudget.mode,
+                responseBudgetTier: responseBudget.tier,
+                responseTruncated: reply.fullReportAssembly?.truncated,
+                responseTruncationReason: reply.fullReportAssembly?.truncationReason,
             },
             trace: {
                 sessionId,
@@ -10650,6 +10680,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 graphAnswerPlan: reply.graphAnswerPlan,
                 graphAnswerCoverage: reply.graphAnswerCoverage,
                 graphExpansion: graphExpansionTrace,
+                responseBudget,
+                responseTruncated: reply.fullReportAssembly?.truncated,
+                responseTruncationReason: reply.fullReportAssembly?.truncationReason,
             },
         };
         if (responseProfile === 'mobile_compact') {
