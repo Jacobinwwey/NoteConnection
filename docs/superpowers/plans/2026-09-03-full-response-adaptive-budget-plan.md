@@ -37,12 +37,12 @@
 - Add optional `responseBudgetMode` and `responseBudgetCapability` to `AgentConversationRequest`.
 - Add effective budget and truncation fields to `AgentConversationTrace` and response summary.
 
-- [ ] Write normalization tests for `adaptive`, `unbounded`, aliases `no_cap`/`unbounded`, unknown values, and mobile-profile coexistence.
-- [ ] Run `npm test -- --runInBand src/learning/requestNormalization.test.ts` and verify the new cases fail before implementation.
-- [ ] Implement one normalization function that accepts camelCase and snake_case keys and returns `adaptive` for unknown values.
-- [ ] Validate capability fields at the edge: `memoryClass` (`low|standard|high`), `workload` (`normal|large|max`), and optional numeric hints; reject non-finite/negative values by omission.
-- [ ] Run the focused suite and verify all cases pass.
-- [ ] Commit as `feat(agent-workspace): add adaptive budget request contract`.
+- [x] Write normalization tests for `adaptive`, `unbounded`, aliases `no_cap`/`unbounded`, unknown values, and mobile-profile coexistence.
+- [x] Run `npm test -- --runInBand src/learning/requestNormalization.test.ts` and verify the new cases fail before implementation.
+- [x] Implement one normalization function that accepts camelCase and snake_case keys and returns `adaptive` for unknown values.
+- [x] Validate capability fields at the edge: `memoryClass` (`low|standard|high`), `workload` (`normal|large|max`), and optional numeric hints; reject non-finite/negative values by omission.
+- [x] Run the focused suite and verify all cases pass.
+- [x] Commit as `feat(agent-workspace): add adaptive budget request contract`.
 
 ### Task 2: Implement a pure adaptive budget resolver
 
@@ -55,11 +55,11 @@
 - Export `resolveAgentResponseBudget(input)` accepting `{ responseMode, responseBudgetMode, capability, mobile }` and returning `AgentConversationBudget`.
 - Export `applyRuntimeGovernor(input)` for deterministic byte/time checks used by JSON/report assembly tests.
 
-- [ ] Add table-driven tests proving adaptive selection: missing/invalid capability -> standard; standard workload -> standard; large workload/high memory -> extended; max workload/high memory -> max; explicit unbounded -> unbounded; mobile -> slim-compatible standard runtime projection.
-- [ ] Add tests proving client numeric hints never exceed max and cannot alter a tier directly.
-- [ ] Implement pure selection with no `os`, filesystem, or browser globals.
-- [ ] Implement unbounded runtime defaults as host-safe governor fields (timeout, max serialized bytes, max fragments processed) while leaving product limits unset.
-- [ ] Run the new suite and commit as `feat(agent-workspace): resolve adaptive response budgets`.
+- [x] Add table-driven tests proving adaptive selection: missing/invalid capability -> standard; standard workload -> standard; large workload/high memory -> extended; max workload/high memory -> max; explicit unbounded -> unbounded; mobile -> slim-compatible standard runtime projection.
+- [x] Add tests proving client numeric hints never exceed max and cannot alter a tier directly.
+- [x] Implement pure selection with no `os`, filesystem, or browser globals.
+- [x] Implement unbounded runtime defaults as host-safe governor fields (timeout, max serialized bytes, max fragments processed) while leaving product limits unset.
+- [x] Run the new suite and commit as `feat(agent-workspace): resolve adaptive response budgets`.
 
 ### Task 3: Thread host capability into the platform and RAG assembly
 
@@ -76,11 +76,11 @@
 - Pass `AgentConversationBudget.rag` to `assembleReviewedRagEvidenceContext`.
 - Extend `RagContextBudget` with an explicit `productCapDisabled` flag and optional governor metadata; do not use `Infinity` in serialized payloads.
 
-- [ ] Add platform tests for standard/extended/max trace budget values and mobile forced slim behavior.
-- [ ] Add RAG tests proving bounded tiers truncate with existing decision reasons, while unbounded keeps all candidate fragments until the runtime governor reports a stop.
-- [ ] Refactor `normalizeRagContextBudget` to distinguish product caps from governor caps and keep existing default callers unchanged.
-- [ ] Refactor `applyContextBudget` to skip product truncation only when the explicit flag is true and to mark governor truncation distinctly.
-- [ ] Run focused platform/RAG suites and commit as `feat(agent-workspace): thread adaptive budgets through rag`.
+- [x] Add platform tests for standard/extended/max trace budget values and mobile forced slim behavior.
+- [x] Add RAG tests proving bounded tiers truncate with existing decision reasons, while unbounded keeps all candidate fragments until the runtime governor reports a stop.
+- [x] Refactor `normalizeRagContextBudget` to distinguish product caps from governor caps and keep existing default callers unchanged.
+- [x] Refactor `applyContextBudget` to skip product truncation only when the explicit flag is true and to mark governor truncation distinctly.
+- [x] Run focused platform/RAG suites and commit as `feat(agent-workspace): thread adaptive budgets through rag`.
 
 ### Task 4: Make full-report composition budget-aware and observable
 
@@ -94,11 +94,11 @@
 - Replace fixed `FULL_RESPONSE_MAX_CHARS`/`FULL_RESPONSE_MAX_FRAGMENTS` reads with the resolved report budget and runtime governor.
 - Return a report assembly state containing `truncated`, `truncationReason`, and counts; preserve the existing string return through the existing reply object.
 
-- [ ] Add a regression fixture larger than 24,000 characters proving adaptive max report output reaches the configured tier.
-- [ ] Add an unbounded fixture proving all safe sections are retained and no product cap reason is emitted.
-- [ ] Add a forced-governor test proving partial output is returned with explicit truncation metadata and balanced Markdown math.
-- [ ] Implement section selection/deduplication unchanged except for injected limits; preserve Mermaid/prompt filtering, same-document graph-neighbor filtering, delayed headings, and flattened-heading recovery.
-- [ ] Run the composer suite and commit as `feat(agent-workspace): expand full report assembly budgets`.
+- [x] Add a regression fixture larger than 24,000 characters proving adaptive max report output reaches the configured tier.
+- [x] Add an unbounded fixture proving all safe sections are retained and no product cap reason is emitted.
+- [x] Add a forced-governor test proving partial output is returned with explicit truncation metadata and balanced Markdown math.
+- [x] Implement section selection/deduplication unchanged except for injected limits; preserve Mermaid/prompt filtering, same-document graph-neighbor filtering, delayed headings, and flattened-heading recovery.
+- [x] Run the composer suite and commit as `feat(agent-workspace): expand full report assembly budgets`.
 
 ### Task 5: Expose budget metadata across JSON, SSE, replay, and cache identity
 
@@ -114,10 +114,10 @@
 - Ensure `buildMobileAgentConversationResponse` strips desktop budget internals and always reports `responseMode=slim`.
 - Ensure `projectAgentConversationTurnEvent` applies the same projection on live and replayed completion events.
 
-- [ ] Add HTTP tests for adaptive default, explicit unbounded, cache separation, SSE replay separation, and mobile projection.
-- [ ] Add tests that invalid budget modes normalize to adaptive instead of returning arbitrary limits.
-- [ ] Implement typed serialization with finite numeric fields only; omit product-limit fields for unbounded.
-- [ ] Run migration/integration suites and commit as `feat(agent-workspace): expose budget diagnostics and cache isolation`.
+- [x] Add HTTP tests for adaptive default, explicit unbounded, cache separation, SSE replay separation, and mobile projection.
+- [x] Add tests that invalid budget modes normalize to adaptive instead of returning arbitrary limits.
+- [x] Implement typed serialization with finite numeric fields only; omit product-limit fields for unbounded.
+- [x] Run migration/integration suites and commit as `feat(agent-workspace): expose budget diagnostics and cache isolation`.
 
 ### Task 6: Add desktop UI controls and bilingual copy
 
@@ -134,9 +134,9 @@
 - Include `responseBudgetMode` in desktop conversation requests; mobile requests omit it and keep `mobile_compact`.
 - Display effective tier/truncation status from response metadata without exposing internal traces.
 
-- [ ] Add DOM/request tests for selector hydration, persistence, adaptive default, unbounded request, and mobile omission.
-- [ ] Implement the selector with existing localization and control patterns; do not add a boolean flag that changes unrelated functions.
-- [ ] Run frontend contract tests and commit as `feat(agent-workspace): add adaptive budget control`.
+- [x] Add DOM/request tests for selector hydration, persistence, adaptive default, unbounded request, and mobile omission.
+- [x] Implement the selector with existing localization and control patterns; do not add a boolean flag that changes unrelated functions.
+- [x] Run frontend contract tests and commit as `feat(agent-workspace): add adaptive budget control`.
 
 ### Task 7: Expand runtime/browser verifiers and bilingual progress docs
 
@@ -146,23 +146,23 @@
 - Modify: `docs/diataxis/en/explanation/development-progress-dashboard.md`
 - Modify: `docs/diataxis/zh/explanation/development-progress-dashboard.md`
 
-- [ ] Add verifier arguments `--response-budget adaptive|unbounded` and assertions for effective tier, report length, balanced math, no Mermaid/prompt leakage, and explicit governor truncation.
-- [ ] Run fixture browser probes for adaptive and unbounded, then run real `waterglass` full probes in Chromium.
-- [ ] Record actual counts/lengths and the fact that mobile remains slim in both language documents.
-- [ ] Run Diátaxis/docs checks and commit as `docs(agent-workspace): document adaptive full response verification`.
+- [x] Add verifier arguments `--response-budget adaptive|unbounded` and assertions for effective tier, report length, balanced math, no Mermaid/prompt leakage, and explicit governor truncation.
+- [x] Run fixture browser probes for adaptive and unbounded, then run real `waterglass` full probes in Chromium.
+- [x] Record actual counts/lengths and the fact that mobile remains slim in both language documents.
+- [x] Run Diátaxis/docs checks and commit as `docs(agent-workspace): document adaptive full response verification`.
 
 ### Task 8: Full verification, CI, and clean main
 
 **Files:**
 - No source changes expected unless a verification regression is found.
 
-- [ ] Run `npm test -- --runInBand` and require zero failed suites.
-- [ ] Run `npm run build:with-vite` and require exit code 0.
-- [ ] Run `npm run test:gates` or the exact local gate subset available on the host.
-- [ ] Verify desktop adaptive/unbounded browser probes and mobile projection/package budget.
-- [ ] Inspect `git diff`, commit all implementation/documentation changes with Conventional Commit messages, and push `main`.
-- [ ] Poll every workflow for the pushed commit; only report completion after all required CI checks are successful.
-- [ ] Confirm `git status --short --branch` reports `main...origin/main` with no worktree changes.
+- [x] Run `npm test -- --runInBand` and require zero failed suites.
+- [x] Run `npm run build:with-vite` and require exit code 0.
+- [x] Run `npm run test:gates` or the exact local gate subset available on the host.
+- [x] Verify desktop adaptive/unbounded browser probes and mobile projection/package budget.
+- [x] Inspect `git diff`, commit all implementation/documentation changes with Conventional Commit messages, and push `main`.
+- [x] Poll every workflow for the pushed commit; only report completion after all required CI checks are successful.
+- [x] Confirm `git status --short --branch` reports `main...origin/main` with no worktree changes.
 
 ## 中文
 
