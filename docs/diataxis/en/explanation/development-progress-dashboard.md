@@ -13,6 +13,8 @@ The mobile boundary is unchanged and enforced before budget selection: `response
 
 Fresh verification after rebuilding `dist`: full Jest and Agent Workspace contracts remain green; adaptive and unbounded fixture browser probes passed; real `waterglass` full adaptive and unbounded Chromium probes each produced `5,425` DOM characters, `5,265` released-answer characters, `86` KaTeX nodes, balanced math, no Mermaid/prompt leakage, and explicit trace tiers (`standard` and `unbounded`).
 
+The response serialization boundary is now governed by the same finite runtime budget. Oversized JSON, HTTP envelopes, and completed SSE events are compacted to a bounded answer while retaining identity, effective budget, and an explicit `runtime_serialized_bytes_limit` state. A dedicated regression suite covers unchanged under-budget responses, balanced-math compaction, HTTP envelopes, and SSE completion payloads. The current full verification totals are `158` Jest suites, `1,414` passed tests, and `26` skipped tests.
+
 ## 2026-09-03 Slim/Full Response Modes and Same-Document RAG Fallback
 
 The Agent Workspace now exposes an additive `responseMode` contract. `slim` remains the default and preserves the existing bounded answer shape; the request boundary also accepts `definition`/`compact` as slim aliases and `comprehensive`/`report` as full aliases. The desktop selector persists `slim` or `full` in local storage and sends the selected mode through JSON and SSE. The turn-cache fingerprint includes the normalized mode, so a replay cannot reuse a slim answer for a full request or vice versa.

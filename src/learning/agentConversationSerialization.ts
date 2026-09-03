@@ -15,7 +15,8 @@ function byteLength(value: string): number {
 }
 
 function countUnescaped(value: string, token: string): number {
-    return (String(value || '').match(new RegExp(`(?<!\\\\)${token}`, 'gu')) || []).length;
+    const escapedToken = String(token || '').replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    return (String(value || '').match(new RegExp(`(?<!\\\\)${escapedToken}`, 'gu')) || []).length;
 }
 
 function clipBalancedMarkdown(value: string, maxChars: number): string {

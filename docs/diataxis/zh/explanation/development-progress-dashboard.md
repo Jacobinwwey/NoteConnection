@@ -10,6 +10,8 @@
 
 重建 `dist` 后的新鲜验证已通过：完整 Jest 与 Agent Workspace contract 继续通过；adaptive 与 unbounded fixture 浏览器探针通过；真实 `waterglass` full adaptive 与 unbounded Chromium 探针均得到 DOM `5,425` 字符、released answer `5,265` 字符、`86` 个 KaTeX 节点，数学公式成对且无 Mermaid/prompt 泄漏，trace 档位分别为 `standard` 与 `unbounded`。
 
+响应序列化边界现在使用同一套有限运行时预算。超大的 JSON、HTTP envelope 和已完成 SSE 事件会被压缩为有界回答，同时保留身份、effective budget 以及明确的 `runtime_serialized_bytes_limit` 状态。专用回归套件覆盖预算内响应不变、数学块成对压缩、HTTP envelope 与 SSE 完成事件。目前 full 验证总量为 `158` 个 Jest suite、`1,414` 个通过、`26` 个跳过。
+
 ## 2026-09-03 Slim/Full 回答模式与同文档 RAG 回退
 
 Agent Workspace 现在提供 additive 的 `responseMode` 契约。`slim` 仍是默认值并保持现有有界回答形状；请求边界同时接受 `definition`/`compact` 作为 slim 别名，以及 `comprehensive`/`report` 作为 full 别名。桌面选择器会在 local storage 持久化 `slim` 或 `full`，并通过 JSON 与 SSE 发送。turn-cache 指纹包含归一化后的 mode，因此 slim 请求不能复用 full 结果，反之亦然。
