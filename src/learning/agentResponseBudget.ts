@@ -61,7 +61,7 @@ function createProductBudgetDefinition(
             productCapDisabled: false,
             runtimeMaxFragments: runtimeGovernor.maxFragmentsProcessed,
             runtimeMaxCharsPerFragment: maxCharsPerFragment,
-            runtimeMaxTotalChars: runtimeGovernor.maxSerializedBytes,
+            runtimeMaxTotalChars: reportMaxChars,
         }),
         reportMaxChars,
         runtimeGovernor,
@@ -193,7 +193,7 @@ export function resolveAgentResponseBudget(input: ResolveAgentResponseBudgetInpu
                 maxTotalChars: AGENT_RESPONSE_UNBOUNDED_RUNTIME_GOVERNOR.maxReportChars,
                 runtimeMaxFragments: UNBOUNDED_RUNTIME_GOVERNOR.maxFragmentsProcessed,
                 runtimeMaxCharsPerFragment: AGENT_RESPONSE_BUDGET_TIERS.max.rag.maxCharsPerFragment,
-                runtimeMaxTotalChars: UNBOUNDED_RUNTIME_GOVERNOR.maxSerializedBytes,
+                runtimeMaxTotalChars: UNBOUNDED_RUNTIME_GOVERNOR.maxReportChars,
             }, true),
             runtimeGovernor: cloneRuntimeGovernor(UNBOUNDED_RUNTIME_GOVERNOR),
         };
