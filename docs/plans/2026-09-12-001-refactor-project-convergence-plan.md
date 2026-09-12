@@ -96,6 +96,8 @@ Keep the existing full-document evidence contract honest: either finish the admi
 
 ### U3 — complete wire-size accounting and bounded SSE delivery
 
+Implementation checkpoint: bounded JSON measurement precedes serialization; one released projection reserves complete framing for HTTP/SSE/replay, preserves bounded citations and clears obsolete coverage. The stream writer bounds bytes/event count and handles drain/close/error/timeout. Cached turns share cancellation and stop when their final consumer leaves; source hydration now shares the turn deadline/accounting. Transport/platform/NoteMD/frontend runtime tests pass 80 tests; seven targeted HTTP conversation cases pass, including a real disconnect with failure replay. Restored migration tests exposed pre-existing registry interception defects, tracked in U5.
+
 - [ ] **U3 / P1 — close F3; R2, R3**
 
 **Owner/files:** `src/learning/agentConversationSerialization.ts`, `src/server.ts`. Tests: `src/learning/agentConversationSerialization.test.ts`, `src/notemd.server.integration.test.ts`, `src/agent_workspace.runtime.behavior.test.ts`.
@@ -288,6 +290,8 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 **验收：**timeout 被生产路径实际消费；response/trace 的 stop reason 一致。提升前必须记录各宿主的有限单源字节、累计读取字节、准入并发 turn 和 cancellation latency 上限，并以 peak allocation 实测支撑；数值属于实施期校准，不由浏览器选择。依赖：会写 memory 的 turn 依赖 U1；纯预算/读取测试可先做。
 
 ### U3：完整 wire-size 计量与有界 SSE delivery
+
+实现检查点：JSON 在序列化前有界计量；HTTP/SSE/replay 使用预留完整封装的同一发布 projection，保留有界引用并清除失效覆盖声明。stream writer 限制字节/事件数量，处理 drain/close/error/timeout。缓存回合共享取消状态，最后一个消费者离开时停止；源 hydration 已共享回合 deadline/计量。transport/platform/NoteMD/frontend runtime 合计 80 项通过；七项 HTTP conversation 定向用例通过，包括真实断连与失败重放。恢复 migration 测试后发现原有 registry 抢先处理缺陷，继续在 U5 修复。
 
 - [ ] **U3 / P1 — 关闭 F3；R2、R3**
 

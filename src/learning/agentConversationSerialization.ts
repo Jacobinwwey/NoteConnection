@@ -1,7 +1,5 @@
-import type {
-    AgentConversationResponse,
-    AgentConversationTurnEvent,
-} from './types';
+import type { AgentConversationResponse, AgentConversationTurnEvent, KnowledgeCitation } from './types';
+import { projectAnswerForMobile } from './mobileAnswerProjection';
 
 export type AgentConversationSerializationResult = {
     json: string;
@@ -10,41 +8,132 @@ export type AgentConversationSerializationResult = {
     reason?: 'runtime_serialized_bytes_limit';
 };
 
-function byteLength(value: string): number {
-    return Buffer.byteLength(String(value || ''), 'utf8');
+const TRUNCATION_REASON = 'runtime_serialized_bytes_limit';
+// Covers a completed event, its validated 160-byte turn ID, timestamp and SSE framing.
+// Every transport reserves the same space to release the same answer.
+const TURN_WIRE_RESERVE_BYTES = 288;
+const DEFAULT_WIRE_LIMIT = 8 * 1024 * 1024;
+const MAX_RELEASE_CITATIONS = 64;
+const MAX_RELEASE_CLAIMS = 128;
+
+export class AgentConversationSerializationError extends Error {
+    readonly code = TRUNCATION_REASON;
+    readonly statusCode = 413;
+    constructor() { super(TRUNCATION_REASON); }
+}
+
+/** Exact for JSON data; stops before allocating a serialized copy of an oversized response. */
+export function measureJsonBytes(value: unknown, limit: number): number {
+    let bytes = 0;
+    const ancestors = new Set<object>();
+    const stringBytes = (text: string): void => {
+        bytes += 2;
+        for (let i = 0; i < text.length && bytes <= limit; i++) {
+            const code = text.charCodeAt(i);
+            if (code === 34 || code === 92 || code === 8 || code === 9 || code === 10 || code === 12 || code === 13) bytes += 2;
+            else if (code < 32) bytes += 6;
+            else if (code < 128) bytes++;
+            else if (code < 2048) bytes += 2;
+            else if (code >= 0xd800 && code <= 0xdbff) {
+                const next = text.charCodeAt(i + 1);
+                if (next >= 0xdc00 && next <= 0xdfff) { bytes += 4; i++; }
+                else bytes += 6;
+            } else if (code >= 0xdc00 && code <= 0xdfff) bytes += 6;
+            else bytes += 3;
+        }
+    };
+    const visit = (item: unknown, depth: number): void => {
+        if (bytes > limit) return;
+        if (item === null || item === undefined || typeof item === 'function' || typeof item === 'symbol') { bytes += 4; return; }
+        if (typeof item === 'string') { stringBytes(item); return; }
+        if (typeof item === 'boolean') { bytes += item ? 4 : 5; return; }
+        if (typeof item === 'number') { bytes += Number.isFinite(item) ? String(item).length : 4; return; }
+        if (typeof item !== 'object') throw new TypeError('Conversation responses must contain JSON data');
+        if (ancestors.has(item) || depth > 64) throw new TypeError('Cyclic or excessively nested conversation response');
+        if (typeof (item as { toJSON?: unknown }).toJSON === 'function') throw new TypeError('Conversation responses must contain plain JSON data');
+        ancestors.add(item);
+        bytes += 2;
+        if (Array.isArray(item)) {
+            for (let i = 0; i < item.length && bytes <= limit; i++) {
+                if (i) bytes++;
+                visit(item[i], depth + 1);
+            }
+        } else {
+            let first = true;
+            for (const key in item) {
+                if (bytes > limit) break;
+                if (!Object.prototype.hasOwnProperty.call(item, key)) continue;
+                const child = (item as Record<string, unknown>)[key];
+                if (child === undefined || typeof child === 'function' || typeof child === 'symbol') continue;
+                if (!first) bytes++;
+                first = false;
+                stringBytes(key);
+                bytes++;
+                visit(child, depth + 1);
+            }
+        }
+        ancestors.delete(item);
+    };
+    visit(value, 0);
+    return bytes;
+}
+
+function wireLimit(result: AgentConversationResponse): number {
+    const requested = Number(result.responseBudget?.runtimeGovernor.maxSerializedBytes);
+    return Number.isFinite(requested) && requested > 0 ? Math.floor(requested) : DEFAULT_WIRE_LIMIT;
 }
 
 function countUnescaped(value: string, token: string): number {
-    const escapedToken = String(token || '').replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-    return (String(value || '').match(new RegExp(`(?<!\\\\)${escapedToken}`, 'gu')) || []).length;
+    const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    return (value.match(new RegExp(`(?<!\\\\)${escapedToken}`, 'gu')) || []).length;
 }
 
-function clipBalancedMarkdown(value: string, maxChars: number): string {
-    const source = String(value || '');
-    if (source.length <= maxChars) {
-        return source;
-    }
+function clipBalancedMarkdown(source: string, maxChars: number): string {
+    if (source.length <= maxChars) return source;
     const marker = '\n\n[Response truncated by runtime safety governor.]';
-    const available = Math.max(64, maxChars - marker.length);
-    let clipped = source.slice(0, available).trimEnd();
-    if (countUnescaped(clipped, '\$\$') % 2 !== 0) {
-        clipped = clipped.slice(0, clipped.lastIndexOf('$$')).trimEnd();
+    if (maxChars < marker.length) return '';
+    let clipped = source.slice(0, maxChars - marker.length).trimEnd();
+    // Keep whole claims when possible, and never leave an unterminated code/math block.
+    const boundary = Math.max(clipped.lastIndexOf('\n\n'), clipped.lastIndexOf('. '), clipped.lastIndexOf('。'));
+    if (boundary >= clipped.length / 2) clipped = clipped.slice(0, boundary + (clipped[boundary] === '\n' ? 0 : 1)).trimEnd();
+    const fences = [...clipped.matchAll(/^\s*(`{3,}|~{3,}).*$/gm)];
+    let openFence: { marker: string; index: number } | undefined;
+    for (const fence of fences) {
+        if (!openFence) openFence = { marker: fence[1], index: fence.index! };
+        else if (fence[1][0] === openFence.marker[0] && fence[1].length >= openFence.marker.length) openFence = undefined;
     }
-    const withoutDisplayMath = clipped.replace(/(?<!\\)\$\$/gu, '');
-    if (countUnescaped(withoutDisplayMath, '\$') % 2 !== 0) {
-        clipped = clipped.slice(0, clipped.lastIndexOf('$')).trimEnd();
-    }
-    return `${clipped}${marker}`.slice(0, maxChars).trimEnd();
+    if (openFence) clipped = clipped.slice(0, openFence.index).trimEnd();
+    if (countUnescaped(clipped, '$$') % 2) clipped = clipped.slice(0, clipped.lastIndexOf('$$')).trimEnd();
+    if (countUnescaped(clipped.replace(/(?<!\\)\$\$/gu, ''), '$') % 2) clipped = clipped.slice(0, clipped.lastIndexOf('$')).trimEnd();
+    if (countUnescaped(clipped.replace(/^\s*`{3,}.*$/gm, ''), '`') % 2) clipped = clipped.slice(0, clipped.lastIndexOf('`')).trimEnd();
+    if (clipped.lastIndexOf('[') > clipped.lastIndexOf(']')) clipped = clipped.slice(0, clipped.lastIndexOf('[')).trimEnd();
+    if (/[\ud800-\udbff]$/.test(clipped)) clipped = clipped.slice(0, -1);
+    return `${clipped}${marker}`.trim();
 }
 
 function compactResponse(result: AgentConversationResponse, answerMaxChars: number): AgentConversationResponse {
-    const answer = clipBalancedMarkdown(result.answer, answerMaxChars);
-    const summary = {
-        ...result.summary,
-        responseTruncated: true,
-        responseTruncationReason: 'runtime_serialized_bytes_limit',
-    };
-    return {
+    const sourceCitations = result.citations || [];
+    const sourceClaims = result.trace?.answerClaimCitations || [];
+    let answer = clipBalancedMarkdown(result.answer || '', answerMaxChars);
+    // Oversized metadata must not leave a retained claim with a dangling citation.
+    const boundedEvidence = sourceCitations.length <= MAX_RELEASE_CITATIONS && sourceClaims.length <= MAX_RELEASE_CLAIMS;
+    const citations: KnowledgeCitation[] = boundedEvidence ? sourceCitations.map(citation => ({
+        citationId: citation.citationId, atomId: citation.atomId, documentId: citation.documentId,
+        sourcePath: citation.sourcePath, title: citation.title,
+        snippet: citation.snippet.length > 1024 ? `${citation.snippet.slice(0, 1021)}...` : citation.snippet,
+        startOffset: citation.startOffset, endOffset: citation.endOffset, startLine: citation.startLine, endLine: citation.endLine,
+        score: citation.score,
+    })) : [];
+    const citationIds = new Set(citations.map(citation => citation.citationId));
+    const claims = boundedEvidence ? sourceClaims.filter(claim => answer.includes(claim.text)) : [];
+    const claimsSupported = claims.every(claim => claim.citationIds.length <= MAX_RELEASE_CITATIONS
+        && claim.citationIds.every(id => citationIds.has(id)));
+    if (!boundedEvidence || !claimsSupported) {
+        answer = clipBalancedMarkdown('[Response truncated by runtime safety governor. Narrow the request to retain its evidence.]', answerMaxChars);
+        citations.length = 0;
+        claims.length = 0;
+    }
+    const compact: AgentConversationResponse = {
         userId: result.userId,
         sessionId: result.sessionId,
         assistantMessage: answer,
@@ -52,187 +141,84 @@ function compactResponse(result: AgentConversationResponse, answerMaxChars: numb
         responseMode: result.responseMode,
         ...(result.responseProfile ? { responseProfile: result.responseProfile } : {}),
         ...(result.responseBudget ? { responseBudget: result.responseBudget } : {}),
-        assistantBlocks: [],
-        knowledgePoints: [],
-        citations: [],
-        recalledMemories: [],
-        memoryActions: [],
-        summary,
-        trace: {
-            sessionId: result.trace.sessionId,
-            invocationId: result.trace.invocationId,
-            retrieval: {} as AgentConversationResponse['trace']['retrieval'],
-            recalledMemoryCount: 0,
-            appliedMemoryCount: 0,
-            usedScope: {
-                source: result.trace.usedScope.source,
-                workspaceId: result.trace.usedScope.workspaceId,
-                corpusId: result.trace.usedScope.corpusId,
-                documentIds: [],
-                atomIds: [],
-                sourcePathPrefixes: [],
-                languages: [],
-                matchedAtomCount: result.trace.usedScope.matchedAtomCount,
-            },
-            responseBudget: result.responseBudget
-                ? {
-                    mode: result.responseBudget.mode,
-                    tier: result.responseBudget.tier,
-                    productCapDisabled: result.responseBudget.productCapDisabled,
-                    rag: {
-                        maxFragments: result.responseBudget.rag.maxFragments,
-                        maxCharsPerFragment: result.responseBudget.rag.maxCharsPerFragment,
-                        maxTotalChars: result.responseBudget.rag.maxTotalChars,
-                        ...(result.responseBudget.rag.productCapDisabled
-                            ? { productCapDisabled: true }
-                            : {}),
-                    },
-                    runtimeGovernor: result.responseBudget.runtimeGovernor,
-                    ...(result.responseBudget.reportMaxChars !== undefined
-                        ? { reportMaxChars: result.responseBudget.reportMaxChars }
-                        : {}),
-                }
-                : undefined,
-            responseTruncated: true,
-            responseTruncationReason: 'runtime_serialized_bytes_limit',
-        },
-    };
-}
-
-function compactResultToBudget(
-    result: AgentConversationResponse,
-    maxBytes: number
-): AgentConversationSerializationResult {
-    const governorMaxChars = Number(result.responseBudget?.runtimeGovernor.maxReportChars || 320_000);
-    let lower = 0;
-    let upper = Math.min(32_000, governorMaxChars);
-    let best = compactResponse(result, 0);
-    let bestJson = JSON.stringify(best);
-    while (lower <= upper) {
-        const answerMaxChars = Math.floor((lower + upper) / 2);
-        const compact = compactResponse(result, answerMaxChars);
-        const json = JSON.stringify(compact);
-        if (byteLength(json) <= maxBytes) {
-            best = compact;
-            bestJson = json;
-            lower = answerMaxChars + 1;
-        } else {
-            upper = answerMaxChars - 1;
-        }
-    }
-    if (byteLength(bestJson) <= maxBytes) {
-        return {
-            json: bestJson,
-            result: best,
-            truncated: true,
-            reason: 'runtime_serialized_bytes_limit',
-        };
-    }
-    const minimal = {
-        userId: result.userId,
-        sessionId: result.sessionId,
-        assistantMessage: '',
-        answer: '',
-        responseMode: result.responseMode,
-        ...(result.responseProfile ? { responseProfile: result.responseProfile } : {}),
+        assistantBlocks: [], knowledgePoints: [], citations, recalledMemories: [], memoryActions: [],
         summary: {
             generatedAt: result.summary.generatedAt,
             topK: result.summary.topK,
             returnedKnowledgePoints: 0,
-            returnedCitations: 0,
+            returnedCitations: citations.length,
             recalledMemoryCount: 0,
             appliedMemoryCount: 0,
-            queryEvidenceCoverageRatioPct: result.summary.queryEvidenceCoverageRatioPct,
-        responseTruncated: true,
-        responseTruncationReason: 'runtime_serialized_bytes_limit' as const,
+            queryEvidenceCoverageRatioPct: citations.length ? result.summary.queryEvidenceCoverageRatioPct : 0,
+            responseTruncated: true,
+            responseTruncationReason: TRUNCATION_REASON,
         },
         trace: {
             sessionId: result.sessionId,
-            invocationId: result.trace.invocationId,
+            invocationId: result.trace?.invocationId || '',
             retrieval: {} as AgentConversationResponse['trace']['retrieval'],
             recalledMemoryCount: 0,
             appliedMemoryCount: 0,
-            usedScope: result.trace.usedScope,
+            usedScope: {
+                source: result.trace?.usedScope?.source || 'global',
+                workspaceId: result.trace?.usedScope?.workspaceId || null,
+                corpusId: result.trace?.usedScope?.corpusId || null,
+                documentIds: [], atomIds: [], sourcePathPrefixes: [], languages: [],
+                matchedAtomCount: result.trace?.usedScope?.matchedAtomCount || 0,
+            },
+            ...(claims.length ? { answerClaimCitations: claims } : {}),
             responseTruncated: true,
-            responseTruncationReason: 'runtime_serialized_bytes_limit',
+            responseTruncationReason: TRUNCATION_REASON,
         },
-        assistantBlocks: [],
-        knowledgePoints: [],
-        citations: [],
-        recalledMemories: [],
-        memoryActions: [],
-    } as AgentConversationResponse;
-    const json = JSON.stringify(minimal);
-    return {
-        json,
-        result: minimal,
-        truncated: true,
-        reason: 'runtime_serialized_bytes_limit',
     };
+    if (result.responseProfile === 'mobile_compact') compact.mobileProjection = projectAnswerForMobile(compact);
+    return compact;
 }
 
-export function serializeAgentConversationResponse(
-    result: AgentConversationResponse
-): AgentConversationSerializationResult {
-    const json = JSON.stringify(result);
-    const maxBytes = Number(result.responseBudget?.runtimeGovernor.maxSerializedBytes || 0);
-    if (!Number.isFinite(maxBytes) || maxBytes <= 0 || byteLength(json) <= maxBytes) {
-        return { json, result, truncated: false };
+function releaseWithinBudget(result: AgentConversationResponse, maxBytes: number): AgentConversationSerializationResult {
+    if (measureJsonBytes(result, maxBytes) <= maxBytes) {
+        const truncated = result.summary.responseTruncationReason === TRUNCATION_REASON;
+        return { json: JSON.stringify(result), result, truncated, ...(truncated ? { reason: TRUNCATION_REASON } : {}) };
     }
-    return compactResultToBudget(result, maxBytes);
+    let lower = 0;
+    let upper = Math.min(32_000, result.answer.length, result.responseBudget?.runtimeGovernor.maxReportChars || 32_000);
+    let best = compactResponse(result, 0);
+    if (measureJsonBytes(best, maxBytes) > maxBytes) {
+        // If citations cannot fit, release no scientific claims and no obsolete coverage.
+        best = compactResponse({ ...result, citations: [], answer: '', trace: { ...result.trace, answerClaimCitations: [] } }, 0);
+        delete best.responseBudget;
+        if (measureJsonBytes(best, maxBytes) > maxBytes) throw new AgentConversationSerializationError();
+        return { json: JSON.stringify(best), result: best, truncated: true, reason: TRUNCATION_REASON };
+    }
+    while (lower <= upper) {
+        const chars = Math.floor((lower + upper) / 2);
+        const candidate = compactResponse(result, chars);
+        if (measureJsonBytes(candidate, maxBytes) <= maxBytes) { best = candidate; lower = chars + 1; }
+        else upper = chars - 1;
+    }
+    return { json: JSON.stringify(best), result: best, truncated: true, reason: TRUNCATION_REASON };
 }
 
-export function serializeAgentConversationHttpResponse(
-    result: AgentConversationResponse
-): AgentConversationSerializationResult {
+export function serializeAgentConversationResponse(result: AgentConversationResponse): AgentConversationSerializationResult {
+    return releaseWithinBudget(result, wireLimit(result) - TURN_WIRE_RESERVE_BYTES);
+}
+
+export function serializeAgentConversationHttpResponse(result: AgentConversationResponse): AgentConversationSerializationResult {
     const serialized = serializeAgentConversationResponse(result);
-    const envelope = JSON.stringify({ success: true, result: serialized.result });
-    const maxBytes = Number(serialized.result.responseBudget?.runtimeGovernor.maxSerializedBytes || 0);
-    if (!serialized.truncated && (!Number.isFinite(maxBytes) || maxBytes <= 0 || byteLength(envelope) <= maxBytes)) {
-        return { json: envelope, result, truncated: false };
-    }
-    if (byteLength(envelope) <= maxBytes || maxBytes <= 0) {
-        return { ...serialized, json: envelope };
-    }
-    let compact = compactResultToBudget(serialized.result, Math.max(256, maxBytes - 128));
-    let compactEnvelope = JSON.stringify({ success: true, result: compact.result });
-    if (byteLength(compactEnvelope) > maxBytes) {
-        compact = compactResultToBudget(compact.result, Math.max(128, maxBytes - 256));
-        compactEnvelope = JSON.stringify({ success: true, result: compact.result });
-    }
-    return {
-        ...compact,
-        json: compactEnvelope,
-    };
+    return { ...serialized, json: `{"success":true,"result":${serialized.json}}` };
 }
 
-export function serializeAgentConversationTurnEvent(
-    eventType: string,
-    payload: unknown
-): { json: string; truncated: boolean } {
-    if (
-        eventType === 'turn_completed'
-        && payload
-        && typeof payload === 'object'
-        && !Array.isArray(payload)
-        && 'result' in payload
-        && payload.result
-        && typeof payload.result === 'object'
-    ) {
+export function serializeAgentConversationTurnEvent(eventType: string, payload: unknown): { json: string; truncated: boolean } {
+    if (eventType === 'turn_completed' && payload && typeof payload === 'object' && 'result' in payload && payload.result) {
         const event = payload as AgentConversationTurnEvent;
-        const serialized = serializeAgentConversationResponse(event.result as AgentConversationResponse);
-        let eventResult = serialized.result;
-        let eventJson = JSON.stringify({ ...event, result: eventResult });
-        const maxBytes = Number(eventResult.responseBudget?.runtimeGovernor.maxSerializedBytes || 0);
-        if (serialized.truncated && maxBytes > 0 && byteLength(eventJson) > maxBytes) {
-            const compact = compactResultToBudget(eventResult, Math.max(128, maxBytes - 256));
-            eventResult = compact.result;
-            eventJson = JSON.stringify({ ...event, result: eventResult });
-        }
-        return {
-            json: eventJson,
-            truncated: serialized.truncated,
-        };
+        const limit = wireLimit(event.result!);
+        const envelope = { ...event, result: null };
+        const framingBytes = Buffer.byteLength(`event: ${eventType}\ndata: \n\n`);
+        const envelopeBytes = measureJsonBytes(envelope, limit) - 4 + framingBytes;
+        const serialized = releaseWithinBudget(event.result!, limit - Math.max(TURN_WIRE_RESERVE_BYTES, envelopeBytes));
+        return { json: JSON.stringify({ ...event, result: serialized.result }), truncated: serialized.truncated };
     }
+    const payloadLimit = DEFAULT_WIRE_LIMIT - Buffer.byteLength(`event: ${eventType}\ndata: \n\n`);
+    if (measureJsonBytes(payload, payloadLimit) > payloadLimit) throw new AgentConversationSerializationError();
     return { json: JSON.stringify(payload), truncated: false };
 }

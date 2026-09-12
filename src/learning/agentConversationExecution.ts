@@ -94,6 +94,11 @@ export class AgentConversationExecution {
         options: { budget: AgentConversationBudget; policy: AgentConversationExecutionPolicy; signal?: AbortSignal },
         operation: (execution: AgentConversationExecution) => Promise<T>,
     ): Promise<T> {
+        const existing = this.current();
+        if (existing) {
+            existing.assertActive();
+            return operation(existing);
+        }
         const execution = new AgentConversationExecution(options.budget, options.policy, options.signal);
         try {
             execution.assertActive();

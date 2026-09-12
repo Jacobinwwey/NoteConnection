@@ -1,4 +1,5 @@
 import {
+    measureJsonBytes,
     serializeAgentConversationHttpResponse,
     serializeAgentConversationResponse,
     serializeAgentConversationTurnEvent,
@@ -69,6 +70,60 @@ function makeResponse(overrides: Partial<AgentConversationResponse> = {}): Agent
 }
 
 describe('agent conversation serialization governor', () => {
+    test.each(['知识🧠', 'quotes " \\ \n\t', '\ud800', '\u0000', { nested: [null, undefined, 1, false] }])('measures JSON escaping and UTF-8 before allocation: %p', value => {
+        const bytes = Buffer.byteLength(JSON.stringify(value));
+        expect(measureJsonBytes(value, bytes)).toBe(bytes);
+        expect(measureJsonBytes(value, bytes - 1)).toBeGreaterThan(bytes - 1);
+    });
+
+    test('the response fits but the full SSE envelope does not', () => {
+        const response = makeResponse();
+        response.responseBudget!.runtimeGovernor.maxSerializedBytes = 2000;
+        response.answer += 'x'.repeat(Math.max(0, 1998 - Buffer.byteLength(JSON.stringify(response)))) ;
+        expect(Buffer.byteLength(JSON.stringify(response))).toBe(1998);
+        const event = serializeAgentConversationTurnEvent('turn_completed', {
+            type: 'turn_completed', turnId: 'turn_envelope', emittedAt: '2026-09-12T00:00:00.000Z', result: response,
+        });
+        expect(Buffer.byteLength(`event: turn_completed\ndata: ${event.json}\n\n`)).toBeLessThanOrEqual(2000);
+        expect(event.truncated).toBe(true);
+        expect(JSON.parse(event.json).result.summary.responseTruncated).toBe(true);
+    });
+
+    test('one released projection is reused for JSON, SSE and replay with surviving citations', () => {
+        const response = makeResponse({ answer: 'A supported claim. '.repeat(800), assistantMessage: 'A supported claim. '.repeat(800) });
+        response.responseBudget!.runtimeGovernor.maxSerializedBytes = 4000;
+        response.citations = [{ citationId: 'cite-1', atomId: 'atom-1', documentId: 'doc-1', sourcePath: 'source.md', title: 'Source', snippet: 'A supported claim.', score: 1 }];
+        response.summary.returnedCitations = 99;
+        response.trace.answerClaimCitations = [{ claimId: 'claim-1', text: 'A supported claim.', citationIds: ['cite-1'], fragmentIds: ['fragment-1'], sourcePaths: ['source.md'], supportStatus: 'supported' }];
+        const http = serializeAgentConversationHttpResponse(response);
+        const event = { type: 'turn_completed', turnId: 'turn_citations', emittedAt: '2026-09-12T00:00:00.000Z', result: response };
+        const live = serializeAgentConversationTurnEvent('turn_completed', event);
+        const replay = serializeAgentConversationTurnEvent('turn_completed', { ...event, result: http.result });
+        expect(JSON.parse(live.json).result).toEqual(http.result);
+        expect(JSON.parse(replay.json).result).toEqual(http.result);
+        expect(http.result.answer).toContain('A supported claim.');
+        expect(http.result.citations.map(citation => citation.citationId)).toEqual(['cite-1']);
+        expect(http.result.summary.returnedCitations).toBe(http.result.citations.length);
+        expect(http.result.summary.returnedKnowledgePoints).toBe(http.result.knowledgePoints.length);
+    });
+
+    test('does not initially stringify oversized diagnostic collections', () => {
+        const response = makeResponse();
+        response.trace.retrieval = { hugeDiagnostics: Array.from({ length: 10000 }, () => 'diagnostic'.repeat(50)) } as any;
+        const stringify = jest.spyOn(JSON, 'stringify');
+        try {
+            const serialized = serializeAgentConversationResponse(response);
+            expect(stringify).not.toHaveBeenCalledWith(response);
+            expect(Buffer.byteLength(serialized.json)).toBeLessThanOrEqual(1200);
+            expect(serialized.result.summary.queryEvidenceCoverageRatioPct).toBe(0);
+        } finally { stringify.mockRestore(); }
+    });
+
+    test('rejects a ceiling too small for the required response contract', () => {
+        const response = makeResponse();
+        response.responseBudget!.runtimeGovernor.maxSerializedBytes = 64;
+        expect(() => serializeAgentConversationHttpResponse(response)).toThrow('runtime_serialized_bytes_limit');
+    });
     test('keeps responses unchanged while under the runtime byte limit', () => {
         const response = makeResponse({
             responseBudget: {

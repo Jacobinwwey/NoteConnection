@@ -119,9 +119,15 @@ import {
     normalizeAgentConversationRequestPayload,
 } from './learning/requestNormalization';
 import {
+    AgentConversationSerializationError,
+    serializeAgentConversationResponse,
     serializeAgentConversationHttpResponse,
     serializeAgentConversationTurnEvent,
 } from './learning/agentConversationSerialization';
+import { AgentConversationExecution, AgentConversationExecutionError, DEFAULT_AGENT_CONVERSATION_EXECUTION_POLICY } from './learning/agentConversationExecution';
+import type { AgentConversationExecutionStop } from './learning/agentConversationExecution';
+import { resolveHostedAgentResponseBudget } from './learning/agentResponseBudget';
+import { SseResponseWriter } from './middleware/SseResponseWriter';
 import { projectAnswerForMobile } from './learning/mobileAnswerProjection';
 import {
     buildKnowledgeSourceInventoryDiff,
@@ -7174,12 +7180,13 @@ const defaultCloudTutorAdapter = createNotemdTutorAdapter('cloud');
 const SERVER_RESPONSE_LOW_MEMORY_BYTES = 4 * 1024 ** 3;
 const SERVER_RESPONSE_HIGH_MEMORY_BYTES = 8 * 1024 ** 3;
 const serverResponseMemoryBytes = os.totalmem();
-const knowledgeLearningPlatform = createKnowledgeLearningPlatform({
-    responseBudgetHostCapability: {
+const SERVER_RESPONSE_BUDGET_CAPABILITY = {
         memoryClass: serverResponseMemoryBytes < SERVER_RESPONSE_LOW_MEMORY_BYTES ? 'low'
             : serverResponseMemoryBytes >= SERVER_RESPONSE_HIGH_MEMORY_BYTES ? 'high' : 'standard',
         workload: 'max',
-    },
+} as const;
+const knowledgeLearningPlatform = createKnowledgeLearningPlatform({
+    responseBudgetHostCapability: SERVER_RESPONSE_BUDGET_CAPABILITY,
     store: knowledgeGraphStore,
     learningQualityThresholds: LEARNING_QUALITY_THRESHOLDS,
     studySessionPlanQualityAdaptiveThresholdsEnabled: STUDY_SESSION_PLAN_QUALITY_ADAPTIVE_THRESHOLDS_ENABLED,
@@ -7357,6 +7364,8 @@ type AgentConversationTurnExecutionFailure = {
 };
 
 type AgentConversationTurnCacheRecord = {
+    controller: AbortController;
+    consumers: number;
     turnId: string;
     requestFingerprint: string;
     createdAtMs: number;
@@ -10004,6 +10013,14 @@ function writeApiErrorResponse(
     error: unknown,
     options: ApiErrorResponseOptions
 ): void {
+    if (res.destroyed || res.writableEnded) return;
+    if (res.headersSent) { res.destroy(); return; }
+    if (error instanceof AgentConversationExecutionError || error instanceof AgentConversationSerializationError) {
+        setApiErrorCodeHeader(res, error.code);
+        res.writeHead(error.statusCode, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(createApiErrorEnvelope({ error: error.message, errorCode: error.code, requestId: options.requestId })));
+        return;
+    }
     if (writeBodyParseErrorResponse(res, error, { requestId: options.requestId })) {
         return;
     }
@@ -10442,8 +10459,12 @@ function getOrCreateAgentConversationTurnCacheRecord(
     }
 
     AGENT_CONVERSATION_TURN_CACHE_COUNTERS.cacheMissCount += 1;
+    const runningTurns = Array.from(AGENT_CONVERSATION_TURN_CACHE.values()).filter(record => record.status === 'running').length;
+    if (runningTurns >= DEFAULT_AGENT_CONVERSATION_EXECUTION_POLICY.maxPendingTurns) throw new AgentConversationExecutionError('runtime_turn_capacity');
     const nowMs = Date.now();
     const record: AgentConversationTurnCacheRecord = {
+        controller: new AbortController(),
+        consumers: 0,
         turnId,
         requestFingerprint,
         createdAtMs: nowMs,
@@ -10454,6 +10475,30 @@ function getOrCreateAgentConversationTurnCacheRecord(
     AGENT_CONVERSATION_TURN_CACHE.set(turnId, record);
     pruneAgentConversationTurnCache(nowMs);
     return record;
+}
+
+function attachAgentConversationClient(record: AgentConversationTurnCacheRecord, req: http.IncomingMessage, res: http.ServerResponse): () => void {
+    record.consumers++;
+    let attached = true;
+    const release = () => {
+        if (!attached) return;
+        attached = false;
+        record.consumers--;
+        req.removeListener('aborted', release);
+        res.removeListener('close', release);
+        if (record.status === 'running' && record.consumers === 0) {
+            record.controller.abort(new AgentConversationExecutionError('runtime_cancelled'));
+            if (!record.inFlight) {
+                record.status = 'failed';
+                record.failure = { error: 'runtime_cancelled', errorCode: 'runtime_cancelled' };
+                appendAgentConversationTurnCacheEvent(record, { type: 'turn_failed', turnId: record.turnId, emittedAt: new Date().toISOString(), ...record.failure });
+            }
+        }
+    };
+    req.once('aborted', release);
+    res.once('close', release);
+    if (req.aborted || res.destroyed) release();
+    return release;
 }
 
 function appendAgentConversationTurnCacheEvent(
@@ -10617,7 +10662,8 @@ async function ensureAgentConversationTurnExecution(
     const emit = (event: AgentConversationTurnEvent): void => {
         appendAgentConversationTurnCacheEvent(record, event);
         if (emitLiveEvent) {
-            emitLiveEvent(event);
+            try { emitLiveEvent(event); }
+            catch (error) { console.warn('[SSE] Live delivery ended:', (error as Error).message); }
         }
     };
     const nowIso = (): string => new Date().toISOString();
@@ -10633,6 +10679,16 @@ async function ensureAgentConversationTurnExecution(
         });
 
         try {
+            await AgentConversationExecution.run({
+                budget: resolveHostedAgentResponseBudget({
+                    responseMode: requestPayload.responseMode,
+                    responseBudgetMode: requestPayload.responseBudgetMode,
+                    capability: requestPayload.responseBudgetCapability,
+                    mobile: requestPayload.responseProfile === 'mobile_compact',
+                }, SERVER_RESPONSE_BUDGET_CAPABILITY),
+                policy: DEFAULT_AGENT_CONVERSATION_EXECUTION_POLICY,
+                signal: record.controller.signal,
+            }, async () => {
             const hydration = await ensureLearningWorkspaceHydratedForConversationRequest(requestPayload);
             emit({
                 type: 'capability_result',
@@ -10647,7 +10703,8 @@ async function ensureAgentConversationTurnExecution(
                     corpusId: hydration.scope?.corpusId || null,
                 },
             });
-            const result = await knowledgeLearningPlatform.runAgentConversation(requestPayload);
+            const rawResult = await knowledgeLearningPlatform.runAgentConversation(requestPayload, record.controller.signal);
+            const result = serializeAgentConversationResponse(rawResult).result;
             record.status = 'completed';
             record.result = result;
             record.failure = undefined;
@@ -10668,17 +10725,19 @@ async function ensureAgentConversationTurnExecution(
                 emittedAt: nowIso(),
                 result,
             });
+            });
         } catch (executionError) {
             const validation = classifyApiInputValidationError(executionError);
+            const runtimeError = executionError instanceof AgentConversationExecutionError || executionError instanceof AgentConversationSerializationError;
             const failure: AgentConversationTurnExecutionFailure = {
                 error: validation?.error || String(
                     (executionError as Error | undefined)?.message
                     || executionError
                     || 'unknown_error'
                 ),
-                errorCode: validation?.errorCode || 'internal_error',
+                errorCode: runtimeError ? executionError.code : validation?.errorCode || 'internal_error',
             };
-            if (!validation) {
+            if (!validation && !runtimeError) {
                 console.error(executionError);
                 CrashLogger.log(executionError, 'API:POST /api/knowledge/conversation [turn-cache]');
             }
@@ -10715,6 +10774,8 @@ function throwAgentConversationCachedFailure(failureLike: AgentConversationTurnE
         error: 'conversation_turn_failed',
         errorCode: 'internal_error',
     };
+    if (failure.errorCode === 'runtime_serialized_bytes_limit') throw new AgentConversationSerializationError();
+    if (failure.errorCode?.startsWith('runtime_')) throw new AgentConversationExecutionError(failure.errorCode as AgentConversationExecutionStop);
     if (failure.errorCode && failure.errorCode !== 'internal_error') {
         throw new InvalidRequestError(failure.error, {
             errorCode: failure.errorCode,
@@ -12709,20 +12770,28 @@ function finalizeNotemdOperation(state: NotemdOperationState, status: NotemdOper
     }, 60000);
 }
 
+const sseResponseWriters = new WeakMap<http.ServerResponse, SseResponseWriter>();
+
 function writeSseEvent(res: http.ServerResponse, eventType: string, payload: unknown): void {
     if (res.writableEnded || (res as { destroyed?: boolean }).destroyed) {
         return;
     }
-    try {
-        const serialized = serializeAgentConversationTurnEvent(eventType, payload);
-        res.write(`event: ${eventType}\n`);
-        res.write(`data: ${serialized.json}\n\n`);
-    } catch (_error) {
-        // Ignore stream write failures when client disconnected mid-stream.
-    }
+    let writer = sseResponseWriters.get(res);
+    if (!writer) { writer = new SseResponseWriter(res); sseResponseWriters.set(res, writer); }
+    const serialized = serializeAgentConversationTurnEvent(eventType, payload);
+    writer.write(`event: ${eventType}\ndata: ${serialized.json}\n\n`);
+}
+
+async function finishSseResponse(res: http.ServerResponse): Promise<void> {
+    const writer = sseResponseWriters.get(res);
+    if (writer) await writer.finish();
+    else res.end();
 }
 
 function createNotemdReporter(state: NotemdOperationState, res?: http.ServerResponse): ProgressReporter {
+    res?.once('close', () => {
+        if (!res.writableFinished && state.status === 'running') state.controller.abort();
+    });
     return {
         report: (eventLike) => {
             const event: ProgressEvent = {
@@ -12730,6 +12799,7 @@ function createNotemdReporter(state: NotemdOperationState, res?: http.ServerResp
                 operationId: state.id,
                 timestamp: Date.now(),
             };
+            if (state.logs.length >= 256) state.logs.shift();
             state.logs.push(event);
             state.updatedAt = event.timestamp;
             if (res) {
@@ -13476,7 +13546,9 @@ async function readMarkdownTitlePreview(filePath: string): Promise<string> {
 async function buildKnowledgeDocumentPayloadsFromPaths(filePaths: string[]): Promise<NonNullable<KnowledgeIngestRequest['documents']>> {
     const documents: NonNullable<KnowledgeIngestRequest['documents']> = [];
     for (const filePath of filePaths) {
-        const content = await fs.promises.readFile(filePath, 'utf8');
+        const execution = AgentConversationExecution.current();
+        const content = execution ? await execution.readSourceFile(filePath) : await fs.promises.readFile(filePath, 'utf8');
+        if (content === null) continue;
         const identity = createResourceIdentity(
             path.relative(KB_ROOT, filePath).replace(/\\/g, '/'),
             path.basename(filePath, path.extname(filePath)),
@@ -15208,6 +15280,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             }
 
             if (postPathname === '/api/knowledge/conversation') {
+                let releaseClient: (() => void) | undefined;
                 try {
                     const payload = await readJsonBody(req);
                     const requestPayload = normalizeAgentConversationRequestPayload(payload);
@@ -15218,6 +15291,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         turnId,
                         requestFingerprint
                     );
+                    releaseClient = attachAgentConversationClient(turnRecord, req, res);
 
                     if (!streamRequested) {
                         const wasCompletedBeforeExecution = turnRecord.status === 'completed';
@@ -15280,13 +15354,15 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         await ensureAgentConversationTurnExecution(turnRecord, requestPayload);
                         replayAgentConversationTurnEvents(res, turnRecord, requestPayload);
                     }
-                    res.end();
+                    await finishSseResponse(res);
                 } catch (error) {
                     writeApiErrorResponse(res, error, {
                         context: 'API:POST /api/knowledge/conversation',
                         requestId,
                         enableValidationStatus: true,
                     });
+                } finally {
+                    releaseClient?.();
                 }
                 return;
             }
@@ -16091,7 +16167,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             operationId: operation.id,
                             result,
                         });
-                        res.end();
+                        await finishSseResponse(res);
                     } else {
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(
@@ -16115,7 +16191,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         const payload = { success: false, error: String((error as Error).message || 'Access denied') };
                         if (streamEnabled) {
                             writeSseEvent(res, 'error', payload);
-                            res.end();
+                            await finishSseResponse(res);
                         } else {
                             res.writeHead(statusCode, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify(payload));
@@ -16127,7 +16203,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     const payload = { success: false, error: String(error) };
                     if (streamEnabled) {
                         writeSseEvent(res, 'error', payload);
-                        res.end();
+                        await finishSseResponse(res);
                     } else {
                         res.writeHead(500, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify(payload));
@@ -16192,7 +16268,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             operationId: operation.id,
                             result,
                         });
-                        res.end();
+                        await finishSseResponse(res);
                     } else {
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(
@@ -16216,7 +16292,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         const payload = { success: false, error: String((error as Error).message || 'Access denied') };
                         if (streamEnabled) {
                             writeSseEvent(res, 'error', payload);
-                            res.end();
+                            await finishSseResponse(res);
                         } else {
                             res.writeHead(statusCode, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify(payload));
@@ -16228,7 +16304,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     const payload = { success: false, error: String(error) };
                     if (streamEnabled) {
                         writeSseEvent(res, 'error', payload);
-                        res.end();
+                        await finishSseResponse(res);
                     } else {
                         res.writeHead(500, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify(payload));
@@ -16512,7 +16588,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             operationId: operation.id,
                             result,
                         });
-                        res.end();
+                        await finishSseResponse(res);
                     } else {
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: true, operationId: operation.id, result, logs: operation.logs }));
@@ -16529,7 +16605,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         const payload = { success: false, error: String((error as Error).message || 'Access denied') };
                         if (streamEnabled) {
                             writeSseEvent(res, 'error', payload);
-                            res.end();
+                            await finishSseResponse(res);
                         } else {
                             res.writeHead(statusCode, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify(payload));
@@ -16541,7 +16617,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     const payload = { success: false, error: String(error) };
                     if (streamEnabled) {
                         writeSseEvent(res, 'error', payload);
-                        res.end();
+                        await finishSseResponse(res);
                     } else {
                         res.writeHead(500, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify(payload));
