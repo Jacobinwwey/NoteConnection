@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { AsyncLocalStorage } from 'async_hooks';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { KnowledgeLearningPlatformAPI } from './api';
@@ -781,7 +782,12 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     private hydrationPromise: Promise<void> | null = null;
 
     /** Serializes ingest mutations so a rollback cannot race a concurrent writer. */
-    private ingestQueue: Promise<void> = Promise.resolve();
+    private pendingKnowledgeStateOperation: Promise<void> = Promise.resolve();
+    private readonly knowledgeStateScope = new AsyncLocalStorage<{
+        active: boolean;
+        transaction?: { persistenceRequested: boolean };
+    }>();
+    private committedStateDuringWrite: KnowledgeSystemState | null = null;
 
     constructor(nowProviderOrOptions: (() => Date) | KnowledgeLearningPlatformOptions = {}) {
         if (typeof nowProviderOrOptions === 'function') {
@@ -856,31 +862,65 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public ingestKnowledge(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse> {
-        const run = this.ingestQueue.then(() => this.ingestKnowledgeExclusive(request));
-        this.ingestQueue = run.then(() => undefined, () => undefined);
-        return run;
+        return this.commitKnowledgeState(() => this.performKnowledgeIngest(request));
     }
 
-    private async ingestKnowledgeExclusive(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse> {
-        await this.ensureHydrated();
-        const rollbackSnapshot = this.cloneKnowledgeGraphSnapshotForTransaction(await this.buildSnapshotForPersist());
-        try {
-            return await this.performKnowledgeIngest(request);
-        } catch (error) {
-            this.restoreFromSnapshot(rollbackSnapshot);
-            if (this.store && this.autoPersist) {
-                try {
-                    await this.store.saveSnapshot(rollbackSnapshot);
-                } catch (rollbackError) {
-                    const originalMessage = error instanceof Error ? error.message : String(error);
-                    const rollbackMessage = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
-                    throw new Error(
-                        `Ingest transaction failed and rollback persistence failed: ${originalMessage}; rollback: ${rollbackMessage}`,
-                    );
-                }
-            }
-            throw error;
+    private serializeKnowledgeStateOperation<T>(operation: () => Promise<T>): Promise<T> {
+        // Nested calls share one operation; detached continuations cannot retain its lease.
+        if (this.knowledgeStateScope.getStore()?.active) {
+            return operation();
         }
+        const pending = this.pendingKnowledgeStateOperation.then(() => {
+            const scope = { active: true };
+            return this.knowledgeStateScope.run(scope, async () => {
+                try {
+                    await this.ensureHydrated();
+                    return await operation();
+                } finally {
+                    scope.active = false;
+                }
+            });
+        });
+        this.pendingKnowledgeStateOperation = pending.then(() => undefined, () => undefined);
+        return pending;
+    }
+
+    private commitKnowledgeState<T>(mutation: () => Promise<T>): Promise<T> {
+        return this.serializeKnowledgeStateOperation(async () => {
+            const scope = this.knowledgeStateScope.getStore()!;
+            if (scope.transaction) {
+                return mutation();
+            }
+            const before = this.cloneKnowledgeGraphSnapshotForTransaction(await this.buildSnapshotForPersist());
+            this.committedStateDuringWrite = this.getKnowledgeState();
+            const transaction = { persistenceRequested: false };
+            scope.transaction = transaction;
+            let persistenceAttempted = false;
+            try {
+                const response = await mutation();
+                if (transaction.persistenceRequested && this.store && this.autoPersist) {
+                    const snapshot = await this.buildSnapshotForPersist();
+                    persistenceAttempted = true;
+                    await this.store.saveSnapshot(snapshot);
+                }
+                return response;
+            } catch (error) {
+                this.restoreFromSnapshot(before);
+                if (persistenceAttempted && this.store) {
+                    try {
+                        await this.store.saveSnapshot(before);
+                    } catch (rollbackError) {
+                        const originalMessage = error instanceof Error ? error.message : String(error);
+                        const rollbackMessage = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+                        throw new Error(`Knowledge state commit failed and rollback persistence failed: ${originalMessage}; rollback: ${rollbackMessage}`);
+                    }
+                }
+                throw error;
+            } finally {
+                delete scope.transaction;
+                this.committedStateDuringWrite = null;
+            }
+        });
     }
 
     private async performKnowledgeIngest(request: KnowledgeIngestRequest): Promise<KnowledgeIngestResponse> {
@@ -1209,22 +1249,24 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public async queryKnowledge(request: KnowledgeQueryRequest): Promise<KnowledgeQueryResponse> {
-        await this.ensureHydrated();
-        const backend = normalizeGraphQueryBackendType(request.queryBackend || this.currentGraphQueryBackendType);
-        const execution = await this.executeQueryBackend(
-            request,
-            backend,
-            {
-                allowRuntimeFallback: true,
-                recordFallback: true,
-            }
-        );
-        this.recordQueryLatency(execution.latencyMs);
-        const response: KnowledgeQueryResponse = {
-            items: execution.items,
-            trace: execution.trace,
-        };
-        return response;
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const backend = normalizeGraphQueryBackendType(request.queryBackend || this.currentGraphQueryBackendType);
+            const execution = await this.executeQueryBackend(
+                request,
+                backend,
+                {
+                    allowRuntimeFallback: true,
+                    recordFallback: true,
+                }
+            );
+            this.recordQueryLatency(execution.latencyMs);
+            const response: KnowledgeQueryResponse = {
+                items: execution.items,
+                trace: execution.trace,
+            };
+            return response;
+        });
     }
 
     public async warmQueryBackend(request: Partial<KnowledgeQueryRequest> = {}): Promise<{
@@ -1234,28 +1276,30 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         candidateCount: number;
         totalAtomsInScope: number;
     }> {
-        await this.ensureHydrated();
-        const backend = normalizeGraphQueryBackendType(request.queryBackend || this.currentGraphQueryBackendType);
-        const contextBundle = this.buildQueryBackendContext({
-            ...request,
-            query: normalizeWhitespace(String(request.query || 'knowledge workspace warmup')),
-            topK: clamp(Math.floor(Number(request.topK) || 1), 1, 20),
-        }, backend);
-        const backendInstance = backend === this.currentGraphQueryBackendType
-            ? this.graphQueryBackend
-            : createGraphQueryBackend({
-                ...this.graphQueryBackendFactoryOptions,
-                backend,
-            });
-        const startedAtMs = Date.now();
-        const result = await backendInstance.query(contextBundle.context);
-        return {
-            warmed: true,
-            backendId: backendInstance.id,
-            latencyMs: Date.now() - startedAtMs,
-            candidateCount: Array.isArray(result.candidates) ? result.candidates.length : 0,
-            totalAtomsInScope: contextBundle.atoms.length,
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const backend = normalizeGraphQueryBackendType(request.queryBackend || this.currentGraphQueryBackendType);
+            const contextBundle = this.buildQueryBackendContext({
+                ...request,
+                query: normalizeWhitespace(String(request.query || 'knowledge workspace warmup')),
+                topK: clamp(Math.floor(Number(request.topK) || 1), 1, 20),
+            }, backend);
+            const backendInstance = backend === this.currentGraphQueryBackendType
+                ? this.graphQueryBackend
+                : createGraphQueryBackend({
+                    ...this.graphQueryBackendFactoryOptions,
+                    backend,
+                });
+            const startedAtMs = Date.now();
+            const result = await backendInstance.query(contextBundle.context);
+            return {
+                warmed: true,
+                backendId: backendInstance.id,
+                latencyMs: Date.now() - startedAtMs,
+                candidateCount: Array.isArray(result.candidates) ? result.candidates.length : 0,
+                totalAtomsInScope: contextBundle.atoms.length,
+            };
+        });
     }
 
     public async inspectKnowledgeWorkspaceRequest(request: {
@@ -1275,178 +1319,184 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         totalActiveAtoms: number;
         sourceInventory?: KnowledgeSourceInventory;
     }> {
-        await this.ensureHydrated();
-        const backend = normalizeGraphQueryBackendType(request.queryBackend || this.currentGraphQueryBackendType);
-        const contextBundle = this.buildQueryBackendContext({
-            query: String(request.query || '').trim(),
-            scope: request.scope,
-            queryBackend: backend,
-        }, backend);
-        const response: {
-            readiness: KnowledgeWorkspaceReadiness;
-            resolvedScope: KnowledgeQueryResolvedScope;
-            planner: {
-                plannerQuery: string | null;
-                titleLikeQueries: string[];
-                titleHitDocumentIds: string[];
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const backend = normalizeGraphQueryBackendType(request.queryBackend || this.currentGraphQueryBackendType);
+            const contextBundle = this.buildQueryBackendContext({
+                query: String(request.query || '').trim(),
+                scope: request.scope,
+                queryBackend: backend,
+            }, backend);
+            const response: {
+                readiness: KnowledgeWorkspaceReadiness;
+                resolvedScope: KnowledgeQueryResolvedScope;
+                planner: {
+                    plannerQuery: string | null;
+                    titleLikeQueries: string[];
+                    titleHitDocumentIds: string[];
+                };
+                totalAtomsInScope: number;
+                totalActiveAtoms: number;
+                sourceInventory?: KnowledgeSourceInventory;
+            } = {
+                readiness: contextBundle.readiness,
+                resolvedScope: contextBundle.resolvedScope,
+                planner: {
+                    plannerQuery: contextBundle.titleLikeQueries[0] || null,
+                    titleLikeQueries: contextBundle.titleLikeQueries,
+                    titleHitDocumentIds: contextBundle.titleHitDocumentIds,
+                },
+                totalAtomsInScope: contextBundle.atoms.length,
+                totalActiveAtoms: this.activeAtomIds.size,
             };
-            totalAtomsInScope: number;
-            totalActiveAtoms: number;
-            sourceInventory?: KnowledgeSourceInventory;
-        } = {
-            readiness: contextBundle.readiness,
-            resolvedScope: contextBundle.resolvedScope,
-            planner: {
-                plannerQuery: contextBundle.titleLikeQueries[0] || null,
-                titleLikeQueries: contextBundle.titleLikeQueries,
-                titleHitDocumentIds: contextBundle.titleHitDocumentIds,
-            },
-            totalAtomsInScope: contextBundle.atoms.length,
-            totalActiveAtoms: this.activeAtomIds.size,
-        };
-        if (request.includeSourceInventory === true) {
-            response.sourceInventory = this.buildSourceInventory(request.scope);
-        }
-        return response;
+            if (request.includeSourceInventory === true) {
+                response.sourceInventory = this.buildSourceInventory(request.scope);
+            }
+            return response;
+        });
     }
 
     public async diagnoseMastery(request: MasteryDiagnosticsRequest): Promise<MasteryDiagnosticsResponse> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('MasteryDiagnosticsAPI requires a non-empty userId.');
-        }
-        const observedAt = this.resolveTimestamp(request.observedAt);
-        const observations = Array.isArray(request.observations) ? request.observations : [];
-        const updatedStates: LearnerConceptState[] = [];
-        let masteryBefore = 0;
-        let masteryAfter = 0;
-
-        for (const observation of observations) {
-            if (!isNonEmptyString(observation.atomId)) {
-                continue;
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('MasteryDiagnosticsAPI requires a non-empty userId.');
             }
-            const stateKey = this.makeLearnerStateKey(userId, observation.atomId);
-            const previousState = this.normalizeLearnerState(
-                this.learnerStates.get(stateKey) || this.createDefaultLearnerState(userId, observation.atomId, observedAt),
-                observedAt
-            );
-            masteryBefore += previousState.masteryProbability;
-            const updatedState = this.applyMasteryObservation(previousState, observation, observedAt);
-            masteryAfter += updatedState.masteryProbability;
-            this.learnerStates.set(stateKey, updatedState);
-            updatedStates.push(updatedState);
-        }
+            const observedAt = this.resolveTimestamp(request.observedAt);
+            const observations = Array.isArray(request.observations) ? request.observations : [];
+            const updatedStates: LearnerConceptState[] = [];
+            let masteryBefore = 0;
+            let masteryAfter = 0;
 
-        const updatedCount = updatedStates.length;
-        const response: MasteryDiagnosticsResponse = {
-            updatedStates,
-            summary: {
-                updatedCount,
-                averageMasteryBefore: updatedCount > 0 ? Number((masteryBefore / updatedCount).toFixed(6)) : 0,
-                averageMasteryAfter: updatedCount > 0 ? Number((masteryAfter / updatedCount).toFixed(6)) : 0,
-            },
-        };
-        await this.persistIfNeeded();
-        return response;
+            for (const observation of observations) {
+                if (!isNonEmptyString(observation.atomId)) {
+                    continue;
+                }
+                const stateKey = this.makeLearnerStateKey(userId, observation.atomId);
+                const previousState = this.normalizeLearnerState(
+                    this.learnerStates.get(stateKey) || this.createDefaultLearnerState(userId, observation.atomId, observedAt),
+                    observedAt
+                );
+                masteryBefore += previousState.masteryProbability;
+                const updatedState = this.applyMasteryObservation(previousState, observation, observedAt);
+                masteryAfter += updatedState.masteryProbability;
+                this.learnerStates.set(stateKey, updatedState);
+                updatedStates.push(updatedState);
+            }
+
+            const updatedCount = updatedStates.length;
+            const response: MasteryDiagnosticsResponse = {
+                updatedStates,
+                summary: {
+                    updatedCount,
+                    averageMasteryBefore: updatedCount > 0 ? Number((masteryBefore / updatedCount).toFixed(6)) : 0,
+                    averageMasteryAfter: updatedCount > 0 ? Number((masteryAfter / updatedCount).toFixed(6)) : 0,
+                },
+            };
+            await this.persistIfNeeded();
+            return response;
+        });
     }
 
     public async queryMasteryMisconceptions(
         request: MasteryMisconceptionRequest
     ): Promise<MasteryMisconceptionResponse> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('MasteryMisconceptionAPI requires a non-empty userId.');
-        }
-        const generatedAt = this.resolveTimestamp(request.generatedAt);
-        const topK = clamp(Math.floor(Number(request.topK) || 10), 1, 100);
-        const atomScope = Array.isArray(request.atomIds) && request.atomIds.length > 0
-            ? new Set(request.atomIds.filter((atomId): atomId is string => isNonEmptyString(atomId)))
-            : null;
-
-        const aggregated = new Map<string, {
-            errorTag: string;
-            count: number;
-            lastSeenAt: string;
-            affectedAtomIds: Set<string>;
-            masteryWeightedSum: number;
-        }>();
-
-        this.learnerStates.forEach((state) => {
-            if (state.userId !== userId) {
-                return;
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('MasteryMisconceptionAPI requires a non-empty userId.');
             }
-            if (atomScope && !atomScope.has(state.atomId)) {
-                return;
-            }
-            const normalizedState = this.normalizeLearnerState(state, generatedAt);
-            normalizedState.errorTagStats.forEach((stat) => {
-                const normalizedTag = this.normalizeMasteryErrorTag(String(stat.tag));
-                if (!normalizedTag) {
+            const generatedAt = this.resolveTimestamp(request.generatedAt);
+            const topK = clamp(Math.floor(Number(request.topK) || 10), 1, 100);
+            const atomScope = Array.isArray(request.atomIds) && request.atomIds.length > 0
+                ? new Set(request.atomIds.filter((atomId): atomId is string => isNonEmptyString(atomId)))
+                : null;
+
+            const aggregated = new Map<string, {
+                errorTag: string;
+                count: number;
+                lastSeenAt: string;
+                affectedAtomIds: Set<string>;
+                masteryWeightedSum: number;
+            }>();
+
+            this.learnerStates.forEach((state) => {
+                if (state.userId !== userId) {
                     return;
                 }
-                const current = aggregated.get(normalizedTag) || {
-                    errorTag: normalizedTag,
-                    count: 0,
-                    lastSeenAt: generatedAt,
-                    affectedAtomIds: new Set<string>(),
-                    masteryWeightedSum: 0,
-                };
-                current.count += Math.max(0, Math.floor(Number(stat.count || 0)));
-                if (isNonEmptyString(stat.lastSeenAt) && stat.lastSeenAt > current.lastSeenAt) {
-                    current.lastSeenAt = stat.lastSeenAt;
+                if (atomScope && !atomScope.has(state.atomId)) {
+                    return;
                 }
-                current.affectedAtomIds.add(normalizedState.atomId);
-                current.masteryWeightedSum += normalizedState.masteryProbability * Math.max(1, Number(stat.count || 1));
-                aggregated.set(normalizedTag, current);
+                const normalizedState = this.normalizeLearnerState(state, generatedAt);
+                normalizedState.errorTagStats.forEach((stat) => {
+                    const normalizedTag = this.normalizeMasteryErrorTag(String(stat.tag));
+                    if (!normalizedTag) {
+                        return;
+                    }
+                    const current = aggregated.get(normalizedTag) || {
+                        errorTag: normalizedTag,
+                        count: 0,
+                        lastSeenAt: generatedAt,
+                        affectedAtomIds: new Set<string>(),
+                        masteryWeightedSum: 0,
+                    };
+                    current.count += Math.max(0, Math.floor(Number(stat.count || 0)));
+                    if (isNonEmptyString(stat.lastSeenAt) && stat.lastSeenAt > current.lastSeenAt) {
+                        current.lastSeenAt = stat.lastSeenAt;
+                    }
+                    current.affectedAtomIds.add(normalizedState.atomId);
+                    current.masteryWeightedSum += normalizedState.masteryProbability * Math.max(1, Number(stat.count || 1));
+                    aggregated.set(normalizedTag, current);
+                });
             });
+
+            const items: MasteryMisconceptionItem[] = Array.from(aggregated.values())
+                .filter((item) => item.count > 0)
+                .map((item) => {
+                    const averageMasteryProbability = Number(
+                        clamp(item.masteryWeightedSum / Math.max(1, item.count), 0, 1).toFixed(6)
+                    );
+                    const frequencyFactor = clamp(item.count / Math.max(1, item.count + 5), 0, 1);
+                    const severityScore = Number(
+                        clamp(
+                            frequencyFactor * 0.65 + (1 - averageMasteryProbability) * 0.35,
+                            0,
+                            1
+                        ).toFixed(6)
+                    );
+                    return {
+                        errorTag: item.errorTag,
+                        count: item.count,
+                        affectedAtomIds: Array.from(item.affectedAtomIds.values()),
+                        averageMasteryProbability,
+                        severityScore,
+                        lastSeenAt: item.lastSeenAt,
+                        recommendedActionKinds: this.resolveActionKindsForErrorTag(item.errorTag),
+                    };
+                })
+                .sort((left, right) => {
+                    if (right.severityScore !== left.severityScore) {
+                        return right.severityScore - left.severityScore;
+                    }
+                    if (right.count !== left.count) {
+                        return right.count - left.count;
+                    }
+                    return right.lastSeenAt.localeCompare(left.lastSeenAt);
+                })
+                .slice(0, topK);
+
+            return {
+                userId,
+                generatedAt,
+                items,
+                summary: {
+                    trackedTags: items.length,
+                    totalObservations: items.reduce((sum, item) => sum + item.count, 0),
+                },
+            };
         });
-
-        const items: MasteryMisconceptionItem[] = Array.from(aggregated.values())
-            .filter((item) => item.count > 0)
-            .map((item) => {
-                const averageMasteryProbability = Number(
-                    clamp(item.masteryWeightedSum / Math.max(1, item.count), 0, 1).toFixed(6)
-                );
-                const frequencyFactor = clamp(item.count / Math.max(1, item.count + 5), 0, 1);
-                const severityScore = Number(
-                    clamp(
-                        frequencyFactor * 0.65 + (1 - averageMasteryProbability) * 0.35,
-                        0,
-                        1
-                    ).toFixed(6)
-                );
-                return {
-                    errorTag: item.errorTag,
-                    count: item.count,
-                    affectedAtomIds: Array.from(item.affectedAtomIds.values()),
-                    averageMasteryProbability,
-                    severityScore,
-                    lastSeenAt: item.lastSeenAt,
-                    recommendedActionKinds: this.resolveActionKindsForErrorTag(item.errorTag),
-                };
-            })
-            .sort((left, right) => {
-                if (right.severityScore !== left.severityScore) {
-                    return right.severityScore - left.severityScore;
-                }
-                if (right.count !== left.count) {
-                    return right.count - left.count;
-                }
-                return right.lastSeenAt.localeCompare(left.lastSeenAt);
-            })
-            .slice(0, topK);
-
-        return {
-            userId,
-            generatedAt,
-            items,
-            summary: {
-                trackedTags: items.length,
-                totalObservations: items.reduce((sum, item) => sum + item.count, 0),
-            },
-        };
     }
 
     private async composeLearningPathResponse(request: LearningPathRequest): Promise<{
@@ -1499,1878 +1549,1917 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public async previewLearningPath(request: LearningPathRequest): Promise<LearningPathResponse> {
-        const { response } = await this.composeLearningPathResponse(request);
-        return response;
+        return this.serializeKnowledgeStateOperation(async () => {
+            const { response } = await this.composeLearningPathResponse(request);
+            return response;
+        });
     }
 
     public async buildLearningPath(request: LearningPathRequest): Promise<LearningPathResponse> {
-        const {
-            response,
-            userId,
-            generatedAt,
-            focusAtomIds,
-        } = await this.composeLearningPathResponse(request);
-        const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(focusAtomIds);
-        this.recordWorkflowArtifact({
-            kind: 'learning_path',
-            sessionId: null,
-            userId,
-            workspaceId: scopedWorkspace.workspaceId,
-            corpusId: scopedWorkspace.corpusId,
-            title: `Learning path for ${focusAtomIds[0] || 'global scope'}`,
-            sourceAtomIds: focusAtomIds,
-            summary: `Generated ${response.masteryPaths.length} mastery path(s), ${response.divergencePaths.length} divergence path(s), and ${response.recommendedActions.length} recommended action(s).`,
-            payload: response as unknown as Record<string, unknown>,
-            recordedAt: generatedAt,
+        return this.commitKnowledgeState(async () => {
+            const {
+                response,
+                userId,
+                generatedAt,
+                focusAtomIds,
+            } = await this.composeLearningPathResponse(request);
+            const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(focusAtomIds);
+            this.recordWorkflowArtifact({
+                kind: 'learning_path',
+                sessionId: null,
+                userId,
+                workspaceId: scopedWorkspace.workspaceId,
+                corpusId: scopedWorkspace.corpusId,
+                title: `Learning path for ${focusAtomIds[0] || 'global scope'}`,
+                sourceAtomIds: focusAtomIds,
+                summary: `Generated ${response.masteryPaths.length} mastery path(s), ${response.divergencePaths.length} divergence path(s), and ${response.recommendedActions.length} recommended action(s).`,
+                payload: response as unknown as Record<string, unknown>,
+                recordedAt: generatedAt,
+            });
+            await this.persistIfNeeded();
+            return response;
         });
-        await this.persistIfNeeded();
-        return response;
     }
 
     public async buildStudySession(request: StudySessionRequest): Promise<StudySessionResponse> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('StudySessionAPI requires a non-empty userId.');
-        }
-        const sessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : undefined;
-        const generatedAt = this.resolveTimestamp(request.generatedAt);
-        const maxActions = clamp(Math.floor(Number(request.maxActions) || 12), 1, 80);
-        const includeDivergence = request.includeDivergence !== false;
-        const includeRetrain = request.includeRetrain !== false;
-        const focusAtomIds = Array.isArray(request.focusAtomIds)
-            ? request.focusAtomIds.filter((atomId): atomId is string => isNonEmptyString(atomId) && this.activeAtomIds.has(atomId))
-            : [];
-        const candidateAtomIds = focusAtomIds.length > 0 ? focusAtomIds : Array.from(this.activeAtomIds);
-        const misconceptionResult = await this.queryMasteryMisconceptions({
-            userId,
-            atomIds: candidateAtomIds,
-            topK: 8,
-            generatedAt,
-        });
-        const pathResult = await this.buildLearningPath({
-            userId,
-            focusAtomIds: candidateAtomIds,
-            maxMasteryPaths: 4,
-            maxDivergencePaths: includeDivergence ? 3 : 0,
-            generatedAt,
-        });
-
-        const retrainResponse = includeRetrain
-            ? await this.applyMemoryPolicy({
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('StudySessionAPI requires a non-empty userId.');
+            }
+            const sessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : undefined;
+            const generatedAt = this.resolveTimestamp(request.generatedAt);
+            const maxActions = clamp(Math.floor(Number(request.maxActions) || 12), 1, 80);
+            const includeDivergence = request.includeDivergence !== false;
+            const includeRetrain = request.includeRetrain !== false;
+            const focusAtomIds = Array.isArray(request.focusAtomIds)
+                ? request.focusAtomIds.filter((atomId): atomId is string => isNonEmptyString(atomId) && this.activeAtomIds.has(atomId))
+                : [];
+            const candidateAtomIds = focusAtomIds.length > 0 ? focusAtomIds : Array.from(this.activeAtomIds);
+            const misconceptionResult = await this.queryMasteryMisconceptions({
                 userId,
-                layer: 'session',
-                operation: 'retrain_plan',
-                limit: maxActions,
-                now: generatedAt,
-            })
-            : null;
+                atomIds: candidateAtomIds,
+                topK: 8,
+                generatedAt,
+            });
+            const pathResult = await this.buildLearningPath({
+                userId,
+                focusAtomIds: candidateAtomIds,
+                maxMasteryPaths: 4,
+                maxDivergencePaths: includeDivergence ? 3 : 0,
+                generatedAt,
+            });
 
-        const masteryActions: StudySessionAction[] = pathResult.masteryPaths
-            .flatMap((pathItem) =>
-                pathItem.actions.map((action) => ({
-                    ...action,
-                    source: 'mastery_path' as const,
-                }))
-            );
-        const divergenceActions: StudySessionAction[] = includeDivergence
-            ? pathResult.divergencePaths.flatMap((pathItem) =>
-                pathItem.actions.map((action) => ({
-                    ...action,
-                    source: 'divergence_path' as const,
-                }))
-            )
-            : [];
-        const retrainActions: StudySessionAction[] = (retrainResponse?.recommendedActions || [])
-            .map((action) => ({
-                ...action,
-                source: 'retrain_plan' as const,
-            }));
-        const misconceptionActions = misconceptionResult.items
-            .slice(0, 4)
-            .reduce<StudySessionAction[]>((actions, item, index) => {
-                const atomId = item.affectedAtomIds.find((candidateAtomId) => this.activeAtomIds.has(candidateAtomId));
-                if (!atomId) {
-                    return actions;
-                }
-                const atom = this.atoms.get(atomId);
-                const kind = item.recommendedActionKinds[0] || 'review';
-                const expectedGain = Number(
-                    clamp(item.severityScore * 0.6 + (1 - item.averageMasteryProbability) * 0.4, 0.05, 0.9).toFixed(4)
+            const retrainResponse = includeRetrain
+                ? await this.applyMemoryPolicy({
+                    userId,
+                    layer: 'session',
+                    operation: 'retrain_plan',
+                    limit: maxActions,
+                    now: generatedAt,
+                })
+                : null;
+
+            const masteryActions: StudySessionAction[] = pathResult.masteryPaths
+                .flatMap((pathItem) =>
+                    pathItem.actions.map((action) => ({
+                        ...action,
+                        source: 'mastery_path' as const,
+                    }))
                 );
-                actions.push({
-                    ...this.createLearningAction({
-                        kind,
-                        atomId,
-                        priority: 112 - index * 3,
-                        expectedGain,
-                        rationale: `Target misconception "${item.errorTag}" before next expansion.`,
-                        evidenceSpanIds: atom?.evidenceSpanIds || [],
-                        relationPathAtomIds: [atomId],
-                        estimatedMinutes: 7,
-                    }),
-                    source: 'misconception_remediation',
-                    errorTag: item.errorTag,
-                });
-                return actions;
-            }, []);
+            const divergenceActions: StudySessionAction[] = includeDivergence
+                ? pathResult.divergencePaths.flatMap((pathItem) =>
+                    pathItem.actions.map((action) => ({
+                        ...action,
+                        source: 'divergence_path' as const,
+                    }))
+                )
+                : [];
+            const retrainActions: StudySessionAction[] = (retrainResponse?.recommendedActions || [])
+                .map((action) => ({
+                    ...action,
+                    source: 'retrain_plan' as const,
+                }));
+            const misconceptionActions = misconceptionResult.items
+                .slice(0, 4)
+                .reduce<StudySessionAction[]>((actions, item, index) => {
+                    const atomId = item.affectedAtomIds.find((candidateAtomId) => this.activeAtomIds.has(candidateAtomId));
+                    if (!atomId) {
+                        return actions;
+                    }
+                    const atom = this.atoms.get(atomId);
+                    const kind = item.recommendedActionKinds[0] || 'review';
+                    const expectedGain = Number(
+                        clamp(item.severityScore * 0.6 + (1 - item.averageMasteryProbability) * 0.4, 0.05, 0.9).toFixed(4)
+                    );
+                    actions.push({
+                        ...this.createLearningAction({
+                            kind,
+                            atomId,
+                            priority: 112 - index * 3,
+                            expectedGain,
+                            rationale: `Target misconception "${item.errorTag}" before next expansion.`,
+                            evidenceSpanIds: atom?.evidenceSpanIds || [],
+                            relationPathAtomIds: [atomId],
+                            estimatedMinutes: 7,
+                        }),
+                        source: 'misconception_remediation',
+                        errorTag: item.errorTag,
+                    });
+                    return actions;
+                }, []);
 
-        const dedupedBySignature = new Map<string, StudySessionAction>();
-        [...misconceptionActions, ...retrainActions, ...masteryActions, ...divergenceActions].forEach((action) => {
-            const signature = `${action.source}::${action.kind}::${action.atomId}`;
-            const existing = dedupedBySignature.get(signature);
-            if (!existing) {
-                dedupedBySignature.set(signature, action);
-                return;
-            }
-            if (action.priority > existing.priority) {
-                dedupedBySignature.set(signature, action);
-            }
-        });
-
-        const actions = Array.from(dedupedBySignature.values())
-            .sort((left, right) => {
-                if (right.priority !== left.priority) {
-                    return right.priority - left.priority;
+            const dedupedBySignature = new Map<string, StudySessionAction>();
+            [...misconceptionActions, ...retrainActions, ...masteryActions, ...divergenceActions].forEach((action) => {
+                const signature = `${action.source}::${action.kind}::${action.atomId}`;
+                const existing = dedupedBySignature.get(signature);
+                if (!existing) {
+                    dedupedBySignature.set(signature, action);
+                    return;
                 }
-                return right.expectedGain - left.expectedGain;
-            })
-            .slice(0, maxActions);
-        const evidenceCoverageRatio = actions.length > 0
-            ? Number((actions.filter((action) => action.evidenceSpanIds.length > 0).length / actions.length).toFixed(4))
-            : 1;
-        const dueRetrainAtoms = Array.from(new Set(retrainActions.map((action) => action.atomId)));
+                if (action.priority > existing.priority) {
+                    dedupedBySignature.set(signature, action);
+                }
+            });
 
-        const response: StudySessionResponse = {
-            userId,
-            sessionId,
-            generatedAt,
-            actions,
-            signals: {
-                misconceptions: misconceptionResult.items,
-                dueRetrainAtoms,
-                masteryPathTargets: pathResult.masteryPaths.map((pathItem) => pathItem.targetAtomId),
-                divergenceTargets: pathResult.divergencePaths.map((pathItem) => pathItem.targetAtomId),
-            },
-            summary: {
-                totalActions: actions.length,
-                totalEstimatedMinutes: actions.reduce((sum, action) => sum + action.estimatedMinutes, 0),
-                evidenceCoverageRatio,
-            },
-        };
-        const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(candidateAtomIds);
-        if (sessionId) {
-            this.upsertConversationSessionState({
-                sessionId,
+            const actions = Array.from(dedupedBySignature.values())
+                .sort((left, right) => {
+                    if (right.priority !== left.priority) {
+                        return right.priority - left.priority;
+                    }
+                    return right.expectedGain - left.expectedGain;
+                })
+                .slice(0, maxActions);
+            const evidenceCoverageRatio = actions.length > 0
+                ? Number((actions.filter((action) => action.evidenceSpanIds.length > 0).length / actions.length).toFixed(4))
+                : 1;
+            const dueRetrainAtoms = Array.from(new Set(retrainActions.map((action) => action.atomId)));
+
+            const response: StudySessionResponse = {
                 userId,
-                mode: 'study_session',
-                workspaceId: scopedWorkspace.workspaceId,
-                corpusId: scopedWorkspace.corpusId,
-                activeResourceIds: this.resolveSourceResourceIdsForAtomIds(candidateAtomIds),
-                activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(candidateAtomIds),
-                topK: maxActions,
-                queryBackend: null,
-                persistMemory: includeRetrain,
-                memoryNamespace: null,
-                exportProfileId: scopedWorkspace.exportProfileId,
-                panelState: {
-                    lastStudyPlanGeneratedAt: generatedAt,
+                sessionId,
+                generatedAt,
+                actions,
+                signals: {
+                    misconceptions: misconceptionResult.items,
+                    dueRetrainAtoms,
+                    masteryPathTargets: pathResult.masteryPaths.map((pathItem) => pathItem.targetAtomId),
+                    divergenceTargets: pathResult.divergencePaths.map((pathItem) => pathItem.targetAtomId),
+                },
+                summary: {
                     totalActions: actions.length,
+                    totalEstimatedMinutes: actions.reduce((sum, action) => sum + action.estimatedMinutes, 0),
                     evidenceCoverageRatio,
                 },
+            };
+            const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(candidateAtomIds);
+            if (sessionId) {
+                this.upsertConversationSessionState({
+                    sessionId,
+                    userId,
+                    mode: 'study_session',
+                    workspaceId: scopedWorkspace.workspaceId,
+                    corpusId: scopedWorkspace.corpusId,
+                    activeResourceIds: this.resolveSourceResourceIdsForAtomIds(candidateAtomIds),
+                    activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(candidateAtomIds),
+                    topK: maxActions,
+                    queryBackend: null,
+                    persistMemory: includeRetrain,
+                    memoryNamespace: null,
+                    exportProfileId: scopedWorkspace.exportProfileId,
+                    panelState: {
+                        lastStudyPlanGeneratedAt: generatedAt,
+                        totalActions: actions.length,
+                        evidenceCoverageRatio,
+                    },
+                    recordedAt: generatedAt,
+                });
+            }
+            this.recordWorkflowArtifact({
+                kind: 'study_session',
+                sessionId: sessionId || null,
+                userId,
+                workspaceId: scopedWorkspace.workspaceId,
+                corpusId: scopedWorkspace.corpusId,
+                title: `Study session for ${candidateAtomIds[0] || 'global scope'}`,
+                sourceAtomIds: candidateAtomIds,
+                summary: `Built ${actions.length} study action(s) with evidence coverage ${Number((evidenceCoverageRatio * 100).toFixed(2))} pct.`,
+                payload: response as unknown as Record<string, unknown>,
                 recordedAt: generatedAt,
             });
-        }
-        this.recordWorkflowArtifact({
-            kind: 'study_session',
-            sessionId: sessionId || null,
-            userId,
-            workspaceId: scopedWorkspace.workspaceId,
-            corpusId: scopedWorkspace.corpusId,
-            title: `Study session for ${candidateAtomIds[0] || 'global scope'}`,
-            sourceAtomIds: candidateAtomIds,
-            summary: `Built ${actions.length} study action(s) with evidence coverage ${Number((evidenceCoverageRatio * 100).toFixed(2))} pct.`,
-            payload: response as unknown as Record<string, unknown>,
-            recordedAt: generatedAt,
+            await this.persistIfNeeded();
+            return response;
         });
-        await this.persistIfNeeded();
-        return response;
     }
 
     public async queryStudySessionHistory(request: StudySessionHistoryRequest): Promise<StudySessionHistoryResponse> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('StudySessionHistoryAPI requires a non-empty userId.');
-        }
-        const generatedAt = this.resolveTimestamp(undefined);
-        const limit = clamp(Math.floor(Number(request.limit) || 10), 1, 100);
-        const offset = Math.max(0, Math.floor(Number(request.offset) || 0));
-        const requestedKinds = Array.isArray(request.executionKinds)
-            ? request.executionKinds
-                .map((kind) => String(kind || '').trim().toLowerCase())
-                .filter((kind): kind is StudySessionExecutionRecord['executionKind'] =>
-                    kind === 'session' || kind === 'retest' || kind === 'custom'
-                )
-            : [];
-        const activeKindFilter = requestedKinds.length > 0
-            ? new Set(requestedKinds)
-            : null;
-        const fromExecutedAtIso = this.resolveOptionalTimestamp(request.fromExecutedAt);
-        const toExecutedAtIso = this.resolveOptionalTimestamp(request.toExecutedAt);
-        const fromExecutedAtMs = fromExecutedAtIso ? Date.parse(fromExecutedAtIso) : Number.NEGATIVE_INFINITY;
-        const toExecutedAtMs = toExecutedAtIso ? Date.parse(toExecutedAtIso) : Number.POSITIVE_INFINITY;
-        const rangeStartMs = Math.min(fromExecutedAtMs, toExecutedAtMs);
-        const rangeEndMs = Math.max(fromExecutedAtMs, toExecutedAtMs);
-        const filteredRecords = this.sessionExecutionHistory
-            .filter((record) => record.userId === userId)
-            .filter((record) => activeKindFilter ? activeKindFilter.has(record.executionKind) : true)
-            .filter((record) => {
-                const executedAtMs = Date.parse(record.executedAt);
-                if (!Number.isFinite(executedAtMs)) {
-                    return false;
-                }
-                return executedAtMs >= rangeStartMs && executedAtMs <= rangeEndMs;
-            });
-        const records = filteredRecords
-            .slice(offset, offset + limit)
-            .map((record) => ({ ...record }));
-        const totalExecutedActions = filteredRecords.reduce(
-            (sum, record) => sum + Math.max(0, Math.floor(Number(record.executedCount || 0))),
-            0
-        );
-        const totalUpdatedMasteryCount = filteredRecords.reduce(
-            (sum, record) => sum + Math.max(0, Math.floor(Number(record.updatedMasteryCount || 0))),
-            0
-        );
-        const averageMasteryDelta = filteredRecords.length > 0
-            ? Number((filteredRecords.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0) / filteredRecords.length).toFixed(6))
-            : 0;
-        const averageTutorConfidence = filteredRecords.length > 0
-            ? Number((filteredRecords.reduce((sum, record) => sum + Number(record.averageTutorConfidence || 0), 0) / filteredRecords.length).toFixed(6))
-            : 0;
-        const executionKindBreakdown = (['session', 'retest', 'custom'] as const).map((executionKind) => {
-            const kindRecords = filteredRecords.filter((record) => record.executionKind === executionKind);
-            const kindExecutedActions = kindRecords.reduce(
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('StudySessionHistoryAPI requires a non-empty userId.');
+            }
+            const generatedAt = this.resolveTimestamp(undefined);
+            const limit = clamp(Math.floor(Number(request.limit) || 10), 1, 100);
+            const offset = Math.max(0, Math.floor(Number(request.offset) || 0));
+            const requestedKinds = Array.isArray(request.executionKinds)
+                ? request.executionKinds
+                    .map((kind) => String(kind || '').trim().toLowerCase())
+                    .filter((kind): kind is StudySessionExecutionRecord['executionKind'] =>
+                        kind === 'session' || kind === 'retest' || kind === 'custom'
+                    )
+                : [];
+            const activeKindFilter = requestedKinds.length > 0
+                ? new Set(requestedKinds)
+                : null;
+            const fromExecutedAtIso = this.resolveOptionalTimestamp(request.fromExecutedAt);
+            const toExecutedAtIso = this.resolveOptionalTimestamp(request.toExecutedAt);
+            const fromExecutedAtMs = fromExecutedAtIso ? Date.parse(fromExecutedAtIso) : Number.NEGATIVE_INFINITY;
+            const toExecutedAtMs = toExecutedAtIso ? Date.parse(toExecutedAtIso) : Number.POSITIVE_INFINITY;
+            const rangeStartMs = Math.min(fromExecutedAtMs, toExecutedAtMs);
+            const rangeEndMs = Math.max(fromExecutedAtMs, toExecutedAtMs);
+            const filteredRecords = this.sessionExecutionHistory
+                .filter((record) => record.userId === userId)
+                .filter((record) => activeKindFilter ? activeKindFilter.has(record.executionKind) : true)
+                .filter((record) => {
+                    const executedAtMs = Date.parse(record.executedAt);
+                    if (!Number.isFinite(executedAtMs)) {
+                        return false;
+                    }
+                    return executedAtMs >= rangeStartMs && executedAtMs <= rangeEndMs;
+                });
+            const records = filteredRecords
+                .slice(offset, offset + limit)
+                .map((record) => ({ ...record }));
+            const totalExecutedActions = filteredRecords.reduce(
                 (sum, record) => sum + Math.max(0, Math.floor(Number(record.executedCount || 0))),
                 0
             );
-            const kindAverageMasteryDelta = kindRecords.length > 0
-                ? Number((kindRecords.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0) / kindRecords.length).toFixed(6))
+            const totalUpdatedMasteryCount = filteredRecords.reduce(
+                (sum, record) => sum + Math.max(0, Math.floor(Number(record.updatedMasteryCount || 0))),
+                0
+            );
+            const averageMasteryDelta = filteredRecords.length > 0
+                ? Number((filteredRecords.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0) / filteredRecords.length).toFixed(6))
                 : 0;
+            const averageTutorConfidence = filteredRecords.length > 0
+                ? Number((filteredRecords.reduce((sum, record) => sum + Number(record.averageTutorConfidence || 0), 0) / filteredRecords.length).toFixed(6))
+                : 0;
+            const executionKindBreakdown = (['session', 'retest', 'custom'] as const).map((executionKind) => {
+                const kindRecords = filteredRecords.filter((record) => record.executionKind === executionKind);
+                const kindExecutedActions = kindRecords.reduce(
+                    (sum, record) => sum + Math.max(0, Math.floor(Number(record.executedCount || 0))),
+                    0
+                );
+                const kindAverageMasteryDelta = kindRecords.length > 0
+                    ? Number((kindRecords.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0) / kindRecords.length).toFixed(6))
+                    : 0;
+                return {
+                    executionKind,
+                    recordCount: kindRecords.length,
+                    totalExecutedActions: kindExecutedActions,
+                    averageMasteryDelta: kindAverageMasteryDelta,
+                };
+            });
+            const hasMore = offset + records.length < filteredRecords.length;
             return {
-                executionKind,
-                recordCount: kindRecords.length,
-                totalExecutedActions: kindExecutedActions,
-                averageMasteryDelta: kindAverageMasteryDelta,
+                userId,
+                generatedAt,
+                records,
+                page: {
+                    limit,
+                    offset,
+                    returnedRecords: records.length,
+                    totalFilteredRecords: filteredRecords.length,
+                    hasMore,
+                    nextOffset: hasMore ? offset + records.length : null,
+                },
+                summary: {
+                    totalRecords: filteredRecords.length,
+                    totalExecutedActions,
+                    totalUpdatedMasteryCount,
+                    averageMasteryDelta,
+                    averageTutorConfidence,
+                    executionKindBreakdown,
+                },
             };
         });
-        const hasMore = offset + records.length < filteredRecords.length;
-        return {
-            userId,
-            generatedAt,
-            records,
-            page: {
-                limit,
-                offset,
-                returnedRecords: records.length,
-                totalFilteredRecords: filteredRecords.length,
-                hasMore,
-                nextOffset: hasMore ? offset + records.length : null,
-            },
-            summary: {
-                totalRecords: filteredRecords.length,
-                totalExecutedActions,
-                totalUpdatedMasteryCount,
-                averageMasteryDelta,
-                averageTutorConfidence,
-                executionKindBreakdown,
-            },
-        };
     }
 
     public async executeStudySessionAction(
         request: StudySessionActionExecutionRequest
     ): Promise<StudySessionActionExecutionResponse> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('StudySessionActionAPI requires a non-empty userId.');
-        }
-        const action = request.action || {} as StudySessionActionExecutionRequest['action'];
-        const atomId = String(action.atomId || '').trim();
-        if (!atomId || !this.activeAtomIds.has(atomId)) {
-            throw new Error('StudySessionActionAPI requires a valid active atomId.');
-        }
-        const sessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : undefined;
-        const learningActionKind = action.kind;
-        const tutorActionKind = this.resolveTutorActionKindFromLearningKind(learningActionKind);
-        const executedAt = this.resolveTimestamp(request.executedAt);
-        const atomWorkspace = this.resolveWorkspaceContextForAtomIds([atomId]);
-        const hasAnswer = isNonEmptyString(action.answer);
-        const tutor = await this.executeTutorAction({
-            userId,
-            actionKind: tutorActionKind,
-            atomId,
-            prompt: action.prompt,
-            answer: action.answer,
-        });
-        const shouldAnalyzeAnswer = hasAnswer && request.autoAnalyzeAnswer !== false;
-        const answerAnalysis = shouldAnalyzeAnswer
-            ? await this.executeTutorAction({
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('StudySessionActionAPI requires a non-empty userId.');
+            }
+            const action = request.action || {} as StudySessionActionExecutionRequest['action'];
+            const atomId = String(action.atomId || '').trim();
+            if (!atomId || !this.activeAtomIds.has(atomId)) {
+                throw new Error('StudySessionActionAPI requires a valid active atomId.');
+            }
+            const sessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : undefined;
+            const learningActionKind = action.kind;
+            const tutorActionKind = this.resolveTutorActionKindFromLearningKind(learningActionKind);
+            const executedAt = this.resolveTimestamp(request.executedAt);
+            const atomWorkspace = this.resolveWorkspaceContextForAtomIds([atomId]);
+            const hasAnswer = isNonEmptyString(action.answer);
+            const tutor = await this.executeTutorAction({
                 userId,
-                actionKind: 'analyze_answer',
+                actionKind: tutorActionKind,
                 atomId,
                 prompt: action.prompt,
                 answer: action.answer,
-            })
-            : null;
-        const inferredOutcome = request.autoUpdateMasteryFromAnswer === false
-            ? null
-            : this.inferMasteryOutcomeFromTutorAnalysis(answerAnalysis);
-        const effectiveOutcome = request.outcome || inferredOutcome;
-        const explicitErrorTag = isNonEmptyString(request.errorTag)
-            ? this.normalizeMasteryErrorTag(request.errorTag)
-            : null;
-        const inferredErrorTag = this.inferMasteryErrorTagFromTutorAnalysis(answerAnalysis, effectiveOutcome);
-        const effectiveErrorTag = explicitErrorTag || inferredErrorTag;
-        const masterySource = request.outcome
-            ? 'explicit'
-            : (effectiveOutcome ? 'inferred' : 'none');
-
-        const persistMemory = request.persistMemory !== false;
-        let memory: MemoryPolicyResponse | null = null;
-        let promotedMemory: MemoryPolicyResponse | null = null;
-        let persistedMemoryEntry: MemoryEntry | null = null;
-        if (persistMemory) {
-            const memoryLayer: MemoryLayer = request.memoryLayer || 'session';
-            const memoryKey = `session_action:${atomId}:${this.nextId('session')}`;
-            const sourceTag = isNonEmptyString(action.source) ? action.source : 'session_plan';
-            const memoryMessage = [
-                tutor.message,
-                answerAnalysis ? `Answer analysis:\n${answerAnalysis.message}` : '',
-                effectiveOutcome ? `Outcome: ${effectiveOutcome}` : '',
-                effectiveErrorTag ? `ErrorTag: ${effectiveErrorTag}` : '',
-            ]
-                .filter((line) => line.length > 0)
-                .join('\n\n')
-                .slice(0, 1200);
-            const memoryConfidenceBase = answerAnalysis
-                ? Math.max(tutor.trace.confidence, answerAnalysis.trace.confidence)
-                : tutor.trace.confidence;
-            const memoryEntry: MemoryEntry = {
-                key: memoryKey,
-                value: memoryMessage,
-                tags: [
-                    'session_action',
-                    `action_kind:${learningActionKind}`,
-                    `action_source:${sourceTag}`,
-                    `tutor_action:${tutorActionKind}`,
-                    ...(effectiveOutcome ? [`mastery_outcome:${effectiveOutcome}`] : []),
-                    ...(effectiveErrorTag ? [`error_tag:${effectiveErrorTag}`] : []),
-                ],
-                confidence: Number(clamp(memoryConfidenceBase, 0.1, 1).toFixed(4)),
-                references: Array.from(new Set([
-                    atomId,
-                    ...tutor.trace.evidenceSpanIds,
-                    tutor.trace.traceId,
-                    ...(answerAnalysis ? answerAnalysis.trace.evidenceSpanIds : []),
-                    ...(answerAnalysis ? [answerAnalysis.trace.traceId] : []),
-                ])),
-                createdAt: executedAt,
-                updatedAt: executedAt,
-                scopeWorkspaceId: atomWorkspace.workspaceId || undefined,
-                scopeCorpusId: atomWorkspace.corpusId || undefined,
-            };
-            persistedMemoryEntry = memoryEntry;
-            memory = await this.applyMemoryPolicy({
-                userId,
-                operation: 'write',
-                layer: memoryLayer,
-                entries: [memoryEntry],
-                now: executedAt,
             });
-            if (
-                request.autoPromoteMemory === true
-                && Number(memoryEntry.confidence || 0) >= clamp(Number(request.promoteMemoryMinConfidence ?? 0.8), 0, 1)
-            ) {
-                promotedMemory = await this.applyMemoryPolicy({
+            const shouldAnalyzeAnswer = hasAnswer && request.autoAnalyzeAnswer !== false;
+            const answerAnalysis = shouldAnalyzeAnswer
+                ? await this.executeTutorAction({
                     userId,
-                    operation: 'promote',
+                    actionKind: 'analyze_answer',
+                    atomId,
+                    prompt: action.prompt,
+                    answer: action.answer,
+                })
+                : null;
+            const inferredOutcome = request.autoUpdateMasteryFromAnswer === false
+                ? null
+                : this.inferMasteryOutcomeFromTutorAnalysis(answerAnalysis);
+            const effectiveOutcome = request.outcome || inferredOutcome;
+            const explicitErrorTag = isNonEmptyString(request.errorTag)
+                ? this.normalizeMasteryErrorTag(request.errorTag)
+                : null;
+            const inferredErrorTag = this.inferMasteryErrorTagFromTutorAnalysis(answerAnalysis, effectiveOutcome);
+            const effectiveErrorTag = explicitErrorTag || inferredErrorTag;
+            const masterySource = request.outcome
+                ? 'explicit'
+                : (effectiveOutcome ? 'inferred' : 'none');
+
+            const persistMemory = request.persistMemory !== false;
+            let memory: MemoryPolicyResponse | null = null;
+            let promotedMemory: MemoryPolicyResponse | null = null;
+            let persistedMemoryEntry: MemoryEntry | null = null;
+            if (persistMemory) {
+                const memoryLayer: MemoryLayer = request.memoryLayer || 'session';
+                const memoryKey = `session_action:${atomId}:${this.nextId('session')}`;
+                const sourceTag = isNonEmptyString(action.source) ? action.source : 'session_plan';
+                const memoryMessage = [
+                    tutor.message,
+                    answerAnalysis ? `Answer analysis:\n${answerAnalysis.message}` : '',
+                    effectiveOutcome ? `Outcome: ${effectiveOutcome}` : '',
+                    effectiveErrorTag ? `ErrorTag: ${effectiveErrorTag}` : '',
+                ]
+                    .filter((line) => line.length > 0)
+                    .join('\n\n')
+                    .slice(0, 1200);
+                const memoryConfidenceBase = answerAnalysis
+                    ? Math.max(tutor.trace.confidence, answerAnalysis.trace.confidence)
+                    : tutor.trace.confidence;
+                const memoryEntry: MemoryEntry = {
+                    key: memoryKey,
+                    value: memoryMessage,
+                    tags: [
+                        'session_action',
+                        `action_kind:${learningActionKind}`,
+                        `action_source:${sourceTag}`,
+                        `tutor_action:${tutorActionKind}`,
+                        ...(effectiveOutcome ? [`mastery_outcome:${effectiveOutcome}`] : []),
+                        ...(effectiveErrorTag ? [`error_tag:${effectiveErrorTag}`] : []),
+                    ],
+                    confidence: Number(clamp(memoryConfidenceBase, 0.1, 1).toFixed(4)),
+                    references: Array.from(new Set([
+                        atomId,
+                        ...tutor.trace.evidenceSpanIds,
+                        tutor.trace.traceId,
+                        ...(answerAnalysis ? answerAnalysis.trace.evidenceSpanIds : []),
+                        ...(answerAnalysis ? [answerAnalysis.trace.traceId] : []),
+                    ])),
+                    createdAt: executedAt,
+                    updatedAt: executedAt,
+                    scopeWorkspaceId: atomWorkspace.workspaceId || undefined,
+                    scopeCorpusId: atomWorkspace.corpusId || undefined,
+                };
+                persistedMemoryEntry = memoryEntry;
+                memory = await this.applyMemoryPolicy({
+                    userId,
+                    operation: 'write',
                     layer: memoryLayer,
-                    targetLayer: request.promoteMemoryTargetLayer || 'long_term',
                     entries: [memoryEntry],
-                    minConfidence: request.promoteMemoryMinConfidence,
-                    removeFromSource: request.promoteMemoryRemoveFromSource,
                     now: executedAt,
                 });
+                if (
+                    request.autoPromoteMemory === true
+                    && Number(memoryEntry.confidence || 0) >= clamp(Number(request.promoteMemoryMinConfidence ?? 0.8), 0, 1)
+                ) {
+                    promotedMemory = await this.applyMemoryPolicy({
+                        userId,
+                        operation: 'promote',
+                        layer: memoryLayer,
+                        targetLayer: request.promoteMemoryTargetLayer || 'long_term',
+                        entries: [memoryEntry],
+                        minConfidence: request.promoteMemoryMinConfidence,
+                        removeFromSource: request.promoteMemoryRemoveFromSource,
+                        now: executedAt,
+                    });
+                }
             }
-        }
 
-        let mastery: MasteryDiagnosticsResponse | null = null;
-        if (effectiveOutcome) {
-            const observationConfidence = answerAnalysis
-                ? Number(clamp(answerAnalysis.trace.confidence, 0, 1).toFixed(4))
-                : Number(clamp(tutor.trace.confidence, 0, 1).toFixed(4));
-            mastery = await this.diagnoseMastery({
-                userId,
-                observedAt: executedAt,
-                observations: [
-                    {
-                        atomId,
-                        outcome: effectiveOutcome,
-                        errorTag: effectiveErrorTag || undefined,
-                        confidence: observationConfidence,
+            let mastery: MasteryDiagnosticsResponse | null = null;
+            if (effectiveOutcome) {
+                const observationConfidence = answerAnalysis
+                    ? Number(clamp(answerAnalysis.trace.confidence, 0, 1).toFixed(4))
+                    : Number(clamp(tutor.trace.confidence, 0, 1).toFixed(4));
+                mastery = await this.diagnoseMastery({
+                    userId,
+                    observedAt: executedAt,
+                    observations: [
+                        {
+                            atomId,
+                            outcome: effectiveOutcome,
+                            errorTag: effectiveErrorTag || undefined,
+                            confidence: observationConfidence,
+                        },
+                    ],
+                });
+            }
+            if (sessionId) {
+                this.upsertConversationSessionState({
+                    sessionId,
+                    userId,
+                    mode: 'study_session',
+                    workspaceId: atomWorkspace.workspaceId,
+                    corpusId: atomWorkspace.corpusId,
+                    activeResourceIds: this.resolveSourceResourceIdsForAtomIds([atomId]),
+                    activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds([atomId]),
+                    topK: 0,
+                    queryBackend: null,
+                    persistMemory,
+                    memoryNamespace: null,
+                    exportProfileId: atomWorkspace.exportProfileId,
+                    panelState: {
+                        lastActionAtomId: atomId,
+                        lastActionKind: learningActionKind,
+                        lastExecutedAt: executedAt,
+                        persistedMemoryKey: persistedMemoryEntry?.key || null,
                     },
-                ],
-            });
-        }
-        if (sessionId) {
-            this.upsertConversationSessionState({
-                sessionId,
-                userId,
-                mode: 'study_session',
-                workspaceId: atomWorkspace.workspaceId,
-                corpusId: atomWorkspace.corpusId,
-                activeResourceIds: this.resolveSourceResourceIdsForAtomIds([atomId]),
-                activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds([atomId]),
-                topK: 0,
-                queryBackend: null,
-                persistMemory,
-                memoryNamespace: null,
-                exportProfileId: atomWorkspace.exportProfileId,
-                panelState: {
-                    lastActionAtomId: atomId,
-                    lastActionKind: learningActionKind,
-                    lastExecutedAt: executedAt,
-                    persistedMemoryKey: persistedMemoryEntry?.key || null,
-                },
-                recordedAt: executedAt,
-            });
-        }
+                    recordedAt: executedAt,
+                });
+            }
 
-        this.recordSessionActionTelemetry({
-            analyzedAnswer: answerAnalysis !== null,
-            persistedMemory: persistMemory,
-            masterySource,
-            effectiveOutcome,
-        });
-        await this.persistIfNeeded();
-
-        return {
-            sessionId,
-            executedAt,
-            tutor,
-            answerAnalysis,
-            memory,
-            promotedMemory,
-            mastery,
-            trace: {
-                tutorActionKind,
-                persistedMemory: persistMemory,
-                updatedMastery: mastery !== null,
+            this.recordSessionActionTelemetry({
                 analyzedAnswer: answerAnalysis !== null,
+                persistedMemory: persistMemory,
                 masterySource,
                 effectiveOutcome,
-                effectiveErrorTag,
-            },
-        };
+            });
+            await this.persistIfNeeded();
+
+            return {
+                sessionId,
+                executedAt,
+                tutor,
+                answerAnalysis,
+                memory,
+                promotedMemory,
+                mastery,
+                trace: {
+                    tutorActionKind,
+                    persistedMemory: persistMemory,
+                    updatedMastery: mastery !== null,
+                    analyzedAnswer: answerAnalysis !== null,
+                    masterySource,
+                    effectiveOutcome,
+                    effectiveErrorTag,
+                },
+            };
+        });
     }
 
     public async executeStudySessionPlan(
         request: StudySessionPlanExecutionRequest
     ): Promise<StudySessionPlanExecutionResponse> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('StudySessionPlanExecutionAPI requires a non-empty userId.');
-        }
-        const executionKind = this.normalizeStudySessionExecutionKind(request.executionKind);
-        const executedAt = this.resolveTimestamp(request.executedAt);
-        const explicitSessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : undefined;
-        const maxActions = clamp(Math.floor(Number(request.maxActions) || 12), 1, 80);
-        const actionLimitRequest = Number(request.actionLimit);
-        const actionLimit = Number.isFinite(actionLimitRequest)
-            ? clamp(Math.floor(actionLimitRequest), 1, 40)
-            : clamp(Math.min(maxActions, 6), 1, 40);
-        const sourceFallback = 'mastery_path';
-        const providedPlan = request.sessionPlan;
-        const hasValidProvidedPlan = Boolean(
-            providedPlan
-            && providedPlan.userId === userId
-            && Array.isArray(providedPlan.actions)
-        );
-        const sessionPlan: StudySessionResponse = hasValidProvidedPlan
-            ? (() => {
-                const plan = providedPlan as StudySessionResponse;
-                const safeActions = plan.actions
-                    .filter((action): action is StudySessionAction => Boolean(action && typeof action === 'object'))
-                    .map((action) => {
-                        const sourceRaw = String(action.source || '').trim();
-                        const source: StudySessionAction['source'] = (
-                            sourceRaw === 'mastery_path'
-                            || sourceRaw === 'divergence_path'
-                            || sourceRaw === 'retrain_plan'
-                            || sourceRaw === 'misconception_remediation'
-                            || sourceRaw === 'flashcard_batch'
-                        )
-                            ? sourceRaw as StudySessionAction['source']
-                            : sourceFallback;
-                        return {
-                            ...action,
-                            source,
-                        };
-                    });
-                const totalEstimatedMinutes = safeActions.reduce(
-                    (sum, action) => sum + Math.max(0, Math.floor(Number(action.estimatedMinutes || 0))),
-                    0
-                );
-                const evidenceCoverageRatio = safeActions.length > 0
-                    ? Number((safeActions.filter((action) => Array.isArray(action.evidenceSpanIds) && action.evidenceSpanIds.length > 0).length / safeActions.length).toFixed(4))
-                    : 1;
-                return {
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('StudySessionPlanExecutionAPI requires a non-empty userId.');
+            }
+            const executionKind = this.normalizeStudySessionExecutionKind(request.executionKind);
+            const executedAt = this.resolveTimestamp(request.executedAt);
+            const explicitSessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : undefined;
+            const maxActions = clamp(Math.floor(Number(request.maxActions) || 12), 1, 80);
+            const actionLimitRequest = Number(request.actionLimit);
+            const actionLimit = Number.isFinite(actionLimitRequest)
+                ? clamp(Math.floor(actionLimitRequest), 1, 40)
+                : clamp(Math.min(maxActions, 6), 1, 40);
+            const sourceFallback = 'mastery_path';
+            const providedPlan = request.sessionPlan;
+            const hasValidProvidedPlan = Boolean(
+                providedPlan
+                && providedPlan.userId === userId
+                && Array.isArray(providedPlan.actions)
+            );
+            const sessionPlan: StudySessionResponse = hasValidProvidedPlan
+                ? (() => {
+                    const plan = providedPlan as StudySessionResponse;
+                    const safeActions = plan.actions
+                        .filter((action): action is StudySessionAction => Boolean(action && typeof action === 'object'))
+                        .map((action) => {
+                            const sourceRaw = String(action.source || '').trim();
+                            const source: StudySessionAction['source'] = (
+                                sourceRaw === 'mastery_path'
+                                || sourceRaw === 'divergence_path'
+                                || sourceRaw === 'retrain_plan'
+                                || sourceRaw === 'misconception_remediation'
+                                || sourceRaw === 'flashcard_batch'
+                            )
+                                ? sourceRaw as StudySessionAction['source']
+                                : sourceFallback;
+                            return {
+                                ...action,
+                                source,
+                            };
+                        });
+                    const totalEstimatedMinutes = safeActions.reduce(
+                        (sum, action) => sum + Math.max(0, Math.floor(Number(action.estimatedMinutes || 0))),
+                        0
+                    );
+                    const evidenceCoverageRatio = safeActions.length > 0
+                        ? Number((safeActions.filter((action) => Array.isArray(action.evidenceSpanIds) && action.evidenceSpanIds.length > 0).length / safeActions.length).toFixed(4))
+                        : 1;
+                    return {
+                        userId,
+                        sessionId: isNonEmptyString(plan.sessionId) ? plan.sessionId : explicitSessionId,
+                        generatedAt: isNonEmptyString(plan.generatedAt) ? plan.generatedAt : executedAt,
+                        actions: safeActions,
+                        signals: {
+                            misconceptions: Array.isArray(plan.signals?.misconceptions)
+                                ? plan.signals.misconceptions
+                                : [],
+                            dueRetrainAtoms: Array.isArray(plan.signals?.dueRetrainAtoms)
+                                ? plan.signals.dueRetrainAtoms
+                                : [],
+                            masteryPathTargets: Array.isArray(plan.signals?.masteryPathTargets)
+                                ? plan.signals.masteryPathTargets
+                                : [],
+                            divergenceTargets: Array.isArray(plan.signals?.divergenceTargets)
+                                ? plan.signals.divergenceTargets
+                                : [],
+                        },
+                        summary: {
+                            totalActions: safeActions.length,
+                            totalEstimatedMinutes,
+                            evidenceCoverageRatio,
+                        },
+                    };
+                })()
+                : await this.buildStudySession({
                     userId,
-                    sessionId: isNonEmptyString(plan.sessionId) ? plan.sessionId : explicitSessionId,
-                    generatedAt: isNonEmptyString(plan.generatedAt) ? plan.generatedAt : executedAt,
-                    actions: safeActions,
-                    signals: {
-                        misconceptions: Array.isArray(plan.signals?.misconceptions)
-                            ? plan.signals.misconceptions
-                            : [],
-                        dueRetrainAtoms: Array.isArray(plan.signals?.dueRetrainAtoms)
-                            ? plan.signals.dueRetrainAtoms
-                            : [],
-                        masteryPathTargets: Array.isArray(plan.signals?.masteryPathTargets)
-                            ? plan.signals.masteryPathTargets
-                            : [],
-                        divergenceTargets: Array.isArray(plan.signals?.divergenceTargets)
-                            ? plan.signals.divergenceTargets
-                            : [],
-                    },
-                    summary: {
-                        totalActions: safeActions.length,
-                        totalEstimatedMinutes,
-                        evidenceCoverageRatio,
-                    },
-                };
-            })()
-            : await this.buildStudySession({
-                userId,
-                sessionId: explicitSessionId,
-                focusAtomIds: request.focusAtomIds,
-                maxActions,
-                includeDivergence: request.includeDivergence,
-                includeRetrain: request.includeRetrain,
-                generatedAt: executedAt,
-            });
-        const sessionId = isNonEmptyString(sessionPlan.sessionId) ? sessionPlan.sessionId : explicitSessionId;
-        const selectedActions = sessionPlan.actions.slice(0, actionLimit);
-        const comparedAtomIds = Array.from(new Set(
-            selectedActions
-                .map((action) => String(action.atomId || '').trim())
-                .filter((atomId) => atomId.length > 0 && this.activeAtomIds.has(atomId))
-        ));
-        const baselineMasteryByAtom = new Map<string, number>();
-        comparedAtomIds.forEach((atomId) => {
-            const stateKey = this.makeLearnerStateKey(userId, atomId);
-            const baselineState = this.learnerStates.has(stateKey)
-                ? this.normalizeLearnerState(
-                    this.learnerStates.get(stateKey) as LearnerConceptState,
-                    executedAt
-                )
-                : this.createDefaultLearnerState(userId, atomId, executedAt);
-            baselineMasteryByAtom.set(atomId, baselineState.masteryProbability);
-        });
-        const stopOnError = request.stopOnError === true;
-        const answersByActionId = request.answersByActionId && typeof request.answersByActionId === 'object'
-            ? request.answersByActionId
-            : {};
-        const answersByAtomId = request.answersByAtomId && typeof request.answersByAtomId === 'object'
-            ? request.answersByAtomId
-            : {};
-        const items: StudySessionPlanExecutionResponse['items'] = [];
-        let stoppedEarly = false;
-
-        for (const action of selectedActions) {
-            const atomId = String(action.atomId || '').trim();
-            if (!atomId || !this.activeAtomIds.has(atomId)) {
-                items.push({
-                    action,
-                    status: 'skipped',
-                    reason: 'inactive_atom',
-                    result: null,
+                    sessionId: explicitSessionId,
+                    focusAtomIds: request.focusAtomIds,
+                    maxActions,
+                    includeDivergence: request.includeDivergence,
+                    includeRetrain: request.includeRetrain,
+                    generatedAt: executedAt,
                 });
-                continue;
-            }
-            const answerByActionId = isNonEmptyString(answersByActionId[action.id])
-                ? String(answersByActionId[action.id]).trim()
-                : '';
-            const answerByAtomId = isNonEmptyString(answersByAtomId[atomId])
-                ? String(answersByAtomId[atomId]).trim()
-                : '';
-            const answer = answerByActionId || answerByAtomId || undefined;
-            try {
-                const result = await this.executeStudySessionAction({
-                    userId,
-                    sessionId,
-                    action: {
-                        atomId,
-                        kind: action.kind,
-                        source: action.source,
-                        prompt: `Session plan execution: ${action.kind} from ${action.source}`,
-                        answer,
-                    },
-                    autoAnalyzeAnswer: request.autoAnalyzeAnswer,
-                    autoUpdateMasteryFromAnswer: request.autoUpdateMasteryFromAnswer,
-                    persistMemory: request.persistMemory,
-                    memoryLayer: request.memoryLayer,
-                    executedAt,
-                    autoPromoteMemory: request.autoPromoteMemory,
-                    promoteMemoryTargetLayer: request.promoteMemoryTargetLayer,
-                    promoteMemoryMinConfidence: request.promoteMemoryMinConfidence,
-                    promoteMemoryRemoveFromSource: request.promoteMemoryRemoveFromSource,
-                });
-                items.push({
-                    action,
-                    status: 'executed',
-                    result,
-                });
-            } catch (error) {
-                const message = String((error as Error)?.message || error || 'Unknown session plan execution error');
-                items.push({
-                    action,
-                    status: 'failed',
-                    error: message,
-                    result: null,
-                });
-                if (stopOnError) {
-                    stoppedEarly = true;
-                    break;
-                }
-            }
-        }
-
-        const executedItems = items.filter(
-            (item): item is StudySessionPlanExecutionResponse['items'][number] & { result: StudySessionActionExecutionResponse } =>
-                item.status === 'executed' && !!item.result
-        );
-        const skippedCount = items.filter((item) => item.status === 'skipped').length;
-        const failedCount = items.filter((item) => item.status === 'failed').length;
-        const updatedMasteryCount = executedItems.filter((item) => item.result.trace.updatedMastery === true).length;
-        const inferredMasteryCount = executedItems.filter((item) => item.result.trace.masterySource === 'inferred').length;
-        const explicitMasteryCount = executedItems.filter((item) => item.result.trace.masterySource === 'explicit').length;
-        const analyzedAnswerCount = executedItems.filter((item) => item.result.trace.analyzedAnswer === true).length;
-        const memoryPersistedCount = executedItems.filter((item) => item.result.trace.persistedMemory === true).length;
-        const averageTutorConfidence = executedItems.length > 0
-            ? Number((
-                executedItems.reduce((sum, item) => sum + Number(item.result.tutor.trace.confidence || 0), 0) / executedItems.length
-            ).toFixed(4))
-            : 0;
-        const lastExecutionByAtom = new Map<string, StudySessionActionExecutionResponse>();
-        executedItems.forEach((item) => {
-            const atomId = String(item.action.atomId || '').trim();
-            if (!atomId) {
-                return;
-            }
-            lastExecutionByAtom.set(atomId, item.result);
-        });
-        const masteryDeltaItems: StudySessionMasteryDeltaItem[] = comparedAtomIds
-            .map((atomId) => {
+            const sessionId = isNonEmptyString(sessionPlan.sessionId) ? sessionPlan.sessionId : explicitSessionId;
+            const selectedActions = sessionPlan.actions.slice(0, actionLimit);
+            const comparedAtomIds = Array.from(new Set(
+                selectedActions
+                    .map((action) => String(action.atomId || '').trim())
+                    .filter((atomId) => atomId.length > 0 && this.activeAtomIds.has(atomId))
+            ));
+            const baselineMasteryByAtom = new Map<string, number>();
+            comparedAtomIds.forEach((atomId) => {
                 const stateKey = this.makeLearnerStateKey(userId, atomId);
-                const currentState = this.learnerStates.has(stateKey)
+                const baselineState = this.learnerStates.has(stateKey)
                     ? this.normalizeLearnerState(
                         this.learnerStates.get(stateKey) as LearnerConceptState,
                         executedAt
                     )
                     : this.createDefaultLearnerState(userId, atomId, executedAt);
-                const beforeMastery = Number((baselineMasteryByAtom.get(atomId) || 0.5).toFixed(6));
-                const afterMastery = Number(currentState.masteryProbability.toFixed(6));
-                const deltaMastery = Number((afterMastery - beforeMastery).toFixed(6));
-                const executionResult = lastExecutionByAtom.get(atomId);
-                return {
-                    atomId,
-                    title: this.atoms.get(atomId)?.title || atomId,
-                    beforeMastery,
-                    afterMastery,
-                    deltaMastery,
-                    updatedByExecution: executionResult?.trace.updatedMastery === true,
-                    lastOutcome: executionResult?.trace.effectiveOutcome || null,
-                };
-            })
-            .sort((left, right) => Math.abs(right.deltaMastery) - Math.abs(left.deltaMastery));
-        const improvedAtomCount = masteryDeltaItems.filter((item) => item.deltaMastery > 0.000001).length;
-        const regressedAtomCount = masteryDeltaItems.filter((item) => item.deltaMastery < -0.000001).length;
-        const unchangedAtomCount = masteryDeltaItems.length - improvedAtomCount - regressedAtomCount;
-        const averageMasteryBefore = masteryDeltaItems.length > 0
-            ? Number((
-                masteryDeltaItems.reduce((sum, item) => sum + item.beforeMastery, 0) / masteryDeltaItems.length
-            ).toFixed(6))
-            : 0;
-        const averageMasteryAfter = masteryDeltaItems.length > 0
-            ? Number((
-                masteryDeltaItems.reduce((sum, item) => sum + item.afterMastery, 0) / masteryDeltaItems.length
-            ).toFixed(6))
-            : 0;
-        const averageMasteryDelta = Number((averageMasteryAfter - averageMasteryBefore).toFixed(6));
-        const includeRetestPlan = request.includeRetestPlan !== false;
-        const retestActionLimit = clamp(Math.floor(Number(request.retestActionLimit) || 6), 1, 24);
-        const retestPlanActions: StudySessionAction[] = includeRetestPlan
-            ? (() => {
-                const retestCandidates = executedItems
-                    .map<StudySessionAction | null>((item) => {
-                        const atomId = String(item.action.atomId || '').trim();
-                        if (!atomId || !this.activeAtomIds.has(atomId)) {
-                            return null;
-                        }
-                        const outcome = item.result.trace.effectiveOutcome;
-                        if (outcome !== 'incorrect' && outcome !== 'partial' && outcome !== 'skipped') {
-                            return null;
-                        }
-                        const atom = this.atoms.get(atomId);
-                        const kind: LearningActionKind = outcome === 'partial' ? 'quiz' : 'review';
-                        const priority = outcome === 'incorrect'
-                            ? 108
-                            : (outcome === 'partial' ? 96 : 92);
-                        const expectedGain = outcome === 'incorrect'
-                            ? 0.24
-                            : (outcome === 'partial' ? 0.16 : 0.12);
-                        const effectiveErrorTag = item.result.trace.effectiveErrorTag || item.action.errorTag;
-                        const errorHint = effectiveErrorTag
-                            ? ` (focus: ${effectiveErrorTag})`
-                            : '';
-                        const generatedAction = this.createLearningAction({
-                            kind,
-                            atomId,
-                            priority,
-                            expectedGain,
-                            rationale: `Immediate retest after ${outcome} outcome${errorHint}.`,
-                            evidenceSpanIds: Array.isArray(item.action.evidenceSpanIds) && item.action.evidenceSpanIds.length > 0
-                                ? item.action.evidenceSpanIds
-                                : (atom?.evidenceSpanIds || []),
-                            relationPathAtomIds: [atomId],
-                            estimatedMinutes: outcome === 'incorrect' ? 7 : 5,
-                        });
-                        const retestAction: StudySessionAction = {
-                            ...generatedAction,
-                            source: 'retrain_plan',
-                            ...(effectiveErrorTag ? { errorTag: effectiveErrorTag } : {}),
-                        };
-                        return retestAction;
-                    })
-                    .filter((action): action is StudySessionAction => Boolean(action))
-                    .sort((left, right) => {
-                        if (right.priority !== left.priority) {
-                            return right.priority - left.priority;
-                        }
-                        return right.expectedGain - left.expectedGain;
+                baselineMasteryByAtom.set(atomId, baselineState.masteryProbability);
+            });
+            const stopOnError = request.stopOnError === true;
+            const answersByActionId = request.answersByActionId && typeof request.answersByActionId === 'object'
+                ? request.answersByActionId
+                : {};
+            const answersByAtomId = request.answersByAtomId && typeof request.answersByAtomId === 'object'
+                ? request.answersByAtomId
+                : {};
+            const items: StudySessionPlanExecutionResponse['items'] = [];
+            let stoppedEarly = false;
+
+            for (const action of selectedActions) {
+                const atomId = String(action.atomId || '').trim();
+                if (!atomId || !this.activeAtomIds.has(atomId)) {
+                    items.push({
+                        action,
+                        status: 'skipped',
+                        reason: 'inactive_atom',
+                        result: null,
                     });
-                const deduped = new Map<string, StudySessionAction>();
-                retestCandidates.forEach((action) => {
-                    const signature = `${action.atomId}::${action.kind}`;
-                    if (!deduped.has(signature)) {
-                        deduped.set(signature, action);
+                    continue;
+                }
+                const answerByActionId = isNonEmptyString(answersByActionId[action.id])
+                    ? String(answersByActionId[action.id]).trim()
+                    : '';
+                const answerByAtomId = isNonEmptyString(answersByAtomId[atomId])
+                    ? String(answersByAtomId[atomId]).trim()
+                    : '';
+                const answer = answerByActionId || answerByAtomId || undefined;
+                try {
+                    const result = await this.executeStudySessionAction({
+                        userId,
+                        sessionId,
+                        action: {
+                            atomId,
+                            kind: action.kind,
+                            source: action.source,
+                            prompt: `Session plan execution: ${action.kind} from ${action.source}`,
+                            answer,
+                        },
+                        autoAnalyzeAnswer: request.autoAnalyzeAnswer,
+                        autoUpdateMasteryFromAnswer: request.autoUpdateMasteryFromAnswer,
+                        persistMemory: request.persistMemory,
+                        memoryLayer: request.memoryLayer,
+                        executedAt,
+                        autoPromoteMemory: request.autoPromoteMemory,
+                        promoteMemoryTargetLayer: request.promoteMemoryTargetLayer,
+                        promoteMemoryMinConfidence: request.promoteMemoryMinConfidence,
+                        promoteMemoryRemoveFromSource: request.promoteMemoryRemoveFromSource,
+                    });
+                    items.push({
+                        action,
+                        status: 'executed',
+                        result,
+                    });
+                } catch (error) {
+                    const message = String((error as Error)?.message || error || 'Unknown session plan execution error');
+                    items.push({
+                        action,
+                        status: 'failed',
+                        error: message,
+                        result: null,
+                    });
+                    if (stopOnError) {
+                        stoppedEarly = true;
+                        break;
                     }
-                });
-                return Array.from(deduped.values()).slice(0, retestActionLimit);
-            })()
-            : [];
-        const record: StudySessionExecutionRecord = {
-            id: this.nextId('session_exec'),
-            userId,
-            executionKind,
-            executedAt,
-            focusAtomIds: comparedAtomIds,
-            plannedActions: sessionPlan.actions.length,
-            attemptedActions: selectedActions.length,
-            executedCount: executedItems.length,
-            updatedMasteryCount,
-            inferredMasteryCount,
-            explicitMasteryCount,
-            analyzedAnswerCount,
-            memoryPersistedCount,
-            averageTutorConfidence,
-            averageMasteryDelta,
-            improvedAtomCount,
-            regressedAtomCount,
-            unchangedAtomCount,
-            retestActions: retestPlanActions.length,
-            stoppedEarly,
-        };
-        this.sessionExecutionHistory.unshift(record);
-        if (this.sessionExecutionHistory.length > SESSION_EXECUTION_HISTORY_LIMIT) {
-            this.sessionExecutionHistory.splice(SESSION_EXECUTION_HISTORY_LIMIT);
-        }
-        const sessionPlanQualityRecord = this.evaluateStudySessionPlanQualityInternal({
-            request: {
-                actionLimit,
-                maxActions,
-            },
-            sessionPlan,
-            userId,
-            evaluatedAt: executedAt,
-            source: 'session_execution',
-            executionRecordId: record.id,
-            executionKind,
-        });
-        this.recordStudySessionPlanQualityHistory(sessionPlanQualityRecord);
-        const learningQualitySnapshot = await this.captureLearningQualitySnapshot({
-            userId,
-            sampledAt: executedAt,
-        });
-        this.recordLearningQualityHistory({
-            recordId: this.nextId('learning_quality'),
-            userId,
-            sampledAt: learningQualitySnapshot.sampledAt,
-            source: 'session_execution',
-            executionRecordId: record.id,
-            executionKind,
-            snapshot: this.cloneLearningQualitySnapshot(learningQualitySnapshot.snapshot),
-            diagnostics: {
-                ...learningQualitySnapshot.diagnostics,
-            },
-        });
-        const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(comparedAtomIds);
-        if (sessionId) {
-            this.upsertConversationSessionState({
-                sessionId,
+                }
+            }
+
+            const executedItems = items.filter(
+                (item): item is StudySessionPlanExecutionResponse['items'][number] & { result: StudySessionActionExecutionResponse } =>
+                    item.status === 'executed' && !!item.result
+            );
+            const skippedCount = items.filter((item) => item.status === 'skipped').length;
+            const failedCount = items.filter((item) => item.status === 'failed').length;
+            const updatedMasteryCount = executedItems.filter((item) => item.result.trace.updatedMastery === true).length;
+            const inferredMasteryCount = executedItems.filter((item) => item.result.trace.masterySource === 'inferred').length;
+            const explicitMasteryCount = executedItems.filter((item) => item.result.trace.masterySource === 'explicit').length;
+            const analyzedAnswerCount = executedItems.filter((item) => item.result.trace.analyzedAnswer === true).length;
+            const memoryPersistedCount = executedItems.filter((item) => item.result.trace.persistedMemory === true).length;
+            const averageTutorConfidence = executedItems.length > 0
+                ? Number((
+                    executedItems.reduce((sum, item) => sum + Number(item.result.tutor.trace.confidence || 0), 0) / executedItems.length
+                ).toFixed(4))
+                : 0;
+            const lastExecutionByAtom = new Map<string, StudySessionActionExecutionResponse>();
+            executedItems.forEach((item) => {
+                const atomId = String(item.action.atomId || '').trim();
+                if (!atomId) {
+                    return;
+                }
+                lastExecutionByAtom.set(atomId, item.result);
+            });
+            const masteryDeltaItems: StudySessionMasteryDeltaItem[] = comparedAtomIds
+                .map((atomId) => {
+                    const stateKey = this.makeLearnerStateKey(userId, atomId);
+                    const currentState = this.learnerStates.has(stateKey)
+                        ? this.normalizeLearnerState(
+                            this.learnerStates.get(stateKey) as LearnerConceptState,
+                            executedAt
+                        )
+                        : this.createDefaultLearnerState(userId, atomId, executedAt);
+                    const beforeMastery = Number((baselineMasteryByAtom.get(atomId) || 0.5).toFixed(6));
+                    const afterMastery = Number(currentState.masteryProbability.toFixed(6));
+                    const deltaMastery = Number((afterMastery - beforeMastery).toFixed(6));
+                    const executionResult = lastExecutionByAtom.get(atomId);
+                    return {
+                        atomId,
+                        title: this.atoms.get(atomId)?.title || atomId,
+                        beforeMastery,
+                        afterMastery,
+                        deltaMastery,
+                        updatedByExecution: executionResult?.trace.updatedMastery === true,
+                        lastOutcome: executionResult?.trace.effectiveOutcome || null,
+                    };
+                })
+                .sort((left, right) => Math.abs(right.deltaMastery) - Math.abs(left.deltaMastery));
+            const improvedAtomCount = masteryDeltaItems.filter((item) => item.deltaMastery > 0.000001).length;
+            const regressedAtomCount = masteryDeltaItems.filter((item) => item.deltaMastery < -0.000001).length;
+            const unchangedAtomCount = masteryDeltaItems.length - improvedAtomCount - regressedAtomCount;
+            const averageMasteryBefore = masteryDeltaItems.length > 0
+                ? Number((
+                    masteryDeltaItems.reduce((sum, item) => sum + item.beforeMastery, 0) / masteryDeltaItems.length
+                ).toFixed(6))
+                : 0;
+            const averageMasteryAfter = masteryDeltaItems.length > 0
+                ? Number((
+                    masteryDeltaItems.reduce((sum, item) => sum + item.afterMastery, 0) / masteryDeltaItems.length
+                ).toFixed(6))
+                : 0;
+            const averageMasteryDelta = Number((averageMasteryAfter - averageMasteryBefore).toFixed(6));
+            const includeRetestPlan = request.includeRetestPlan !== false;
+            const retestActionLimit = clamp(Math.floor(Number(request.retestActionLimit) || 6), 1, 24);
+            const retestPlanActions: StudySessionAction[] = includeRetestPlan
+                ? (() => {
+                    const retestCandidates = executedItems
+                        .map<StudySessionAction | null>((item) => {
+                            const atomId = String(item.action.atomId || '').trim();
+                            if (!atomId || !this.activeAtomIds.has(atomId)) {
+                                return null;
+                            }
+                            const outcome = item.result.trace.effectiveOutcome;
+                            if (outcome !== 'incorrect' && outcome !== 'partial' && outcome !== 'skipped') {
+                                return null;
+                            }
+                            const atom = this.atoms.get(atomId);
+                            const kind: LearningActionKind = outcome === 'partial' ? 'quiz' : 'review';
+                            const priority = outcome === 'incorrect'
+                                ? 108
+                                : (outcome === 'partial' ? 96 : 92);
+                            const expectedGain = outcome === 'incorrect'
+                                ? 0.24
+                                : (outcome === 'partial' ? 0.16 : 0.12);
+                            const effectiveErrorTag = item.result.trace.effectiveErrorTag || item.action.errorTag;
+                            const errorHint = effectiveErrorTag
+                                ? ` (focus: ${effectiveErrorTag})`
+                                : '';
+                            const generatedAction = this.createLearningAction({
+                                kind,
+                                atomId,
+                                priority,
+                                expectedGain,
+                                rationale: `Immediate retest after ${outcome} outcome${errorHint}.`,
+                                evidenceSpanIds: Array.isArray(item.action.evidenceSpanIds) && item.action.evidenceSpanIds.length > 0
+                                    ? item.action.evidenceSpanIds
+                                    : (atom?.evidenceSpanIds || []),
+                                relationPathAtomIds: [atomId],
+                                estimatedMinutes: outcome === 'incorrect' ? 7 : 5,
+                            });
+                            const retestAction: StudySessionAction = {
+                                ...generatedAction,
+                                source: 'retrain_plan',
+                                ...(effectiveErrorTag ? { errorTag: effectiveErrorTag } : {}),
+                            };
+                            return retestAction;
+                        })
+                        .filter((action): action is StudySessionAction => Boolean(action))
+                        .sort((left, right) => {
+                            if (right.priority !== left.priority) {
+                                return right.priority - left.priority;
+                            }
+                            return right.expectedGain - left.expectedGain;
+                        });
+                    const deduped = new Map<string, StudySessionAction>();
+                    retestCandidates.forEach((action) => {
+                        const signature = `${action.atomId}::${action.kind}`;
+                        if (!deduped.has(signature)) {
+                            deduped.set(signature, action);
+                        }
+                    });
+                    return Array.from(deduped.values()).slice(0, retestActionLimit);
+                })()
+                : [];
+            const record: StudySessionExecutionRecord = {
+                id: this.nextId('session_exec'),
                 userId,
-                mode: executionKind === 'custom' ? 'review_plan' : 'study_session',
+                executionKind,
+                executedAt,
+                focusAtomIds: comparedAtomIds,
+                plannedActions: sessionPlan.actions.length,
+                attemptedActions: selectedActions.length,
+                executedCount: executedItems.length,
+                updatedMasteryCount,
+                inferredMasteryCount,
+                explicitMasteryCount,
+                analyzedAnswerCount,
+                memoryPersistedCount,
+                averageTutorConfidence,
+                averageMasteryDelta,
+                improvedAtomCount,
+                regressedAtomCount,
+                unchangedAtomCount,
+                retestActions: retestPlanActions.length,
+                stoppedEarly,
+            };
+            this.sessionExecutionHistory.unshift(record);
+            if (this.sessionExecutionHistory.length > SESSION_EXECUTION_HISTORY_LIMIT) {
+                this.sessionExecutionHistory.splice(SESSION_EXECUTION_HISTORY_LIMIT);
+            }
+            const sessionPlanQualityRecord = this.evaluateStudySessionPlanQualityInternal({
+                request: {
+                    actionLimit,
+                    maxActions,
+                },
+                sessionPlan,
+                userId,
+                evaluatedAt: executedAt,
+                source: 'session_execution',
+                executionRecordId: record.id,
+                executionKind,
+            });
+            this.recordStudySessionPlanQualityHistory(sessionPlanQualityRecord);
+            const learningQualitySnapshot = await this.captureLearningQualitySnapshot({
+                userId,
+                sampledAt: executedAt,
+            });
+            this.recordLearningQualityHistory({
+                recordId: this.nextId('learning_quality'),
+                userId,
+                sampledAt: learningQualitySnapshot.sampledAt,
+                source: 'session_execution',
+                executionRecordId: record.id,
+                executionKind,
+                snapshot: this.cloneLearningQualitySnapshot(learningQualitySnapshot.snapshot),
+                diagnostics: {
+                    ...learningQualitySnapshot.diagnostics,
+                },
+            });
+            const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(comparedAtomIds);
+            if (sessionId) {
+                this.upsertConversationSessionState({
+                    sessionId,
+                    userId,
+                    mode: executionKind === 'custom' ? 'review_plan' : 'study_session',
+                    workspaceId: scopedWorkspace.workspaceId,
+                    corpusId: scopedWorkspace.corpusId,
+                    activeResourceIds: this.resolveSourceResourceIdsForAtomIds(comparedAtomIds),
+                    activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(comparedAtomIds),
+                    topK: actionLimit,
+                    queryBackend: null,
+                    persistMemory: request.persistMemory !== false,
+                    memoryNamespace: null,
+                    exportProfileId: scopedWorkspace.exportProfileId,
+                    panelState: {
+                        lastExecutionAt: executedAt,
+                        lastExecutionKind: executionKind,
+                        executedCount: executedItems.length,
+                        failedCount,
+                        retestActions: retestPlanActions.length,
+                    },
+                    recordedAt: executedAt,
+                });
+            }
+            this.recordWorkflowArtifact({
+                kind: 'review_plan',
+                sessionId: sessionId || null,
+                userId,
                 workspaceId: scopedWorkspace.workspaceId,
                 corpusId: scopedWorkspace.corpusId,
-                activeResourceIds: this.resolveSourceResourceIdsForAtomIds(comparedAtomIds),
-                activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(comparedAtomIds),
-                topK: actionLimit,
-                queryBackend: null,
-                persistMemory: request.persistMemory !== false,
-                memoryNamespace: null,
-                exportProfileId: scopedWorkspace.exportProfileId,
-                panelState: {
-                    lastExecutionAt: executedAt,
-                    lastExecutionKind: executionKind,
-                    executedCount: executedItems.length,
-                    failedCount,
-                    retestActions: retestPlanActions.length,
-                },
+                title: `Session execution ${executionKind} for ${comparedAtomIds[0] || 'global scope'}`,
+                sourceAtomIds: comparedAtomIds,
+                summary: `Executed ${executedItems.length}/${selectedActions.length} actions with average mastery delta ${averageMasteryDelta}.`,
+                payload: {
+                    summary: {
+                        plannedActions: sessionPlan.actions.length,
+                        attemptedActions: selectedActions.length,
+                        executedCount: executedItems.length,
+                        skippedCount,
+                        failedCount,
+                        averageMasteryDelta,
+                        retestActions: retestPlanActions.length,
+                    },
+                    masteryDelta: masteryDeltaItems,
+                } as Record<string, unknown>,
                 recordedAt: executedAt,
             });
-        }
-        this.recordWorkflowArtifact({
-            kind: 'review_plan',
-            sessionId: sessionId || null,
-            userId,
-            workspaceId: scopedWorkspace.workspaceId,
-            corpusId: scopedWorkspace.corpusId,
-            title: `Session execution ${executionKind} for ${comparedAtomIds[0] || 'global scope'}`,
-            sourceAtomIds: comparedAtomIds,
-            summary: `Executed ${executedItems.length}/${selectedActions.length} actions with average mastery delta ${averageMasteryDelta}.`,
-            payload: {
+            await this.persistIfNeeded();
+
+            return {
+                userId,
+                sessionId,
+                executedAt,
+                sessionPlan,
+                items,
                 summary: {
                     plannedActions: sessionPlan.actions.length,
                     attemptedActions: selectedActions.length,
                     executedCount: executedItems.length,
                     skippedCount,
                     failedCount,
+                    updatedMasteryCount,
+                    inferredMasteryCount,
+                    explicitMasteryCount,
+                    analyzedAnswerCount,
+                    memoryPersistedCount,
+                    totalEstimatedMinutes: selectedActions.reduce(
+                        (sum, action) => sum + Math.max(0, Math.floor(Number(action.estimatedMinutes || 0))),
+                        0
+                    ),
+                    averageTutorConfidence,
+                    averageMasteryBefore,
+                    averageMasteryAfter,
                     averageMasteryDelta,
-                    retestActions: retestPlanActions.length,
+                    improvedAtomCount,
+                    regressedAtomCount,
+                    unchangedAtomCount,
+                    stoppedEarly,
                 },
-                masteryDelta: masteryDeltaItems,
-            } as Record<string, unknown>,
-            recordedAt: executedAt,
+                masteryDelta: {
+                    comparedAtoms: masteryDeltaItems.length,
+                    averageBefore: averageMasteryBefore,
+                    averageAfter: averageMasteryAfter,
+                    averageDelta: averageMasteryDelta,
+                    improvedCount: improvedAtomCount,
+                    regressedCount: regressedAtomCount,
+                    unchangedCount: unchangedAtomCount,
+                    items: masteryDeltaItems,
+                },
+                retestPlan: {
+                    generatedAt: executedAt,
+                    actions: retestPlanActions,
+                    summary: {
+                        totalActions: retestPlanActions.length,
+                        targetAtoms: Array.from(new Set(retestPlanActions.map((action) => action.atomId))),
+                    },
+                },
+                record,
+            };
         });
-        await this.persistIfNeeded();
-
-        return {
-            userId,
-            sessionId,
-            executedAt,
-            sessionPlan,
-            items,
-            summary: {
-                plannedActions: sessionPlan.actions.length,
-                attemptedActions: selectedActions.length,
-                executedCount: executedItems.length,
-                skippedCount,
-                failedCount,
-                updatedMasteryCount,
-                inferredMasteryCount,
-                explicitMasteryCount,
-                analyzedAnswerCount,
-                memoryPersistedCount,
-                totalEstimatedMinutes: selectedActions.reduce(
-                    (sum, action) => sum + Math.max(0, Math.floor(Number(action.estimatedMinutes || 0))),
-                    0
-                ),
-                averageTutorConfidence,
-                averageMasteryBefore,
-                averageMasteryAfter,
-                averageMasteryDelta,
-                improvedAtomCount,
-                regressedAtomCount,
-                unchangedAtomCount,
-                stoppedEarly,
-            },
-            masteryDelta: {
-                comparedAtoms: masteryDeltaItems.length,
-                averageBefore: averageMasteryBefore,
-                averageAfter: averageMasteryAfter,
-                averageDelta: averageMasteryDelta,
-                improvedCount: improvedAtomCount,
-                regressedCount: regressedAtomCount,
-                unchangedCount: unchangedAtomCount,
-                items: masteryDeltaItems,
-            },
-            retestPlan: {
-                generatedAt: executedAt,
-                actions: retestPlanActions,
-                summary: {
-                    totalActions: retestPlanActions.length,
-                    targetAtoms: Array.from(new Set(retestPlanActions.map((action) => action.atomId))),
-                },
-            },
-            record,
-        };
     }
 
     public async executeTutorAction(request: TutorActionRequest): Promise<TutorActionResponse> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('TutorActionAPI requires a non-empty userId.');
-        }
-        const nowIso = this.resolveTimestamp(undefined);
-        let targetAtom: KnowledgeAtom | undefined;
-
-        if (isNonEmptyString(request.atomId)) {
-            targetAtom = this.atoms.get(request.atomId);
-        }
-
-        if (!targetAtom && isNonEmptyString(request.prompt)) {
-            const queryResult = await this.queryKnowledge({
-                query: request.prompt,
-                topK: 1,
-                asOf: nowIso,
-            });
-            targetAtom = queryResult.items[0]?.atom;
-        }
-
-        if (!targetAtom) {
-            throw new Error('TutorActionAPI could not resolve target atom.');
-        }
-
-        const evidenceSpans = targetAtom.evidenceSpanIds
-            .map((evidenceId) => this.evidenceSpans.get(evidenceId))
-            .filter((span): span is EvidenceSpan => Boolean(span));
-        const neighbors = this.collectNeighborAtomIds(targetAtom.id, 3);
-        const learnerState = this.learnerStates.has(this.makeLearnerStateKey(userId, targetAtom.id))
-            ? this.normalizeLearnerState(
-                this.learnerStates.get(this.makeLearnerStateKey(userId, targetAtom.id)) as LearnerConceptState,
-                nowIso
-            )
-            : null;
-        const dominantErrorTag = learnerState ? this.getDominantErrorTag(learnerState) : null;
-        const suggestedActions = this.buildTutorSuggestedActions(targetAtom.id, evidenceSpans, neighbors, dominantErrorTag);
-        let message = this.renderTutorMessage({
-            actionKind: request.actionKind,
-            atom: targetAtom,
-            answer: request.answer,
-            prompt: request.prompt,
-            neighbors,
-            evidenceSpans,
-            dominantErrorTag,
-        });
-        let traceSource: TutorTrace['source'] = 'rule-engine';
-        let traceConfidence = this.estimateTutorConfidence(request.actionKind, request.answer, targetAtom);
-        let traceNotes = dominantErrorTag
-            ? `Evidence-first response generated by local rule engine with misconception focus: ${dominantErrorTag}.`
-            : 'Evidence-first response generated by local rule engine.';
-        let traceEvidenceSpanIds = evidenceSpans.map((span) => span.id);
-        let traceAdapterId = 'rule-engine-local';
-        let traceProviderName = 'rule-engine';
-        let traceProviderMode: TutorTrace['providerMode'] = 'local';
-        let traceVerificationStatus: TutorTrace['verificationStatus'] = 'verified';
-        let traceProviderAttemptCount = 1;
-        let traceFallbackUsed = false;
-        let traceFailed = false;
-        let traceErrorMessage = '';
-
-        if (this.tutorAdapter) {
-            try {
-                traceAdapterId = String(request.adapterId || this.tutorAdapter.id || '').trim() || 'configured-tutor-adapter';
-                traceProviderName = String(request.providerName || this.tutorAdapter.id || '').trim() || traceAdapterId;
-                traceProviderMode = String(request.providerMode || this.tutorAdapter.mode || '').trim() || 'local';
-                const adapterResult = await this.tutorAdapter.execute({
-                    userId,
-                    actionKind: request.actionKind,
-                    atom: targetAtom,
-                    prompt: request.prompt,
-                    answer: request.answer,
-                    evidenceSpans,
-                    relatedAtomIds: neighbors,
-                });
-                const adapterMetadata = (
-                    adapterResult.metadata && typeof adapterResult.metadata === 'object'
-                        ? adapterResult.metadata
-                        : {}
-                ) as Record<string, unknown>;
-                const attemptedProviders = Array.isArray(adapterMetadata.attemptedProviders)
-                    ? adapterMetadata.attemptedProviders
-                        .map((candidate) => String(candidate || '').trim())
-                        .filter(Boolean)
-                    : [];
-                traceAdapterId = String(
-                    adapterResult.adapterId
-                    || adapterMetadata.adapterIdHint
-                    || request.adapterId
-                    || this.tutorAdapter.id
-                    || ''
-                ).trim() || traceAdapterId;
-                traceProviderName = String(
-                    adapterResult.providerName
-                    || adapterMetadata.selectedProvider
-                    || request.providerName
-                    || this.tutorAdapter.id
-                    || ''
-                ).trim() || traceProviderName;
-                traceProviderMode = String(
-                    adapterResult.providerMode
-                    || request.providerMode
-                    || this.tutorAdapter.mode
-                    || ''
-                ).trim() || traceProviderMode;
-                traceProviderAttemptCount = Math.max(1, attemptedProviders.length || traceProviderAttemptCount);
-                const adapterConfidence = clamp(Number(adapterResult.confidence ?? 0), 0, 1);
-                const adapterEvidenceSpanIds = (adapterResult.evidenceSpanIds || [])
-                    .filter((spanId) => traceEvidenceSpanIds.includes(spanId));
-                const adapterMessage = normalizeWhitespace(String(adapterResult.message || ''));
-                const hasEvidenceBinding = adapterEvidenceSpanIds.length > 0;
-                traceSource = 'llm-adapter';
-                traceConfidence = Number(adapterConfidence.toFixed(4));
-                if (adapterMessage && adapterConfidence >= 0.65 && hasEvidenceBinding) {
-                    message = adapterMessage;
-                    traceNotes = `Adapter response accepted from ${this.tutorAdapter.id} with evidence binding.`;
-                    traceEvidenceSpanIds = adapterEvidenceSpanIds;
-                    traceVerificationStatus = 'verified';
-                } else {
-                    const evidenceHint = evidenceSpans[0]?.snippet || targetAtom.content.slice(0, 220);
-                    message = [
-                        'Low-confidence tutor output detected. Treat this as unverified guidance.',
-                        `Evidence-first fallback: ${evidenceHint}`,
-                        'Please verify the answer against cited source fragments before accepting it.',
-                    ].join('\n');
-                    traceNotes = `Adapter response downgraded from ${traceProviderName} (confidence=${adapterConfidence.toFixed(4)}, evidenceBindings=${adapterEvidenceSpanIds.length}).`;
-                    traceVerificationStatus = 'pending';
-                    traceFallbackUsed = true;
-                }
-            } catch (error) {
-                traceSource = 'llm-adapter';
-                traceConfidence = 0.2;
-                traceVerificationStatus = 'failed';
-                traceFallbackUsed = true;
-                traceFailed = true;
-                traceErrorMessage = String((error as Error)?.message || error || 'unknown_error');
-                traceNotes = `Adapter execution failed and fallback was used: ${traceErrorMessage}`;
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('TutorActionAPI requires a non-empty userId.');
             }
-        }
-        const trace: TutorTrace = {
-            traceId: this.nextId('trace'),
-            userId,
-            actionKind: request.actionKind,
-            atomId: targetAtom.id,
-            createdAt: nowIso,
-            confidence: traceConfidence,
-            evidenceSpanIds: traceEvidenceSpanIds,
-            relationPathAtomIds: neighbors,
-            source: traceSource,
-            notes: traceNotes,
-            adapterId: traceAdapterId,
-            providerName: traceProviderName,
-            providerMode: traceProviderMode,
-            verificationStatus: traceVerificationStatus,
-            providerAttemptCount: traceProviderAttemptCount,
-            fallbackUsed: traceFallbackUsed,
-            failed: traceFailed,
-            errorMessage: traceErrorMessage || undefined,
-        };
-        this.tutorTraces.push(trace);
+            const nowIso = this.resolveTimestamp(undefined);
+            let targetAtom: KnowledgeAtom | undefined;
 
-        const response: TutorActionResponse = {
-            message,
-            suggestedActions,
-            evidenceSpans,
-            trace,
-        };
-        await this.persistIfNeeded();
-        return response;
+            if (isNonEmptyString(request.atomId)) {
+                targetAtom = this.atoms.get(request.atomId);
+            }
+
+            if (!targetAtom && isNonEmptyString(request.prompt)) {
+                const queryResult = await this.queryKnowledge({
+                    query: request.prompt,
+                    topK: 1,
+                    asOf: nowIso,
+                });
+                targetAtom = queryResult.items[0]?.atom;
+            }
+
+            if (!targetAtom) {
+                throw new Error('TutorActionAPI could not resolve target atom.');
+            }
+
+            const evidenceSpans = targetAtom.evidenceSpanIds
+                .map((evidenceId) => this.evidenceSpans.get(evidenceId))
+                .filter((span): span is EvidenceSpan => Boolean(span));
+            const neighbors = this.collectNeighborAtomIds(targetAtom.id, 3);
+            const learnerState = this.learnerStates.has(this.makeLearnerStateKey(userId, targetAtom.id))
+                ? this.normalizeLearnerState(
+                    this.learnerStates.get(this.makeLearnerStateKey(userId, targetAtom.id)) as LearnerConceptState,
+                    nowIso
+                )
+                : null;
+            const dominantErrorTag = learnerState ? this.getDominantErrorTag(learnerState) : null;
+            const suggestedActions = this.buildTutorSuggestedActions(targetAtom.id, evidenceSpans, neighbors, dominantErrorTag);
+            let message = this.renderTutorMessage({
+                actionKind: request.actionKind,
+                atom: targetAtom,
+                answer: request.answer,
+                prompt: request.prompt,
+                neighbors,
+                evidenceSpans,
+                dominantErrorTag,
+            });
+            let traceSource: TutorTrace['source'] = 'rule-engine';
+            let traceConfidence = this.estimateTutorConfidence(request.actionKind, request.answer, targetAtom);
+            let traceNotes = dominantErrorTag
+                ? `Evidence-first response generated by local rule engine with misconception focus: ${dominantErrorTag}.`
+                : 'Evidence-first response generated by local rule engine.';
+            let traceEvidenceSpanIds = evidenceSpans.map((span) => span.id);
+            let traceAdapterId = 'rule-engine-local';
+            let traceProviderName = 'rule-engine';
+            let traceProviderMode: TutorTrace['providerMode'] = 'local';
+            let traceVerificationStatus: TutorTrace['verificationStatus'] = 'verified';
+            let traceProviderAttemptCount = 1;
+            let traceFallbackUsed = false;
+            let traceFailed = false;
+            let traceErrorMessage = '';
+
+            if (this.tutorAdapter) {
+                try {
+                    traceAdapterId = String(request.adapterId || this.tutorAdapter.id || '').trim() || 'configured-tutor-adapter';
+                    traceProviderName = String(request.providerName || this.tutorAdapter.id || '').trim() || traceAdapterId;
+                    traceProviderMode = String(request.providerMode || this.tutorAdapter.mode || '').trim() || 'local';
+                    const adapterResult = await this.tutorAdapter.execute({
+                        userId,
+                        actionKind: request.actionKind,
+                        atom: targetAtom,
+                        prompt: request.prompt,
+                        answer: request.answer,
+                        evidenceSpans,
+                        relatedAtomIds: neighbors,
+                    });
+                    const adapterMetadata = (
+                        adapterResult.metadata && typeof adapterResult.metadata === 'object'
+                            ? adapterResult.metadata
+                            : {}
+                    ) as Record<string, unknown>;
+                    const attemptedProviders = Array.isArray(adapterMetadata.attemptedProviders)
+                        ? adapterMetadata.attemptedProviders
+                            .map((candidate) => String(candidate || '').trim())
+                            .filter(Boolean)
+                        : [];
+                    traceAdapterId = String(
+                        adapterResult.adapterId
+                        || adapterMetadata.adapterIdHint
+                        || request.adapterId
+                        || this.tutorAdapter.id
+                        || ''
+                    ).trim() || traceAdapterId;
+                    traceProviderName = String(
+                        adapterResult.providerName
+                        || adapterMetadata.selectedProvider
+                        || request.providerName
+                        || this.tutorAdapter.id
+                        || ''
+                    ).trim() || traceProviderName;
+                    traceProviderMode = String(
+                        adapterResult.providerMode
+                        || request.providerMode
+                        || this.tutorAdapter.mode
+                        || ''
+                    ).trim() || traceProviderMode;
+                    traceProviderAttemptCount = Math.max(1, attemptedProviders.length || traceProviderAttemptCount);
+                    const adapterConfidence = clamp(Number(adapterResult.confidence ?? 0), 0, 1);
+                    const adapterEvidenceSpanIds = (adapterResult.evidenceSpanIds || [])
+                        .filter((spanId) => traceEvidenceSpanIds.includes(spanId));
+                    const adapterMessage = normalizeWhitespace(String(adapterResult.message || ''));
+                    const hasEvidenceBinding = adapterEvidenceSpanIds.length > 0;
+                    traceSource = 'llm-adapter';
+                    traceConfidence = Number(adapterConfidence.toFixed(4));
+                    if (adapterMessage && adapterConfidence >= 0.65 && hasEvidenceBinding) {
+                        message = adapterMessage;
+                        traceNotes = `Adapter response accepted from ${this.tutorAdapter.id} with evidence binding.`;
+                        traceEvidenceSpanIds = adapterEvidenceSpanIds;
+                        traceVerificationStatus = 'verified';
+                    } else {
+                        const evidenceHint = evidenceSpans[0]?.snippet || targetAtom.content.slice(0, 220);
+                        message = [
+                            'Low-confidence tutor output detected. Treat this as unverified guidance.',
+                            `Evidence-first fallback: ${evidenceHint}`,
+                            'Please verify the answer against cited source fragments before accepting it.',
+                        ].join('\n');
+                        traceNotes = `Adapter response downgraded from ${traceProviderName} (confidence=${adapterConfidence.toFixed(4)}, evidenceBindings=${adapterEvidenceSpanIds.length}).`;
+                        traceVerificationStatus = 'pending';
+                        traceFallbackUsed = true;
+                    }
+                } catch (error) {
+                    traceSource = 'llm-adapter';
+                    traceConfidence = 0.2;
+                    traceVerificationStatus = 'failed';
+                    traceFallbackUsed = true;
+                    traceFailed = true;
+                    traceErrorMessage = String((error as Error)?.message || error || 'unknown_error');
+                    traceNotes = `Adapter execution failed and fallback was used: ${traceErrorMessage}`;
+                }
+            }
+            const trace: TutorTrace = {
+                traceId: this.nextId('trace'),
+                userId,
+                actionKind: request.actionKind,
+                atomId: targetAtom.id,
+                createdAt: nowIso,
+                confidence: traceConfidence,
+                evidenceSpanIds: traceEvidenceSpanIds,
+                relationPathAtomIds: neighbors,
+                source: traceSource,
+                notes: traceNotes,
+                adapterId: traceAdapterId,
+                providerName: traceProviderName,
+                providerMode: traceProviderMode,
+                verificationStatus: traceVerificationStatus,
+                providerAttemptCount: traceProviderAttemptCount,
+                fallbackUsed: traceFallbackUsed,
+                failed: traceFailed,
+                errorMessage: traceErrorMessage || undefined,
+            };
+            this.tutorTraces.push(trace);
+
+            const response: TutorActionResponse = {
+                message,
+                suggestedActions,
+                evidenceSpans,
+                trace,
+            };
+            await this.persistIfNeeded();
+            return response;
+        });
     }
 
     public async applyMemoryPolicy(request: MemoryPolicyRequest): Promise<MemoryPolicyResponse> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('MemoryPolicyAPI requires a non-empty userId.');
-        }
-        const layer = request.layer;
-        const operation = request.operation;
-        const nowIso = this.resolveTimestamp(request.now);
-        const bank = this.ensureUserMemoryBank(userId);
-        const entries = bank[layer];
-        let evictedCount = 0;
-
-        if (operation === 'write') {
-            const incomingEntries = Array.isArray(request.entries) ? request.entries : [];
-            for (const incomingEntry of incomingEntries) {
-                if (!isNonEmptyString(incomingEntry.key) || !isNonEmptyString(incomingEntry.value)) {
-                    continue;
-                }
-                const index = entries.findIndex((entry) => entry.key === incomingEntry.key);
-                if (index >= 0) {
-                    entries[index] = this.buildGovernedMemoryEntry({
-                        entry: {
-                            ...incomingEntry,
-                            updatedAt: nowIso,
-                        },
-                        previous: entries[index],
-                    });
-                    this.appendMemoryAuditRecord({
-                        userId,
-                        operation: 'write',
-                        layer,
-                        entry: entries[index],
-                        reason: 'memory_policy_write:update',
-                        recordedAt: nowIso,
-                    });
-                } else {
-                    const governedEntry = this.buildGovernedMemoryEntry({
-                        entry: {
-                            ...incomingEntry,
-                            createdAt: incomingEntry.createdAt || nowIso,
-                            updatedAt: nowIso,
-                        },
-                    });
-                    entries.push(governedEntry);
-                    this.appendMemoryAuditRecord({
-                        userId,
-                        operation: 'write',
-                        layer,
-                        entry: governedEntry,
-                        reason: 'memory_policy_write:create',
-                        recordedAt: nowIso,
-                    });
-                }
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('MemoryPolicyAPI requires a non-empty userId.');
             }
-            const eviction = this.evictMemoryLayerDetailed(bank, layer, nowIso);
-            evictedCount = eviction.evictedCount;
-            eviction.evictedEntries.forEach((entry) => {
-                this.appendMemoryAuditRecord({
-                    userId,
-                    operation: 'evict',
-                    layer,
-                    entry,
-                    reason: 'memory_policy_write:capacity_or_expiry',
-                    recordedAt: nowIso,
-                });
-            });
-            const response: MemoryPolicyResponse = {
-                layer,
-                operation,
-                entries: [...bank[layer]],
-                evictedCount,
-                stats: this.collectMemoryStats(),
-            };
-            await this.persistIfNeeded();
-            return response;
-        }
+            const layer = request.layer;
+            const operation = request.operation;
+            const nowIso = this.resolveTimestamp(request.now);
+            const bank = this.ensureUserMemoryBank(userId);
+            const entries = bank[layer];
+            let evictedCount = 0;
 
-        if (operation === 'evict') {
-            const eviction = this.evictMemoryLayerDetailed(bank, layer, nowIso);
-            evictedCount = eviction.evictedCount;
-            eviction.evictedEntries.forEach((entry) => {
-                this.appendMemoryAuditRecord({
-                    userId,
-                    operation: 'evict',
-                    layer,
-                    entry,
-                    reason: 'memory_policy_evict:manual',
-                    recordedAt: nowIso,
+            if (operation === 'write') {
+                const incomingEntries = Array.isArray(request.entries) ? request.entries : [];
+                for (const incomingEntry of incomingEntries) {
+                    if (!isNonEmptyString(incomingEntry.key) || !isNonEmptyString(incomingEntry.value)) {
+                        continue;
+                    }
+                    const index = entries.findIndex((entry) => entry.key === incomingEntry.key);
+                    if (index >= 0) {
+                        entries[index] = this.buildGovernedMemoryEntry({
+                            entry: {
+                                ...incomingEntry,
+                                updatedAt: nowIso,
+                            },
+                            previous: entries[index],
+                        });
+                        this.appendMemoryAuditRecord({
+                            userId,
+                            operation: 'write',
+                            layer,
+                            entry: entries[index],
+                            reason: 'memory_policy_write:update',
+                            recordedAt: nowIso,
+                        });
+                    } else {
+                        const governedEntry = this.buildGovernedMemoryEntry({
+                            entry: {
+                                ...incomingEntry,
+                                createdAt: incomingEntry.createdAt || nowIso,
+                                updatedAt: nowIso,
+                            },
+                        });
+                        entries.push(governedEntry);
+                        this.appendMemoryAuditRecord({
+                            userId,
+                            operation: 'write',
+                            layer,
+                            entry: governedEntry,
+                            reason: 'memory_policy_write:create',
+                            recordedAt: nowIso,
+                        });
+                    }
+                }
+                const eviction = this.evictMemoryLayerDetailed(bank, layer, nowIso);
+                evictedCount = eviction.evictedCount;
+                eviction.evictedEntries.forEach((entry) => {
+                    this.appendMemoryAuditRecord({
+                        userId,
+                        operation: 'evict',
+                        layer,
+                        entry,
+                        reason: 'memory_policy_write:capacity_or_expiry',
+                        recordedAt: nowIso,
+                    });
                 });
-            });
-            const response: MemoryPolicyResponse = {
-                layer,
-                operation,
-                entries: [...bank[layer]],
-                evictedCount,
-                stats: this.collectMemoryStats(),
-            };
-            await this.persistIfNeeded();
-            return response;
-        }
+                const response: MemoryPolicyResponse = {
+                    layer,
+                    operation,
+                    entries: [...bank[layer]],
+                    evictedCount,
+                    stats: this.collectMemoryStats(),
+                };
+                await this.persistIfNeeded();
+                return response;
+            }
 
-        if (operation === 'read') {
-            const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 100);
-            const minConfidence = clamp(Number(request.minConfidence ?? 0), 0, 1);
-            const includeExpired = request.includeExpired === true;
-            const queryTokens = tokenize(String(request.query || ''));
-            const requiredTokenHits = queryTokens.length <= 1
-                ? queryTokens.length
-                : Math.max(1, Math.ceil(queryTokens.length * 0.5));
-            const selectedEntries = bank[layer]
-                .filter((entry) => {
-                    if (!includeExpired) {
-                        const expiresAt = this.resolveOptionalTimestamp(entry.expiresAt);
-                        if (expiresAt && Date.parse(expiresAt) <= Date.parse(nowIso)) {
+            if (operation === 'evict') {
+                const eviction = this.evictMemoryLayerDetailed(bank, layer, nowIso);
+                evictedCount = eviction.evictedCount;
+                eviction.evictedEntries.forEach((entry) => {
+                    this.appendMemoryAuditRecord({
+                        userId,
+                        operation: 'evict',
+                        layer,
+                        entry,
+                        reason: 'memory_policy_evict:manual',
+                        recordedAt: nowIso,
+                    });
+                });
+                const response: MemoryPolicyResponse = {
+                    layer,
+                    operation,
+                    entries: [...bank[layer]],
+                    evictedCount,
+                    stats: this.collectMemoryStats(),
+                };
+                await this.persistIfNeeded();
+                return response;
+            }
+
+            if (operation === 'read') {
+                const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 100);
+                const minConfidence = clamp(Number(request.minConfidence ?? 0), 0, 1);
+                const includeExpired = request.includeExpired === true;
+                const queryTokens = tokenize(String(request.query || ''));
+                const requiredTokenHits = queryTokens.length <= 1
+                    ? queryTokens.length
+                    : Math.max(1, Math.ceil(queryTokens.length * 0.5));
+                const selectedEntries = bank[layer]
+                    .filter((entry) => {
+                        if (!includeExpired) {
+                            const expiresAt = this.resolveOptionalTimestamp(entry.expiresAt);
+                            if (expiresAt && Date.parse(expiresAt) <= Date.parse(nowIso)) {
+                                return false;
+                            }
+                        }
+                        if (Number(entry.confidence || 0) < minConfidence) {
                             return false;
                         }
-                    }
-                    if (Number(entry.confidence || 0) < minConfidence) {
-                        return false;
-                    }
-                    if (!queryTokens.length) {
-                        return true;
-                    }
-                    const haystack = normalizeWhitespace([
-                        entry.key,
-                        entry.value,
-                        ...(entry.tags || []),
-                        ...(entry.references || []),
-                    ].join(' ')).toLowerCase();
-                    const tokenHits = queryTokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0);
-                    return tokenHits >= requiredTokenHits;
-                })
-                .sort((left, right) => {
-                    const leftHaystack = normalizeWhitespace([
-                        left.key,
-                        left.value,
-                        ...(left.tags || []),
-                        ...(left.references || []),
-                    ].join(' ')).toLowerCase();
-                    const rightHaystack = normalizeWhitespace([
-                        right.key,
-                        right.value,
-                        ...(right.tags || []),
-                        ...(right.references || []),
-                    ].join(' ')).toLowerCase();
-                    const leftTokenHits = queryTokens.reduce((count, token) => count + (leftHaystack.includes(token) ? 1 : 0), 0);
-                    const rightTokenHits = queryTokens.reduce((count, token) => count + (rightHaystack.includes(token) ? 1 : 0), 0);
-                    const leftScore = leftTokenHits + Number(left.confidence || 0) + computeGovernedMemoryWeight(left);
-                    const rightScore = rightTokenHits + Number(right.confidence || 0) + computeGovernedMemoryWeight(right);
-                    if (rightScore !== leftScore) {
-                        return rightScore - leftScore;
-                    }
-                    return right.updatedAt.localeCompare(left.updatedAt);
-                })
-                .slice(0, limit);
-            selectedEntries.forEach((entry) => {
-                this.appendMemoryAuditRecord({
-                    userId,
-                    operation: 'read',
+                        if (!queryTokens.length) {
+                            return true;
+                        }
+                        const haystack = normalizeWhitespace([
+                            entry.key,
+                            entry.value,
+                            ...(entry.tags || []),
+                            ...(entry.references || []),
+                        ].join(' ')).toLowerCase();
+                        const tokenHits = queryTokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0);
+                        return tokenHits >= requiredTokenHits;
+                    })
+                    .sort((left, right) => {
+                        const leftHaystack = normalizeWhitespace([
+                            left.key,
+                            left.value,
+                            ...(left.tags || []),
+                            ...(left.references || []),
+                        ].join(' ')).toLowerCase();
+                        const rightHaystack = normalizeWhitespace([
+                            right.key,
+                            right.value,
+                            ...(right.tags || []),
+                            ...(right.references || []),
+                        ].join(' ')).toLowerCase();
+                        const leftTokenHits = queryTokens.reduce((count, token) => count + (leftHaystack.includes(token) ? 1 : 0), 0);
+                        const rightTokenHits = queryTokens.reduce((count, token) => count + (rightHaystack.includes(token) ? 1 : 0), 0);
+                        const leftScore = leftTokenHits + Number(left.confidence || 0) + computeGovernedMemoryWeight(left);
+                        const rightScore = rightTokenHits + Number(right.confidence || 0) + computeGovernedMemoryWeight(right);
+                        if (rightScore !== leftScore) {
+                            return rightScore - leftScore;
+                        }
+                        return right.updatedAt.localeCompare(left.updatedAt);
+                    })
+                    .slice(0, limit);
+                selectedEntries.forEach((entry) => {
+                    this.appendMemoryAuditRecord({
+                        userId,
+                        operation: 'read',
+                        layer,
+                        entry,
+                        reason: queryTokens.length > 0 ? `memory_policy_read:${queryTokens.join('|')}` : 'memory_policy_read:snapshot',
+                        recordedAt: nowIso,
+                    });
+                });
+                return {
                     layer,
-                    entry,
-                    reason: queryTokens.length > 0 ? `memory_policy_read:${queryTokens.join('|')}` : 'memory_policy_read:snapshot',
-                    recordedAt: nowIso,
-                });
-            });
-            return {
-                layer,
-                operation,
-                entries: selectedEntries,
-                evictedCount: 0,
-                stats: this.collectMemoryStats(),
-            };
-        }
-
-        if (operation === 'promote') {
-            const targetLayer = request.targetLayer || (layer === 'session' ? 'unit' : 'long_term');
-            const minConfidence = clamp(Number(request.minConfidence ?? 0.75), 0, 1);
-            const removeFromSource = request.removeFromSource === true && targetLayer !== layer;
-            const queryTokens = tokenize(String(request.query || ''));
-            const requestedKeys = new Set(
-                (Array.isArray(request.entries) ? request.entries : [])
-                    .map((entry) => String(entry?.key || '').trim())
-                    .filter(Boolean)
-            );
-            const sourceEntries = bank[layer]
-                .filter((entry) => Number(entry.confidence || 0) >= minConfidence)
-                .filter((entry) => {
-                    if (requestedKeys.size > 0) {
-                        return requestedKeys.has(entry.key);
-                    }
-                    if (queryTokens.length <= 0) {
-                        return true;
-                    }
-                    const haystack = normalizeWhitespace([
-                        entry.key,
-                        entry.value,
-                        ...(entry.tags || []),
-                        ...(entry.references || []),
-                    ].join(' ')).toLowerCase();
-                    return queryTokens.some((token) => haystack.includes(token));
-                });
-            const targetEntries = bank[targetLayer];
-            sourceEntries.forEach((entry) => {
-                const index = targetEntries.findIndex((candidate) => candidate.key === entry.key);
-                const promotedEntry = this.buildGovernedMemoryEntry({
-                    entry: {
-                        ...entry,
-                        tags: Array.from(new Set([...(entry.tags || []), `promoted_from:${layer}`])),
-                        updatedAt: nowIso,
-                    },
-                    previous: index >= 0 ? targetEntries[index] : null,
-                    fallbackScopeWorkspaceId: entry.scopeWorkspaceId,
-                    fallbackScopeCorpusId: entry.scopeCorpusId,
-                });
-                if (index >= 0) {
-                    targetEntries[index] = promotedEntry;
-                } else {
-                    targetEntries.push(promotedEntry);
-                }
-                this.appendMemoryAuditRecord({
-                    userId,
-                    operation: 'promote',
-                    layer: targetLayer,
-                    entry: promotedEntry,
-                    reason: `memory_policy_promote:${layer}_to_${targetLayer}`,
-                    recordedAt: nowIso,
-                });
-            });
-            if (removeFromSource && sourceEntries.length > 0) {
-                const promotedKeys = new Set(sourceEntries.map((entry) => entry.key));
-                bank[layer] = bank[layer].filter((entry) => !promotedKeys.has(entry.key));
+                    operation,
+                    entries: selectedEntries,
+                    evictedCount: 0,
+                    stats: this.collectMemoryStats(),
+                };
             }
-            const targetEviction = this.evictMemoryLayerDetailed(bank, targetLayer, nowIso);
-            targetEviction.evictedEntries.forEach((entry) => {
-                this.appendMemoryAuditRecord({
-                    userId,
-                    operation: 'evict',
+
+            if (operation === 'promote') {
+                const targetLayer = request.targetLayer || (layer === 'session' ? 'unit' : 'long_term');
+                const minConfidence = clamp(Number(request.minConfidence ?? 0.75), 0, 1);
+                const removeFromSource = request.removeFromSource === true && targetLayer !== layer;
+                const queryTokens = tokenize(String(request.query || ''));
+                const requestedKeys = new Set(
+                    (Array.isArray(request.entries) ? request.entries : [])
+                        .map((entry) => String(entry?.key || '').trim())
+                        .filter(Boolean)
+                );
+                const sourceEntries = bank[layer]
+                    .filter((entry) => Number(entry.confidence || 0) >= minConfidence)
+                    .filter((entry) => {
+                        if (requestedKeys.size > 0) {
+                            return requestedKeys.has(entry.key);
+                        }
+                        if (queryTokens.length <= 0) {
+                            return true;
+                        }
+                        const haystack = normalizeWhitespace([
+                            entry.key,
+                            entry.value,
+                            ...(entry.tags || []),
+                            ...(entry.references || []),
+                        ].join(' ')).toLowerCase();
+                        return queryTokens.some((token) => haystack.includes(token));
+                    });
+                const targetEntries = bank[targetLayer];
+                sourceEntries.forEach((entry) => {
+                    const index = targetEntries.findIndex((candidate) => candidate.key === entry.key);
+                    const promotedEntry = this.buildGovernedMemoryEntry({
+                        entry: {
+                            ...entry,
+                            tags: Array.from(new Set([...(entry.tags || []), `promoted_from:${layer}`])),
+                            updatedAt: nowIso,
+                        },
+                        previous: index >= 0 ? targetEntries[index] : null,
+                        fallbackScopeWorkspaceId: entry.scopeWorkspaceId,
+                        fallbackScopeCorpusId: entry.scopeCorpusId,
+                    });
+                    if (index >= 0) {
+                        targetEntries[index] = promotedEntry;
+                    } else {
+                        targetEntries.push(promotedEntry);
+                    }
+                    this.appendMemoryAuditRecord({
+                        userId,
+                        operation: 'promote',
+                        layer: targetLayer,
+                        entry: promotedEntry,
+                        reason: `memory_policy_promote:${layer}_to_${targetLayer}`,
+                        recordedAt: nowIso,
+                    });
+                });
+                if (removeFromSource && sourceEntries.length > 0) {
+                    const promotedKeys = new Set(sourceEntries.map((entry) => entry.key));
+                    bank[layer] = bank[layer].filter((entry) => !promotedKeys.has(entry.key));
+                }
+                const targetEviction = this.evictMemoryLayerDetailed(bank, targetLayer, nowIso);
+                targetEviction.evictedEntries.forEach((entry) => {
+                    this.appendMemoryAuditRecord({
+                        userId,
+                        operation: 'evict',
+                        layer: targetLayer,
+                        entry,
+                        reason: 'memory_policy_promote:capacity_or_expiry',
+                        recordedAt: nowIso,
+                    });
+                });
+                const sourceEviction = removeFromSource ? this.evictMemoryLayerDetailed(bank, layer, nowIso) : { evictedCount: 0, evictedEntries: [] as MemoryEntry[] };
+                sourceEviction.evictedEntries.forEach((entry) => {
+                    this.appendMemoryAuditRecord({
+                        userId,
+                        operation: 'evict',
+                        layer,
+                        entry,
+                        reason: 'memory_policy_promote:source_cleanup',
+                        recordedAt: nowIso,
+                    });
+                });
+                evictedCount = targetEviction.evictedCount + sourceEviction.evictedCount;
+                const response: MemoryPolicyResponse = {
                     layer: targetLayer,
-                    entry,
-                    reason: 'memory_policy_promote:capacity_or_expiry',
-                    recordedAt: nowIso,
+                    operation,
+                    entries: [...bank[targetLayer]],
+                    evictedCount,
+                    stats: this.collectMemoryStats(),
+                };
+                await this.persistIfNeeded();
+                return response;
+            }
+
+            if (operation === 'retrain_plan') {
+                const limit = clamp(Math.floor(Number(request.limit) || 8), 1, 40);
+                const nowTime = Date.parse(nowIso);
+                const dueStates = Array.from(this.learnerStates.values())
+                    .filter((state) => state.userId === userId)
+                    .map((state) => this.normalizeLearnerState(state, nowIso))
+                    .filter((state) => {
+                        const nextReviewAtTime = Date.parse(state.nextReviewAt);
+                        if (!Number.isFinite(nextReviewAtTime)) {
+                            return true;
+                        }
+                        return nextReviewAtTime <= nowTime;
+                    })
+                    .sort((left, right) => {
+                        const leftGap = 1 - left.masteryProbability;
+                        const rightGap = 1 - right.masteryProbability;
+                        if (rightGap !== leftGap) {
+                            return rightGap - leftGap;
+                        }
+                        return left.nextReviewAt.localeCompare(right.nextReviewAt);
+                    })
+                    .slice(0, limit);
+
+                const recommendedActions = dueStates.flatMap((state, index) => {
+                    const expectedGain = Number(clamp((1 - state.masteryProbability) * 0.65, 0.05, 0.85).toFixed(4));
+                    return this.buildMasteryActions(
+                        state.atomId,
+                        expectedGain,
+                        index + 1,
+                        this.getDominantErrorTag(state)
+                    ).slice(0, 2);
                 });
-            });
-            const sourceEviction = removeFromSource ? this.evictMemoryLayerDetailed(bank, layer, nowIso) : { evictedCount: 0, evictedEntries: [] as MemoryEntry[] };
-            sourceEviction.evictedEntries.forEach((entry) => {
-                this.appendMemoryAuditRecord({
-                    userId,
-                    operation: 'evict',
+
+                return {
                     layer,
-                    entry,
-                    reason: 'memory_policy_promote:source_cleanup',
-                    recordedAt: nowIso,
-                });
-            });
-            evictedCount = targetEviction.evictedCount + sourceEviction.evictedCount;
-            const response: MemoryPolicyResponse = {
-                layer: targetLayer,
-                operation,
-                entries: [...bank[targetLayer]],
-                evictedCount,
-                stats: this.collectMemoryStats(),
-            };
-            await this.persistIfNeeded();
-            return response;
-        }
-
-        if (operation === 'retrain_plan') {
-            const limit = clamp(Math.floor(Number(request.limit) || 8), 1, 40);
-            const nowTime = Date.parse(nowIso);
-            const dueStates = Array.from(this.learnerStates.values())
-                .filter((state) => state.userId === userId)
-                .map((state) => this.normalizeLearnerState(state, nowIso))
-                .filter((state) => {
-                    const nextReviewAtTime = Date.parse(state.nextReviewAt);
-                    if (!Number.isFinite(nextReviewAtTime)) {
-                        return true;
-                    }
-                    return nextReviewAtTime <= nowTime;
-                })
-                .sort((left, right) => {
-                    const leftGap = 1 - left.masteryProbability;
-                    const rightGap = 1 - right.masteryProbability;
-                    if (rightGap !== leftGap) {
-                        return rightGap - leftGap;
-                    }
-                    return left.nextReviewAt.localeCompare(right.nextReviewAt);
-                })
-                .slice(0, limit);
-
-            const recommendedActions = dueStates.flatMap((state, index) => {
-                const expectedGain = Number(clamp((1 - state.masteryProbability) * 0.65, 0.05, 0.85).toFixed(4));
-                return this.buildMasteryActions(
-                    state.atomId,
-                    expectedGain,
-                    index + 1,
-                    this.getDominantErrorTag(state)
-                ).slice(0, 2);
-            });
+                    operation,
+                    entries: [],
+                    evictedCount: 0,
+                    recommendedActions,
+                    stats: this.collectMemoryStats(),
+                };
+            }
 
             return {
                 layer,
-                operation,
-                entries: [],
+                operation: 'snapshot',
+                entries: [...bank[layer]],
                 evictedCount: 0,
-                recommendedActions,
                 stats: this.collectMemoryStats(),
             };
-        }
-
-        return {
-            layer,
-            operation: 'snapshot',
-            entries: [...bank[layer]],
-            evictedCount: 0,
-            stats: this.collectMemoryStats(),
-        };
+        });
     }
 
     public async evaluateLearningQuality(
         request: LearningQualityEvaluationRequest
     ): Promise<LearningQualityEvaluationResponse> {
-        await this.ensureHydrated();
-        const evaluatedAt = this.resolveTimestamp(request.evaluatedAt);
-        const runtimeP95 = this.buildRetrievalTelemetry().queryP95Ms;
-        const baseline = this.normalizeLearningQualitySnapshot(request.baseline, runtimeP95);
-        const current = this.normalizeLearningQualitySnapshot(request.current, runtimeP95);
-        const currentQueryP95Ms = Number(current.queryP95Ms ?? runtimeP95);
-        const thresholds = this.resolveLearningQualityThresholds(request.thresholds);
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const evaluatedAt = this.resolveTimestamp(request.evaluatedAt);
+            const runtimeP95 = this.buildRetrievalTelemetry().queryP95Ms;
+            const baseline = this.normalizeLearningQualitySnapshot(request.baseline, runtimeP95);
+            const current = this.normalizeLearningQualitySnapshot(request.current, runtimeP95);
+            const currentQueryP95Ms = Number(current.queryP95Ms ?? runtimeP95);
+            const thresholds = this.resolveLearningQualityThresholds(request.thresholds);
 
-        const retestPassRateUpliftPct = Number((current.retestPassRatePct - baseline.retestPassRatePct).toFixed(4));
-        const misconceptionRecurrenceReductionPct = Number(
-            (baseline.misconceptionRecurrenceRatePct - current.misconceptionRecurrenceRatePct).toFixed(4)
-        );
-        const pathEffectivenessLiftPct = Number(
-            (current.averagePathMasteryGainPct - current.randomPathMasteryGainPct).toFixed(4)
-        );
-        const historyWindowAverageMasteryDeltaUplift = Number(
-            (
-                Number(current.historyWindowAverageMasteryDelta || 0)
-                - Number(baseline.historyWindowAverageMasteryDelta || 0)
-            ).toFixed(6)
-        );
+            const retestPassRateUpliftPct = Number((current.retestPassRatePct - baseline.retestPassRatePct).toFixed(4));
+            const misconceptionRecurrenceReductionPct = Number(
+                (baseline.misconceptionRecurrenceRatePct - current.misconceptionRecurrenceRatePct).toFixed(4)
+            );
+            const pathEffectivenessLiftPct = Number(
+                (current.averagePathMasteryGainPct - current.randomPathMasteryGainPct).toFixed(4)
+            );
+            const historyWindowAverageMasteryDeltaUplift = Number(
+                (
+                    Number(current.historyWindowAverageMasteryDelta || 0)
+                    - Number(baseline.historyWindowAverageMasteryDelta || 0)
+                ).toFixed(6)
+            );
 
-        const gates: LearningQualityGateResult[] = [
-            {
-                gateId: 'retest_pass_rate_uplift',
-                passed: retestPassRateUpliftPct >= thresholds.retestPassRateUpliftPct,
-                comparator: '>=',
-                observedValue: retestPassRateUpliftPct,
-                threshold: thresholds.retestPassRateUpliftPct,
-                unit: 'pct',
-                message: 'Retest pass-rate uplift should satisfy the v1.5 threshold.',
-            },
-            {
-                gateId: 'misconception_reduction',
-                passed: misconceptionRecurrenceReductionPct >= thresholds.misconceptionRecurrenceReductionPct,
-                comparator: '>=',
-                observedValue: misconceptionRecurrenceReductionPct,
-                threshold: thresholds.misconceptionRecurrenceReductionPct,
-                unit: 'pct',
-                message: 'Misconception recurrence should decline after intervention.',
-            },
-            {
-                gateId: 'evidence_ratio',
-                passed: current.evidenceBackedSuggestionRatioPct >= thresholds.evidenceBackedSuggestionRatioPct,
-                comparator: '>=',
-                observedValue: current.evidenceBackedSuggestionRatioPct,
-                threshold: thresholds.evidenceBackedSuggestionRatioPct,
-                unit: 'pct',
-                message: 'Evidence-backed recommendation ratio should remain high.',
-            },
-            {
-                gateId: 'path_effectiveness',
-                passed: pathEffectivenessLiftPct >= thresholds.pathEffectivenessLiftPct,
-                comparator: '>=',
-                observedValue: pathEffectivenessLiftPct,
-                threshold: thresholds.pathEffectivenessLiftPct,
-                unit: 'pct',
-                message: 'Mastery-oriented paths should outperform random paths.',
-            },
-            {
-                gateId: 'history_mastery_delta_uplift',
-                passed: historyWindowAverageMasteryDeltaUplift >= thresholds.historyWindowAverageMasteryDeltaUplift,
-                comparator: '>=',
-                observedValue: historyWindowAverageMasteryDeltaUplift,
-                threshold: thresholds.historyWindowAverageMasteryDeltaUplift,
-                unit: 'pct',
-                message: 'Recent session-history mastery delta should show positive uplift.',
-            },
-            {
-                gateId: 'query_p95',
-                passed: currentQueryP95Ms <= thresholds.queryP95Ms,
-                comparator: '<=',
-                observedValue: currentQueryP95Ms,
-                threshold: thresholds.queryP95Ms,
-                unit: 'ms',
-                message: 'Knowledge query p95 latency should stay within interactive budget.',
-            },
-        ];
+            const gates: LearningQualityGateResult[] = [
+                {
+                    gateId: 'retest_pass_rate_uplift',
+                    passed: retestPassRateUpliftPct >= thresholds.retestPassRateUpliftPct,
+                    comparator: '>=',
+                    observedValue: retestPassRateUpliftPct,
+                    threshold: thresholds.retestPassRateUpliftPct,
+                    unit: 'pct',
+                    message: 'Retest pass-rate uplift should satisfy the v1.5 threshold.',
+                },
+                {
+                    gateId: 'misconception_reduction',
+                    passed: misconceptionRecurrenceReductionPct >= thresholds.misconceptionRecurrenceReductionPct,
+                    comparator: '>=',
+                    observedValue: misconceptionRecurrenceReductionPct,
+                    threshold: thresholds.misconceptionRecurrenceReductionPct,
+                    unit: 'pct',
+                    message: 'Misconception recurrence should decline after intervention.',
+                },
+                {
+                    gateId: 'evidence_ratio',
+                    passed: current.evidenceBackedSuggestionRatioPct >= thresholds.evidenceBackedSuggestionRatioPct,
+                    comparator: '>=',
+                    observedValue: current.evidenceBackedSuggestionRatioPct,
+                    threshold: thresholds.evidenceBackedSuggestionRatioPct,
+                    unit: 'pct',
+                    message: 'Evidence-backed recommendation ratio should remain high.',
+                },
+                {
+                    gateId: 'path_effectiveness',
+                    passed: pathEffectivenessLiftPct >= thresholds.pathEffectivenessLiftPct,
+                    comparator: '>=',
+                    observedValue: pathEffectivenessLiftPct,
+                    threshold: thresholds.pathEffectivenessLiftPct,
+                    unit: 'pct',
+                    message: 'Mastery-oriented paths should outperform random paths.',
+                },
+                {
+                    gateId: 'history_mastery_delta_uplift',
+                    passed: historyWindowAverageMasteryDeltaUplift >= thresholds.historyWindowAverageMasteryDeltaUplift,
+                    comparator: '>=',
+                    observedValue: historyWindowAverageMasteryDeltaUplift,
+                    threshold: thresholds.historyWindowAverageMasteryDeltaUplift,
+                    unit: 'pct',
+                    message: 'Recent session-history mastery delta should show positive uplift.',
+                },
+                {
+                    gateId: 'query_p95',
+                    passed: currentQueryP95Ms <= thresholds.queryP95Ms,
+                    comparator: '<=',
+                    observedValue: currentQueryP95Ms,
+                    threshold: thresholds.queryP95Ms,
+                    unit: 'ms',
+                    message: 'Knowledge query p95 latency should stay within interactive budget.',
+                },
+            ];
 
-        return {
-            evaluatedAt,
-            thresholds,
-            baseline,
-            current: {
-                ...current,
-                queryP95Ms: currentQueryP95Ms,
-            },
-            deltas: {
-                retestPassRateUpliftPct,
-                misconceptionRecurrenceReductionPct,
-                pathEffectivenessLiftPct,
-                historyWindowAverageMasteryDeltaUplift,
-            },
-            gates,
-            overallPassed: gates.every((gate) => gate.passed),
-        };
+            return {
+                evaluatedAt,
+                thresholds,
+                baseline,
+                current: {
+                    ...current,
+                    queryP95Ms: currentQueryP95Ms,
+                },
+                deltas: {
+                    retestPassRateUpliftPct,
+                    misconceptionRecurrenceReductionPct,
+                    pathEffectivenessLiftPct,
+                    historyWindowAverageMasteryDeltaUplift,
+                },
+                gates,
+                overallPassed: gates.every((gate) => gate.passed),
+            };
+        });
     }
 
     public async captureLearningQualitySnapshot(
         request: LearningQualitySnapshotRequest
     ): Promise<LearningQualitySnapshotResponse> {
-        await this.ensureHydrated();
-        const sampledAt = this.resolveTimestamp(request.sampledAt);
-        const userId = isNonEmptyString(request.userId) ? request.userId.trim() : null;
-        const historyWindowDays = Math.floor(clamp(Number(request.historyWindowDays || 14), 1, 180));
-        const sampledAtMs = Date.parse(sampledAt);
-        const historyWindowStartMs = sampledAtMs - historyWindowDays * 24 * 60 * 60 * 1000;
-        const scopedStates = Array.from(this.learnerStates.values())
-            .filter((state) => !userId || state.userId === userId)
-            .map((state) => this.normalizeLearnerState(state, sampledAt));
-        const totalReviews = scopedStates.reduce((sum, state) => sum + state.reviewCount, 0);
-        const totalCorrect = scopedStates.reduce((sum, state) => sum + state.correctCount, 0);
-        const retestPassRatePct = Number(
-            clamp((totalCorrect / Math.max(1, totalReviews)) * 100, 0, 100).toFixed(4)
-        );
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const sampledAt = this.resolveTimestamp(request.sampledAt);
+            const userId = isNonEmptyString(request.userId) ? request.userId.trim() : null;
+            const historyWindowDays = Math.floor(clamp(Number(request.historyWindowDays || 14), 1, 180));
+            const sampledAtMs = Date.parse(sampledAt);
+            const historyWindowStartMs = sampledAtMs - historyWindowDays * 24 * 60 * 60 * 1000;
+            const scopedStates = Array.from(this.learnerStates.values())
+                .filter((state) => !userId || state.userId === userId)
+                .map((state) => this.normalizeLearnerState(state, sampledAt));
+            const totalReviews = scopedStates.reduce((sum, state) => sum + state.reviewCount, 0);
+            const totalCorrect = scopedStates.reduce((sum, state) => sum + state.correctCount, 0);
+            const retestPassRatePct = Number(
+                clamp((totalCorrect / Math.max(1, totalReviews)) * 100, 0, 100).toFixed(4)
+            );
 
-        const misconceptionEvents = scopedStates.reduce((sum, state) =>
-            sum + state.errorTagStats.reduce((subSum, item) => subSum + Math.max(0, Math.floor(Number(item.count || 0))), 0),
-        0);
-        const recurrentMisconceptionEvents = scopedStates.reduce((sum, state) =>
-            sum + state.errorTagStats.reduce((subSum, item) => {
-                const count = Math.max(0, Math.floor(Number(item.count || 0)));
-                return subSum + Math.max(0, count - 1);
-            }, 0),
-        0);
-        const misconceptionRecurrenceRatePct = Number(
-            clamp((recurrentMisconceptionEvents / Math.max(1, misconceptionEvents)) * 100, 0, 100).toFixed(4)
-        );
+            const misconceptionEvents = scopedStates.reduce((sum, state) =>
+                sum + state.errorTagStats.reduce((subSum, item) => subSum + Math.max(0, Math.floor(Number(item.count || 0))), 0),
+            0);
+            const recurrentMisconceptionEvents = scopedStates.reduce((sum, state) =>
+                sum + state.errorTagStats.reduce((subSum, item) => {
+                    const count = Math.max(0, Math.floor(Number(item.count || 0)));
+                    return subSum + Math.max(0, count - 1);
+                }, 0),
+            0);
+            const misconceptionRecurrenceRatePct = Number(
+                clamp((recurrentMisconceptionEvents / Math.max(1, misconceptionEvents)) * 100, 0, 100).toFixed(4)
+            );
 
-        const scopedTraces = this.tutorTraces.filter((trace) => !userId || trace.userId === userId);
-        const evidenceBackedTutorTraces = scopedTraces.filter((trace) => trace.evidenceSpanIds.length > 0).length;
-        const evidenceBackedSuggestionRatioPct = Number(
-            clamp((evidenceBackedTutorTraces / Math.max(1, scopedTraces.length)) * 100, 0, 100).toFixed(4)
-        );
+            const scopedTraces = this.tutorTraces.filter((trace) => !userId || trace.userId === userId);
+            const evidenceBackedTutorTraces = scopedTraces.filter((trace) => trace.evidenceSpanIds.length > 0).length;
+            const evidenceBackedSuggestionRatioPct = Number(
+                clamp((evidenceBackedTutorTraces / Math.max(1, scopedTraces.length)) * 100, 0, 100).toFixed(4)
+            );
 
-        const masteryGaps = scopedStates.length > 0
-            ? scopedStates.map((state) => 1 - state.masteryProbability)
-            : [0.5];
-        const averageGap = masteryGaps.reduce((sum, gap) => sum + gap, 0) / Math.max(1, masteryGaps.length);
-        const averagePathMasteryGainPct = Number(clamp(averageGap * 36, 0, 100).toFixed(4));
-        const randomPathMasteryGainPct = Number(clamp(averageGap * 22, 0, 100).toFixed(4));
-        const scopedHistoryRecords = this.sessionExecutionHistory.filter((record) => {
-            if (userId && record.userId !== userId) {
-                return false;
-            }
-            const executedAtMs = Date.parse(record.executedAt);
-            if (!Number.isFinite(executedAtMs)) {
-                return false;
-            }
-            return executedAtMs >= historyWindowStartMs && executedAtMs <= sampledAtMs;
+            const masteryGaps = scopedStates.length > 0
+                ? scopedStates.map((state) => 1 - state.masteryProbability)
+                : [0.5];
+            const averageGap = masteryGaps.reduce((sum, gap) => sum + gap, 0) / Math.max(1, masteryGaps.length);
+            const averagePathMasteryGainPct = Number(clamp(averageGap * 36, 0, 100).toFixed(4));
+            const randomPathMasteryGainPct = Number(clamp(averageGap * 22, 0, 100).toFixed(4));
+            const scopedHistoryRecords = this.sessionExecutionHistory.filter((record) => {
+                if (userId && record.userId !== userId) {
+                    return false;
+                }
+                const executedAtMs = Date.parse(record.executedAt);
+                if (!Number.isFinite(executedAtMs)) {
+                    return false;
+                }
+                return executedAtMs >= historyWindowStartMs && executedAtMs <= sampledAtMs;
+            });
+            const historyWindowRecords = scopedHistoryRecords.length;
+            const historyWindowAverageMasteryDelta = historyWindowRecords > 0
+                ? Number(
+                    (
+                        scopedHistoryRecords.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0)
+                        / historyWindowRecords
+                    ).toFixed(6)
+                )
+                : 0;
+            const scopedRetestHistoryRecords = scopedHistoryRecords.filter((record) => record.executionKind === 'retest');
+            const historyWindowRetestPositiveDeltaRatePct = Number(
+                clamp(
+                    (
+                        scopedRetestHistoryRecords.filter((record) => Number(record.averageMasteryDelta || 0) > 0).length
+                        / Math.max(1, scopedRetestHistoryRecords.length)
+                    ) * 100,
+                    0,
+                    100
+                ).toFixed(4)
+            );
+            const pendingVerificationRatioPct = Number(
+                clamp(
+                    (
+                        scopedTraces.filter((trace) => String(trace.verificationStatus || '').trim() === 'pending').length
+                        / Math.max(1, scopedTraces.length)
+                    ) * 100,
+                    0,
+                    100
+                ).toFixed(4)
+            );
+            const queryTelemetry = this.buildRetrievalTelemetry();
+            const queryP95Ms = this.buildRetrievalTelemetry().queryP95Ms;
+            const queryBackendFallbackRatioPct = Number(
+                clamp(
+                    (this.queryBackendFallbackCount / Math.max(1, queryTelemetry.queryCount)) * 100,
+                    0,
+                    100
+                ).toFixed(4)
+            );
+            const sessionMemoryPromotionCoveragePct = Number(
+                clamp(
+                    (
+                        Number(this.sessionActionTelemetry.memoryPersistedCount || 0)
+                        / Math.max(1, Number(this.sessionActionTelemetry.executionCount || 0))
+                    ) * 100,
+                    0,
+                    100
+                ).toFixed(4)
+            );
+
+            return {
+                sampledAt,
+                snapshot: {
+                    retestPassRatePct,
+                    misconceptionRecurrenceRatePct,
+                    evidenceBackedSuggestionRatioPct,
+                    averagePathMasteryGainPct,
+                    randomPathMasteryGainPct,
+                    historyWindowDays,
+                    historyWindowRecords,
+                    historyWindowAverageMasteryDelta,
+                    historyWindowRetestPositiveDeltaRatePct,
+                    queryP95Ms,
+                    pendingVerificationRatioPct,
+                    queryBackendFallbackRatioPct,
+                    sessionMemoryPromotionCoveragePct,
+                },
+                diagnostics: {
+                    learnerStates: scopedStates.length,
+                    totalReviews,
+                    misconceptionEvents,
+                    evidenceBackedTutorTraces,
+                    totalTutorTraces: scopedTraces.length,
+                    historyWindowRecords,
+                    historyWindowRetestRecords: scopedRetestHistoryRecords.length,
+                },
+            };
         });
-        const historyWindowRecords = scopedHistoryRecords.length;
-        const historyWindowAverageMasteryDelta = historyWindowRecords > 0
-            ? Number(
-                (
-                    scopedHistoryRecords.reduce((sum, record) => sum + Number(record.averageMasteryDelta || 0), 0)
-                    / historyWindowRecords
-                ).toFixed(6)
-            )
-            : 0;
-        const scopedRetestHistoryRecords = scopedHistoryRecords.filter((record) => record.executionKind === 'retest');
-        const historyWindowRetestPositiveDeltaRatePct = Number(
-            clamp(
-                (
-                    scopedRetestHistoryRecords.filter((record) => Number(record.averageMasteryDelta || 0) > 0).length
-                    / Math.max(1, scopedRetestHistoryRecords.length)
-                ) * 100,
-                0,
-                100
-            ).toFixed(4)
-        );
-        const pendingVerificationRatioPct = Number(
-            clamp(
-                (
-                    scopedTraces.filter((trace) => String(trace.verificationStatus || '').trim() === 'pending').length
-                    / Math.max(1, scopedTraces.length)
-                ) * 100,
-                0,
-                100
-            ).toFixed(4)
-        );
-        const queryTelemetry = this.buildRetrievalTelemetry();
-        const queryP95Ms = this.buildRetrievalTelemetry().queryP95Ms;
-        const queryBackendFallbackRatioPct = Number(
-            clamp(
-                (this.queryBackendFallbackCount / Math.max(1, queryTelemetry.queryCount)) * 100,
-                0,
-                100
-            ).toFixed(4)
-        );
-        const sessionMemoryPromotionCoveragePct = Number(
-            clamp(
-                (
-                    Number(this.sessionActionTelemetry.memoryPersistedCount || 0)
-                    / Math.max(1, Number(this.sessionActionTelemetry.executionCount || 0))
-                ) * 100,
-                0,
-                100
-            ).toFixed(4)
-        );
-
-        return {
-            sampledAt,
-            snapshot: {
-                retestPassRatePct,
-                misconceptionRecurrenceRatePct,
-                evidenceBackedSuggestionRatioPct,
-                averagePathMasteryGainPct,
-                randomPathMasteryGainPct,
-                historyWindowDays,
-                historyWindowRecords,
-                historyWindowAverageMasteryDelta,
-                historyWindowRetestPositiveDeltaRatePct,
-                queryP95Ms,
-                pendingVerificationRatioPct,
-                queryBackendFallbackRatioPct,
-                sessionMemoryPromotionCoveragePct,
-            },
-            diagnostics: {
-                learnerStates: scopedStates.length,
-                totalReviews,
-                misconceptionEvents,
-                evidenceBackedTutorTraces,
-                totalTutorTraces: scopedTraces.length,
-                historyWindowRecords,
-                historyWindowRetestRecords: scopedRetestHistoryRecords.length,
-            },
-        };
     }
 
     public async getLearningQualityBaseline(
         request: LearningQualityBaselineGetRequest
     ): Promise<LearningQualityBaselineResponse> {
-        await this.ensureHydrated();
-        const userId = String(request?.userId || '').trim();
-        if (!userId) {
-            throw new Error('learning_quality_baseline_user_id_required');
-        }
-        const baseline = this.learningQualityBaselines.get(userId);
-        return {
-            userId,
-            found: Boolean(baseline),
-            storedAt: baseline?.storedAt || null,
-            snapshot: baseline ? this.cloneLearningQualitySnapshot(baseline.snapshot) : null,
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const userId = String(request?.userId || '').trim();
+            if (!userId) {
+                throw new Error('learning_quality_baseline_user_id_required');
+            }
+            const baseline = this.learningQualityBaselines.get(userId);
+            return {
+                userId,
+                found: Boolean(baseline),
+                storedAt: baseline?.storedAt || null,
+                snapshot: baseline ? this.cloneLearningQualitySnapshot(baseline.snapshot) : null,
+            };
+        });
     }
 
     public async setLearningQualityBaseline(
         request: LearningQualityBaselineSetRequest
     ): Promise<LearningQualityBaselineResponse> {
-        await this.ensureHydrated();
-        const userId = String(request?.userId || '').trim();
-        if (!userId) {
-            throw new Error('learning_quality_baseline_user_id_required');
-        }
-        if (!request?.snapshot || typeof request.snapshot !== 'object') {
-            throw new Error('learning_quality_baseline_snapshot_required');
-        }
-        const fallbackQueryP95Ms = this.buildRetrievalTelemetry().queryP95Ms;
-        const normalizedSnapshot = this.normalizeLearningQualitySnapshot(
-            request.snapshot,
-            fallbackQueryP95Ms
-        );
-        const storedAt = this.resolveTimestamp(request.storedAt);
-        this.learningQualityBaselines.set(userId, {
-            snapshot: this.cloneLearningQualitySnapshot(normalizedSnapshot),
-            storedAt,
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const userId = String(request?.userId || '').trim();
+            if (!userId) {
+                throw new Error('learning_quality_baseline_user_id_required');
+            }
+            if (!request?.snapshot || typeof request.snapshot !== 'object') {
+                throw new Error('learning_quality_baseline_snapshot_required');
+            }
+            const fallbackQueryP95Ms = this.buildRetrievalTelemetry().queryP95Ms;
+            const normalizedSnapshot = this.normalizeLearningQualitySnapshot(
+                request.snapshot,
+                fallbackQueryP95Ms
+            );
+            const storedAt = this.resolveTimestamp(request.storedAt);
+            this.learningQualityBaselines.set(userId, {
+                snapshot: this.cloneLearningQualitySnapshot(normalizedSnapshot),
+                storedAt,
+            });
+            return {
+                userId,
+                found: true,
+                storedAt,
+                snapshot: this.cloneLearningQualitySnapshot(normalizedSnapshot),
+            };
         });
-        return {
-            userId,
-            found: true,
-            storedAt,
-            snapshot: this.cloneLearningQualitySnapshot(normalizedSnapshot),
-        };
     }
 
     public async clearLearningQualityBaseline(
         request: LearningQualityBaselineClearRequest
     ): Promise<LearningQualityBaselineResponse> {
-        await this.ensureHydrated();
-        const userId = String(request?.userId || '').trim();
-        if (!userId) {
-            throw new Error('learning_quality_baseline_user_id_required');
-        }
-        this.learningQualityBaselines.delete(userId);
-        return {
-            userId,
-            found: false,
-            storedAt: null,
-            snapshot: null,
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const userId = String(request?.userId || '').trim();
+            if (!userId) {
+                throw new Error('learning_quality_baseline_user_id_required');
+            }
+            this.learningQualityBaselines.delete(userId);
+            return {
+                userId,
+                found: false,
+                storedAt: null,
+                snapshot: null,
+            };
+        });
     }
 
     public async evaluateLearningQualityAgainstBaseline(
         request: LearningQualityBaselineEvaluateRequest
     ): Promise<LearningQualityBaselineEvaluateResponse> {
-        await this.ensureHydrated();
-        const userId = String(request?.userId || '').trim();
-        if (!userId) {
-            throw new Error('learning_quality_baseline_user_id_required');
-        }
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const userId = String(request?.userId || '').trim();
+            if (!userId) {
+                throw new Error('learning_quality_baseline_user_id_required');
+            }
 
-        const baseline = await this.getLearningQualityBaseline({ userId });
-        if (!baseline.found || !baseline.snapshot) {
-            throw new Error('learning_quality_baseline_not_found');
-        }
+            const baseline = await this.getLearningQualityBaseline({ userId });
+            if (!baseline.found || !baseline.snapshot) {
+                throw new Error('learning_quality_baseline_not_found');
+            }
 
-        const currentSnapshot = request.current && typeof request.current === 'object'
-            ? {
-                sampledAt: this.resolveTimestamp(request.sampledAt),
-                snapshot: this.normalizeLearningQualitySnapshot(
-                    request.current,
-                    this.buildRetrievalTelemetry().queryP95Ms
-                ),
-                diagnostics: {
-                    learnerStates: 0,
-                    totalReviews: 0,
-                    misconceptionEvents: 0,
-                    evidenceBackedTutorTraces: 0,
-                    totalTutorTraces: 0,
-                    historyWindowRecords: 0,
-                    historyWindowRetestRecords: 0,
-                },
-            } as LearningQualitySnapshotResponse
-            : await this.captureLearningQualitySnapshot({
-                userId,
-                sampledAt: request.sampledAt,
-                historyWindowDays: request.historyWindowDays,
+            const currentSnapshot = request.current && typeof request.current === 'object'
+                ? {
+                    sampledAt: this.resolveTimestamp(request.sampledAt),
+                    snapshot: this.normalizeLearningQualitySnapshot(
+                        request.current,
+                        this.buildRetrievalTelemetry().queryP95Ms
+                    ),
+                    diagnostics: {
+                        learnerStates: 0,
+                        totalReviews: 0,
+                        misconceptionEvents: 0,
+                        evidenceBackedTutorTraces: 0,
+                        totalTutorTraces: 0,
+                        historyWindowRecords: 0,
+                        historyWindowRetestRecords: 0,
+                    },
+                } as LearningQualitySnapshotResponse
+                : await this.captureLearningQualitySnapshot({
+                    userId,
+                    sampledAt: request.sampledAt,
+                    historyWindowDays: request.historyWindowDays,
+                });
+
+            const evaluation = await this.evaluateLearningQuality({
+                baseline: baseline.snapshot,
+                current: currentSnapshot.snapshot,
+                thresholds: request.thresholds,
+                evaluatedAt: request.sampledAt,
             });
 
-        const evaluation = await this.evaluateLearningQuality({
-            baseline: baseline.snapshot,
-            current: currentSnapshot.snapshot,
-            thresholds: request.thresholds,
-            evaluatedAt: request.sampledAt,
+            return {
+                userId,
+                baseline,
+                currentSnapshot,
+                evaluation,
+            };
         });
-
-        return {
-            userId,
-            baseline,
-            currentSnapshot,
-            evaluation,
-        };
     }
 
     public async evaluateIngestGuardrails(
         request: IngestGuardrailEvaluationRequest
     ): Promise<IngestGuardrailEvaluationResponse> {
-        await this.ensureHydrated();
-        const evaluatedAt = this.resolveTimestamp(request.evaluatedAt);
-        const thresholds = this.resolveIngestGuardrailThresholds(request.thresholds);
-        const telemetry = this.buildIngestTelemetry();
-        const latestSummary = this.latestIngestSummary ? { ...this.latestIngestSummary } : null;
-        const changedDocuments = latestSummary?.changedDocuments ?? 0;
-        const deletedDocuments = latestSummary?.deletedDocuments ?? 0;
-        const activeAtoms = latestSummary?.activeAtoms ?? this.activeAtomIds.size;
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const evaluatedAt = this.resolveTimestamp(request.evaluatedAt);
+            const thresholds = this.resolveIngestGuardrailThresholds(request.thresholds);
+            const telemetry = this.buildIngestTelemetry();
+            const latestSummary = this.latestIngestSummary ? { ...this.latestIngestSummary } : null;
+            const changedDocuments = latestSummary?.changedDocuments ?? 0;
+            const deletedDocuments = latestSummary?.deletedDocuments ?? 0;
+            const activeAtoms = latestSummary?.activeAtoms ?? this.activeAtomIds.size;
 
-        const gates: IngestGuardrailGateResult[] = [
-            {
-                gateId: 'changed_documents',
-                passed: changedDocuments <= thresholds.maxChangedDocuments,
-                comparator: '<=',
-                observedValue: changedDocuments,
-                threshold: thresholds.maxChangedDocuments,
-                unit: 'count',
-                message: 'Changed document volume should stay inside ingest risk budget.',
-            },
-            {
-                gateId: 'deleted_documents',
-                passed: deletedDocuments <= thresholds.maxDeletedDocuments,
-                comparator: '<=',
-                observedValue: deletedDocuments,
-                threshold: thresholds.maxDeletedDocuments,
-                unit: 'count',
-                message: 'Deleted document volume should stay inside rollback-safe budget.',
-            },
-            {
-                gateId: 'active_atoms',
-                passed: activeAtoms <= thresholds.maxActiveAtoms,
-                comparator: '<=',
-                observedValue: activeAtoms,
-                threshold: thresholds.maxActiveAtoms,
-                unit: 'count',
-                message: 'Active atom cardinality should remain within local capacity limits.',
-            },
-            {
-                gateId: 'ingest_p95',
-                passed: telemetry.ingestP95Ms <= thresholds.maxIngestP95Ms,
-                comparator: '<=',
-                observedValue: telemetry.ingestP95Ms,
-                threshold: thresholds.maxIngestP95Ms,
-                unit: 'ms',
-                message: 'Ingest p95 latency should satisfy local interaction budget.',
-            },
-            {
-                gateId: 'recompute_p95',
-                passed: telemetry.recomputeP95Ms <= thresholds.maxRecomputeP95Ms,
-                comparator: '<=',
-                observedValue: telemetry.recomputeP95Ms,
-                threshold: thresholds.maxRecomputeP95Ms,
-                unit: 'ms',
-                message: 'Relation recompute p95 latency should satisfy governance budget.',
-            },
-        ];
+            const gates: IngestGuardrailGateResult[] = [
+                {
+                    gateId: 'changed_documents',
+                    passed: changedDocuments <= thresholds.maxChangedDocuments,
+                    comparator: '<=',
+                    observedValue: changedDocuments,
+                    threshold: thresholds.maxChangedDocuments,
+                    unit: 'count',
+                    message: 'Changed document volume should stay inside ingest risk budget.',
+                },
+                {
+                    gateId: 'deleted_documents',
+                    passed: deletedDocuments <= thresholds.maxDeletedDocuments,
+                    comparator: '<=',
+                    observedValue: deletedDocuments,
+                    threshold: thresholds.maxDeletedDocuments,
+                    unit: 'count',
+                    message: 'Deleted document volume should stay inside rollback-safe budget.',
+                },
+                {
+                    gateId: 'active_atoms',
+                    passed: activeAtoms <= thresholds.maxActiveAtoms,
+                    comparator: '<=',
+                    observedValue: activeAtoms,
+                    threshold: thresholds.maxActiveAtoms,
+                    unit: 'count',
+                    message: 'Active atom cardinality should remain within local capacity limits.',
+                },
+                {
+                    gateId: 'ingest_p95',
+                    passed: telemetry.ingestP95Ms <= thresholds.maxIngestP95Ms,
+                    comparator: '<=',
+                    observedValue: telemetry.ingestP95Ms,
+                    threshold: thresholds.maxIngestP95Ms,
+                    unit: 'ms',
+                    message: 'Ingest p95 latency should satisfy local interaction budget.',
+                },
+                {
+                    gateId: 'recompute_p95',
+                    passed: telemetry.recomputeP95Ms <= thresholds.maxRecomputeP95Ms,
+                    comparator: '<=',
+                    observedValue: telemetry.recomputeP95Ms,
+                    threshold: thresholds.maxRecomputeP95Ms,
+                    unit: 'ms',
+                    message: 'Relation recompute p95 latency should satisfy governance budget.',
+                },
+            ];
 
-        return {
-            evaluatedAt,
-            thresholds,
-            latestSummary,
-            gates,
-            overallPassed: gates.every((gate) => gate.passed),
-        };
+            return {
+                evaluatedAt,
+                thresholds,
+                latestSummary,
+                gates,
+                overallPassed: gates.every((gate) => gate.passed),
+            };
+        });
     }
 
     public async ensureReady(): Promise<void> {
-        await this.ensureHydrated();
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+        });
     }
 
     public async getStoreDiagnostics(): Promise<KnowledgeGraphStoreDiagnostics> {
-        await this.ensureHydrated();
-        if (!this.store) {
-            return {
-                storeType: 'none',
-                exists: false,
-                loaded: this.hydrated,
-            };
-        }
-        return this.store.getDiagnostics();
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            if (!this.store) {
+                return {
+                    storeType: 'none',
+                    exists: false,
+                    loaded: this.hydrated,
+                };
+            }
+            return this.store.getDiagnostics();
+        });
     }
 
     public async reloadFromStore(): Promise<boolean> {
-        if (!this.store) {
+        return this.commitKnowledgeState(async () => {
+            if (!this.store) {
+                this.hydrated = true;
+                return false;
+            }
+            const snapshot = await this.store.loadSnapshot();
+            if (!snapshot) {
+                this.hydrated = true;
+                return false;
+            }
+            this.restoreFromSnapshot(snapshot);
             this.hydrated = true;
-            return false;
-        }
-        const snapshot = await this.store.loadSnapshot();
-        if (!snapshot) {
-            this.hydrated = true;
-            return false;
-        }
-        this.restoreFromSnapshot(snapshot);
-        this.hydrated = true;
-        return true;
+            return true;
+        });
     }
 
     public getKnowledgeState(): KnowledgeSystemState {
+        if (this.committedStateDuringWrite && !this.knowledgeStateScope.getStore()?.active) {
+            return JSON.parse(JSON.stringify(this.committedStateDuringWrite)) as KnowledgeSystemState;
+        }
         const ingestTelemetry = this.buildIngestTelemetry();
         const retrievalTelemetry = this.buildRetrievalTelemetry();
         const memoryStats = this.collectMemoryStats();
@@ -5542,6 +5631,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     private async persistIfNeeded(): Promise<void> {
         if (!this.store || !this.autoPersist) {
+            return;
+        }
+        const transaction = this.knowledgeStateScope.getStore()?.transaction;
+        if (transaction) {
+            transaction.persistenceRequested = true;
             return;
         }
         const snapshot = await this.buildSnapshotForPersist();
@@ -9783,74 +9877,76 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         reportCount: number;
         stored: GraphFocusRenderDiagnosticsRecord;
     }> {
-        await this.ensureHydrated();
-        const sessionId = String(request.sessionId || '').trim();
-        if (!sessionId) {
-            throw new Error('Graph-focus diagnostics require a non-empty sessionId.');
-        }
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('Graph-focus diagnostics require a non-empty userId.');
-        }
-        const recordedAt = this.resolveTimestamp(request.recordedAt);
-        const storedReport = this.buildGraphFocusRenderDiagnosticsRecord(request, recordedAt);
-        const existing = this.sessionStateStore.get(sessionId);
-        if (existing && existing.userId !== userId) {
-            throw new Error(`Graph-focus diagnostics session "${sessionId}" is already owned by another user.`);
-        }
-        const inferredWorkspaceId = this.inferWorkspaceIdFromKnowledgeBaseSourcePath(
-            storedReport.resolvedSourcePath || storedReport.requestedSourcePath
-        );
-        const workspaceId = existing?.workspaceId
-            || this.normalizeWorkspaceScopedSessionValue(request.workspaceId)
-            || inferredWorkspaceId;
-        const corpusId = existing?.corpusId
-            || this.normalizeWorkspaceScopedSessionValue(request.corpusId)
-            || workspaceId;
-        const workspace = workspaceId ? this.workspaceRegistry.getWorkspaceById(workspaceId) : null;
-        const existingPanelState = existing?.panelState && typeof existing.panelState === 'object'
-            ? existing.panelState as Record<string, unknown>
-            : {};
-        const nextGraphFocusReports = [
-            ...this.readGraphFocusRenderDiagnosticsRecords(existingPanelState),
-            storedReport,
-        ].slice(-GRAPH_FOCUS_REPORT_HISTORY_LIMIT);
-        const nextPanelState = {
-            ...existingPanelState,
-            graphFocusReports: nextGraphFocusReports,
-        };
-        const nextSessionState = this.sessionStateStore.upsert({
-            sessionId,
-            userId,
-            workspaceId,
-            corpusId,
-            mode: existing?.mode || 'grounded_conversation',
-            activeResourceIds: existing?.activeResourceIds || [],
-            activeProjectionIds: existing?.activeProjectionIds || [],
-            retrievalSettings: existing?.retrievalSettings
-                ? { ...existing.retrievalSettings }
-                : {
-                    topK: 0,
-                    queryBackend: null,
-                    persistMemory: false,
-                },
-            memorySettings: existing?.memorySettings
-                ? { ...existing.memorySettings }
-                : {
-                    namespace: null,
-                    enabled: false,
-                },
-            exportProfileId: existing?.exportProfileId || workspace?.exportProfileId || null,
-            panelState: nextPanelState,
-            recordedAt,
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const sessionId = String(request.sessionId || '').trim();
+            if (!sessionId) {
+                throw new Error('Graph-focus diagnostics require a non-empty sessionId.');
+            }
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('Graph-focus diagnostics require a non-empty userId.');
+            }
+            const recordedAt = this.resolveTimestamp(request.recordedAt);
+            const storedReport = this.buildGraphFocusRenderDiagnosticsRecord(request, recordedAt);
+            const existing = this.sessionStateStore.get(sessionId);
+            if (existing && existing.userId !== userId) {
+                throw new Error(`Graph-focus diagnostics session "${sessionId}" is already owned by another user.`);
+            }
+            const inferredWorkspaceId = this.inferWorkspaceIdFromKnowledgeBaseSourcePath(
+                storedReport.resolvedSourcePath || storedReport.requestedSourcePath
+            );
+            const workspaceId = existing?.workspaceId
+                || this.normalizeWorkspaceScopedSessionValue(request.workspaceId)
+                || inferredWorkspaceId;
+            const corpusId = existing?.corpusId
+                || this.normalizeWorkspaceScopedSessionValue(request.corpusId)
+                || workspaceId;
+            const workspace = workspaceId ? this.workspaceRegistry.getWorkspaceById(workspaceId) : null;
+            const existingPanelState = existing?.panelState && typeof existing.panelState === 'object'
+                ? existing.panelState as Record<string, unknown>
+                : {};
+            const nextGraphFocusReports = [
+                ...this.readGraphFocusRenderDiagnosticsRecords(existingPanelState),
+                storedReport,
+            ].slice(-GRAPH_FOCUS_REPORT_HISTORY_LIMIT);
+            const nextPanelState = {
+                ...existingPanelState,
+                graphFocusReports: nextGraphFocusReports,
+            };
+            const nextSessionState = this.sessionStateStore.upsert({
+                sessionId,
+                userId,
+                workspaceId,
+                corpusId,
+                mode: existing?.mode || 'grounded_conversation',
+                activeResourceIds: existing?.activeResourceIds || [],
+                activeProjectionIds: existing?.activeProjectionIds || [],
+                retrievalSettings: existing?.retrievalSettings
+                    ? { ...existing.retrievalSettings }
+                    : {
+                        topK: 0,
+                        queryBackend: null,
+                        persistMemory: false,
+                    },
+                memorySettings: existing?.memorySettings
+                    ? { ...existing.memorySettings }
+                    : {
+                        namespace: null,
+                        enabled: false,
+                    },
+                exportProfileId: existing?.exportProfileId || workspace?.exportProfileId || null,
+                panelState: nextPanelState,
+                recordedAt,
+            });
+            await this.persistIfNeeded();
+            return {
+                sessionStateId: nextSessionState.sessionStateId,
+                sessionId: nextSessionState.sessionId,
+                reportCount: nextGraphFocusReports.length,
+                stored: storedReport,
+            };
         });
-        await this.persistIfNeeded();
-        return {
-            sessionStateId: nextSessionState.sessionStateId,
-            sessionId: nextSessionState.sessionId,
-            reportCount: nextGraphFocusReports.length,
-            stored: storedReport,
-        };
     }
 
     private recordWorkflowArtifact(params: {
@@ -9987,206 +10083,210 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     public async executeWorkflowArtifactReviewFollowUp(
         request: WorkflowArtifactReviewFollowUpRequest
     ): Promise<WorkflowArtifactReviewFollowUpResponse> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('WorkflowArtifactReviewFollowUpAPI requires a non-empty userId.');
-        }
-        const artifactId = String(request.artifactId || '').trim();
-        const cardId = String(request.cardId || '').trim();
-        if (!artifactId || !cardId) {
-            throw new Error('WorkflowArtifactReviewFollowUpAPI requires non-empty artifactId and cardId.');
-        }
-        const artifact = this.workflowArtifactStore.getArtifactById(artifactId);
-        if (!artifact) {
-            throw new Error(`Workflow artifact "${artifactId}" was not found.`);
-        }
-        if (artifact.kind !== 'flashcard_batch') {
-            throw new Error(`Workflow artifact "${artifactId}" is not a flashcard batch.`);
-        }
-        if (artifact.userId && artifact.userId !== userId) {
-            throw new Error(`Workflow artifact "${artifactId}" does not belong to user "${userId}".`);
-        }
-        const artifactPayload = this.cloneArtifactPayload(artifact.payload || {});
-        const reviewCards = this.normalizeKnowledgeRunReviewCards(artifactPayload.reviewCards);
-        const targetCard = reviewCards.find((card) => card.cardId === cardId);
-        if (!targetCard) {
-            throw new Error(`Workflow artifact "${artifactId}" does not contain review card "${cardId}".`);
-        }
-        const currentReviewState = this.buildKnowledgeRunReviewState(
-            reviewCards,
-            (artifactPayload.reviewState as Record<string, unknown> | undefined)?.consumedCardIds,
-            (artifactPayload.reviewState as Record<string, unknown> | undefined)?.completedAt,
-        );
-        if (currentReviewState.consumedCardIds.includes(cardId)) {
-            throw new Error(`Workflow artifact review card "${cardId}" has already been consumed.`);
-        }
-
-        const actionAtomId = isNonEmptyString(request.action?.atomId)
-            ? String(request.action?.atomId).trim()
-            : String(targetCard.atomId || '').trim();
-        if (!actionAtomId || !this.activeAtomIds.has(actionAtomId)) {
-            throw new Error(`Workflow artifact review card "${cardId}" does not resolve to an active atom.`);
-        }
-        const actionKind = request.action?.kind || targetCard.suggestedActionKind || 'review';
-        const studySessionAction = await this.executeStudySessionAction({
-            userId,
-            sessionId: isNonEmptyString(request.sessionId)
-                ? request.sessionId.trim()
-                : (artifact.sessionId || undefined),
-            action: {
-                atomId: actionAtomId,
-                kind: actionKind,
-                source: request.action?.source || 'flashcard_batch',
-                prompt: isNonEmptyString(request.action?.prompt) ? request.action?.prompt : targetCard.prompt,
-                answer: isNonEmptyString(request.action?.answer) ? request.action?.answer : undefined,
-            },
-            outcome: request.outcome,
-            errorTag: request.errorTag,
-            autoAnalyzeAnswer: request.autoAnalyzeAnswer,
-            autoUpdateMasteryFromAnswer: request.autoUpdateMasteryFromAnswer,
-            executedAt: request.executedAt,
-            persistMemory: request.persistMemory,
-            memoryLayer: request.memoryLayer,
-            tutorAdapterId: request.tutorAdapterId,
-            tutorProviderName: request.tutorProviderName,
-            tutorProviderMode: request.tutorProviderMode,
-            autoPromoteMemory: request.autoPromoteMemory,
-            promoteMemoryTargetLayer: request.promoteMemoryTargetLayer,
-            promoteMemoryMinConfidence: request.promoteMemoryMinConfidence,
-            promoteMemoryRemoveFromSource: request.promoteMemoryRemoveFromSource,
-        });
-
-        const updatedReviewState = this.buildKnowledgeRunReviewState(
-            reviewCards,
-            [...currentReviewState.consumedCardIds, cardId],
-            currentReviewState.completedAt,
-            studySessionAction.executedAt
-        );
-        const archivedArtifact = updatedReviewState.remainingReviewCardCount <= 0;
-        const updatedArtifact = this.workflowArtifactStore.updateArtifact(artifactId, (current) => ({
-            ...current,
-            status: archivedArtifact ? 'archived' : current.status,
-            updatedAt: studySessionAction.executedAt,
-            summary: this.buildFlashcardBatchArtifactSummary(reviewCards, updatedReviewState),
-            payload: {
-                ...this.cloneArtifactPayload(current.payload || {}),
-                runId: String(artifactPayload.runId || '').trim(),
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('WorkflowArtifactReviewFollowUpAPI requires a non-empty userId.');
+            }
+            const artifactId = String(request.artifactId || '').trim();
+            const cardId = String(request.cardId || '').trim();
+            if (!artifactId || !cardId) {
+                throw new Error('WorkflowArtifactReviewFollowUpAPI requires non-empty artifactId and cardId.');
+            }
+            const artifact = this.workflowArtifactStore.getArtifactById(artifactId);
+            if (!artifact) {
+                throw new Error(`Workflow artifact "${artifactId}" was not found.`);
+            }
+            if (artifact.kind !== 'flashcard_batch') {
+                throw new Error(`Workflow artifact "${artifactId}" is not a flashcard batch.`);
+            }
+            if (artifact.userId && artifact.userId !== userId) {
+                throw new Error(`Workflow artifact "${artifactId}" does not belong to user "${userId}".`);
+            }
+            const artifactPayload = this.cloneArtifactPayload(artifact.payload || {});
+            const reviewCards = this.normalizeKnowledgeRunReviewCards(artifactPayload.reviewCards);
+            const targetCard = reviewCards.find((card) => card.cardId === cardId);
+            if (!targetCard) {
+                throw new Error(`Workflow artifact "${artifactId}" does not contain review card "${cardId}".`);
+            }
+            const currentReviewState = this.buildKnowledgeRunReviewState(
                 reviewCards,
-                evidenceClaims: Array.isArray(artifactPayload.evidenceClaims)
-                    ? artifactPayload.evidenceClaims
-                    : [],
-                reviewState: updatedReviewState,
-            },
-        }));
-        if (!updatedArtifact) {
-            throw new Error(`Workflow artifact "${artifactId}" could not be updated.`);
-        }
+                (artifactPayload.reviewState as Record<string, unknown> | undefined)?.consumedCardIds,
+                (artifactPayload.reviewState as Record<string, unknown> | undefined)?.completedAt,
+            );
+            if (currentReviewState.consumedCardIds.includes(cardId)) {
+                throw new Error(`Workflow artifact review card "${cardId}" has already been consumed.`);
+            }
 
-        const runId = String(artifactPayload.runId || '').trim();
-        const relatedKnowledgeRunArtifact = this.resolveRelatedKnowledgeRunArtifact(updatedArtifact, runId);
-        const updatedKnowledgeRunArtifact = relatedKnowledgeRunArtifact
-            ? this.workflowArtifactStore.updateArtifact(relatedKnowledgeRunArtifact.artifactId, (current) => {
-                const payload = this.cloneArtifactPayload(current.payload || {});
-                const rawKnowledgeRun = payload.knowledgeRun as KnowledgeRun | undefined;
-                if (!rawKnowledgeRun) {
-                    return current;
-                }
-                const normalizedKnowledgeRunCards = this.normalizeKnowledgeRunReviewCards(rawKnowledgeRun.reviewCards);
-                const knowledgeRunReviewState = this.buildKnowledgeRunReviewState(
-                    normalizedKnowledgeRunCards,
-                    [...updatedReviewState.consumedCardIds],
-                    updatedReviewState.completedAt,
-                    studySessionAction.executedAt
-                );
-                const updatedKnowledgeRun = this.updateKnowledgeRunSummaryReviewProgress(
-                    {
-                        ...rawKnowledgeRun,
-                        reviewCards: normalizedKnowledgeRunCards,
-                    },
-                    knowledgeRunReviewState
-                );
-                return {
-                    ...current,
-                    status: archivedArtifact ? 'archived' : current.status,
-                    updatedAt: studySessionAction.executedAt,
-                    summary: `Generated ${updatedKnowledgeRun.summary.claimCount} evidence claim(s); ${updatedKnowledgeRun.summary.completedReviewCardCount} review card(s) completed and ${updatedKnowledgeRun.summary.remainingReviewCardCount} remaining.`,
-                    payload: {
-                        ...payload,
-                        knowledgeRun: updatedKnowledgeRun,
-                    },
-                };
-            })
-            : null;
+            const actionAtomId = isNonEmptyString(request.action?.atomId)
+                ? String(request.action?.atomId).trim()
+                : String(targetCard.atomId || '').trim();
+            if (!actionAtomId || !this.activeAtomIds.has(actionAtomId)) {
+                throw new Error(`Workflow artifact review card "${cardId}" does not resolve to an active atom.`);
+            }
+            const actionKind = request.action?.kind || targetCard.suggestedActionKind || 'review';
+            const studySessionAction = await this.executeStudySessionAction({
+                userId,
+                sessionId: isNonEmptyString(request.sessionId)
+                    ? request.sessionId.trim()
+                    : (artifact.sessionId || undefined),
+                action: {
+                    atomId: actionAtomId,
+                    kind: actionKind,
+                    source: request.action?.source || 'flashcard_batch',
+                    prompt: isNonEmptyString(request.action?.prompt) ? request.action?.prompt : targetCard.prompt,
+                    answer: isNonEmptyString(request.action?.answer) ? request.action?.answer : undefined,
+                },
+                outcome: request.outcome,
+                errorTag: request.errorTag,
+                autoAnalyzeAnswer: request.autoAnalyzeAnswer,
+                autoUpdateMasteryFromAnswer: request.autoUpdateMasteryFromAnswer,
+                executedAt: request.executedAt,
+                persistMemory: request.persistMemory,
+                memoryLayer: request.memoryLayer,
+                tutorAdapterId: request.tutorAdapterId,
+                tutorProviderName: request.tutorProviderName,
+                tutorProviderMode: request.tutorProviderMode,
+                autoPromoteMemory: request.autoPromoteMemory,
+                promoteMemoryTargetLayer: request.promoteMemoryTargetLayer,
+                promoteMemoryMinConfidence: request.promoteMemoryMinConfidence,
+                promoteMemoryRemoveFromSource: request.promoteMemoryRemoveFromSource,
+            });
 
-        await this.persistIfNeeded();
+            const updatedReviewState = this.buildKnowledgeRunReviewState(
+                reviewCards,
+                [...currentReviewState.consumedCardIds, cardId],
+                currentReviewState.completedAt,
+                studySessionAction.executedAt
+            );
+            const archivedArtifact = updatedReviewState.remainingReviewCardCount <= 0;
+            const updatedArtifact = this.workflowArtifactStore.updateArtifact(artifactId, (current) => ({
+                ...current,
+                status: archivedArtifact ? 'archived' : current.status,
+                updatedAt: studySessionAction.executedAt,
+                summary: this.buildFlashcardBatchArtifactSummary(reviewCards, updatedReviewState),
+                payload: {
+                    ...this.cloneArtifactPayload(current.payload || {}),
+                    runId: String(artifactPayload.runId || '').trim(),
+                    reviewCards,
+                    evidenceClaims: Array.isArray(artifactPayload.evidenceClaims)
+                        ? artifactPayload.evidenceClaims
+                        : [],
+                    reviewState: updatedReviewState,
+                },
+            }));
+            if (!updatedArtifact) {
+                throw new Error(`Workflow artifact "${artifactId}" could not be updated.`);
+            }
 
-        return {
-            artifact: updatedArtifact,
-            relatedKnowledgeRunArtifact: updatedKnowledgeRunArtifact,
-            studySessionAction,
-            consumedCardId: cardId,
-            completedReviewCardCount: updatedReviewState.completedReviewCardCount,
-            remainingReviewCardCount: updatedReviewState.remainingReviewCardCount,
-            archivedArtifact,
-        };
+            const runId = String(artifactPayload.runId || '').trim();
+            const relatedKnowledgeRunArtifact = this.resolveRelatedKnowledgeRunArtifact(updatedArtifact, runId);
+            const updatedKnowledgeRunArtifact = relatedKnowledgeRunArtifact
+                ? this.workflowArtifactStore.updateArtifact(relatedKnowledgeRunArtifact.artifactId, (current) => {
+                    const payload = this.cloneArtifactPayload(current.payload || {});
+                    const rawKnowledgeRun = payload.knowledgeRun as KnowledgeRun | undefined;
+                    if (!rawKnowledgeRun) {
+                        return current;
+                    }
+                    const normalizedKnowledgeRunCards = this.normalizeKnowledgeRunReviewCards(rawKnowledgeRun.reviewCards);
+                    const knowledgeRunReviewState = this.buildKnowledgeRunReviewState(
+                        normalizedKnowledgeRunCards,
+                        [...updatedReviewState.consumedCardIds],
+                        updatedReviewState.completedAt,
+                        studySessionAction.executedAt
+                    );
+                    const updatedKnowledgeRun = this.updateKnowledgeRunSummaryReviewProgress(
+                        {
+                            ...rawKnowledgeRun,
+                            reviewCards: normalizedKnowledgeRunCards,
+                        },
+                        knowledgeRunReviewState
+                    );
+                    return {
+                        ...current,
+                        status: archivedArtifact ? 'archived' : current.status,
+                        updatedAt: studySessionAction.executedAt,
+                        summary: `Generated ${updatedKnowledgeRun.summary.claimCount} evidence claim(s); ${updatedKnowledgeRun.summary.completedReviewCardCount} review card(s) completed and ${updatedKnowledgeRun.summary.remainingReviewCardCount} remaining.`,
+                        payload: {
+                            ...payload,
+                            knowledgeRun: updatedKnowledgeRun,
+                        },
+                    };
+                })
+                : null;
+
+            await this.persistIfNeeded();
+
+            return {
+                artifact: updatedArtifact,
+                relatedKnowledgeRunArtifact: updatedKnowledgeRunArtifact,
+                studySessionAction,
+                consumedCardId: cardId,
+                completedReviewCardCount: updatedReviewState.completedReviewCardCount,
+                remainingReviewCardCount: updatedReviewState.remainingReviewCardCount,
+                archivedArtifact,
+            };
+        });
     }
 
     public async queryWorkflowArtifacts(request: WorkflowArtifactQueryRequest = {}): Promise<WorkflowArtifactQueryResponse> {
-        await this.ensureHydrated();
-        const generatedAt = this.resolveTimestamp(undefined);
-        const workspaceId = isNonEmptyString(request.workspaceId) ? request.workspaceId.trim().toLowerCase() : null;
-        const sessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : null;
-        const userId = isNonEmptyString(request.userId) ? request.userId.trim() : null;
-        const artifactId = isNonEmptyString(request.artifactId) ? request.artifactId.trim() : null;
-        const runId = isNonEmptyString(request.runId) ? request.runId.trim() : null;
-        const limit = clamp(Math.floor(Number(request.limit) || 12), 1, 100);
-        const artifactKinds = Array.isArray(request.artifactKinds)
-            ? request.artifactKinds
-                .map((kind) => String(kind || '').trim())
-                .filter(Boolean)
-            : [];
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const generatedAt = this.resolveTimestamp(undefined);
+            const workspaceId = isNonEmptyString(request.workspaceId) ? request.workspaceId.trim().toLowerCase() : null;
+            const sessionId = isNonEmptyString(request.sessionId) ? request.sessionId.trim() : null;
+            const userId = isNonEmptyString(request.userId) ? request.userId.trim() : null;
+            const artifactId = isNonEmptyString(request.artifactId) ? request.artifactId.trim() : null;
+            const runId = isNonEmptyString(request.runId) ? request.runId.trim() : null;
+            const limit = clamp(Math.floor(Number(request.limit) || 12), 1, 100);
+            const artifactKinds = Array.isArray(request.artifactKinds)
+                ? request.artifactKinds
+                    .map((kind) => String(kind || '').trim())
+                    .filter(Boolean)
+                : [];
 
-        let artifacts = workspaceId
-            ? this.workflowArtifactStore.listByWorkspace(workspaceId, userId)
-            : sessionId
-                ? this.workflowArtifactStore.listBySession(sessionId)
-                : this.workflowArtifactStore.listAll();
+            let artifacts = workspaceId
+                ? this.workflowArtifactStore.listByWorkspace(workspaceId, userId)
+                : sessionId
+                    ? this.workflowArtifactStore.listBySession(sessionId)
+                    : this.workflowArtifactStore.listAll();
 
-        if (!workspaceId && sessionId && userId) {
-            artifacts = artifacts.filter((artifact) => artifact.userId === userId);
-        }
-        if (!workspaceId && !sessionId && userId) {
-            artifacts = artifacts.filter((artifact) => artifact.userId === userId);
-        }
-        if (artifactId) {
-            artifacts = artifacts.filter((artifact) => artifact.artifactId === artifactId);
-        }
-        if (runId) {
-            artifacts = artifacts.filter((artifact) => this.resolveWorkflowArtifactRunId(artifact) === runId);
-        }
-        if (artifactKinds.length > 0) {
-            const allowedKinds = new Set(artifactKinds);
-            artifacts = artifacts.filter((artifact) => allowedKinds.has(artifact.kind));
-        }
+            if (!workspaceId && sessionId && userId) {
+                artifacts = artifacts.filter((artifact) => artifact.userId === userId);
+            }
+            if (!workspaceId && !sessionId && userId) {
+                artifacts = artifacts.filter((artifact) => artifact.userId === userId);
+            }
+            if (artifactId) {
+                artifacts = artifacts.filter((artifact) => artifact.artifactId === artifactId);
+            }
+            if (runId) {
+                artifacts = artifacts.filter((artifact) => this.resolveWorkflowArtifactRunId(artifact) === runId);
+            }
+            if (artifactKinds.length > 0) {
+                const allowedKinds = new Set(artifactKinds);
+                artifacts = artifacts.filter((artifact) => allowedKinds.has(artifact.kind));
+            }
 
-        const normalizedArtifacts = artifacts
-            .slice(0, limit)
-            .map((artifact) => ({
-                ...artifact,
-                sourceResourceIds: [...artifact.sourceResourceIds],
-                sourceProjectionIds: [...artifact.sourceProjectionIds],
-                payload: this.cloneArtifactPayload(artifact.payload || {}),
-            }));
+            const normalizedArtifacts = artifacts
+                .slice(0, limit)
+                .map((artifact) => ({
+                    ...artifact,
+                    sourceResourceIds: [...artifact.sourceResourceIds],
+                    sourceProjectionIds: [...artifact.sourceProjectionIds],
+                    payload: this.cloneArtifactPayload(artifact.payload || {}),
+                }));
 
-        return {
-            generatedAt,
-            workspaceId,
-            sessionId,
-            userId,
-            returnedArtifacts: normalizedArtifacts.length,
-            artifacts: normalizedArtifacts,
-        };
+            return {
+                generatedAt,
+                workspaceId,
+                sessionId,
+                userId,
+                returnedArtifacts: normalizedArtifacts.length,
+                artifacts: normalizedArtifacts,
+            };
+        });
     }
 
     private buildWorkspaceIndexSummary(units: IndexUnitRecord[], segments: IndexSegmentRecord[]): IndexLifecycleSummary {
@@ -10275,154 +10375,209 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public async buildWorkspaceExportBundle(request: WorkspaceExportBundleRequest): Promise<WorkspaceExportBundle> {
-        await this.ensureHydrated();
-        const workspaceId = String(request.workspaceId || '').trim().toLowerCase();
-        if (!workspaceId) {
-            throw new Error('Workspace export requires a non-empty workspaceId.');
-        }
-        const workspace = this.workspaceRegistry.getWorkspaceById(workspaceId);
-        if (!workspace) {
-            throw new Error(`Workspace export could not find workspace "${workspaceId}".`);
-        }
-        const includeDeleted = request.includeDeleted === true;
-        const generatedAt = this.resolveTimestamp(request.generatedAt);
-        const bindings = this.workspaceRegistry.listBindingsByWorkspace(workspace.workspaceId);
-        const resourceIds = bindings.map((binding) => binding.resourceId);
-        const bindingProjectionIds = bindings.map((binding) => binding.projectionId);
-        const resources = this.resourceRegistry.listResourcesByIds(resourceIds, { includeDeleted });
-        const projections = this.resourceRegistry.listProjectionsByIds(bindingProjectionIds, { includeDeleted });
-        const projectionIds = projections.map((projection) => projection.projectionId);
-        const units = this.indexLifecycle.listUnitsByProjectionIds(projectionIds);
-        const segments = this.indexLifecycle.listSegmentsByUnitIds(units.map((unit) => unit.unitId));
-        const documentIds = new Set(
-            projections
-                .map((projection) => projection.documentId)
-                .filter((documentId): documentId is string => isNonEmptyString(documentId))
-        );
-        const atoms = Array.from(this.atoms.values()).filter((atom) => documentIds.has(atom.documentId));
-        const workspaceAtomIds = new Set(atoms.map((atom) => atom.id));
-        const evidenceSpanIds = new Set(atoms.flatMap((atom) => atom.evidenceSpanIds));
-        const evidenceSpans = Array.from(this.evidenceSpans.values()).filter((span) => evidenceSpanIds.has(span.id));
-        const relationEdges = this.collectActiveRelationEdges(generatedAt)
-            .filter((edge) => workspaceAtomIds.has(edge.sourceAtomId) && workspaceAtomIds.has(edge.targetAtomId));
-        const temporalEdges = Array.from(this.temporalEdges.values())
-            .filter((edge) => workspaceAtomIds.has(edge.sourceAtomId) && workspaceAtomIds.has(edge.targetAtomId));
-        const sessionStates = request.includeSessionState === false
-            ? []
-            : this.sessionStateStore.listByWorkspace(workspace.workspaceId, request.userId || null);
-        const sessionIds = new Set(sessionStates.map((state) => state.sessionId));
-        const conversationSessions = request.includeConversationHistory === false
-            ? []
-            : Array.from(this.conversationSessions.values()).filter((record) => sessionIds.has(record.sessionId));
-        const turnIds = new Set(conversationSessions.flatMap((record) => record.turnIds));
-        const conversationTurns = request.includeConversationHistory === false
-            ? []
-            : Array.from(this.conversationTurns.values()).filter((record) => turnIds.has(record.turnId));
-        const conversationInvocations = request.includeConversationHistory === false
-            ? []
-            : this.conversationInvocations.filter((record) => sessionIds.has(record.sessionId));
-        const workflowArtifacts = request.includeWorkflowArtifacts === false
-            ? []
-            : this.workflowArtifactStore.listByWorkspace(workspace.workspaceId, request.userId || null);
-        const memoryEntries = request.includeMemory === false
-            ? []
-            : this.collectWorkspaceMemoryExportRecords({
-                workspaceId: workspace.workspaceId,
-                corpusId: workspace.corpusId,
-                userId: request.userId || null,
-                workspaceAtomIds,
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const workspaceId = String(request.workspaceId || '').trim().toLowerCase();
+            if (!workspaceId) {
+                throw new Error('Workspace export requires a non-empty workspaceId.');
+            }
+            const workspace = this.workspaceRegistry.getWorkspaceById(workspaceId);
+            if (!workspace) {
+                throw new Error(`Workspace export could not find workspace "${workspaceId}".`);
+            }
+            const includeDeleted = request.includeDeleted === true;
+            const generatedAt = this.resolveTimestamp(request.generatedAt);
+            const bindings = this.workspaceRegistry.listBindingsByWorkspace(workspace.workspaceId);
+            const resourceIds = bindings.map((binding) => binding.resourceId);
+            const bindingProjectionIds = bindings.map((binding) => binding.projectionId);
+            const resources = this.resourceRegistry.listResourcesByIds(resourceIds, { includeDeleted });
+            const projections = this.resourceRegistry.listProjectionsByIds(bindingProjectionIds, { includeDeleted });
+            const projectionIds = projections.map((projection) => projection.projectionId);
+            const units = this.indexLifecycle.listUnitsByProjectionIds(projectionIds);
+            const segments = this.indexLifecycle.listSegmentsByUnitIds(units.map((unit) => unit.unitId));
+            const documentIds = new Set(
+                projections
+                    .map((projection) => projection.documentId)
+                    .filter((documentId): documentId is string => isNonEmptyString(documentId))
+            );
+            const atoms = Array.from(this.atoms.values()).filter((atom) => documentIds.has(atom.documentId));
+            const workspaceAtomIds = new Set(atoms.map((atom) => atom.id));
+            const evidenceSpanIds = new Set(atoms.flatMap((atom) => atom.evidenceSpanIds));
+            const evidenceSpans = Array.from(this.evidenceSpans.values()).filter((span) => evidenceSpanIds.has(span.id));
+            const relationEdges = this.collectActiveRelationEdges(generatedAt)
+                .filter((edge) => workspaceAtomIds.has(edge.sourceAtomId) && workspaceAtomIds.has(edge.targetAtomId));
+            const temporalEdges = Array.from(this.temporalEdges.values())
+                .filter((edge) => workspaceAtomIds.has(edge.sourceAtomId) && workspaceAtomIds.has(edge.targetAtomId));
+            const sessionStates = request.includeSessionState === false
+                ? []
+                : this.sessionStateStore.listByWorkspace(workspace.workspaceId, request.userId || null);
+            const sessionIds = new Set(sessionStates.map((state) => state.sessionId));
+            const conversationSessions = request.includeConversationHistory === false
+                ? []
+                : Array.from(this.conversationSessions.values()).filter((record) => sessionIds.has(record.sessionId));
+            const turnIds = new Set(conversationSessions.flatMap((record) => record.turnIds));
+            const conversationTurns = request.includeConversationHistory === false
+                ? []
+                : Array.from(this.conversationTurns.values()).filter((record) => turnIds.has(record.turnId));
+            const conversationInvocations = request.includeConversationHistory === false
+                ? []
+                : this.conversationInvocations.filter((record) => sessionIds.has(record.sessionId));
+            const workflowArtifacts = request.includeWorkflowArtifacts === false
+                ? []
+                : this.workflowArtifactStore.listByWorkspace(workspace.workspaceId, request.userId || null);
+            const memoryEntries = request.includeMemory === false
+                ? []
+                : this.collectWorkspaceMemoryExportRecords({
+                    workspaceId: workspace.workspaceId,
+                    corpusId: workspace.corpusId,
+                    userId: request.userId || null,
+                    workspaceAtomIds,
+                });
+            const memoryAuditRecords = request.includeMemory === false
+                ? []
+                : this.collectWorkspaceMemoryAuditRecords({
+                    workspaceId: workspace.workspaceId,
+                    corpusId: workspace.corpusId,
+                    userId: request.userId || null,
+                });
+            return assembleWorkspaceExportBundle({
+                request,
+                workspace,
+                bindings,
+                resources,
+                projections,
+                indexSummary: this.buildWorkspaceIndexSummary(units, segments),
+                units,
+                segments,
+                atoms,
+                evidenceSpans,
+                relationEdges,
+                temporalEdges,
+                sessionStates,
+                conversationSessions,
+                conversationTurns,
+                conversationInvocations,
+                workflowArtifacts,
+                memoryEntries,
+                memoryAuditRecords,
+                generatedAt,
             });
-        const memoryAuditRecords = request.includeMemory === false
-            ? []
-            : this.collectWorkspaceMemoryAuditRecords({
-                workspaceId: workspace.workspaceId,
-                corpusId: workspace.corpusId,
-                userId: request.userId || null,
-            });
-        return assembleWorkspaceExportBundle({
-            request,
-            workspace,
-            bindings,
-            resources,
-            projections,
-            indexSummary: this.buildWorkspaceIndexSummary(units, segments),
-            units,
-            segments,
-            atoms,
-            evidenceSpans,
-            relationEdges,
-            temporalEdges,
-            sessionStates,
-            conversationSessions,
-            conversationTurns,
-            conversationInvocations,
-            workflowArtifacts,
-            memoryEntries,
-            memoryAuditRecords,
-            generatedAt,
         });
     }
 
     public async agentConversation(request: AgentConversationRequest = {}): Promise<AgentConversationResponse> {
-        await this.ensureHydrated();
-        const userId = isNonEmptyString(request.userId)
-            ? request.userId.trim()
-            : 'path_user_default';
-        const sessionId = isNonEmptyString(request.sessionId)
-            ? request.sessionId.trim()
-            : this.nextId('agent_session');
-        const message = normalizeWhitespace(String(request.message || ''));
-        const answerLanguage = request.answerLanguage === 'zh' || request.answerLanguage === 'en'
-            ? request.answerLanguage
-            : 'auto';
-        const responseMode: AgentConversationResponseMode = request.responseMode === 'full' ? 'full' : 'slim';
-        const responseProfile = request.responseProfile === 'mobile_compact'
-            ? 'mobile_compact' as const
-            : undefined;
-        const effectiveResponseMode: AgentConversationResponseMode = responseProfile === 'mobile_compact'
-            ? 'slim'
-            : responseMode;
-        const responseBudget = resolveAgentResponseBudget({
-            responseMode: effectiveResponseMode,
-            responseBudgetMode: request.responseBudgetMode,
-            capability: request.responseBudgetCapability || this.responseBudgetCapability,
-            mobile: responseProfile === 'mobile_compact',
-        });
-        const requestedTopK = Math.floor(Number(request.topK) || 6);
-        const topK = clamp(
-            Math.max(requestedTopK, effectiveResponseMode === 'full' ? 12 : 1),
-            1,
-            18
-        );
-        const generatedAt = this.resolveTimestamp(request.asOf);
-        const namespace = this.normalizeConversationMemoryNamespace(request.memoryNamespace);
-        const queryResult = await this.queryKnowledge({
-            query: message || 'local knowledge',
-            topK,
-            asOf: generatedAt,
-            scope: request.scope,
-        });
-        const knowledgePoints = mergeAgentConversationKnowledgePoints(
-            queryResult.items,
-            (atomId) => this.buildAgentWorkspaceCapabilities(atomId)
-        );
-        const citations = knowledgePoints
-            .flatMap((point) => (
-                Array.isArray(point.citations) && point.citations.length > 0
-                    ? point.citations
-                    : (point.citation ? [point.citation] : [])
-            ))
-            .filter((citation): citation is KnowledgeCitation => Boolean(citation));
-        const recalledMemoryResult = await this.searchConversationMemory({
-            userId,
-            namespace,
-            query: message || 'memory',
-            limit: 6,
-            now: generatedAt,
-        });
-        const recalledMemories = this.filterConversationMemoryRecordsByScope(
-            Array.isArray(recalledMemoryResult.entries) ? recalledMemoryResult.entries as AgentConversationMemoryRecord[] : [],
-            queryResult.trace.scope || {
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const userId = isNonEmptyString(request.userId)
+                ? request.userId.trim()
+                : 'path_user_default';
+            const sessionId = isNonEmptyString(request.sessionId)
+                ? request.sessionId.trim()
+                : this.nextId('agent_session');
+            const message = normalizeWhitespace(String(request.message || ''));
+            const answerLanguage = request.answerLanguage === 'zh' || request.answerLanguage === 'en'
+                ? request.answerLanguage
+                : 'auto';
+            const responseMode: AgentConversationResponseMode = request.responseMode === 'full' ? 'full' : 'slim';
+            const responseProfile = request.responseProfile === 'mobile_compact'
+                ? 'mobile_compact' as const
+                : undefined;
+            const effectiveResponseMode: AgentConversationResponseMode = responseProfile === 'mobile_compact'
+                ? 'slim'
+                : responseMode;
+            const responseBudget = resolveAgentResponseBudget({
+                responseMode: effectiveResponseMode,
+                responseBudgetMode: request.responseBudgetMode,
+                capability: request.responseBudgetCapability || this.responseBudgetCapability,
+                mobile: responseProfile === 'mobile_compact',
+            });
+            const requestedTopK = Math.floor(Number(request.topK) || 6);
+            const topK = clamp(
+                Math.max(requestedTopK, effectiveResponseMode === 'full' ? 12 : 1),
+                1,
+                18
+            );
+            const generatedAt = this.resolveTimestamp(request.asOf);
+            const namespace = this.normalizeConversationMemoryNamespace(request.memoryNamespace);
+            const queryResult = await this.queryKnowledge({
+                query: message || 'local knowledge',
+                topK,
+                asOf: generatedAt,
+                scope: request.scope,
+            });
+            const knowledgePoints = mergeAgentConversationKnowledgePoints(
+                queryResult.items,
+                (atomId) => this.buildAgentWorkspaceCapabilities(atomId)
+            );
+            const citations = knowledgePoints
+                .flatMap((point) => (
+                    Array.isArray(point.citations) && point.citations.length > 0
+                        ? point.citations
+                        : (point.citation ? [point.citation] : [])
+                ))
+                .filter((citation): citation is KnowledgeCitation => Boolean(citation));
+            const recalledMemoryResult = await this.searchConversationMemory({
+                userId,
+                namespace,
+                query: message || 'memory',
+                limit: 6,
+                now: generatedAt,
+            });
+            const recalledMemories = this.filterConversationMemoryRecordsByScope(
+                Array.isArray(recalledMemoryResult.entries) ? recalledMemoryResult.entries as AgentConversationMemoryRecord[] : [],
+                queryResult.trace.scope || {
+                    source: 'global',
+                    workspaceId: null,
+                    corpusId: null,
+                    documentIds: [],
+                    atomIds: [],
+                    sourcePathPrefixes: [],
+                    languages: [],
+                    matchedAtomCount: 0,
+                }
+            );
+
+            const memoryActions: AgentConversationMemoryAction[] = [];
+            if (request.persistMemory !== false && message) {
+                const scopeTags: string[] = [];
+                if (queryResult.trace.scope?.workspaceId) {
+                    scopeTags.push(`scope_workspace:${queryResult.trace.scope.workspaceId}`);
+                }
+                if (queryResult.trace.scope?.corpusId) {
+                    scopeTags.push(`scope_corpus:${queryResult.trace.scope.corpusId}`);
+                }
+                const persistedMemory = await this.addConversationMemory({
+                    userId,
+                    namespace,
+                    content: `User focus: ${message}`,
+                    tags: ['agent_turn', 'user_focus', ...scopeTags],
+                    source: 'agent_conversation',
+                    confidence: 0.82,
+                    scopeWorkspaceId: queryResult.trace.scope?.workspaceId || null,
+                    scopeCorpusId: queryResult.trace.scope?.corpusId || null,
+                    now: generatedAt,
+                });
+                memoryActions.push({
+                    kind: 'persist_session_memory',
+                    status: persistedMemory.added === true ? 'applied' : 'skipped',
+                    layer: persistedMemory.layer || this.resolveConversationMemoryLayer(namespace),
+                    namespace,
+                    memoryId: typeof persistedMemory.memory?.memoryId === 'string' ? persistedMemory.memory.memoryId : undefined,
+                    reason: 'Persist the latest user focus to scoped conversation memory.',
+                });
+            }
+            if (citations.length > 0) {
+                memoryActions.push({
+                    kind: 'propose_long_term_memory',
+                    status: 'proposed',
+                    layer: 'long_term',
+                    namespace: 'project',
+                    reason: `Promote ${citations[0].title} to long-term project memory if the same scope is recalled repeatedly.`,
+                });
+            }
+
+            const invocationId = this.nextId('agent_invocation');
+            const traceScope = queryResult.trace.scope || {
                 source: 'global',
                 workspaceId: null,
                 corpusId: null,
@@ -10430,397 +10585,354 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 atomIds: [],
                 sourcePathPrefixes: [],
                 languages: [],
-                matchedAtomCount: 0,
-            }
-        );
-
-        const memoryActions: AgentConversationMemoryAction[] = [];
-        if (request.persistMemory !== false && message) {
-            const scopeTags: string[] = [];
-            if (queryResult.trace.scope?.workspaceId) {
-                scopeTags.push(`scope_workspace:${queryResult.trace.scope.workspaceId}`);
-            }
-            if (queryResult.trace.scope?.corpusId) {
-                scopeTags.push(`scope_corpus:${queryResult.trace.scope.corpusId}`);
-            }
-            const persistedMemory = await this.addConversationMemory({
-                userId,
-                namespace,
-                content: `User focus: ${message}`,
-                tags: ['agent_turn', 'user_focus', ...scopeTags],
-                source: 'agent_conversation',
-                confidence: 0.82,
-                scopeWorkspaceId: queryResult.trace.scope?.workspaceId || null,
-                scopeCorpusId: queryResult.trace.scope?.corpusId || null,
-                now: generatedAt,
+                matchedAtomCount: queryResult.items.length,
+            };
+            const graphExpansionPolicy = resolveGraphExpansionPolicy(message);
+            const assembledConversation = await assembleAgentConversationGraphContext({
+                message,
+                usedScope: traceScope,
+                knowledgePoints,
+                store: this.store,
+                budget: graphExpansionPolicy.enabled
+                    ? {
+                        maxSupportNodes: 4,
+                        maxConnectionPaths: 4,
+                        maxPathDepth: graphExpansionPolicy.maxPathDepth,
+                        maxPredecessors: 4,
+                        maxSuccessors: 4,
+                    }
+                    : undefined,
             });
-            memoryActions.push({
-                kind: 'persist_session_memory',
-                status: persistedMemory.added === true ? 'applied' : 'skipped',
-                layer: persistedMemory.layer || this.resolveConversationMemoryLayer(namespace),
-                namespace,
-                memoryId: typeof persistedMemory.memory?.memoryId === 'string' ? persistedMemory.memory.memoryId : undefined,
-                reason: 'Persist the latest user focus to scoped conversation memory.',
-            });
-        }
-        if (citations.length > 0) {
-            memoryActions.push({
-                kind: 'propose_long_term_memory',
-                status: 'proposed',
-                layer: 'long_term',
-                namespace: 'project',
-                reason: `Promote ${citations[0].title} to long-term project memory if the same scope is recalled repeatedly.`,
-            });
-        }
-
-        const invocationId = this.nextId('agent_invocation');
-        const traceScope = queryResult.trace.scope || {
-            source: 'global',
-            workspaceId: null,
-            corpusId: null,
-            documentIds: [],
-            atomIds: [],
-            sourcePathPrefixes: [],
-            languages: [],
-            matchedAtomCount: queryResult.items.length,
-        };
-        const graphExpansionPolicy = resolveGraphExpansionPolicy(message);
-        const assembledConversation = await assembleAgentConversationGraphContext({
-            message,
-            usedScope: traceScope,
-            knowledgePoints,
-            store: this.store,
-            budget: graphExpansionPolicy.enabled
-                ? {
-                    maxSupportNodes: 4,
-                    maxConnectionPaths: 4,
-                    maxPathDepth: graphExpansionPolicy.maxPathDepth,
-                    maxPredecessors: 4,
-                    maxSuccessors: 4,
-                }
-                : undefined,
-        });
-        const conversationKnowledgePoints = assembledConversation.knowledgePoints;
-        const graphContext = assembledConversation.graphContext;
-        const ragEvidenceProfile = resolveAgentRagEvidenceProfile(
-            message,
-            graphExpansionPolicy,
-            effectiveResponseMode,
-            responseBudget
-        );
-        const graphNeighborItems = this.buildRagGraphNeighborQueryItems(
-            graphContext,
-            conversationKnowledgePoints,
-            generatedAt,
-            message,
-            ragEvidenceProfile.graphNeighborLimit,
-            traceScope
-        );
-        const preRagGraphAnswerPlan = buildGraphAnswerPlan({
-            message,
-            knowledgePoints: conversationKnowledgePoints,
-            graphContext,
-        });
-        const graphExpansionTrace: AgentConversationResponse['trace']['graphExpansion'] = {
-            ...graphExpansionPolicy,
-            executedSteps: graphExpansionPolicy.enabled && graphNeighborItems.length > 0 ? 1 : 0,
-            selectedNeighborCount: graphExpansionPolicy.enabled ? graphNeighborItems.length : 0,
-        };
-        const firstReviewedRag = await this.assembleReviewedRagEvidenceContext({
-            query: message || 'local knowledge',
-            items: queryResult.items,
-            graphNeighborItems,
-            graphContext,
-            graphAnswerPlan: preRagGraphAnswerPlan,
-            generatedAt,
-            budget: ragEvidenceProfile.budget,
-            paragraphWindow: ragEvidenceProfile.paragraphWindow,
-        });
-        let ragContextPack = firstReviewedRag.ragContextPack;
-        let ragSufficiencyReview = firstReviewedRag.ragSufficiencyReview;
-        let ragRecovery: RagEvidenceRecoveryTrace | undefined;
-        if (this.canRecoverRagEvidenceContext(ragContextPack, ragSufficiencyReview, graphContext)) {
-            const recoveryGraphNeighborItems = this.buildRagGraphNeighborQueryItems(
+            const conversationKnowledgePoints = assembledConversation.knowledgePoints;
+            const graphContext = assembledConversation.graphContext;
+            const ragEvidenceProfile = resolveAgentRagEvidenceProfile(
+                message,
+                graphExpansionPolicy,
+                effectiveResponseMode,
+                responseBudget
+            );
+            const graphNeighborItems = this.buildRagGraphNeighborQueryItems(
                 graphContext,
                 conversationKnowledgePoints,
                 generatedAt,
                 message,
-                AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT,
+                ragEvidenceProfile.graphNeighborLimit,
                 traceScope
             );
-            const recoveredReviewedRag = await this.assembleReviewedRagEvidenceContext({
+            const preRagGraphAnswerPlan = buildGraphAnswerPlan({
+                message,
+                knowledgePoints: conversationKnowledgePoints,
+                graphContext,
+            });
+            const graphExpansionTrace: AgentConversationResponse['trace']['graphExpansion'] = {
+                ...graphExpansionPolicy,
+                executedSteps: graphExpansionPolicy.enabled && graphNeighborItems.length > 0 ? 1 : 0,
+                selectedNeighborCount: graphExpansionPolicy.enabled ? graphNeighborItems.length : 0,
+            };
+            const firstReviewedRag = await this.assembleReviewedRagEvidenceContext({
                 query: message || 'local knowledge',
                 items: queryResult.items,
-                graphNeighborItems: recoveryGraphNeighborItems,
+                graphNeighborItems,
                 graphContext,
                 graphAnswerPlan: preRagGraphAnswerPlan,
                 generatedAt,
-                budget: effectiveResponseMode === 'full' && responseBudget.rag
-                    ? { ...responseBudget.rag }
-                    : AGENT_RAG_RECOVERY_CONTEXT_BUDGET,
-                paragraphWindow: effectiveResponseMode === 'full'
-                    ? 20
-                    : AGENT_RAG_RECOVERY_PARAGRAPH_WINDOW,
+                budget: ragEvidenceProfile.budget,
+                paragraphWindow: ragEvidenceProfile.paragraphWindow,
             });
-            ragRecovery = this.buildRagEvidenceRecoveryTrace({
-                beforePack: ragContextPack,
-                beforeReview: ragSufficiencyReview,
-                afterPack: recoveredReviewedRag.ragContextPack,
-                afterReview: recoveredReviewedRag.ragSufficiencyReview,
-            });
-            const useRecoveredPack = this.shouldUseRecoveredRagEvidenceContext(
-                ragSufficiencyReview,
-                recoveredReviewedRag.ragSufficiencyReview
-            );
-            if (useRecoveredPack) {
-                ragContextPack = recoveredReviewedRag.ragContextPack;
-                ragSufficiencyReview = this.markRagReviewWithRecovery(
-                    recoveredReviewedRag.ragSufficiencyReview,
-                    ragRecovery,
-                    true
+            let ragContextPack = firstReviewedRag.ragContextPack;
+            let ragSufficiencyReview = firstReviewedRag.ragSufficiencyReview;
+            let ragRecovery: RagEvidenceRecoveryTrace | undefined;
+            if (this.canRecoverRagEvidenceContext(ragContextPack, ragSufficiencyReview, graphContext)) {
+                const recoveryGraphNeighborItems = this.buildRagGraphNeighborQueryItems(
+                    graphContext,
+                    conversationKnowledgePoints,
+                    generatedAt,
+                    message,
+                    AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT,
+                    traceScope
                 );
-            } else {
-                ragSufficiencyReview = this.markRagReviewWithRecovery(
+                const recoveredReviewedRag = await this.assembleReviewedRagEvidenceContext({
+                    query: message || 'local knowledge',
+                    items: queryResult.items,
+                    graphNeighborItems: recoveryGraphNeighborItems,
+                    graphContext,
+                    graphAnswerPlan: preRagGraphAnswerPlan,
+                    generatedAt,
+                    budget: effectiveResponseMode === 'full' && responseBudget.rag
+                        ? { ...responseBudget.rag }
+                        : AGENT_RAG_RECOVERY_CONTEXT_BUDGET,
+                    paragraphWindow: effectiveResponseMode === 'full'
+                        ? 20
+                        : AGENT_RAG_RECOVERY_PARAGRAPH_WINDOW,
+                });
+                ragRecovery = this.buildRagEvidenceRecoveryTrace({
+                    beforePack: ragContextPack,
+                    beforeReview: ragSufficiencyReview,
+                    afterPack: recoveredReviewedRag.ragContextPack,
+                    afterReview: recoveredReviewedRag.ragSufficiencyReview,
+                });
+                const useRecoveredPack = this.shouldUseRecoveredRagEvidenceContext(
                     ragSufficiencyReview,
-                    ragRecovery,
-                    false
+                    recoveredReviewedRag.ragSufficiencyReview
                 );
+                if (useRecoveredPack) {
+                    ragContextPack = recoveredReviewedRag.ragContextPack;
+                    ragSufficiencyReview = this.markRagReviewWithRecovery(
+                        recoveredReviewedRag.ragSufficiencyReview,
+                        ragRecovery,
+                        true
+                    );
+                } else {
+                    ragSufficiencyReview = this.markRagReviewWithRecovery(
+                        ragSufficiencyReview,
+                        ragRecovery,
+                        false
+                    );
+                }
             }
-        }
-        const activeConversationAtomIds = collectAgentConversationAtomIds(conversationKnowledgePoints);
-        const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(activeConversationAtomIds);
-        const effectiveWorkspaceId = traceScope.workspaceId || scopedWorkspace.workspaceId;
-        const effectiveCorpusId = traceScope.corpusId || scopedWorkspace.corpusId;
-        const reply = buildScopedConversationReply({
-            message,
-            answerLanguage,
-            responseMode: effectiveResponseMode,
-            responseBudget,
-            knowledgePoints: conversationKnowledgePoints,
-            citations,
-            recalledMemories,
-            memoryActions,
-            usedScope: traceScope,
-            generatedAt,
-            nextBlockId: () => this.nextId('assistant_block'),
-            nextRunId: () => this.nextId('knowledge_run'),
-            graphContext,
-            ragContextPack,
-            ragSufficiencyReview,
-        });
-        const ragFailureClassifications = this.buildRagFailureClassifications({
-            pack: ragContextPack,
-            review: ragSufficiencyReview,
-            recovery: ragRecovery,
-            graphContext,
-            answerReleaseReview: reply.answerReleaseReview,
-        });
-        const answerClaimCitations = this.buildAnswerClaimCitations({
-            answer: reply.answer,
-            pack: ragContextPack,
-            invocationId,
-        });
-        const response: AgentConversationResponse = {
-            userId,
-            sessionId,
-            assistantMessage: reply.answer,
-            answer: reply.answer,
-            responseMode: effectiveResponseMode,
-            ...(responseProfile ? { responseProfile } : {}),
-            responseBudget,
-            answerReleaseReview: reply.answerReleaseReview,
-            graphAnswerPlan: reply.graphAnswerPlan,
-            graphAnswerCoverage: reply.graphAnswerCoverage,
-            answerTaskPlan: reply.graphAnswerPlan.answerTaskPlan,
-            answerTaskCoverage: reply.answerReleaseReview.answerTaskCoverage,
-            assistantBlocks: reply.assistantBlocks,
-            knowledgeRun: reply.knowledgeRun,
-            knowledgePoints: conversationKnowledgePoints,
-            citations,
-            recalledMemories,
-            memoryActions,
-            summary: {
-                generatedAt,
-                topK,
-                returnedKnowledgePoints: conversationKnowledgePoints.length,
-                returnedCitations: citations.length,
-                recalledMemoryCount: recalledMemories.length,
-                appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,
-                queryEvidenceCoverageRatioPct: Number(
-                    (Number(queryResult.trace?.evidenceCoverageRatio || 0) * 100).toFixed(2)
-                ),
-                responseBudgetMode: responseBudget.mode,
-                responseBudgetTier: responseBudget.tier,
-                responseTruncated: reply.fullReportAssembly?.truncated,
-                responseTruncationReason: reply.fullReportAssembly?.truncationReason,
-            },
-            trace: {
-                sessionId,
-                invocationId,
-                retrieval: queryResult.trace,
-                recalledMemoryCount: recalledMemories.length,
-                appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,
-                usedScope: traceScope,
-                workspaceReadiness: traceScope.readiness,
-                missDiagnostics: traceScope.missDiagnostics,
-                planner: {
-                    plannerQuery: queryResult.trace.planner?.plannerQuery || null,
-                    titleLikeQueries: queryResult.trace.planner?.titleLikeQueries || [],
-                    titleHitDocumentIds: queryResult.trace.planner?.titleHitDocumentIds || [],
-                },
-                graphContext: graphContext || reply.graphContext || undefined,
-                ragContextPack,
-                ragSufficiencyReview,
-                ragRecovery,
-                ragFailureClassifications,
-                answerClaimCitations,
-                answerTaskPlan: reply.graphAnswerPlan.answerTaskPlan,
-                answerTaskCoverage: reply.answerReleaseReview.answerTaskCoverage,
-                answerReleaseReview: reply.answerReleaseReview,
-                graphAnswerPlan: reply.graphAnswerPlan,
-                graphAnswerCoverage: reply.graphAnswerCoverage,
-                graphExpansion: graphExpansionTrace,
+            const activeConversationAtomIds = collectAgentConversationAtomIds(conversationKnowledgePoints);
+            const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(activeConversationAtomIds);
+            const effectiveWorkspaceId = traceScope.workspaceId || scopedWorkspace.workspaceId;
+            const effectiveCorpusId = traceScope.corpusId || scopedWorkspace.corpusId;
+            const reply = buildScopedConversationReply({
+                message,
+                answerLanguage,
+                responseMode: effectiveResponseMode,
                 responseBudget,
-                responseTruncated: reply.fullReportAssembly?.truncated,
-                responseTruncationReason: reply.fullReportAssembly?.truncationReason,
-            },
-        };
-        if (responseProfile === 'mobile_compact') {
-            response.mobileProjection = projectAnswerForMobile(response);
-        }
-        const knowledgeRunArtifact = this.recordWorkflowArtifact({
-            kind: 'knowledge_run',
-            sessionId,
-            userId,
-            workspaceId: effectiveWorkspaceId,
-            corpusId: effectiveCorpusId,
-            title: `Knowledge run: ${String(message || 'local knowledge').slice(0, 64)}`,
-            sourceAtomIds: activeConversationAtomIds,
-            summary: `Generated ${reply.knowledgeRun.summary.claimCount} evidence claim(s) and ${reply.knowledgeRun.summary.reviewCardCount} review card(s) with status ${reply.knowledgeRun.status}.`,
-            payload: {
-                knowledgeRun: reply.knowledgeRun,
-                graphContext: graphContext || reply.graphContext || undefined,
-                ragContextPack,
-                ragSufficiencyReview,
-                ragRecovery,
-                ragFailureClassifications,
-                answerClaimCitations,
-                answerReleaseReview: reply.answerReleaseReview,
-                graphAnswerPlan: reply.graphAnswerPlan,
-                graphAnswerCoverage: reply.graphAnswerCoverage,
-                graphExpansion: graphExpansionTrace,
+                knowledgePoints: conversationKnowledgePoints,
                 citations,
                 recalledMemories,
                 memoryActions,
-            },
-            recordedAt: generatedAt,
-        });
-        response.assistantBlocks = this.attachKnowledgeRunArtifactIdToBlocks(
-            response.assistantBlocks,
-            knowledgeRunArtifact.artifactId
-        );
-        this.upsertConversationSessionState({
-            sessionId,
-            userId,
-            mode: 'grounded_conversation',
-            workspaceId: effectiveWorkspaceId,
-            corpusId: effectiveCorpusId,
-            activeResourceIds: this.resolveSourceResourceIdsForAtomIds(activeConversationAtomIds),
-            activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(activeConversationAtomIds),
-            topK,
-            queryBackend: String(request.scope && queryResult.trace.modeWeights.vector ? 'local_vector' : '').trim() || null,
-            persistMemory: request.persistMemory !== false,
-            memoryNamespace: namespace,
-            exportProfileId: effectiveWorkspaceId
-                ? this.workspaceRegistry.listActiveWorkspaces().find((workspace) => workspace.workspaceId === effectiveWorkspaceId)?.exportProfileId || null
-                : scopedWorkspace.exportProfileId,
-            panelState: {
-                lastGroundedAnswerAt: generatedAt,
-                returnedKnowledgePoints: knowledgePoints.length,
-                returnedCitations: citations.length,
-            },
-            recordedAt: generatedAt,
-        });
-        this.recordAgentConversationTurn({
-            sessionId,
-            userId,
-            request: {
-                ...request,
+                usedScope: traceScope,
+                generatedAt,
+                nextBlockId: () => this.nextId('assistant_block'),
+                nextRunId: () => this.nextId('knowledge_run'),
+                graphContext,
+                ragContextPack,
+                ragSufficiencyReview,
+            });
+            const ragFailureClassifications = this.buildRagFailureClassifications({
+                pack: ragContextPack,
+                review: ragSufficiencyReview,
+                recovery: ragRecovery,
+                graphContext,
+                answerReleaseReview: reply.answerReleaseReview,
+            });
+            const answerClaimCitations = this.buildAnswerClaimCitations({
+                answer: reply.answer,
+                pack: ragContextPack,
+                invocationId,
+            });
+            const response: AgentConversationResponse = {
                 userId,
                 sessionId,
-                message,
-                topK,
-                asOf: generatedAt,
-                memoryNamespace: namespace,
-            },
-            response,
-        });
-        if (reply.knowledgeRun.reviewCards.length > 0) {
-            this.recordWorkflowArtifact({
-                kind: 'flashcard_batch',
+                assistantMessage: reply.answer,
+                answer: reply.answer,
+                responseMode: effectiveResponseMode,
+                ...(responseProfile ? { responseProfile } : {}),
+                responseBudget,
+                answerReleaseReview: reply.answerReleaseReview,
+                graphAnswerPlan: reply.graphAnswerPlan,
+                graphAnswerCoverage: reply.graphAnswerCoverage,
+                answerTaskPlan: reply.graphAnswerPlan.answerTaskPlan,
+                answerTaskCoverage: reply.answerReleaseReview.answerTaskCoverage,
+                assistantBlocks: reply.assistantBlocks,
+                knowledgeRun: reply.knowledgeRun,
+                knowledgePoints: conversationKnowledgePoints,
+                citations,
+                recalledMemories,
+                memoryActions,
+                summary: {
+                    generatedAt,
+                    topK,
+                    returnedKnowledgePoints: conversationKnowledgePoints.length,
+                    returnedCitations: citations.length,
+                    recalledMemoryCount: recalledMemories.length,
+                    appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,
+                    queryEvidenceCoverageRatioPct: Number(
+                        (Number(queryResult.trace?.evidenceCoverageRatio || 0) * 100).toFixed(2)
+                    ),
+                    responseBudgetMode: responseBudget.mode,
+                    responseBudgetTier: responseBudget.tier,
+                    responseTruncated: reply.fullReportAssembly?.truncated,
+                    responseTruncationReason: reply.fullReportAssembly?.truncationReason,
+                },
+                trace: {
+                    sessionId,
+                    invocationId,
+                    retrieval: queryResult.trace,
+                    recalledMemoryCount: recalledMemories.length,
+                    appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,
+                    usedScope: traceScope,
+                    workspaceReadiness: traceScope.readiness,
+                    missDiagnostics: traceScope.missDiagnostics,
+                    planner: {
+                        plannerQuery: queryResult.trace.planner?.plannerQuery || null,
+                        titleLikeQueries: queryResult.trace.planner?.titleLikeQueries || [],
+                        titleHitDocumentIds: queryResult.trace.planner?.titleHitDocumentIds || [],
+                    },
+                    graphContext: graphContext || reply.graphContext || undefined,
+                    ragContextPack,
+                    ragSufficiencyReview,
+                    ragRecovery,
+                    ragFailureClassifications,
+                    answerClaimCitations,
+                    answerTaskPlan: reply.graphAnswerPlan.answerTaskPlan,
+                    answerTaskCoverage: reply.answerReleaseReview.answerTaskCoverage,
+                    answerReleaseReview: reply.answerReleaseReview,
+                    graphAnswerPlan: reply.graphAnswerPlan,
+                    graphAnswerCoverage: reply.graphAnswerCoverage,
+                    graphExpansion: graphExpansionTrace,
+                    responseBudget,
+                    responseTruncated: reply.fullReportAssembly?.truncated,
+                    responseTruncationReason: reply.fullReportAssembly?.truncationReason,
+                },
+            };
+            if (responseProfile === 'mobile_compact') {
+                response.mobileProjection = projectAnswerForMobile(response);
+            }
+            const knowledgeRunArtifact = this.recordWorkflowArtifact({
+                kind: 'knowledge_run',
                 sessionId,
                 userId,
                 workspaceId: effectiveWorkspaceId,
                 corpusId: effectiveCorpusId,
-                title: `Knowledge run review cards: ${String(message || 'local knowledge').slice(0, 64)}`,
+                title: `Knowledge run: ${String(message || 'local knowledge').slice(0, 64)}`,
                 sourceAtomIds: activeConversationAtomIds,
-                summary: `Prepared ${reply.knowledgeRun.reviewCards.length} review card(s) from ${reply.knowledgeRun.summary.verifiedClaimCount + reply.knowledgeRun.summary.weakClaimCount} evidenced claim(s).`,
+                summary: `Generated ${reply.knowledgeRun.summary.claimCount} evidence claim(s) and ${reply.knowledgeRun.summary.reviewCardCount} review card(s) with status ${reply.knowledgeRun.status}.`,
                 payload: {
-                    runId: reply.knowledgeRun.runId,
-                    reviewCards: reply.knowledgeRun.reviewCards,
-                    evidenceClaims: reply.knowledgeRun.evidenceClaims,
-                    reviewState: reply.knowledgeRun.reviewState,
+                    knowledgeRun: reply.knowledgeRun,
+                    graphContext: graphContext || reply.graphContext || undefined,
+                    ragContextPack,
+                    ragSufficiencyReview,
+                    ragRecovery,
+                    ragFailureClassifications,
+                    answerClaimCitations,
+                    answerReleaseReview: reply.answerReleaseReview,
+                    graphAnswerPlan: reply.graphAnswerPlan,
+                    graphAnswerCoverage: reply.graphAnswerCoverage,
+                    graphExpansion: graphExpansionTrace,
+                    citations,
+                    recalledMemories,
+                    memoryActions,
                 },
                 recordedAt: generatedAt,
             });
-        }
-        this.recordWorkflowArtifact({
-            kind: 'research_report',
-            sessionId,
-            userId,
-            workspaceId: effectiveWorkspaceId,
-            corpusId: effectiveCorpusId,
-            title: `Grounded conversation: ${String(message || 'local knowledge').slice(0, 64)}`,
-            sourceAtomIds: knowledgePoints.map((point) => point.atomId),
-            summary: reply.answer,
-            payload: {
-                citations,
-                recalledMemories,
-                memoryActions,
-                knowledgeRun: reply.knowledgeRun,
-            },
-            recordedAt: generatedAt,
+            response.assistantBlocks = this.attachKnowledgeRunArtifactIdToBlocks(
+                response.assistantBlocks,
+                knowledgeRunArtifact.artifactId
+            );
+            this.upsertConversationSessionState({
+                sessionId,
+                userId,
+                mode: 'grounded_conversation',
+                workspaceId: effectiveWorkspaceId,
+                corpusId: effectiveCorpusId,
+                activeResourceIds: this.resolveSourceResourceIdsForAtomIds(activeConversationAtomIds),
+                activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(activeConversationAtomIds),
+                topK,
+                queryBackend: String(request.scope && queryResult.trace.modeWeights.vector ? 'local_vector' : '').trim() || null,
+                persistMemory: request.persistMemory !== false,
+                memoryNamespace: namespace,
+                exportProfileId: effectiveWorkspaceId
+                    ? this.workspaceRegistry.listActiveWorkspaces().find((workspace) => workspace.workspaceId === effectiveWorkspaceId)?.exportProfileId || null
+                    : scopedWorkspace.exportProfileId,
+                panelState: {
+                    lastGroundedAnswerAt: generatedAt,
+                    returnedKnowledgePoints: knowledgePoints.length,
+                    returnedCitations: citations.length,
+                },
+                recordedAt: generatedAt,
+            });
+            this.recordAgentConversationTurn({
+                sessionId,
+                userId,
+                request: {
+                    ...request,
+                    userId,
+                    sessionId,
+                    message,
+                    topK,
+                    asOf: generatedAt,
+                    memoryNamespace: namespace,
+                },
+                response,
+            });
+            if (reply.knowledgeRun.reviewCards.length > 0) {
+                this.recordWorkflowArtifact({
+                    kind: 'flashcard_batch',
+                    sessionId,
+                    userId,
+                    workspaceId: effectiveWorkspaceId,
+                    corpusId: effectiveCorpusId,
+                    title: `Knowledge run review cards: ${String(message || 'local knowledge').slice(0, 64)}`,
+                    sourceAtomIds: activeConversationAtomIds,
+                    summary: `Prepared ${reply.knowledgeRun.reviewCards.length} review card(s) from ${reply.knowledgeRun.summary.verifiedClaimCount + reply.knowledgeRun.summary.weakClaimCount} evidenced claim(s).`,
+                    payload: {
+                        runId: reply.knowledgeRun.runId,
+                        reviewCards: reply.knowledgeRun.reviewCards,
+                        evidenceClaims: reply.knowledgeRun.evidenceClaims,
+                        reviewState: reply.knowledgeRun.reviewState,
+                    },
+                    recordedAt: generatedAt,
+                });
+            }
+            this.recordWorkflowArtifact({
+                kind: 'research_report',
+                sessionId,
+                userId,
+                workspaceId: effectiveWorkspaceId,
+                corpusId: effectiveCorpusId,
+                title: `Grounded conversation: ${String(message || 'local knowledge').slice(0, 64)}`,
+                sourceAtomIds: knowledgePoints.map((point) => point.atomId),
+                summary: reply.answer,
+                payload: {
+                    citations,
+                    recalledMemories,
+                    memoryActions,
+                    knowledgeRun: reply.knowledgeRun,
+                },
+                recordedAt: generatedAt,
+            });
+            await this.persistIfNeeded();
+            return response;
         });
-        await this.persistIfNeeded();
-        return response;
     }
 
     public async streamAgentConversation(request: AgentConversationRequest = {}): Promise<AsyncGenerator<any, void, void>> {
-        const result = await this.agentConversation(request);
-        const turnId = this.nextId('turn');
-        const emittedAt = this.nowProvider().toISOString();
-        return (async function* stream(): AsyncGenerator<any, void, void> {
-            yield {
-                type: 'turn_completed',
-                turnId,
-                emittedAt,
-                result,
-            };
-        }());
+        return this.commitKnowledgeState(async () => {
+            const result = await this.agentConversation(request);
+            const turnId = this.nextId('turn');
+            const emittedAt = this.nowProvider().toISOString();
+            return (async function* stream(): AsyncGenerator<any, void, void> {
+                yield {
+                    type: 'turn_completed',
+                    turnId,
+                    emittedAt,
+                    result,
+                };
+            }());
+        });
     }
 
     public async queryMasteryDiagnostics(request: MasteryDiagnosticsRequest): Promise<MasteryDiagnosticsResponse> {
-        return this.diagnoseMastery(request);
+        return this.commitKnowledgeState(async () => {
+            return this.diagnoseMastery(request);
+        });
     }
 
     public async generateLearningPath(request: LearningPathRequest): Promise<LearningPathResponse> {
-        return this.buildLearningPath(request);
+        return this.commitKnowledgeState(async () => {
+            return this.buildLearningPath(request);
+        });
     }
 
     public async evaluateIngestGuardrail(
         request: IngestGuardrailEvaluationRequest
     ): Promise<IngestGuardrailEvaluationResponse> {
-        return this.evaluateIngestGuardrails(request);
+        return this.serializeKnowledgeStateOperation(async () => {
+            return this.evaluateIngestGuardrails(request);
+        });
     }
 
     public getAgentConversationTurnCacheDiagnostics(_request: { format?: string } = {}): any {
@@ -10886,48 +10998,54 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public async getRuntimeCapabilityMatrix(): Promise<any> {
-        return {
-            generatedAt: this.nowProvider().toISOString(),
-            modules: (await this.getFoundationReadiness()).modules,
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                generatedAt: this.nowProvider().toISOString(),
+                modules: (await this.getFoundationReadiness()).modules,
+            };
+        });
     }
 
     public async getRuntimeCapabilityRunbook(): Promise<any> {
-        return {
-            generatedAt: this.nowProvider().toISOString(),
-            checks: [],
-            summary: {
-                totalChecks: 0,
-            },
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                generatedAt: this.nowProvider().toISOString(),
+                checks: [],
+                summary: {
+                    totalChecks: 0,
+                },
+            };
+        });
     }
 
     public async verifyRuntimeCapabilityRunbook(_request: { limit?: number } = {}): Promise<any> {
-        return {
-            generatedAt: this.nowProvider().toISOString(),
-            selectedCheckId: '',
-            selectedCheckStatus: 'unknown',
-            selectedCheckEscalation: 'normal',
-            selectedCheckPriorityScore: 0,
-            selectedCheckMessage: 'No verification history available yet.',
-            verificationTargets: [],
-            selectedCheckEscalationActions: [],
-            traceSummary: {
-                returnedRecords: 0,
-                errorRequests: 0,
-                errorRatioPct: 0,
-                p95DurationMs: 0,
-            },
-            selectedCheckHistory: {
-                returnedRecords: 0,
-                activeRiskStreak: 0,
-                activeFailStreak: 0,
-                trendStatus: 'insufficient_data',
-            },
-            selectedCheckRemediation: {
-                riskRatioPct: 0,
-            },
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                generatedAt: this.nowProvider().toISOString(),
+                selectedCheckId: '',
+                selectedCheckStatus: 'unknown',
+                selectedCheckEscalation: 'normal',
+                selectedCheckPriorityScore: 0,
+                selectedCheckMessage: 'No verification history available yet.',
+                verificationTargets: [],
+                selectedCheckEscalationActions: [],
+                traceSummary: {
+                    returnedRecords: 0,
+                    errorRequests: 0,
+                    errorRatioPct: 0,
+                    p95DurationMs: 0,
+                },
+                selectedCheckHistory: {
+                    returnedRecords: 0,
+                    activeRiskStreak: 0,
+                    activeFailStreak: 0,
+                    trendStatus: 'insufficient_data',
+                },
+                selectedCheckRemediation: {
+                    riskRatioPct: 0,
+                },
+            };
+        });
     }
 
     public async getRuntimeCapabilityRunbookHistory(_request: {
@@ -10936,33 +11054,35 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         sinceMinutes?: number;
         status?: string;
     } = {}): Promise<any> {
-        return {
-            summary: {
-                totalRecords: 0,
-                matchedRecords: 0,
-                returnedRecords: 0,
-                checkId: String(_request.checkId || ''),
-                sinceMinutes: Number(_request.sinceMinutes || 0),
-                status: String(_request.status || ''),
-                statusCounts: {
-                    pass: 0,
-                    warn: 0,
-                    fail: 0,
-                    unknown: 0,
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                summary: {
+                    totalRecords: 0,
+                    matchedRecords: 0,
+                    returnedRecords: 0,
+                    checkId: String(_request.checkId || ''),
+                    sinceMinutes: Number(_request.sinceMinutes || 0),
+                    status: String(_request.status || ''),
+                    statusCounts: {
+                        pass: 0,
+                        warn: 0,
+                        fail: 0,
+                        unknown: 0,
+                    },
+                    activeRiskStreak: 0,
+                    activeFailStreak: 0,
+                    averageErrorRatioPct: 0,
+                    averageP95DurationMs: 0,
+                    trendStatus: 'insufficient_data',
+                    trendWindowSize: 0,
+                    severityDelta: 0,
+                    errorRatioDeltaPct: 0,
+                    p95DurationDeltaMs: 0,
+                    latestVerifiedAt: '',
                 },
-                activeRiskStreak: 0,
-                activeFailStreak: 0,
-                averageErrorRatioPct: 0,
-                averageP95DurationMs: 0,
-                trendStatus: 'insufficient_data',
-                trendWindowSize: 0,
-                severityDelta: 0,
-                errorRatioDeltaPct: 0,
-                p95DurationDeltaMs: 0,
-                latestVerifiedAt: '',
-            },
-            records: [],
-        };
+                records: [],
+            };
+        });
     }
 
     public async queryRuntimeCapabilityRunbookChecks(_request: {
@@ -10971,31 +11091,33 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         status?: string;
         checkQuery?: string;
     } = {}): Promise<any> {
-        return {
-            summary: {
-                totalRecords: 0,
-                matchedRecords: 0,
-                returnedChecks: 0,
-                sinceMinutes: Number(_request.sinceMinutes || 0),
-                status: String(_request.status || ''),
-                checkQuery: String(_request.checkQuery || ''),
-                regressingChecks: 0,
-                improvingChecks: 0,
-                stableChecks: 0,
-                insufficientDataChecks: 0,
-                recommendedFocusCheckId: '',
-                recommendedFocusEscalation: '',
-                recommendedFocusReason: '',
-                recommendedFocusTopAction: '',
-                actionQueueTotal: 0,
-                actionQueueP0: 0,
-                actionQueueP1: 0,
-                actionQueueP2: 0,
-                remediationRiskRatioPct: 0,
-                remediationLatestRecordedAt: '',
-            },
-            checks: [],
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                summary: {
+                    totalRecords: 0,
+                    matchedRecords: 0,
+                    returnedChecks: 0,
+                    sinceMinutes: Number(_request.sinceMinutes || 0),
+                    status: String(_request.status || ''),
+                    checkQuery: String(_request.checkQuery || ''),
+                    regressingChecks: 0,
+                    improvingChecks: 0,
+                    stableChecks: 0,
+                    insufficientDataChecks: 0,
+                    recommendedFocusCheckId: '',
+                    recommendedFocusEscalation: '',
+                    recommendedFocusReason: '',
+                    recommendedFocusTopAction: '',
+                    actionQueueTotal: 0,
+                    actionQueueP0: 0,
+                    actionQueueP1: 0,
+                    actionQueueP2: 0,
+                    remediationRiskRatioPct: 0,
+                    remediationLatestRecordedAt: '',
+                },
+                checks: [],
+            };
+        });
     }
 
     public async queryRuntimeCapabilityRunbookActionQueue(_request: {
@@ -11010,160 +11132,127 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         remediationStatus?: string;
         remediationTrend?: string;
     } = {}): Promise<any> {
-        return {
-            summary: {
-                totalRecords: 0,
-                matchedRecords: 0,
-                returnedChecks: 0,
-                sinceMinutes: Number(_request.sinceMinutes || 0),
-                status: String(_request.status || ''),
-                checkQuery: String(_request.checkQuery || ''),
-                queueLimit: Number(_request.queueLimit || _request.limit || 0),
-                priorityFilter: String(_request.priority || 'all'),
-                categoryFilter: String(_request.category || 'all'),
-                checkIdFilter: String(_request.checkId || ''),
-                remediationStatusFilter: String(_request.remediationStatus || 'all'),
-                remediationTrendFilter: String(_request.remediationTrend || 'all'),
-                totalQueueItems: 0,
-                filteredQueueItems: 0,
-                returnedQueueItems: 0,
-                queueP0: 0,
-                queueP1: 0,
-                queueP2: 0,
-                remediationRiskQueueItems: 0,
-                remediationRegressingQueueItems: 0,
-                remediationAverageRiskRatioPct: 0,
-                remediationTopRiskCheckId: '',
-                recommendedFocusCheckId: '',
-                recommendedFocusEscalation: '',
-                generatedAt: this.nowProvider().toISOString(),
-            },
-            actionQueue: [],
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                summary: {
+                    totalRecords: 0,
+                    matchedRecords: 0,
+                    returnedChecks: 0,
+                    sinceMinutes: Number(_request.sinceMinutes || 0),
+                    status: String(_request.status || ''),
+                    checkQuery: String(_request.checkQuery || ''),
+                    queueLimit: Number(_request.queueLimit || _request.limit || 0),
+                    priorityFilter: String(_request.priority || 'all'),
+                    categoryFilter: String(_request.category || 'all'),
+                    checkIdFilter: String(_request.checkId || ''),
+                    remediationStatusFilter: String(_request.remediationStatus || 'all'),
+                    remediationTrendFilter: String(_request.remediationTrend || 'all'),
+                    totalQueueItems: 0,
+                    filteredQueueItems: 0,
+                    returnedQueueItems: 0,
+                    queueP0: 0,
+                    queueP1: 0,
+                    queueP2: 0,
+                    remediationRiskQueueItems: 0,
+                    remediationRegressingQueueItems: 0,
+                    remediationAverageRiskRatioPct: 0,
+                    remediationTopRiskCheckId: '',
+                    recommendedFocusCheckId: '',
+                    recommendedFocusEscalation: '',
+                    generatedAt: this.nowProvider().toISOString(),
+                },
+                actionQueue: [],
+            };
+        });
     }
 
     public async getRuntimeCapabilityRunbookRemediationHistory(_request: { limit?: number } = {}): Promise<any> {
-        return {
-            summary: {
-                totalRecords: 0,
-                returnedRecords: 0,
-            },
-            records: [],
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                summary: {
+                    totalRecords: 0,
+                    returnedRecords: 0,
+                },
+                records: [],
+            };
+        });
     }
 
     public async getRuntimeCapabilityRunbookReplaySchedule(): Promise<any> {
-        return {
-            updatedAt: this.nowProvider().toISOString(),
-            enabled: false,
-            intervalMinutes: 0,
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                updatedAt: this.nowProvider().toISOString(),
+                enabled: false,
+                intervalMinutes: 0,
+            };
+        });
     }
 
     public async recordRuntimeCapabilityRemediationEvent(_request: Record<string, unknown> = {}): Promise<any> {
-        return {
-            recorded: true,
-            recordedAt: this.nowProvider().toISOString(),
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                recorded: true,
+                recordedAt: this.nowProvider().toISOString(),
+            };
+        });
     }
 
     public async replayRuntimeCapabilityRemediationEvent(_request: Record<string, unknown> = {}): Promise<any> {
-        return {
-            replayed: true,
-            replayedAt: this.nowProvider().toISOString(),
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                replayed: true,
+                replayedAt: this.nowProvider().toISOString(),
+            };
+        });
     }
 
     public async updateRuntimeCapabilityReplaySchedule(_request: Record<string, unknown> = {}): Promise<any> {
-        return {
-            updated: true,
-            updatedAt: this.nowProvider().toISOString(),
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                updated: true,
+                updatedAt: this.nowProvider().toISOString(),
+            };
+        });
     }
 
     public async tickRuntimeCapabilityReplaySchedule(): Promise<any> {
-        return {
-            ticked: true,
-            tickedAt: this.nowProvider().toISOString(),
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            return {
+                ticked: true,
+                tickedAt: this.nowProvider().toISOString(),
+            };
+        });
     }
 
     // ── M8-M10 stubs (pending full implementation) ──
 
     public async getTutorAdapterCatalog(): Promise<any> {
-        await this.ensureHydrated();
-        const adapters = this.listConfiguredTutorAdapters().map((adapter, index) => ({
-            adapterId: adapter.id,
-            mode: adapter.mode,
-            configured: true,
-            active: this.tutorAdapter ? adapter.id === this.tutorAdapter.id : index === 0,
-            selectedByDefault: this.tutorAdapter ? adapter.id === this.tutorAdapter.id : index === 0,
-        }));
-        return {
-            summary: {
-                totalAdapters: adapters.length,
-                activeAdapters: adapters.filter((adapter) => adapter.active).length,
-                defaultAdapterId: adapters.find((adapter) => adapter.selectedByDefault)?.adapterId || null,
-            },
-            adapters,
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const adapters = this.listConfiguredTutorAdapters().map((adapter, index) => ({
+                adapterId: adapter.id,
+                mode: adapter.mode,
+                configured: true,
+                active: this.tutorAdapter ? adapter.id === this.tutorAdapter.id : index === 0,
+                selectedByDefault: this.tutorAdapter ? adapter.id === this.tutorAdapter.id : index === 0,
+            }));
+            return {
+                summary: {
+                    totalAdapters: adapters.length,
+                    activeAdapters: adapters.filter((adapter) => adapter.active).length,
+                    defaultAdapterId: adapters.find((adapter) => adapter.selectedByDefault)?.adapterId || null,
+                },
+                adapters,
+            };
+        });
     }
 
     public async getTutorAdapterTelemetry(): Promise<any> {
-        await this.ensureHydrated();
-        const configuredAdapters = this.listConfiguredTutorAdapters();
-        const llmTraces = this.filterTutorTraces({ source: 'llm-adapter' });
-        const adapterStats = new Map<string, {
-            adapterId: string;
-            mode: string;
-            totalRequests: number;
-            successfulResponses: number;
-            acceptedResponses: number;
-            downgradedResponses: number;
-            failedResponses: number;
-            providerFallbackResponses: number;
-            averageConfidenceAccumulator: number;
-            averageProviderAttemptAccumulator: number;
-            lastSeenAt: string;
-            lastError: string;
-        }>();
-
-        configuredAdapters.forEach((adapter) => {
-            adapterStats.set(adapter.id, {
-                adapterId: adapter.id,
-                mode: adapter.mode,
-                totalRequests: 0,
-                successfulResponses: 0,
-                acceptedResponses: 0,
-                downgradedResponses: 0,
-                failedResponses: 0,
-                providerFallbackResponses: 0,
-                averageConfidenceAccumulator: 0,
-                averageProviderAttemptAccumulator: 0,
-                lastSeenAt: '',
-                lastError: '',
-            });
-        });
-
-        llmTraces.forEach((trace) => {
-            const adapterId = String(trace.adapterId || trace.providerName || 'llm-adapter').trim() || 'llm-adapter';
-            if (!adapterStats.has(adapterId)) {
-                adapterStats.set(adapterId, {
-                    adapterId,
-                    mode: String(trace.providerMode || 'unknown').trim() || 'unknown',
-                    totalRequests: 0,
-                    successfulResponses: 0,
-                    acceptedResponses: 0,
-                    downgradedResponses: 0,
-                    failedResponses: 0,
-                    providerFallbackResponses: 0,
-                    averageConfidenceAccumulator: 0,
-                    averageProviderAttemptAccumulator: 0,
-                    lastSeenAt: '',
-                    lastError: '',
-                });
-            }
-            const current = adapterStats.get(adapterId) as {
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const configuredAdapters = this.listConfiguredTutorAdapters();
+            const llmTraces = this.filterTutorTraces({ source: 'llm-adapter' });
+            const adapterStats = new Map<string, {
                 adapterId: string;
                 mode: string;
                 totalRequests: number;
@@ -11176,1107 +11265,1192 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 averageProviderAttemptAccumulator: number;
                 lastSeenAt: string;
                 lastError: string;
-            };
-            current.totalRequests += 1;
-            current.averageConfidenceAccumulator += clamp(Number(trace.confidence || 0), 0, 1);
-            current.averageProviderAttemptAccumulator += Math.max(1, Math.floor(Number(trace.providerAttemptCount || 1)));
-            if (trace.failed === true || trace.verificationStatus === 'failed') {
-                current.failedResponses += 1;
-                current.lastError = String(trace.errorMessage || current.lastError || '').trim();
-            } else {
-                current.successfulResponses += 1;
-            }
-            if (trace.verificationStatus === 'verified' && trace.fallbackUsed !== true) {
-                current.acceptedResponses += 1;
-            }
-            if (trace.fallbackUsed === true && trace.verificationStatus !== 'failed') {
-                current.downgradedResponses += 1;
-            }
-            if (trace.fallbackUsed === true) {
-                current.providerFallbackResponses += 1;
-            }
-            if (!current.lastSeenAt || trace.createdAt > current.lastSeenAt) {
-                current.lastSeenAt = trace.createdAt;
-            }
-        });
+            }>();
 
-        const adapters = Array.from(adapterStats.values())
-            .map((item) => ({
-                adapterId: item.adapterId,
-                mode: item.mode,
-                totalRequests: item.totalRequests,
-                successfulResponses: item.successfulResponses,
-                acceptedResponses: item.acceptedResponses,
-                downgradedResponses: item.downgradedResponses,
-                failedResponses: item.failedResponses,
-                providerFallbackResponses: item.providerFallbackResponses,
-                providerFallbackRatioPct: Number(
-                    clamp((item.providerFallbackResponses / Math.max(1, item.totalRequests)) * 100, 0, 100).toFixed(4)
-                ),
-                averageConfidence: item.totalRequests > 0
-                    ? Number((item.averageConfidenceAccumulator / item.totalRequests).toFixed(4))
-                    : 0,
-                averageProviderAttemptCount: item.totalRequests > 0
-                    ? Number((item.averageProviderAttemptAccumulator / item.totalRequests).toFixed(4))
-                    : 0,
-                lastSeenAt: item.lastSeenAt || null,
-                lastError: item.lastError || '',
-            }))
-            .sort((left, right) => {
-                if (right.totalRequests !== left.totalRequests) {
-                    return right.totalRequests - left.totalRequests;
-                }
-                return String(left.adapterId || '').localeCompare(String(right.adapterId || ''));
+            configuredAdapters.forEach((adapter) => {
+                adapterStats.set(adapter.id, {
+                    adapterId: adapter.id,
+                    mode: adapter.mode,
+                    totalRequests: 0,
+                    successfulResponses: 0,
+                    acceptedResponses: 0,
+                    downgradedResponses: 0,
+                    failedResponses: 0,
+                    providerFallbackResponses: 0,
+                    averageConfidenceAccumulator: 0,
+                    averageProviderAttemptAccumulator: 0,
+                    lastSeenAt: '',
+                    lastError: '',
+                });
             });
-        const totalRequests = llmTraces.length;
-        const providerFallbackResponses = llmTraces.filter((trace) => trace.fallbackUsed === true).length;
-        const averageConfidence = totalRequests > 0
-            ? Number((
-                llmTraces.reduce((sum, trace) => sum + clamp(Number(trace.confidence || 0), 0, 1), 0)
-                / totalRequests
-            ).toFixed(4))
-            : 0;
-        const averageProviderAttemptCount = totalRequests > 0
-            ? Number((
-                llmTraces.reduce((sum, trace) => sum + Math.max(1, Math.floor(Number(trace.providerAttemptCount || 1))), 0)
-                / totalRequests
-            ).toFixed(4))
-            : 0;
-        const preferredMode = String(
-            this.studySessionOrchestrationTutorRoutingConfig.preferredMode
-            || configuredAdapters[0]?.mode
-            || this.tutorAdapter?.mode
-            || 'local'
-        ).trim() || 'local';
-        const lastTrace = llmTraces[0] || null;
-        return {
-            summary: {
-                totalAdapters: adapters.length,
-                activeAdapters: adapters.filter((adapter) => adapter.totalRequests > 0 || adapter.mode !== 'unknown').length,
-                totalRequests,
-                successfulResponses: llmTraces.filter((trace) => trace.failed !== true && trace.verificationStatus !== 'failed').length,
-                acceptedResponses: llmTraces.filter((trace) => trace.verificationStatus === 'verified' && trace.fallbackUsed !== true).length,
-                downgradedResponses: llmTraces.filter((trace) => trace.fallbackUsed === true && trace.verificationStatus !== 'failed').length,
-                failedResponses: llmTraces.filter((trace) => trace.failed === true || trace.verificationStatus === 'failed').length,
-                providerFallbackResponses,
-                providerFallbackRatioPct: Number(clamp((providerFallbackResponses / Math.max(1, totalRequests)) * 100, 0, 100).toFixed(4)),
-                averageProviderAttemptCount,
-                averageConfidence,
-                lastRoutingStrategy: configuredAdapters.length > 1 ? 'multi_adapter_catalog' : 'single_adapter_catalog',
-                lastRoutingReason: lastTrace
-                    ? String(lastTrace.notes || '').trim()
-                    : (configuredAdapters.length > 0 ? 'Tutor adapter catalog is configured but no llm-adapter trace has run yet.' : 'No tutor adapter is configured.'),
-                lastRoutingScore: lastTrace ? Number(clamp(Number(lastTrace.confidence || 0), 0, 1).toFixed(4)) : averageConfidence,
-                lastRoutingDynamicPreferredMode: preferredMode,
-                lastRoutingDynamicModeReason: String(
-                    this.studySessionOrchestrationTutorRoutingConfig.enabled === true
-                        ? 'runtime_tutor_routing_config_enabled'
-                        : 'runtime_tutor_routing_config_default'
-                ),
-            },
-            adapters,
-        };
+
+            llmTraces.forEach((trace) => {
+                const adapterId = String(trace.adapterId || trace.providerName || 'llm-adapter').trim() || 'llm-adapter';
+                if (!adapterStats.has(adapterId)) {
+                    adapterStats.set(adapterId, {
+                        adapterId,
+                        mode: String(trace.providerMode || 'unknown').trim() || 'unknown',
+                        totalRequests: 0,
+                        successfulResponses: 0,
+                        acceptedResponses: 0,
+                        downgradedResponses: 0,
+                        failedResponses: 0,
+                        providerFallbackResponses: 0,
+                        averageConfidenceAccumulator: 0,
+                        averageProviderAttemptAccumulator: 0,
+                        lastSeenAt: '',
+                        lastError: '',
+                    });
+                }
+                const current = adapterStats.get(adapterId) as {
+                    adapterId: string;
+                    mode: string;
+                    totalRequests: number;
+                    successfulResponses: number;
+                    acceptedResponses: number;
+                    downgradedResponses: number;
+                    failedResponses: number;
+                    providerFallbackResponses: number;
+                    averageConfidenceAccumulator: number;
+                    averageProviderAttemptAccumulator: number;
+                    lastSeenAt: string;
+                    lastError: string;
+                };
+                current.totalRequests += 1;
+                current.averageConfidenceAccumulator += clamp(Number(trace.confidence || 0), 0, 1);
+                current.averageProviderAttemptAccumulator += Math.max(1, Math.floor(Number(trace.providerAttemptCount || 1)));
+                if (trace.failed === true || trace.verificationStatus === 'failed') {
+                    current.failedResponses += 1;
+                    current.lastError = String(trace.errorMessage || current.lastError || '').trim();
+                } else {
+                    current.successfulResponses += 1;
+                }
+                if (trace.verificationStatus === 'verified' && trace.fallbackUsed !== true) {
+                    current.acceptedResponses += 1;
+                }
+                if (trace.fallbackUsed === true && trace.verificationStatus !== 'failed') {
+                    current.downgradedResponses += 1;
+                }
+                if (trace.fallbackUsed === true) {
+                    current.providerFallbackResponses += 1;
+                }
+                if (!current.lastSeenAt || trace.createdAt > current.lastSeenAt) {
+                    current.lastSeenAt = trace.createdAt;
+                }
+            });
+
+            const adapters = Array.from(adapterStats.values())
+                .map((item) => ({
+                    adapterId: item.adapterId,
+                    mode: item.mode,
+                    totalRequests: item.totalRequests,
+                    successfulResponses: item.successfulResponses,
+                    acceptedResponses: item.acceptedResponses,
+                    downgradedResponses: item.downgradedResponses,
+                    failedResponses: item.failedResponses,
+                    providerFallbackResponses: item.providerFallbackResponses,
+                    providerFallbackRatioPct: Number(
+                        clamp((item.providerFallbackResponses / Math.max(1, item.totalRequests)) * 100, 0, 100).toFixed(4)
+                    ),
+                    averageConfidence: item.totalRequests > 0
+                        ? Number((item.averageConfidenceAccumulator / item.totalRequests).toFixed(4))
+                        : 0,
+                    averageProviderAttemptCount: item.totalRequests > 0
+                        ? Number((item.averageProviderAttemptAccumulator / item.totalRequests).toFixed(4))
+                        : 0,
+                    lastSeenAt: item.lastSeenAt || null,
+                    lastError: item.lastError || '',
+                }))
+                .sort((left, right) => {
+                    if (right.totalRequests !== left.totalRequests) {
+                        return right.totalRequests - left.totalRequests;
+                    }
+                    return String(left.adapterId || '').localeCompare(String(right.adapterId || ''));
+                });
+            const totalRequests = llmTraces.length;
+            const providerFallbackResponses = llmTraces.filter((trace) => trace.fallbackUsed === true).length;
+            const averageConfidence = totalRequests > 0
+                ? Number((
+                    llmTraces.reduce((sum, trace) => sum + clamp(Number(trace.confidence || 0), 0, 1), 0)
+                    / totalRequests
+                ).toFixed(4))
+                : 0;
+            const averageProviderAttemptCount = totalRequests > 0
+                ? Number((
+                    llmTraces.reduce((sum, trace) => sum + Math.max(1, Math.floor(Number(trace.providerAttemptCount || 1))), 0)
+                    / totalRequests
+                ).toFixed(4))
+                : 0;
+            const preferredMode = String(
+                this.studySessionOrchestrationTutorRoutingConfig.preferredMode
+                || configuredAdapters[0]?.mode
+                || this.tutorAdapter?.mode
+                || 'local'
+            ).trim() || 'local';
+            const lastTrace = llmTraces[0] || null;
+            return {
+                summary: {
+                    totalAdapters: adapters.length,
+                    activeAdapters: adapters.filter((adapter) => adapter.totalRequests > 0 || adapter.mode !== 'unknown').length,
+                    totalRequests,
+                    successfulResponses: llmTraces.filter((trace) => trace.failed !== true && trace.verificationStatus !== 'failed').length,
+                    acceptedResponses: llmTraces.filter((trace) => trace.verificationStatus === 'verified' && trace.fallbackUsed !== true).length,
+                    downgradedResponses: llmTraces.filter((trace) => trace.fallbackUsed === true && trace.verificationStatus !== 'failed').length,
+                    failedResponses: llmTraces.filter((trace) => trace.failed === true || trace.verificationStatus === 'failed').length,
+                    providerFallbackResponses,
+                    providerFallbackRatioPct: Number(clamp((providerFallbackResponses / Math.max(1, totalRequests)) * 100, 0, 100).toFixed(4)),
+                    averageProviderAttemptCount,
+                    averageConfidence,
+                    lastRoutingStrategy: configuredAdapters.length > 1 ? 'multi_adapter_catalog' : 'single_adapter_catalog',
+                    lastRoutingReason: lastTrace
+                        ? String(lastTrace.notes || '').trim()
+                        : (configuredAdapters.length > 0 ? 'Tutor adapter catalog is configured but no llm-adapter trace has run yet.' : 'No tutor adapter is configured.'),
+                    lastRoutingScore: lastTrace ? Number(clamp(Number(lastTrace.confidence || 0), 0, 1).toFixed(4)) : averageConfidence,
+                    lastRoutingDynamicPreferredMode: preferredMode,
+                    lastRoutingDynamicModeReason: String(
+                        this.studySessionOrchestrationTutorRoutingConfig.enabled === true
+                            ? 'runtime_tutor_routing_config_enabled'
+                            : 'runtime_tutor_routing_config_default'
+                    ),
+                },
+                adapters,
+            };
+        });
     }
 
     public async queryTutorTraceDiagnostics(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
-        const matchedTraces = this.filterTutorTraces(request);
-        const records = matchedTraces.slice(0, limit).map((trace) => ({ ...trace }));
-        const providerBreakdownMap = new Map<string, TutorTrace[]>();
-        matchedTraces.forEach((trace) => {
-            const providerKey = String(trace.providerName || trace.adapterId || trace.source || 'unknown').trim() || 'unknown';
-            if (!providerBreakdownMap.has(providerKey)) {
-                providerBreakdownMap.set(providerKey, []);
-            }
-            providerBreakdownMap.get(providerKey)?.push(trace);
-        });
-        const providerBreakdown = Array.from(providerBreakdownMap.entries())
-            .map(([providerName, traces]) => {
-                const metrics = this.summarizeTutorTraceMetrics(traces);
-                return {
-                    providerName,
-                    traces: traces.length,
-                    fallbackTraces: metrics.fallbackTraces,
-                    failedTraces: metrics.failedTraces,
-                    averageConfidence: metrics.averageConfidence,
-                    averageProviderAttemptCount: metrics.averageProviderAttemptCount,
-                    lastSeenAt: metrics.latestSeenAt || null,
-                };
-            })
-            .sort((left, right) => {
-                if (right.traces !== left.traces) {
-                    return right.traces - left.traces;
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
+            const matchedTraces = this.filterTutorTraces(request);
+            const records = matchedTraces.slice(0, limit).map((trace) => ({ ...trace }));
+            const providerBreakdownMap = new Map<string, TutorTrace[]>();
+            matchedTraces.forEach((trace) => {
+                const providerKey = String(trace.providerName || trace.adapterId || trace.source || 'unknown').trim() || 'unknown';
+                if (!providerBreakdownMap.has(providerKey)) {
+                    providerBreakdownMap.set(providerKey, []);
                 }
-                return String(right.lastSeenAt || '').localeCompare(String(left.lastSeenAt || ''));
+                providerBreakdownMap.get(providerKey)?.push(trace);
             });
-        const aggregateMetrics = this.summarizeTutorTraceMetrics(matchedTraces);
-        return {
-            filters: {
-                userId: String(request.userId || '').trim() || null,
-                source: String(request.source || '').trim() || null,
-                actionKind: String(request.actionKind || '').trim() || null,
-                providerName: String(request.providerName || '').trim() || null,
-                providerMode: String(request.providerMode || '').trim() || null,
-                fallbackUsed: typeof request.fallbackUsed === 'boolean' ? request.fallbackUsed : null,
-                limit,
-            },
-            summary: {
-                matchedTraces: matchedTraces.length,
-                returnedTraces: records.length,
-                llmAdapterTraces: matchedTraces.filter((trace) => trace.source === 'llm-adapter').length,
-                ruleEngineTraces: matchedTraces.filter((trace) => trace.source === 'rule-engine').length,
-                verifiedTraces: aggregateMetrics.verifiedTraces,
-                pendingVerificationTraces: aggregateMetrics.pendingTraces,
-                fallbackTraces: aggregateMetrics.fallbackTraces,
-                fallbackRatioPct: aggregateMetrics.fallbackRatioPct,
-                averageProviderAttemptCount: aggregateMetrics.averageProviderAttemptCount,
-                latestCreatedAt: aggregateMetrics.latestSeenAt || null,
-            },
-            providerBreakdown,
-            records,
-        };
+            const providerBreakdown = Array.from(providerBreakdownMap.entries())
+                .map(([providerName, traces]) => {
+                    const metrics = this.summarizeTutorTraceMetrics(traces);
+                    return {
+                        providerName,
+                        traces: traces.length,
+                        fallbackTraces: metrics.fallbackTraces,
+                        failedTraces: metrics.failedTraces,
+                        averageConfidence: metrics.averageConfidence,
+                        averageProviderAttemptCount: metrics.averageProviderAttemptCount,
+                        lastSeenAt: metrics.latestSeenAt || null,
+                    };
+                })
+                .sort((left, right) => {
+                    if (right.traces !== left.traces) {
+                        return right.traces - left.traces;
+                    }
+                    return String(right.lastSeenAt || '').localeCompare(String(left.lastSeenAt || ''));
+                });
+            const aggregateMetrics = this.summarizeTutorTraceMetrics(matchedTraces);
+            return {
+                filters: {
+                    userId: String(request.userId || '').trim() || null,
+                    source: String(request.source || '').trim() || null,
+                    actionKind: String(request.actionKind || '').trim() || null,
+                    providerName: String(request.providerName || '').trim() || null,
+                    providerMode: String(request.providerMode || '').trim() || null,
+                    fallbackUsed: typeof request.fallbackUsed === 'boolean' ? request.fallbackUsed : null,
+                    limit,
+                },
+                summary: {
+                    matchedTraces: matchedTraces.length,
+                    returnedTraces: records.length,
+                    llmAdapterTraces: matchedTraces.filter((trace) => trace.source === 'llm-adapter').length,
+                    ruleEngineTraces: matchedTraces.filter((trace) => trace.source === 'rule-engine').length,
+                    verifiedTraces: aggregateMetrics.verifiedTraces,
+                    pendingVerificationTraces: aggregateMetrics.pendingTraces,
+                    fallbackTraces: aggregateMetrics.fallbackTraces,
+                    fallbackRatioPct: aggregateMetrics.fallbackRatioPct,
+                    averageProviderAttemptCount: aggregateMetrics.averageProviderAttemptCount,
+                    latestCreatedAt: aggregateMetrics.latestSeenAt || null,
+                },
+                providerBreakdown,
+                records,
+            };
+        });
     }
 
     public async queryTutorProviderTrendDiagnostics(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 12), 1, 100);
-        const windowSize = clamp(Math.floor(Number(request.windowSize) || 6), 1, 50);
-        const minSamples = clamp(Math.floor(Number(request.minSamples) || 3), 1, 50);
-        const matchedTraces = this.filterTutorTraces(request);
-        const providerMap = new Map<string, TutorTrace[]>();
-        matchedTraces.forEach((trace) => {
-            const providerKey = String(trace.providerName || trace.adapterId || trace.source || 'unknown').trim() || 'unknown';
-            if (!providerMap.has(providerKey)) {
-                providerMap.set(providerKey, []);
-            }
-            providerMap.get(providerKey)?.push(trace);
-        });
-
-        const providers = Array.from(providerMap.entries())
-            .map(([providerName, traces]) => {
-                const currentWindow = traces.slice(0, windowSize);
-                const previousWindow = traces.slice(windowSize, windowSize * 2);
-                const currentMetrics = this.summarizeTutorTraceMetrics(currentWindow);
-                const previousMetrics = previousWindow.length > 0
-                    ? this.summarizeTutorTraceMetrics(previousWindow)
-                    : null;
-                const assessment = this.assessTutorProviderTrend(currentMetrics, previousMetrics, minSamples);
-                return {
-                    providerName,
-                    trendStatus: assessment.trendStatus,
-                    trendScore: assessment.trendScore,
-                    trendConfidence: assessment.trendConfidence,
-                    fallbackRatioPct: currentMetrics.fallbackRatioPct,
-                    failedRatioPct: currentMetrics.failedRatioPct,
-                    averageConfidence: currentMetrics.averageConfidence,
-                    deltas: assessment.deltas,
-                    reason: assessment.reason,
-                    latestSeenAt: currentMetrics.latestSeenAt || null,
-                };
-            })
-            .sort((left, right) => {
-                const statusOrder = {
-                    regressing: 0,
-                    insufficient_data: 1,
-                    stable: 2,
-                    improving: 3,
-                } as Record<string, number>;
-                const leftOrder = statusOrder[left.trendStatus] ?? 9;
-                const rightOrder = statusOrder[right.trendStatus] ?? 9;
-                if (leftOrder !== rightOrder) {
-                    return leftOrder - rightOrder;
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 12), 1, 100);
+            const windowSize = clamp(Math.floor(Number(request.windowSize) || 6), 1, 50);
+            const minSamples = clamp(Math.floor(Number(request.minSamples) || 3), 1, 50);
+            const matchedTraces = this.filterTutorTraces(request);
+            const providerMap = new Map<string, TutorTrace[]>();
+            matchedTraces.forEach((trace) => {
+                const providerKey = String(trace.providerName || trace.adapterId || trace.source || 'unknown').trim() || 'unknown';
+                if (!providerMap.has(providerKey)) {
+                    providerMap.set(providerKey, []);
                 }
-                if (left.trendScore !== right.trendScore) {
-                    return left.trendScore - right.trendScore;
-                }
-                return String(right.latestSeenAt || '').localeCompare(String(left.latestSeenAt || ''));
+                providerMap.get(providerKey)?.push(trace);
             });
-        const selectedProviders = providers.slice(0, limit);
-        const recommendedFocus = selectedProviders.find((provider) => provider.trendStatus === 'regressing')
-            || selectedProviders.find((provider) => provider.trendStatus === 'insufficient_data')
-            || selectedProviders[0]
-            || null;
-        return {
-            filters: {
-                userId: String(request.userId || '').trim() || null,
-                source: String(request.source || '').trim() || null,
-                limit,
-                windowSize,
-                minSamples,
-            },
-            summary: {
-                totalProviders: providers.length,
-                evaluatedProviders: providers.filter((provider) => provider.trendStatus !== 'insufficient_data').length,
-                returnedProviders: selectedProviders.length,
-                regressingProviders: selectedProviders.filter((provider) => provider.trendStatus === 'regressing').length,
-                stableProviders: selectedProviders.filter((provider) => provider.trendStatus === 'stable').length,
-                improvingProviders: selectedProviders.filter((provider) => provider.trendStatus === 'improving').length,
-                insufficientDataProviders: selectedProviders.filter((provider) => provider.trendStatus === 'insufficient_data').length,
-                recommendedFocusProviderName: recommendedFocus?.providerName || null,
-                recommendedFocusReason: recommendedFocus?.reason || null,
-            },
-            providers: selectedProviders,
-        };
+
+            const providers = Array.from(providerMap.entries())
+                .map(([providerName, traces]) => {
+                    const currentWindow = traces.slice(0, windowSize);
+                    const previousWindow = traces.slice(windowSize, windowSize * 2);
+                    const currentMetrics = this.summarizeTutorTraceMetrics(currentWindow);
+                    const previousMetrics = previousWindow.length > 0
+                        ? this.summarizeTutorTraceMetrics(previousWindow)
+                        : null;
+                    const assessment = this.assessTutorProviderTrend(currentMetrics, previousMetrics, minSamples);
+                    return {
+                        providerName,
+                        trendStatus: assessment.trendStatus,
+                        trendScore: assessment.trendScore,
+                        trendConfidence: assessment.trendConfidence,
+                        fallbackRatioPct: currentMetrics.fallbackRatioPct,
+                        failedRatioPct: currentMetrics.failedRatioPct,
+                        averageConfidence: currentMetrics.averageConfidence,
+                        deltas: assessment.deltas,
+                        reason: assessment.reason,
+                        latestSeenAt: currentMetrics.latestSeenAt || null,
+                    };
+                })
+                .sort((left, right) => {
+                    const statusOrder = {
+                        regressing: 0,
+                        insufficient_data: 1,
+                        stable: 2,
+                        improving: 3,
+                    } as Record<string, number>;
+                    const leftOrder = statusOrder[left.trendStatus] ?? 9;
+                    const rightOrder = statusOrder[right.trendStatus] ?? 9;
+                    if (leftOrder !== rightOrder) {
+                        return leftOrder - rightOrder;
+                    }
+                    if (left.trendScore !== right.trendScore) {
+                        return left.trendScore - right.trendScore;
+                    }
+                    return String(right.latestSeenAt || '').localeCompare(String(left.latestSeenAt || ''));
+                });
+            const selectedProviders = providers.slice(0, limit);
+            const recommendedFocus = selectedProviders.find((provider) => provider.trendStatus === 'regressing')
+                || selectedProviders.find((provider) => provider.trendStatus === 'insufficient_data')
+                || selectedProviders[0]
+                || null;
+            return {
+                filters: {
+                    userId: String(request.userId || '').trim() || null,
+                    source: String(request.source || '').trim() || null,
+                    limit,
+                    windowSize,
+                    minSamples,
+                },
+                summary: {
+                    totalProviders: providers.length,
+                    evaluatedProviders: providers.filter((provider) => provider.trendStatus !== 'insufficient_data').length,
+                    returnedProviders: selectedProviders.length,
+                    regressingProviders: selectedProviders.filter((provider) => provider.trendStatus === 'regressing').length,
+                    stableProviders: selectedProviders.filter((provider) => provider.trendStatus === 'stable').length,
+                    improvingProviders: selectedProviders.filter((provider) => provider.trendStatus === 'improving').length,
+                    insufficientDataProviders: selectedProviders.filter((provider) => provider.trendStatus === 'insufficient_data').length,
+                    recommendedFocusProviderName: recommendedFocus?.providerName || null,
+                    recommendedFocusReason: recommendedFocus?.reason || null,
+                },
+                providers: selectedProviders,
+            };
+        });
     }
 
     public async queryTutorProviderTrendHistory(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 24), 1, 200);
-        const windowSize = clamp(Math.floor(Number(request.windowSize) || 6), 1, 50);
-        const minSamples = clamp(Math.floor(Number(request.minSamples) || 3), 1, 50);
-        const matchedTraces = this.filterTutorTraces(request);
-        const providerMap = new Map<string, TutorTrace[]>();
-        matchedTraces.forEach((trace) => {
-            const providerKey = String(trace.providerName || trace.adapterId || trace.source || 'unknown').trim() || 'unknown';
-            if (!providerMap.has(providerKey)) {
-                providerMap.set(providerKey, []);
-            }
-            providerMap.get(providerKey)?.push(trace);
-        });
-
-        const records = Array.from(providerMap.entries()).flatMap(([providerName, traces]) => {
-            const windows: Array<Record<string, unknown>> = [];
-            for (let windowIndex = 0; windowIndex * windowSize < traces.length; windowIndex += 1) {
-                const start = windowIndex * windowSize;
-                const currentWindow = traces.slice(start, start + windowSize);
-                if (currentWindow.length <= 0) {
-                    continue;
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 24), 1, 200);
+            const windowSize = clamp(Math.floor(Number(request.windowSize) || 6), 1, 50);
+            const minSamples = clamp(Math.floor(Number(request.minSamples) || 3), 1, 50);
+            const matchedTraces = this.filterTutorTraces(request);
+            const providerMap = new Map<string, TutorTrace[]>();
+            matchedTraces.forEach((trace) => {
+                const providerKey = String(trace.providerName || trace.adapterId || trace.source || 'unknown').trim() || 'unknown';
+                if (!providerMap.has(providerKey)) {
+                    providerMap.set(providerKey, []);
                 }
-                const previousWindow = traces.slice(start + windowSize, start + windowSize * 2);
-                const currentMetrics = this.summarizeTutorTraceMetrics(currentWindow);
-                const previousMetrics = previousWindow.length > 0
-                    ? this.summarizeTutorTraceMetrics(previousWindow)
-                    : null;
-                const assessment = this.assessTutorProviderTrend(currentMetrics, previousMetrics, minSamples);
-                windows.push({
-                    providerName,
-                    windowIndex,
-                    sampleCount: currentMetrics.sampleCount,
-                    trendStatus: assessment.trendStatus,
-                    trendScore: assessment.trendScore,
-                    trendConfidence: assessment.trendConfidence,
-                    windowStartAt: currentWindow[currentWindow.length - 1]?.createdAt || null,
-                    windowEndAt: currentWindow[0]?.createdAt || null,
-                    fallbackRatioPct: currentMetrics.fallbackRatioPct,
-                    failedRatioPct: currentMetrics.failedRatioPct,
-                    averageConfidence: currentMetrics.averageConfidence,
-                    deltas: assessment.deltas,
-                    reason: assessment.reason,
-                });
-            }
-            return windows;
-        }).sort((left, right) => {
-            const byDate = String(right.windowEndAt || '').localeCompare(String(left.windowEndAt || ''));
-            if (byDate !== 0) {
-                return byDate;
-            }
-            const byWindow = Number(left.windowIndex || 0) - Number(right.windowIndex || 0);
-            if (byWindow !== 0) {
-                return byWindow;
-            }
-            return String(left.providerName || '').localeCompare(String(right.providerName || ''));
+                providerMap.get(providerKey)?.push(trace);
+            });
+
+            const records = Array.from(providerMap.entries()).flatMap(([providerName, traces]) => {
+                const windows: Array<Record<string, unknown>> = [];
+                for (let windowIndex = 0; windowIndex * windowSize < traces.length; windowIndex += 1) {
+                    const start = windowIndex * windowSize;
+                    const currentWindow = traces.slice(start, start + windowSize);
+                    if (currentWindow.length <= 0) {
+                        continue;
+                    }
+                    const previousWindow = traces.slice(start + windowSize, start + windowSize * 2);
+                    const currentMetrics = this.summarizeTutorTraceMetrics(currentWindow);
+                    const previousMetrics = previousWindow.length > 0
+                        ? this.summarizeTutorTraceMetrics(previousWindow)
+                        : null;
+                    const assessment = this.assessTutorProviderTrend(currentMetrics, previousMetrics, minSamples);
+                    windows.push({
+                        providerName,
+                        windowIndex,
+                        sampleCount: currentMetrics.sampleCount,
+                        trendStatus: assessment.trendStatus,
+                        trendScore: assessment.trendScore,
+                        trendConfidence: assessment.trendConfidence,
+                        windowStartAt: currentWindow[currentWindow.length - 1]?.createdAt || null,
+                        windowEndAt: currentWindow[0]?.createdAt || null,
+                        fallbackRatioPct: currentMetrics.fallbackRatioPct,
+                        failedRatioPct: currentMetrics.failedRatioPct,
+                        averageConfidence: currentMetrics.averageConfidence,
+                        deltas: assessment.deltas,
+                        reason: assessment.reason,
+                    });
+                }
+                return windows;
+            }).sort((left, right) => {
+                const byDate = String(right.windowEndAt || '').localeCompare(String(left.windowEndAt || ''));
+                if (byDate !== 0) {
+                    return byDate;
+                }
+                const byWindow = Number(left.windowIndex || 0) - Number(right.windowIndex || 0);
+                if (byWindow !== 0) {
+                    return byWindow;
+                }
+                return String(left.providerName || '').localeCompare(String(right.providerName || ''));
+            });
+            const selectedRecords = records.slice(0, limit);
+            const recommendedFocus = selectedRecords.find((record) => record.trendStatus === 'regressing')
+                || selectedRecords.find((record) => record.trendStatus === 'insufficient_data')
+                || selectedRecords[0]
+                || null;
+            return {
+                filters: {
+                    userId: String(request.userId || '').trim() || null,
+                    source: String(request.source || '').trim() || null,
+                    limit,
+                    windowSize,
+                    minSamples,
+                },
+                summary: {
+                    totalProviders: providerMap.size,
+                    evaluatedProviders: Array.from(providerMap.values()).filter((traces) => traces.length >= minSamples).length,
+                    totalRecords: records.length,
+                    returnedRecords: selectedRecords.length,
+                    regressingRecords: selectedRecords.filter((record) => record.trendStatus === 'regressing').length,
+                    stableRecords: selectedRecords.filter((record) => record.trendStatus === 'stable').length,
+                    improvingRecords: selectedRecords.filter((record) => record.trendStatus === 'improving').length,
+                    insufficientDataRecords: selectedRecords.filter((record) => record.trendStatus === 'insufficient_data').length,
+                    latestWindowEndAt: selectedRecords[0]?.windowEndAt || null,
+                    oldestWindowEndAt: selectedRecords[selectedRecords.length - 1]?.windowStartAt || null,
+                    recommendedFocusProviderName: recommendedFocus?.providerName || null,
+                },
+                records: selectedRecords,
+            };
         });
-        const selectedRecords = records.slice(0, limit);
-        const recommendedFocus = selectedRecords.find((record) => record.trendStatus === 'regressing')
-            || selectedRecords.find((record) => record.trendStatus === 'insufficient_data')
-            || selectedRecords[0]
-            || null;
-        return {
-            filters: {
-                userId: String(request.userId || '').trim() || null,
-                source: String(request.source || '').trim() || null,
-                limit,
-                windowSize,
-                minSamples,
-            },
-            summary: {
-                totalProviders: providerMap.size,
-                evaluatedProviders: Array.from(providerMap.values()).filter((traces) => traces.length >= minSamples).length,
-                totalRecords: records.length,
-                returnedRecords: selectedRecords.length,
-                regressingRecords: selectedRecords.filter((record) => record.trendStatus === 'regressing').length,
-                stableRecords: selectedRecords.filter((record) => record.trendStatus === 'stable').length,
-                improvingRecords: selectedRecords.filter((record) => record.trendStatus === 'improving').length,
-                insufficientDataRecords: selectedRecords.filter((record) => record.trendStatus === 'insufficient_data').length,
-                latestWindowEndAt: selectedRecords[0]?.windowEndAt || null,
-                oldestWindowEndAt: selectedRecords[selectedRecords.length - 1]?.windowStartAt || null,
-                recommendedFocusProviderName: recommendedFocus?.providerName || null,
-            },
-            records: selectedRecords,
-        };
     }
-    public async runAgentConversation(_r: any): Promise<any> { return this.agentConversation(_r); }
+    public async runAgentConversation(_r: any): Promise<any> {
+        return this.commitKnowledgeState(async () => {
+            return this.agentConversation(_r);
+        });
+    }
     public async addConversationMemory(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('ConversationMemory add requires a non-empty userId.');
-        }
-        const content = String(request.content || '').trim();
-        if (!content) {
-            throw new Error('ConversationMemory add requires non-empty content.');
-        }
-        const namespace = this.normalizeConversationMemoryNamespace(request.namespace);
-        const layer = this.resolveConversationMemoryLayer(namespace);
-        const nowIso = this.resolveTimestamp(request.now);
-        const bank = this.ensureUserMemoryBank(userId);
-        const references = Array.isArray(request.references)
-            ? request.references.map((reference: unknown) => String(reference || '').trim()).filter(Boolean)
-            : [];
-        let tags = Array.isArray(request.tags)
-            ? request.tags.map((tag: unknown) => String(tag || '').trim()).filter(Boolean)
-            : [];
-        tags = this.upsertConversationMemoryInternalTag(tags, 'memory_domain:', 'conversation');
-        tags = this.upsertConversationMemoryInternalTag(tags, 'namespace:', namespace);
-        tags = this.upsertConversationMemoryInternalTag(
-            tags,
-            'source:',
-            String(request.source || 'manual').trim() || 'manual'
-        );
-        const entry = this.buildGovernedMemoryEntry({
-            entry: {
-                key: String(request.memoryId || '').trim() || this.nextId('conv_memory'),
-                value: content,
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('ConversationMemory add requires a non-empty userId.');
+            }
+            const content = String(request.content || '').trim();
+            if (!content) {
+                throw new Error('ConversationMemory add requires non-empty content.');
+            }
+            const namespace = this.normalizeConversationMemoryNamespace(request.namespace);
+            const layer = this.resolveConversationMemoryLayer(namespace);
+            const nowIso = this.resolveTimestamp(request.now);
+            const bank = this.ensureUserMemoryBank(userId);
+            const references = Array.isArray(request.references)
+                ? request.references.map((reference: unknown) => String(reference || '').trim()).filter(Boolean)
+                : [];
+            let tags = Array.isArray(request.tags)
+                ? request.tags.map((tag: unknown) => String(tag || '').trim()).filter(Boolean)
+                : [];
+            tags = this.upsertConversationMemoryInternalTag(tags, 'memory_domain:', 'conversation');
+            tags = this.upsertConversationMemoryInternalTag(tags, 'namespace:', namespace);
+            tags = this.upsertConversationMemoryInternalTag(
                 tags,
-                confidence: clamp(Number(request.confidence ?? 0.72), 0, 1),
-                references,
-                createdAt: nowIso,
-                updatedAt: nowIso,
-                expiresAt: this.resolveOptionalTimestamp(request.expiresAt) || undefined,
-                scopeWorkspaceId: this.normalizeMemoryScopeValue(request.scopeWorkspaceId),
-                scopeCorpusId: this.normalizeMemoryScopeValue(request.scopeCorpusId),
-            },
-        });
-        bank[layer].push(entry);
-        const eviction = this.evictMemoryLayerDetailed(bank, layer, nowIso);
-        this.appendMemoryAuditRecord({
-            userId,
-            operation: 'write',
-            layer,
-            entry,
-            reason: 'conversation_memory:add',
-            recordedAt: nowIso,
-        });
-        eviction.evictedEntries.forEach((evictedEntry) => {
+                'source:',
+                String(request.source || 'manual').trim() || 'manual'
+            );
+            const entry = this.buildGovernedMemoryEntry({
+                entry: {
+                    key: String(request.memoryId || '').trim() || this.nextId('conv_memory'),
+                    value: content,
+                    tags,
+                    confidence: clamp(Number(request.confidence ?? 0.72), 0, 1),
+                    references,
+                    createdAt: nowIso,
+                    updatedAt: nowIso,
+                    expiresAt: this.resolveOptionalTimestamp(request.expiresAt) || undefined,
+                    scopeWorkspaceId: this.normalizeMemoryScopeValue(request.scopeWorkspaceId),
+                    scopeCorpusId: this.normalizeMemoryScopeValue(request.scopeCorpusId),
+                },
+            });
+            bank[layer].push(entry);
+            const eviction = this.evictMemoryLayerDetailed(bank, layer, nowIso);
             this.appendMemoryAuditRecord({
                 userId,
-                operation: 'evict',
+                operation: 'write',
                 layer,
-                entry: evictedEntry,
-                reason: 'conversation_memory:add:capacity_or_expiry',
+                entry,
+                reason: 'conversation_memory:add',
                 recordedAt: nowIso,
             });
-        });
-        await this.persistIfNeeded();
-        return {
-            added: true,
-            namespace,
-            layer,
-            evictedCount: eviction.evictedCount,
-            memory: this.buildConversationMemoryRecord(entry, layer),
-            stats: this.collectMemoryStats(),
-        };
-    }
-
-    public async listConversationMemory(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('ConversationMemory list requires a non-empty userId.');
-        }
-        const namespace = request.namespace
-            ? this.normalizeConversationMemoryNamespace(request.namespace)
-            : undefined;
-        const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
-        const nowIso = this.resolveTimestamp(request.now);
-        const nowTime = Date.parse(nowIso);
-        const matchedEntries = this.collectConversationMemoryEntries(userId, namespace)
-            .filter(({ entry }) => {
-                const expiresAt = this.resolveOptionalTimestamp(entry.expiresAt);
-                return !expiresAt || Date.parse(expiresAt) > nowTime;
-            });
-        const entries = matchedEntries
-            .slice(0, limit)
-            .map(({ layer, entry }) => this.buildConversationMemoryRecord(entry, layer));
-        return {
-            namespace: namespace || null,
-            summary: {
-                matchedEntries: matchedEntries.length,
-                returnedEntries: entries.length,
-            },
-            entries,
-        };
-    }
-
-    public async searchConversationMemory(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('ConversationMemory search requires a non-empty userId.');
-        }
-        const namespace = request.namespace
-            ? this.normalizeConversationMemoryNamespace(request.namespace)
-            : undefined;
-        const limit = clamp(Math.floor(Number(request.limit) || 6), 1, 100);
-        const query = String(request.query || '').trim();
-        const queryLabel = query || 'memory';
-        const queryTokens = tokenize(queryLabel);
-        const requiredTokenHits = queryTokens.length <= 1
-            ? queryTokens.length
-            : Math.max(1, Math.ceil(queryTokens.length * 0.5));
-        const nowIso = this.resolveTimestamp(request.now);
-        const nowTime = Date.parse(nowIso);
-        const matchedEntries = this.collectConversationMemoryEntries(userId, namespace)
-            .filter(({ entry }) => {
-                const expiresAt = this.resolveOptionalTimestamp(entry.expiresAt);
-                if (expiresAt && Date.parse(expiresAt) <= nowTime) {
-                    return false;
-                }
-                if (queryTokens.length <= 0) {
-                    return true;
-                }
-                const haystack = normalizeWhitespace([
-                    entry.key,
-                    entry.value,
-                    ...(Array.isArray(entry.tags) ? entry.tags : []),
-                    ...(Array.isArray(entry.references) ? entry.references : []),
-                ].join(' ')).toLowerCase();
-                const tokenHits = queryTokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0);
-                return tokenHits >= requiredTokenHits;
-            })
-            .map(({ layer, entry }) => {
-                const record = this.buildConversationMemoryRecord(entry, layer);
-                const haystack = normalizeWhitespace([
-                    String(record.content || ''),
-                    ...(Array.isArray(record.tags) ? record.tags.map((tag) => String(tag || '')) : []),
-                    String(record.source || ''),
-                    String(record.namespace || ''),
-                ].join(' ')).toLowerCase();
-                const tokenHits = queryTokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0);
-                return {
-                    record,
-                    score: Number((
-                        tokenHits
-                        + Number(record.confidence || 0)
-                        + computeGovernedMemoryWeight(entry)
-                    ).toFixed(4)),
-                };
-            })
-            .sort((left, right) => {
-                if (right.score !== left.score) {
-                    return right.score - left.score;
-                }
-                return String(right.record.updatedAt || '').localeCompare(String(left.record.updatedAt || ''));
-            });
-        const results = matchedEntries.slice(0, limit).map((item) => item.record);
-        matchedEntries.slice(0, limit).forEach((item) => {
-            this.appendMemoryAuditRecord({
-                userId,
-                operation: 'recall',
-                layer: item.record.layer as MemoryLayer,
-                entry: this.buildGovernedMemoryEntry({
-                    entry: {
-                        key: String(item.record.memoryId || ''),
-                        value: String(item.record.content || ''),
-                        tags: Array.isArray(item.record.tags) ? item.record.tags.map((tag) => String(tag || '')) : [],
-                        confidence: Number(item.record.confidence || 0),
-                        references: Array.isArray(item.record.references)
-                            ? item.record.references.map((reference) => String(reference || ''))
-                            : [],
-                        createdAt: String(item.record.createdAt || nowIso),
-                        updatedAt: String(item.record.updatedAt || nowIso),
-                        expiresAt: isNonEmptyString(item.record.expiresAt) ? String(item.record.expiresAt) : undefined,
-                        memoryType: isNonEmptyString(item.record.memoryType) ? String(item.record.memoryType) : undefined,
-                        memoryPurpose: isNonEmptyString(item.record.memoryPurpose) ? String(item.record.memoryPurpose) : undefined,
-                        classificationConfidence: Number(item.record.classificationConfidence || 0),
-                        scopeWorkspaceId: this.normalizeMemoryScopeValue(item.record.scopeWorkspaceId),
-                        scopeCorpusId: this.normalizeMemoryScopeValue(item.record.scopeCorpusId),
-                    },
-                }),
-                reason: query ? `conversation_memory:recall:${query}` : 'conversation_memory:recall',
-                recordedAt: nowIso,
-            });
-        });
-        const recallLines = results.map((record, index) => (
-            `${index + 1}. [${String(record.namespace || 'conversation')}] ${String(record.content || '').trim()}`
-        ));
-        const message = results.length > 0
-            ? `Conversation memory recall (${results.length}/${matchedEntries.length}) for "${queryLabel}":\n${recallLines.join('\n')}`
-            : `Conversation memory recall (0/0) for "${queryLabel}":\nNo scoped memories matched the current query.`;
-        return {
-            namespace: namespace || null,
-            query,
-            summary: {
-                matchedResults: matchedEntries.length,
-                returnedResults: results.length,
-            },
-            results,
-            entries: results,
-            message,
-        };
-    }
-
-    public async deleteConversationMemory(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('ConversationMemory delete requires a non-empty userId.');
-        }
-        const memoryId = String(request.memoryId || '').trim();
-        if (!memoryId) {
-            throw new Error('ConversationMemory delete requires a non-empty memoryId.');
-        }
-        const namespace = this.normalizeConversationMemoryNamespace(request.namespace);
-        const layer = this.resolveConversationMemoryLayer(namespace);
-        const bank = this.ensureUserMemoryBank(userId);
-        const beforeCount = bank[layer].length;
-        const deletedEntries = bank[layer].filter((entry) => (
-            entry.key === memoryId
-            && this.hasConversationMemoryDomainTag(entry)
-            && this.extractConversationMemoryTagValue(entry, 'namespace:') === namespace
-        ));
-        bank[layer] = bank[layer].filter((entry) => (
-            entry.key !== memoryId
-            || !this.hasConversationMemoryDomainTag(entry)
-            || this.extractConversationMemoryTagValue(entry, 'namespace:') !== namespace
-        ));
-        const deletedCount = beforeCount - bank[layer].length;
-        if (deletedCount > 0) {
-            const recordedAt = this.resolveTimestamp(request.now);
-            deletedEntries.forEach((entry) => {
+            eviction.evictedEntries.forEach((evictedEntry) => {
                 this.appendMemoryAuditRecord({
                     userId,
                     operation: 'evict',
                     layer,
-                    entry,
-                    reason: 'conversation_memory:delete',
-                    recordedAt,
+                    entry: evictedEntry,
+                    reason: 'conversation_memory:add:capacity_or_expiry',
+                    recordedAt: nowIso,
                 });
             });
             await this.persistIfNeeded();
-        }
-        return {
-            deleted: deletedCount > 0,
-            deletedCount,
-            namespace,
-            memoryId,
-            stats: this.collectMemoryStats(),
-        };
+            return {
+                added: true,
+                namespace,
+                layer,
+                evictedCount: eviction.evictedCount,
+                memory: this.buildConversationMemoryRecord(entry, layer),
+                stats: this.collectMemoryStats(),
+            };
+        });
+    }
+
+    public async listConversationMemory(request: any = {}): Promise<any> {
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('ConversationMemory list requires a non-empty userId.');
+            }
+            const namespace = request.namespace
+                ? this.normalizeConversationMemoryNamespace(request.namespace)
+                : undefined;
+            const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
+            const nowIso = this.resolveTimestamp(request.now);
+            const nowTime = Date.parse(nowIso);
+            const matchedEntries = this.collectConversationMemoryEntries(userId, namespace)
+                .filter(({ entry }) => {
+                    const expiresAt = this.resolveOptionalTimestamp(entry.expiresAt);
+                    return !expiresAt || Date.parse(expiresAt) > nowTime;
+                });
+            const entries = matchedEntries
+                .slice(0, limit)
+                .map(({ layer, entry }) => this.buildConversationMemoryRecord(entry, layer));
+            return {
+                namespace: namespace || null,
+                summary: {
+                    matchedEntries: matchedEntries.length,
+                    returnedEntries: entries.length,
+                },
+                entries,
+            };
+        });
+    }
+
+    public async searchConversationMemory(request: any = {}): Promise<any> {
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('ConversationMemory search requires a non-empty userId.');
+            }
+            const namespace = request.namespace
+                ? this.normalizeConversationMemoryNamespace(request.namespace)
+                : undefined;
+            const limit = clamp(Math.floor(Number(request.limit) || 6), 1, 100);
+            const query = String(request.query || '').trim();
+            const queryLabel = query || 'memory';
+            const queryTokens = tokenize(queryLabel);
+            const requiredTokenHits = queryTokens.length <= 1
+                ? queryTokens.length
+                : Math.max(1, Math.ceil(queryTokens.length * 0.5));
+            const nowIso = this.resolveTimestamp(request.now);
+            const nowTime = Date.parse(nowIso);
+            const matchedEntries = this.collectConversationMemoryEntries(userId, namespace)
+                .filter(({ entry }) => {
+                    const expiresAt = this.resolveOptionalTimestamp(entry.expiresAt);
+                    if (expiresAt && Date.parse(expiresAt) <= nowTime) {
+                        return false;
+                    }
+                    if (queryTokens.length <= 0) {
+                        return true;
+                    }
+                    const haystack = normalizeWhitespace([
+                        entry.key,
+                        entry.value,
+                        ...(Array.isArray(entry.tags) ? entry.tags : []),
+                        ...(Array.isArray(entry.references) ? entry.references : []),
+                    ].join(' ')).toLowerCase();
+                    const tokenHits = queryTokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0);
+                    return tokenHits >= requiredTokenHits;
+                })
+                .map(({ layer, entry }) => {
+                    const record = this.buildConversationMemoryRecord(entry, layer);
+                    const haystack = normalizeWhitespace([
+                        String(record.content || ''),
+                        ...(Array.isArray(record.tags) ? record.tags.map((tag) => String(tag || '')) : []),
+                        String(record.source || ''),
+                        String(record.namespace || ''),
+                    ].join(' ')).toLowerCase();
+                    const tokenHits = queryTokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0);
+                    return {
+                        record,
+                        score: Number((
+                            tokenHits
+                            + Number(record.confidence || 0)
+                            + computeGovernedMemoryWeight(entry)
+                        ).toFixed(4)),
+                    };
+                })
+                .sort((left, right) => {
+                    if (right.score !== left.score) {
+                        return right.score - left.score;
+                    }
+                    return String(right.record.updatedAt || '').localeCompare(String(left.record.updatedAt || ''));
+                });
+            const results = matchedEntries.slice(0, limit).map((item) => item.record);
+            matchedEntries.slice(0, limit).forEach((item) => {
+                this.appendMemoryAuditRecord({
+                    userId,
+                    operation: 'recall',
+                    layer: item.record.layer as MemoryLayer,
+                    entry: this.buildGovernedMemoryEntry({
+                        entry: {
+                            key: String(item.record.memoryId || ''),
+                            value: String(item.record.content || ''),
+                            tags: Array.isArray(item.record.tags) ? item.record.tags.map((tag) => String(tag || '')) : [],
+                            confidence: Number(item.record.confidence || 0),
+                            references: Array.isArray(item.record.references)
+                                ? item.record.references.map((reference) => String(reference || ''))
+                                : [],
+                            createdAt: String(item.record.createdAt || nowIso),
+                            updatedAt: String(item.record.updatedAt || nowIso),
+                            expiresAt: isNonEmptyString(item.record.expiresAt) ? String(item.record.expiresAt) : undefined,
+                            memoryType: isNonEmptyString(item.record.memoryType) ? String(item.record.memoryType) : undefined,
+                            memoryPurpose: isNonEmptyString(item.record.memoryPurpose) ? String(item.record.memoryPurpose) : undefined,
+                            classificationConfidence: Number(item.record.classificationConfidence || 0),
+                            scopeWorkspaceId: this.normalizeMemoryScopeValue(item.record.scopeWorkspaceId),
+                            scopeCorpusId: this.normalizeMemoryScopeValue(item.record.scopeCorpusId),
+                        },
+                    }),
+                    reason: query ? `conversation_memory:recall:${query}` : 'conversation_memory:recall',
+                    recordedAt: nowIso,
+                });
+            });
+            const recallLines = results.map((record, index) => (
+                `${index + 1}. [${String(record.namespace || 'conversation')}] ${String(record.content || '').trim()}`
+            ));
+            const message = results.length > 0
+                ? `Conversation memory recall (${results.length}/${matchedEntries.length}) for "${queryLabel}":\n${recallLines.join('\n')}`
+                : `Conversation memory recall (0/0) for "${queryLabel}":\nNo scoped memories matched the current query.`;
+            return {
+                namespace: namespace || null,
+                query,
+                summary: {
+                    matchedResults: matchedEntries.length,
+                    returnedResults: results.length,
+                },
+                results,
+                entries: results,
+                message,
+            };
+        });
+    }
+
+    public async deleteConversationMemory(request: any = {}): Promise<any> {
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('ConversationMemory delete requires a non-empty userId.');
+            }
+            const memoryId = String(request.memoryId || '').trim();
+            if (!memoryId) {
+                throw new Error('ConversationMemory delete requires a non-empty memoryId.');
+            }
+            const namespace = this.normalizeConversationMemoryNamespace(request.namespace);
+            const layer = this.resolveConversationMemoryLayer(namespace);
+            const bank = this.ensureUserMemoryBank(userId);
+            const beforeCount = bank[layer].length;
+            const deletedEntries = bank[layer].filter((entry) => (
+                entry.key === memoryId
+                && this.hasConversationMemoryDomainTag(entry)
+                && this.extractConversationMemoryTagValue(entry, 'namespace:') === namespace
+            ));
+            bank[layer] = bank[layer].filter((entry) => (
+                entry.key !== memoryId
+                || !this.hasConversationMemoryDomainTag(entry)
+                || this.extractConversationMemoryTagValue(entry, 'namespace:') !== namespace
+            ));
+            const deletedCount = beforeCount - bank[layer].length;
+            if (deletedCount > 0) {
+                const recordedAt = this.resolveTimestamp(request.now);
+                deletedEntries.forEach((entry) => {
+                    this.appendMemoryAuditRecord({
+                        userId,
+                        operation: 'evict',
+                        layer,
+                        entry,
+                        reason: 'conversation_memory:delete',
+                        recordedAt,
+                    });
+                });
+                await this.persistIfNeeded();
+            }
+            return {
+                deleted: deletedCount > 0,
+                deletedCount,
+                namespace,
+                memoryId,
+                stats: this.collectMemoryStats(),
+            };
+        });
     }
 
     public async feedbackConversationMemory(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const userId = String(request.userId || '').trim();
-        if (!userId) {
-            throw new Error('ConversationMemory feedback requires a non-empty userId.');
-        }
-        const memoryId = String(request.memoryId || '').trim();
-        if (!memoryId) {
-            throw new Error('ConversationMemory feedback requires a non-empty memoryId.');
-        }
-        const namespace = this.normalizeConversationMemoryNamespace(request.namespace);
-        const layer = this.resolveConversationMemoryLayer(namespace);
-        const feedback = String(request.feedback || 'upvote').trim().toLowerCase();
-        const nowIso = this.resolveTimestamp(request.now);
-        const bank = this.ensureUserMemoryBank(userId);
-        const targetIndex = bank[layer].findIndex((entry) => (
-            entry.key === memoryId
-            && this.hasConversationMemoryDomainTag(entry)
-            && this.extractConversationMemoryTagValue(entry, 'namespace:') === namespace
-        ));
-        if (targetIndex < 0) {
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const userId = String(request.userId || '').trim();
+            if (!userId) {
+                throw new Error('ConversationMemory feedback requires a non-empty userId.');
+            }
+            const memoryId = String(request.memoryId || '').trim();
+            if (!memoryId) {
+                throw new Error('ConversationMemory feedback requires a non-empty memoryId.');
+            }
+            const namespace = this.normalizeConversationMemoryNamespace(request.namespace);
+            const layer = this.resolveConversationMemoryLayer(namespace);
+            const feedback = String(request.feedback || 'upvote').trim().toLowerCase();
+            const nowIso = this.resolveTimestamp(request.now);
+            const bank = this.ensureUserMemoryBank(userId);
+            const targetIndex = bank[layer].findIndex((entry) => (
+                entry.key === memoryId
+                && this.hasConversationMemoryDomainTag(entry)
+                && this.extractConversationMemoryTagValue(entry, 'namespace:') === namespace
+            ));
+            if (targetIndex < 0) {
+                return {
+                    recorded: false,
+                    namespace,
+                    memoryId,
+                    feedback,
+                    stats: this.collectMemoryStats(),
+                };
+            }
+            const current = bank[layer][targetIndex];
+            let nextConfidence = clamp(Number(current.confidence || 0), 0, 1);
+            if (feedback === 'downvote') {
+                nextConfidence = clamp(nextConfidence - 0.18, 0.01, 1);
+            } else if (feedback === 'correct') {
+                nextConfidence = clamp(Math.max(nextConfidence, 0.92), 0, 1);
+            } else {
+                nextConfidence = clamp(nextConfidence + 0.08, 0, 1);
+            }
+            const updatedEntry = this.buildGovernedMemoryEntry({
+                entry: {
+                    ...current,
+                    value: feedback === 'correct' && isNonEmptyString(request.correctedContent)
+                        ? String(request.correctedContent).trim()
+                        : current.value,
+                    tags: this.appendConversationMemoryFeedbackTag(
+                        Array.isArray(current.tags) ? [...current.tags] : [],
+                        feedback,
+                        nowIso
+                    ),
+                    confidence: Number(nextConfidence.toFixed(4)),
+                    updatedAt: nowIso,
+                },
+                previous: current,
+            });
+            bank[layer][targetIndex] = updatedEntry;
+            this.appendMemoryAuditRecord({
+                userId,
+                operation: 'feedback',
+                layer,
+                entry: updatedEntry,
+                reason: `conversation_memory:feedback:${feedback}`,
+                recordedAt: nowIso,
+            });
+            await this.persistIfNeeded();
             return {
-                recorded: false,
+                recorded: true,
                 namespace,
                 memoryId,
                 feedback,
+                memory: this.buildConversationMemoryRecord(updatedEntry, layer),
                 stats: this.collectMemoryStats(),
             };
-        }
-        const current = bank[layer][targetIndex];
-        let nextConfidence = clamp(Number(current.confidence || 0), 0, 1);
-        if (feedback === 'downvote') {
-            nextConfidence = clamp(nextConfidence - 0.18, 0.01, 1);
-        } else if (feedback === 'correct') {
-            nextConfidence = clamp(Math.max(nextConfidence, 0.92), 0, 1);
-        } else {
-            nextConfidence = clamp(nextConfidence + 0.08, 0, 1);
-        }
-        const updatedEntry = this.buildGovernedMemoryEntry({
-            entry: {
-                ...current,
-                value: feedback === 'correct' && isNonEmptyString(request.correctedContent)
-                    ? String(request.correctedContent).trim()
-                    : current.value,
-                tags: this.appendConversationMemoryFeedbackTag(
-                    Array.isArray(current.tags) ? [...current.tags] : [],
-                    feedback,
-                    nowIso
-                ),
-                confidence: Number(nextConfidence.toFixed(4)),
-                updatedAt: nowIso,
-            },
-            previous: current,
         });
-        bank[layer][targetIndex] = updatedEntry;
-        this.appendMemoryAuditRecord({
-            userId,
-            operation: 'feedback',
-            layer,
-            entry: updatedEntry,
-            reason: `conversation_memory:feedback:${feedback}`,
-            recordedAt: nowIso,
-        });
-        await this.persistIfNeeded();
-        return {
-            recorded: true,
-            namespace,
-            memoryId,
-            feedback,
-            memory: this.buildConversationMemoryRecord(updatedEntry, layer),
-            stats: this.collectMemoryStats(),
-        };
     }
     public async compareQueryBackends(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const comparedAt = this.resolveTimestamp(request.comparedAt);
-        const query = normalizeWhitespace(String(request.query || ''));
-        const topK = clamp(Math.floor(Number(request.topK) || 6), 1, 20);
-        const leftBackend = normalizeGraphQueryBackendType(request.leftBackend || 'local_hybrid');
-        const rightBackend = normalizeGraphQueryBackendType(
-            request.rightBackend
-            || (leftBackend === 'local_hybrid' ? 'keyword_only' : 'local_hybrid')
-        );
-        const left = await this.executeQueryBackend(
-            {
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const comparedAt = this.resolveTimestamp(request.comparedAt);
+            const query = normalizeWhitespace(String(request.query || ''));
+            const topK = clamp(Math.floor(Number(request.topK) || 6), 1, 20);
+            const leftBackend = normalizeGraphQueryBackendType(request.leftBackend || 'local_hybrid');
+            const rightBackend = normalizeGraphQueryBackendType(
+                request.rightBackend
+                || (leftBackend === 'local_hybrid' ? 'keyword_only' : 'local_hybrid')
+            );
+            const left = await this.executeQueryBackend(
+                {
+                    query,
+                    topK,
+                    asOf: request.asOf,
+                    queryBackend: leftBackend,
+                },
+                leftBackend,
+                {
+                    allowRuntimeFallback: false,
+                    recordFallback: false,
+                }
+            );
+            const right = await this.executeQueryBackend(
+                {
+                    query,
+                    topK,
+                    asOf: request.asOf,
+                    queryBackend: rightBackend,
+                },
+                rightBackend,
+                {
+                    allowRuntimeFallback: false,
+                    recordFallback: false,
+                }
+            );
+            const record = this.buildQueryBackendComparisonRecord({
+                comparedAt,
                 query,
                 topK,
-                asOf: request.asOf,
-                queryBackend: leftBackend,
-            },
-            leftBackend,
-            {
-                allowRuntimeFallback: false,
-                recordFallback: false,
-            }
-        );
-        const right = await this.executeQueryBackend(
-            {
-                query,
-                topK,
-                asOf: request.asOf,
-                queryBackend: rightBackend,
-            },
-            rightBackend,
-            {
-                allowRuntimeFallback: false,
-                recordFallback: false,
-            }
-        );
-        const record = this.buildQueryBackendComparisonRecord({
-            comparedAt,
-            query,
-            topK,
-            left,
-            right,
+                left,
+                right,
+            });
+            this.recordQueryBackendComparisonHistory(record);
+            await this.persistIfNeeded();
+            return record;
         });
-        this.recordQueryBackendComparisonHistory(record);
-        await this.persistIfNeeded();
-        return record;
     }
 
     public async queryKnowledgeQueryBackendComparisonHistory(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 8), 1, 200);
-        const records = this.queryBackendComparisonHistoryRecords
-            .slice()
-            .sort((left, right) => right.comparedAt.localeCompare(left.comparedAt))
-            .slice(0, limit)
-            .map((record) => ({
-                ...record,
-                left: {
-                    ...record.left,
-                    retrievalModes: [...record.left.retrievalModes],
-                    modeWeights: { ...record.left.modeWeights },
-                    items: record.left.items.map((item) => ({ ...item })),
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 8), 1, 200);
+            const records = this.queryBackendComparisonHistoryRecords
+                .slice()
+                .sort((left, right) => right.comparedAt.localeCompare(left.comparedAt))
+                .slice(0, limit)
+                .map((record) => ({
+                    ...record,
+                    left: {
+                        ...record.left,
+                        retrievalModes: [...record.left.retrievalModes],
+                        modeWeights: { ...record.left.modeWeights },
+                        items: record.left.items.map((item) => ({ ...item })),
+                    },
+                    right: {
+                        ...record.right,
+                        retrievalModes: [...record.right.retrievalModes],
+                        modeWeights: { ...record.right.modeWeights },
+                        items: record.right.items.map((item) => ({ ...item })),
+                    },
+                    summary: { ...record.summary },
+                }));
+            const averageMetric = (selector: (record: QueryBackendComparisonRecord) => number): number => (
+                records.length > 0
+                    ? Number((records.reduce((sum, record) => sum + selector(record), 0) / records.length).toFixed(4))
+                    : 0
+            );
+            const preferredCounts = records.reduce((accumulator, record) => {
+                accumulator[record.summary.preferredBackend] += 1;
+                return accumulator;
+            }, { left: 0, right: 0, tie: 0 });
+            return {
+                summary: {
+                    totalRecords: this.queryBackendComparisonHistoryRecords.length,
+                    returnedRecords: records.length,
+                    averageOverlapRatioPct: averageMetric((record) => record.summary.overlapRatioPct),
+                    averageLatencyDeltaMs: averageMetric((record) => record.summary.latencyDeltaMs),
+                    averageLeftEvidenceCoverageRatio: averageMetric((record) => record.summary.leftEvidenceCoverageRatio),
+                    averageRightEvidenceCoverageRatio: averageMetric((record) => record.summary.rightEvidenceCoverageRatio),
+                    preferredCounts,
+                    latestComparedAt: records[0]?.comparedAt || null,
                 },
-                right: {
-                    ...record.right,
-                    retrievalModes: [...record.right.retrievalModes],
-                    modeWeights: { ...record.right.modeWeights },
-                    items: record.right.items.map((item) => ({ ...item })),
-                },
-                summary: { ...record.summary },
-            }));
-        const averageMetric = (selector: (record: QueryBackendComparisonRecord) => number): number => (
-            records.length > 0
-                ? Number((records.reduce((sum, record) => sum + selector(record), 0) / records.length).toFixed(4))
-                : 0
-        );
-        const preferredCounts = records.reduce((accumulator, record) => {
-            accumulator[record.summary.preferredBackend] += 1;
-            return accumulator;
-        }, { left: 0, right: 0, tie: 0 });
-        return {
-            summary: {
-                totalRecords: this.queryBackendComparisonHistoryRecords.length,
-                returnedRecords: records.length,
-                averageOverlapRatioPct: averageMetric((record) => record.summary.overlapRatioPct),
-                averageLatencyDeltaMs: averageMetric((record) => record.summary.latencyDeltaMs),
-                averageLeftEvidenceCoverageRatio: averageMetric((record) => record.summary.leftEvidenceCoverageRatio),
-                averageRightEvidenceCoverageRatio: averageMetric((record) => record.summary.rightEvidenceCoverageRatio),
-                preferredCounts,
-                latestComparedAt: records[0]?.comparedAt || null,
-            },
-            records,
-        };
+                records,
+            };
+        });
     }
 
     public async queryKnowledgeQueryBackendComparisonTrend(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 12), 1, 200);
-        const windowSize = clamp(Math.floor(Number(request.windowSize) || 2), 1, 50);
-        const minSamples = clamp(Math.floor(Number(request.minSamples) || 1), 1, 50);
-        const records = this.queryBackendComparisonHistoryRecords
-            .slice()
-            .sort((left, right) => right.comparedAt.localeCompare(left.comparedAt))
-            .slice(0, limit);
-        const currentWindow = records.slice(0, windowSize);
-        const previousWindow = records.slice(windowSize, windowSize * 2);
-        const summarizeWindow = (items: QueryBackendComparisonRecord[]) => {
-            const count = items.length;
-            const preferredLeft = items.filter((record) => record.summary.preferredBackend === 'left').length;
-            const preferredRight = items.filter((record) => record.summary.preferredBackend === 'right').length;
-            const overlap = count > 0
-                ? items.reduce((sum, record) => sum + record.summary.overlapRatioPct, 0) / count
-                : 0;
-            const latencyImbalance = count > 0
-                ? items.reduce((sum, record) => sum + Math.abs(Number(record.summary.latencyDeltaMs || 0)), 0) / count
-                : 0;
-            const explainabilityGap = count > 0
-                ? items.reduce((sum, record) => {
-                    const leftExplainability = (
-                        record.summary.leftEvidenceCoverageRatio
-                        + record.summary.leftRelationPathCoverageRatio
-                        + record.summary.leftTemporalValidityPassRatio
-                    ) / 3;
-                    const rightExplainability = (
-                        record.summary.rightEvidenceCoverageRatio
-                        + record.summary.rightRelationPathCoverageRatio
-                        + record.summary.rightTemporalValidityPassRatio
-                    ) / 3;
-                    return sum + Math.abs(leftExplainability - rightExplainability) * 100;
-                }, 0) / count
-                : 0;
-            return {
-                count,
-                overlapRatioPct: Number(overlap.toFixed(4)),
-                latencyImbalanceDeltaMs: Number(latencyImbalance.toFixed(4)),
-                explainabilityGapDeltaPct: Number(explainabilityGap.toFixed(4)),
-                leftPreferredSharePct: Number(((preferredLeft / Math.max(1, count)) * 100).toFixed(4)),
-                rightPreferredSharePct: Number(((preferredRight / Math.max(1, count)) * 100).toFixed(4)),
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 12), 1, 200);
+            const windowSize = clamp(Math.floor(Number(request.windowSize) || 2), 1, 50);
+            const minSamples = clamp(Math.floor(Number(request.minSamples) || 1), 1, 50);
+            const records = this.queryBackendComparisonHistoryRecords
+                .slice()
+                .sort((left, right) => right.comparedAt.localeCompare(left.comparedAt))
+                .slice(0, limit);
+            const currentWindow = records.slice(0, windowSize);
+            const previousWindow = records.slice(windowSize, windowSize * 2);
+            const summarizeWindow = (items: QueryBackendComparisonRecord[]) => {
+                const count = items.length;
+                const preferredLeft = items.filter((record) => record.summary.preferredBackend === 'left').length;
+                const preferredRight = items.filter((record) => record.summary.preferredBackend === 'right').length;
+                const overlap = count > 0
+                    ? items.reduce((sum, record) => sum + record.summary.overlapRatioPct, 0) / count
+                    : 0;
+                const latencyImbalance = count > 0
+                    ? items.reduce((sum, record) => sum + Math.abs(Number(record.summary.latencyDeltaMs || 0)), 0) / count
+                    : 0;
+                const explainabilityGap = count > 0
+                    ? items.reduce((sum, record) => {
+                        const leftExplainability = (
+                            record.summary.leftEvidenceCoverageRatio
+                            + record.summary.leftRelationPathCoverageRatio
+                            + record.summary.leftTemporalValidityPassRatio
+                        ) / 3;
+                        const rightExplainability = (
+                            record.summary.rightEvidenceCoverageRatio
+                            + record.summary.rightRelationPathCoverageRatio
+                            + record.summary.rightTemporalValidityPassRatio
+                        ) / 3;
+                        return sum + Math.abs(leftExplainability - rightExplainability) * 100;
+                    }, 0) / count
+                    : 0;
+                return {
+                    count,
+                    overlapRatioPct: Number(overlap.toFixed(4)),
+                    latencyImbalanceDeltaMs: Number(latencyImbalance.toFixed(4)),
+                    explainabilityGapDeltaPct: Number(explainabilityGap.toFixed(4)),
+                    leftPreferredSharePct: Number(((preferredLeft / Math.max(1, count)) * 100).toFixed(4)),
+                    rightPreferredSharePct: Number(((preferredRight / Math.max(1, count)) * 100).toFixed(4)),
+                };
             };
-        };
-        const current = summarizeWindow(currentWindow);
-        const previous = summarizeWindow(previousWindow);
-        const deltas = {
-            overlapDeltaPct: Number((current.overlapRatioPct - previous.overlapRatioPct).toFixed(4)),
-            latencyImbalanceDeltaMs: Number((current.latencyImbalanceDeltaMs - previous.latencyImbalanceDeltaMs).toFixed(4)),
-            explainabilityGapDeltaPct: Number((current.explainabilityGapDeltaPct - previous.explainabilityGapDeltaPct).toFixed(4)),
-            leftPreferredShareDeltaPct: Number((current.leftPreferredSharePct - previous.leftPreferredSharePct).toFixed(4)),
-            rightPreferredShareDeltaPct: Number((current.rightPreferredSharePct - previous.rightPreferredSharePct).toFixed(4)),
-        };
-        const score = Number(clamp(
-            (current.overlapRatioPct / 100) * 0.35
-            + (1 - Math.min(current.latencyImbalanceDeltaMs, 1500) / 1500) * 0.25
-            + (1 - current.explainabilityGapDeltaPct / 100) * 0.4,
-            0,
-            1
-        ).toFixed(4));
-        if (currentWindow.length < minSamples || previousWindow.length < minSamples) {
+            const current = summarizeWindow(currentWindow);
+            const previous = summarizeWindow(previousWindow);
+            const deltas = {
+                overlapDeltaPct: Number((current.overlapRatioPct - previous.overlapRatioPct).toFixed(4)),
+                latencyImbalanceDeltaMs: Number((current.latencyImbalanceDeltaMs - previous.latencyImbalanceDeltaMs).toFixed(4)),
+                explainabilityGapDeltaPct: Number((current.explainabilityGapDeltaPct - previous.explainabilityGapDeltaPct).toFixed(4)),
+                leftPreferredShareDeltaPct: Number((current.leftPreferredSharePct - previous.leftPreferredSharePct).toFixed(4)),
+                rightPreferredShareDeltaPct: Number((current.rightPreferredSharePct - previous.rightPreferredSharePct).toFixed(4)),
+            };
+            const score = Number(clamp(
+                (current.overlapRatioPct / 100) * 0.35
+                + (1 - Math.min(current.latencyImbalanceDeltaMs, 1500) / 1500) * 0.25
+                + (1 - current.explainabilityGapDeltaPct / 100) * 0.4,
+                0,
+                1
+            ).toFixed(4));
+            if (currentWindow.length < minSamples || previousWindow.length < minSamples) {
+                return {
+                    status: 'insufficient_data',
+                    confidence: Number(clamp(records.length / Math.max(1, minSamples * 2), 0, 1).toFixed(4)),
+                    score,
+                    summary: {
+                        totalRecords: records.length,
+                        evaluatedRecords: currentWindow.length,
+                        reason: `Need ${minSamples} backend comparisons in both windows before trend scoring is reliable.`,
+                        latestComparedAt: records[0]?.comparedAt || null,
+                    },
+                    deltas,
+                };
+            }
+            let status: 'improving' | 'stable' | 'regressing' | 'insufficient_data' = 'stable';
+            if (
+                deltas.overlapDeltaPct >= 5
+                && deltas.latencyImbalanceDeltaMs <= 0
+                && deltas.explainabilityGapDeltaPct <= 0
+            ) {
+                status = 'improving';
+            } else if (
+                deltas.overlapDeltaPct <= -5
+                || deltas.latencyImbalanceDeltaMs >= 15
+                || deltas.explainabilityGapDeltaPct >= 5
+            ) {
+                status = 'regressing';
+            }
             return {
-                status: 'insufficient_data',
-                confidence: Number(clamp(records.length / Math.max(1, minSamples * 2), 0, 1).toFixed(4)),
+                status,
+                confidence: Number(clamp(
+                    Math.min(currentWindow.length, previousWindow.length) / Math.max(1, minSamples * 2),
+                    0,
+                    1
+                ).toFixed(4)),
                 score,
                 summary: {
                     totalRecords: records.length,
-                    evaluatedRecords: currentWindow.length,
-                    reason: `Need ${minSamples} backend comparisons in both windows before trend scoring is reliable.`,
+                    evaluatedRecords: currentWindow.length + previousWindow.length,
+                    reason: `Overlap delta ${deltas.overlapDeltaPct.toFixed(2)} pct, latency imbalance delta ${deltas.latencyImbalanceDeltaMs.toFixed(2)} ms, explainability gap delta ${deltas.explainabilityGapDeltaPct.toFixed(2)} pct.`,
                     latestComparedAt: records[0]?.comparedAt || null,
                 },
                 deltas,
             };
-        }
-        let status: 'improving' | 'stable' | 'regressing' | 'insufficient_data' = 'stable';
-        if (
-            deltas.overlapDeltaPct >= 5
-            && deltas.latencyImbalanceDeltaMs <= 0
-            && deltas.explainabilityGapDeltaPct <= 0
-        ) {
-            status = 'improving';
-        } else if (
-            deltas.overlapDeltaPct <= -5
-            || deltas.latencyImbalanceDeltaMs >= 15
-            || deltas.explainabilityGapDeltaPct >= 5
-        ) {
-            status = 'regressing';
-        }
-        return {
-            status,
-            confidence: Number(clamp(
-                Math.min(currentWindow.length, previousWindow.length) / Math.max(1, minSamples * 2),
-                0,
-                1
-            ).toFixed(4)),
-            score,
-            summary: {
-                totalRecords: records.length,
-                evaluatedRecords: currentWindow.length + previousWindow.length,
-                reason: `Overlap delta ${deltas.overlapDeltaPct.toFixed(2)} pct, latency imbalance delta ${deltas.latencyImbalanceDeltaMs.toFixed(2)} ms, explainability gap delta ${deltas.explainabilityGapDeltaPct.toFixed(2)} pct.`,
-                latestComparedAt: records[0]?.comparedAt || null,
-            },
-            deltas,
-        };
+        });
     }
 
     public async queryKnowledgeStalenessDiagnostics(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 500);
-        const onlyStale = request.onlyStale === true;
-        const sourcePathPrefix = String(request.sourcePathPrefix || '').trim();
-        const records = await Promise.all(
-            Array.from(this.documents.values())
-                .filter((snapshot) => !sourcePathPrefix || snapshot.sourcePath.startsWith(sourcePathPrefix))
-                .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-                .map(async (snapshot) => {
-                    const resolvedPath = path.resolve(snapshot.sourcePath);
-                    try {
-                        const stat = await fs.promises.stat(resolvedPath);
-                        const content = await fs.promises.readFile(resolvedPath, 'utf8');
-                        const currentHash = this.computeHash(content);
-                        const status = currentHash === snapshot.sourceHash ? 'up_to_date' : 'hash_mismatch';
-                        return {
-                            documentId: snapshot.documentId,
-                            sourcePath: snapshot.sourcePath,
-                            resolvedSourcePath: resolvedPath,
-                            status,
-                            version: snapshot.version,
-                            storedHash: snapshot.sourceHash,
-                            currentHash,
-                            updatedAt: snapshot.updatedAt,
-                            fileMtime: stat.mtime.toISOString(),
-                            stale: status !== 'up_to_date',
-                        };
-                    } catch (error) {
-                        const code = (error as NodeJS.ErrnoException | undefined)?.code;
-                        const status = code === 'ENOENT' || code === 'ENOTDIR'
-                            ? 'missing_source'
-                            : 'read_error';
-                        return {
-                            documentId: snapshot.documentId,
-                            sourcePath: snapshot.sourcePath,
-                            resolvedSourcePath: resolvedPath,
-                            status,
-                            version: snapshot.version,
-                            storedHash: snapshot.sourceHash,
-                            currentHash: null,
-                            updatedAt: snapshot.updatedAt,
-                            fileMtime: null,
-                            stale: true,
-                            error: String((error as Error)?.message || error || status).trim(),
-                        };
-                    }
-                })
-        );
-        const filteredRecords = onlyStale ? records.filter((record) => record.stale) : records;
-        const returnedRecords = filteredRecords.slice(0, limit);
-        const upToDateDocuments = records.filter((record) => record.status === 'up_to_date').length;
-        const hashMismatchDocuments = records.filter((record) => record.status === 'hash_mismatch').length;
-        const missingSourceDocuments = records.filter((record) => record.status === 'missing_source').length;
-        const readErrorDocuments = records.filter((record) => record.status === 'read_error').length;
-        const staleDocuments = hashMismatchDocuments + missingSourceDocuments + readErrorDocuments;
-        const evaluatedDocuments = records.length;
-        return {
-            summary: {
-                totalDocuments: this.documents.size,
-                evaluatedDocuments,
-                returnedRecords: returnedRecords.length,
-                upToDateDocuments,
-                hashMismatchDocuments,
-                missingSourceDocuments,
-                readErrorDocuments,
-                staleDocuments,
-                freshnessRatioPct: Number(
-                    clamp((upToDateDocuments / Math.max(1, evaluatedDocuments)) * 100, 0, 100).toFixed(4)
-                ),
-                staleRatioPct: Number(
-                    clamp((staleDocuments / Math.max(1, evaluatedDocuments)) * 100, 0, 100).toFixed(4)
-                ),
-                reason: staleDocuments > 0
-                    ? `Detected ${staleDocuments} stale source document(s) across ${evaluatedDocuments} evaluated snapshots.`
-                    : 'All evaluated source documents match the stored knowledge snapshot.',
-            },
-            records: returnedRecords,
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 500);
+            const onlyStale = request.onlyStale === true;
+            const sourcePathPrefix = String(request.sourcePathPrefix || '').trim();
+            const records = await Promise.all(
+                Array.from(this.documents.values())
+                    .filter((snapshot) => !sourcePathPrefix || snapshot.sourcePath.startsWith(sourcePathPrefix))
+                    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+                    .map(async (snapshot) => {
+                        const resolvedPath = path.resolve(snapshot.sourcePath);
+                        try {
+                            const stat = await fs.promises.stat(resolvedPath);
+                            const content = await fs.promises.readFile(resolvedPath, 'utf8');
+                            const currentHash = this.computeHash(content);
+                            const status = currentHash === snapshot.sourceHash ? 'up_to_date' : 'hash_mismatch';
+                            return {
+                                documentId: snapshot.documentId,
+                                sourcePath: snapshot.sourcePath,
+                                resolvedSourcePath: resolvedPath,
+                                status,
+                                version: snapshot.version,
+                                storedHash: snapshot.sourceHash,
+                                currentHash,
+                                updatedAt: snapshot.updatedAt,
+                                fileMtime: stat.mtime.toISOString(),
+                                stale: status !== 'up_to_date',
+                            };
+                        } catch (error) {
+                            const code = (error as NodeJS.ErrnoException | undefined)?.code;
+                            const status = code === 'ENOENT' || code === 'ENOTDIR'
+                                ? 'missing_source'
+                                : 'read_error';
+                            return {
+                                documentId: snapshot.documentId,
+                                sourcePath: snapshot.sourcePath,
+                                resolvedSourcePath: resolvedPath,
+                                status,
+                                version: snapshot.version,
+                                storedHash: snapshot.sourceHash,
+                                currentHash: null,
+                                updatedAt: snapshot.updatedAt,
+                                fileMtime: null,
+                                stale: true,
+                                error: String((error as Error)?.message || error || status).trim(),
+                            };
+                        }
+                    })
+            );
+            const filteredRecords = onlyStale ? records.filter((record) => record.stale) : records;
+            const returnedRecords = filteredRecords.slice(0, limit);
+            const upToDateDocuments = records.filter((record) => record.status === 'up_to_date').length;
+            const hashMismatchDocuments = records.filter((record) => record.status === 'hash_mismatch').length;
+            const missingSourceDocuments = records.filter((record) => record.status === 'missing_source').length;
+            const readErrorDocuments = records.filter((record) => record.status === 'read_error').length;
+            const staleDocuments = hashMismatchDocuments + missingSourceDocuments + readErrorDocuments;
+            const evaluatedDocuments = records.length;
+            return {
+                summary: {
+                    totalDocuments: this.documents.size,
+                    evaluatedDocuments,
+                    returnedRecords: returnedRecords.length,
+                    upToDateDocuments,
+                    hashMismatchDocuments,
+                    missingSourceDocuments,
+                    readErrorDocuments,
+                    staleDocuments,
+                    freshnessRatioPct: Number(
+                        clamp((upToDateDocuments / Math.max(1, evaluatedDocuments)) * 100, 0, 100).toFixed(4)
+                    ),
+                    staleRatioPct: Number(
+                        clamp((staleDocuments / Math.max(1, evaluatedDocuments)) * 100, 0, 100).toFixed(4)
+                    ),
+                    reason: staleDocuments > 0
+                        ? `Detected ${staleDocuments} stale source document(s) across ${evaluatedDocuments} evaluated snapshots.`
+                        : 'All evaluated source documents match the stored knowledge snapshot.',
+                },
+                records: returnedRecords,
+            };
+        });
     }
 
     public async rebuildKnowledgeFromStalenessDiagnostics(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        if (Array.isArray(request.documents) && request.documents.length > 0) {
-            const ingestResult = await this.ingestKnowledge({
-                incremental: true,
-                documents: request.documents,
-                relationRecomputeMode: 'full',
-                ingestedAt: request.rebuiltAt,
-            });
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            if (Array.isArray(request.documents) && request.documents.length > 0) {
+                const ingestResult = await this.ingestKnowledge({
+                    incremental: true,
+                    documents: request.documents,
+                    relationRecomputeMode: 'full',
+                    ingestedAt: request.rebuiltAt,
+                });
+                return {
+                    rebuilt: ingestResult.summary.changedDocuments,
+                    mode: 'reingest_documents',
+                    rebuiltAt: this.resolveTimestamp(request.rebuiltAt),
+                    plannedDocuments: ingestResult.summary.changedDocuments,
+                    summary: ingestResult.summary,
+                };
+            }
+            const diagnostics = await this.queryKnowledgeStalenessDiagnostics(request);
+            const staleRecords = Array.isArray(diagnostics.records)
+                ? diagnostics.records.filter((record: Record<string, unknown>) => record && record.stale === true)
+                : [];
             return {
-                rebuilt: ingestResult.summary.changedDocuments,
-                mode: 'reingest_documents',
+                rebuilt: 0,
+                mode: 'plan_only',
                 rebuiltAt: this.resolveTimestamp(request.rebuiltAt),
-                plannedDocuments: ingestResult.summary.changedDocuments,
-                summary: ingestResult.summary,
+                plannedDocuments: staleRecords.length,
+                staleDocuments: Number(diagnostics.summary?.staleDocuments || staleRecords.length),
+                reason: 'Runtime snapshots retain hashes and evidence, not full source payloads. Rebuild requires caller-supplied document content for re-ingest.',
+                records: staleRecords,
             };
-        }
-        const diagnostics = await this.queryKnowledgeStalenessDiagnostics(request);
-        const staleRecords = Array.isArray(diagnostics.records)
-            ? diagnostics.records.filter((record: Record<string, unknown>) => record && record.stale === true)
-            : [];
-        return {
-            rebuilt: 0,
-            mode: 'plan_only',
-            rebuiltAt: this.resolveTimestamp(request.rebuiltAt),
-            plannedDocuments: staleRecords.length,
-            staleDocuments: Number(diagnostics.summary?.staleDocuments || staleRecords.length),
-            reason: 'Runtime snapshots retain hashes and evidence, not full source payloads. Rebuild requires caller-supplied document content for re-ingest.',
-            records: staleRecords,
-        };
+        });
     }
 
     public async queryLearningQualityHistory(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
-        const userId = String(request.userId || '').trim();
-        const records = this.learningQualityHistoryRecords
-            .filter((record) => !userId || record.userId === userId)
-            .slice()
-            .sort((left, right) => right.sampledAt.localeCompare(left.sampledAt))
-            .slice(0, limit)
-            .map((record) => ({
-                ...record,
-                snapshot: this.cloneLearningQualitySnapshot(record.snapshot),
-                diagnostics: { ...record.diagnostics },
-            }));
-        const averageMetric = (selector: (record: LearningQualityHistoryRecord) => number): number => (
-            records.length > 0
-                ? Number((records.reduce((sum, record) => sum + selector(record), 0) / records.length).toFixed(4))
-                : 0
-        );
-        return {
-            summary: {
-                totalRecords: this.learningQualityHistoryRecords.filter((record) => !userId || record.userId === userId).length,
-                returnedRecords: records.length,
-                latestSampledAt: records[0]?.sampledAt || null,
-                oldestSampledAt: records[records.length - 1]?.sampledAt || null,
-                averageRetestPassRatePct: averageMetric((record) => Number(record.snapshot.retestPassRatePct || 0)),
-                averageEvidenceBackedSuggestionRatioPct: averageMetric((record) => Number(record.snapshot.evidenceBackedSuggestionRatioPct || 0)),
-                averageMisconceptionRecurrenceRatePct: averageMetric((record) => Number(record.snapshot.misconceptionRecurrenceRatePct || 0)),
-                averageQueryBackendFallbackRatioPct: averageMetric((record) => Number(record.snapshot.queryBackendFallbackRatioPct || 0)),
-            },
-            records,
-        };
-    }
-
-    public async queryLearningQualityTrend(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 10), 1, 200);
-        const windowSize = clamp(Math.floor(Number(request.windowSize) || 2), 1, 50);
-        const minSamples = clamp(Math.floor(Number(request.minSamples) || 1), 1, 50);
-        const userId = String(request.userId || '').trim();
-        const records = this.learningQualityHistoryRecords
-            .filter((record) => !userId || record.userId === userId)
-            .slice()
-            .sort((left, right) => right.sampledAt.localeCompare(left.sampledAt))
-            .slice(0, limit);
-        const summarizeWindow = (items: LearningQualityHistoryRecord[]) => {
-            const count = items.length;
-            const average = (selector: (record: LearningQualityHistoryRecord) => number): number => (
-                count > 0
-                    ? items.reduce((sum, record) => sum + selector(record), 0) / count
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
+            const userId = String(request.userId || '').trim();
+            const records = this.learningQualityHistoryRecords
+                .filter((record) => !userId || record.userId === userId)
+                .slice()
+                .sort((left, right) => right.sampledAt.localeCompare(left.sampledAt))
+                .slice(0, limit)
+                .map((record) => ({
+                    ...record,
+                    snapshot: this.cloneLearningQualitySnapshot(record.snapshot),
+                    diagnostics: { ...record.diagnostics },
+                }));
+            const averageMetric = (selector: (record: LearningQualityHistoryRecord) => number): number => (
+                records.length > 0
+                    ? Number((records.reduce((sum, record) => sum + selector(record), 0) / records.length).toFixed(4))
                     : 0
             );
             return {
-                count,
-                retestPassRatePct: Number(average((record) => Number(record.snapshot.retestPassRatePct || 0)).toFixed(4)),
-                evidenceBackedSuggestionRatioPct: Number(average((record) => Number(record.snapshot.evidenceBackedSuggestionRatioPct || 0)).toFixed(4)),
-                misconceptionRecurrenceRatePct: Number(average((record) => Number(record.snapshot.misconceptionRecurrenceRatePct || 0)).toFixed(4)),
-                queryBackendFallbackRatioPct: Number(average((record) => Number(record.snapshot.queryBackendFallbackRatioPct || 0)).toFixed(4)),
+                summary: {
+                    totalRecords: this.learningQualityHistoryRecords.filter((record) => !userId || record.userId === userId).length,
+                    returnedRecords: records.length,
+                    latestSampledAt: records[0]?.sampledAt || null,
+                    oldestSampledAt: records[records.length - 1]?.sampledAt || null,
+                    averageRetestPassRatePct: averageMetric((record) => Number(record.snapshot.retestPassRatePct || 0)),
+                    averageEvidenceBackedSuggestionRatioPct: averageMetric((record) => Number(record.snapshot.evidenceBackedSuggestionRatioPct || 0)),
+                    averageMisconceptionRecurrenceRatePct: averageMetric((record) => Number(record.snapshot.misconceptionRecurrenceRatePct || 0)),
+                    averageQueryBackendFallbackRatioPct: averageMetric((record) => Number(record.snapshot.queryBackendFallbackRatioPct || 0)),
+                },
+                records,
             };
-        };
-        const currentWindow = records.slice(0, windowSize);
-        const previousWindow = records.slice(windowSize, windowSize * 2);
-        const current = summarizeWindow(currentWindow);
-        const previous = summarizeWindow(previousWindow);
-        const deltas = {
-            retestPassRateDeltaPct: Number((current.retestPassRatePct - previous.retestPassRatePct).toFixed(4)),
-            evidenceBackedSuggestionDeltaPct: Number((current.evidenceBackedSuggestionRatioPct - previous.evidenceBackedSuggestionRatioPct).toFixed(4)),
-            misconceptionRecurrenceDeltaPct: Number((current.misconceptionRecurrenceRatePct - previous.misconceptionRecurrenceRatePct).toFixed(4)),
-            queryBackendFallbackDeltaPct: Number((current.queryBackendFallbackRatioPct - previous.queryBackendFallbackRatioPct).toFixed(4)),
-        };
-        const score = Number(clamp(
-            (current.retestPassRatePct / 100) * 0.25
-            + (current.evidenceBackedSuggestionRatioPct / 100) * 0.3
-            + (1 - current.misconceptionRecurrenceRatePct / 100) * 0.25
-            + (1 - current.queryBackendFallbackRatioPct / 100) * 0.2,
-            0,
-            1
-        ).toFixed(4));
-        if (currentWindow.length < minSamples || previousWindow.length < minSamples) {
+        });
+    }
+
+    public async queryLearningQualityTrend(request: any = {}): Promise<any> {
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 10), 1, 200);
+            const windowSize = clamp(Math.floor(Number(request.windowSize) || 2), 1, 50);
+            const minSamples = clamp(Math.floor(Number(request.minSamples) || 1), 1, 50);
+            const userId = String(request.userId || '').trim();
+            const records = this.learningQualityHistoryRecords
+                .filter((record) => !userId || record.userId === userId)
+                .slice()
+                .sort((left, right) => right.sampledAt.localeCompare(left.sampledAt))
+                .slice(0, limit);
+            const summarizeWindow = (items: LearningQualityHistoryRecord[]) => {
+                const count = items.length;
+                const average = (selector: (record: LearningQualityHistoryRecord) => number): number => (
+                    count > 0
+                        ? items.reduce((sum, record) => sum + selector(record), 0) / count
+                        : 0
+                );
+                return {
+                    count,
+                    retestPassRatePct: Number(average((record) => Number(record.snapshot.retestPassRatePct || 0)).toFixed(4)),
+                    evidenceBackedSuggestionRatioPct: Number(average((record) => Number(record.snapshot.evidenceBackedSuggestionRatioPct || 0)).toFixed(4)),
+                    misconceptionRecurrenceRatePct: Number(average((record) => Number(record.snapshot.misconceptionRecurrenceRatePct || 0)).toFixed(4)),
+                    queryBackendFallbackRatioPct: Number(average((record) => Number(record.snapshot.queryBackendFallbackRatioPct || 0)).toFixed(4)),
+                };
+            };
+            const currentWindow = records.slice(0, windowSize);
+            const previousWindow = records.slice(windowSize, windowSize * 2);
+            const current = summarizeWindow(currentWindow);
+            const previous = summarizeWindow(previousWindow);
+            const deltas = {
+                retestPassRateDeltaPct: Number((current.retestPassRatePct - previous.retestPassRatePct).toFixed(4)),
+                evidenceBackedSuggestionDeltaPct: Number((current.evidenceBackedSuggestionRatioPct - previous.evidenceBackedSuggestionRatioPct).toFixed(4)),
+                misconceptionRecurrenceDeltaPct: Number((current.misconceptionRecurrenceRatePct - previous.misconceptionRecurrenceRatePct).toFixed(4)),
+                queryBackendFallbackDeltaPct: Number((current.queryBackendFallbackRatioPct - previous.queryBackendFallbackRatioPct).toFixed(4)),
+            };
+            const score = Number(clamp(
+                (current.retestPassRatePct / 100) * 0.25
+                + (current.evidenceBackedSuggestionRatioPct / 100) * 0.3
+                + (1 - current.misconceptionRecurrenceRatePct / 100) * 0.25
+                + (1 - current.queryBackendFallbackRatioPct / 100) * 0.2,
+                0,
+                1
+            ).toFixed(4));
+            if (currentWindow.length < minSamples || previousWindow.length < minSamples) {
+                return {
+                    status: 'insufficient_data',
+                    confidence: Number(clamp(records.length / Math.max(1, minSamples * 2), 0, 1).toFixed(4)),
+                    score,
+                    summary: {
+                        totalRecords: records.length,
+                        evaluatedRecords: currentWindow.length,
+                        reason: `Need ${minSamples} learning-quality records in both windows before trend scoring is reliable.`,
+                        latestSampledAt: records[0]?.sampledAt || null,
+                    },
+                    deltas,
+                };
+            }
+            let status: 'improving' | 'stable' | 'regressing' | 'insufficient_data' = 'stable';
+            if (
+                deltas.retestPassRateDeltaPct >= 3
+                && deltas.evidenceBackedSuggestionDeltaPct >= 0
+                && deltas.misconceptionRecurrenceDeltaPct <= 0
+                && deltas.queryBackendFallbackDeltaPct <= 0
+            ) {
+                status = 'improving';
+            } else if (
+                deltas.retestPassRateDeltaPct <= -3
+                || deltas.evidenceBackedSuggestionDeltaPct <= -5
+                || deltas.misconceptionRecurrenceDeltaPct >= 5
+                || deltas.queryBackendFallbackDeltaPct >= 5
+            ) {
+                status = 'regressing';
+            }
             return {
-                status: 'insufficient_data',
-                confidence: Number(clamp(records.length / Math.max(1, minSamples * 2), 0, 1).toFixed(4)),
+                status,
+                confidence: Number(clamp(
+                    Math.min(currentWindow.length, previousWindow.length) / Math.max(1, minSamples * 2),
+                    0,
+                    1
+                ).toFixed(4)),
                 score,
                 summary: {
                     totalRecords: records.length,
-                    evaluatedRecords: currentWindow.length,
-                    reason: `Need ${minSamples} learning-quality records in both windows before trend scoring is reliable.`,
+                    evaluatedRecords: currentWindow.length + previousWindow.length,
+                    reason: `Retest delta ${deltas.retestPassRateDeltaPct.toFixed(2)} pct, evidence delta ${deltas.evidenceBackedSuggestionDeltaPct.toFixed(2)} pct, misconception delta ${deltas.misconceptionRecurrenceDeltaPct.toFixed(2)} pct, fallback delta ${deltas.queryBackendFallbackDeltaPct.toFixed(2)} pct.`,
                     latestSampledAt: records[0]?.sampledAt || null,
                 },
                 deltas,
             };
-        }
-        let status: 'improving' | 'stable' | 'regressing' | 'insufficient_data' = 'stable';
-        if (
-            deltas.retestPassRateDeltaPct >= 3
-            && deltas.evidenceBackedSuggestionDeltaPct >= 0
-            && deltas.misconceptionRecurrenceDeltaPct <= 0
-            && deltas.queryBackendFallbackDeltaPct <= 0
-        ) {
-            status = 'improving';
-        } else if (
-            deltas.retestPassRateDeltaPct <= -3
-            || deltas.evidenceBackedSuggestionDeltaPct <= -5
-            || deltas.misconceptionRecurrenceDeltaPct >= 5
-            || deltas.queryBackendFallbackDeltaPct >= 5
-        ) {
-            status = 'regressing';
-        }
-        return {
-            status,
-            confidence: Number(clamp(
-                Math.min(currentWindow.length, previousWindow.length) / Math.max(1, minSamples * 2),
-                0,
-                1
-            ).toFixed(4)),
-            score,
-            summary: {
-                totalRecords: records.length,
-                evaluatedRecords: currentWindow.length + previousWindow.length,
-                reason: `Retest delta ${deltas.retestPassRateDeltaPct.toFixed(2)} pct, evidence delta ${deltas.evidenceBackedSuggestionDeltaPct.toFixed(2)} pct, misconception delta ${deltas.misconceptionRecurrenceDeltaPct.toFixed(2)} pct, fallback delta ${deltas.queryBackendFallbackDeltaPct.toFixed(2)} pct.`,
-                latestSampledAt: records[0]?.sampledAt || null,
-            },
-            deltas,
-        };
+        });
     }
 
     public getLearningQualityThresholds(): any {
@@ -12286,456 +12460,470 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public async evaluateStudySessionPlanQuality(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const sessionPlan = request.sessionPlan && typeof request.sessionPlan === 'object'
-            ? request.sessionPlan as StudySessionResponse
-            : null;
-        if (!sessionPlan) {
-            throw new Error('study_session_plan_quality_session_plan_required');
-        }
-        const evaluatedAt = this.resolveTimestamp(request.evaluatedAt);
-        const userId = isNonEmptyString(request.userId)
-            ? request.userId.trim()
-            : (isNonEmptyString(sessionPlan.userId) ? sessionPlan.userId.trim() : null);
-        const record = this.evaluateStudySessionPlanQualityInternal({
-            request,
-            sessionPlan,
-            userId,
-            evaluatedAt,
-            source: 'manual_evaluation',
-        });
-        if (request.persistRecord !== false) {
-            this.recordStudySessionPlanQualityHistory(record);
-            await this.persistIfNeeded();
-        }
-        return {
-            evaluated: true,
-            evaluatedAt,
-            userId,
-            thresholds: { ...record.thresholds },
-            metrics: {
-                totalActions: record.totalActions,
-                evidenceCoverageRatioPct: record.evidenceCoverageRatioPct,
-                budgetDeviationActions: record.budgetDeviationActions,
-                recoverySharePct: record.recoverySharePct,
-                divergenceSharePct: record.divergenceSharePct,
-            },
-            summary: {
-                overallPassed: record.overallPassed,
-                status: record.status,
-                score: record.score,
-                confidence: record.confidence,
-                reason: record.summaryReason,
-                trendContextStatus: record.trendContextStatus,
-            },
-            gates: record.gates.map((gate) => ({ ...gate })),
-            record: {
-                ...record,
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const sessionPlan = request.sessionPlan && typeof request.sessionPlan === 'object'
+                ? request.sessionPlan as StudySessionResponse
+                : null;
+            if (!sessionPlan) {
+                throw new Error('study_session_plan_quality_session_plan_required');
+            }
+            const evaluatedAt = this.resolveTimestamp(request.evaluatedAt);
+            const userId = isNonEmptyString(request.userId)
+                ? request.userId.trim()
+                : (isNonEmptyString(sessionPlan.userId) ? sessionPlan.userId.trim() : null);
+            const record = this.evaluateStudySessionPlanQualityInternal({
+                request,
+                sessionPlan,
+                userId,
+                evaluatedAt,
+                source: 'manual_evaluation',
+            });
+            if (request.persistRecord !== false) {
+                this.recordStudySessionPlanQualityHistory(record);
+                await this.persistIfNeeded();
+            }
+            return {
+                evaluated: true,
+                evaluatedAt,
+                userId,
                 thresholds: { ...record.thresholds },
+                metrics: {
+                    totalActions: record.totalActions,
+                    evidenceCoverageRatioPct: record.evidenceCoverageRatioPct,
+                    budgetDeviationActions: record.budgetDeviationActions,
+                    recoverySharePct: record.recoverySharePct,
+                    divergenceSharePct: record.divergenceSharePct,
+                },
+                summary: {
+                    overallPassed: record.overallPassed,
+                    status: record.status,
+                    score: record.score,
+                    confidence: record.confidence,
+                    reason: record.summaryReason,
+                    trendContextStatus: record.trendContextStatus,
+                },
                 gates: record.gates.map((gate) => ({ ...gate })),
-                failedGateIds: [...record.failedGateIds],
-            },
-        };
+                record: {
+                    ...record,
+                    thresholds: { ...record.thresholds },
+                    gates: record.gates.map((gate) => ({ ...gate })),
+                    failedGateIds: [...record.failedGateIds],
+                },
+            };
+        });
     }
 
     public async queryStudySessionPlanQualityHistory(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
-        const userId = String(request.userId || '').trim();
-        const scopedRecords = this.studySessionPlanQualityHistoryRecords
-            .filter((record) => !userId || record.userId === userId)
-            .slice()
-            .sort((left, right) => right.evaluatedAt.localeCompare(left.evaluatedAt));
-        const records = scopedRecords
-            .slice(0, limit)
-            .map((record) => ({
-                ...record,
-                thresholds: { ...record.thresholds },
-                gates: record.gates.map((gate) => ({ ...gate })),
-                failedGateIds: [...record.failedGateIds],
-            }));
-        const overallPassRatePct = Number(
-            clamp(
-                (scopedRecords.filter((record) => record.overallPassed).length / Math.max(1, scopedRecords.length)) * 100,
-                0,
-                100
-            ).toFixed(4)
-        );
-        const returnedPassRatePct = Number(
-            clamp(
-                (records.filter((record) => record.overallPassed).length / Math.max(1, records.length)) * 100,
-                0,
-                100
-            ).toFixed(4)
-        );
-        let consecutiveFailureCount = 0;
-        for (const record of scopedRecords) {
-            if (record.overallPassed) {
-                break;
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
+            const userId = String(request.userId || '').trim();
+            const scopedRecords = this.studySessionPlanQualityHistoryRecords
+                .filter((record) => !userId || record.userId === userId)
+                .slice()
+                .sort((left, right) => right.evaluatedAt.localeCompare(left.evaluatedAt));
+            const records = scopedRecords
+                .slice(0, limit)
+                .map((record) => ({
+                    ...record,
+                    thresholds: { ...record.thresholds },
+                    gates: record.gates.map((gate) => ({ ...gate })),
+                    failedGateIds: [...record.failedGateIds],
+                }));
+            const overallPassRatePct = Number(
+                clamp(
+                    (scopedRecords.filter((record) => record.overallPassed).length / Math.max(1, scopedRecords.length)) * 100,
+                    0,
+                    100
+                ).toFixed(4)
+            );
+            const returnedPassRatePct = Number(
+                clamp(
+                    (records.filter((record) => record.overallPassed).length / Math.max(1, records.length)) * 100,
+                    0,
+                    100
+                ).toFixed(4)
+            );
+            let consecutiveFailureCount = 0;
+            for (const record of scopedRecords) {
+                if (record.overallPassed) {
+                    break;
+                }
+                consecutiveFailureCount += 1;
             }
-            consecutiveFailureCount += 1;
-        }
-        const failedGateCounts = new Map<string, number>();
-        scopedRecords.forEach((record) => {
-            record.failedGateIds.forEach((gateId) => {
-                failedGateCounts.set(gateId, (failedGateCounts.get(gateId) || 0) + 1);
+            const failedGateCounts = new Map<string, number>();
+            scopedRecords.forEach((record) => {
+                record.failedGateIds.forEach((gateId) => {
+                    failedGateCounts.set(gateId, (failedGateCounts.get(gateId) || 0) + 1);
+                });
             });
+            const commonFailedGates = Array.from(failedGateCounts.entries())
+                .map(([gateId, count]) => ({ gateId, count }))
+                .sort((left, right) => right.count - left.count);
+            const averageBudgetDeviationActions = records.length > 0
+                ? Number((records.reduce((sum, record) => sum + record.budgetDeviationActions, 0) / records.length).toFixed(4))
+                : 0;
+            return {
+                summary: {
+                    totalRecords: scopedRecords.length,
+                    returnedRecords: records.length,
+                    overallPassRatePct,
+                    returnedPassRatePct,
+                    consecutiveFailureCount,
+                    averageBudgetDeviationActions,
+                    commonFailedGates,
+                    latestEvaluatedAt: records[0]?.evaluatedAt || null,
+                },
+                records,
+            };
         });
-        const commonFailedGates = Array.from(failedGateCounts.entries())
-            .map(([gateId, count]) => ({ gateId, count }))
-            .sort((left, right) => right.count - left.count);
-        const averageBudgetDeviationActions = records.length > 0
-            ? Number((records.reduce((sum, record) => sum + record.budgetDeviationActions, 0) / records.length).toFixed(4))
-            : 0;
-        return {
-            summary: {
-                totalRecords: scopedRecords.length,
-                returnedRecords: records.length,
-                overallPassRatePct,
-                returnedPassRatePct,
-                consecutiveFailureCount,
-                averageBudgetDeviationActions,
-                commonFailedGates,
-                latestEvaluatedAt: records[0]?.evaluatedAt || null,
-            },
-            records,
-        };
     }
 
     public async queryStudySessionPlanQualityTrend(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 10), 1, 200);
-        const windowSize = clamp(Math.floor(Number(request.windowSize) || 2), 1, 50);
-        const minSamples = clamp(Math.floor(Number(request.minSamples) || 1), 1, 50);
-        const userId = String(request.userId || '').trim();
-        const records = this.studySessionPlanQualityHistoryRecords
-            .filter((record) => !userId || record.userId === userId)
-            .slice()
-            .sort((left, right) => right.evaluatedAt.localeCompare(left.evaluatedAt))
-            .slice(0, limit);
-        const summarizeWindow = (items: StudySessionPlanQualityHistoryRecord[]) => {
-            const count = items.length;
-            const average = (selector: (record: StudySessionPlanQualityHistoryRecord) => number): number => (
-                count > 0
-                    ? items.reduce((sum, record) => sum + selector(record), 0) / count
-                    : 0
-            );
-            return {
-                count,
-                passRatePct: Number(
-                    clamp((items.filter((record) => record.overallPassed).length / Math.max(1, count)) * 100, 0, 100).toFixed(4)
-                ),
-                evidenceCoverageRatioPct: Number(average((record) => record.evidenceCoverageRatioPct).toFixed(4)),
-                budgetDeviationActions: Number(average((record) => record.budgetDeviationActions).toFixed(4)),
-                recoverySharePct: Number(average((record) => record.recoverySharePct).toFixed(4)),
-                divergenceSharePct: Number(average((record) => record.divergenceSharePct).toFixed(4)),
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 10), 1, 200);
+            const windowSize = clamp(Math.floor(Number(request.windowSize) || 2), 1, 50);
+            const minSamples = clamp(Math.floor(Number(request.minSamples) || 1), 1, 50);
+            const userId = String(request.userId || '').trim();
+            const records = this.studySessionPlanQualityHistoryRecords
+                .filter((record) => !userId || record.userId === userId)
+                .slice()
+                .sort((left, right) => right.evaluatedAt.localeCompare(left.evaluatedAt))
+                .slice(0, limit);
+            const summarizeWindow = (items: StudySessionPlanQualityHistoryRecord[]) => {
+                const count = items.length;
+                const average = (selector: (record: StudySessionPlanQualityHistoryRecord) => number): number => (
+                    count > 0
+                        ? items.reduce((sum, record) => sum + selector(record), 0) / count
+                        : 0
+                );
+                return {
+                    count,
+                    passRatePct: Number(
+                        clamp((items.filter((record) => record.overallPassed).length / Math.max(1, count)) * 100, 0, 100).toFixed(4)
+                    ),
+                    evidenceCoverageRatioPct: Number(average((record) => record.evidenceCoverageRatioPct).toFixed(4)),
+                    budgetDeviationActions: Number(average((record) => record.budgetDeviationActions).toFixed(4)),
+                    recoverySharePct: Number(average((record) => record.recoverySharePct).toFixed(4)),
+                    divergenceSharePct: Number(average((record) => record.divergenceSharePct).toFixed(4)),
+                };
             };
-        };
-        const currentWindow = records.slice(0, windowSize);
-        const previousWindow = records.slice(windowSize, windowSize * 2);
-        const current = summarizeWindow(currentWindow);
-        const previous = summarizeWindow(previousWindow);
-        const deltas = {
-            passRateDeltaPct: Number((current.passRatePct - previous.passRatePct).toFixed(4)),
-            evidenceCoverageDeltaPct: Number((current.evidenceCoverageRatioPct - previous.evidenceCoverageRatioPct).toFixed(4)),
-            budgetDeviationDeltaActions: Number((current.budgetDeviationActions - previous.budgetDeviationActions).toFixed(4)),
-            recoveryShareDeltaPct: Number((current.recoverySharePct - previous.recoverySharePct).toFixed(4)),
-            divergenceShareDeltaPct: Number((current.divergenceSharePct - previous.divergenceSharePct).toFixed(4)),
-        };
-        const score = Number(clamp(
-            (current.passRatePct / 100) * 0.55
-            + (current.evidenceCoverageRatioPct / 100) * 0.25
-            + (1 - Math.min(current.budgetDeviationActions, 6) / 6) * 0.1
-            + (current.recoverySharePct / 100) * 0.05
-            + (1 - current.divergenceSharePct / 100) * 0.05,
-            0,
-            1
-        ).toFixed(4));
-        if (currentWindow.length < minSamples || previousWindow.length < minSamples) {
+            const currentWindow = records.slice(0, windowSize);
+            const previousWindow = records.slice(windowSize, windowSize * 2);
+            const current = summarizeWindow(currentWindow);
+            const previous = summarizeWindow(previousWindow);
+            const deltas = {
+                passRateDeltaPct: Number((current.passRatePct - previous.passRatePct).toFixed(4)),
+                evidenceCoverageDeltaPct: Number((current.evidenceCoverageRatioPct - previous.evidenceCoverageRatioPct).toFixed(4)),
+                budgetDeviationDeltaActions: Number((current.budgetDeviationActions - previous.budgetDeviationActions).toFixed(4)),
+                recoveryShareDeltaPct: Number((current.recoverySharePct - previous.recoverySharePct).toFixed(4)),
+                divergenceShareDeltaPct: Number((current.divergenceSharePct - previous.divergenceSharePct).toFixed(4)),
+            };
+            const score = Number(clamp(
+                (current.passRatePct / 100) * 0.55
+                + (current.evidenceCoverageRatioPct / 100) * 0.25
+                + (1 - Math.min(current.budgetDeviationActions, 6) / 6) * 0.1
+                + (current.recoverySharePct / 100) * 0.05
+                + (1 - current.divergenceSharePct / 100) * 0.05,
+                0,
+                1
+            ).toFixed(4));
+            if (currentWindow.length < minSamples || previousWindow.length < minSamples) {
+                return {
+                    status: 'insufficient_data',
+                    confidence: Number(clamp(records.length / Math.max(1, minSamples * 2), 0, 1).toFixed(4)),
+                    score,
+                    summary: {
+                        totalRecords: records.length,
+                        evaluatedRecords: currentWindow.length,
+                        reason: `Need ${minSamples} study-session plan quality records in both windows before trend scoring is reliable.`,
+                        latestEvaluatedAt: records[0]?.evaluatedAt || null,
+                    },
+                    deltas,
+                };
+            }
+            let status: 'improving' | 'stable' | 'regressing' | 'insufficient_data' = 'stable';
+            if (
+                deltas.passRateDeltaPct >= 10
+                && deltas.evidenceCoverageDeltaPct >= 0
+                && deltas.budgetDeviationDeltaActions <= 0
+            ) {
+                status = 'improving';
+            } else if (
+                deltas.passRateDeltaPct <= -10
+                || deltas.evidenceCoverageDeltaPct <= -10
+                || deltas.budgetDeviationDeltaActions >= 1
+            ) {
+                status = 'regressing';
+            }
             return {
-                status: 'insufficient_data',
-                confidence: Number(clamp(records.length / Math.max(1, minSamples * 2), 0, 1).toFixed(4)),
+                status,
+                confidence: Number(clamp(
+                    Math.min(currentWindow.length, previousWindow.length) / Math.max(1, minSamples * 2),
+                    0,
+                    1
+                ).toFixed(4)),
                 score,
                 summary: {
                     totalRecords: records.length,
-                    evaluatedRecords: currentWindow.length,
-                    reason: `Need ${minSamples} study-session plan quality records in both windows before trend scoring is reliable.`,
+                    evaluatedRecords: currentWindow.length + previousWindow.length,
+                    reason: `Pass-rate delta ${deltas.passRateDeltaPct.toFixed(2)} pct, evidence delta ${deltas.evidenceCoverageDeltaPct.toFixed(2)} pct, budget delta ${deltas.budgetDeviationDeltaActions.toFixed(2)} actions.`,
                     latestEvaluatedAt: records[0]?.evaluatedAt || null,
                 },
                 deltas,
             };
-        }
-        let status: 'improving' | 'stable' | 'regressing' | 'insufficient_data' = 'stable';
-        if (
-            deltas.passRateDeltaPct >= 10
-            && deltas.evidenceCoverageDeltaPct >= 0
-            && deltas.budgetDeviationDeltaActions <= 0
-        ) {
-            status = 'improving';
-        } else if (
-            deltas.passRateDeltaPct <= -10
-            || deltas.evidenceCoverageDeltaPct <= -10
-            || deltas.budgetDeviationDeltaActions >= 1
-        ) {
-            status = 'regressing';
-        }
-        return {
-            status,
-            confidence: Number(clamp(
-                Math.min(currentWindow.length, previousWindow.length) / Math.max(1, minSamples * 2),
-                0,
-                1
-            ).toFixed(4)),
-            score,
-            summary: {
-                totalRecords: records.length,
-                evaluatedRecords: currentWindow.length + previousWindow.length,
-                reason: `Pass-rate delta ${deltas.passRateDeltaPct.toFixed(2)} pct, evidence delta ${deltas.evidenceCoverageDeltaPct.toFixed(2)} pct, budget delta ${deltas.budgetDeviationDeltaActions.toFixed(2)} actions.`,
-                latestEvaluatedAt: records[0]?.evaluatedAt || null,
-            },
-            deltas,
-        };
+        });
     }
 
     public async queryStudySessionPlanQualityRuntimeThresholds(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const historyLimit = clamp(
-            Math.floor(
-                Number(
-                    request.historyLimit
-                    ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.historyLimit
-                    ?? 12
-                ) || 12
-            ),
-            1,
-            200
-        );
-        const trendLimit = clamp(
-            Math.floor(
-                Number(
-                    request.trendLimit
-                    ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.trendLimit
-                    ?? 12
-                ) || 12
-            ),
-            1,
-            200
-        );
-        const trendWindowSize = clamp(
-            Math.floor(
-                Number(
-                    request.trendWindowSize
-                    ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.trendWindowSize
-                    ?? 2
-                ) || 2
-            ),
-            1,
-            50
-        );
-        const trendMinSamples = clamp(
-            Math.floor(
-                Number(
-                    request.trendMinSamples
-                    ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.trendMinSamples
-                    ?? 1
-                ) || 1
-            ),
-            1,
-            50
-        );
-        const userId = String(request.userId || '').trim();
-        const baseThresholds = this.resolveStudySessionPlanQualityThresholds(
-            (request.thresholds && typeof request.thresholds === 'object'
-                ? request.thresholds
-                : undefined) as Partial<StudySessionPlanQualityThresholdSet> | undefined
-        );
-        const adaptiveThresholdsEnabled = request.adaptiveThresholdsEnabled === true
-            || (
-                request.adaptiveThresholdsEnabled !== false
-                && this.studySessionPlanQualityAdaptiveThresholdsEnabled === true
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const historyLimit = clamp(
+                Math.floor(
+                    Number(
+                        request.historyLimit
+                        ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.historyLimit
+                        ?? 12
+                    ) || 12
+                ),
+                1,
+                200
             );
-        const history = await this.queryStudySessionPlanQualityHistory({
-            userId: userId || undefined,
-            limit: historyLimit,
+            const trendLimit = clamp(
+                Math.floor(
+                    Number(
+                        request.trendLimit
+                        ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.trendLimit
+                        ?? 12
+                    ) || 12
+                ),
+                1,
+                200
+            );
+            const trendWindowSize = clamp(
+                Math.floor(
+                    Number(
+                        request.trendWindowSize
+                        ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.trendWindowSize
+                        ?? 2
+                    ) || 2
+                ),
+                1,
+                50
+            );
+            const trendMinSamples = clamp(
+                Math.floor(
+                    Number(
+                        request.trendMinSamples
+                        ?? this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig.trendMinSamples
+                        ?? 1
+                    ) || 1
+                ),
+                1,
+                50
+            );
+            const userId = String(request.userId || '').trim();
+            const baseThresholds = this.resolveStudySessionPlanQualityThresholds(
+                (request.thresholds && typeof request.thresholds === 'object'
+                    ? request.thresholds
+                    : undefined) as Partial<StudySessionPlanQualityThresholdSet> | undefined
+            );
+            const adaptiveThresholdsEnabled = request.adaptiveThresholdsEnabled === true
+                || (
+                    request.adaptiveThresholdsEnabled !== false
+                    && this.studySessionPlanQualityAdaptiveThresholdsEnabled === true
+                );
+            const history = await this.queryStudySessionPlanQualityHistory({
+                userId: userId || undefined,
+                limit: historyLimit,
+            });
+            const trend = await this.queryStudySessionPlanQualityTrend({
+                userId: userId || undefined,
+                limit: trendLimit,
+                windowSize: trendWindowSize,
+                minSamples: trendMinSamples,
+            });
+            const records = this.studySessionPlanQualityHistoryRecords
+                .filter((record) => !userId || record.userId === userId)
+                .slice(0, historyLimit);
+            const thresholds = {
+                ...baseThresholds,
+            };
+            const adaptiveAdjustments: Record<string, number> = {};
+            if (adaptiveThresholdsEnabled && records.length > 0) {
+                const averageTotalActions = records.reduce((sum, record) => sum + record.totalActions, 0) / records.length;
+                const averageEvidenceCoverageRatioPct = records.reduce((sum, record) => sum + record.evidenceCoverageRatioPct, 0) / records.length;
+                const averageBudgetDeviationActions = records.reduce((sum, record) => sum + record.budgetDeviationActions, 0) / records.length;
+                thresholds.minTotalActions = Math.max(1, Math.floor(Math.max(baseThresholds.minTotalActions, averageTotalActions * 0.6)));
+                thresholds.minEvidenceCoverageRatioPct = Number(
+                    clamp(Math.max(baseThresholds.minEvidenceCoverageRatioPct, averageEvidenceCoverageRatioPct * 0.85), 0, 100).toFixed(4)
+                );
+                thresholds.maxBudgetDeviationActions = Math.max(
+                    baseThresholds.maxBudgetDeviationActions,
+                    Math.ceil(averageBudgetDeviationActions + 1)
+                );
+                adaptiveAdjustments.minTotalActions = Number((thresholds.minTotalActions - baseThresholds.minTotalActions).toFixed(4));
+                adaptiveAdjustments.minEvidenceCoverageRatioPct = Number(
+                    (thresholds.minEvidenceCoverageRatioPct - baseThresholds.minEvidenceCoverageRatioPct).toFixed(4)
+                );
+                adaptiveAdjustments.maxBudgetDeviationActions = Number(
+                    (thresholds.maxBudgetDeviationActions - baseThresholds.maxBudgetDeviationActions).toFixed(4)
+                );
+            }
+            return {
+                adaptiveThresholdsEnabled,
+                baseThresholds,
+                thresholds,
+                adaptiveAdjustments,
+                runtimeConfig: {
+                    ...this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig,
+                    historyLimit,
+                    trendLimit,
+                    trendWindowSize,
+                    trendMinSamples,
+                },
+                summary: {
+                    totalRecords: Number(history.summary?.totalRecords || records.length),
+                    latestEvaluatedAt: history.summary?.latestEvaluatedAt || null,
+                    trendStatus: String(trend.status || 'insufficient_data'),
+                    reason: adaptiveThresholdsEnabled
+                        ? 'Adaptive session-plan quality thresholds were derived from recent execution history.'
+                        : 'Static session-plan quality thresholds are active.',
+                },
+            };
         });
-        const trend = await this.queryStudySessionPlanQualityTrend({
-            userId: userId || undefined,
-            limit: trendLimit,
-            windowSize: trendWindowSize,
-            minSamples: trendMinSamples,
-        });
-        const records = this.studySessionPlanQualityHistoryRecords
-            .filter((record) => !userId || record.userId === userId)
-            .slice(0, historyLimit);
-        const thresholds = {
-            ...baseThresholds,
-        };
-        const adaptiveAdjustments: Record<string, number> = {};
-        if (adaptiveThresholdsEnabled && records.length > 0) {
-            const averageTotalActions = records.reduce((sum, record) => sum + record.totalActions, 0) / records.length;
-            const averageEvidenceCoverageRatioPct = records.reduce((sum, record) => sum + record.evidenceCoverageRatioPct, 0) / records.length;
-            const averageBudgetDeviationActions = records.reduce((sum, record) => sum + record.budgetDeviationActions, 0) / records.length;
-            thresholds.minTotalActions = Math.max(1, Math.floor(Math.max(baseThresholds.minTotalActions, averageTotalActions * 0.6)));
-            thresholds.minEvidenceCoverageRatioPct = Number(
-                clamp(Math.max(baseThresholds.minEvidenceCoverageRatioPct, averageEvidenceCoverageRatioPct * 0.85), 0, 100).toFixed(4)
-            );
-            thresholds.maxBudgetDeviationActions = Math.max(
-                baseThresholds.maxBudgetDeviationActions,
-                Math.ceil(averageBudgetDeviationActions + 1)
-            );
-            adaptiveAdjustments.minTotalActions = Number((thresholds.minTotalActions - baseThresholds.minTotalActions).toFixed(4));
-            adaptiveAdjustments.minEvidenceCoverageRatioPct = Number(
-                (thresholds.minEvidenceCoverageRatioPct - baseThresholds.minEvidenceCoverageRatioPct).toFixed(4)
-            );
-            adaptiveAdjustments.maxBudgetDeviationActions = Number(
-                (thresholds.maxBudgetDeviationActions - baseThresholds.maxBudgetDeviationActions).toFixed(4)
-            );
-        }
-        return {
-            adaptiveThresholdsEnabled,
-            baseThresholds,
-            thresholds,
-            adaptiveAdjustments,
-            runtimeConfig: {
-                ...this.studySessionPlanQualityAdaptiveThresholdRuntimeConfig,
-                historyLimit,
-                trendLimit,
-                trendWindowSize,
-                trendMinSamples,
-            },
-            summary: {
-                totalRecords: Number(history.summary?.totalRecords || records.length),
-                latestEvaluatedAt: history.summary?.latestEvaluatedAt || null,
-                trendStatus: String(trend.status || 'insufficient_data'),
-                reason: adaptiveThresholdsEnabled
-                    ? 'Adaptive session-plan quality thresholds were derived from recent execution history.'
-                    : 'Static session-plan quality thresholds are active.',
-            },
-        };
     }
     public async queryMemoryPolicyDiagnostics(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const diagnostics = this.buildMemoryPolicyDiagnosticsSnapshot(request);
-        if (request.persistRecord !== false) {
-            this.recordMemoryPolicyDiagnosticsHistory({ ...diagnostics });
-            await this.persistIfNeeded();
-        }
-        return diagnostics;
+        return this.commitKnowledgeState(async () => {
+            await this.ensureHydrated();
+            const diagnostics = this.buildMemoryPolicyDiagnosticsSnapshot(request);
+            if (request.persistRecord !== false) {
+                this.recordMemoryPolicyDiagnosticsHistory({ ...diagnostics });
+                await this.persistIfNeeded();
+            }
+            return diagnostics;
+        });
     }
     public async queryMemoryPolicyDiagnosticsHistory(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
-        const records: Array<Record<string, unknown>> = this.memoryPolicyDiagnosticsHistoryRecords
-            .slice()
-            .sort((left, right) => String(right.recordedAt || '').localeCompare(String(left.recordedAt || '')))
-            .slice(0, limit)
-            .map((record) => ({ ...record }));
-        const getRecordStatus = (record: Record<string, unknown>): string => {
-            const summary = record.summary && typeof record.summary === 'object'
-                ? record.summary as Record<string, unknown>
-                : {};
-            return String(summary.status || '').trim();
-        };
-        return {
-            summary: {
-                totalRecords: this.memoryPolicyDiagnosticsHistoryRecords.length,
-                returnedRecords: records.length,
-                latestRecordedAt: records[0]?.recordedAt || null,
-                oldestRecordedAt: records[records.length - 1]?.recordedAt || null,
-                healthyRecords: records.filter((record) => getRecordStatus(record) === 'healthy').length,
-                watchRecords: records.filter((record) => getRecordStatus(record) === 'watch').length,
-                riskRecords: records.filter((record) => getRecordStatus(record) === 'risk').length,
-                insufficientDataRecords: records.filter((record) => getRecordStatus(record) === 'insufficient_data').length,
-            },
-            records,
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 20), 1, 200);
+            const records: Array<Record<string, unknown>> = this.memoryPolicyDiagnosticsHistoryRecords
+                .slice()
+                .sort((left, right) => String(right.recordedAt || '').localeCompare(String(left.recordedAt || '')))
+                .slice(0, limit)
+                .map((record) => ({ ...record }));
+            const getRecordStatus = (record: Record<string, unknown>): string => {
+                const summary = record.summary && typeof record.summary === 'object'
+                    ? record.summary as Record<string, unknown>
+                    : {};
+                return String(summary.status || '').trim();
+            };
+            return {
+                summary: {
+                    totalRecords: this.memoryPolicyDiagnosticsHistoryRecords.length,
+                    returnedRecords: records.length,
+                    latestRecordedAt: records[0]?.recordedAt || null,
+                    oldestRecordedAt: records[records.length - 1]?.recordedAt || null,
+                    healthyRecords: records.filter((record) => getRecordStatus(record) === 'healthy').length,
+                    watchRecords: records.filter((record) => getRecordStatus(record) === 'watch').length,
+                    riskRecords: records.filter((record) => getRecordStatus(record) === 'risk').length,
+                    insufficientDataRecords: records.filter((record) => getRecordStatus(record) === 'insufficient_data').length,
+                },
+                records,
+            };
+        });
     }
     public async queryMemoryPolicyDiagnosticsTrend(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const limit = clamp(Math.floor(Number(request.limit) || 12), 1, 200);
-        const windowSize = clamp(Math.floor(Number(request.windowSize) || 2), 1, 50);
-        const minSamples = clamp(Math.floor(Number(request.minSamples) || 2), 1, 50);
-        const records: Array<Record<string, unknown>> = this.memoryPolicyDiagnosticsHistoryRecords
-            .slice()
-            .sort((left, right) => String(right.recordedAt || '').localeCompare(String(left.recordedAt || '')))
-            .slice(0, limit);
-        const latestWindow = records.slice(0, windowSize);
-        const previousWindow = records.slice(windowSize, windowSize * 2);
-        const averageHealthScore = (items: Array<Record<string, unknown>>): number => (
-            items.length > 0
-                ? Number((
-                    items.reduce((sum, item) => {
-                        const summary = item.summary && typeof item.summary === 'object'
-                            ? item.summary as Record<string, unknown>
-                            : {};
-                        return sum + Number(summary.healthScore || 0);
-                    }, 0)
-                    / items.length
-                ).toFixed(4))
-                : 0
-        );
-        const sumMetric = (items: Array<Record<string, unknown>>, key: string): number => (
-            items.reduce((sum, item) => {
-                const summary = item.summary && typeof item.summary === 'object'
-                    ? item.summary as Record<string, unknown>
-                    : {};
-                return sum + Math.max(0, Number(summary[key] || 0));
-            }, 0)
-        );
-        const latestScore = averageHealthScore(latestWindow);
-        const previousScore = averageHealthScore(previousWindow);
-        const deltas = {
-            healthScoreDelta: Number((latestScore - previousScore).toFixed(4)),
-            expiredEntriesDelta: Number((sumMetric(latestWindow, 'expiredEntries') - sumMetric(previousWindow, 'expiredEntries')).toFixed(4)),
-            staleEntriesDelta: Number((sumMetric(latestWindow, 'staleEntries') - sumMetric(previousWindow, 'staleEntries')).toFixed(4)),
-            lowConfidenceEntriesDelta: Number((sumMetric(latestWindow, 'lowConfidenceEntries') - sumMetric(previousWindow, 'lowConfidenceEntries')).toFixed(4)),
-        };
-        if (latestWindow.length < minSamples || previousWindow.length < minSamples) {
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const limit = clamp(Math.floor(Number(request.limit) || 12), 1, 200);
+            const windowSize = clamp(Math.floor(Number(request.windowSize) || 2), 1, 50);
+            const minSamples = clamp(Math.floor(Number(request.minSamples) || 2), 1, 50);
+            const records: Array<Record<string, unknown>> = this.memoryPolicyDiagnosticsHistoryRecords
+                .slice()
+                .sort((left, right) => String(right.recordedAt || '').localeCompare(String(left.recordedAt || '')))
+                .slice(0, limit);
+            const latestWindow = records.slice(0, windowSize);
+            const previousWindow = records.slice(windowSize, windowSize * 2);
+            const averageHealthScore = (items: Array<Record<string, unknown>>): number => (
+                items.length > 0
+                    ? Number((
+                        items.reduce((sum, item) => {
+                            const summary = item.summary && typeof item.summary === 'object'
+                                ? item.summary as Record<string, unknown>
+                                : {};
+                            return sum + Number(summary.healthScore || 0);
+                        }, 0)
+                        / items.length
+                    ).toFixed(4))
+                    : 0
+            );
+            const sumMetric = (items: Array<Record<string, unknown>>, key: string): number => (
+                items.reduce((sum, item) => {
+                    const summary = item.summary && typeof item.summary === 'object'
+                        ? item.summary as Record<string, unknown>
+                        : {};
+                    return sum + Math.max(0, Number(summary[key] || 0));
+                }, 0)
+            );
+            const latestScore = averageHealthScore(latestWindow);
+            const previousScore = averageHealthScore(previousWindow);
+            const deltas = {
+                healthScoreDelta: Number((latestScore - previousScore).toFixed(4)),
+                expiredEntriesDelta: Number((sumMetric(latestWindow, 'expiredEntries') - sumMetric(previousWindow, 'expiredEntries')).toFixed(4)),
+                staleEntriesDelta: Number((sumMetric(latestWindow, 'staleEntries') - sumMetric(previousWindow, 'staleEntries')).toFixed(4)),
+                lowConfidenceEntriesDelta: Number((sumMetric(latestWindow, 'lowConfidenceEntries') - sumMetric(previousWindow, 'lowConfidenceEntries')).toFixed(4)),
+            };
+            if (latestWindow.length < minSamples || previousWindow.length < minSamples) {
+                return {
+                    status: 'insufficient_data',
+                    score: Number((latestScore / 100).toFixed(4)),
+                    confidence: Number(clamp(records.length / Math.max(1, minSamples * 2), 0, 1).toFixed(4)),
+                    summary: {
+                        reason: `Need ${minSamples} records in both windows before memory policy trend can be evaluated.`,
+                        totalRecords: records.length,
+                        evaluatedRecords: latestWindow.length,
+                        latestRecordedAt: records[0]?.recordedAt || null,
+                        oldestRecordedAt: records[records.length - 1]?.recordedAt || null,
+                    },
+                    deltas,
+                };
+            }
+            let status: 'improving' | 'stable' | 'regressing' | 'insufficient_data' = 'stable';
+            if (
+                deltas.healthScoreDelta >= 3
+                && deltas.expiredEntriesDelta <= 0
+                && deltas.staleEntriesDelta <= 0
+            ) {
+                status = 'improving';
+            } else if (
+                deltas.healthScoreDelta <= -3
+                || deltas.expiredEntriesDelta > 0
+                || deltas.staleEntriesDelta > 0
+            ) {
+                status = 'regressing';
+            }
             return {
-                status: 'insufficient_data',
+                status,
                 score: Number((latestScore / 100).toFixed(4)),
-                confidence: Number(clamp(records.length / Math.max(1, minSamples * 2), 0, 1).toFixed(4)),
+                confidence: Number(clamp(
+                    Math.min(latestWindow.length, previousWindow.length) / Math.max(1, minSamples * 2),
+                    0,
+                    1
+                ).toFixed(4)),
                 summary: {
-                    reason: `Need ${minSamples} records in both windows before memory policy trend can be evaluated.`,
+                    reason: `Health delta ${deltas.healthScoreDelta.toFixed(2)} with expired delta ${deltas.expiredEntriesDelta.toFixed(0)} and stale delta ${deltas.staleEntriesDelta.toFixed(0)}.`,
                     totalRecords: records.length,
-                    evaluatedRecords: latestWindow.length,
+                    evaluatedRecords: latestWindow.length + previousWindow.length,
                     latestRecordedAt: records[0]?.recordedAt || null,
                     oldestRecordedAt: records[records.length - 1]?.recordedAt || null,
                 },
                 deltas,
             };
-        }
-        let status: 'improving' | 'stable' | 'regressing' | 'insufficient_data' = 'stable';
-        if (
-            deltas.healthScoreDelta >= 3
-            && deltas.expiredEntriesDelta <= 0
-            && deltas.staleEntriesDelta <= 0
-        ) {
-            status = 'improving';
-        } else if (
-            deltas.healthScoreDelta <= -3
-            || deltas.expiredEntriesDelta > 0
-            || deltas.staleEntriesDelta > 0
-        ) {
-            status = 'regressing';
-        }
-        return {
-            status,
-            score: Number((latestScore / 100).toFixed(4)),
-            confidence: Number(clamp(
-                Math.min(latestWindow.length, previousWindow.length) / Math.max(1, minSamples * 2),
-                0,
-                1
-            ).toFixed(4)),
-            summary: {
-                reason: `Health delta ${deltas.healthScoreDelta.toFixed(2)} with expired delta ${deltas.expiredEntriesDelta.toFixed(0)} and stale delta ${deltas.staleEntriesDelta.toFixed(0)}.`,
-                totalRecords: records.length,
-                evaluatedRecords: latestWindow.length + previousWindow.length,
-                latestRecordedAt: records[0]?.recordedAt || null,
-                oldestRecordedAt: records[records.length - 1]?.recordedAt || null,
-            },
-            deltas,
-        };
+        });
     }
     public getQueryBackendConfig(): any {
         return {
@@ -12761,51 +12949,53 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public async updateQueryBackendConfig(request: any = {}): Promise<any> {
-        await this.ensureHydrated();
-        const previousConfig = this.getQueryBackendConfig();
-        const nextBackend = normalizeGraphQueryBackendType(
-            request.configuredBackend || request.backend || this.currentGraphQueryBackendType
-        );
-        const nextFactoryOptions: GraphQueryBackendFactoryOptions = {
-            ...this.graphQueryBackendFactoryOptions,
-            backend: nextBackend,
-        };
-        if ('localVectorIndexPath' in request) {
-            nextFactoryOptions.localVectorIndexPath = isNonEmptyString(request.localVectorIndexPath)
-                ? String(request.localVectorIndexPath).trim()
-                : undefined;
-        }
-        if ('queryVectorAnnPrefilterEnabled' in request || 'localVectorAnnPrefilterEnabled' in request) {
-            nextFactoryOptions.localVectorAnnPrefilterEnabled = (
-                request.queryVectorAnnPrefilterEnabled ?? request.localVectorAnnPrefilterEnabled
-            ) !== false;
-        }
-        if ('localVectorAccelerationAdapter' in request && request.localVectorAccelerationAdapter) {
-            nextFactoryOptions.localVectorAccelerationAdapter = request.localVectorAccelerationAdapter;
-        }
-        if ('configuredVectorAccelerationFailureMode' in request || 'localVectorAccelerationFailureMode' in request) {
-            nextFactoryOptions.localVectorAccelerationFailureMode =
-                request.configuredVectorAccelerationFailureMode ?? request.localVectorAccelerationFailureMode;
-        }
-        if (
-            'configuredVectorAccelerationRepresentationStrict' in request
-            || 'localVectorAccelerationRepresentationStrict' in request
-        ) {
-            nextFactoryOptions.localVectorAccelerationRepresentationStrict = (
-                request.configuredVectorAccelerationRepresentationStrict
-                ?? request.localVectorAccelerationRepresentationStrict
-            ) === true;
-        }
-        this.currentGraphQueryBackendType = nextBackend;
-        this.graphQueryBackendFactoryOptions = nextFactoryOptions;
-        this.graphQueryBackend = createGraphQueryBackend(nextFactoryOptions);
-        this.queryBackendLastError = '';
-        return {
-            updated: true,
-            updatedAt: this.resolveTimestamp(undefined),
-            previousConfig,
-            queryBackendConfig: this.getQueryBackendConfig(),
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            await this.ensureHydrated();
+            const previousConfig = this.getQueryBackendConfig();
+            const nextBackend = normalizeGraphQueryBackendType(
+                request.configuredBackend || request.backend || this.currentGraphQueryBackendType
+            );
+            const nextFactoryOptions: GraphQueryBackendFactoryOptions = {
+                ...this.graphQueryBackendFactoryOptions,
+                backend: nextBackend,
+            };
+            if ('localVectorIndexPath' in request) {
+                nextFactoryOptions.localVectorIndexPath = isNonEmptyString(request.localVectorIndexPath)
+                    ? String(request.localVectorIndexPath).trim()
+                    : undefined;
+            }
+            if ('queryVectorAnnPrefilterEnabled' in request || 'localVectorAnnPrefilterEnabled' in request) {
+                nextFactoryOptions.localVectorAnnPrefilterEnabled = (
+                    request.queryVectorAnnPrefilterEnabled ?? request.localVectorAnnPrefilterEnabled
+                ) !== false;
+            }
+            if ('localVectorAccelerationAdapter' in request && request.localVectorAccelerationAdapter) {
+                nextFactoryOptions.localVectorAccelerationAdapter = request.localVectorAccelerationAdapter;
+            }
+            if ('configuredVectorAccelerationFailureMode' in request || 'localVectorAccelerationFailureMode' in request) {
+                nextFactoryOptions.localVectorAccelerationFailureMode =
+                    request.configuredVectorAccelerationFailureMode ?? request.localVectorAccelerationFailureMode;
+            }
+            if (
+                'configuredVectorAccelerationRepresentationStrict' in request
+                || 'localVectorAccelerationRepresentationStrict' in request
+            ) {
+                nextFactoryOptions.localVectorAccelerationRepresentationStrict = (
+                    request.configuredVectorAccelerationRepresentationStrict
+                    ?? request.localVectorAccelerationRepresentationStrict
+                ) === true;
+            }
+            this.currentGraphQueryBackendType = nextBackend;
+            this.graphQueryBackendFactoryOptions = nextFactoryOptions;
+            this.graphQueryBackend = createGraphQueryBackend(nextFactoryOptions);
+            this.queryBackendLastError = '';
+            return {
+                updated: true,
+                updatedAt: this.resolveTimestamp(undefined),
+                previousConfig,
+                queryBackendConfig: this.getQueryBackendConfig(),
+            };
+        });
     }
 
     public getQueryBackendDiagnostics(): any {
@@ -12867,7 +13057,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             ...this.studySessionOrchestrationTutorRoutingConfig,
         };
     }
-    public async updateStudySessionOrchestrationConfig(_r: any): Promise<any> { return { updated: true }; }
+    public async updateStudySessionOrchestrationConfig(_r: any): Promise<any> {
+        return this.serializeKnowledgeStateOperation(async () => {
+            return { updated: true };
+        });
+    }
 
     private readPackageScripts(): Record<string, unknown> {
         const packagePath = path.resolve(process.cwd(), 'package.json');
@@ -13203,35 +13397,39 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     public async getFoundationReadiness(): Promise<any> {
-        return this.buildFoundationReadinessPayload();
+        return this.serializeKnowledgeStateOperation(async () => {
+            return this.buildFoundationReadinessPayload();
+        });
     }
     public async getBackendBaselineSufficiency(): Promise<any> {
-        const readiness = await this.buildFoundationReadinessPayload();
-        const checks = {
-            knowledgeGraph: {
-                passed: Boolean(readiness.baseline?.graphBackendIndependent),
-                reason: Boolean(readiness.baseline?.graphBackendIndependent)
-                    ? String(readiness.baseline?.graphBackendSignalKind || 'embedded_graphdb')
-                    : 'graph_backend_not_independent',
-            },
-            queryBackend: {
-                passed: String(readiness.baseline?.queryBackendDefaultMode || '').trim().length > 0,
-                reason: String(readiness.baseline?.queryBackendDefaultMode || '').trim().length > 0
-                    ? 'local_query_backend_available'
-                    : 'query_backend_missing',
-            },
-            vectorIndex: {
-                passed: Boolean(readiness.baseline?.vectorAdapterIndependent),
-                reason: Boolean(readiness.baseline?.vectorAdapterIndependent)
-                    ? String(readiness.baseline?.vectorAdapterSignalKind || 'embedding_ann')
-                    : 'vector_backend_not_independent',
-            },
-        };
-        return {
-            sufficient: checks.knowledgeGraph.passed && checks.queryBackend.passed && checks.vectorIndex.passed,
-            checks,
-            checkedAt: readiness.evaluatedAt,
-        };
+        return this.serializeKnowledgeStateOperation(async () => {
+            const readiness = await this.buildFoundationReadinessPayload();
+            const checks = {
+                knowledgeGraph: {
+                    passed: Boolean(readiness.baseline?.graphBackendIndependent),
+                    reason: Boolean(readiness.baseline?.graphBackendIndependent)
+                        ? String(readiness.baseline?.graphBackendSignalKind || 'embedded_graphdb')
+                        : 'graph_backend_not_independent',
+                },
+                queryBackend: {
+                    passed: String(readiness.baseline?.queryBackendDefaultMode || '').trim().length > 0,
+                    reason: String(readiness.baseline?.queryBackendDefaultMode || '').trim().length > 0
+                        ? 'local_query_backend_available'
+                        : 'query_backend_missing',
+                },
+                vectorIndex: {
+                    passed: Boolean(readiness.baseline?.vectorAdapterIndependent),
+                    reason: Boolean(readiness.baseline?.vectorAdapterIndependent)
+                        ? String(readiness.baseline?.vectorAdapterSignalKind || 'embedding_ann')
+                        : 'vector_backend_not_independent',
+                },
+            };
+            return {
+                sufficient: checks.knowledgeGraph.passed && checks.queryBackend.passed && checks.vectorIndex.passed,
+                checks,
+                checkedAt: readiness.evaluatedAt,
+            };
+        });
     }
 }
 

@@ -4,6 +4,12 @@ import * as path from 'path';
 import { KnowledgeLearningPlatform } from './KnowledgeLearningPlatform';
 import { createFileBackedKnowledgeGraphStore } from './store';
 
+function deferredSignal(): { promise: Promise<void>; resolve: () => void } {
+    let resolve!: () => void;
+    const promise = new Promise<void>((complete) => { resolve = complete; });
+    return { promise, resolve };
+}
+
 describe('KnowledgeLearningPlatform persistence', () => {
     let tempRoot: string;
     let snapshotPath: string;
@@ -17,6 +23,100 @@ describe('KnowledgeLearningPlatform persistence', () => {
 
     afterEach(() => {
         fs.rmSync(tempRoot, { recursive: true, force: true });
+    });
+
+    test('preserves an acknowledged memory write when a concurrent ingest commit fails', async () => {
+        const store = createFileBackedKnowledgeGraphStore({ filePath: snapshotPath });
+        const platform = new KnowledgeLearningPlatform({ store, nowProvider: () => new Date(nowIso) });
+        await platform.ingestKnowledge({ documents: [{
+            documentId: 'committed', sourcePath: 'isolation/committed.md',
+            content: '# Committed\nThe committed document must survive a failed write.',
+        }] });
+        const entered = deferredSignal();
+        const resume = deferredSignal();
+        jest.spyOn(store, 'saveSnapshot').mockImplementationOnce(async () => {
+            entered.resolve();
+            await resume.promise;
+            throw new Error('injected commit failure');
+        });
+        const ingest = platform.ingestKnowledge({ documents: [{
+            documentId: 'uncommitted', sourcePath: 'isolation/uncommitted.md',
+            content: '# Uncommitted\nThis document belongs to the failed commit.',
+        }] }).catch((error: Error) => error);
+        await entered.promise;
+        const visibleDocumentCount = platform.getKnowledgeState().documents;
+        const memory = platform.addConversationMemory({
+            userId: 'isolation-user', namespace: 'project', content: 'An acknowledged memory survives.',
+        });
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        resume.resolve();
+        expect(await ingest).toEqual(expect.objectContaining({ message: 'injected commit failure' }));
+        expect((await memory).added).toBe(true);
+        const reopened = new KnowledgeLearningPlatform({
+            store: createFileBackedKnowledgeGraphStore({ filePath: snapshotPath }),
+            nowProvider: () => new Date(nowIso),
+        });
+        const persisted = await reopened.listConversationMemory({ userId: 'isolation-user', namespace: 'project' });
+        expect(visibleDocumentCount).toBe(1);
+        expect(persisted.entries).toEqual(expect.arrayContaining([
+            expect.objectContaining({ content: 'An acknowledged memory survives.' }),
+        ]));
+        expect(reopened.getKnowledgeState().documents).toBe(1);
+    });
+
+    test('query and export wait for a complete committed revision', async () => {
+        const store = createFileBackedKnowledgeGraphStore({ filePath: snapshotPath });
+        const platform = new KnowledgeLearningPlatform({ store, nowProvider: () => new Date(nowIso) });
+        await platform.ingestKnowledge({ documents: [{
+            documentId: 'first', sourcePath: 'isolated/first.md', workspaceId: 'isolated', corpusId: 'isolated',
+            content: '# First\nThe initial committed document.',
+        }] });
+        const entered = deferredSignal();
+        const resume = deferredSignal();
+        const save = store.saveSnapshot.bind(store);
+        jest.spyOn(store, 'saveSnapshot').mockImplementationOnce(async (snapshot) => {
+            entered.resolve();
+            await resume.promise;
+            await save(snapshot);
+        });
+        const ingest = platform.ingestKnowledge({ documents: [{
+            documentId: 'second', sourcePath: 'isolated/second.md', workspaceId: 'isolated', corpusId: 'isolated',
+            content: '# Second\nThe second committed document.',
+        }] });
+        await entered.promise;
+        let queryCompleted = false;
+        let exportCompleted = false;
+        const query = platform.queryKnowledge({ query: 'second', scope: { documentIds: ['second'] } })
+            .then((response) => { queryCompleted = true; return response; });
+        const exported = platform.buildWorkspaceExportBundle({ workspaceId: 'isolated', exportProfileId: 'mobile-slim' })
+            .then((response) => { exportCompleted = true; return response; });
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        const completedBeforeCommit = { queryCompleted, exportCompleted };
+        resume.resolve();
+        await ingest;
+        expect((await query).items.some((item) => item.atom.documentId === 'second')).toBe(true);
+        await exported;
+        expect(completedBeforeCommit).toEqual({ queryCompleted: false, exportCompleted: false });
+    });
+
+    test('nested conversation writes commit once and the queue continues after failure', async () => {
+        const store = createFileBackedKnowledgeGraphStore({ filePath: snapshotPath });
+        const platform = new KnowledgeLearningPlatform({ store, nowProvider: () => new Date(nowIso) });
+        await platform.ingestKnowledge({ documents: [{
+            documentId: 'nested', sourcePath: 'nested.md', content: '# Nested\nNested transactions preserve memory.',
+        }] });
+        const save = jest.spyOn(store, 'saveSnapshot');
+        await platform.agentConversation({
+            userId: 'nested-user', sessionId: 'nested-session', message: 'What is nested?', persistMemory: true,
+        });
+        expect(save).toHaveBeenCalledTimes(1);
+        save.mockRejectedValueOnce(new Error('snapshot unavailable'));
+        await expect(platform.addConversationMemory({ userId: 'nested-user', content: 'must roll back' }))
+            .rejects.toThrow('snapshot unavailable');
+        await platform.addConversationMemory({ userId: 'nested-user', content: 'queue still accepts writes' });
+        const memory = await platform.listConversationMemory({ userId: 'nested-user' });
+        expect(memory.entries.some((entry: { content: string }) => entry.content === 'must roll back')).toBe(false);
+        expect(memory.entries.some((entry: { content: string }) => entry.content === 'queue still accepts writes')).toBe(true);
     });
 
     test('restores ingested graph and learner state from local file store', async () => {

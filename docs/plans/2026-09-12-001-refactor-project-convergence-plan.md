@@ -1,7 +1,7 @@
 ---
 title: "refactor: Close state, runtime, and release contracts"
 type: refactor
-status: planned
+status: in_progress
 date: 2026-09-12
 origin: docs/audits/2026-09-12-project-progress.md
 source_revision: e84d6ece9cce5b82902d4b9335ac096a136a8d2a
@@ -10,6 +10,10 @@ source_revision: e84d6ece9cce5b82902d4b9335ac096a136a8d2a
 # Project Convergence Implementation Plan / 项目收敛实施计划
 
 ## English
+
+### Execution checkpoint — 2026-09-12
+
+U1 implementation is in place: the existing platform serializes complete asynchronous state operations, nested calls reuse one operation scope, persistence is deferred to the outer commit, and synchronous state reads expose the committed projection during writes. The three new regression cases failed on the audit baseline and now pass; the persistence/platform/export suites pass 65 tests. This deliberately trades per-instance concurrency for isolation without adding a forwarding facade. Full-suite, runtime and allocation validation remain before final acceptance. U2–U8 are still in progress/not yet accepted.
 
 ### Outcome and constraints
 
@@ -195,6 +199,10 @@ Documentation policy: update this unit's English and Chinese status together; re
 <a id="chinese"></a>
 
 ## 中文
+
+### 执行检查点 — 2026-09-12
+
+U1 已实现：现有 platform 串行化完整异步状态操作，嵌套调用复用同一操作 scope，持久化延迟到外层 commit，同步状态读取在写入期间返回 committed projection。三个新增回归在审计基线上失败，现已通过；persistence/platform/export 三个套件共 65 项通过。该方案以单实例并发度换隔离性，不新增转发 facade。全量、runtime 和分配验证完成前不作最终验收；U2–U8 仍在推进/尚未验收。
 
 ### 目标与约束
 
