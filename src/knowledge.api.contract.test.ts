@@ -84,8 +84,6 @@ describe('Knowledge mastery API contract wiring', () => {
             'queryKnowledgeQueryBackendComparisonTrend',
             'queryWorkflowArtifacts',
             'executeWorkflowArtifactReviewFollowUp',
-            'getAgentConversationTurnCacheDiagnostics',
-            'getAgentConversationTurnCacheTrend',
             'getRuntimeCapabilityMatrix',
             'evaluateIngestGuardrail',
         ];
@@ -110,6 +108,10 @@ describe('Knowledge mastery API contract wiring', () => {
         runtimeRunbookOpsMethods.forEach((methodName) => {
             expect(knowledgeRoutesSource).toContain(`runtimeRunbookOps?.${methodName}`);
         });
+        expect(knowledgeRoutesSource.includes('knowledgeLearningPlatform.getAgentConversationTurnCacheDiagnostics')).toBe(false);
+        expect(knowledgeRoutesSource.includes('knowledgeLearningPlatform.getAgentConversationTurnCacheTrend')).toBe(false);
+        expect(serverSource.includes('result: getAgentConversationTurnCacheDiagnostics()')).toBe(true);
+        expect(serverSource.includes('queryAgentConversationTurnCacheAlertTrend(request)')).toBe(true);
     });
 
     test('runtime runbook modular routes forward live query parameters instead of dropping them', () => {

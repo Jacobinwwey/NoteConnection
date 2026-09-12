@@ -119,6 +119,23 @@ describe('KnowledgeLearningPlatform persistence', () => {
         expect(memory.entries.some((entry: { content: string }) => entry.content === 'queue still accepts writes')).toBe(true);
     });
 
+    test('surfaces commit and rollback failures together and retains the prior state for recovery', async () => {
+        const store = createFileBackedKnowledgeGraphStore({ filePath: snapshotPath });
+        const platform = new KnowledgeLearningPlatform({ store });
+        await platform.ingestKnowledge({ documents: [{ documentId: 'prior', sourcePath: 'prior.md', content: '# Prior\nAcknowledged state.' }] });
+        const save = jest.spyOn(store, 'saveSnapshot')
+            .mockRejectedValueOnce(new Error('commit storage unavailable'))
+            .mockRejectedValueOnce(new Error('rollback storage unavailable'));
+        await expect(platform.ingestKnowledge({ documents: [{ documentId: 'failed', sourcePath: 'failed.md', content: '# Failed\nUncommitted state.' }] }))
+            .rejects.toThrow('commit storage unavailable; rollback: rollback storage unavailable');
+        expect(platform.getKnowledgeState().documents).toBe(1);
+        save.mockRestore();
+        expect((await platform.addConversationMemory({ userId: 'recovery', content: 'Recovered after storage became available.' })).added).toBe(true);
+        const reopened = new KnowledgeLearningPlatform({ store: createFileBackedKnowledgeGraphStore({ filePath: snapshotPath }) });
+        expect((await reopened.queryKnowledge({ query: 'Acknowledged state' })).items.some(item => item.atom.documentId === 'prior')).toBe(true);
+        expect(reopened.getKnowledgeState().documents).toBe(1);
+    });
+
     test('restores ingested graph and learner state from local file store', async () => {
         const store = createFileBackedKnowledgeGraphStore({ filePath: snapshotPath });
         const platformA = new KnowledgeLearningPlatform({

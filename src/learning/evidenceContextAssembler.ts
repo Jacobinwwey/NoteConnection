@@ -216,27 +216,22 @@ function splitSourceLines(content: string, execution?: AgentConversationExecutio
     if (!normalizedContent) {
         return [];
     }
-    const lines = normalizedContent.split(/\r\n|\n|\r/);
-    execution?.checkSourceLineCount(lines.length);
     const records: SourceLine[] = [];
+    const newline = /\r\n|\n|\r/g;
     let cursor = 0;
-    lines.forEach((line, index) => {
-        const startOffset = cursor;
-        const endOffset = startOffset + line.length;
+    let delimiter: RegExpExecArray | null;
+    while ((delimiter = newline.exec(normalizedContent)) !== null) {
+        execution?.checkSourceLineCount(records.length + 1);
         records.push({
-            lineNumber: index + 1,
-            text: line,
-            startOffset,
-            endOffset,
+            lineNumber: records.length + 1,
+            text: normalizedContent.slice(cursor, delimiter.index),
+            startOffset: cursor,
+            endOffset: delimiter.index,
         });
-        if (normalizedContent.startsWith('\r\n', endOffset)) {
-            cursor = endOffset + 2;
-        } else if (normalizedContent[endOffset] === '\n' || normalizedContent[endOffset] === '\r') {
-            cursor = endOffset + 1;
-        } else {
-            cursor = endOffset;
-        }
-    });
+        cursor = delimiter.index + delimiter[0].length;
+    }
+    execution?.checkSourceLineCount(records.length + 1);
+    records.push({ lineNumber: records.length + 1, text: normalizedContent.slice(cursor), startOffset: cursor, endOffset: normalizedContent.length });
     return records;
 }
 

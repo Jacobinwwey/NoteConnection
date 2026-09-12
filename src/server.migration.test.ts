@@ -1049,6 +1049,47 @@ describe('server migration settings routes', () => {
     expect(mobileResponse.body.result.summary.responseBudgetMode).toBe('adaptive');
   });
 
+  test('disconnecting one joined consumer does not cancel the remaining consumer or duplicate execution', async () => {
+    const { KnowledgeLearningPlatform } = require('./learning/KnowledgeLearningPlatform');
+    const original = KnowledgeLearningPlatform.prototype.runAgentConversation;
+    const started = deferred();
+    const held = deferred();
+    let signal: AbortSignal | undefined;
+    const run = jest.spyOn(KnowledgeLearningPlatform.prototype, 'runAgentConversation').mockImplementationOnce(async function(this: any, ...args: unknown[]) {
+      signal = args[1] as AbortSignal;
+      started.resolve();
+      await held.promise;
+      return original.apply(this, args);
+    });
+    const before = await requestJson(port, 'GET', '/api/knowledge/conversation/turn-cache/diagnostics');
+    const previousJoins = before.body.result.counters.inFlightJoinCount;
+    const payload = { userId: 'joined-consumer', message: 'Financial overview', persistMemory: false };
+    const headers = { 'x-agent-conversation-turn-id': 'turn_joined_consumer' };
+    const client = http.request({ host: '127.0.0.1', port, path: '/api/knowledge/conversation', method: 'POST', headers: {
+      ...headers, 'content-type': 'application/json', accept: 'text/event-stream',
+    } }, response => response.resume());
+    client.on('error', () => undefined);
+    let second: Promise<JsonResponse> | undefined;
+    try {
+      client.end(JSON.stringify(payload));
+      await started.promise;
+      second = requestJson(port, 'POST', '/api/knowledge/conversation', payload, headers);
+      const deadline = Date.now() + 2000;
+      let joins = previousJoins;
+      while (joins === previousJoins && Date.now() < deadline) {
+        joins = (await requestJson(port, 'GET', '/api/knowledge/conversation/turn-cache/diagnostics')).body.result.counters.inFlightJoinCount;
+        if (joins === previousJoins) await new Promise(resolve => setTimeout(resolve, 5));
+      }
+      expect(joins).toBeGreaterThan(previousJoins);
+      client.destroy();
+      await new Promise(resolve => setTimeout(resolve, 25));
+      expect(signal?.aborted).toBe(false);
+      held.resolve();
+      expect((await second).status).toBe(200);
+      expect(run).toHaveBeenCalledTimes(1);
+    } finally { held.resolve(); client.destroy(); await second; run.mockRestore(); }
+  });
+
   test('conversation JSON and SSE responses preserve an explicit Chinese answer language for an English no-match query', async () => {
     const requestPayload = {
       userId: 'server_language_no_match_user',

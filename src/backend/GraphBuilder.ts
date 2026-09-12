@@ -397,6 +397,7 @@ export class GraphBuilder {
       const targetIds = files.map(f => f.filename);
 
       const workerPromises: Promise<void>[] = [];
+      const matchingWorkers: Worker[] = [];
       const workerRuntime = resolveWorkerRuntimePath(__dirname, 'workers/keywordMatchWorker.ts');
       const actualWorkerPath = workerRuntime.workerPath;
       const isTsNode = workerRuntime.isTsNode;
@@ -443,6 +444,7 @@ export class GraphBuilder {
                       workerData: workerPayload,
                       execArgv
                   });
+                  matchingWorkers.push(worker);
 
                   worker.on('message', (results: {source: string, target: string}[]) => {
                       results.forEach(res => {
@@ -476,7 +478,9 @@ export class GraphBuilder {
         console.log(`[GraphBuilder] Parallel matching complete.`);
       } catch (err) {
           console.error('[GraphBuilder] Parallel matching failed, falling back to sequential.', err);
-          // Fallback
+          // No worker may append edges while downstream graph analysis sees the fallback.
+          await Promise.allSettled(matchingWorkers.map(worker => worker.terminate()));
+          await Promise.allSettled(workerPromises);
           this.runSequentialMatching(files, graph);
       }
   }
