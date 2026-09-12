@@ -47,6 +47,38 @@ describe('vector acceleration adapter', () => {
         expect(adapter).toBeUndefined();
     });
 
+    test.each(['syncIndex', 'selectCandidates'] as const)('cancels %s HTTP without retry or circuit failure', async operation => {
+        const controller = new AbortController();
+        const cancelled = new Error('turn_cancelled');
+        const fetchMock = jest.fn((_url, init) => new Promise((_resolve, reject) => {
+            const signal = init.signal as AbortSignal;
+            signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+            controller.abort(cancelled);
+        }));
+        globalThis.fetch = fetchMock as unknown as typeof fetch;
+        const adapter = createVectorAccelerationAdapter('external_http', {
+            externalHttp: { endpoint: 'http://127.0.0.1:18080', maxRetries: 3 },
+        })!;
+        const input = { ...baseSelectionInput, signal: controller.signal };
+        await expect(adapter[operation]!(input)).rejects.toBe(cancelled);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(fetchMock.mock.calls[0][1].body)).not.toHaveProperty('signal');
+        expect(adapter.getHealth?.().consecutiveFailures).toBe(0);
+    });
+
+    test('cancels the connector retry delay before a second request', async () => {
+        const controller = new AbortController();
+        const cancelled = new Error('turn_cancelled');
+        globalThis.fetch = jest.fn().mockRejectedValue(new Error('socket_hang_up'));
+        const adapter = createVectorAccelerationAdapter('external_http', {
+            externalHttp: { endpoint: 'http://127.0.0.1:18080', maxRetries: 3, retryDelayMs: 1000 },
+        })!;
+        const result = Promise.resolve(adapter.selectCandidates({ ...baseSelectionInput, signal: controller.signal }));
+        setImmediate(() => controller.abort(cancelled));
+        await expect(result).rejects.toBe(cancelled);
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+
     test('external stub adapter selects token-based candidates for large corpus', async () => {
         const adapter = createVectorAccelerationAdapter('external_stub');
         expect(adapter).toBeDefined();

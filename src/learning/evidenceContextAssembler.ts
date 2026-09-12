@@ -10,6 +10,7 @@ import type {
 } from './types';
 import { buildRagContextPack, estimateRagTokenCount } from './ragContextPack';
 import { conditionRagFragmentsByGraphPlan } from './graphConditionedContext';
+import type { AgentConversationExecution } from './agentConversationExecution';
 
 export interface RagEvidenceSourceLookup {
     documentId: string;
@@ -19,6 +20,7 @@ export interface RagEvidenceSourceLookup {
 }
 
 export interface RagEvidenceSourceDocument {
+    unavailableReason?: string;
     documentId: string;
     sourcePath: string;
     content: string;
@@ -31,6 +33,7 @@ export type RagEvidenceSourceResolver = (
 ) => RagEvidenceSourceDocument | null | Promise<RagEvidenceSourceDocument | null>;
 
 export interface AssembleRagEvidenceContextParams {
+    execution?: AgentConversationExecution;
     query: string;
     items: KnowledgeQueryItem[];
     graphNeighborItems?: KnowledgeQueryItem[];
@@ -190,6 +193,17 @@ function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+function finishEvidenceFragment(fragment: RagEvidenceFragment, execution?: AgentConversationExecution): RagEvidenceFragment {
+    if (!execution) return fragment;
+    execution.recordFragment();
+    if (fragment.text.length <= execution.maxFragmentChars) return fragment;
+    const text = fragment.text.slice(0, execution.maxFragmentChars);
+    return {
+        ...fragment, text, charCount: text.length, tokenEstimate: estimateRagTokenCount(text),
+        truncated: true, truncationReason: 'runtime_fragment_chars_limit',
+    };
+}
+
 function sanitizeFragmentPart(value: string): string {
     return normalizeWhitespace(value)
         .replace(/[^a-zA-Z0-9_-]+/g, '_')
@@ -197,12 +211,13 @@ function sanitizeFragmentPart(value: string): string {
         .slice(0, 80) || 'fragment';
 }
 
-function splitSourceLines(content: string): SourceLine[] {
+function splitSourceLines(content: string, execution?: AgentConversationExecution): SourceLine[] {
     const normalizedContent = String(content || '');
     if (!normalizedContent) {
         return [];
     }
     const lines = normalizedContent.split(/\r\n|\n|\r/);
+    execution?.checkSourceLineCount(lines.length);
     const records: SourceLine[] = [];
     let cursor = 0;
     lines.forEach((line, index) => {
@@ -230,8 +245,8 @@ function isTableLine(text: string): boolean {
     return trimmed.startsWith('|') && trimmed.endsWith('|');
 }
 
-function parseMarkdownBlocks(content: string): SourceBlock[] {
-    const sourceLines = splitSourceLines(content);
+function parseMarkdownBlocks(content: string, execution?: AgentConversationExecution): SourceBlock[] {
+    const sourceLines = splitSourceLines(content, execution);
     const blocks: SourceBlock[] = [];
     const headingStack: Array<{ level: number; title: string }> = [];
     let pendingLines: SourceLine[] = [];
@@ -264,6 +279,7 @@ function parseMarkdownBlocks(content: string): SourceBlock[] {
     };
 
     sourceLines.forEach((line) => {
+        execution?.assertActive();
         const rawText = String(line.text || '');
         const trimmed = rawText.trim();
         const fenceLine = /^```/.test(trimmed);
@@ -632,6 +648,7 @@ function normalizeComparableStatusCodeValue(value: string): string | null {
 }
 
 function extractComparableEvidenceFacts(params: {
+    execution?: AgentConversationExecution;
     block: SourceBlock;
     citationIds: string[];
     item: KnowledgeQueryItem;
@@ -640,6 +657,10 @@ function extractComparableEvidenceFacts(params: {
         return [];
     }
     const facts: ComparableEvidenceFact[] = [];
+    const appendFact = (fact: ComparableEvidenceFact): void => {
+        params.execution?.recordSourceFact();
+        facts.push(fact);
+    };
     for (const match of String(params.block.text || '').matchAll(COMPARABLE_NUMERIC_FACT_PATTERN)) {
         const subjectLabel = normalizeWhitespace(match[1]);
         const scopeKeys = comparableFactScopeKeys(
@@ -652,7 +673,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !Number.isFinite(value) || !unit) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey: `${Number(value.toFixed(12))}:${unit}`,
@@ -674,7 +695,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !Number.isFinite(value)) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey: `${Number(value.toFixed(12))}`,
@@ -696,7 +717,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !valueKey) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey,
@@ -718,7 +739,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !stateValue) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey: `${subjectKey}:${stateValue.groupKey}`,
             subjectLabel,
             valueKey: stateValue.valueKey,
@@ -740,7 +761,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !valueKey) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey,
@@ -762,7 +783,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !valueKey) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey,
@@ -784,7 +805,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !valueKey) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey,
@@ -806,7 +827,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !valueKey) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey,
@@ -828,7 +849,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !valueKey) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey,
@@ -850,7 +871,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !valueKey) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey,
@@ -872,7 +893,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !valueKey) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey,
@@ -894,7 +915,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !valueKey) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey,
@@ -916,7 +937,7 @@ function extractComparableEvidenceFacts(params: {
         if (!subjectKey || !valueKey) {
             continue;
         }
-        facts.push({
+        appendFact({
             subjectKey,
             subjectLabel,
             valueKey,
@@ -951,11 +972,13 @@ function buildBlockCitationMap(
 
 function extractComparableEvidenceFactsFromBlockEntries(
     entries: Array<{ block: SourceBlock; item: KnowledgeQueryItem }>,
-    citationIdsByBlock: Map<string, Set<string>>
+    citationIdsByBlock: Map<string, Set<string>>,
+    execution?: AgentConversationExecution
 ): ComparableEvidenceFact[] {
     return entries
         .sort((left, right) => left.block.startOffset - right.block.startOffset)
         .flatMap(({ block, item }) => extractComparableEvidenceFacts({
+            execution,
             block,
             item,
             citationIds: Array.from(citationIdsByBlock.get(sourceBlockKey(block)) || []),
@@ -995,9 +1018,10 @@ function buildEvidenceItemMap(
 function collectSelectedContextComparableFacts(
     group: DocumentEvidenceGroup,
     source: RagEvidenceSourceDocument,
-    paragraphWindow: number
+    paragraphWindow: number,
+    blocks: SourceBlock[],
+    execution?: AgentConversationExecution,
 ): ComparableEvidenceFact[] {
-    const blocks = parseMarkdownBlocks(source.content);
     const citationIdsByBlock = buildBlockCitationMap(group, blocks, source);
     const selectedBlocks = new Map<string, { block: SourceBlock; item: KnowledgeQueryItem }>();
 
@@ -1012,18 +1036,19 @@ function collectSelectedContextComparableFacts(
             });
         });
 
-    return extractComparableEvidenceFactsFromBlockEntries(Array.from(selectedBlocks.values()), citationIdsByBlock);
+    return extractComparableEvidenceFactsFromBlockEntries(Array.from(selectedBlocks.values()), citationIdsByBlock, execution);
 }
 
 function collectFullDocumentComparableFacts(
     group: DocumentEvidenceGroup,
-    source: RagEvidenceSourceDocument
+    source: RagEvidenceSourceDocument,
+    blocks: SourceBlock[],
+    execution?: AgentConversationExecution,
 ): ComparableEvidenceFact[] {
     const fallbackItem = selectRepresentativeGroupItem(group);
     if (!fallbackItem) {
         return [];
     }
-    const blocks = parseMarkdownBlocks(source.content);
     const citationIdsByBlock = buildBlockCitationMap(group, blocks, source);
     const evidenceItemByBlock = buildEvidenceItemMap(group, blocks, source);
     return extractComparableEvidenceFactsFromBlockEntries(
@@ -1031,7 +1056,8 @@ function collectFullDocumentComparableFacts(
             block,
             item: evidenceItemByBlock.get(sourceBlockKey(block)) || fallbackItem,
         })),
-        citationIdsByBlock
+        citationIdsByBlock,
+        execution,
     );
 }
 
@@ -1042,7 +1068,8 @@ function comparableFactDocumentKey(fact: ComparableEvidenceFact): string {
 function buildConflictFragments(
     group: DocumentEvidenceGroup,
     facts: ComparableEvidenceFact[],
-    paragraphWindow: number
+    paragraphWindow: number,
+    execution?: AgentConversationExecution,
 ): RagEvidenceFragment[] {
     const fragments: RagEvidenceFragment[] = [];
     const seenConflicts = new Set<string>();
@@ -1082,7 +1109,7 @@ function buildConflictFragments(
                 `Conflicting evidence for ${left.subjectLabel}:`,
                 ...conflictBlockTexts,
             ].join('\n');
-            fragments.push({
+            fragments.push(finishEvidenceFragment({
                 fragmentId: `rag_conflict_${sanitizeFragmentPart(group.documentId)}_${fragments.length + 1}`,
                 role: 'conflict',
                 text,
@@ -1105,14 +1132,14 @@ function buildConflictFragments(
                 ])),
                 score: Number(Math.max(Number(left.item.score || 0), Number(right.item.score || 0)).toFixed(4)),
                 sourceBoundary: 'full_document',
-            });
+            }, execution));
         });
     });
 
     return fragments;
 }
 
-function buildCrossDocumentConflictFragments(facts: ComparableEvidenceFact[]): RagEvidenceFragment[] {
+function buildCrossDocumentConflictFragments(facts: ComparableEvidenceFact[], execution?: AgentConversationExecution): RagEvidenceFragment[] {
     const orderedFacts = facts.slice().sort((left, right) => {
         const sourceDelta = String(left.item.atom.sourcePath || '').localeCompare(String(right.item.atom.sourcePath || ''));
         if (sourceDelta !== 0) {
@@ -1124,6 +1151,7 @@ function buildCrossDocumentConflictFragments(facts: ComparableEvidenceFact[]): R
     const seenConflicts = new Set<string>();
 
     orderedFacts.forEach((left, leftIndex) => {
+        execution?.assertActive();
         orderedFacts.slice(leftIndex + 1).forEach((right) => {
             if (comparableFactDocumentKey(left) === comparableFactDocumentKey(right)) {
                 return;
@@ -1152,7 +1180,7 @@ function buildCrossDocumentConflictFragments(facts: ComparableEvidenceFact[]): R
                 `${left.item.atom.title}: ${left.block.text}`,
                 `${right.item.atom.title}: ${right.block.text}`,
             ].join('\n');
-            fragments.push({
+            fragments.push(finishEvidenceFragment({
                 fragmentId: `rag_conflict_cross_document_${sanitizeFragmentPart(left.item.atom.documentId)}_${sanitizeFragmentPart(right.item.atom.documentId)}_${fragments.length + 1}`,
                 role: 'conflict',
                 text,
@@ -1171,7 +1199,7 @@ function buildCrossDocumentConflictFragments(facts: ComparableEvidenceFact[]): R
                 ])),
                 score: Number(Math.max(Number(left.item.score || 0), Number(right.item.score || 0)).toFixed(4)),
                 sourceBoundary: 'full_document',
-            });
+            }, execution));
         });
     });
 
@@ -1208,10 +1236,11 @@ function buildDirectFragment(
     item: KnowledgeQueryItem,
     span: EvidenceSpan,
     index: number,
-    role: 'direct_support' | 'graph_neighbor_support' = 'direct_support'
+    role: 'direct_support' | 'graph_neighbor_support' = 'direct_support',
+    execution?: AgentConversationExecution,
 ): RagEvidenceFragment {
     const text = normalizeWhitespace(String(span.snippet || item.atom.content || item.atom.title || ''));
-    return {
+    return finishEvidenceFragment({
         fragmentId: `${role === 'graph_neighbor_support' ? 'rag_graph_neighbor' : 'rag_direct'}_${sanitizeFragmentPart(item.atom.documentId)}_${sanitizeFragmentPart(span.id || String(index + 1))}`,
         role,
         text,
@@ -1231,7 +1260,7 @@ function buildDirectFragment(
         relationEdgeIds: item.relationPath.map((edge) => edge.id),
         score: Number(Number(item.score || 0).toFixed(4)),
         sourceBoundary: 'direct_span_only',
-    };
+    }, execution);
 }
 
 function groupItemsByDocument(
@@ -1287,7 +1316,7 @@ async function resolveDocumentSource(
         atomIds,
         citationIds,
     });
-    if (!source || !String(source.content || '').trim()) {
+    if (!source || (!source.unavailableReason && !String(source.content || '').trim())) {
         return null;
     }
     return {
@@ -1301,9 +1330,10 @@ async function resolveDocumentSource(
 function buildParentFragments(
     group: DocumentEvidenceGroup,
     source: RagEvidenceSourceDocument,
-    paragraphWindow: number
+    paragraphWindow: number,
+    blocks: SourceBlock[],
+    execution?: AgentConversationExecution,
 ): RagEvidenceFragment[] {
-    const blocks = parseMarkdownBlocks(source.content);
     const parentDrafts = new Map<string, ParentFragmentDraft>();
 
     group.entries
@@ -1354,7 +1384,7 @@ function buildParentFragments(
         const fragmentPrefix = draft.role === 'graph_neighbor_support'
             ? 'rag_graph_neighbor_context'
             : 'rag_parent';
-        return {
+        return finishEvidenceFragment({
             fragmentId: `${fragmentPrefix}_${sanitizeFragmentPart(draft.documentId)}_${index + 1}`,
             role: draft.role,
             text,
@@ -1374,7 +1404,7 @@ function buildParentFragments(
             relationEdgeIds: Array.from(draft.relationEdgeIds),
             score: Number(Number(draft.score || 0).toFixed(4)),
             sourceBoundary: 'full_document',
-        };
+        }, execution);
     }).filter((fragment) => fragment.text.length > 0);
 }
 
@@ -1383,59 +1413,66 @@ export async function assembleRagEvidenceContext(params: AssembleRagEvidenceCont
     const decisions: RagSourceDecision[] = [];
     const rawFragments: RagEvidenceFragment[] = [];
     const fullDocumentComparableFacts: ComparableEvidenceFact[] = [];
+    const execution = params.execution;
     let readFullDocument = false;
-
     const groups = groupItemsByDocument(
         Array.isArray(params.items) ? params.items : [],
         Array.isArray(params.graphNeighborItems) ? params.graphNeighborItems : []
     );
+
     for (const group of groups) {
-        group.entries.forEach((entry) => {
-            const item = entry.item;
-            itemEvidenceSpans(item).forEach((span, spanIndex) => {
-                rawFragments.push(buildDirectFragment(item, span, rawFragments.length + spanIndex, entry.directRole));
+        await execution?.yieldCheckpoint();
+        try {
+            group.entries.forEach(entry => {
+                itemEvidenceSpans(entry.item).forEach((span, spanIndex) => {
+                    rawFragments.push(buildDirectFragment(entry.item, span, rawFragments.length + spanIndex, entry.directRole, execution));
+                });
             });
-        });
-
-        const source = await resolveDocumentSource(group, params.sourceResolver);
-        if (!source) {
-            const unavailableRoles = Array.from(new Set(
-                group.entries
-                    .map((entry) => entry.directRole)
-                    .filter(Boolean)
-            )).join(',');
+            const source = await resolveDocumentSource(group, params.sourceResolver);
+            execution?.assertActive();
+            if (!source || source.unavailableReason) {
+                const unavailableRoles = Array.from(new Set(group.entries.map(entry => entry.directRole))).join(',');
+                decisions.push({
+                    documentId: group.documentId, sourcePath: group.sourcePath,
+                    sourceBoundary: 'direct_span_only', status: 'source_window_unavailable',
+                    reason: source?.unavailableReason || `source_resolver_returned_no_content:${unavailableRoles}`,
+                });
+                continue;
+            }
+            readFullDocument = true;
+            const blocks = parseMarkdownBlocks(source.content, execution);
+            rawFragments.push(...buildParentFragments(group, source, paragraphWindow, blocks, execution));
+            const selectedFacts = collectSelectedContextComparableFacts(group, source, paragraphWindow, blocks, execution);
+            fullDocumentComparableFacts.push(...collectFullDocumentComparableFacts(group, source, blocks, execution));
+            rawFragments.push(...buildConflictFragments(group, selectedFacts, paragraphWindow, execution));
             decisions.push({
-                documentId: group.documentId,
-                sourcePath: group.sourcePath,
-                sourceBoundary: 'direct_span_only',
-                status: 'source_window_unavailable',
-                reason: unavailableRoles
-                    ? `source_resolver_returned_no_content:${unavailableRoles}`
-                    : 'source_resolver_returned_no_content',
+                documentId: group.documentId, sourcePath: group.sourcePath,
+                sourceBoundary: 'full_document', status: 'read', charsRead: source.content.length,
             });
-            continue;
+        } catch (error) {
+            if (!execution || !execution.isResourceLimit(error)) throw error;
+            decisions.push({
+                documentId: group.documentId, sourcePath: group.sourcePath,
+                sourceBoundary: 'direct_span_only', status: 'source_window_unavailable', reason: error.code,
+            });
+            if (error.code === 'runtime_fragment_limit') break;
         }
-        readFullDocument = true;
-        decisions.push({
-            documentId: group.documentId,
-            sourcePath: group.sourcePath,
-            sourceBoundary: 'full_document',
-            status: 'read',
-            charsRead: source.content.length,
-        });
-        rawFragments.push(...buildParentFragments(group, source, paragraphWindow));
-        const selectedContextComparableFacts = collectSelectedContextComparableFacts(group, source, paragraphWindow);
-        fullDocumentComparableFacts.push(...collectFullDocumentComparableFacts(group, source));
-        rawFragments.push(...buildConflictFragments(group, selectedContextComparableFacts, paragraphWindow));
     }
-    rawFragments.push(...buildCrossDocumentConflictFragments(fullDocumentComparableFacts));
-
+    try {
+        rawFragments.push(...buildCrossDocumentConflictFragments(fullDocumentComparableFacts, execution));
+    } catch (error) {
+        if (!execution || !execution.isResourceLimit(error)) throw error;
+        decisions.push({
+            documentId: 'cross_document_conflicts', sourcePath: '',
+            sourceBoundary: 'direct_span_only', status: 'source_window_unavailable', reason: error.code,
+        });
+    }
+    execution?.assertActive();
     const candidateFragments = limitGraphNeighborDocumentContextFragments(rawFragments);
     const graphConditioning = conditionRagFragmentsByGraphPlan({
         fragments: candidateFragments,
         graphAnswerPlan: params.graphAnswerPlan,
     });
-
     return buildRagContextPack({
         query: params.query,
         generatedAt: params.generatedAt,

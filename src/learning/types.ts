@@ -1428,6 +1428,22 @@ export interface AgentConversationRuntimeGovernor {
     maxSerializedBytes: number;
     maxFragmentsProcessed: number;
     maxReportChars: number;
+    maxSourceBytes?: number;
+    maxTotalSourceBytes?: number;
+}
+
+export interface AgentConversationExecutionDiagnostics {
+    elapsedMs: number;
+    timeoutMs: number;
+    maxSourceBytes: number;
+    maxTotalSourceBytes: number;
+    sourceBytes: number;
+    sourceReads: number;
+    processedFragments: number;
+    maxSourceLines: number;
+    maxSourceFacts: number;
+    sourceFacts: number;
+    truncationReason?: string;
 }
 
 export interface AgentConversationBudget {
@@ -1577,6 +1593,7 @@ export interface AgentConversationMemoryAction {
 }
 
 export interface AgentConversationTrace {
+    responseExecution?: AgentConversationExecutionDiagnostics;
     sessionId: string;
     invocationId: string;
     retrieval: KnowledgeQueryResponse['trace'];

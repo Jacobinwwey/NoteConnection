@@ -19,6 +19,7 @@ type GraphQueryTemporalSignal = {
 };
 
 export interface GraphQueryBackendContext {
+    signal?: AbortSignal;
     request: KnowledgeQueryRequest;
     query: string;
     queryTokens: string[];
@@ -274,6 +275,7 @@ export type LocalVectorAccelerationAdapterHealth = {
 };
 
 export type LocalVectorAccelerationSelectionInput = {
+    signal?: AbortSignal;
     atomCount: number;
     queryTokens: string[];
     queryWeights: ReadonlyMap<string, number>;
@@ -309,6 +311,7 @@ export type LocalVectorAccelerationSelectionOutput = {
 };
 
 export type LocalVectorAccelerationIndexSyncInput = {
+    signal?: AbortSignal;
     atomCount: number;
     tokenToAtomIds: ReadonlyMap<string, string[]>;
     signatureBuckets: ReadonlyMap<string, string[]>;
@@ -1464,6 +1467,7 @@ const DEFAULT_LOCAL_VECTOR_ACCELERATION_ADAPTER: LocalVectorAccelerationAdapter 
 };
 
 async function selectLocalVectorAnnCandidates(params: {
+    signal?: AbortSignal;
     index: LocalVectorIndexState;
     queryTokens: string[];
     queryWeights: Map<string, number>;
@@ -1474,8 +1478,10 @@ async function selectLocalVectorAnnCandidates(params: {
 }): Promise<LocalVectorAnnCandidateSelection> {
     const adapterId = String(params.accelerationAdapter?.id || '').trim() || LOCAL_VECTOR_ACCELERATION_ADAPTER_ID;
     try {
+        params.signal?.throwIfAborted();
         if (typeof params.accelerationAdapter.syncIndex === 'function') {
             await params.accelerationAdapter.syncIndex({
+                signal: params.signal,
                 atomCount: params.index.atomCount,
                 tokenToAtomIds: params.index.tokenToAtomIds,
                 signatureBuckets: params.index.signatureBuckets,
@@ -1485,7 +1491,9 @@ async function selectLocalVectorAnnCandidates(params: {
                 indexSignature: params.index.signature,
             });
         }
+        params.signal?.throwIfAborted();
         const rawSelection = await params.accelerationAdapter.selectCandidates({
+            signal: params.signal,
             atomCount: params.index.atomCount,
             queryTokens: [...params.queryTokens],
             queryWeights: params.queryWeights,
@@ -1498,6 +1506,7 @@ async function selectLocalVectorAnnCandidates(params: {
             embeddingDimension: params.index.documentFrequency.size,
             indexSignature: params.index.signature,
         });
+        params.signal?.throwIfAborted();
         const mode: LocalVectorAccelerationSelectionMode = (
             rawSelection?.mode === 'token_prefilter'
             || rawSelection?.mode === 'token_signature_prefilter'
@@ -1520,6 +1529,7 @@ async function selectLocalVectorAnnCandidates(params: {
             adapterId,
         };
     } catch (error) {
+        params.signal?.throwIfAborted();
         const normalizedError = String((error as Error)?.message || error || 'unknown_error')
             .replace(/\s+/g, ' ')
             .trim()
@@ -1546,7 +1556,11 @@ export class LocalHybridGraphQueryBackend implements GraphQueryBackend {
         const graphFeatureIndex = buildGraphFeatureIndex(context, querySemanticTokens);
 
         const candidates: GraphQueryCandidate[] = [];
-        context.atoms.forEach((atom) => {
+        for (const [candidateIndex, atom] of context.atoms.entries()) {
+            if (context.signal && candidateIndex % 128 === 0) {
+                await new Promise<void>(resolve => setImmediate(resolve));
+                context.signal.throwIfAborted();
+            }
             const titleLower = atom.title.toLowerCase();
             const contentLower = atom.content.toLowerCase();
             const keywordMatches = context.queryTokens.filter((token) => atom.keywords.includes(token)).length;
@@ -1563,7 +1577,7 @@ export class LocalHybridGraphQueryBackend implements GraphQueryBackend {
                     score: Number(clamp(score, 0, 100).toFixed(4)),
                 });
             }
-        });
+        }
 
         candidates.sort((left, right) => right.score - left.score);
         const maxCandidates = Math.max(context.topK, Math.min(context.atoms.length, context.topK * 4));
@@ -1596,7 +1610,11 @@ export class KeywordOnlyGraphQueryBackend implements GraphQueryBackend {
     public async query(context: GraphQueryBackendContext): Promise<GraphQueryBackendResult> {
         const queryVariants = buildQueryTextVariants(context);
         const candidates: GraphQueryCandidate[] = [];
-        context.atoms.forEach((atom) => {
+        for (const [candidateIndex, atom] of context.atoms.entries()) {
+            if (context.signal && candidateIndex % 128 === 0) {
+                await new Promise<void>(resolve => setImmediate(resolve));
+                context.signal.throwIfAborted();
+            }
             const titleLower = atom.title.toLowerCase();
             const contentLower = atom.content.toLowerCase();
             const keywordMatches = context.queryTokens.filter((token) => atom.keywords.includes(token)).length;
@@ -1609,7 +1627,7 @@ export class KeywordOnlyGraphQueryBackend implements GraphQueryBackend {
                     score: Number(clamp(score, 0, 100).toFixed(4)),
                 });
             }
-        });
+        }
         candidates.sort((left, right) => right.score - left.score);
         const maxCandidates = Math.max(context.topK, Math.min(context.atoms.length, context.topK * 4));
         return {
@@ -1772,6 +1790,7 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
         let annCandidateSelection: LocalVectorAnnCandidateSelection;
         try {
             annCandidateSelection = await selectLocalVectorAnnCandidates({
+                signal: context.signal,
                 index,
                 queryTokens: querySemanticTokens,
                 queryWeights,
@@ -1857,10 +1876,14 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
         };
         const candidates: GraphQueryCandidate[] = [];
 
-        atomIdsToScore.forEach((atomId) => {
+        for (const [candidateIndex, atomId] of atomIdsToScore.entries()) {
+            if (context.signal && candidateIndex % 128 === 0) {
+                await new Promise<void>(resolve => setImmediate(resolve));
+                context.signal.throwIfAborted();
+            }
             const entry = index.entriesByAtomId.get(atomId);
             if (!entry) {
-                return;
+                continue;
             }
             const cosineSimilarity = computeCosineSimilarity(queryWeights, entry.weights);
             const semanticOverlap = computeJaccard(querySemanticTokens, entry.tokens);
@@ -1870,13 +1893,13 @@ export class LocalVectorGraphQueryBackend implements GraphQueryBackend {
                 : 0;
             const score = (cosineSimilarity * 4.2) + (semanticOverlap * 1.1) + graphFeatureBonus + signatureBonus;
             if (score <= 0) {
-                return;
+                continue;
             }
             candidates.push({
                 atomId,
                 score: Number(clamp(score, 0, 100).toFixed(4)),
             });
-        });
+        }
 
         candidates.sort((left, right) => right.score - left.score);
         const maxCandidates = Math.max(context.topK, Math.min(context.atoms.length, context.topK * 4));

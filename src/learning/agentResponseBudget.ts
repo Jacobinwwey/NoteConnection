@@ -226,3 +226,13 @@ export function applyRuntimeGovernor(input: RuntimeGovernorInput): RuntimeGovern
     }
     return { allowed: true, truncated: false };
 }
+
+export function resolveHostedAgentResponseBudget(
+    input: ResolveAgentResponseBudgetInput,
+    hostCapability: AgentConversationResponseBudgetCapability | undefined,
+): AgentConversationBudget {
+    const requested = resolveAgentResponseBudget(input);
+    const ceiling = resolveAgentResponseBudget({ ...input, capability: hostCapability });
+    const rank: Record<AgentConversationBudgetTier, number> = { standard: 0, extended: 1, max: 2, unbounded: 3 };
+    return rank[requested.tier] <= rank[ceiling.tier] ? requested : ceiling;
+}

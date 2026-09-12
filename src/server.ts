@@ -2,6 +2,7 @@
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import * as net from 'net';
 import * as readline from 'readline';
 import { once } from 'events';
@@ -7170,7 +7171,15 @@ const knowledgeGraphStore = createKnowledgeGraphStore({
 });
 const defaultLocalTutorAdapter = createNotemdTutorAdapter('local');
 const defaultCloudTutorAdapter = createNotemdTutorAdapter('cloud');
+const SERVER_RESPONSE_LOW_MEMORY_BYTES = 4 * 1024 ** 3;
+const SERVER_RESPONSE_HIGH_MEMORY_BYTES = 8 * 1024 ** 3;
+const serverResponseMemoryBytes = os.totalmem();
 const knowledgeLearningPlatform = createKnowledgeLearningPlatform({
+    responseBudgetHostCapability: {
+        memoryClass: serverResponseMemoryBytes < SERVER_RESPONSE_LOW_MEMORY_BYTES ? 'low'
+            : serverResponseMemoryBytes >= SERVER_RESPONSE_HIGH_MEMORY_BYTES ? 'high' : 'standard',
+        workload: 'max',
+    },
     store: knowledgeGraphStore,
     learningQualityThresholds: LEARNING_QUALITY_THRESHOLDS,
     studySessionPlanQualityAdaptiveThresholdsEnabled: STUDY_SESSION_PLAN_QUALITY_ADAPTIVE_THRESHOLDS_ENABLED,

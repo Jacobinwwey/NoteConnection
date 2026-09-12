@@ -73,6 +73,8 @@ A first bounded implementation can trade write concurrency for correctness. A la
 
 ### U2 — request admission, deadline and cancellation across answer work
 
+Implementation checkpoint: one host-owned execution scope now bounds queued turns, source bytes/lines/facts and fragments. File reads check both stat and chunk bytes and close descriptors on abort. Query cancellation reaches vector HTTP and retry delay; local scoring yields every 128 candidates. Client hints cannot raise the host ceiling. Execution/budget/backend/adapter regressions pass 65 tests; the broader persistence/composition/RAG set passes 117 tests. Delivery cancellation and calibration follow in U3/U7. These are cooperative admission controls, not an OS RSS guarantee; a provider that ignores AbortSignal retains the state lease until it settles.
+
 - [ ] **U2 / P1 — close F2; R2, R3**
 
 **Owner/files:** `src/learning/agentResponseBudget.ts`, `src/learning/evidenceContextAssembler.ts`, `src/learning/KnowledgeLearningPlatform.ts`; additive types in `src/learning/types.ts`. Tests: `src/learning/agentResponseBudget.test.ts`, `src/learning/KnowledgeLearningPlatform.test.ts`, `src/learning/conversationComposer.test.ts`.
@@ -263,6 +265,8 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 **验收：**审计中的 memory 丢失与 dirty read 不再复现，identity/persistence 回归通过。依赖：无。
 
 ### U2：回答链路的请求准入、deadline 与 cancellation
+
+实现检查点：单一 host-owned execution scope 已约束排队回合、源字节/行/事实和 fragment。文件读取同时检查 stat 与 chunk 字节，取消时关闭描述符。取消已传到向量 HTTP 和退避等待；本地打分每 128 个候选让出事件循环。客户端提示不能提高宿主上限。execution/budget/backend/adapter 回归 65 项通过；persistence/composition/RAG 组合 117 项通过。传输取消和实测校准继续在 U3/U7 完成。这些是协作式准入限制，不是 OS 级 RSS 保证；忽略 AbortSignal 的 provider 必须等到结束才释放状态 lease。
 
 - [ ] **U2 / P1 — 关闭 F2；R2、R3**
 

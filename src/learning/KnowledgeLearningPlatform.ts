@@ -121,6 +121,7 @@ import {
 } from './queryBackend';
 import type {
     GraphQueryBackend,
+    GraphQueryBackendContext,
     GraphQueryBackendFactoryOptions,
     GraphQueryBackendResult,
     GraphQueryBackendType,
@@ -160,7 +161,13 @@ import {
 } from './evidenceContextAssembler';
 import { reviewRagContextSufficiency, type RagSufficiencyLlmJudge } from './ragSufficiencyJudge';
 import { deriveKnowledgeTargetLookupQueries } from './workspaceHydration';
-import { resolveAgentResponseBudget } from './agentResponseBudget';
+import { resolveHostedAgentResponseBudget } from './agentResponseBudget';
+import {
+    AgentConversationExecution,
+    AgentConversationExecutionError,
+    normalizeAgentConversationExecutionPolicy,
+    type AgentConversationExecutionPolicy,
+} from './agentConversationExecution';
 
 type ParsedAtomDraft = {
     stableKey: string;
@@ -417,6 +424,8 @@ export type KnowledgeLearningPlatformOptions = {
     studySessionOrchestrationTutorRoutingConfig?: Record<string, unknown>;
     ragSufficiencyLlmJudge?: RagSufficiencyLlmJudge;
     responseBudgetCapability?: AgentConversationResponseBudgetCapability;
+    responseBudgetHostCapability?: AgentConversationResponseBudgetCapability;
+    responseExecutionPolicy?: Partial<AgentConversationExecutionPolicy>;
 }
 
 const STOPWORDS = new Set<string>([
@@ -666,6 +675,12 @@ function computePercentile(values: number[], percentile: number): number {
     return Number(sorted[index].toFixed(4));
 }
 
+interface KnowledgeStateOperationScope {
+    active: boolean;
+    transaction?: { persistenceRequested: boolean };
+    execution?: AgentConversationExecution;
+}
+
 export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     private idCounter = 0;
 
@@ -752,6 +767,9 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     private readonly ragSufficiencyLlmJudge: RagSufficiencyLlmJudge | null;
 
     private readonly responseBudgetCapability: AgentConversationResponseBudgetCapability | undefined;
+    private readonly responseBudgetHostCapability: AgentConversationResponseBudgetCapability | undefined;
+    private readonly responseExecutionPolicy: AgentConversationExecutionPolicy;
+    private pendingAgentConversations = 0;
 
     private currentGraphQueryBackendType: GraphQueryBackendType;
 
@@ -783,10 +801,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     /** Serializes ingest mutations so a rollback cannot race a concurrent writer. */
     private pendingKnowledgeStateOperation: Promise<void> = Promise.resolve();
-    private readonly knowledgeStateScope = new AsyncLocalStorage<{
-        active: boolean;
-        transaction?: { persistenceRequested: boolean };
-    }>();
+    private readonly knowledgeStateScope = new AsyncLocalStorage<KnowledgeStateOperationScope>();
     private committedStateDuringWrite: KnowledgeSystemState | null = null;
 
     constructor(nowProviderOrOptions: (() => Date) | KnowledgeLearningPlatformOptions = {}) {
@@ -804,6 +819,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             this.studySessionOrchestrationTutorRoutingConfig = {};
             this.ragSufficiencyLlmJudge = null;
             this.responseBudgetCapability = undefined;
+            this.responseBudgetHostCapability = undefined;
+            this.responseExecutionPolicy = normalizeAgentConversationExecutionPolicy();
             this.currentGraphQueryBackendType = 'local_hybrid';
             this.graphQueryBackendFactoryOptions = {
                 backend: this.currentGraphQueryBackendType,
@@ -847,6 +864,10 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         this.responseBudgetCapability = nowProviderOrOptions.responseBudgetCapability
             ? { ...nowProviderOrOptions.responseBudgetCapability }
             : undefined;
+        this.responseExecutionPolicy = normalizeAgentConversationExecutionPolicy(nowProviderOrOptions.responseExecutionPolicy);
+        this.responseBudgetHostCapability = nowProviderOrOptions.responseBudgetHostCapability
+            ? { ...nowProviderOrOptions.responseBudgetHostCapability }
+            : this.responseBudgetCapability;
         const inferredBackendType = normalizeGraphQueryBackendType(
             nowProviderOrOptions.graphQueryBackendFactoryOptions?.backend
             || this.inferGraphQueryBackendTypeFromId(nowProviderOrOptions.graphQueryBackend?.id)
@@ -871,13 +892,16 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             return operation();
         }
         const pending = this.pendingKnowledgeStateOperation.then(() => {
-            const scope = { active: true };
+            const scope: KnowledgeStateOperationScope = { active: true, execution: AgentConversationExecution.current() };
             return this.knowledgeStateScope.run(scope, async () => {
                 try {
+                    scope.execution?.assertActive();
                     await this.ensureHydrated();
+                    scope.execution?.assertActive();
                     return await operation();
                 } finally {
                     scope.active = false;
+                    delete scope.execution;
                 }
             });
         });
@@ -892,14 +916,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 return mutation();
             }
             const before = this.cloneKnowledgeGraphSnapshotForTransaction(await this.buildSnapshotForPersist());
+            scope.execution?.assertActive();
             this.committedStateDuringWrite = this.getKnowledgeState();
             const transaction = { persistenceRequested: false };
             scope.transaction = transaction;
             let persistenceAttempted = false;
             try {
                 const response = await mutation();
+                scope.execution?.assertActive();
                 if (transaction.persistenceRequested && this.store && this.autoPersist) {
                     const snapshot = await this.buildSnapshotForPersist();
+                    scope.execution?.assertActive();
                     persistenceAttempted = true;
                     await this.store.saveSnapshot(snapshot);
                 }
@@ -5089,6 +5116,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             overrideBackend?: GraphQueryBackend;
         }
     ): Promise<QueryBackendExecutionResult> {
+        const execution = AgentConversationExecution.current();
+        execution?.assertActive();
         const contextBundle = this.buildQueryBackendContext(request, backend);
         const backendInstance = options.overrideBackend
             || (
@@ -5099,10 +5128,16 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                         backend,
                     })
         );
+        const queryBackend = async (context: GraphQueryBackendContext) => {
+            execution?.assertActive();
+            const response = await backendInstance.query({ ...context, signal: execution?.signal });
+            execution?.assertActive();
+            return response;
+        };
         const startedAtMs = Date.now();
         try {
             let effectiveContextBundle = contextBundle;
-            let effectiveBackendResult = await backendInstance.query(contextBundle.context);
+            let effectiveBackendResult = await queryBackend(contextBundle.context);
             let materializedItems = this.materializeQueryBackendItems(
                 effectiveBackendResult,
                 effectiveContextBundle.asOf,
@@ -5127,7 +5162,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     ...request,
                     scope: plannerScopeRecovery!.recoveryScope,
                 }, backend);
-                const recoveryBackendResult = await backendInstance.query(recoveryContextBundle.context);
+                const recoveryBackendResult = await queryBackend(recoveryContextBundle.context);
                 const recoveryItems = this.materializeQueryBackendItems(
                     recoveryBackendResult,
                     recoveryContextBundle.asOf,
@@ -5239,6 +5274,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 error: null,
             };
         } catch (error) {
+            execution?.assertActive();
             const errorMessage = String((error as Error)?.message || error || 'query_backend_error')
                 .replace(/\s+/g, ' ')
                 .trim()
@@ -6987,45 +7023,24 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     private async resolveRagEvidenceSourceDocument(
-        lookup: RagEvidenceSourceLookup
+        lookup: RagEvidenceSourceLookup,
+        execution: AgentConversationExecution,
     ): Promise<RagEvidenceSourceDocument | null> {
+        execution.assertActive();
         const requestedDocumentId = String(lookup.documentId || '').trim();
         const requestedSourcePath = String(lookup.sourcePath || '').trim();
-        const requestedSourcePathKey = requestedSourcePath
-            ? normalizeIdentifier(requestedSourcePath.replace(/\\/g, '/'))
-            : '';
-        const snapshot = (
-            requestedDocumentId ? this.documents.get(requestedDocumentId) : undefined
-        ) || Array.from(this.documents.values()).find((candidate) => (
-            requestedSourcePathKey
-            && normalizeIdentifier(candidate.sourcePath.replace(/\\/g, '/')) === requestedSourcePathKey
-        ));
-        if (this.isRuntimeFaultedRagSourcePath(requestedSourcePath, snapshot?.sourcePath)) {
-            return null;
-        }
-        if (snapshot && typeof snapshot.content === 'string' && snapshot.content.trim()) {
-            return {
-                documentId: snapshot.documentId,
-                sourcePath: snapshot.sourcePath,
-                content: snapshot.content,
-                sourceHash: snapshot.sourceHash,
-                updatedAt: snapshot.updatedAt,
-            };
-        }
+        const pathKey = requestedSourcePath ? normalizeIdentifier(requestedSourcePath.replace(/\\/g, '/')) : '';
+        const snapshot = this.documents.get(requestedDocumentId)
+            || Array.from(this.documents.values()).find(candidate => pathKey
+                && normalizeIdentifier(candidate.sourcePath.replace(/\\/g, '/')) === pathKey);
+        if (this.isRuntimeFaultedRagSourcePath(requestedSourcePath, snapshot?.sourcePath)) return null;
         const sourcePath = snapshot?.sourcePath || requestedSourcePath;
-        if (!sourcePath) {
-            return null;
-        }
-        const absolutePath = path.isAbsolute(sourcePath) ? sourcePath : path.resolve(sourcePath);
+        if (!sourcePath) return null;
         try {
-            const stat = await fs.promises.stat(absolutePath);
-            if (!stat.isFile()) {
-                return null;
-            }
-            const content = await fs.promises.readFile(absolutePath, 'utf8');
-            if (!content.trim()) {
-                return null;
-            }
+            const content = snapshot?.content?.trim()
+                ? execution.acceptSourceText(snapshot.content)
+                : await execution.readSourceFile(path.isAbsolute(sourcePath) ? sourcePath : path.resolve(sourcePath));
+            if (!content?.trim()) return null;
             return {
                 documentId: snapshot?.documentId || requestedDocumentId || normalizeIdentifier(sourcePath),
                 sourcePath,
@@ -7033,7 +7048,16 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 sourceHash: snapshot?.sourceHash || this.computeHash(content),
                 updatedAt: snapshot?.updatedAt,
             };
-        } catch (_error) {
+        } catch (error) {
+            execution.assertActive();
+            if (execution.isResourceLimit(error)) {
+                return {
+                    documentId: snapshot?.documentId || requestedDocumentId,
+                    sourcePath,
+                    content: '',
+                    unavailableReason: error.code,
+                };
+            }
             return null;
         }
     }
@@ -7072,6 +7096,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
     }
 
     private async assembleReviewedRagEvidenceContext(params: {
+        execution: AgentConversationExecution;
         query: string;
         items: KnowledgeQueryItem[];
         graphNeighborItems: KnowledgeQueryItem[];
@@ -7082,16 +7107,18 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         paragraphWindow?: number;
     }): Promise<ReviewedRagEvidenceContext> {
         const ragContextPack = await assembleRagEvidenceContext({
+            execution: params.execution,
             query: params.query,
             items: params.items,
             graphNeighborItems: params.graphNeighborItems,
             generatedAt: params.generatedAt,
-            sourceResolver: (lookup) => this.resolveRagEvidenceSourceDocument(lookup),
+            sourceResolver: (lookup) => this.resolveRagEvidenceSourceDocument(lookup, params.execution),
             budget: params.budget,
             paragraphWindow: params.paragraphWindow,
             graphAnswerPlan: params.graphAnswerPlan,
         });
         const ragSufficiencyReview = await reviewRagContextSufficiency({
+            signal: params.execution.signal,
             query: params.query,
             contextPack: ragContextPack,
             graphContext: params.graphNeighborItems.length > 0 ? params.graphContext : null,
@@ -7099,6 +7126,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             allowLlmJudge: Boolean(this.ragSufficiencyLlmJudge),
             llmJudge: this.ragSufficiencyLlmJudge || undefined,
         });
+        params.execution.assertActive();
         return {
             ragContextPack,
             ragSufficiencyReview,
@@ -10465,67 +10493,133 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         });
     }
 
-    public async agentConversation(request: AgentConversationRequest = {}): Promise<AgentConversationResponse> {
-        return this.commitKnowledgeState(async () => {
-            await this.ensureHydrated();
-            const userId = isNonEmptyString(request.userId)
-                ? request.userId.trim()
-                : 'path_user_default';
-            const sessionId = isNonEmptyString(request.sessionId)
-                ? request.sessionId.trim()
-                : this.nextId('agent_session');
-            const message = normalizeWhitespace(String(request.message || ''));
-            const answerLanguage = request.answerLanguage === 'zh' || request.answerLanguage === 'en'
-                ? request.answerLanguage
-                : 'auto';
-            const responseMode: AgentConversationResponseMode = request.responseMode === 'full' ? 'full' : 'slim';
-            const responseProfile = request.responseProfile === 'mobile_compact'
-                ? 'mobile_compact' as const
-                : undefined;
-            const effectiveResponseMode: AgentConversationResponseMode = responseProfile === 'mobile_compact'
-                ? 'slim'
-                : responseMode;
-            const responseBudget = resolveAgentResponseBudget({
-                responseMode: effectiveResponseMode,
-                responseBudgetMode: request.responseBudgetMode,
-                capability: request.responseBudgetCapability || this.responseBudgetCapability,
-                mobile: responseProfile === 'mobile_compact',
-            });
-            const requestedTopK = Math.floor(Number(request.topK) || 6);
-            const topK = clamp(
-                Math.max(requestedTopK, effectiveResponseMode === 'full' ? 12 : 1),
-                1,
-                18
-            );
-            const generatedAt = this.resolveTimestamp(request.asOf);
-            const namespace = this.normalizeConversationMemoryNamespace(request.memoryNamespace);
-            const queryResult = await this.queryKnowledge({
-                query: message || 'local knowledge',
-                topK,
-                asOf: generatedAt,
-                scope: request.scope,
-            });
-            const knowledgePoints = mergeAgentConversationKnowledgePoints(
-                queryResult.items,
-                (atomId) => this.buildAgentWorkspaceCapabilities(atomId)
-            );
-            const citations = knowledgePoints
-                .flatMap((point) => (
-                    Array.isArray(point.citations) && point.citations.length > 0
-                        ? point.citations
-                        : (point.citation ? [point.citation] : [])
-                ))
-                .filter((citation): citation is KnowledgeCitation => Boolean(citation));
-            const recalledMemoryResult = await this.searchConversationMemory({
-                userId,
-                namespace,
-                query: message || 'memory',
-                limit: 6,
-                now: generatedAt,
-            });
-            const recalledMemories = this.filterConversationMemoryRecordsByScope(
-                Array.isArray(recalledMemoryResult.entries) ? recalledMemoryResult.entries as AgentConversationMemoryRecord[] : [],
-                queryResult.trace.scope || {
+    public async agentConversation(request: AgentConversationRequest = {}, signal?: AbortSignal): Promise<AgentConversationResponse> {
+        const responseMode: AgentConversationResponseMode = request.responseMode === 'full' ? 'full' : 'slim';
+        const responseProfile = request.responseProfile === 'mobile_compact'
+            ? 'mobile_compact' as const
+            : undefined;
+        const effectiveResponseMode: AgentConversationResponseMode = responseProfile === 'mobile_compact'
+            ? 'slim'
+            : responseMode;
+        const responseBudget = resolveHostedAgentResponseBudget({
+            responseMode: effectiveResponseMode,
+            responseBudgetMode: request.responseBudgetMode,
+            capability: request.responseBudgetCapability || this.responseBudgetCapability,
+            mobile: responseProfile === 'mobile_compact',
+        }, this.responseBudgetHostCapability);
+        responseBudget.runtimeGovernor = {
+            ...responseBudget.runtimeGovernor,
+            timeoutMs: Math.min(responseBudget.runtimeGovernor.timeoutMs, this.responseExecutionPolicy.timeoutMs),
+            maxSourceBytes: this.responseExecutionPolicy.maxSourceBytes,
+            maxTotalSourceBytes: this.responseExecutionPolicy.maxTotalSourceBytes,
+        };
+        if (this.pendingAgentConversations >= this.responseExecutionPolicy.maxPendingTurns) {
+            throw new AgentConversationExecutionError('runtime_turn_capacity');
+        }
+        this.pendingAgentConversations++;
+        try {
+            return await AgentConversationExecution.run({
+                budget: responseBudget, policy: this.responseExecutionPolicy, signal,
+            }, execution => this.commitKnowledgeState(async () => {
+                execution.assertActive();
+                await this.ensureHydrated();
+                const userId = isNonEmptyString(request.userId)
+                    ? request.userId.trim()
+                    : 'path_user_default';
+                const sessionId = isNonEmptyString(request.sessionId)
+                    ? request.sessionId.trim()
+                    : this.nextId('agent_session');
+                const message = normalizeWhitespace(String(request.message || ''));
+                const answerLanguage = request.answerLanguage === 'zh' || request.answerLanguage === 'en'
+                    ? request.answerLanguage
+                    : 'auto';
+                const requestedTopK = Math.floor(Number(request.topK) || 6);
+                const topK = clamp(
+                    Math.max(requestedTopK, effectiveResponseMode === 'full' ? 12 : 1),
+                    1,
+                    18
+                );
+                const generatedAt = this.resolveTimestamp(request.asOf);
+                const namespace = this.normalizeConversationMemoryNamespace(request.memoryNamespace);
+                const queryResult = await this.queryKnowledge({
+                    query: message || 'local knowledge',
+                    topK,
+                    asOf: generatedAt,
+                    scope: request.scope,
+                });
+                const knowledgePoints = mergeAgentConversationKnowledgePoints(
+                    queryResult.items,
+                    (atomId) => this.buildAgentWorkspaceCapabilities(atomId)
+                );
+                const citations = knowledgePoints
+                    .flatMap((point) => (
+                        Array.isArray(point.citations) && point.citations.length > 0
+                            ? point.citations
+                            : (point.citation ? [point.citation] : [])
+                    ))
+                    .filter((citation): citation is KnowledgeCitation => Boolean(citation));
+                const recalledMemoryResult = await this.searchConversationMemory({
+                    userId,
+                    namespace,
+                    query: message || 'memory',
+                    limit: 6,
+                    now: generatedAt,
+                });
+                const recalledMemories = this.filterConversationMemoryRecordsByScope(
+                    Array.isArray(recalledMemoryResult.entries) ? recalledMemoryResult.entries as AgentConversationMemoryRecord[] : [],
+                    queryResult.trace.scope || {
+                        source: 'global',
+                        workspaceId: null,
+                        corpusId: null,
+                        documentIds: [],
+                        atomIds: [],
+                        sourcePathPrefixes: [],
+                        languages: [],
+                        matchedAtomCount: 0,
+                    }
+                );
+    
+                const memoryActions: AgentConversationMemoryAction[] = [];
+                if (request.persistMemory !== false && message) {
+                    const scopeTags: string[] = [];
+                    if (queryResult.trace.scope?.workspaceId) {
+                        scopeTags.push(`scope_workspace:${queryResult.trace.scope.workspaceId}`);
+                    }
+                    if (queryResult.trace.scope?.corpusId) {
+                        scopeTags.push(`scope_corpus:${queryResult.trace.scope.corpusId}`);
+                    }
+                    const persistedMemory = await this.addConversationMemory({
+                        userId,
+                        namespace,
+                        content: `User focus: ${message}`,
+                        tags: ['agent_turn', 'user_focus', ...scopeTags],
+                        source: 'agent_conversation',
+                        confidence: 0.82,
+                        scopeWorkspaceId: queryResult.trace.scope?.workspaceId || null,
+                        scopeCorpusId: queryResult.trace.scope?.corpusId || null,
+                        now: generatedAt,
+                    });
+                    memoryActions.push({
+                        kind: 'persist_session_memory',
+                        status: persistedMemory.added === true ? 'applied' : 'skipped',
+                        layer: persistedMemory.layer || this.resolveConversationMemoryLayer(namespace),
+                        namespace,
+                        memoryId: typeof persistedMemory.memory?.memoryId === 'string' ? persistedMemory.memory.memoryId : undefined,
+                        reason: 'Persist the latest user focus to scoped conversation memory.',
+                    });
+                }
+                if (citations.length > 0) {
+                    memoryActions.push({
+                        kind: 'propose_long_term_memory',
+                        status: 'proposed',
+                        layer: 'long_term',
+                        namespace: 'project',
+                        reason: `Promote ${citations[0].title} to long-term project memory if the same scope is recalled repeatedly.`,
+                    });
+                }
+    
+                const invocationId = this.nextId('agent_invocation');
+                const traceScope = queryResult.trace.scope || {
                     source: 'global',
                     workspaceId: null,
                     corpusId: null,
@@ -10533,386 +10627,335 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     atomIds: [],
                     sourcePathPrefixes: [],
                     languages: [],
-                    matchedAtomCount: 0,
-                }
-            );
-
-            const memoryActions: AgentConversationMemoryAction[] = [];
-            if (request.persistMemory !== false && message) {
-                const scopeTags: string[] = [];
-                if (queryResult.trace.scope?.workspaceId) {
-                    scopeTags.push(`scope_workspace:${queryResult.trace.scope.workspaceId}`);
-                }
-                if (queryResult.trace.scope?.corpusId) {
-                    scopeTags.push(`scope_corpus:${queryResult.trace.scope.corpusId}`);
-                }
-                const persistedMemory = await this.addConversationMemory({
-                    userId,
-                    namespace,
-                    content: `User focus: ${message}`,
-                    tags: ['agent_turn', 'user_focus', ...scopeTags],
-                    source: 'agent_conversation',
-                    confidence: 0.82,
-                    scopeWorkspaceId: queryResult.trace.scope?.workspaceId || null,
-                    scopeCorpusId: queryResult.trace.scope?.corpusId || null,
-                    now: generatedAt,
+                    matchedAtomCount: queryResult.items.length,
+                };
+                const graphExpansionPolicy = resolveGraphExpansionPolicy(message);
+                const assembledConversation = await assembleAgentConversationGraphContext({
+                    message,
+                    usedScope: traceScope,
+                    knowledgePoints,
+                    store: this.store,
+                    budget: graphExpansionPolicy.enabled
+                        ? {
+                            maxSupportNodes: 4,
+                            maxConnectionPaths: 4,
+                            maxPathDepth: graphExpansionPolicy.maxPathDepth,
+                            maxPredecessors: 4,
+                            maxSuccessors: 4,
+                        }
+                        : undefined,
                 });
-                memoryActions.push({
-                    kind: 'persist_session_memory',
-                    status: persistedMemory.added === true ? 'applied' : 'skipped',
-                    layer: persistedMemory.layer || this.resolveConversationMemoryLayer(namespace),
-                    namespace,
-                    memoryId: typeof persistedMemory.memory?.memoryId === 'string' ? persistedMemory.memory.memoryId : undefined,
-                    reason: 'Persist the latest user focus to scoped conversation memory.',
-                });
-            }
-            if (citations.length > 0) {
-                memoryActions.push({
-                    kind: 'propose_long_term_memory',
-                    status: 'proposed',
-                    layer: 'long_term',
-                    namespace: 'project',
-                    reason: `Promote ${citations[0].title} to long-term project memory if the same scope is recalled repeatedly.`,
-                });
-            }
-
-            const invocationId = this.nextId('agent_invocation');
-            const traceScope = queryResult.trace.scope || {
-                source: 'global',
-                workspaceId: null,
-                corpusId: null,
-                documentIds: [],
-                atomIds: [],
-                sourcePathPrefixes: [],
-                languages: [],
-                matchedAtomCount: queryResult.items.length,
-            };
-            const graphExpansionPolicy = resolveGraphExpansionPolicy(message);
-            const assembledConversation = await assembleAgentConversationGraphContext({
-                message,
-                usedScope: traceScope,
-                knowledgePoints,
-                store: this.store,
-                budget: graphExpansionPolicy.enabled
-                    ? {
-                        maxSupportNodes: 4,
-                        maxConnectionPaths: 4,
-                        maxPathDepth: graphExpansionPolicy.maxPathDepth,
-                        maxPredecessors: 4,
-                        maxSuccessors: 4,
-                    }
-                    : undefined,
-            });
-            const conversationKnowledgePoints = assembledConversation.knowledgePoints;
-            const graphContext = assembledConversation.graphContext;
-            const ragEvidenceProfile = resolveAgentRagEvidenceProfile(
-                message,
-                graphExpansionPolicy,
-                effectiveResponseMode,
-                responseBudget
-            );
-            const graphNeighborItems = this.buildRagGraphNeighborQueryItems(
-                graphContext,
-                conversationKnowledgePoints,
-                generatedAt,
-                message,
-                ragEvidenceProfile.graphNeighborLimit,
-                traceScope
-            );
-            const preRagGraphAnswerPlan = buildGraphAnswerPlan({
-                message,
-                knowledgePoints: conversationKnowledgePoints,
-                graphContext,
-            });
-            const graphExpansionTrace: AgentConversationResponse['trace']['graphExpansion'] = {
-                ...graphExpansionPolicy,
-                executedSteps: graphExpansionPolicy.enabled && graphNeighborItems.length > 0 ? 1 : 0,
-                selectedNeighborCount: graphExpansionPolicy.enabled ? graphNeighborItems.length : 0,
-            };
-            const firstReviewedRag = await this.assembleReviewedRagEvidenceContext({
-                query: message || 'local knowledge',
-                items: queryResult.items,
-                graphNeighborItems,
-                graphContext,
-                graphAnswerPlan: preRagGraphAnswerPlan,
-                generatedAt,
-                budget: ragEvidenceProfile.budget,
-                paragraphWindow: ragEvidenceProfile.paragraphWindow,
-            });
-            let ragContextPack = firstReviewedRag.ragContextPack;
-            let ragSufficiencyReview = firstReviewedRag.ragSufficiencyReview;
-            let ragRecovery: RagEvidenceRecoveryTrace | undefined;
-            if (this.canRecoverRagEvidenceContext(ragContextPack, ragSufficiencyReview, graphContext)) {
-                const recoveryGraphNeighborItems = this.buildRagGraphNeighborQueryItems(
+                const conversationKnowledgePoints = assembledConversation.knowledgePoints;
+                const graphContext = assembledConversation.graphContext;
+                const ragEvidenceProfile = resolveAgentRagEvidenceProfile(
+                    message,
+                    graphExpansionPolicy,
+                    effectiveResponseMode,
+                    responseBudget
+                );
+                const graphNeighborItems = this.buildRagGraphNeighborQueryItems(
                     graphContext,
                     conversationKnowledgePoints,
                     generatedAt,
                     message,
-                    AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT,
+                    ragEvidenceProfile.graphNeighborLimit,
                     traceScope
                 );
-                const recoveredReviewedRag = await this.assembleReviewedRagEvidenceContext({
+                const preRagGraphAnswerPlan = buildGraphAnswerPlan({
+                    message,
+                    knowledgePoints: conversationKnowledgePoints,
+                    graphContext,
+                });
+                const graphExpansionTrace: AgentConversationResponse['trace']['graphExpansion'] = {
+                    ...graphExpansionPolicy,
+                    executedSteps: graphExpansionPolicy.enabled && graphNeighborItems.length > 0 ? 1 : 0,
+                    selectedNeighborCount: graphExpansionPolicy.enabled ? graphNeighborItems.length : 0,
+                };
+                const firstReviewedRag = await this.assembleReviewedRagEvidenceContext({
+                    execution,
                     query: message || 'local knowledge',
                     items: queryResult.items,
-                    graphNeighborItems: recoveryGraphNeighborItems,
+                    graphNeighborItems,
                     graphContext,
                     graphAnswerPlan: preRagGraphAnswerPlan,
                     generatedAt,
-                    budget: effectiveResponseMode === 'full' && responseBudget.rag
-                        ? { ...responseBudget.rag }
-                        : AGENT_RAG_RECOVERY_CONTEXT_BUDGET,
-                    paragraphWindow: effectiveResponseMode === 'full'
-                        ? 20
-                        : AGENT_RAG_RECOVERY_PARAGRAPH_WINDOW,
+                    budget: ragEvidenceProfile.budget,
+                    paragraphWindow: ragEvidenceProfile.paragraphWindow,
                 });
-                ragRecovery = this.buildRagEvidenceRecoveryTrace({
-                    beforePack: ragContextPack,
-                    beforeReview: ragSufficiencyReview,
-                    afterPack: recoveredReviewedRag.ragContextPack,
-                    afterReview: recoveredReviewedRag.ragSufficiencyReview,
-                });
-                const useRecoveredPack = this.shouldUseRecoveredRagEvidenceContext(
-                    ragSufficiencyReview,
-                    recoveredReviewedRag.ragSufficiencyReview
-                );
-                if (useRecoveredPack) {
-                    ragContextPack = recoveredReviewedRag.ragContextPack;
-                    ragSufficiencyReview = this.markRagReviewWithRecovery(
-                        recoveredReviewedRag.ragSufficiencyReview,
-                        ragRecovery,
-                        true
+                let ragContextPack = firstReviewedRag.ragContextPack;
+                let ragSufficiencyReview = firstReviewedRag.ragSufficiencyReview;
+                let ragRecovery: RagEvidenceRecoveryTrace | undefined;
+                if (!execution.truncationReason && this.canRecoverRagEvidenceContext(ragContextPack, ragSufficiencyReview, graphContext)) {
+                    const recoveryGraphNeighborItems = this.buildRagGraphNeighborQueryItems(
+                        graphContext,
+                        conversationKnowledgePoints,
+                        generatedAt,
+                        message,
+                        AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT,
+                        traceScope
                     );
-                } else {
-                    ragSufficiencyReview = this.markRagReviewWithRecovery(
+                    const recoveredReviewedRag = await this.assembleReviewedRagEvidenceContext({
+                    execution,
+                        query: message || 'local knowledge',
+                        items: queryResult.items,
+                        graphNeighborItems: recoveryGraphNeighborItems,
+                        graphContext,
+                        graphAnswerPlan: preRagGraphAnswerPlan,
+                        generatedAt,
+                        budget: effectiveResponseMode === 'full' && responseBudget.rag
+                            ? { ...responseBudget.rag }
+                            : AGENT_RAG_RECOVERY_CONTEXT_BUDGET,
+                        paragraphWindow: effectiveResponseMode === 'full'
+                            ? 20
+                            : AGENT_RAG_RECOVERY_PARAGRAPH_WINDOW,
+                    });
+                    ragRecovery = this.buildRagEvidenceRecoveryTrace({
+                        beforePack: ragContextPack,
+                        beforeReview: ragSufficiencyReview,
+                        afterPack: recoveredReviewedRag.ragContextPack,
+                        afterReview: recoveredReviewedRag.ragSufficiencyReview,
+                    });
+                    const useRecoveredPack = this.shouldUseRecoveredRagEvidenceContext(
                         ragSufficiencyReview,
-                        ragRecovery,
-                        false
+                        recoveredReviewedRag.ragSufficiencyReview
                     );
+                    if (useRecoveredPack) {
+                        ragContextPack = recoveredReviewedRag.ragContextPack;
+                        ragSufficiencyReview = this.markRagReviewWithRecovery(
+                            recoveredReviewedRag.ragSufficiencyReview,
+                            ragRecovery,
+                            true
+                        );
+                    } else {
+                        ragSufficiencyReview = this.markRagReviewWithRecovery(
+                            ragSufficiencyReview,
+                            ragRecovery,
+                            false
+                        );
+                    }
                 }
-            }
-            const activeConversationAtomIds = collectAgentConversationAtomIds(conversationKnowledgePoints);
-            const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(activeConversationAtomIds);
-            const effectiveWorkspaceId = traceScope.workspaceId || scopedWorkspace.workspaceId;
-            const effectiveCorpusId = traceScope.corpusId || scopedWorkspace.corpusId;
-            const reply = buildScopedConversationReply({
-                message,
-                answerLanguage,
-                responseMode: effectiveResponseMode,
-                responseBudget,
-                knowledgePoints: conversationKnowledgePoints,
-                citations,
-                recalledMemories,
-                memoryActions,
-                usedScope: traceScope,
-                generatedAt,
-                nextBlockId: () => this.nextId('assistant_block'),
-                nextRunId: () => this.nextId('knowledge_run'),
-                graphContext,
-                ragContextPack,
-                ragSufficiencyReview,
-            });
-            const ragFailureClassifications = this.buildRagFailureClassifications({
-                pack: ragContextPack,
-                review: ragSufficiencyReview,
-                recovery: ragRecovery,
-                graphContext,
-                answerReleaseReview: reply.answerReleaseReview,
-            });
-            const answerClaimCitations = this.buildAnswerClaimCitations({
-                answer: reply.answer,
-                pack: ragContextPack,
-                invocationId,
-            });
-            const response: AgentConversationResponse = {
-                userId,
-                sessionId,
-                assistantMessage: reply.answer,
-                answer: reply.answer,
-                responseMode: effectiveResponseMode,
-                ...(responseProfile ? { responseProfile } : {}),
-                responseBudget,
-                answerReleaseReview: reply.answerReleaseReview,
-                graphAnswerPlan: reply.graphAnswerPlan,
-                graphAnswerCoverage: reply.graphAnswerCoverage,
-                answerTaskPlan: reply.graphAnswerPlan.answerTaskPlan,
-                answerTaskCoverage: reply.answerReleaseReview.answerTaskCoverage,
-                assistantBlocks: reply.assistantBlocks,
-                knowledgeRun: reply.knowledgeRun,
-                knowledgePoints: conversationKnowledgePoints,
-                citations,
-                recalledMemories,
-                memoryActions,
-                summary: {
-                    generatedAt,
-                    topK,
-                    returnedKnowledgePoints: conversationKnowledgePoints.length,
-                    returnedCitations: citations.length,
-                    recalledMemoryCount: recalledMemories.length,
-                    appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,
-                    queryEvidenceCoverageRatioPct: Number(
-                        (Number(queryResult.trace?.evidenceCoverageRatio || 0) * 100).toFixed(2)
-                    ),
-                    responseBudgetMode: responseBudget.mode,
-                    responseBudgetTier: responseBudget.tier,
-                    responseTruncated: reply.fullReportAssembly?.truncated,
-                    responseTruncationReason: reply.fullReportAssembly?.truncationReason,
-                },
-                trace: {
-                    sessionId,
-                    invocationId,
-                    retrieval: queryResult.trace,
-                    recalledMemoryCount: recalledMemories.length,
-                    appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,
-                    usedScope: traceScope,
-                    workspaceReadiness: traceScope.readiness,
-                    missDiagnostics: traceScope.missDiagnostics,
-                    planner: {
-                        plannerQuery: queryResult.trace.planner?.plannerQuery || null,
-                        titleLikeQueries: queryResult.trace.planner?.titleLikeQueries || [],
-                        titleHitDocumentIds: queryResult.trace.planner?.titleHitDocumentIds || [],
-                    },
-                    graphContext: graphContext || reply.graphContext || undefined,
-                    ragContextPack,
-                    ragSufficiencyReview,
-                    ragRecovery,
-                    ragFailureClassifications,
-                    answerClaimCitations,
-                    answerTaskPlan: reply.graphAnswerPlan.answerTaskPlan,
-                    answerTaskCoverage: reply.answerReleaseReview.answerTaskCoverage,
-                    answerReleaseReview: reply.answerReleaseReview,
-                    graphAnswerPlan: reply.graphAnswerPlan,
-                    graphAnswerCoverage: reply.graphAnswerCoverage,
-                    graphExpansion: graphExpansionTrace,
+                const activeConversationAtomIds = collectAgentConversationAtomIds(conversationKnowledgePoints);
+                await execution.yieldCheckpoint();
+                const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(activeConversationAtomIds);
+                const effectiveWorkspaceId = traceScope.workspaceId || scopedWorkspace.workspaceId;
+                const effectiveCorpusId = traceScope.corpusId || scopedWorkspace.corpusId;
+                const reply = buildScopedConversationReply({
+                    message,
+                    answerLanguage,
+                    responseMode: effectiveResponseMode,
                     responseBudget,
-                    responseTruncated: reply.fullReportAssembly?.truncated,
-                    responseTruncationReason: reply.fullReportAssembly?.truncationReason,
-                },
-            };
-            if (responseProfile === 'mobile_compact') {
-                response.mobileProjection = projectAnswerForMobile(response);
-            }
-            const knowledgeRunArtifact = this.recordWorkflowArtifact({
-                kind: 'knowledge_run',
-                sessionId,
-                userId,
-                workspaceId: effectiveWorkspaceId,
-                corpusId: effectiveCorpusId,
-                title: `Knowledge run: ${String(message || 'local knowledge').slice(0, 64)}`,
-                sourceAtomIds: activeConversationAtomIds,
-                summary: `Generated ${reply.knowledgeRun.summary.claimCount} evidence claim(s) and ${reply.knowledgeRun.summary.reviewCardCount} review card(s) with status ${reply.knowledgeRun.status}.`,
-                payload: {
-                    knowledgeRun: reply.knowledgeRun,
-                    graphContext: graphContext || reply.graphContext || undefined,
-                    ragContextPack,
-                    ragSufficiencyReview,
-                    ragRecovery,
-                    ragFailureClassifications,
-                    answerClaimCitations,
-                    answerReleaseReview: reply.answerReleaseReview,
-                    graphAnswerPlan: reply.graphAnswerPlan,
-                    graphAnswerCoverage: reply.graphAnswerCoverage,
-                    graphExpansion: graphExpansionTrace,
+                    knowledgePoints: conversationKnowledgePoints,
                     citations,
                     recalledMemories,
                     memoryActions,
-                },
-                recordedAt: generatedAt,
-            });
-            response.assistantBlocks = this.attachKnowledgeRunArtifactIdToBlocks(
-                response.assistantBlocks,
-                knowledgeRunArtifact.artifactId
-            );
-            this.upsertConversationSessionState({
-                sessionId,
-                userId,
-                mode: 'grounded_conversation',
-                workspaceId: effectiveWorkspaceId,
-                corpusId: effectiveCorpusId,
-                activeResourceIds: this.resolveSourceResourceIdsForAtomIds(activeConversationAtomIds),
-                activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(activeConversationAtomIds),
-                topK,
-                queryBackend: String(request.scope && queryResult.trace.modeWeights.vector ? 'local_vector' : '').trim() || null,
-                persistMemory: request.persistMemory !== false,
-                memoryNamespace: namespace,
-                exportProfileId: effectiveWorkspaceId
-                    ? this.workspaceRegistry.listActiveWorkspaces().find((workspace) => workspace.workspaceId === effectiveWorkspaceId)?.exportProfileId || null
-                    : scopedWorkspace.exportProfileId,
-                panelState: {
-                    lastGroundedAnswerAt: generatedAt,
-                    returnedKnowledgePoints: knowledgePoints.length,
-                    returnedCitations: citations.length,
-                },
-                recordedAt: generatedAt,
-            });
-            this.recordAgentConversationTurn({
-                sessionId,
-                userId,
-                request: {
-                    ...request,
+                    usedScope: traceScope,
+                    generatedAt,
+                    nextBlockId: () => this.nextId('assistant_block'),
+                    nextRunId: () => this.nextId('knowledge_run'),
+                    graphContext,
+                    ragContextPack,
+                    ragSufficiencyReview,
+                });
+                const ragFailureClassifications = this.buildRagFailureClassifications({
+                    pack: ragContextPack,
+                    review: ragSufficiencyReview,
+                    recovery: ragRecovery,
+                    graphContext,
+                    answerReleaseReview: reply.answerReleaseReview,
+                });
+                const answerClaimCitations = this.buildAnswerClaimCitations({
+                    answer: reply.answer,
+                    pack: ragContextPack,
+                    invocationId,
+                });
+                const response: AgentConversationResponse = {
                     userId,
                     sessionId,
-                    message,
-                    topK,
-                    asOf: generatedAt,
-                    memoryNamespace: namespace,
-                },
-                response,
-            });
-            if (reply.knowledgeRun.reviewCards.length > 0) {
-                this.recordWorkflowArtifact({
-                    kind: 'flashcard_batch',
+                    assistantMessage: reply.answer,
+                    answer: reply.answer,
+                    responseMode: effectiveResponseMode,
+                    ...(responseProfile ? { responseProfile } : {}),
+                    responseBudget,
+                    answerReleaseReview: reply.answerReleaseReview,
+                    graphAnswerPlan: reply.graphAnswerPlan,
+                    graphAnswerCoverage: reply.graphAnswerCoverage,
+                    answerTaskPlan: reply.graphAnswerPlan.answerTaskPlan,
+                    answerTaskCoverage: reply.answerReleaseReview.answerTaskCoverage,
+                    assistantBlocks: reply.assistantBlocks,
+                    knowledgeRun: reply.knowledgeRun,
+                    knowledgePoints: conversationKnowledgePoints,
+                    citations,
+                    recalledMemories,
+                    memoryActions,
+                    summary: {
+                        generatedAt,
+                        topK,
+                        returnedKnowledgePoints: conversationKnowledgePoints.length,
+                        returnedCitations: citations.length,
+                        recalledMemoryCount: recalledMemories.length,
+                        appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,
+                        queryEvidenceCoverageRatioPct: Number(
+                            (Number(queryResult.trace?.evidenceCoverageRatio || 0) * 100).toFixed(2)
+                        ),
+                        responseBudgetMode: responseBudget.mode,
+                        responseBudgetTier: responseBudget.tier,
+                        responseTruncated: execution.truncationReason ? true : reply.fullReportAssembly?.truncated,
+                        responseTruncationReason: execution.truncationReason || reply.fullReportAssembly?.truncationReason,
+                    },
+                    trace: {
+                        sessionId,
+                        invocationId,
+                        retrieval: queryResult.trace,
+                        responseExecution: execution.diagnostics(),
+                        recalledMemoryCount: recalledMemories.length,
+                        appliedMemoryCount: memoryActions.filter((action) => action.status === 'applied').length,
+                        usedScope: traceScope,
+                        workspaceReadiness: traceScope.readiness,
+                        missDiagnostics: traceScope.missDiagnostics,
+                        planner: {
+                            plannerQuery: queryResult.trace.planner?.plannerQuery || null,
+                            titleLikeQueries: queryResult.trace.planner?.titleLikeQueries || [],
+                            titleHitDocumentIds: queryResult.trace.planner?.titleHitDocumentIds || [],
+                        },
+                        graphContext: graphContext || reply.graphContext || undefined,
+                        ragContextPack,
+                        ragSufficiencyReview,
+                        ragRecovery,
+                        ragFailureClassifications,
+                        answerClaimCitations,
+                        answerTaskPlan: reply.graphAnswerPlan.answerTaskPlan,
+                        answerTaskCoverage: reply.answerReleaseReview.answerTaskCoverage,
+                        answerReleaseReview: reply.answerReleaseReview,
+                        graphAnswerPlan: reply.graphAnswerPlan,
+                        graphAnswerCoverage: reply.graphAnswerCoverage,
+                        graphExpansion: graphExpansionTrace,
+                        responseBudget,
+                        responseTruncated: execution.truncationReason ? true : reply.fullReportAssembly?.truncated,
+                        responseTruncationReason: execution.truncationReason || reply.fullReportAssembly?.truncationReason,
+                    },
+                };
+                if (responseProfile === 'mobile_compact') {
+                    response.mobileProjection = projectAnswerForMobile(response);
+                }
+                execution.assertActive();
+                const knowledgeRunArtifact = this.recordWorkflowArtifact({
+                    kind: 'knowledge_run',
                     sessionId,
                     userId,
                     workspaceId: effectiveWorkspaceId,
                     corpusId: effectiveCorpusId,
-                    title: `Knowledge run review cards: ${String(message || 'local knowledge').slice(0, 64)}`,
+                    title: `Knowledge run: ${String(message || 'local knowledge').slice(0, 64)}`,
                     sourceAtomIds: activeConversationAtomIds,
-                    summary: `Prepared ${reply.knowledgeRun.reviewCards.length} review card(s) from ${reply.knowledgeRun.summary.verifiedClaimCount + reply.knowledgeRun.summary.weakClaimCount} evidenced claim(s).`,
+                    summary: `Generated ${reply.knowledgeRun.summary.claimCount} evidence claim(s) and ${reply.knowledgeRun.summary.reviewCardCount} review card(s) with status ${reply.knowledgeRun.status}.`,
                     payload: {
-                        runId: reply.knowledgeRun.runId,
-                        reviewCards: reply.knowledgeRun.reviewCards,
-                        evidenceClaims: reply.knowledgeRun.evidenceClaims,
-                        reviewState: reply.knowledgeRun.reviewState,
+                        knowledgeRun: reply.knowledgeRun,
+                        graphContext: graphContext || reply.graphContext || undefined,
+                        ragContextPack,
+                        ragSufficiencyReview,
+                        ragRecovery,
+                        ragFailureClassifications,
+                        answerClaimCitations,
+                        answerReleaseReview: reply.answerReleaseReview,
+                        graphAnswerPlan: reply.graphAnswerPlan,
+                        graphAnswerCoverage: reply.graphAnswerCoverage,
+                        graphExpansion: graphExpansionTrace,
+                        citations,
+                        recalledMemories,
+                        memoryActions,
                     },
                     recordedAt: generatedAt,
                 });
-            }
-            this.recordWorkflowArtifact({
-                kind: 'research_report',
-                sessionId,
-                userId,
-                workspaceId: effectiveWorkspaceId,
-                corpusId: effectiveCorpusId,
-                title: `Grounded conversation: ${String(message || 'local knowledge').slice(0, 64)}`,
-                sourceAtomIds: knowledgePoints.map((point) => point.atomId),
-                summary: reply.answer,
-                payload: {
-                    citations,
-                    recalledMemories,
-                    memoryActions,
-                    knowledgeRun: reply.knowledgeRun,
-                },
-                recordedAt: generatedAt,
-            });
-            await this.persistIfNeeded();
-            return response;
-        });
+                response.assistantBlocks = this.attachKnowledgeRunArtifactIdToBlocks(
+                    response.assistantBlocks,
+                    knowledgeRunArtifact.artifactId
+                );
+                this.upsertConversationSessionState({
+                    sessionId,
+                    userId,
+                    mode: 'grounded_conversation',
+                    workspaceId: effectiveWorkspaceId,
+                    corpusId: effectiveCorpusId,
+                    activeResourceIds: this.resolveSourceResourceIdsForAtomIds(activeConversationAtomIds),
+                    activeProjectionIds: this.resolveSourceProjectionIdsForAtomIds(activeConversationAtomIds),
+                    topK,
+                    queryBackend: String(request.scope && queryResult.trace.modeWeights.vector ? 'local_vector' : '').trim() || null,
+                    persistMemory: request.persistMemory !== false,
+                    memoryNamespace: namespace,
+                    exportProfileId: effectiveWorkspaceId
+                        ? this.workspaceRegistry.listActiveWorkspaces().find((workspace) => workspace.workspaceId === effectiveWorkspaceId)?.exportProfileId || null
+                        : scopedWorkspace.exportProfileId,
+                    panelState: {
+                        lastGroundedAnswerAt: generatedAt,
+                        returnedKnowledgePoints: knowledgePoints.length,
+                        returnedCitations: citations.length,
+                    },
+                    recordedAt: generatedAt,
+                });
+                this.recordAgentConversationTurn({
+                    sessionId,
+                    userId,
+                    request: {
+                        ...request,
+                        userId,
+                        sessionId,
+                        message,
+                        topK,
+                        asOf: generatedAt,
+                        memoryNamespace: namespace,
+                    },
+                    response,
+                });
+                if (reply.knowledgeRun.reviewCards.length > 0) {
+                    this.recordWorkflowArtifact({
+                        kind: 'flashcard_batch',
+                        sessionId,
+                        userId,
+                        workspaceId: effectiveWorkspaceId,
+                        corpusId: effectiveCorpusId,
+                        title: `Knowledge run review cards: ${String(message || 'local knowledge').slice(0, 64)}`,
+                        sourceAtomIds: activeConversationAtomIds,
+                        summary: `Prepared ${reply.knowledgeRun.reviewCards.length} review card(s) from ${reply.knowledgeRun.summary.verifiedClaimCount + reply.knowledgeRun.summary.weakClaimCount} evidenced claim(s).`,
+                        payload: {
+                            runId: reply.knowledgeRun.runId,
+                            reviewCards: reply.knowledgeRun.reviewCards,
+                            evidenceClaims: reply.knowledgeRun.evidenceClaims,
+                            reviewState: reply.knowledgeRun.reviewState,
+                        },
+                        recordedAt: generatedAt,
+                    });
+                }
+                this.recordWorkflowArtifact({
+                    kind: 'research_report',
+                    sessionId,
+                    userId,
+                    workspaceId: effectiveWorkspaceId,
+                    corpusId: effectiveCorpusId,
+                    title: `Grounded conversation: ${String(message || 'local knowledge').slice(0, 64)}`,
+                    sourceAtomIds: knowledgePoints.map((point) => point.atomId),
+                    summary: reply.answer,
+                    payload: {
+                        citations,
+                        recalledMemories,
+                        memoryActions,
+                        knowledgeRun: reply.knowledgeRun,
+                    },
+                    recordedAt: generatedAt,
+                });
+                await this.persistIfNeeded();
+                return response;
+            }));
+        } finally {
+            this.pendingAgentConversations--;
+        }
     }
 
-    public async streamAgentConversation(request: AgentConversationRequest = {}): Promise<AsyncGenerator<any, void, void>> {
-        return this.commitKnowledgeState(async () => {
-            const result = await this.agentConversation(request);
-            const turnId = this.nextId('turn');
-            const emittedAt = this.nowProvider().toISOString();
-            return (async function* stream(): AsyncGenerator<any, void, void> {
-                yield {
-                    type: 'turn_completed',
-                    turnId,
-                    emittedAt,
-                    result,
-                };
-            }());
-        });
+    public async streamAgentConversation(request: AgentConversationRequest = {}, signal?: AbortSignal): Promise<AsyncGenerator<any, void, void>> {
+        const result = await this.agentConversation(request, signal);
+        const turnId = `turn_${result.trace.invocationId}`;
+        const emittedAt = this.nowProvider().toISOString();
+        return (async function* stream(): AsyncGenerator<any, void, void> {
+            yield { type: 'turn_completed', turnId, emittedAt, result };
+        }());
     }
 
     public async queryMasteryDiagnostics(request: MasteryDiagnosticsRequest): Promise<MasteryDiagnosticsResponse> {
@@ -11652,10 +11695,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             };
         });
     }
-    public async runAgentConversation(_r: any): Promise<any> {
-        return this.commitKnowledgeState(async () => {
-            return this.agentConversation(_r);
-        });
+    public async runAgentConversation(request: AgentConversationRequest, signal?: AbortSignal): Promise<AgentConversationResponse> {
+        return this.agentConversation(request, signal);
     }
     public async addConversationMemory(request: any = {}): Promise<any> {
         return this.commitKnowledgeState(async () => {

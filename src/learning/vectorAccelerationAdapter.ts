@@ -348,12 +348,21 @@ function parseExternalHttpRetryAfterMs(rawValue: unknown, nowMs = Date.now()): n
     return Math.min(EXTERNAL_HTTP_RETRY_AFTER_MS_MAX, Math.floor(deltaMs));
 }
 
-async function waitForRetryDelay(ms: number): Promise<void> {
+async function waitForRetryDelay(ms: number, signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted();
     if (!Number.isFinite(ms) || ms <= 0) {
         return;
     }
-    await new Promise<void>((resolve) => {
-        setTimeout(resolve, ms);
+    await new Promise<void>((resolve, reject) => {
+        const onAbort = () => {
+            clearTimeout(timer);
+            reject(signal?.reason);
+        };
+        const timer = setTimeout(() => {
+            signal?.removeEventListener('abort', onAbort);
+            resolve();
+        }, ms);
+        signal?.addEventListener('abort', onAbort, { once: true });
     });
 }
 
@@ -569,6 +578,7 @@ export function createVectorAccelerationAdapter(
     return {
         id: EXTERNAL_HTTP_ADAPTER_ID,
         async syncIndex(input: LocalVectorAccelerationIndexSyncInput): Promise<LocalVectorAccelerationIndexSyncOutput> {
+            input.signal?.throwIfAborted();
             const requestedRepresentationVersion = normalizeRepresentationVersion(input.representationVersion);
             const requestedEmbeddingModelId = normalizeEmbeddingModelId(input.embeddingModelId);
             const requestedEmbeddingDimension = normalizeEmbeddingDimension(input.embeddingDimension);
@@ -629,7 +639,7 @@ export function createVectorAccelerationAdapter(
                         tokenToAtomIds: Array.from(input.tokenToAtomIds.entries()),
                         signatureBuckets: Array.from(input.signatureBuckets.entries()),
                     }),
-                    signal: controller.signal,
+                    signal: input.signal ? AbortSignal.any([input.signal, controller.signal]) : controller.signal,
                 });
                 const connectorRequestId = normalizeExternalHttpRequestId(
                     response?.headers?.get?.('x-request-id'),
@@ -651,6 +661,7 @@ export function createVectorAccelerationAdapter(
                     throw new Error(indexSyncMessage);
                 }
                 const payload = await response.json();
+                input.signal?.throwIfAborted();
                 const responseRepresentationVersion = normalizeRepresentationVersion(payload?.representationVersion);
                 const responseEmbeddingModelId = normalizeEmbeddingModelId(payload?.embeddingModelId);
                 const responseEmbeddingDimension = normalizeEmbeddingDimension(payload?.embeddingDimension);
@@ -705,6 +716,7 @@ export function createVectorAccelerationAdapter(
                     },
                 };
             } catch (error) {
+                input.signal?.throwIfAborted();
                 syncFailureCount += 1;
                 indexSyncStatus = endpoint ? 'degraded' : 'unavailable';
                 indexSyncMessage = truncateMessage((error as Error)?.message || error, 240) || 'external_http_index_sync_failed';
@@ -719,6 +731,7 @@ export function createVectorAccelerationAdapter(
             }
         },
         async selectCandidates(input: LocalVectorAccelerationSelectionInput): Promise<LocalVectorAccelerationSelectionOutput> {
+            input.signal?.throwIfAborted();
             selectionRequestCount += 1;
             const requestedRepresentationVersion = normalizeRepresentationVersion(input.representationVersion);
             const requestedEmbeddingModelId = normalizeEmbeddingModelId(input.embeddingModelId);
@@ -781,6 +794,7 @@ export function createVectorAccelerationAdapter(
             const totalAttempts = Math.max(1, maxRetries + 1);
             let lastError: unknown = null;
             for (let attemptIndex = 0; attemptIndex < totalAttempts; attemptIndex += 1) {
+                input.signal?.throwIfAborted();
                 const currentAttempt = attemptIndex + 1;
                 const clientRequestId = nextExternalHttpRequestId();
                 let connectorRequestId = '';
@@ -809,7 +823,7 @@ export function createVectorAccelerationAdapter(
                                 : undefined,
                             indexSignature: requestedIndexSignature || undefined,
                         }),
-                        signal: controller.signal,
+                        signal: input.signal ? AbortSignal.any([input.signal, controller.signal]) : controller.signal,
                     });
                     connectorRequestId = normalizeExternalHttpRequestId(
                         response?.headers?.get?.('x-request-id'),
@@ -847,6 +861,7 @@ export function createVectorAccelerationAdapter(
                         );
                     }
                     const payload = await response.json();
+                    input.signal?.throwIfAborted();
                     const mode = String(payload?.mode || '').trim().toLowerCase();
                     const normalizedMode: LocalVectorAccelerationSelectionOutput['mode'] = (
                         mode === 'token_prefilter'
@@ -975,6 +990,7 @@ export function createVectorAccelerationAdapter(
                         },
                     };
                 } catch (error) {
+                    input.signal?.throwIfAborted();
                     lastError = error;
                     const transient = isExternalHttpTransientFailure(error);
                     const finalAttempt = currentAttempt >= totalAttempts;
@@ -1025,7 +1041,7 @@ export function createVectorAccelerationAdapter(
                             ),
                             checkedAt: new Date().toISOString(),
                         });
-                        await waitForRetryDelay(effectiveBackoffDelay);
+                        await waitForRetryDelay(effectiveBackoffDelay, input.signal);
                         continue;
                     }
                     consecutiveFailures += 1;

@@ -6,6 +6,7 @@ import type {
 } from './types';
 
 export interface RagSufficiencyJudgeInput {
+    signal?: AbortSignal;
     query: string;
     contextPack: RagContextPack;
     graphContext?: AgentConversationGraphContext | null;
@@ -56,6 +57,11 @@ function hasConflictEvidence(fragments: RagEvidenceFragment[]): boolean {
     return fragments.some((fragment) => fragment.role === 'conflict' && textHasSubstance(fragment));
 }
 
+function hasIncompleteSourceScan(pack: RagContextPack): boolean {
+    return pack.sourceDecisions.some(decision => decision.status === 'source_window_unavailable'
+        && String(decision.reason || '').startsWith('runtime_'));
+}
+
 function hasUnavailableGraphNeighborSourceWindow(pack: RagContextPack): boolean {
     return pack.sourceDecisions.some((decision) => (
         decision.status === 'source_window_unavailable'
@@ -101,6 +107,8 @@ function buildDeterministicReview(params: ReviewRagContextSufficiencyParams): Ra
     if (budgetViolation) {
         reasons.push('context_budget_dropped_fragments');
     }
+    const incompleteSourceScan = hasIncompleteSourceScan(params.contextPack);
+    if (incompleteSourceScan) reasons.push('source_scan_incomplete');
 
     if (!directSupport) {
         return {
@@ -133,6 +141,7 @@ function buildDeterministicReview(params: ReviewRagContextSufficiencyParams): Ra
         && documentAugmentation
         && !conflictEvidence
         && !graphNeighborEvidenceMissing
+        && !incompleteSourceScan
         ? 'sufficient'
         : 'borderline';
     return {
@@ -188,11 +197,13 @@ export async function reviewRagContextSufficiency(
         deterministicReview.status !== 'borderline'
         || params.allowLlmJudge !== true
         || typeof params.llmJudge !== 'function'
+        || hasIncompleteSourceScan(params.contextPack)
     ) {
         return deterministicReview;
     }
     try {
         const judgeReview = await params.llmJudge({
+            signal: params.signal,
             query: params.query,
             contextPack: params.contextPack,
             graphContext: params.graphContext,
