@@ -188,42 +188,29 @@ async function completeWithTimeout(params: {
     request: Parameters<RagSufficiencyCompletionClient['complete']>[0];
     timeoutMs: number;
 }): Promise<LlmCompletionResult> {
+    params.request.signal?.throwIfAborted();
     const controller = new AbortController();
     let didTimeout = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const timeoutPromise = new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => {
-            didTimeout = true;
-            controller.abort();
-            reject(new Error('RAG sufficiency judge timed out.'));
-        }, params.timeoutMs);
-        params.request.signal?.addEventListener('abort', () => {
-            if (timer) {
-                clearTimeout(timer);
-                timer = null;
-            }
-            controller.abort();
-            reject(new Error('RAG sufficiency judge cancelled.'));
-        }, { once: true });
-    });
+    const timer = setTimeout(() => {
+        didTimeout = true;
+        controller.abort(new Error('RAG sufficiency judge timed out.'));
+    }, params.timeoutMs);
+    const onParentAbort = () => controller.abort(params.request.signal?.reason);
+    params.request.signal?.addEventListener('abort', onParentAbort, { once: true });
 
     try {
-        return await Promise.race([
-            params.client.complete({
-                ...params.request,
-                signal: controller.signal,
-            }),
-            timeoutPromise,
-        ]);
+        const completion = await params.client.complete({ ...params.request, signal: controller.signal });
+        controller.signal.throwIfAborted();
+        return completion;
     } catch (error) {
         if (didTimeout) {
             throw new Error('RAG sufficiency judge timed out.');
         }
+        params.request.signal?.throwIfAborted();
         throw error;
     } finally {
-        if (timer) {
-            clearTimeout(timer);
-        }
+        clearTimeout(timer);
+        params.request.signal?.removeEventListener('abort', onParentAbort);
     }
 }
 
@@ -245,7 +232,9 @@ export function createRagSufficiencyProviderJudge(
     );
 
     return async (input) => {
+        input.signal?.throwIfAborted();
         const settings = await options.settingsProvider();
+        input.signal?.throwIfAborted();
         const provider = selectProviderForTask(settings, RAG_SUFFICIENCY_TASK_KEY);
         const model = selectModelForTask(settings, RAG_SUFFICIENCY_TASK_KEY, provider);
         const configuredPrompt = settings.enableGlobalCustomPrompts
@@ -255,6 +244,7 @@ export function createRagSufficiencyProviderJudge(
             client,
             timeoutMs,
             request: {
+                signal: input.signal,
                 provider,
                 model,
                 prompt: configuredPrompt || DEFAULT_REVIEW_PROMPT,

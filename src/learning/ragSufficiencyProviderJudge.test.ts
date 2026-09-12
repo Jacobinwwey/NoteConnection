@@ -4,6 +4,7 @@ import {
 } from './ragSufficiencyProviderJudge';
 import type { RagContextPack, RagEvidenceFragment } from './types';
 import type { NotemdSettings } from '../notemd/types';
+import { getEventListeners } from 'events';
 
 function makeSettings(): NotemdSettings {
     return {
@@ -75,6 +76,59 @@ function makePack(): RagContextPack {
 }
 
 describe('createRagSufficiencyProviderJudge', () => {
+    test('turn cancellation reaches provider I/O', async () => {
+        const controller = new AbortController();
+        const reason = new Error('turn_cancelled');
+        let entered!: () => void;
+        const started = new Promise<void>(resolve => { entered = resolve; });
+        const complete = jest.fn<Promise<any>, [any]>(request => new Promise((_resolve, reject) => {
+            request.signal.addEventListener('abort', () => reject(request.signal.reason), { once: true });
+            entered();
+        }));
+        const judge = createRagSufficiencyProviderJudge({ settingsProvider: makeSettings, llmClient: { complete } });
+        const pending = judge({ query: 'water glass', contextPack: makePack(), signal: controller.signal }).catch(error => error);
+        await started;
+        controller.abort(reason);
+        expect(await pending).toBe(reason);
+        expect(complete.mock.calls[0][0].signal.aborted).toBe(true);
+    });
+
+    test('does not return while a cancelled provider callback can still run', async () => {
+        const controller = new AbortController();
+        const reason = new Error('turn_cancelled');
+        let release!: () => void;
+        let entered!: () => void;
+        const started = new Promise<void>(resolve => { entered = resolve; });
+        const held = new Promise<void>(resolve => { release = resolve; });
+        const complete = jest.fn(async () => { entered(); await held; return { text: '{"status":"sufficient","score":1}', provider: 'OpenAI' as const, model: 'gpt-test' }; });
+        const judge = createRagSufficiencyProviderJudge({ settingsProvider: makeSettings, llmClient: { complete } });
+        let finished = false;
+        const pending = judge({ query: 'water glass', contextPack: makePack(), signal: controller.signal }).catch(error => error).finally(() => { finished = true; });
+        await started;
+        controller.abort(reason);
+        await new Promise(resolve => setImmediate(resolve));
+        const finishedBeforeProviderStopped = finished;
+        release();
+        expect(await pending).toBe(reason);
+        expect(finishedBeforeProviderStopped).toBe(false);
+    });
+
+    test('a pre-cancelled turn does not start a provider request', async () => {
+        const controller = new AbortController();
+        controller.abort(new Error('already_cancelled'));
+        const complete = jest.fn();
+        const judge = createRagSufficiencyProviderJudge({ settingsProvider: makeSettings, llmClient: { complete } });
+        await expect(judge({ query: 'water glass', contextPack: makePack(), signal: controller.signal })).rejects.toThrow('already_cancelled');
+        expect(complete).not.toHaveBeenCalled();
+    });
+
+    test('completed provider work releases the parent cancellation listener', async () => {
+        const controller = new AbortController();
+        const complete = jest.fn().mockResolvedValue({ text: '{"status":"sufficient","score":1}', provider: 'OpenAI', model: 'gpt-test' });
+        const judge = createRagSufficiencyProviderJudge({ settingsProvider: makeSettings, llmClient: { complete } });
+        await judge({ query: 'water glass', contextPack: makePack(), signal: controller.signal });
+        expect(getEventListeners(controller.signal, 'abort')).toHaveLength(0);
+    });
     test('calls the configured NoteMD provider with bounded JSON-only review input', async () => {
         const complete = jest.fn().mockResolvedValue({
             text: '```json\n{"status":"sufficient","score":0.84,"reasons":["answerable_from_context"],"degradationState":"none"}\n```',
