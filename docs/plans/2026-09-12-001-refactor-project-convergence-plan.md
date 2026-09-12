@@ -115,7 +115,9 @@ Handle `write() === false` through a bounded queue/drain lifecycle with close/er
 
 ### U4 — preserve matching semantics before further graph optimization
 
-- [ ] **U4 / P1 — close F4; R4**
+- [x] **U4 / P1 — close F4; R4**
+
+Implemented: exact-phrase candidates use the matcher's ASCII word boundaries; fuzzy matching uses the complete candidate set. Differential regressions cover mixed Chinese/ASCII, substrings, punctuation, exclusions and both actual worker input modes. Matching, identity and PathEngine suites passed 11 tests. This keeps fuzzy's worst-case scan cost explicit.
 
 **Owner/files:** `src/backend/GraphBuilder.ts`, `src/backend/workers/keywordMatchWorker.ts`, `src/backend/utils/stringUtils.ts` only if shared semantics need an explicit contract. Create `src/backend/GraphBuilder.matching.test.ts`; retain `src/backend/GraphBuilder.identity.test.ts` and `src/core/PathEngine.test.ts`.
 
@@ -304,7 +306,9 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 ### U4：先保证图匹配语义，再优化性能
 
-- [ ] **U4 / P1 — 关闭 F4；R4**
+- [x] **U4 / P1 — 关闭 F4；R4**
+
+已实现：exact-phrase 候选与 matcher 的 ASCII 词边界一致；fuzzy 使用完整候选集。差分回归覆盖中英混排、子串、标点、排除项和真实 worker 的两种输入方式；matching、identity、PathEngine 共 11 项通过。保留 fuzzy 最坏情况下的扫描成本说明。
 
 **Owner/文件：**`src/backend/GraphBuilder.ts`、`src/backend/workers/keywordMatchWorker.ts`；仅共享语义契约需要时涉及 `src/backend/utils/stringUtils.ts`。新增 `src/backend/GraphBuilder.matching.test.ts`，保留 identity 与 `src/core/PathEngine.test.ts` 回归。
 

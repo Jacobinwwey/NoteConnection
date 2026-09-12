@@ -482,14 +482,13 @@ export class GraphBuilder {
   }
 
   private static runSequentialMatching(files: RawFile[], graph: Graph) {
-      // Index the first semantic token of every document once. The previous
-      // implementation tested every source/target pair (O(V^2)); candidate
-      // filtering keeps exact semantics while making the common case close to
-      // O(total content + matching candidates). Punctuation-only titles retain
-      // the old full-scan behavior because they have no safe anchor token.
+      // Exact-phrase matching uses JavaScript's ASCII word boundaries. Index
+      // those same word runs so mixed CJK/ASCII text cannot hide a valid match.
+      // Substring matching requires a full candidate set; token equality is not
+      // a conservative prefilter for fuzzy matches inside a longer word.
       const candidatesByAnchor = new Map<string, RawFile[]>();
       files.forEach((sourceFile) => {
-          const tokens = sourceFile.content.toLowerCase().match(/[A-Za-z0-9\u4e00-\u9fff]+/gu) || [];
+          const tokens = sourceFile.content.toLowerCase().match(/[A-Za-z0-9_]+/g) || [];
           const seenTokens = new Set(tokens);
           seenTokens.forEach((token) => {
               const candidates = candidatesByAnchor.get(token) || [];
@@ -503,8 +502,10 @@ export class GraphBuilder {
           if (config.exclusionList.includes(targetId)) {
               return;
           }
-          const anchor = targetId.toLowerCase().match(/[A-Za-z0-9\u4e00-\u9fff]+/u)?.[0] || '';
-          const candidateSources = anchor ? (candidatesByAnchor.get(anchor) || []) : files;
+          const anchor = targetId.toLowerCase().match(/[A-Za-z0-9_]+/)?.[0] || '';
+          const candidateSources = config.matchingStrategy === 'exact-phrase' && anchor
+              ? (candidatesByAnchor.get(anchor) || [])
+              : files;
           candidateSources.forEach((sourceFile) => {
               const sourceId = sourceFile.filename;
               if (sourceId === targetId) {
