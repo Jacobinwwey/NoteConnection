@@ -533,6 +533,8 @@ async function runVerification(options) {
                 texAnnotations: Array.from(direct?.querySelectorAll('.katex annotation[encoding="application/x-tex"]') || [])
                     .map((annotation) => annotation.textContent || ''),
                 rawMathDelimiterCount: (direct?.textContent?.match(/(?<!\\\\)\\$/g) || []).length,
+                messageViewportHeight: document.getElementById('agent-workspace-chat-messages')?.clientHeight || 0,
+                viewport: { width: window.innerWidth, height: window.innerHeight },
                 hiddenSections,
                 visibleKnowledgeRunCount: card?.querySelectorAll('.agent-chat-knowledge-run-card').length || 0,
                 visibleKnowledgeActions: (card?.textContent || '').includes('Knowledge Actions'),
@@ -554,7 +556,7 @@ async function runVerification(options) {
             };
         })())`);
         const report = JSON.parse(String(reportJson || '{}'));
-        await evaluate(connection, sessionId, `document.querySelector('.agent-chat-structured-answer-card [data-structured-answer-section="directAnswer"]')?.scrollIntoView({ block: 'center', inline: 'nearest' })`);
+        await evaluate(connection, sessionId, `document.querySelector('.agent-chat-structured-answer-card [data-structured-answer-section="directAnswer"]')?.scrollIntoView({ block: 'start', inline: 'nearest' })`);
         await delay(150);
         const screenshot = await connection.request('Page.captureScreenshot', {
             format: 'png',
@@ -592,6 +594,7 @@ async function runVerification(options) {
         const expectedTitle = options.realWaterglass ? '可信回答' : 'Grounded Answer';
         if (report.title !== expectedTitle) failures.push(`title=${report.title}`);
         if (report.katexCount < 2) failures.push(`katexCount=${report.katexCount}`);
+        if (report.messageViewportHeight < 128) failures.push(`messageViewportHeight=${report.messageViewportHeight}`);
         const normalizedTexAnnotations = report.texAnnotations.map(normalizeMathExpression);
         if (!normalizedTexAnnotations.some((value) => value.includes(normalizeMathExpression('\\frac{\\partial T}{\\partial t}=\\alpha\\nabla^2 T')))) {
             failures.push('thermalTexAnnotationMissing');

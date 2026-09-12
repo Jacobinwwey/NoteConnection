@@ -1566,23 +1566,19 @@ body.agent-workspace-open .agent-workspace-drawer {
 }
 
 .agent-chat-pane {
-  display: grid;
-  grid-template-rows:
-    auto
-    auto
-    auto
-    minmax(128px, 0.92fr)
-    minmax(128px, 0.62fr)
-    auto
-    auto
-    auto;
-  max-height: calc(100vh - 142px);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 142px);
   padding: 16px;
   gap: 12px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+
+.agent-chat-pane > * {
+  flex-shrink: 0;
 }
 
 .agent-pane-header,
@@ -1903,7 +1899,9 @@ body.agent-workspace-open .agent-workspace-drawer {
 }
 
 .agent-chat-messages {
-  min-height: 0;
+  /* The transcript owns spare height even when optional controls are inserted. */
+  flex: 1 0 240px;
+  min-height: 128px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2219,6 +2217,7 @@ body.agent-workspace-open .agent-workspace-drawer {
 
 .agent-knowledge-points {
   min-height: 0;
+  max-height: min(200px, 24vh);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -3698,7 +3697,7 @@ body[data-agent-workspace-promotion="learning-path"] #agent-learning-path-pane {
   }
 
   .agent-chat-pane {
-    max-height: none;
+    height: auto;
   }
 
   .agent-side-work-area {

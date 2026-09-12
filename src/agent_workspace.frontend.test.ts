@@ -4247,7 +4247,6 @@ describe('workspace panes controller', () => {
         const toolbarRule = styles.match(/\.agent-workspace-drawer-toolbar\s*\{[^}]*\}/)?.[0] || '';
         const workspaceScopeRule = styles.match(/\.agent-scope-control--workspace\s*\{[^}]*\}/)?.[0] || '';
         const scopeStyle = styles.match(/\.agent-scope-control\s*\{[^}]*\}/)?.[0] || '';
-        const chatPaneRule = styles.match(/\.agent-chat-pane\s*\{[^}]*\}/)?.[0] || '';
         const knowledgePointsRule = styles.match(/\.agent-knowledge-points\s*\{[^}]*\}/)?.[0] || '';
         const knowledgeCardHeaderRule = styles.match(/\.agent-knowledge-card-header\s*\{[^}]*\}/)?.[0] || '';
         const knowledgeMenuButtonRule = styles.match(/\.agent-knowledge-menu-button\s*\{[^}]*\}/)?.[0] || '';
@@ -4255,8 +4254,6 @@ describe('workspace panes controller', () => {
         expect(toolbarRule).toContain('grid-template-columns: minmax(180px, 1fr) auto');
         expect(workspaceScopeRule).toContain('grid-template-columns: minmax(94px, auto) minmax(0, 1fr)');
         expect(scopeStyle).not.toContain('position: sticky');
-        expect(chatPaneRule).toContain('display: grid');
-        expect(chatPaneRule).toContain('grid-template-rows:');
         expect(knowledgePointsRule).toContain('overflow-y: auto');
         expect(knowledgeCardHeaderRule).toContain('grid-template-columns: minmax(0, 1fr) 44px');
         expect(knowledgeMenuButtonRule).toContain('width: 44px');
@@ -4411,12 +4408,8 @@ describe('workspace panes controller', () => {
         expect(chatPaneRule).toContain('overflow-x: hidden');
         expect(chatPaneRule).toContain('overflow-y: auto');
         expect(chatPaneRule).not.toContain('overflow: hidden');
-        expect(chatPaneRule).toContain('display: grid');
-        expect(chatPaneRule).toContain('grid-template-rows:');
-        expect(chatPaneRule).toContain('minmax(128px, 0.62fr)');
-        expect(chatPaneRule).toContain('max-height: calc(100vh - 142px)');
+        // The browser verifier measures readable transcript height with optional controls present.
         expect(chatMessagesRule).toContain('overflow-y: auto');
-        expect(chatMessagesRule).toContain('min-height: 0');
         expect(knowledgePointsRule).toContain('overflow-y: auto');
         expect(knowledgePointsRule).toContain('min-height: 0');
         expect(knowledgePointsRule).toContain('scrollbar-gutter: stable');

@@ -140,3 +140,44 @@ jobs:
         run: |
           npm run test:agent-workspace:contracts
           npm run test:conversation-turn-cache:durability
+
+  agent-answer-browser-gates:
+    name: agent-answer-browser-gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run build:with-vite
+      - name: Verify rendered slim and full answers
+        shell: bash
+        run: |
+          set -euo pipefail
+          google-chrome --headless=new --no-sandbox --disable-dev-shm-usage \
+            --disable-background-networking --no-first-run \
+            --remote-debugging-address=127.0.0.1 --remote-debugging-port=9223 \
+            --window-size=1600,1200 --force-device-scale-factor=1 \
+            --user-data-dir="$RUNNER_TEMP/agent-answer-browser" about:blank \
+            > "$RUNNER_TEMP/agent-answer-browser.log" 2>&1 &
+          browser_pid=$!
+          trap 'kill "$browser_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..50}; do
+            if curl --fail --silent http://127.0.0.1:9223/json/version > /dev/null; then break; fi
+            sleep 0.2
+          done
+          curl --fail --silent http://127.0.0.1:9223/json/version > /dev/null
+          node scripts/verify-agent-answer-browser.js --cdp-port 9223
+          node scripts/verify-agent-answer-browser.js --cdp-port 9223 --response-mode full
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-answer-browser-evidence
+          path: |
+            output/browser-research/agent-answer-*
+            ${{ runner.temp }}/agent-answer-browser.log
