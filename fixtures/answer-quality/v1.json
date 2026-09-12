@@ -1,0 +1,1016 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "authoredAt": "2026-09-12",
+  "backend": "local-hybrid-v1",
+  "description": {
+    "en": "Closed-world bilingual reference probes. Calibration subjects are disjoint from evaluation subjects; frozen before observing evaluation outputs.",
+    "zh": "闭合证据范围的双语参考探针。校准主题与评估主题分离，评估输出观察前冻结。"
+  },
+  "cases": [
+    {
+      "id": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "query": "What is a directed acyclic graph?",
+      "documents": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md",
+          "language": "en",
+          "content": "# Directed Acyclic Graph\nA directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "no directed cycles"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "topological order"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "contains directed cycles"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是有向无环图？",
+      "documents": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md",
+          "language": "zh",
+          "content": "# 有向无环图\n有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "不含有向环"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "拓扑排序"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "一定包含有向环"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "query": "Why does unbounded queuing increase latency?",
+      "documents": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md",
+          "language": "en",
+          "content": "# Unbounded Queuing\nUnbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "wait|waiting"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "admission|reject"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "eliminates all latency"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "query": "为什么无界排队会增加延迟？",
+      "documents": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md",
+          "language": "zh",
+          "content": "# 无界排队\n无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "等待"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "准入|拒绝"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "消除所有延迟"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the retention period for the Cobalt log?",
+      "documents": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md",
+          "language": "en",
+          "content": "# Cobalt Log\nThe Cobalt log retention period is 7 days. This policy is active."
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md",
+          "language": "en",
+          "content": "# Cobalt Log Policy\nThe Cobalt log retention period is 30 days. This policy is active."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "query": "蓝钴日志的保留周期是多少？",
+      "documents": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md",
+          "language": "zh",
+          "content": "# 蓝钴日志\n蓝钴日志的保留周期是7天。该策略当前有效。"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md",
+          "language": "zh",
+          "content": "# 蓝钴日志策略\n蓝钴日志的保留周期是30天。该策略当前有效。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-idempotency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "query": "What is idempotent registration?",
+      "documents": [
+        {
+          "documentId": "eval-idempotency-en-doc-1",
+          "sourcePath": "evaluation/eval-idempotency-en/source-1.md",
+          "language": "en",
+          "content": "# Idempotent Registration\nIdempotent registration returns a stored result for repeated requests with the same key. The state change is committed at most once for that key. This contract does not guarantee delivery over an unreliable network."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "stored result"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "same key"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "at most once"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "ensures exactly.once network delivery"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-idempotency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是幂等注册？",
+      "documents": [
+        {
+          "documentId": "eval-idempotency-zh-doc-1",
+          "sourcePath": "evaluation/eval-idempotency-zh/source-1.md",
+          "language": "zh",
+          "content": "# 幂等注册\n幂等注册对相同键的重复请求返回已保存的结果。对于该键，状态变更最多提交一次。这一契约不保证不可靠网络上的消息送达。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "相同键"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "已保存的结果"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "最多提交一次"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "保证网络消息恰好送达一次"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-snapshot-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "query": "Compare a snapshot and a journal.",
+      "documents": [
+        {
+          "documentId": "eval-snapshot-en-doc-1",
+          "sourcePath": "evaluation/eval-snapshot-en/source-1.md",
+          "language": "en",
+          "content": "# Snapshot\nA snapshot stores the complete state at a checkpoint. Restoring a snapshot starts from that recorded state. [[Journal]]"
+        },
+        {
+          "documentId": "eval-snapshot-en-doc-2",
+          "sourcePath": "evaluation/eval-snapshot-en/source-2.md",
+          "language": "en",
+          "content": "# Journal\nA journal records an ordered sequence of state changes. Recovery replays the recorded changes in order. [[Snapshot]]"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "complete state"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "ordered sequence|changes in order"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "a journal stores only the complete state"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-snapshot-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "query": "比较快照和变更日志。",
+      "documents": [
+        {
+          "documentId": "eval-snapshot-zh-doc-1",
+          "sourcePath": "evaluation/eval-snapshot-zh/source-1.md",
+          "language": "zh",
+          "content": "# 快照\n快照记录检查点时的完整状态。恢复快照从该状态开始。[[变更日志]]"
+        },
+        {
+          "documentId": "eval-snapshot-zh-doc-2",
+          "sourcePath": "evaluation/eval-snapshot-zh/source-2.md",
+          "language": "zh",
+          "content": "# 变更日志\n变更日志记录有序的状态变更序列。恢复时按顺序重放这些变更。[[快照]]"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "完整状态"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "有序|按顺序"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "变更日志只记录完整状态"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-retries-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "causal",
+      "query": "Why do synchronized retries overload a recovering server?",
+      "documents": [
+        {
+          "documentId": "eval-retries-en-doc-1",
+          "sourcePath": "evaluation/eval-retries-en/source-1.md",
+          "language": "en",
+          "content": "# Synchronized Retries\nSynchronized retries overload a recovering server because many clients retry at the same moment after a shared outage. Randomized delay spreads retry traffic over time and reduces simultaneous load."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "same moment|simultaneous"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "randomized delay"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "randomized delay guarantees delivery"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-retries-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "causal",
+      "query": "为什么同步重试会压垮恢复中的服务器？",
+      "documents": [
+        {
+          "documentId": "eval-retries-zh-doc-1",
+          "sourcePath": "evaluation/eval-retries-zh/source-1.md",
+          "language": "zh",
+          "content": "# 同步重试\n同步重试会压垮恢复中的服务器，因为多个客户端在共同故障后同时重试。加入随机延迟可以分散重试流量，减少同一时刻的负载。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "同时重试"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "随机延迟"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "随机延迟保证消息送达"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-replacement-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "multi_step",
+      "query": "How do I perform safe snapshot replacement?",
+      "documents": [
+        {
+          "documentId": "eval-replacement-en-doc-1",
+          "sourcePath": "evaluation/eval-replacement-en/source-1.md",
+          "language": "en",
+          "content": "# Safe Snapshot Replacement\nPerform these steps in order:\n1. Write the new state to a temporary file.\n2. Flush the temporary file contents.\n3. Atomically rename the temporary file over the old snapshot.\n4. Acknowledge the write only after the replacement succeeds.\nA failed replacement must not acknowledge success."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "temporary file"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "flush"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "rename"
+            ]
+          },
+          {
+            "id": "fact-4",
+            "patterns": [
+              "acknowledge"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "acknowledge before replacement"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false,
+        "orderedSteps": [
+          "temporary file",
+          "flush",
+          "rename",
+          "acknowledge"
+        ]
+      }
+    },
+    {
+      "id": "eval-replacement-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "multi_step",
+      "query": "如何执行安全快照替换？",
+      "documents": [
+        {
+          "documentId": "eval-replacement-zh-doc-1",
+          "sourcePath": "evaluation/eval-replacement-zh/source-1.md",
+          "language": "zh",
+          "content": "# 安全快照替换\n按顺序执行以下步骤：\n1. 将新状态写入临时文件。\n2. 刷新临时文件内容。\n3. 原子重命名临时文件，替换旧快照。\n4. 替换成功后才确认写入。\n替换失败不能确认成功。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "临时文件"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "刷新"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "原子重命名"
+            ]
+          },
+          {
+            "id": "fact-4",
+            "patterns": [
+              "确认写入"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "替换之前确认成功"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false,
+        "orderedSteps": [
+          "临时文件",
+          "刷新",
+          "原子重命名",
+          "确认写入"
+        ]
+      }
+    },
+    {
+      "id": "eval-capacity-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the capacity of the Helios buffer according to the active notes?",
+      "documents": [
+        {
+          "documentId": "eval-capacity-en-doc-1",
+          "sourcePath": "evaluation/eval-capacity-en/source-1.md",
+          "language": "en",
+          "content": "# Helios Buffer\nThe Helios buffer capacity is 64 MB. This specification is active."
+        },
+        {
+          "documentId": "eval-capacity-en-doc-2",
+          "sourcePath": "evaluation/eval-capacity-en/source-2.md",
+          "language": "en",
+          "content": "# Helios Buffer Specification\nThe Helios buffer capacity is 128 MB. This specification is active."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "64"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "128"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "capacity is 96 MB"
+          }
+        ],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-capacity-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "query": "根据当前有效的笔记，白鹭缓冲区容量是多少？",
+      "documents": [
+        {
+          "documentId": "eval-capacity-zh-doc-1",
+          "sourcePath": "evaluation/eval-capacity-zh/source-1.md",
+          "language": "zh",
+          "content": "# 白鹭缓冲区\n白鹭缓冲区容量是64MB。这份规格当前有效。"
+        },
+        {
+          "documentId": "eval-capacity-zh-doc-2",
+          "sourcePath": "evaluation/eval-capacity-zh/source-2.md",
+          "language": "zh",
+          "content": "# 白鹭缓冲区规格\n白鹭缓冲区容量是128MB。这份规格当前有效。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "64"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "128"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "容量是96MB"
+          }
+        ],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-missing-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "query": "What is the isotope ratio of an Asterion core?",
+      "documents": [
+        {
+          "documentId": "eval-missing-en-doc-1",
+          "sourcePath": "evaluation/eval-missing-en/source-1.md",
+          "language": "en",
+          "content": "# Bloom Filter\nA Bloom filter is a probabilistic membership structure. These notes contain no measurements of isotope ratios."
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "72\\.5\\s*%"
+          },
+          {
+            "id": "unsupported-2",
+            "pattern": "isotope ratio (is|equals) [0-9]"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    },
+    {
+      "id": "eval-missing-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "query": "玄穹晶体的同位素比例是多少？",
+      "documents": [
+        {
+          "documentId": "eval-missing-zh-doc-1",
+          "sourcePath": "evaluation/eval-missing-zh/source-1.md",
+          "language": "zh",
+          "content": "# 布隆过滤器\n布隆过滤器是一种概率型成员查询结构。这些笔记没有提供同位素比例的测量数据。"
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "72\\.5\\s*%"
+          },
+          {
+            "id": "unsupported-2",
+            "pattern": "同位素比例(是|为)[0-9]"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    },
+    {
+      "id": "eval-drift-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "topic_drift",
+      "query": "Explain lease expiry.",
+      "documents": [
+        {
+          "documentId": "eval-drift-en-doc-1",
+          "sourcePath": "evaluation/eval-drift-en/source-1.md",
+          "language": "en",
+          "content": "# Lease Expiry\nLease expiry ends a time-limited ownership grant when its deadline passes. A client must reacquire a new lease before performing protected writes."
+        },
+        {
+          "documentId": "eval-drift-en-doc-2",
+          "sourcePath": "evaluation/eval-drift-en/source-2.md",
+          "language": "en",
+          "content": "# Greenhouse Schedule\nPhotosynthesis converts light energy into chemical energy. The greenhouse schedule also contains deadlines."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "deadline"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "reacquire|new lease"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "photosynthesis converts"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-drift-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "topic_drift",
+      "query": "解释租约到期。",
+      "documents": [
+        {
+          "documentId": "eval-drift-zh-doc-1",
+          "sourcePath": "evaluation/eval-drift-zh/source-1.md",
+          "language": "zh",
+          "content": "# 租约到期\n租约到期指有时限的所有权授权在截止时间之后失效。客户端必须重新取得租约，才能继续执行受保护的写入。"
+        },
+        {
+          "documentId": "eval-drift-zh-doc-2",
+          "sourcePath": "evaluation/eval-drift-zh/source-2.md",
+          "language": "zh",
+          "content": "# 温室计划\n光合作用把光能转化为化学能。温室计划也包含截止时间。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "截止时间"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "重新取得租约"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "光合作用把光能"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-math-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "math",
+      "query": "Explain series resistance and its formula.",
+      "documents": [
+        {
+          "documentId": "eval-math-en-doc-1",
+          "sourcePath": "evaluation/eval-math-en/source-1.md",
+          "language": "en",
+          "content": "# Series Resistance\nThe total resistance of two resistors connected in series is the sum of their individual resistances.\n\n$$\nR_{total} = R_1 + R_2\n$$\n\nThis relation assumes ideal resistors connected in a single series path."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "sum"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "R_1\\s*\\+\\s*R_2"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "R_1\\s*-\\s*R_2"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-math-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "math",
+      "query": "解释串联电阻及其公式。",
+      "documents": [
+        {
+          "documentId": "eval-math-zh-doc-1",
+          "sourcePath": "evaluation/eval-math-zh/source-1.md",
+          "language": "zh",
+          "content": "# 串联电阻\n两个电阻串联时，总电阻等于两个电阻的阻值之和。\n\n$$\nR_{总} = R_1 + R_2\n$$\n\n这个关系适用于连接在单一串联路径上的理想电阻。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "之和"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "R_1\\s*\\+\\s*R_2"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "R_1\\s*-\\s*R_2"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-headings-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "noisy_headings",
+      "query": "What is a fencing token?",
+      "documents": [
+        {
+          "documentId": "eval-headings-en-doc-1",
+          "sourcePath": "evaluation/eval-headings-en/source-1.md",
+          "language": "en",
+          "content": "# Introduction\n## Table of Contents\n### Fencing Token\nA fencing token is a monotonically increasing number attached to an ownership grant. The storage system rejects writes carrying an older token than the newest accepted token.\n## Revision History\nThe heading names are editorial metadata."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "monotonically increasing"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "rejects writes|older token"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "tokens are always random strings"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "eval-headings-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "noisy_headings",
+      "query": "什么是栅栏令牌？",
+      "documents": [
+        {
+          "documentId": "eval-headings-zh-doc-1",
+          "sourcePath": "evaluation/eval-headings-zh/source-1.md",
+          "language": "zh",
+          "content": "# 引言\n## 目录\n### 栅栏令牌\n栅栏令牌是附加在所有权授权上的单调递增编号。存储系统拒绝携带旧于最新已接受令牌的写入。\n## 修订历史\n这些标题是编辑元数据。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "单调递增"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "拒绝.*写入"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "令牌总是随机字符串"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    }
+  ]
+}

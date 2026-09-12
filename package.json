@@ -146,7 +146,9 @@
     "docs:site:serve": "node scripts/run-mkdocs.js serve --config-file mkdocs.yml",
     "docs:github-pages:publish": "node -e \"console.log('Use GitHub Actions workflow: Docs GitHub Pages Publish (.github/workflows/docs-github-pages-publish.yml).')\"",
     "docs:github-pages:rollback": "node -e \"console.log('Run workflow_dispatch for docs-github-pages-publish.yml and set git_ref to the target stable tag/commit.')\"",
-    "test:convergence": "jest src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/agentConversationExecution.test.ts src/learning/vectorAccelerationAdapter.test.ts src/learning/agentConversationSerialization.test.ts src/middleware/SseResponseWriter.test.ts src/backend/GraphBuilder.matching.test.ts src/server.migration.test.ts --runInBand --ci"
+    "test:convergence": "jest src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/agentConversationExecution.test.ts src/learning/vectorAccelerationAdapter.test.ts src/learning/agentConversationSerialization.test.ts src/middleware/SseResponseWriter.test.ts src/backend/GraphBuilder.matching.test.ts src/server.migration.test.ts --runInBand --ci",
+    "evaluate:answer-quality": "node scripts/evaluate-answer-quality.js",
+    "measure:convergence": "node --expose-gc scripts/measure-convergence-runtime.js"
   },
   "pkg": {
     "scripts": [
