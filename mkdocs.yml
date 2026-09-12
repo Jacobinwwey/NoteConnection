@@ -47,7 +47,9 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Project Progress Audit (2026-09-12): audits/2026-09-12-project-progress.md
+  - Convergence Results (2026-09-13): evaluations/2026-09-13-convergence-results.md
+  - Learning Pilot Protocol: evaluations/2026-09-12-learning-pilot-protocol.md
+  - Project Progress Baseline (2026-09-12): audits/2026-09-12-project-progress.md
   - Project Convergence Plan: plans/2026-09-12-001-refactor-project-convergence-plan.md
   - Historical Open Goal Audit (2026-05-10): open_goal_audit_2026-05-10.md
   - Working Docs:

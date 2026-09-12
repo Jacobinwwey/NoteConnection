@@ -1,4 +1,4 @@
-# 2026-09-12 - Bilingual Docs Pair Index
+# 2026-09-13 - Bilingual Docs Pair Index
 
 ## English Document
 
@@ -25,7 +25,7 @@
 
 ### Bilingual Pairs
 
-Shared bilingual documents with separated English/Chinese sections: [current audit](audits/2026-09-12-project-progress.md) and [convergence plan](plans/2026-09-12-001-refactor-project-convergence-plan.md). Earlier dated progress claims below are historical.
+Shared bilingual documents with separated English/Chinese sections: [current results](evaluations/2026-09-13-convergence-results.md), [pilot protocol](evaluations/2026-09-12-learning-pilot-protocol.md), [audit baseline](audits/2026-09-12-project-progress.md) and [convergence plan](plans/2026-09-12-001-refactor-project-convergence-plan.md). Earlier dated progress claims below are historical.
 
 | # | File | English | Chinese | Status |
 |---|---|---|---|---|
@@ -84,7 +84,7 @@ Shared bilingual documents with separated English/Chinese sections: [current aud
 
 ### 双语配对清单
 
-中英文分节的共享文档：[当前审计](audits/2026-09-12-project-progress.md)与[推进计划](plans/2026-09-12-001-refactor-project-convergence-plan.md)。下方早期日期的进度声明保留为历史。
+中英文分节的共享文档：[当前实施结果](evaluations/2026-09-13-convergence-results.md#chinese)、[pilot 协议](evaluations/2026-09-12-learning-pilot-protocol.md)、[审计基线](audits/2026-09-12-project-progress.md)与[推进计划](plans/2026-09-12-001-refactor-project-convergence-plan.md)。下方早期日期的进度声明保留为历史。
 
 | # | 文件 | 英文 | 中文 | 状态 |
 |---|---|---|---|---|

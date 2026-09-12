@@ -1,0 +1,364 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-12T21:12:14.147Z",
+  "baselineRevision": "e84d6ece9cce5b82902d4b9335ac096a136a8d2a",
+  "implementationRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
+  "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+  "artifacts": {
+    "dist_node_runtime": {
+      "kind": "sidecar_inputs",
+      "path": "dist/src",
+      "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
+      "sizeBytes": 27993653
+    },
+    "packaged_sidecar": {
+      "kind": "file",
+      "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+      "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
+      "sizeBytes": 77904488
+    }
+  },
+  "tests": [
+    {
+      "id": "node22",
+      "node": "22.19.0",
+      "passed": 1528,
+      "failed": 0,
+      "skipped": 0,
+      "suites": 162,
+      "sourceReport": "output/project-convergence-2026-09-12/test-reports/complete-final-node22-1789246419456.json",
+      "sourceReportSha256": "254aeda98f7b0e2da813a965f346b41d0e32604eb8cbaec2520d8e130ab1938c"
+    },
+    {
+      "id": "node24",
+      "node": "24.14.0",
+      "passed": 1528,
+      "failed": 0,
+      "skipped": 0,
+      "suites": 162,
+      "sourceReport": "output/project-convergence-2026-09-12/test-reports/complete-final-node24-1789246419466.json",
+      "sourceReportSha256": "91d3d72419d72bb8532665da3265e421777a1edd8003f732c6586cc98685336d"
+    }
+  ],
+  "browsers": [
+    {
+      "sourceReport": "output/browser-research/agent-answer-formula-render-latest.json",
+      "sourceReportSha256": "22aae3876ff546c498c2148e240e595cf5f4db12dd74dc32aa5cd2c8abab668d",
+      "capturedAt": "2026-09-12T21:00:05.813Z",
+      "responseMode": "slim",
+      "responseBudgetMode": "adaptive",
+      "realWaterglass": false,
+      "sourceDocumentCount": 1,
+      "viewport": {
+        "width": 778,
+        "height": 502
+      },
+      "messageViewportHeight": 240,
+      "katexCount": 4,
+      "rawMathDelimiterCount": 0,
+      "hiddenSections": [],
+      "visibleKnowledgeRunCount": 0,
+      "nextActionsExpanded": "false",
+      "screenshotPath": "output/browser-research/agent-answer-formula-render-latest.png"
+    },
+    {
+      "sourceReport": "output/browser-research/agent-answer-formula-render-full-adaptive-latest.json",
+      "sourceReportSha256": "ad7f1725d935c0f1d00f596fcb3b81bac36f8e402dba739129e9d9c965b10fa1",
+      "capturedAt": "2026-09-12T21:00:19.949Z",
+      "responseMode": "full",
+      "responseBudgetMode": "adaptive",
+      "realWaterglass": false,
+      "sourceDocumentCount": 1,
+      "viewport": {
+        "width": 778,
+        "height": 502
+      },
+      "messageViewportHeight": 240,
+      "katexCount": 4,
+      "rawMathDelimiterCount": 0,
+      "hiddenSections": [],
+      "visibleKnowledgeRunCount": 0,
+      "nextActionsExpanded": "false",
+      "screenshotPath": "output/browser-research/agent-answer-formula-render-full-adaptive-latest.png"
+    },
+    {
+      "sourceReport": "output/browser-research/agent-answer-real-waterglass-latest.json",
+      "sourceReportSha256": "40f51c57c741995075af5595dd8af151d4bb74ee946846113c2ccba3219335b0",
+      "capturedAt": "2026-09-12T20:52:46.648Z",
+      "responseMode": "slim",
+      "responseBudgetMode": "adaptive",
+      "realWaterglass": true,
+      "sourceDocumentCount": 214,
+      "viewport": {
+        "width": 1578,
+        "height": 1102
+      },
+      "messageViewportHeight": 240,
+      "katexCount": 5,
+      "rawMathDelimiterCount": 0,
+      "hiddenSections": [],
+      "visibleKnowledgeRunCount": 0,
+      "nextActionsExpanded": "false",
+      "screenshotPath": "output/browser-research/agent-answer-real-waterglass-latest.png"
+    },
+    {
+      "sourceReport": "output/browser-research/agent-answer-real-waterglass-full-adaptive-latest.json",
+      "sourceReportSha256": "756195474baa81a59bb3cec3576094ed01866fbd35c0ed5b8281c1a24846e3ab",
+      "capturedAt": "2026-09-12T20:53:32.917Z",
+      "responseMode": "full",
+      "responseBudgetMode": "adaptive",
+      "realWaterglass": true,
+      "sourceDocumentCount": 214,
+      "viewport": {
+        "width": 1578,
+        "height": 1102
+      },
+      "messageViewportHeight": 240,
+      "katexCount": 86,
+      "rawMathDelimiterCount": 0,
+      "hiddenSections": [],
+      "visibleKnowledgeRunCount": 0,
+      "nextActionsExpanded": "false",
+      "screenshotPath": "output/browser-research/agent-answer-real-waterglass-full-adaptive-latest.png"
+    },
+    {
+      "sourceReport": "output/browser-research/agent-answer-real-waterglass-full-unbounded-latest.json",
+      "sourceReportSha256": "be48f61800c9b449f46a7740159c2e98d657f42eced38b5591b6211427fab7c9",
+      "capturedAt": "2026-09-12T20:54:29.624Z",
+      "responseMode": "full",
+      "responseBudgetMode": "unbounded",
+      "realWaterglass": true,
+      "sourceDocumentCount": 214,
+      "viewport": {
+        "width": 1578,
+        "height": 1102
+      },
+      "messageViewportHeight": 240,
+      "katexCount": 86,
+      "rawMathDelimiterCount": 0,
+      "hiddenSections": [],
+      "visibleKnowledgeRunCount": 0,
+      "nextActionsExpanded": "false",
+      "screenshotPath": "output/browser-research/agent-answer-real-waterglass-full-unbounded-latest.png"
+    }
+  ],
+  "foundation": {
+    "sqlite": [
+      {
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-05-42-169Z.json",
+        "sha256": "25edd459e5aa81647d66e6e2012f3163f2eb938bc007a164ae3a21b2c0270b8a",
+        "runId": "5ebd893f-69df-4e0e-a041-3f367353a33a",
+        "verifiedAt": "2026-09-12T21:05:42.169Z",
+        "provenance": {
+          "schemaVersion": 1,
+          "runId": "5ebd893f-69df-4e0e-a041-3f367353a33a",
+          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
+          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "artifacts": {
+            "dist_node_runtime": {
+              "kind": "sidecar_inputs",
+              "path": "dist/src",
+              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
+              "sizeBytes": 27993653
+            },
+            "packaged_sidecar": {
+              "kind": "file",
+              "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
+              "sizeBytes": 77904488
+            }
+          },
+          "workloadHash": "3a333a8bcee5d8b3a98c28b50911b3b0b84a8c1b3a9a88f62141b2bb55afa3f9"
+        }
+      },
+      {
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-04-50-246Z.json",
+        "sha256": "ab54b1ca86f72a4cad2020e7b932fe9a5d700731c904a7720bdfb89b93f9921e",
+        "runId": "ffc3f97b-4d24-489e-9361-622eec25205e",
+        "verifiedAt": "2026-09-12T21:04:50.246Z",
+        "provenance": {
+          "schemaVersion": 1,
+          "runId": "ffc3f97b-4d24-489e-9361-622eec25205e",
+          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
+          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "artifacts": {
+            "dist_node_runtime": {
+              "kind": "sidecar_inputs",
+              "path": "dist/src",
+              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
+              "sizeBytes": 27993653
+            },
+            "packaged_sidecar": {
+              "kind": "file",
+              "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
+              "sizeBytes": 77904488
+            }
+          },
+          "workloadHash": "3a333a8bcee5d8b3a98c28b50911b3b0b84a8c1b3a9a88f62141b2bb55afa3f9"
+        }
+      },
+      {
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-03-55-284Z.json",
+        "sha256": "f05693de04adc0e8f68beaf2ee98e03f5fc605dee8c63d0a68908eb7dd251fb0",
+        "runId": "e6c8da8f-55c2-46b2-a4e3-4c6d728d23ab",
+        "verifiedAt": "2026-09-12T21:03:55.284Z",
+        "provenance": {
+          "schemaVersion": 1,
+          "runId": "e6c8da8f-55c2-46b2-a4e3-4c6d728d23ab",
+          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
+          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "artifacts": {
+            "dist_node_runtime": {
+              "kind": "sidecar_inputs",
+              "path": "dist/src",
+              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
+              "sizeBytes": 27993653
+            },
+            "packaged_sidecar": {
+              "kind": "file",
+              "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
+              "sizeBytes": 77904488
+            }
+          },
+          "workloadHash": "3a333a8bcee5d8b3a98c28b50911b3b0b84a8c1b3a9a88f62141b2bb55afa3f9"
+        }
+      }
+    ],
+    "ann": [
+      {
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-06-05-773Z.json",
+        "sha256": "a52319ba5089dfa966d85821757a046bfa58553a38c924651e527bb0391037d5",
+        "runId": "0ce08210-dabd-4184-a081-908275f7993f",
+        "verifiedAt": "2026-09-12T21:06:05.773Z",
+        "provenance": {
+          "schemaVersion": 1,
+          "runId": "0ce08210-dabd-4184-a081-908275f7993f",
+          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
+          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "artifacts": {
+            "dist_node_runtime": {
+              "kind": "sidecar_inputs",
+              "path": "dist/src",
+              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
+              "sizeBytes": 27993653
+            },
+            "packaged_sidecar": {
+              "kind": "file",
+              "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
+              "sizeBytes": 77904488
+            }
+          },
+          "workloadHash": "0ab835f5549369b241fbcd5cf2bf956757a6bcef36c0d3d23570f2d7e83b679c"
+        }
+      },
+      {
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-05-14-219Z.json",
+        "sha256": "b7aac723724bf29c3ff226e8ceacf608a18b1a7bda5f568922f5430ab1dd4d8a",
+        "runId": "fa707a09-1f2f-48d3-9dc9-31f637163df0",
+        "verifiedAt": "2026-09-12T21:05:14.219Z",
+        "provenance": {
+          "schemaVersion": 1,
+          "runId": "fa707a09-1f2f-48d3-9dc9-31f637163df0",
+          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
+          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "artifacts": {
+            "dist_node_runtime": {
+              "kind": "sidecar_inputs",
+              "path": "dist/src",
+              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
+              "sizeBytes": 27993653
+            },
+            "packaged_sidecar": {
+              "kind": "file",
+              "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
+              "sizeBytes": 77904488
+            }
+          },
+          "workloadHash": "0ab835f5549369b241fbcd5cf2bf956757a6bcef36c0d3d23570f2d7e83b679c"
+        }
+      },
+      {
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-04-20-919Z.json",
+        "sha256": "e24dd4d808a2009726f80a8b98e628c3dc9ec59e20fdb2e4b0e1c81b7ceb679f",
+        "runId": "4971d33d-89ef-4ded-8d77-3b081625b3ea",
+        "verifiedAt": "2026-09-12T21:04:20.919Z",
+        "provenance": {
+          "schemaVersion": 1,
+          "runId": "4971d33d-89ef-4ded-8d77-3b081625b3ea",
+          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
+          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "artifacts": {
+            "dist_node_runtime": {
+              "kind": "sidecar_inputs",
+              "path": "dist/src",
+              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
+              "sizeBytes": 27993653
+            },
+            "packaged_sidecar": {
+              "kind": "file",
+              "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
+              "sizeBytes": 77904488
+            }
+          },
+          "workloadHash": "0ab835f5549369b241fbcd5cf2bf956757a6bcef36c0d3d23570f2d7e83b679c"
+        }
+      }
+    ]
+  },
+  "evaluations": {
+    "answer-quality-v1": {
+      "path": "docs/evaluations/evidence/2026-09-13/answer-quality-v1.json",
+      "sha256": "adbd8fdad9e3416029762b888080a9ad6c8e758e0e0040c53d308445ee5e28a5",
+      "corpusSha256": "76cf05c3623476034ba9f7933178ee590fe889cc7b80b6a1b75a8b87e8c83efd",
+      "sourceRevision": "6b0e3ccb101f2587e4a43b29b813ce4a63d8ad81"
+    },
+    "answer-quality-v2": {
+      "path": "docs/evaluations/evidence/2026-09-13/answer-quality-v2.json",
+      "sha256": "1e0fb982c19e5d423c65566db4597e526776a4158701aaa6446b85a207ff1d58",
+      "corpusSha256": "7d0cd1fb36096b0b138194315459ef0253ff2619dd1f107e3380bd10f2a84702",
+      "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052"
+    },
+    "runtime": {
+      "path": "docs/evaluations/evidence/2026-09-13/convergence-runtime.json",
+      "sha256": "49207469fbfd16a40bc242534cfd8ce1724b0c53fe178e0cbd318728d8e4bc24"
+    }
+  },
+  "qualification": {
+    "windowsDistSqlite": true,
+    "windowsPackagedSqlite": true,
+    "referenceHttpPrefilter": true,
+    "externalProductionAnn": false,
+    "independentHostCount": 1,
+    "nativeAndroid": false,
+    "nativeTauriWindow": false,
+    "learningOutcomes": false
+  },
+  "verificationNotes": [
+    "ANN workloads use startReferenceAnnService, an in-process HTTP token-posting prefilter; expected recall 1.0 does not qualify an external approximate index.",
+    "Rust: 30 tests passed; the normally ignored semantic probe ran through the mobile projection verifier. Its four host profiles were checked on one physical Windows machine.",
+    "Knowledge Workspace runtime: 55 isolated groups, 92 cases passed. Route shadow: 19 equivalent and four registry-only cases passed.",
+    "Mobile recovery: one initial orphan rename returned pending; five diagnostic reruns plus the final eight-scenario run passed. Initial failure was not reproduced and is not attributed to an established filesystem cause.",
+    "Both browser fixture response modes also passed at desktop size; the latest fixture reports represent the final narrow viewport runs.",
+    "A source-only CSS fix followed the first v2 confirmation evaluation. The second frozen-v2 evaluation preserves the same answer-quality counts; no answer heuristic was tuned on v2.",
+    "Local logs/screenshots remain ignored diagnostics; copied fixture qualification/evaluation reports are durable records."
+  ],
+  "foundationVerifier": {
+    "path": "docs/evaluations/evidence/2026-09-13/foundation-release-evidence.json",
+    "sha256": "1a80e6c52b81816caf95ff5c1eff253f4cd8564cbc15c1c51959acaf4b8a6c30",
+    "checkedAt": "2026-09-12T21:12:43.933Z",
+    "ok": true,
+    "reportCounts": {
+      "sqlite": 3,
+      "ann": 3
+    },
+    "hostCounts": {
+      "sqlite": 1,
+      "ann": 1
+    }
+  }
+}

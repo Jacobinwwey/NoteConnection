@@ -25,7 +25,9 @@ Required records: pseudonymous participant ID, consent record reference, randomi
 
 Report participant count, task count, missing observations and attrition per condition. Preserve numerators and denominators. Use paired estimates and bootstrap learners for uncertainty once the sample supports it. Repeated answers from one learner are correlated. If randomization or baseline data are absent, report descriptive observations without a causal “better than random” claim.
 
-The current [answer-quality corpus](../../fixtures/answer-quality/v1.json) measures deterministic reference probes. Its unsupported-assertion probes are a lower-bound detection instrument, not an exhaustive hallucination rate. Independent sentence-level review is still required for a general unsupported-claim rate.
+The current [answer-quality corpus](https://github.com/Jacobinwwey/NoteConnection/blob/main/fixtures/answer-quality/v2.json) measures deterministic reference probes. Its unsupported-assertion probes are a lower-bound detection instrument, not an exhaustive hallucination rate. Independent sentence-level review is still required for a general unsupported-claim rate.
+
+<a id="chinese"></a>
 
 ## 中文
 
@@ -46,4 +48,4 @@ The current [answer-quality corpus](../../fixtures/answer-quality/v1.json) measu
 
 分别报告各条件的参与人数、任务数、缺测与流失，保留所有分子和分母。样本具备条件后采用配对估计，并以学习者为单位 bootstrap 不确定性；同一学习者的多次回答存在相关性。缺少随机分配或基线数据时，只报告描述性观察，不作“因果上优于随机”的结论。
 
-当前[回答质量语料](../../fixtures/answer-quality/v1.json)测量确定性参考探针。已标注的不受支持断言探针只提供检测下界，不能当作完整幻觉率。一般性的 unsupported-claim rate 仍需独立逐句审阅。
+当前[回答质量语料](https://github.com/Jacobinwwey/NoteConnection/blob/main/fixtures/answer-quality/v2.json)测量确定性参考探针。已标注的不受支持断言探针只提供检测下界，不能当作完整幻觉率。一般性的 unsupported-claim rate 仍需独立逐句审阅。

@@ -1,11 +1,11 @@
 
 # 2026-05-12 v1.7.0 - HEAD 现实对齐实施计划
 
-## 2026-09-12 审计状态
+## 2026-09-13 实施状态
 
-以下旧日期与勾选保留为历史记录。图条件上下文已经实现；共享状态隔离、回答执行/传输、匹配语义和发布证据仍开放。本次更新对齐文档，不代表后续实施单元已经完成。
+U1–U6 已实现并验收。U7 已验证当前 Windows dist/sidecar 与参考 HTTP 预筛选服务；U8 已建立可复现双语基线。Android 真机、独立宿主、生产 ANN 和学习效果仍未验收。以下旧日期与勾选保留为历史记录。
 
-当前状态：[项目审计](../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+当前证据与剩余工作：[收敛实施结果](../evaluations/2026-09-13-convergence-results.md#chinese)。分单元验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。原始基线：[项目审计](../audits/2026-09-12-project-progress.md)。
 
 
 ## 中文文档

@@ -1,10 +1,10 @@
 # 解释：开发进度看板
 
-## 2026-09-12 审计状态
+## 2026-09-13 实施验收
 
-已重新审计本地 `main/e84d6ece`：TypeScript 通过；159 个 Jest suite，1,419 项通过、26 项跳过。生产函数探针复现 ingest 回滚丢失已确认 memory、SSE completed envelope 超预算、fuzzy 匹配漏边。预算档位/cap 已实现，但生产执行未调用 deadline predicate，SSE 未处理背压。按显式审计日期，SQLite/ANN 报告不满足新鲜度/发布资格。本轮未重跑浏览器、打包桌面/Godot 与 Android 验收。
+U1–U6 已验收：状态隔离、执行/取消、封装/背压约束、匹配等价、有效门禁与 NoteMD owner 已落地。Node 22.19.0 与 24.14.0 均通过 162 suite / 1,528 test，零跳过。最终 Windows dist/sidecar 的 SQLite soak 与参考 HTTP 预筛选 matrix 各三次独立通过。修复 transcript 高度后，浏览器 slim/full 与窄窗口验证通过。U8 质量测量完成，但揭示主题泄漏和冲突漏报；Android/原生窗口、独立宿主、生产 ANN 与学习效果仍未验收。下方条目保留各历史日期的观察。
 
-当前状态：[项目审计](../../../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../../../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+当前状态：[实施结果与证据](../../../evaluations/2026-09-13-convergence-results.md#chinese)。分单元验收：[U1–U8 计划](../../../plans/2026-09-12-001-refactor-project-convergence-plan.md)。原始基线：[项目审计](../../../audits/2026-09-12-project-progress.md)。
 
 
 ## 2026-09-03 Adaptive Full 回答预算

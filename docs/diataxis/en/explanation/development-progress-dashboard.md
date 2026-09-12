@@ -1,10 +1,10 @@
 # Explanation: Development Progress Dashboard
 
-## 2026-09-12 Audit status
+## 2026-09-13 Implementation acceptance
 
-Local `main` at `e84d6ece` was re-audited: TypeScript passed; 159 Jest suites, 1,419 passed and 26 skipped. Production-function probes reproduce acknowledged-memory loss after ingest rollback, a completed SSE envelope exceeding its budget, and fuzzy matching false negatives. Budget tiers/caps exist, but the deadline predicate is not called by production execution and SSE backpressure is not handled. At the explicit audit date, SQLite/ANN release reports fail freshness/qualification. Browser, packaged desktop/Godot and Android acceptance were not rerun.
+U1–U6 are accepted: state isolation, execution/cancellation, wire/backpressure bounds, matching equivalence, meaningful gates and NoteMD ownership are implemented. Final Jest passed 162 suites / 1,528 tests with zero skips on Node 22.19.0 and 24.14.0. Three distinct SQLite soak and reference HTTP prefilter matrices passed against the final Windows dist/sidecar. Browser slim/full and narrow-window checks passed after fixing transcript height. U8 quality measurements are complete but expose topic leakage and missed conflicts; native Android and native-window interaction, independent hosts, production ANN and learning outcomes remain unqualified. Entries below retain their historical observation dates.
 
-Current status: [project audit](../../../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../../../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+Current status: [convergence results and evidence](../../../evaluations/2026-09-13-convergence-results.md). Acceptance: [U1–U8 plan](../../../plans/2026-09-12-001-refactor-project-convergence-plan.md). Baseline: [project audit](../../../audits/2026-09-12-project-progress.md).
 
 
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.

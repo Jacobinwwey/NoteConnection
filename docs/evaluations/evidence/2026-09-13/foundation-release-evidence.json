@@ -1,0 +1,162 @@
+{
+  "checkedAt": "2026-09-12T21:12:43.933Z",
+  "maxAgeHours": 168,
+  "sqlite": {
+    "reportPath": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-05-42-169Z.json",
+    "evidenceCommand": "npm run verify:foundation:sqlite-runtime:release",
+    "minimumReportCount": 3,
+    "reportCount": 3,
+    "reportPaths": [
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-05-42-169Z.json",
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-04-50-246Z.json",
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-03-55-284Z.json"
+    ],
+    "minimumHostCount": 1,
+    "hostCount": 1,
+    "hostKeys": [
+      "983343981b26ab1985598fc0"
+    ],
+    "verifiedAt": "2026-09-12T21:05:42.169Z",
+    "ageHours": 0.1172,
+    "maxAgeHours": 168,
+    "suiteKind": "soak",
+    "soakCycles": 5,
+    "requiredProfiles": [
+      "heavy"
+    ],
+    "profileRuns": [
+      {
+        "profileId": "heavy",
+        "modes": [
+          {
+            "mode": "dist_node_runtime",
+            "gateCount": 8,
+            "failedGateIds": [],
+            "restartCycleCount": 5,
+            "querySampleCount": 24
+          },
+          {
+            "mode": "packaged_sidecar",
+            "gateCount": 8,
+            "failedGateIds": [],
+            "restartCycleCount": 5,
+            "querySampleCount": 24
+          }
+        ]
+      }
+    ]
+  },
+  "ann": {
+    "reportPath": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-06-05-773Z.json",
+    "evidenceCommand": "npm run verify:foundation:ann-runtime:release",
+    "minimumReportCount": 3,
+    "reportCount": 3,
+    "reportPaths": [
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-06-05-773Z.json",
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-05-14-219Z.json",
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-04-20-919Z.json"
+    ],
+    "minimumHostCount": 1,
+    "hostCount": 1,
+    "hostKeys": [
+      "983343981b26ab1985598fc0"
+    ],
+    "verifiedAt": "2026-09-12T21:06:05.773Z",
+    "ageHours": 0.1106,
+    "maxAgeHours": 168,
+    "suiteKind": "matrix",
+    "releaseGatesEnabled": true,
+    "minExpectedRecall": 1,
+    "requiredProfiles": [
+      "smoke",
+      "medium",
+      "heavy"
+    ],
+    "profileRuns": [
+      {
+        "profileId": "smoke",
+        "modes": [
+          {
+            "mode": "dist_node_runtime",
+            "gateCount": 6,
+            "failedGateIds": [],
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "querySampleCount": 8
+          },
+          {
+            "mode": "packaged_sidecar",
+            "gateCount": 6,
+            "failedGateIds": [],
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "querySampleCount": 8
+          }
+        ]
+      },
+      {
+        "profileId": "medium",
+        "modes": [
+          {
+            "mode": "dist_node_runtime",
+            "gateCount": 6,
+            "failedGateIds": [],
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "querySampleCount": 8
+          },
+          {
+            "mode": "packaged_sidecar",
+            "gateCount": 6,
+            "failedGateIds": [],
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "querySampleCount": 8
+          }
+        ]
+      },
+      {
+        "profileId": "heavy",
+        "modes": [
+          {
+            "mode": "dist_node_runtime",
+            "gateCount": 6,
+            "failedGateIds": [],
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "querySampleCount": 8
+          },
+          {
+            "mode": "packaged_sidecar",
+            "gateCount": 6,
+            "failedGateIds": [],
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "querySampleCount": 8
+          }
+        ]
+      }
+    ]
+  },
+  "ok": true,
+  "errors": [],
+  "warnings": []
+}

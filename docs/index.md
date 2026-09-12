@@ -8,20 +8,20 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use `npm run docs:site:build` to validate page rendering and link stability.
 - Use `npm run docs:site:serve` for local browsing during iterative doc updates.
 - Use [Working Docs / Brainstorms](brainstorms/index.md) and [Working Docs / Solutions](solutions/index.md) for in-progress alignment artifacts and durable solution notes.
-- Use [Project Progress Audit (2026-09-12)](audits/2026-09-12-project-progress.md) as the current cross-plan status source; the May open-goal audit is historical.
+- Use [Convergence Results (2026-09-13)](evaluations/2026-09-13-convergence-results.md) as the current cross-plan status and evidence source; the [September 12 audit](audits/2026-09-12-project-progress.md) is the implementation baseline.
 - Use [Agent Knowledge Workspace Graph Preview and Review Closure (2026-06-20)](solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) for the current matched-file, Focus runtime reuse, Godot Future Path dispatch, DAG-context, and final-answer review closure.
 - Use [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md) for the clarified existing-DAG answer contract and graph-conditioned context assembly direction.
-- Use [Project Convergence Plan (2026-09-12)](plans/2026-09-12-001-refactor-project-convergence-plan.md) for the next implementation units; the June alignment note remains historical context.
+- Use [Project Convergence Plan (2026-09-12)](plans/2026-09-12-001-refactor-project-convergence-plan.md) for per-unit acceptance and remaining external gates.
 - Track the Program A-F substrate/export closure in [Development Progress Dashboard](diataxis/en/explanation/development-progress-dashboard.md) and [Deep Student Comparison Next-Phase Plan](brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md).
 - 当前 agent knowledge 的命中文件、Focus runtime 复用、Godot Future Path 调度、DAG 上下文与最终回答审核收口请查看 [Agent 知识工作区图预览与回答审核收口（2026-06-20）](solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md)。
 - 当前 agent knowledge 的现有 DAG 回答契约与 graph-conditioned context assembly 方向请查看 [Agent Knowledge DAG 回答契约方案（2026-06-17）](solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md)。
-- 当前代码/计划状态请查看[项目进度审计（2026-09-12）](audits/2026-09-12-project-progress.md)，后续顺序见[项目收敛推进计划](plans/2026-09-12-001-refactor-project-convergence-plan.md)；6 月对齐说明保留为历史背景。
+- 当前代码/计划状态与证据见[收敛实施结果（2026-09-13）](evaluations/2026-09-13-convergence-results.md#chinese)，逐单元验收见[项目收敛推进计划](plans/2026-09-12-001-refactor-project-convergence-plan.md)；[9 月 12 日审计](audits/2026-09-12-project-progress.md)保留为实施基线。
 - Program A-F 的 substrate / export 收口状态请查看 [Development Progress Dashboard](diataxis/en/explanation/development-progress-dashboard.md) 与 [Deep Student Comparison Next-Phase Plan](brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md)。
 
 ## English
 
-- Current [progress and completion boundaries](audits/2026-09-12-project-progress.md#english).
-- Next [implementation units, trade-offs and acceptance](plans/2026-09-12-001-refactor-project-convergence-plan.md#english).
+- Current [results and completion boundaries](evaluations/2026-09-13-convergence-results.md#english).
+- [Implementation units, trade-offs and acceptance](plans/2026-09-12-001-refactor-project-convergence-plan.md#english).
 
 - Start with [Diataxis Overview](diataxis/en/overview.md).
 - Follow [First Run Tutorial](diataxis/en/tutorials/first-run.md).
@@ -50,8 +50,8 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 
 ## 中文
 
-- 当前[项目进度与完成边界](audits/2026-09-12-project-progress.md#chinese)。
-- 后续[实施单元、权衡与验收](plans/2026-09-12-001-refactor-project-convergence-plan.md#chinese)。
+- 当前[实施结果与完成边界](evaluations/2026-09-13-convergence-results.md#chinese)。
+- [实施单元、权衡与验收](plans/2026-09-12-001-refactor-project-convergence-plan.md#chinese)。
 
 - 从 [Diataxis 概览](diataxis/zh/overview.md) 开始。
 - 按照 [首次运行教程](diataxis/zh/tutorials/first-run.md) 上手。

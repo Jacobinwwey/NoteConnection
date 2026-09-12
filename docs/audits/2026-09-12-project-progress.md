@@ -1,7 +1,8 @@
 ---
 title: Project progress audit and completion boundaries
 date: 2026-09-12
-status: current-audit
+status: baseline-audit
+superseded_by: docs/evaluations/2026-09-13-convergence-results.md
 source_revision: e84d6ece9cce5b82902d4b9335ac096a136a8d2a
 ---
 
@@ -9,13 +10,15 @@ source_revision: e84d6ece9cce5b82902d4b9335ac096a136a8d2a
 
 ## English
 
+The findings below preserve the pre-implementation baseline. Current acceptance and remaining work are recorded in the [September 13 results](../evaluations/2026-09-13-convergence-results.md).
+
 ### Decision and scope
 
 The project has a substantial working implementation, but **runtime isolation, bounded execution, and release qualification remain open**. The next increment should close those contracts before adding more answer profiles, infrastructure, or platform variants.
 
 Baseline: local `main`, commit `e84d6ece` (2026-09-03), package `1.8.0`; audited on 2026-09-12. This is a local code/document audit with fresh tests and synthetic probes against production functions. Remote CI, a freshly packaged desktop application, browser/Godot interaction, and Android hardware were not revalidated in this audit. No production implementation was changed.
 
-This page owns the current cross-plan status. The [convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md) owns the next implementation units. Older task files, walkthroughs, and dated completion notes remain historical evidence; their unchecked items are not automatically current backlog.
+This page owns the audit baseline; the [results record](../evaluations/2026-09-13-convergence-results.md) owns current cross-plan status. The [convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md) tracks acceptance. Older unchecked items are not automatically current backlog.
 
 Status notation:
 
@@ -175,13 +178,15 @@ The inventory groups translations and historical trackers without treating them 
 
 ## 中文
 
+下文保留实施前的审计基线。当前验收与剩余工作见[九月十三日实施结果](../evaluations/2026-09-13-convergence-results.md#chinese)。
+
 ### 结论与范围
 
 项目已具备较完整的功能实现，但**状态隔离、端到端资源约束和发布验收仍未闭环**。下一轮应先关闭这些契约，再扩展回答 profile、基础设施和平台变体。
 
 审计基线：本地 `main`，提交 `e84d6ece`（2026-09-03），版本 `1.8.0`；审计日期 2026-09-12。本轮检查代码与文档，执行新鲜测试，并对生产函数做合成边界探针。未重新验收远端 CI、新打包桌面应用、浏览器/Godot 交互或 Android 真机；未修改生产实现。
 
-本页负责各计划的当前状态，[推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)负责下一批实施单元。旧 Task、walkthrough 和日期化完成记录保留为历史证据，未勾选项不自动成为当前 backlog。
+本页保留审计基线，[实施结果](../evaluations/2026-09-13-convergence-results.md#chinese)负责当前跨计划状态，[推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)跟踪验收。旧记录中的未勾选项不自动成为当前 backlog。
 
 状态定义：
 

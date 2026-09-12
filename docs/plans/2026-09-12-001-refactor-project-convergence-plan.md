@@ -1,25 +1,27 @@
 ---
 title: "refactor: Close state, runtime, and release contracts"
 type: refactor
-status: in_progress
+status: partial_acceptance
 date: 2026-09-12
+updated: 2026-09-13
 origin: docs/audits/2026-09-12-project-progress.md
 source_revision: e84d6ece9cce5b82902d4b9335ac096a136a8d2a
+implementation_revision: e1802ea2f4f77a76c08a92378fbe090ef81fb052
 ---
 
 # Project Convergence Implementation Plan / 项目收敛实施计划
 
 ## English
 
-### Execution checkpoint — 2026-09-12
+### Acceptance checkpoint — 2026-09-13
 
-U1 implementation is in place: the existing platform serializes complete asynchronous state operations, nested calls reuse one operation scope, persistence is deferred to the outer commit, and synchronous state reads expose the committed projection during writes. The three new regression cases failed on the audit baseline and now pass; the persistence/platform/export suites pass 65 tests. This deliberately trades per-instance concurrency for isolation without adding a forwarding facade. Full-suite, runtime and allocation validation remain before final acceptance. U2–U8 are still in progress/not yet accepted.
+U1–U6 are implemented and accepted. Both Node 22.19.0 and 24.14.0 passed 162 suites / 1,528 tests with zero skips. U7 has three fresh Windows SQLite soak and reference HTTP prefilter matrix runs, bound to the final source and packaged bytes. U8 has archived bilingual V1/V2 quality and allocation measurements. Android/native-window, independent-host, external production ANN and learner-outcome acceptance remain open; U7/U8 therefore retain unchecked overall acceptance boxes. See [final results and evidence](../evaluations/2026-09-13-convergence-results.md) for the precise limits, the browser layout fix found during acceptance, and prioritized quality follow-up. Earlier per-slice test counts below record implementation checkpoints, not the final suite totals.
 
 ### Outcome and constraints
 
 Deliver a local-first knowledge/learning runtime whose acknowledged writes survive unrelated failures, whose answer work is bounded before allocation, and whose release claims are backed by target-specific evidence.
 
-This plan follows the [2026-09-12 audit](../audits/2026-09-12-project-progress.md). It proposes implementation; **none of U1–U8 is completed by the documentation audit**. Existing tests pass, but three synthetic production-code probes expose gaps outside that coverage.
+This plan follows the [2026-09-12 audit](../audits/2026-09-12-project-progress.md). That documentation audit was the baseline: its three production-code probes exposed gaps outside the passing test coverage. The acceptance checkpoint above records the subsequent implementation and verification.
 
 Requirements:
 
@@ -50,7 +52,7 @@ Waves A and B are several engineering iterations, not a guaranteed “two-week c
 
 ### U1 — committed-state publication and cross-operation isolation
 
-- [ ] **U1 / P0 — close F1; R1, R6**
+- [x] **U1 / P0 — close F1; R1, R6**
 
 **Owner/files:** `src/learning/KnowledgeLearningPlatform.ts`; `src/learning/store.ts` only if the persistence contract requires it. Tests: `src/learning/KnowledgeLearningPlatform.persistence.test.ts`, `src/learning/KnowledgeLearningPlatform.test.ts`.
 
@@ -75,9 +77,9 @@ A first bounded implementation can trade write concurrency for correctness. A la
 
 Implementation checkpoint: one host-owned execution scope now bounds queued turns, source bytes/lines/facts and fragments. File reads check both stat and chunk bytes and close descriptors on abort. Query cancellation reaches vector HTTP and retry delay; local scoring yields every 128 candidates. Client hints cannot raise the host ceiling. Execution/budget/backend/adapter regressions pass 65 tests; the broader persistence/composition/RAG set passes 117 tests. Delivery cancellation and calibration follow in U3/U7. These are cooperative admission controls, not an OS RSS guarantee; a provider that ignores AbortSignal retains the state lease until it settles.
 
-- [ ] **U2 / P1 — close F2; R2, R3**
+- [x] **U2 / P1 — close F2; R2, R3**
 
-**Owner/files:** `src/learning/agentResponseBudget.ts`, `src/learning/evidenceContextAssembler.ts`, `src/learning/KnowledgeLearningPlatform.ts`; additive types in `src/learning/types.ts`. Tests: `src/learning/agentResponseBudget.test.ts`, `src/learning/KnowledgeLearningPlatform.test.ts`, `src/learning/conversationComposer.test.ts`.
+**Implemented owners:** `src/learning/agentConversationExecution.ts`, `src/learning/agentResponseBudget.ts`, `src/learning/evidenceContextAssembler.ts`, `src/learning/KnowledgeLearningPlatform.ts`; provider cancellation in `queryBackend.ts`, `vectorAccelerationAdapter.ts` and `ragSufficiencyReview.ts`. Execution, platform, backend and composer tests cover these boundaries.
 
 **Decision:** choose a finite server ceiling independently of browser hints; client capability/preferences may only select within it. Start one deadline at the turn boundary and pass cancellation and cumulative source/fragment accounting to the operations that perform work. Bound document reads before allocation and during reading so a changing file cannot bypass a stat-only check. Count concurrent admission separately from per-response size.
 
@@ -98,9 +100,9 @@ Keep the existing full-document evidence contract honest: either finish the admi
 
 Implementation checkpoint: bounded JSON measurement precedes serialization; one released projection reserves complete framing for HTTP/SSE/replay, preserves bounded citations and clears obsolete coverage. The stream writer bounds bytes/event count and handles drain/close/error/timeout. Cached turns share cancellation and stop when their final consumer leaves; source hydration now shares the turn deadline/accounting. Transport/platform/NoteMD/frontend runtime tests pass 80 tests; seven targeted HTTP conversation cases pass, including a real disconnect with failure replay. Restored migration tests exposed pre-existing registry interception defects, tracked in U5.
 
-- [ ] **U3 / P1 — close F3; R2, R3**
+- [x] **U3 / P1 — close F3; R2, R3**
 
-**Owner/files:** `src/learning/agentConversationSerialization.ts`, `src/server.ts`. Tests: `src/learning/agentConversationSerialization.test.ts`, `src/notemd.server.integration.test.ts`, `src/agent_workspace.runtime.behavior.test.ts`.
+**Implemented owners:** `src/learning/agentConversationSerialization.ts`, `src/middleware/SseResponseWriter.ts`, `src/server.ts`. Serialization/stream unit tests and real HTTP/frontend integration tests cover framing, drain and shared-consumer cancellation.
 
 **Decision:** the transport owner accounts for the entire emitted unit, including envelope and SSE framing. Compact diagnostic collections before serializing large objects. Produce one released response projection reused by JSON, live SSE and replay; preserve a bounded citation set for the surviving answer and derive summary counts from that projection.
 
@@ -135,7 +137,7 @@ Implemented: exact-phrase candidates use the matcher's ASCII word boundaries; fu
 
 Implementation checkpoint: all 13 skipped HTTP obligations now execute and pass after removing incomplete data/diagnostic/clipboard/Graphviz registry copies. Native clipboard, filesystem resolution and build admission remain at their complete server owner. Graph rebuild preserves its requested recompute policy, now covered through HTTP. The 13 skipped capability obligations were replaced by runtime registry/emission tests against exported typed contracts; context-dependent artifact presenters are checked at their supported registry rather than required in every conversation. The echo gate now runs SQLite/readiness/backend/evidence assertions. A missing turn-cache durability test was restored, and its HTTP diagnostics now read the actual cache instead of placeholder platform counters. Combined verification: 84 tests, zero skipped. Node support is declared as 22.19+ or 24.x, with both CI lanes for convergence regressions.
 
-- [ ] **U5 / P1 — close F5; R5, R7**
+- [x] **U5 / P1 — close F5; R5, R7**
 
 **Owner/files:** `package.json`, `.github/workflows/migration-gates.yml`, `src/server.migration.test.ts`, `src/agent_workspace.contract.parity.test.ts`. Use `src/foundation.release.evidence.contract.test.ts`; create `src/foundation.rollout.boundary.test.ts` for actual rollout behavior if the old suite no longer exists.
 
@@ -151,7 +153,7 @@ Pin and document the supported Node matrix. Current local evidence is Node 22.19
 
 Implementation checkpoint: 10 matching behavior cases passed independently against legacy and registry before deletion (raw JSON: `output/project-convergence-2026-09-12/notemd-{legacy,registry}-parity.json`). The 20 legacy NoteMD handlers and their operation/workspace helpers have been removed from server.ts. Registry now owns operation admission, IDs, cancellation, workspace updates and existing PUT aliases; request parsing, canonical filesystem access and SSE delivery retain shared boundaries. Additional HTTP tests cover auth, unknown routes, batch/workflow path rejection, ID conflicts and cancellation. Four suites pass 71 tests, zero skips. Telemetry separates intentional server-owned handling from registry misses instead of claiming seven inline routes by constant.
 
-- [ ] **U6 / P1 — advance M04; R5, R6**
+- [x] **U6 / P1 — advance M04; R5, R6**
 
 **Owner/files:** first `src/routes/notemd.ts`, `src/server.ts`, `src/routes/types.ts`; existing `scripts/verify-route-registry-shadow.js`, `src/routes/registry.shadow.contract.test.ts`, `src/notemd.server.integration.test.ts`.
 
@@ -165,7 +167,10 @@ Do not execute mutating requests twice against production for “shadow” verif
 
 ### U7 — qualify concrete desktop/mobile artifacts
 
-Tooling checkpoint: release selection now finds eligible dated reports, deduplicates mirrored run IDs, and keeps the newest comparable failure blocking. Reports bind source content/revision, dist inputs, sidecar bytes, host/runtime and workload; collection rejects edits during a run. Sidecar freshness now includes uncompiled source changes. Verifier checks required gate measurements, at least five SQLite restarts and unchanged ANN recall requirements. Twenty-nine evidence/freshness tests pass. Artifact qualification is pending the final build. ADB reports no connected device; Android native acceptance remains unqualified.
+Final host checkpoint: report selection, run-ID deduplication, newest-failure blocking, source/dist/sidecar binding and five-restart requirements are implemented. Three distinct final-build SQLite soak and reference HTTP prefilter matrix runs passed in dist and packaged Windows modes; the strict gate passed against the checked-in archive. The prefilter is a reference token-posting service, not an external approximate index. ADB has no connected device; Android, native-window and independent-host acceptance remain unqualified.
+
+- [x] U7 tooling, Windows SQLite and reference connector qualification.
+- [ ] U7 external device/host/backend qualification with their own artifacts and measurements.
 
 - [ ] **U7 / P1 — close evidence obligations, not feature scope; R7**
 
@@ -181,11 +186,14 @@ Desktop acceptance covers dist and packaged sidecar, SQLite restart/soak, explic
 
 ### U8 — representative answer and learning-outcome calibration
 
-Corpus checkpoint: version 1.0.0 contains six calibration cases and eighteen held-out bilingual cases across nine categories. Subjects are separate and references were authored before evaluation outputs. The evaluator records independent reference coverage, labelled unsupported-assertion probes, conflict/abstention signals, repeat stability, cold/hot timings and memory observations with explicit denominators. It does not treat runtime sufficiency as an external correctness label. Baseline execution and learner outcome collection remain pending.
+Measurement checkpoint: V1 is archived; V2 contains six calibration and eighteen disjoint confirmation cases with references frozen before the wiki-link evidence fix. Final V2 reference acceptance is 8/18 slim and 13/18 full; coverage is 28/36 and 36/36. Full responses still show two topic-leakage probe hits and both modes miss 2/2 conflict signals. The 2,000-document snapshot cost and cooperative cancellation limits are measured in the results record. These measurements complete the baseline, not general answer-quality or learner-outcome acceptance.
+
+- [x] U8 versioned bilingual corpora, reproducible measurements and consent-based pilot protocol.
+- [ ] U8 broader topic/conflict quality validation and consented learner observations.
 
 - [ ] **U8 / P2 — advance M01/M09/M10/M11; R8**
 
-**Owner/files:** `src/learning/KnowledgeWorkspaceConversationRegression.ts`, `scripts/verify-knowledge-workspace-runtime.js`, `src/learning/graphAnswerQualityPolicy.ts` only when calibration supports a change. Tests: `src/learning/graphAnswerPlan.test.ts`, `src/learning/answerReleaseReview.test.ts`; dated evaluation records under `docs/` with separate English/Chinese sections.
+**Implemented owners:** `src/learning/AnswerQualityEvaluation.ts`, `scripts/evaluate-answer-quality.js`, `scripts/measure-convergence-runtime.js`, `fixtures/answer-quality/v{1,2}.json` and the bilingual evaluation/pilot records. The bounded wiki-link fix belongs to `src/learning/ragPublicText.ts`; the existing Knowledge Workspace runtime corpus remains a regression gate. General topic/conflict policy changes require new independent evidence.
 
 **Decision:** keep Water Glass as a known regression and create a versioned held-out bilingual corpus covering definition, comparison, causality, multi-step tasks, conflict, missing evidence, topic drift, math and noisy headings. Split calibration and evaluation cases; state corpus/hash, backend, response mode, sample count and latency/memory measurement conditions.
 
@@ -208,21 +216,21 @@ Run a learning pilot on the stable local/exact backend. Operational mastery metr
 
 Each unit should be independently reviewable and revertible. Preserve storage formats during U1; retain the previous working artifact during U7; do not use a feature switch to conceal a known data-loss path. Reopen status when a production invariant fails, even when old implementation checkboxes remain checked.
 
-Documentation policy: update this unit's English and Chinese status together; record source revision, executed checks and excluded evidence. Point dashboards/trackers to this plan instead of copying another full backlog. No release tag, deployment or production configuration change is part of the audit.
+Documentation policy: update English and Chinese status together and link the results/evidence record instead of copying another backlog. The user authorized integrating the verified implementation into remote main. Release tags, manual deployment, production configuration changes and promotion of unverified targets remain outside this work.
 
 <a id="chinese"></a>
 
 ## 中文
 
-### 执行检查点 — 2026-09-12
+### 验收检查点 — 2026-09-13
 
-U1 已实现：现有 platform 串行化完整异步状态操作，嵌套调用复用同一操作 scope，持久化延迟到外层 commit，同步状态读取在写入期间返回 committed projection。三个新增回归在审计基线上失败，现已通过；persistence/platform/export 三个套件共 65 项通过。该方案以单实例并发度换隔离性，不新增转发 facade。全量、runtime 和分配验证完成前不作最终验收；U2–U8 仍在推进/尚未验收。
+U1–U6 已实现并验收。Node 22.19.0 与 24.14.0 均通过 162 suite / 1,528 test，零跳过。U7 的 Windows SQLite soak 与参考 HTTP 预筛选 matrix 各三次通过，绑定最终源码和打包字节。U8 的双语 V1/V2 质量与分配测量已归档。Android/原生窗口、独立宿主、外部生产 ANN 与学习效果仍开放，因此 U7/U8 的整体验收框保留未勾选。精确边界、验收中发现的浏览器布局修复及质量后续优先级见[最终结果与证据](../evaluations/2026-09-13-convergence-results.md#chinese)。下方旧的分阶段测试数量属于实现检查点，不是最终总数。
 
 ### 目标与约束
 
 交付一个本地优先的知识/学习 runtime：已确认写入不被无关失败抹掉，回答工作在分配前受到约束，发布声明有对应目标环境的证据。
 
-本计划依据 [2026-09-12 审计](../audits/2026-09-12-project-progress.md)。它是实施建议；**文档审计没有完成 U1–U8 中任何单元**。现有测试通过，但三个生产代码合成探针已暴露覆盖外缺口。
+本计划依据 [2026-09-12 审计](../audits/2026-09-12-project-progress.md)。该文档审计是基线，三个生产代码探针暴露了当时绿色测试覆盖外的缺口；上方验收检查点记录其后的实施和验证。
 
 需求：
 
@@ -253,7 +261,7 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 ### U1：committed-state 发布与跨操作隔离
 
-- [ ] **U1 / P0 — 关闭 F1；R1、R6**
+- [x] **U1 / P0 — 关闭 F1；R1、R6**
 
 **Owner/文件：**`src/learning/KnowledgeLearningPlatform.ts`；仅持久化契约确有需要时涉及 `src/learning/store.ts`。测试：`src/learning/KnowledgeLearningPlatform.persistence.test.ts`、`src/learning/KnowledgeLearningPlatform.test.ts`。
 
@@ -278,9 +286,9 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 实现检查点：单一 host-owned execution scope 已约束排队回合、源字节/行/事实和 fragment。文件读取同时检查 stat 与 chunk 字节，取消时关闭描述符。取消已传到向量 HTTP 和退避等待；本地打分每 128 个候选让出事件循环。客户端提示不能提高宿主上限。execution/budget/backend/adapter 回归 65 项通过；persistence/composition/RAG 组合 117 项通过。传输取消和实测校准继续在 U3/U7 完成。这些是协作式准入限制，不是 OS 级 RSS 保证；忽略 AbortSignal 的 provider 必须等到结束才释放状态 lease。
 
-- [ ] **U2 / P1 — 关闭 F2；R2、R3**
+- [x] **U2 / P1 — 关闭 F2；R2、R3**
 
-**Owner/文件：**`src/learning/agentResponseBudget.ts`、`src/learning/evidenceContextAssembler.ts`、`src/learning/KnowledgeLearningPlatform.ts`；必要 additive 类型放在 `src/learning/types.ts`。测试：`agentResponseBudget.test.ts`、`KnowledgeLearningPlatform.test.ts`、`conversationComposer.test.ts`（均在 `src/learning/`）。
+**实现 owner：**`src/learning/agentConversationExecution.ts`、`src/learning/agentResponseBudget.ts`、`src/learning/evidenceContextAssembler.ts`、`src/learning/KnowledgeLearningPlatform.ts`；provider 取消由 `queryBackend.ts`、`vectorAccelerationAdapter.ts`、`ragSufficiencyReview.ts` 负责。execution/platform/backend/composer 测试覆盖这些边界。
 
 **决策：**服务端独立决定有限上限，客户端 hint/偏好只能在其中选择。在 turn 边界启动一个 deadline，将 cancellation 与累计 source/fragment 计量传给真正执行工作的操作。读取前和读取中限制字节，避免文件增长绕过 stat 检查；并发准入单独计量，不能用单响应大小代替。
 
@@ -301,9 +309,9 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 实现检查点：JSON 在序列化前有界计量；HTTP/SSE/replay 使用预留完整封装的同一发布 projection，保留有界引用并清除失效覆盖声明。stream writer 限制字节/事件数量，处理 drain/close/error/timeout。缓存回合共享取消状态，最后一个消费者离开时停止；源 hydration 已共享回合 deadline/计量。transport/platform/NoteMD/frontend runtime 合计 80 项通过；七项 HTTP conversation 定向用例通过，包括真实断连与失败重放。恢复 migration 测试后发现原有 registry 抢先处理缺陷，继续在 U5 修复。
 
-- [ ] **U3 / P1 — 关闭 F3；R2、R3**
+- [x] **U3 / P1 — 关闭 F3；R2、R3**
 
-**Owner/文件：**`src/learning/agentConversationSerialization.ts`、`src/server.ts`。测试：`src/learning/agentConversationSerialization.test.ts`、`src/notemd.server.integration.test.ts`、`src/agent_workspace.runtime.behavior.test.ts`。
+**实现 owner：**`src/learning/agentConversationSerialization.ts`、`src/middleware/SseResponseWriter.ts`、`src/server.ts`。序列化/stream 单测和真实 HTTP/前端集成测试覆盖封装、drain 与共享消费者取消。
 
 **决策：**transport owner 计入完整发送单元，覆盖 envelope 与 SSE framing。大对象序列化前先压缩诊断集合；JSON/live SSE/replay 复用同一 released response projection，保留存活答案的有界引用集，并据投影重算 summary。
 
@@ -338,7 +346,7 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 实现检查点：13 项跳过的 HTTP 义务已恢复并通过；删除不完整的 data/diagnostic/clipboard/Graphviz 注册副本后，由完整 server owner 继续负责原生剪贴板、文件边界和构建准入。构建保留请求的 recompute 策略，改由 HTTP 回归验证。13 项跳过的能力义务已改为运行时注册表/真实能力输出测试，使用导出的类型契约；依赖上下文的 artifact presenter 在所属注册表验证，不要求每次 conversation 都输出。echo gate 已替换为 SQLite/readiness/backend/evidence 断言。缺失的 turn-cache durability 测试已恢复，HTTP 诊断读取真实缓存，取代 platform 占位计数。组合验证 84 项通过、零跳过。支持 Node 22.19+ 与 24.x，CI 为收敛回归配置双版本通道。
 
-- [ ] **U5 / P1 — 关闭 F5；R5、R7**
+- [x] **U5 / P1 — 关闭 F5；R5、R7**
 
 **Owner/文件：**`package.json`、`.github/workflows/migration-gates.yml`、`src/server.migration.test.ts`、`src/agent_workspace.contract.parity.test.ts`；复用 `src/foundation.release.evidence.contract.test.ts`，若旧 rollout suite 已不存在，新增 `src/foundation.rollout.boundary.test.ts` 验证实际行为。
 
@@ -354,7 +362,7 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 实现检查点：删除前在 legacy 与 registry 两个实现上分别通过相同的 10 项行为对照（原始 JSON：`output/project-convergence-2026-09-12/notemd-{legacy,registry}-parity.json`）。server.ts 的 20 个 NoteMD 旧 handler 及 operation/workspace helper 已删除。registry 负责操作准入、ID、取消、workspace 更新和原有 PUT 别名；请求解析、文件 canonical 边界和 SSE 传输复用共享实现。新增 HTTP 测试覆盖认证、未知路由、批处理/workflow 路径拒绝、ID 冲突与取消。四套件 71 项通过、零跳过。遥测已区分有意保留的 server-owned 路由与 registry miss，不再用常数宣称只有七个 inline 路由。
 
-- [ ] **U6 / P1 — 推进 M04；R5、R6**
+- [x] **U6 / P1 — 推进 M04；R5、R6**
 
 **Owner/文件：**首先处理 `src/routes/notemd.ts`、`src/server.ts`、`src/routes/types.ts`；复用 `scripts/verify-route-registry-shadow.js`、`src/routes/registry.shadow.contract.test.ts`、`src/notemd.server.integration.test.ts`。
 
@@ -368,7 +376,10 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 ### U7：验收具体桌面/移动 artifact
 
-工具检查点：release 选择器已检索合格的日期报告，对镜像 run ID 去重，并保留最新可比失败的阻断作用。报告绑定源码内容/修订、dist 输入、sidecar 字节、宿主/runtime 与工作负载；运行过程中修改输入会拒绝证据。sidecar freshness 已覆盖未编译源码变化。验证器校验必要 gate 的实测数值、至少五次 SQLite 重启，以及未放宽的 ANN recall 要求。evidence/freshness 29 项通过。artifact 验收等待最终构建；ADB 当前没有设备，Android 原生验收仍未通过。
+最终宿主检查点：日期选择、run ID 去重、最新失败阻断、源码/dist/sidecar 绑定及至少五次重启要求已实现。最终构建的 SQLite soak 与参考 HTTP 预筛选 matrix 各三次通过，覆盖 Windows dist/packaged；对入库归档执行严格门禁亦通过。预筛选是 token posting 参考服务，不是外部近似索引。ADB 没有在线设备，Android、原生窗口与独立宿主仍未验收。
+
+- [x] U7 工具、Windows SQLite 与参考连接器资格验证。
+- [ ] U7 外部设备/宿主/backend 的独立 artifact 与实测资格。
 
 - [ ] **U7 / P1 — 关闭证据义务；R7**
 
@@ -384,11 +395,14 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 ### U8：代表性回答与学习成效校准
 
-语料检查点：1.0.0 版包含六个校准用例、十八个独立评估双语用例，覆盖九类任务。校准与评估主题分离，参考事实在观察评估输出前编写。评估器记录独立参考覆盖、已标注不受支持断言探针、冲突/拒答信号、重复稳定性、冷/热时延与内存观测，并保留分母；不把 runtime 的 sufficiency 当作外部正确性标签。基线执行与学习者成效采样尚待完成。
+测量检查点：V1 已归档，V2 包含六个校准与十八个独立确认用例，参考在 wiki-link 证据修复前冻结。最终 V2 参考验收 slim 8/18、full 13/18，覆盖分别为 28/36、36/36。full 仍命中两个主题泄漏探针，两种模式均漏报 2/2 冲突信号。2,000 文档 snapshot 成本与协作式取消的测量边界已记录。这些结果完成基线，不代表一般回答质量或真实学习成效已经验收。
+
+- [x] U8 版本化双语语料、可复现测量与知情同意 pilot 协议。
+- [ ] U8 更广的主题/冲突质量验证及已取得参与同意的学习者观察。
 
 - [ ] **U8 / P2 — 推进 M01/M09/M10/M11；R8**
 
-**Owner/文件：**`src/learning/KnowledgeWorkspaceConversationRegression.ts`、`scripts/verify-knowledge-workspace-runtime.js`；仅校准结果支持时修改 `src/learning/graphAnswerQualityPolicy.ts`。测试：`src/learning/graphAnswerPlan.test.ts`、`src/learning/answerReleaseReview.test.ts`；日期化评估记录放在 `docs/`，中英文分节。
+**实现 owner：**`src/learning/AnswerQualityEvaluation.ts`、`scripts/evaluate-answer-quality.js`、`scripts/measure-convergence-runtime.js`、`fixtures/answer-quality/v{1,2}.json` 与双语 evaluation/pilot 记录。有界 wiki-link 修复归属 `src/learning/ragPublicText.ts`；既有 Knowledge Workspace runtime 语料继续作为回归门禁。一般主题/冲突策略变更须有新的独立证据。
 
 **决策：**Water Glass 保留为已知回归；建立版本化中英留出集，覆盖定义、比较、因果、复合任务、冲突、缺证据、主题漂移、数学及噪声标题。分离调参与评估样本，记录 corpus/hash、backend、response mode、样本量和时延/内存测量条件。
 
@@ -411,4 +425,4 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 每个单元应可独立审查与回退。U1 保持存储格式，U7 保留前一个可用 artifact；不以 feature switch 掩盖已知数据丢失路径。生产不变量失败时重新打开状态，即使历史编码步骤仍勾选。
 
-文档要求：同步更新单元的英文/中文状态，记录源码 revision、实际检查与未覆盖证据；看板/tracker 链接本计划，不再复制整份 backlog。本轮审计不涉及 release tag、部署或生产配置调整。
+文档要求：同步更新中英文状态，链接结果/证据记录，不复制另一份 backlog。用户已授权将验证后的实现同步到远端 main；release tag、手工部署、生产配置调整及未验收目标的提升不在本轮范围内。

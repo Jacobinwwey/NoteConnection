@@ -1,10 +1,10 @@
 # 2026-03-04 v1.5.13 - Bridge-First Brainstorming Addendum (Tauri Migration)
 
-## 2026-09-12 Audit status
+## 2026-09-13 Implementation status
 
-Earlier dates and checkboxes below are historical. Graph-conditioned context is implemented; shared-state isolation, answer execution/transport, matching parity and release evidence remain open. This update reconciles documentation; it does not implement the next units.
+U1–U6 are implemented and accepted. U7 qualifies the current Windows dist/sidecar and reference HTTP prefilter; U8 has a reproducible bilingual baseline. Native Android, independent hosts, production ANN and learner outcomes remain unqualified. Earlier dates and checkboxes below are historical.
 
-Current status: [project audit](../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+Current evidence and remaining work: [convergence results](../evaluations/2026-09-13-convergence-results.md). Acceptance by unit: [U1–U8 convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md). Original baseline: [project audit](../audits/2026-09-12-project-progress.md).
 
 
 ---

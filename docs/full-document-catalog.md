@@ -2,11 +2,15 @@
 
 ## English — current planning
 
+- [Convergence results and acceptance evidence](evaluations/2026-09-13-convergence-results.md#english)
+- [Learning pilot protocol](evaluations/2026-09-12-learning-pilot-protocol.md#english)
 - [Project progress audit and evidence](audits/2026-09-12-project-progress.md#english)
 - [Project convergence implementation plan](plans/2026-09-12-001-refactor-project-convergence-plan.md#english)
 
 ## 中文 — 当前规划
 
+- [收敛实施结果与验收证据](evaluations/2026-09-13-convergence-results.md#chinese)
+- [学习成效 pilot 协议](evaluations/2026-09-12-learning-pilot-protocol.md#chinese)
 - [项目进度审计与证据](audits/2026-09-12-project-progress.md#chinese)
 - [项目收敛实施计划](plans/2026-09-12-001-refactor-project-convergence-plan.md#chinese)
 
@@ -17,6 +21,8 @@ This page is an indexed catalog for **all Markdown docs** under `docs/`.
 ## All Markdown Files
 
 - [`BILINGUAL_INDEX.md`](BILINGUAL_INDEX.md)
+- [`evaluations/2026-09-13-convergence-results.md`](evaluations/2026-09-13-convergence-results.md)
+- [`evaluations/2026-09-12-learning-pilot-protocol.md`](evaluations/2026-09-12-learning-pilot-protocol.md)
 - [`open_goal_audit_2026-05-10.md`](open_goal_audit_2026-05-10.md)
 - [`brainstorms/2026-04-11-deeptutor-reuse-analysis.md`](brainstorms/2026-04-11-deeptutor-reuse-analysis.md)
 - [`brainstorms/2026-04-11-evolution-progress-alignment-requirements.md`](brainstorms/2026-04-11-evolution-progress-alignment-requirements.md)
