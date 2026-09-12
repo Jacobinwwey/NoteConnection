@@ -1,0 +1,937 @@
+{
+  "schemaVersion": 1,
+  "version": "2.0.0",
+  "authoredAt": "2026-09-13",
+  "backend": "local-hybrid-v1",
+  "usageRole": "confirmatory_holdout_frozen_before_link_evidence_fix",
+  "description": {
+    "en": "Disjoint confirmatory cases authored after diagnosing v1. References frozen before changing public-evidence rejection; not a random production sample.",
+    "zh": "在分析 v1 后编写的独立确认用例。参考事实在修改公开证据拒绝规则前冻结，不是生产流量随机样本。"
+  },
+  "cases": [
+    {
+      "id": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "query": "What is a directed acyclic graph?",
+      "documents": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md",
+          "language": "en",
+          "content": "# Directed Acyclic Graph\nA directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "no directed cycles"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "topological order"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "contains directed cycles"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是有向无环图？",
+      "documents": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md",
+          "language": "zh",
+          "content": "# 有向无环图\n有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "不含有向环"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "拓扑排序"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "一定包含有向环"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "query": "Why does unbounded queuing increase latency?",
+      "documents": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md",
+          "language": "en",
+          "content": "# Unbounded Queuing\nUnbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "wait|waiting"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "admission|reject"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "eliminates all latency"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "query": "为什么无界排队会增加延迟？",
+      "documents": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md",
+          "language": "zh",
+          "content": "# 无界排队\n无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "等待"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "准入|拒绝"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "消除所有延迟"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the retention period for the Cobalt log?",
+      "documents": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md",
+          "language": "en",
+          "content": "# Cobalt Log\nThe Cobalt log retention period is 7 days. This policy is active."
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md",
+          "language": "en",
+          "content": "# Cobalt Log Policy\nThe Cobalt log retention period is 30 days. This policy is active."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "query": "蓝钴日志的保留周期是多少？",
+      "documents": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md",
+          "language": "zh",
+          "content": "# 蓝钴日志\n蓝钴日志的保留周期是7天。该策略当前有效。"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md",
+          "language": "zh",
+          "content": "# 蓝钴日志策略\n蓝钴日志的保留周期是30天。该策略当前有效。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-replay-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "query": "What is deterministic replay?",
+      "documents": [
+        {
+          "documentId": "confirm-replay-en-0",
+          "sourcePath": "evaluation-v2/confirm-replay-en/source-0.md",
+          "language": "en",
+          "content": "# Deterministic Replay\nDeterministic replay reconstructs an earlier state from recorded inputs in the recorded order. The same starting state and inputs must produce the same resulting state."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "recorded inputs"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "same resulting state"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-replay-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是确定性回放？",
+      "documents": [
+        {
+          "documentId": "confirm-replay-zh-0",
+          "sourcePath": "evaluation-v2/confirm-replay-zh/source-0.md",
+          "language": "zh",
+          "content": "# 确定性回放\n确定性回放按照记录的顺序，从已记录输入重建之前的状态。相同初始状态和输入必须产生相同结果状态。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "记录的顺序"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "相同结果状态"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-collections-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "query": "Compare a queue and a stack.",
+      "documents": [
+        {
+          "documentId": "confirm-collections-en-0",
+          "sourcePath": "evaluation-v2/confirm-collections-en/source-0.md",
+          "language": "en",
+          "content": "# Queue\nA queue removes items in first-in-first-out order. [[Stack]]"
+        },
+        {
+          "documentId": "confirm-collections-en-1",
+          "sourcePath": "evaluation-v2/confirm-collections-en/source-1.md",
+          "language": "en",
+          "content": "# Stack\nA stack removes items in last-in-first-out order. [[Queue]]"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "first.in.first.out"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "last.in.first.out"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-collections-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "query": "比较队列和栈。",
+      "documents": [
+        {
+          "documentId": "confirm-collections-zh-0",
+          "sourcePath": "evaluation-v2/confirm-collections-zh/source-0.md",
+          "language": "zh",
+          "content": "# 队列\n队列按先进先出的顺序移除元素。[[栈]]"
+        },
+        {
+          "documentId": "confirm-collections-zh-1",
+          "sourcePath": "evaluation-v2/confirm-collections-zh/source-1.md",
+          "language": "zh",
+          "content": "# 栈\n栈按后进先出的顺序移除元素。[[队列]]"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "先进先出"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "后进先出"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-pressure-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "causal",
+      "query": "Why does backpressure reduce buffer growth?",
+      "documents": [
+        {
+          "documentId": "confirm-pressure-en-0",
+          "sourcePath": "evaluation-v2/confirm-pressure-en/source-0.md",
+          "language": "en",
+          "content": "# Backpressure\nBackpressure reduces buffer growth because the producer waits when the consumer cannot accept more work. Production resumes when the consumer has capacity."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "producer waits"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "consumer has capacity"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-pressure-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "causal",
+      "query": "为什么背压能减少缓冲区增长？",
+      "documents": [
+        {
+          "documentId": "confirm-pressure-zh-0",
+          "sourcePath": "evaluation-v2/confirm-pressure-zh/source-0.md",
+          "language": "zh",
+          "content": "# 背压\n背压能减少缓冲区增长，因为消费者无法接收更多工作时，生产者会等待。消费者恢复容量之后，生产者再继续工作。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "生产者会等待"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "恢复容量"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-rotation-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "multi_step",
+      "query": "How should a scoped credential be rotated?",
+      "documents": [
+        {
+          "documentId": "confirm-rotation-en-0",
+          "sourcePath": "evaluation-v2/confirm-rotation-en/source-0.md",
+          "language": "en",
+          "content": "# Scoped Credential Rotation\nRotate the credential in this order:\n1. Create a replacement credential with the required scope.\n2. Deploy the replacement to the consumer.\n3. Verify that the consumer succeeds with the replacement.\n4. Revoke the previous credential."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "create"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "deploy"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "verify"
+            ]
+          },
+          {
+            "id": "fact-4",
+            "patterns": [
+              "revoke"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false,
+        "orderedSteps": [
+          "create",
+          "deploy",
+          "verify",
+          "revoke"
+        ]
+      }
+    },
+    {
+      "id": "confirm-rotation-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "multi_step",
+      "query": "如何轮换限定权限的凭据？",
+      "documents": [
+        {
+          "documentId": "confirm-rotation-zh-0",
+          "sourcePath": "evaluation-v2/confirm-rotation-zh/source-0.md",
+          "language": "zh",
+          "content": "# 限定权限凭据轮换\n按顺序执行以下步骤：\n1. 创建具有所需权限的新凭据。\n2. 部署新凭据到使用方。\n3. 验证使用方通过新凭据正常工作。\n4. 撤销旧凭据。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "创建"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "部署"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "验证"
+            ]
+          },
+          {
+            "id": "fact-4",
+            "patterns": [
+              "撤销"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false,
+        "orderedSteps": [
+          "创建",
+          "部署",
+          "验证",
+          "撤销"
+        ]
+      }
+    },
+    {
+      "id": "confirm-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the Orion sensor rate?",
+      "documents": [
+        {
+          "documentId": "confirm-frequency-en-0",
+          "sourcePath": "evaluation-v2/confirm-frequency-en/source-0.md",
+          "language": "en",
+          "content": "# Orion Sensor Rate\nThe Orion sensor rate is 20 Hz. This is the active record."
+        },
+        {
+          "documentId": "confirm-frequency-en-1",
+          "sourcePath": "evaluation-v2/confirm-frequency-en/source-1.md",
+          "language": "en",
+          "content": "# Orion Sensor Rate Record\nThe Orion sensor rate is 60 Hz. This is the active record."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "20"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "60"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "query": "苍穹传感器的刷新频率是多少？",
+      "documents": [
+        {
+          "documentId": "confirm-frequency-zh-0",
+          "sourcePath": "evaluation-v2/confirm-frequency-zh/source-0.md",
+          "language": "zh",
+          "content": "# 苍穹传感器刷新频率\n苍穹传感器的刷新频率是20赫兹。这是当前有效的记录。"
+        },
+        {
+          "documentId": "confirm-frequency-zh-1",
+          "sourcePath": "evaluation-v2/confirm-frequency-zh/source-1.md",
+          "language": "zh",
+          "content": "# 苍穹传感器刷新频率记录\n苍穹传感器的刷新频率是60赫兹。这是当前有效的记录。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "20"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "60"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-unknown-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "query": "What is the melting point of Nebula alloy?",
+      "documents": [
+        {
+          "documentId": "confirm-unknown-en-0",
+          "sourcePath": "evaluation-v2/confirm-unknown-en/source-0.md",
+          "language": "en",
+          "content": "# Nebula Alloy Records\nThe archive contains no measurement of the melting point of Nebula alloy."
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [
+          {
+            "id": "invented-temperature",
+            "pattern": "melting point is [0-9]"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    },
+    {
+      "id": "confirm-unknown-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "query": "星云合金的熔点是多少？",
+      "documents": [
+        {
+          "documentId": "confirm-unknown-zh-0",
+          "sourcePath": "evaluation-v2/confirm-unknown-zh/source-0.md",
+          "language": "zh",
+          "content": "# 星云合金记录\n存档没有提供星云合金熔点的测量数据。"
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [
+          {
+            "id": "invented-temperature",
+            "pattern": "熔点是[0-9]"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    },
+    {
+      "id": "confirm-wal-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "topic_drift",
+      "query": "Explain write-ahead log ordering.",
+      "documents": [
+        {
+          "documentId": "confirm-wal-en-0",
+          "sourcePath": "evaluation-v2/confirm-wal-en/source-0.md",
+          "language": "en",
+          "content": "# Write Ahead Log Ordering\nA write-ahead log records a change durably before the corresponding data page is written. Recovery uses the durable log to reconstruct changes that were not yet applied to data pages."
+        },
+        {
+          "documentId": "confirm-wal-en-1",
+          "sourcePath": "evaluation-v2/confirm-wal-en/source-1.md",
+          "language": "en",
+          "content": "# Bird Watching Log\nCardinals have red plumage. A bird-watching log records observations in a notebook."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "before"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "reconstruct"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "topic-leakage",
+            "pattern": "cardinals have red"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-wal-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "topic_drift",
+      "query": "解释预写日志的写入顺序。",
+      "documents": [
+        {
+          "documentId": "confirm-wal-zh-0",
+          "sourcePath": "evaluation-v2/confirm-wal-zh/source-0.md",
+          "language": "zh",
+          "content": "# 预写日志的写入顺序\n预写日志先持久记录变更，再写入对应的数据页。恢复时可以通过持久日志重建尚未应用到数据页的变更。"
+        },
+        {
+          "documentId": "confirm-wal-zh-1",
+          "sourcePath": "evaluation-v2/confirm-wal-zh/source-1.md",
+          "language": "zh",
+          "content": "# 观鸟日志\n红雀有红色羽毛。观鸟日志在笔记本中记录观察结果。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "再写入"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "重建"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "topic-leakage",
+            "pattern": "红雀有红色羽毛"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-throughput-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "math",
+      "query": "Explain average throughput and its equation.",
+      "documents": [
+        {
+          "documentId": "confirm-throughput-en-0",
+          "sourcePath": "evaluation-v2/confirm-throughput-en/source-0.md",
+          "language": "en",
+          "content": "# Average Throughput\nAverage throughput is the number of completed operations divided by the elapsed time.\n\n$$\nQ = \\frac{N}{t}\n$$\n\nHere N is the completed operation count and t is a positive duration."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "divided"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "\\\\frac\\{N\\}\\{t\\}"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "wrong-equation",
+            "pattern": "Q\\s*=\\s*N\\s*\\*\\s*t"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-mean-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "math",
+      "query": "解释两个数的算术平均数及其公式。",
+      "documents": [
+        {
+          "documentId": "confirm-mean-zh-0",
+          "sourcePath": "evaluation-v2/confirm-mean-zh/source-0.md",
+          "language": "zh",
+          "content": "# 两个数的算术平均数\n两个数的算术平均数等于它们的和除以二。\n\n$$\nM = \\frac{a+b}{2}\n$$\n\n其中 a 和 b 是两个实数。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "除以二"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "\\\\frac\\{a\\+b\\}\\{2\\}"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "wrong-equation",
+            "pattern": "\\\\frac\\{a-b\\}\\{2\\}"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-digest-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "noisy_headings",
+      "query": "What is a content digest?",
+      "documents": [
+        {
+          "documentId": "confirm-digest-en-0",
+          "sourcePath": "evaluation-v2/confirm-digest-en/source-0.md",
+          "language": "en",
+          "content": "# Overview\n## Contents\n### Content Digest\nA content digest is a fixed-length fingerprint computed from content bytes. Identical bytes produce the same digest under the same algorithm.\n## Revision Notes\nThese headings organize the source document."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "fixed.length"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "same digest"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "confirm-digest-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "noisy_headings",
+      "query": "什么是内容摘要？",
+      "documents": [
+        {
+          "documentId": "confirm-digest-zh-0",
+          "sourcePath": "evaluation-v2/confirm-digest-zh/source-0.md",
+          "language": "zh",
+          "content": "# 概述\n## 目录\n### 内容摘要\n内容摘要是根据内容字节计算的固定长度指纹。相同字节在相同算法下产生相同摘要。\n## 修订说明\n这些标题用于组织源文档。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "固定长度"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "相同摘要"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    }
+  ]
+}

@@ -6,12 +6,23 @@ import type { AgentConversationResponse } from './types';
 const raw = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../fixtures/answer-quality/v1.json'), 'utf8'));
 
 describe('independent answer-quality measurements', () => {
-    test('freezes disjoint bilingual calibration/evaluation sets covering every declared category', () => {
+    test('validates disjoint bilingual calibration/evaluation sets covering every declared category', () => {
         const corpus = parseAnswerQualityCorpus(raw);
         expect(corpus.cases.filter(entry => entry.split === 'calibration')).toHaveLength(6);
         const heldOut = corpus.cases.filter(entry => entry.split === 'evaluation');
         expect(heldOut).toHaveLength(18);
         for (const category of ANSWER_QUALITY_CATEGORIES) expect(heldOut.filter(entry => entry.category === category).map(entry => entry.language).sort()).toEqual(['en', 'zh']);
+    });
+    test('the confirmation corpus uses disjoint evaluation documents and subjects', () => {
+        const confirmation = parseAnswerQualityCorpus(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../fixtures/answer-quality/v2.json'), 'utf8')));
+        const original = parseAnswerQualityCorpus(raw);
+        const queries = new Set(original.cases.map(entry => entry.query));
+        const sourceContents = new Set(original.cases.flatMap(entry => entry.documents.map(document => document.content.replace(/\s+/g, ' ').trim())));
+        for (const entry of confirmation.cases.filter(item => item.split === 'evaluation')) {
+            expect(queries.has(entry.query)).toBe(false);
+            for (const document of entry.documents) expect(sourceContents.has(document.content.replace(/\s+/g, ' ').trim())).toBe(false);
+        }
+        for (const category of ANSWER_QUALITY_CATEGORIES) expect(confirmation.cases.filter(entry => entry.split === 'evaluation' && entry.category === category).map(entry => entry.language).sort()).toEqual(['en', 'zh']);
     });
     test('rejects source leakage between calibration and evaluation', () => {
         const corpus = structuredClone(raw);

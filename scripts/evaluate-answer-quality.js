@@ -8,7 +8,7 @@ const { spawnSync } = require('child_process');
 const { computeSidecarSourceFingerprint } = require('./sidecar-build-fingerprint');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
-const CORPUS_PATH = path.join(REPO_ROOT, 'fixtures', 'answer-quality', 'v1.json');
+const CORPUS_PATH = path.join(REPO_ROOT, 'fixtures', 'answer-quality', 'v2.json');
 
 function distribution(values) {
     const sorted = [...values].sort((a, b) => a - b);
@@ -71,7 +71,7 @@ async function evaluateAnswerQuality({ repeats = 3, outputRoot = path.join(REPO_
     const revision = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: REPO_ROOT, encoding: 'utf8', windowsHide: true });
     if (revision.status !== 0) throw new Error('Cannot record evaluation source revision');
     const report = {
-        evaluatedAt: new Date().toISOString(), corpusVersion: corpus.version,
+        evaluatedAt: new Date().toISOString(), corpusVersion: corpus.version, corpusRole: corpus.usageRole,
         corpusSha256: createHash('sha256').update(corpusBytes).digest('hex'), sourceRevision: revision.stdout.trim(),
         sourceTreeHash: computeSidecarSourceFingerprint(REPO_ROOT).digest,
         executionCompleted: !rows.some(row => row.error) && rows.length === corpus.cases.length * 2,

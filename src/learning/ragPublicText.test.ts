@@ -2,8 +2,25 @@ import {
     naturalizeRagPublicEvidenceClause,
     shouldRejectPublicEvidenceClause,
 } from './ragPublicText';
+import { KnowledgeLearningPlatform } from './KnowledgeLearningPlatform';
 
 describe('ragPublicText', () => {
+    test.each(['[[Checkpoint]]', '[[Checkpoint]] [[Mutation log]]', '1. [[Checkpoint]] 2. [[Mutation log]]'])('rejects link-only navigation as factual evidence: %s', text => {
+        expect(shouldRejectPublicEvidenceClause(text)).toBe(true);
+    });
+    test('preserves factual prose that contains a wiki link', () => {
+        expect(shouldRejectPublicEvidenceClause('A [[Mutation log]] records an ordered sequence of changes.')).toBe(false);
+    });
+    test('comparison composition selects source facts instead of bare wiki links', async () => {
+        const platform = new KnowledgeLearningPlatform({ autoPersist: false });
+        await platform.ingestKnowledge({ documents: [
+            { documentId: 'checkpoint', sourcePath: 'test/checkpoint.md', content: '# Checkpoint\nA checkpoint stores the complete state at a checkpoint. [[Mutation log]]' },
+            { documentId: 'mutation-log', sourcePath: 'test/mutation-log.md', content: '# Mutation Log\nA mutation log records an ordered sequence of state changes. [[Checkpoint]]' },
+        ] });
+        const response = await platform.agentConversation({ message: 'Compare Checkpoint and Mutation Log', persistMemory: false });
+        expect(response.answer).toMatch(/complete state|ordered sequence/i);
+        expect(shouldRejectPublicEvidenceClause(response.answer)).toBe(false);
+    });
     test('removes Markdown list and bold-label scaffolding before public composition', () => {
         expect(naturalizeRagPublicEvidenceClause('* **Quantitative analysis**: pressure follows P = rho g h.'))
             .toBe('Quantitative analysis: pressure follows P = rho g h.');

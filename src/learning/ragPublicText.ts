@@ -79,7 +79,9 @@ export function naturalizeRagPublicEvidenceClause(value: string): string {
 
 export function shouldRejectPublicEvidenceClause(value: string): boolean {
     const normalized = normalizeWhitespace(value);
-    return /\b(?:distractor|must not guide|do not use|ignore this (?:section|evidence)|must (?:compare|resolve)|before publishing)\b/iu.test(normalized)
+    // A bare wiki link identifies a note, but supplies no factual statement for answer coverage.
+    return /^(?:(?:\d+[.)]|[-*+])?\s*\[\[[^\]]+\]\][\s,;、，；.!。]*)+$/u.test(normalized)
+        || /\b(?:distractor|must not guide|do not use|ignore this (?:section|evidence)|must (?:compare|resolve)|before publishing)\b/iu.test(normalized)
         || /\b(?:the following table|the table below)\b/iu.test(normalized)
         || /(?:下表|以下表格|表中)(?:列出|展示|给出|包含)/u.test(normalized)
         || /(?:参数\s*\(Parameter\)|Parameter).{0,160}(?:单位\s*\(Unit\)|Unit).{0,160}:---/iu.test(normalized)

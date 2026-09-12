@@ -25,6 +25,7 @@ export interface AnswerQualityCorpus {
     version: string;
     authoredAt: string;
     backend: string;
+    usageRole?: string;
     cases: AnswerQualityCase[];
 }
 
