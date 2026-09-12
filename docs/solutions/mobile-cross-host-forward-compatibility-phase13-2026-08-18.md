@@ -8,6 +8,13 @@ status: active
 
 ## English
 
+### 2026-09-12 Audit status
+
+Compact projection, native recovery code, the signed-artifact/RSS harness and the versioned host identity corpus now exist. Earlier “harness next” wording is historical. Native signed arm64 SAF/process-death/RSS acceptance remains open; host replay explicitly is not native evidence. Keep canonical public-ID cutover and mobile SQLite/WASM promotion separate.
+
+Current status: [project audit](../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ### Decision
 
 Keep the mobile runtime body-free and adapter-led. Web, Tauri, Capacitor, and Android must consume the same versioned projection and query semantics, while each host owns only storage, lifecycle, and cancellation primitives. Do not promote SQLite/WASM, Godot, a sidecar, or an embedded model to the default mobile profile until measured evidence proves that the bounded exact workload needs it.
@@ -51,6 +58,13 @@ The Phase 12 projection replay is a contract test, not native parity evidence. T
 The implementation increment was checked with the Android picker contract suite, mobile artifact/profile contract suites, TypeScript no-emit, the 57-suite migration matrix (307 passed, 13 skipped), and `app:compileArm64ReleaseKotlin`. The environment has no online Android device, no configured AVD, and no signing keystore, so G2 remains explicitly incomplete.
 
 ## 中文
+
+### 2026-09-12 审计状态
+
+compact projection、原生恢复代码、签名产物/RSS harness、版本化 host identity corpus 均已存在；旧“harness 下一步”属于历史状态。signed arm64 SAF/进程死亡/RSS 原生验收仍开放，host replay 明确不能替代。canonical public-ID 与移动 SQLite/WASM 提升独立决策。
+
+当前状态：[项目审计](../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
 
 ### 决策
 

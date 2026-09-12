@@ -1,5 +1,12 @@
 # 2026-04-07 v1.7.0 - Git LFS Asset Migration Plan
 
+## 2026-09-12 Audit status
+
+Partial: generated graph payload removal and runtime-first/bootstrap contracts are implemented, but five sidecar paths remain Git-tracked. Strict no-LFS delivery, multi-host clean bootstrap and history migration are not complete. Current Tauri Android release routing is authoritative; old universal unsigned release observations are historical.
+
+Current status: [project audit](../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ## Scope
 
 - Remove Git LFS from the repository's default delivery path without breaking the current runtime model, npm publish flow, or desktop/mobile release automation.

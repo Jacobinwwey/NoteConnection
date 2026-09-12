@@ -198,11 +198,11 @@
       "id": "development-progress-dashboard",
       "category": "explanation",
       "en": {
-        "canonical": ["docs/en/knowledge_mastery_evolution_plan.md", "docs/brainstorms/2026-04-11-evolution-progress-alignment-requirements.md", "docs/solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md", "src/learning/api.ts", "src/server.ts"],
+        "canonical": ["docs/audits/2026-09-12-project-progress.md", "docs/plans/2026-09-12-001-refactor-project-convergence-plan.md", "docs/en/knowledge_mastery_evolution_plan.md", "docs/brainstorms/2026-04-11-evolution-progress-alignment-requirements.md", "docs/solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md", "src/learning/api.ts", "src/server.ts"],
         "diataxis": "docs/diataxis/en/explanation/development-progress-dashboard.md"
       },
       "zh": {
-        "canonical": ["docs/zh/knowledge_mastery_evolution_plan.md", "docs/brainstorms/2026-04-11-evolution-progress-alignment-requirements.md", "docs/solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md", "src/learning/api.ts", "src/server.ts"],
+        "canonical": ["docs/audits/2026-09-12-project-progress.md", "docs/plans/2026-09-12-001-refactor-project-convergence-plan.md", "docs/zh/knowledge_mastery_evolution_plan.md", "docs/brainstorms/2026-04-11-evolution-progress-alignment-requirements.md", "docs/solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md", "src/learning/api.ts", "src/server.ts"],
         "diataxis": "docs/diataxis/zh/explanation/development-progress-dashboard.md"
       }
     },

@@ -2,6 +2,13 @@
 
 ## English
 
+### 2026-09-12 Audit status
+
+The safety requirements remain valid, but implementation acceptance is partial. Tiers, UI and product caps exist; production deadline enforcement, source admission, complete SSE size accounting and backpressure remain open (U2/U3). Implementation checkboxes alone do not establish the specification's memory/time contract.
+
+Current status: [project audit](../../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ### Goal
 
 Expand desktop `full` responses without weakening the existing `slim` contract or the mobile resource boundary. Full responses should adapt to the host capability, expose their effective budget for diagnostics, and offer an explicit user-controlled mode that removes product truncation while retaining non-optional runtime safety controls.
@@ -58,6 +65,13 @@ The server owns the budget policy. Clients may request a budget mode but cannot 
 - Full Jest, production/Vite builds, mobile contract gates, and remote CI must pass before updating `main`.
 
 ## 中文
+
+### 2026-09-12 审计状态
+
+安全要求继续有效，但实现验收为部分完成。档位、UI、product cap 已有；生产 deadline 执行、源读取准入、完整 SSE 字节计量和背压仍待 U2/U3。编码步骤勾选不能证明规格中的内存/时间契约。
+
+当前状态：[项目审计](../../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
 
 ### 目标
 

@@ -12,6 +12,13 @@ version: 2026.08.21
 
 ## English
 
+### 2026-09-12 Audit status
+
+Auth unification, identity guards, atomic file writes and the graph-conditioning baseline are implemented. Whole-platform isolation is reopened: the current ingest-only queue and whole-snapshot rollback can erase concurrently acknowledged memory. Native G2/G3 evidence and canonical public-ID cutover remain independently gated. Historical Phase-26 atomicity claims apply to isolated ingest requests, not concurrent platform writers.
+
+Current status: [project audit](../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ## 2026-08-21 Phase 30 Graph-Conditioned Context Assembly
 
 The retrieval boundary now consumes a pre-RAG graph answer plan through a focused `graphConditionedContext` adapter. It produces deterministic fragment order and an additive `RagGraphConditioningTrace`; the existing role/score budget remains authoritative, so graph conditioning cannot promote weak evidence over direct support or escape scope. Normal and bounded recovery assembly share the same plan. This closes the graph-to-RAG wiring gap without changing public IDs, IPC, mobile assets, or native evidence claims.
@@ -115,6 +122,13 @@ The additive identity foundation now crosses the learning boundary as well as th
 The remaining architectural blocker is intentional: a path-derived URI is not a rename journal. Move/rename events, workspace namespace, old-snapshot replay, Android folder selection, signed artifact extraction, and device RSS evidence must land before canonical-ID cutover or a strict mobile release claim.
 
 ## 中文
+
+### 2026-09-12 审计状态
+
+认证收敛、identity guard、原子文件写与图条件上下文基线已实现。整个平台隔离重新打开：仅 ingest 排队与整 snapshot 回滚会抹掉并发确认的 memory。原生 G2/G3 与 canonical public-ID 切换仍独立受门禁约束。历史 Phase-26 原子性结论只覆盖孤立 ingest，不能推广到并发 platform writer。
+
+当前状态：[项目审计](../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
 
 ## 2026-08-21 第 30 阶段：图条件上下文装配
 

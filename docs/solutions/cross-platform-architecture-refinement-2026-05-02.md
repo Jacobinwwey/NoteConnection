@@ -3,10 +3,28 @@ module: architecture
 tags: [cross-platform, refactoring, code-health, compatibility, roadmap]
 problem_type: architectural-debt
 created: 2026-05-02
-status: proposed
+status: historical
+reviewed: 2026-09-12
 ---
 
 # 跨平台架构优化与代码健康度改进方案
+
+## English
+
+### 2026-09-12 Audit status
+
+This is a historical May planning/audit snapshot. Its percentages, test totals and CI statements are not current HEAD acceptance. Registry/domain files exist, but duplicate routes and reverse platform delegation remain. Remaining obligations are carried into U1, U5 and U6 of the current plan; do not execute the old sequence as a fresh backlog.
+
+Current status: [project audit](../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+## 中文
+
+### 2026-09-12 审计状态
+
+本页为 5 月历史规划/审计快照，百分比、测试数量与 CI 描述不代表当前 HEAD 验收。registry/domain 文件已存在，但路由重复与反向 platform 委托仍在。剩余义务归入当前计划 U1、U5、U6，不应把旧顺序重新当作新 backlog 执行。
+
+当前状态：[项目审计](../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
 
 ## 元信息
 

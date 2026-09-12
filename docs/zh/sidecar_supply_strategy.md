@@ -1,5 +1,12 @@
 # 2026-04-08 v1.7.0 - 反脆弱 Sidecar 供给策略
 
+## 2026-09-12 审计状态
+
+bootstrap、mirror/cache policy、构建单写锁和内容指纹新鲜度已实现，但不证明严格 no-LFS 或当前多宿主发布资格。保持 cache/mirror/offline-seed 供给方式，先验收真实产物再移除剩余跟踪二进制。
+
+当前状态：[项目审计](../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
+
 ## 中文文档
 
 ### 为什么需要这份文档

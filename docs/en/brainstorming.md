@@ -1,5 +1,12 @@
 # 2026-03-04 v1.5.13 - Bridge-First Brainstorming Addendum (Tauri Migration)
 
+## 2026-09-12 Audit status
+
+Earlier dates and checkboxes below are historical. Graph-conditioned context is implemented; shared-state isolation, answer execution/transport, matching parity and release evidence remain open. This update reconciles documentation; it does not implement the next units.
+
+Current status: [project audit](../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ---
 
 ## Session 9: Soap Bubble Physics & Environment Refinements (Current Progress)
@@ -56,4 +63,3 @@ The design direction is now explicitly Bridge-first:
 - How strict should startup debounce be for websocket reconnection under heavy cold starts?
 - Should cache prompt state be controlled entirely backend-side to avoid frontend race windows?
 - Should history snapshots include source event metadata (`dblclick`, `manual switch`, `collapse all`) for debugging?
-

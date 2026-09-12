@@ -43,6 +43,13 @@ Reference project facts:
 
 ## English
 
+### 2026-09-12 Audit status
+
+Scope, indexing, workspace/session persistence, RAG and memory integration have progressed beyond the original missing-layer diagnosis. Remaining implementation work concerns shared-state isolation and bounded turn/transport execution; representative corpus and native release qualification remain separate. Reuse the existing owners instead of rebuilding the May target architecture.
+
+Current status: [project audit](../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ### 1. Definitions
 
 `Source`
@@ -678,6 +685,13 @@ For a note like `Knowledge_Base/.../Absorption.md`, the correct final behavior i
 5. Mobile support becomes realistic only after scope, indexing, conversation, and rendering contracts are explicit and portable.
 
 ## 中文
+
+### 2026-09-12 审计状态
+
+scope、indexing、workspace/session 持久化、RAG、memory 集成已超出原缺失层诊断。当前实现缺口是共享状态隔离与有界 turn/transport；代表性语料与原生发布资格分别验收。复用已有 owner，不重建 5 月目标架构。
+
+当前状态：[项目审计](../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
 
 ### 1. 术语定义
 

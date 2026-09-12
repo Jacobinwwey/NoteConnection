@@ -1,5 +1,12 @@
 # 2026-07-03 v1.7.0 - Knowledge Workspace RSE 与 Hosted Runtime 对齐 TODO
 
+## 2026-09-12 审计状态
+
+以下旧日期与勾选保留为历史记录。图条件上下文已经实现；共享状态隔离、回答执行/传输、匹配语义和发布证据仍开放。本次更新对齐文档，不代表后续实施单元已经完成。
+
+当前状态：[项目审计](../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
+
 ## 中文文档
 
 ### 目标

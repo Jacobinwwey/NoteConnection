@@ -2,6 +2,13 @@
 
 ## English Document
 
+### 2026-09-12 Audit status
+
+Earlier dates and checkboxes below are historical. Graph-conditioned context is implemented; shared-state isolation, answer execution/transport, matching parity and release evidence remain open. This update reconciles documentation; it does not implement the next units.
+
+Current status: [project audit](docs/audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](docs/plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ### Active Task Snapshot
 
 - [x] Current code has been re-audited against the earlier lightweight-RAG, agent-workspace, and mainline architecture plans.
@@ -10,7 +17,7 @@
 - [x] The current DAG-backed learning substrate is confirmed in code: `KnowledgeAtom`, `RelationEdge`, `TemporalEdge`, path queries, and prerequisite-driven learning flows already exist.
 - [~] The visible answer area still needs contraction so users see the targeted answer first and supporting blocks move to secondary surfaces.
 - [~] Left-side knowledge hits are file-first, but still need to converge on a right-pane-first reading model.
-- [ ] Add a graph-conditioned context-assembly layer between retrieval and answer synthesis so the current DAG becomes a first-class answer-planning substrate.
+- [x] Graph-conditioned context assembly is implemented between retrieval and answer synthesis (2026-08-21); current runtime-safety follow-up is tracked in the 2026-09-12 plan.
 - [ ] Continue ownership reduction in `src/server.ts`, `src/learning/KnowledgeLearningPlatform.ts`, `src/frontend/agent_workspace.js`, and `src/frontend/workspace_panes.js`.
 
 ### Current Acceptance Targets
@@ -22,6 +29,13 @@
 
 ## 中文文档
 
+### 2026-09-12 审计状态
+
+以下旧日期与勾选保留为历史记录。图条件上下文已经实现；共享状态隔离、回答执行/传输、匹配语义和发布证据仍开放。本次更新对齐文档，不代表后续实施单元已经完成。
+
+当前状态：[项目审计](docs/audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](docs/plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
+
 ### 当前任务快照
 
 - [x] 已重新按源码审计当前代码与此前 lightweight-RAG、agent-workspace 和主线架构方案的对应关系。
@@ -30,7 +44,7 @@
 - [x] 当前 DAG 学习底座已在代码中确认存在：`KnowledgeAtom`、`RelationEdge`、`TemporalEdge`、path query 与 prerequisite 驱动的学习流都已落地。
 - [~] 用户可见回答区仍需继续收缩为“targeted answer 优先，supporting block 退居次级表面”。
 - [~] 左侧 knowledge hit 虽已是 file-first，但仍需继续收敛为 right-pane-first 阅读模型。
-- [ ] 需要在 retrieval 与 answer synthesis 之间补一个 graph-conditioned context-assembly layer，让当前 DAG 成为一等 answer-planning substrate。
+- [x] retrieval 与 answer synthesis 之间的 graph-conditioned context assembly 已实现（2026-08-21）；当前 runtime safety 后续工作归入 2026-09-12 计划。
 - [ ] 继续缩减 `src/server.ts`、`src/learning/KnowledgeLearningPlatform.ts`、`src/frontend/agent_workspace.js`、`src/frontend/workspace_panes.js` 的所有权压力。
 
 ### 当前验收目标

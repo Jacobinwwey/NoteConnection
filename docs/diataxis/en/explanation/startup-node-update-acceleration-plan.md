@@ -1,5 +1,12 @@
 # Startup Node Update Acceleration Plan (Cross-Platform + Windows Pilot)
 
+## 2026-09-12 Audit status
+
+Plan B's warm snapshot, delta transfer and staged rendering are implemented. Historical Windows measurements and simulated cross-platform cohorts remain historical evidence; no fresh cross-device performance claim is made. Measure cold/hot behavior on representative workloads and preserve matching correctness before further performance work.
+
+Current status: [project audit](../../../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../../../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ## Context
 
 This document solidifies the optimization strategy for improving node initialization/update speed after app launch.

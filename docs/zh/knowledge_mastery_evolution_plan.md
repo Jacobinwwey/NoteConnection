@@ -1,5 +1,12 @@
 # 2026-03-31 v1.7.0 - 知识彻底掌握演进实施计划
 
+## 2026-09-12 审计状态
+
+atom/evidence、存储、检索、mastery、tutor、memory 机制已存在；当前发布资格与学习成效证据仍开放。先在稳定 local/exact backend 开展成效试验；生产 ANN 与原生移动验收只约束各自目标，不应整体阻塞 Phase-2 测量。旧 6–9 个月蓝图不能按时间流逝判断完成。
+
+当前状态：[项目审计](../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
+
 ## 目标
 
 本计划用于固化 NoteConnection 下一阶段演进路线：将项目从“知识可视化系统”升级为本地优先的“知识彻底解析 + 掌握度闭环 + 发散思维引擎 + 可插拔 LLM 学习助手”平台。

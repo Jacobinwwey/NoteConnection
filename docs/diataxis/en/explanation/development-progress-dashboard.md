@@ -1,5 +1,12 @@
 # Explanation: Development Progress Dashboard
 
+## 2026-09-12 Audit status
+
+Local `main` at `e84d6ece` was re-audited: TypeScript passed; 159 Jest suites, 1,419 passed and 26 skipped. Production-function probes reproduce acknowledged-memory loss after ingest rollback, a completed SSE envelope exceeding its budget, and fuzzy matching false negatives. Budget tiers/caps exist, but the deadline predicate is not called by production execution and SSE backpressure is not handled. At the explicit audit date, SQLite/ANN release reports fail freshness/qualification. Browser, packaged desktop/Godot and Android acceptance were not rerun.
+
+Current status: [project audit](../../../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../../../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 This page is the implementation-facing dashboard for the Knowledge Mastery evolution plan.
 It tracks what is already implemented, where the hard gaps remain, and how to verify progress from code and runtime behavior.
 
@@ -7,19 +14,19 @@ It tracks what is already implemented, where the hard gaps remain, and how to ve
 
 Desktop `full` responses now accept an additive `responseBudgetMode`: `adaptive` (the default) or `unbounded`. `adaptive` selects a server-owned tier from validated host capability hints: `standard` is `120` fragments / `8,000` chars per fragment / `64,000` RAG chars / `48,000` report chars; `extended` is `160` / `12,000` / `128,000` / `80,000`; `max` is `256` / `16,000` / `256,000` / `160,000`. Unknown modes and absent capability resolve to `adaptive + standard`; clients cannot submit arbitrary numeric limits.
 
-`unbounded` disables product-level RAG/report truncation for the scoped desktop corpus. It does not disable runtime safety: finite timeout, processed-fragment, report-character, serialized-byte, and SSE backpressure governors remain active. If a governor stops assembly, the response retains completed sections and exposes `responseTruncated` plus `responseTruncationReason` in summary/trace. The budget mode and capability are part of turn-cache identity, so adaptive and unbounded requests cannot share a replay.
+`unbounded` disables product-level RAG/report truncation for the scoped desktop corpus. Finite fragment/report limits and response compaction are implemented, but the 2026-09-12 audit found that deadline metadata is not enforced by production execution and SSE backpressure is not handled. Limit-based assembly stops expose `responseTruncated` and `responseTruncationReason`; this is not yet an end-to-end time/memory guarantee. Budget mode and capability are part of turn-cache identity, so adaptive and unbounded requests cannot share a replay.
 
 The mobile boundary is unchanged and enforced before budget selection: `responseProfile=mobile_compact` resolves to `slim`, omits desktop budget metadata from JSON/SSE projections, and the UI hides the budget control. Desktop UI persists the adaptive/unbounded preference and sends it only for desktop requests.
 
 Fresh verification after rebuilding `dist`: full Jest and Agent Workspace contracts remain green; adaptive and unbounded fixture browser probes passed; real `waterglass` full adaptive and unbounded Chromium probes each produced `5,425` DOM characters, `5,265` released-answer characters, `86` KaTeX nodes, balanced math, no Mermaid/prompt leakage, and explicit trace tiers (`standard` and `unbounded`).
 
-The response serialization boundary is now governed by the same finite runtime budget. Oversized JSON, HTTP envelopes, and completed SSE events are compacted to a bounded answer while retaining identity, effective budget, and an explicit `runtime_serialized_bytes_limit` state. A dedicated regression suite covers unchanged under-budget responses, balanced-math compaction, HTTP envelopes, and SSE completion payloads. The current full verification totals are `158` Jest suites, `1,414` passed tests, and `26` skipped tests.
+Serialization compaction and its regression suite were delivered on 2026-09-03 (`158` suites, `1,414` passed, `26` skipped at that checkpoint). The 2026-09-12 audit reopens acceptance: serialization checks occur after initial allocation, and a fitting inner response can exceed the SSE limit after the event envelope is added without being marked truncated. Current evidence and U3 acceptance are linked above; the historical suite did not cover that boundary.
 
 ## 2026-09-03 Slim/Full Response Modes and Same-Document RAG Fallback
 
 The Agent Workspace now exposes an additive `responseMode` contract. `slim` remains the default and preserves the existing bounded answer shape; the request boundary also accepts `definition`/`compact` as slim aliases and `comprehensive`/`report` as full aliases. The desktop selector persists `slim` or `full` in local storage and sends the selected mode through JSON and SSE. The turn-cache fingerprint includes the normalized mode, so a replay cannot reuse a slim answer for a full request or vice versa.
 
-`full` is a desktop/report profile, not an unbounded dump. Retrieval is capped at 80 fragments, 5,000 characters per fragment, and 30,000 total characters; public assembly is capped again at 24 selected sections and 24,000 characters. Mermaid and prompt scaffolding are removed, Markdown tables/headings are retained, and math blocks must remain balanced. `responseProfile=mobile_compact` is an explicit resource boundary: it forces the effective response mode to slim and returns the existing bounded mobile projection, even when a caller requests full.
+The initial `full` profile used 80 fragments, 5,000 characters per fragment, 30,000 total RAG characters, 24 sections and 24,000 report characters. Those fixed limits were superseded by the adaptive tiers described above. Mermaid/prompt filtering, retained Markdown headings/tables and balanced math remain required. `responseProfile=mobile_compact` forces slim and the existing bounded mobile projection, even when a caller requests full.
 
 Full section selection now accepts `graph_neighbor_support` only when its `documentId` and `sourcePath` match the anchor document identity. Section priority is `parent_context`, `adjacent_context`, `graph_neighbor_support`, `direct_support`, then `conflict`; this allows a missing optical or mechanism section to recover from same-document graph context without leaking unrelated documents. The fallback is covered by a regression that includes a cross-document decoy.
 

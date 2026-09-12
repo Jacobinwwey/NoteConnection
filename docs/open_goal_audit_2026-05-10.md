@@ -2,6 +2,13 @@
 
 ## English
 
+### 2026-09-12 Audit status
+
+This May unresolved-goal inventory is historical. The September audit replaces it as the current status source, distinguishing implemented baselines, reopened implementation defects, missing release evidence and deliberately deferred migrations. Historical markers are retained for traceability.
+
+Current status: [project audit](audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ### 2026-05-13 Further Revalidation
 
 - This document remains a 2026-05-10 audit baseline and should not be read as current HEAD truth without this addendum.
@@ -110,6 +117,13 @@
 | `docs/zh/TODO.md` | 160 |
 
 ## 中文
+
+### 2026-09-12 审计状态
+
+本页 5 月未完成目标清单改为历史快照。当前状态以 9 月审计为准，区分实现基线、重新打开的实现缺陷、缺失的发布证据与条件性暂缓迁移。保留旧 marker 用于追溯。
+
+当前状态：[项目审计](audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
 
 ### 2026-05-13 进一步复核
 

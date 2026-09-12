@@ -8,17 +8,20 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use `npm run docs:site:build` to validate page rendering and link stability.
 - Use `npm run docs:site:serve` for local browsing during iterative doc updates.
 - Use [Working Docs / Brainstorms](brainstorms/index.md) and [Working Docs / Solutions](solutions/index.md) for in-progress alignment artifacts and durable solution notes.
-- Use [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md) as the all-docs unresolved-goal snapshot.
+- Use [Project Progress Audit (2026-09-12)](audits/2026-09-12-project-progress.md) as the current cross-plan status source; the May open-goal audit is historical.
 - Use [Agent Knowledge Workspace Graph Preview and Review Closure (2026-06-20)](solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md) for the current matched-file, Focus runtime reuse, Godot Future Path dispatch, DAG-context, and final-answer review closure.
 - Use [Agent Knowledge DAG Answer Contract Plan (2026-06-17)](solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md) for the clarified existing-DAG answer contract and graph-conditioned context assembly direction.
-- Use [Architecture Progress Alignment and Mainline Plan (2026-06-06)](solutions/architecture-progress-alignment-2026-06-06.md) for the current code-vs-plan comparison and next mainline sequence.
+- Use [Project Convergence Plan (2026-09-12)](plans/2026-09-12-001-refactor-project-convergence-plan.md) for the next implementation units; the June alignment note remains historical context.
 - Track the Program A-F substrate/export closure in [Development Progress Dashboard](diataxis/en/explanation/development-progress-dashboard.md) and [Deep Student Comparison Next-Phase Plan](brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md).
 - 当前 agent knowledge 的命中文件、Focus runtime 复用、Godot Future Path 调度、DAG 上下文与最终回答审核收口请查看 [Agent 知识工作区图预览与回答审核收口（2026-06-20）](solutions/agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md)。
 - 当前 agent knowledge 的现有 DAG 回答契约与 graph-conditioned context assembly 方向请查看 [Agent Knowledge DAG 回答契约方案（2026-06-17）](solutions/agent-knowledge-dag-answer-contract-plan-2026-06-17.md)。
-- 当前代码 / 方案对比与后续主线顺序请查看 [架构推进对齐与主线推进方案（2026-06-06）](solutions/architecture-progress-alignment-2026-06-06.md)。
+- 当前代码/计划状态请查看[项目进度审计（2026-09-12）](audits/2026-09-12-project-progress.md)，后续顺序见[项目收敛推进计划](plans/2026-09-12-001-refactor-project-convergence-plan.md)；6 月对齐说明保留为历史背景。
 - Program A-F 的 substrate / export 收口状态请查看 [Development Progress Dashboard](diataxis/en/explanation/development-progress-dashboard.md) 与 [Deep Student Comparison Next-Phase Plan](brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md)。
 
 ## English
+
+- Current [progress and completion boundaries](audits/2026-09-12-project-progress.md#english).
+- Next [implementation units, trade-offs and acceptance](plans/2026-09-12-001-refactor-project-convergence-plan.md#english).
 
 - Start with [Diataxis Overview](diataxis/en/overview.md).
 - Follow [First Run Tutorial](diataxis/en/tutorials/first-run.md).
@@ -43,9 +46,12 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - Use [Git LFS Asset Migration](diataxis/en/explanation/git-lfs-asset-migration.md) for the phased repository/runtime decoupling strategy.
 - Use [Sidecar Supply Feasibility](diataxis/en/explanation/sidecar-supply-feasibility.md) for the cost/user-friction/maintainer-burden decision matrix behind mirror choices.
 - Use [Anti-Fragile Sidecar Supply Strategy](en/sidecar_supply_strategy.md) for the cache-first, mirror-aware, offline-seed path that explicitly rejects download-only replacement.
-- Use [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md) for cross-doc unresolved-goal status.
+- Use [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md) for the historical May unresolved-goal snapshot.
 
 ## 中文
+
+- 当前[项目进度与完成边界](audits/2026-09-12-project-progress.md#chinese)。
+- 后续[实施单元、权衡与验收](plans/2026-09-12-001-refactor-project-convergence-plan.md#chinese)。
 
 - 从 [Diataxis 概览](diataxis/zh/overview.md) 开始。
 - 按照 [首次运行教程](diataxis/zh/tutorials/first-run.md) 上手。
@@ -70,4 +76,4 @@ This site adopts the Diataxis framework to make documentation easier to navigate
 - 仓库与运行时资产解耦迁移请查看 [Git LFS 资产迁移](diataxis/zh/explanation/git-lfs-asset-migration.md)。
 - 镜像方案的成本 / 用户门槛 / 维护负担矩阵请查看 [Sidecar 供给可行性](diataxis/zh/explanation/sidecar-supply-feasibility.md)。
 - 桌面 sidecar 的缓存优先 / 镜像感知 / 离线种子迁移路径请查看 [反脆弱 Sidecar 供给策略](zh/sidecar_supply_strategy.md)。
-- 全量文档未完成目标快照请查看 [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md)。
+- 历史 5 月未完成目标快照见 [Open Goal Audit (2026-05-10)](open_goal_audit_2026-05-10.md)。

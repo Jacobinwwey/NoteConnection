@@ -1,5 +1,12 @@
 # 2026-04-08 v1.7.0 - Anti-Fragile Sidecar Supply Strategy
 
+## 2026-09-12 Audit status
+
+Bootstrap, mirror/cache policy, a single-writer build lock and content-based sidecar freshness are implemented. That does not prove strict no-LFS delivery or current multi-host release readiness. Preserve the cache/mirror/offline-seed supply approach; qualify actual artifacts before removing the remaining tracked binaries.
+
+Current status: [project audit](../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ## English Document
 
 ### Why this document exists

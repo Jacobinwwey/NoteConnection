@@ -47,7 +47,9 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Open Goal Audit (2026-05-10): open_goal_audit_2026-05-10.md
+  - Project Progress Audit (2026-09-12): audits/2026-09-12-project-progress.md
+  - Project Convergence Plan: plans/2026-09-12-001-refactor-project-convergence-plan.md
+  - Historical Open Goal Audit (2026-05-10): open_goal_audit_2026-05-10.md
   - Working Docs:
       - Brainstorms: brainstorms/index.md
       - Solutions: solutions/index.md

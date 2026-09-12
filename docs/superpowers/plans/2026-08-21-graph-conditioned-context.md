@@ -16,6 +16,13 @@
 
 ## English
 
+### 2026-09-12 Audit status
+
+Implemented baseline: graph-answer planning feeds deterministic RAG fragment ordering in the production path and existing tests pass. Do not reopen this as a missing architecture layer. Runtime budget safety, transport and larger-corpus qualification are separate remaining work.
+
+Current status: [project audit](../../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ### Task 1: Conditioning contract and deterministic ordering
 
 **Files:** Create `src/learning/graphConditionedContext.ts` and `src/learning/graphConditionedContext.test.ts`; modify `src/learning/types.ts` and `src/learning/ragContextPack.ts`.
@@ -39,6 +46,13 @@
 - Update the bilingual progress documents with shipped behavior, limits, and the next pending migration gates.
 
 ## 中文
+
+### 2026-09-12 审计状态
+
+实现基线已成立：生产路径已有 graph-answer plan 驱动的确定性 RAG fragment 排序，现有测试通过。不再把它作为缺失架构层重建；runtime 预算安全、transport 和大语料验收属于独立后续工作。
+
+当前状态：[项目审计](../../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
 
 ### 任务 1：图条件上下文契约与确定性排序
 

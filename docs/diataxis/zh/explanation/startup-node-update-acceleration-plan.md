@@ -1,5 +1,12 @@
 # 启动节点更新提速方案（跨平台 + Windows 试点）
 
+## 2026-09-12 审计状态
+
+Plan B 的 warm snapshot、delta 传输与分阶段渲染已实现。旧 Windows 测量与模拟跨端 cohort 仍是历史证据，本轮不宣称新鲜跨设备性能。后续先测代表性 workload 的 cold/hot 行为，并在优化前保证匹配正确性。
+
+当前状态：[项目审计](../../../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../../../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
+
 ## 背景
 
 本文用于固化「应用启动后节点初始化/更新速度提升」的系统方案，先在 Windows 试点验证，再逐步推广到 macOS 与 APK 运行时。

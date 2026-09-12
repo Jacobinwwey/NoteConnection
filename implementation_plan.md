@@ -2,6 +2,13 @@
 
 ## English Document
 
+### 2026-09-12 Audit status
+
+Earlier dates and checkboxes below are historical. Graph-conditioned context is implemented; shared-state isolation, answer execution/transport, matching parity and release evidence remain open. This update reconciles documentation; it does not implement the next units.
+
+Current status: [project audit](docs/audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](docs/plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ### 2026-08-21 Phase 30 Graph-Conditioned Context Assembly
 
 The retrieval-to-synthesis boundary now consumes a deterministic pre-RAG graph answer plan. `graphConditionedContext` ranks fragments by planned atom/edge matches, while the existing role and score priorities remain authoritative. `RagContextPack.graphConditioning` records the selected claims, fragments, atoms, edges, and fallback state. Normal and one-pass recovery assembly use the same pre-RAG plan; the final composer still rebuilds the evidence-backed public plan.
@@ -46,6 +53,13 @@ Record the current code-backed state of the Knowledge Workspace and the existing
 ---
 
 ## 中文文档
+
+### 2026-09-12 审计状态
+
+以下旧日期与勾选保留为历史记录。图条件上下文已经实现；共享状态隔离、回答执行/传输、匹配语义和发布证据仍开放。本次更新对齐文档，不代表后续实施单元已经完成。
+
+当前状态：[项目审计](docs/audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](docs/plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
 
 ### 2026-06-10 知识工作区与 DAG 实施方向
 

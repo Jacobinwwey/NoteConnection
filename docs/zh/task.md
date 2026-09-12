@@ -1,5 +1,12 @@
 ## 2026-09-02 Waterglass 发布边界与浏览器 E2E 闭环
 
+## 2026-09-12 审计状态
+
+以下旧日期与勾选保留为历史记录。图条件上下文已经实现；共享状态隔离、回答执行/传输、匹配语义和发布证据仍开放。本次更新对齐文档，不代表后续实施单元已经完成。
+
+当前状态：[项目审计](../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
+
 - [x] 通过真实 sidecar 链路复现剩余的 `waterglass` 质量故障。214 文件的 full-document 传输没有被截断；公开投影先选择了热学变量释义，挤掉了独立的光学公式，导致 definition 回答看似不完整或过宽。
 - [x] 为 full-document definition plan 增加失败优先的 release-review 回归测试，并在 `answerReleaseReview.ts` 中改为优先保留互异且完整的公式上下文；每个 definition 回答最多保留两个完整等式上下文，独立变量释义仅作为无上下文公式时的回退证据。章节编号、应用/规格/比较文案、Mermaid 伪证据和独立 `$x$ 是...` 变量条目不再挤占主体定义/公式证据。
 - [x] 保留完整内部 audit plan 与 RAG trace。公开 plan 仍是 additive、向前兼容的；当前 214 文件 `什么是waterglass?` 运行时发布一条定义及完整热传导、斯涅尔定律上下文（284 字符），两条公式各只出现一次。

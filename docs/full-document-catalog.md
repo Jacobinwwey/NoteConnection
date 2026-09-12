@@ -1,5 +1,15 @@
 # Full Document Catalog / 全量文档目录
 
+## English — current planning
+
+- [Project progress audit and evidence](audits/2026-09-12-project-progress.md#english)
+- [Project convergence implementation plan](plans/2026-09-12-001-refactor-project-convergence-plan.md#english)
+
+## 中文 — 当前规划
+
+- [项目进度审计与证据](audits/2026-09-12-project-progress.md#chinese)
+- [项目收敛实施计划](plans/2026-09-12-001-refactor-project-convergence-plan.md#chinese)
+
 This page is an indexed catalog for **all Markdown docs** under `docs/`.
 
 本页提供 `docs/` 目录下**全部 Markdown 文档**的可点击索引。

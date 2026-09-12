@@ -23,6 +23,17 @@
 
 ## English
 
+### 2026-09-12 completion reassessment — partial
+
+The original 39-step checklists are synchronized between languages as implementation history. Their checked state does not prove the safety specification: `applyRuntimeGovernor` is not called by production execution, full source reads precede pack budgeting, and SSE envelope/backpressure boundaries remain incomplete. Fresh baseline: 159 Jest suites / 1,419 passed / 26 skipped; TypeScript passed. Browser/native release acceptance was not rerun.
+
+- [ ] Enforce source admission and turn-wide deadline/cancellation in production (U2).
+- [ ] Account for full wire payloads and implement bounded SSE backpressure (U3).
+- [ ] Qualify the corrected runtime with fresh target/artifact evidence (U7).
+
+Current evidence: [project audit](../../audits/2026-09-12-project-progress.md). Next work: [convergence plan](../../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ### Task 1: Extend the typed contract and request normalization
 
 **Files:**
@@ -166,6 +177,17 @@
 
 ## 中文
 
+### 2026-09-12 完成度复审——部分完成
+
+原有 39 步 checklist 已按实现历史同步中英文；勾选不代表安全规格已验收：生产执行未调用 `applyRuntimeGovernor`，全文读取发生在 pack 预算之前，SSE envelope/背压边界仍不完整。本轮基线：159 个 Jest suite / 1,419 passed / 26 skipped，TypeScript 通过；未重跑浏览器/原生发布验收。
+
+- [ ] 在生产路径落实源读取准入与贯穿 turn 的 deadline/cancellation（U2）。
+- [ ] 计量完整 wire payload，并实现有界 SSE 背压（U3）。
+- [ ] 用新鲜 target/artifact 证据验收修正后的 runtime（U7）。
+
+当前证据：[项目审计](../../audits/2026-09-12-project-progress.md)。后续实施：[推进计划](../../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
+
 ### 任务 1：扩展类型契约与请求归一化
 
 **文件：**
@@ -180,12 +202,12 @@
 - 在 `AgentConversationRequest` 增加可选 `responseBudgetMode`、`responseBudgetCapability`。
 - 在 `AgentConversationTrace` 与 response summary 增加 effective budget 和截断字段。
 
-- [ ] 为 `adaptive`、`unbounded`、`no_cap`/`unbounded` 别名、未知值和移动 profile 共存增加归一化测试。
-- [ ] 运行 `npm test -- --runInBand src/learning/requestNormalization.test.ts`，确认实现前新增用例失败。
-- [ ] 实现单一归一化函数，支持 camelCase/snake_case，未知值回落 `adaptive`。
-- [ ] 在边界校验 capability：`memoryClass`（`low|standard|high`）、`workload`（`normal|large|max`）和可选数字提示；非法/非有限/负数直接忽略。
-- [ ] 运行聚焦套件并确认全部通过。
-- [ ] 提交：`feat(agent-workspace): add adaptive budget request contract`。
+- [x] 为 `adaptive`、`unbounded`、`no_cap`/`unbounded` 别名、未知值和移动 profile 共存增加归一化测试。
+- [x] 运行 `npm test -- --runInBand src/learning/requestNormalization.test.ts`，确认实现前新增用例失败。
+- [x] 实现单一归一化函数，支持 camelCase/snake_case，未知值回落 `adaptive`。
+- [x] 在边界校验 capability：`memoryClass`（`low|standard|high`）、`workload`（`normal|large|max`）和可选数字提示；非法/非有限/负数直接忽略。
+- [x] 运行聚焦套件并确认全部通过。
+- [x] 提交：`feat(agent-workspace): add adaptive budget request contract`。
 
 ### 任务 2：实现纯函数 adaptive budget resolver
 
@@ -198,11 +220,11 @@
 - 导出 `resolveAgentResponseBudget(input)`，输入 `{ responseMode, responseBudgetMode, capability, mobile }`，返回 `AgentConversationBudget`。
 - 导出 `applyRuntimeGovernor(input)`，供 JSON/report 拼装测试使用。
 
-- [ ] 增加表驱动测试：capability 缺失/非法 -> standard；standard workload -> standard；large/high -> extended；max/high -> max；显式 unbounded -> unbounded；移动端 -> slim 兼容的 standard runtime projection。
-- [ ] 增加测试证明客户端数字提示不能超过 max，也不能直接改变档位。
-- [ ] 实现纯选择逻辑，不引用 `os`、文件系统或浏览器全局对象。
-- [ ] unbounded 使用宿主安全的运行时默认值（超时、序列化字节、处理 fragment 数），产品限制字段保持未设置。
-- [ ] 运行新套件并提交：`feat(agent-workspace): resolve adaptive response budgets`。
+- [x] 增加表驱动测试：capability 缺失/非法 -> standard；standard workload -> standard；large/high -> extended；max/high -> max；显式 unbounded -> unbounded；移动端 -> slim 兼容的 standard runtime projection。
+- [x] 增加测试证明客户端数字提示不能超过 max，也不能直接改变档位。
+- [x] 实现纯选择逻辑，不引用 `os`、文件系统或浏览器全局对象。
+- [x] unbounded 使用宿主安全的运行时默认值（超时、序列化字节、处理 fragment 数），产品限制字段保持未设置。
+- [x] 运行新套件并提交：`feat(agent-workspace): resolve adaptive response budgets`。
 
 ### 任务 3：将宿主能力接入 platform 与 RAG 拼装
 
@@ -219,11 +241,11 @@
 - 将 `AgentConversationBudget.rag` 传给 `assembleReviewedRagEvidenceContext`。
 - 为 `RagContextBudget` 增加显式 `productCapDisabled` 和可选 governor 元数据；禁止用 `Infinity` 序列化。
 
-- [ ] 增加 standard/extended/max trace 数值与移动强制 slim 的 platform 测试。
-- [ ] 增加 RAG 测试：有界档位按既有原因截断，unbounded 保留所有候选 fragment，直到运行时 governor 停止。
-- [ ] 重构 `normalizeRagContextBudget` 区分产品限制和 governor 限制，并保持既有默认调用不变。
-- [ ] 重构 `applyContextBudget`：只有显式 flag 才跳过产品截断，并用独立原因标记 governor 截断。
-- [ ] 运行聚焦 platform/RAG 套件并提交：`feat(agent-workspace): thread adaptive budgets through rag`。
+- [x] 增加 standard/extended/max trace 数值与移动强制 slim 的 platform 测试。
+- [x] 增加 RAG 测试：有界档位按既有原因截断，unbounded 保留所有候选 fragment，直到运行时 governor 停止。
+- [x] 重构 `normalizeRagContextBudget` 区分产品限制和 governor 限制，并保持既有默认调用不变。
+- [x] 重构 `applyContextBudget`：只有显式 flag 才跳过产品截断，并用独立原因标记 governor 截断。
+- [x] 运行聚焦 platform/RAG 套件并提交：`feat(agent-workspace): thread adaptive budgets through rag`。
 
 ### 任务 4：使 full-report 拼装读取预算并可观测
 
@@ -237,11 +259,11 @@
 - 用 effective report budget 和 runtime governor 替代 `FULL_RESPONSE_MAX_CHARS`/`FULL_RESPONSE_MAX_FRAGMENTS`。
 - 返回带 `truncated`、`truncationReason`、计数的 report assembly state，同时保持现有 reply 字符串接口。
 
-- [ ] 增加超过 24,000 字符的 fixture，证明 adaptive max report 可达到配置档位。
-- [ ] 增加 unbounded fixture，证明安全章节全部保留且不产生产品限制原因。
-- [ ] 增加强制 governor 测试，证明返回部分输出、带显式截断元数据且 Markdown 数学公式成对。
-- [ ] 保持 Mermaid/prompt 过滤、同文档 graph-neighbor 过滤、延迟标题和扁平标题恢复逻辑不变，仅注入新限制。
-- [ ] 运行 composer 套件并提交：`feat(agent-workspace): expand full report assembly budgets`。
+- [x] 增加超过 24,000 字符的 fixture，证明 adaptive max report 可达到配置档位。
+- [x] 增加 unbounded fixture，证明安全章节全部保留且不产生产品限制原因。
+- [x] 增加强制 governor 测试，证明返回部分输出、带显式截断元数据且 Markdown 数学公式成对。
+- [x] 保持 Mermaid/prompt 过滤、同文档 graph-neighbor 过滤、延迟标题和扁平标题恢复逻辑不变，仅注入新限制。
+- [x] 运行 composer 套件并提交：`feat(agent-workspace): expand full report assembly budgets`。
 
 ### 任务 5：让 JSON、SSE、replay 与缓存身份暴露预算元数据
 
@@ -257,10 +279,10 @@
 - `buildMobileAgentConversationResponse` 清除桌面预算内部字段并始终报告 `responseMode=slim`。
 - `projectAgentConversationTurnEvent` 对实时与 replay completion 使用相同投影。
 
-- [ ] 增加 adaptive 默认、显式 unbounded、缓存隔离、SSE replay 隔离和移动投影 HTTP 测试。
-- [ ] 增加非法预算模式回落 adaptive 而非接受任意限制的测试。
-- [ ] 使用仅包含有限数字的 typed serialization；unbounded 省略产品限制字段。
-- [ ] 运行 migration/integration 套件并提交：`feat(agent-workspace): expose budget diagnostics and cache isolation`。
+- [x] 增加 adaptive 默认、显式 unbounded、缓存隔离、SSE replay 隔离和移动投影 HTTP 测试。
+- [x] 增加非法预算模式回落 adaptive 而非接受任意限制的测试。
+- [x] 使用仅包含有限数字的 typed serialization；unbounded 省略产品限制字段。
+- [x] 运行 migration/integration 套件并提交：`feat(agent-workspace): expose budget diagnostics and cache isolation`。
 
 ### 任务 6：增加桌面 UI 控件与双语文案
 
@@ -277,9 +299,9 @@
 - 桌面请求包含 `responseBudgetMode`；移动请求省略该字段并保留 `mobile_compact`。
 - 根据 response 元数据显示 effective tier/截断状态，不暴露内部 trace。
 
-- [ ] 增加 selector hydration、持久化、adaptive 默认、unbounded 请求和移动省略字段的 DOM/request 测试。
-- [ ] 使用现有本地化与控件模式实现；不增加改变多个职责的布尔开关。
-- [ ] 运行 frontend contract 测试并提交：`feat(agent-workspace): add adaptive budget control`。
+- [x] 增加 selector hydration、持久化、adaptive 默认、unbounded 请求和移动省略字段的 DOM/request 测试。
+- [x] 使用现有本地化与控件模式实现；不增加改变多个职责的布尔开关。
+- [x] 运行 frontend contract 测试并提交：`feat(agent-workspace): add adaptive budget control`。
 
 ### 任务 7：扩展 runtime/browser verifier 与双语进度文档
 
@@ -289,20 +311,20 @@
 - 修改：`docs/diataxis/en/explanation/development-progress-dashboard.md`
 - 修改：`docs/diataxis/zh/explanation/development-progress-dashboard.md`
 
-- [ ] 增加 verifier 参数 `--response-budget adaptive|unbounded`，断言 effective tier、报告长度、公式成对、无 Mermaid/prompt 泄漏以及 governor 截断状态。
-- [ ] 运行 adaptive/unbounded fixture 浏览器探针，再运行 Chromium 真实 `waterglass` full 探针。
-- [ ] 记录实际数量/长度与移动始终 slim 的事实到双语文档。
-- [ ] 运行 Diátaxis/docs 检查并提交：`docs(agent-workspace): document adaptive full response verification`。
+- [x] 增加 verifier 参数 `--response-budget adaptive|unbounded`，断言 effective tier、报告长度、公式成对、无 Mermaid/prompt 泄漏以及 governor 截断状态。
+- [x] 运行 adaptive/unbounded fixture 浏览器探针，再运行 Chromium 真实 `waterglass` full 探针。
+- [x] 记录实际数量/长度与移动始终 slim 的事实到双语文档。
+- [x] 运行 Diátaxis/docs 检查并提交：`docs(agent-workspace): document adaptive full response verification`。
 
 ### 任务 8：完整验证、CI 与 clean main
 
 **文件：**
 - 无预期源代码变更，除非验证发现回归。
 
-- [ ] 运行 `npm test -- --runInBand`，要求失败套件为 0。
-- [ ] 运行 `npm run build:with-vite`，要求退出码为 0。
-- [ ] 运行 `npm run test:gates` 或当前主机可用的等价本地门禁子集。
-- [ ] 验证桌面 adaptive/unbounded 浏览器探针与移动 projection/包体预算。
-- [ ] 检查 `git diff`，使用 Conventional Commit 提交全部实现/文档变更并推送 `main`。
-- [ ] 轮询推送 commit 的所有 workflow；全部 required CI 成功后才能报告完成。
-- [ ] 确认 `git status --short --branch` 只显示 `main...origin/main`，工作区无变更。
+- [x] 运行 `npm test -- --runInBand`，要求失败套件为 0。
+- [x] 运行 `npm run build:with-vite`，要求退出码为 0。
+- [x] 运行 `npm run test:gates` 或当前主机可用的等价本地门禁子集。
+- [x] 验证桌面 adaptive/unbounded 浏览器探针与移动 projection/包体预算。
+- [x] 检查 `git diff`，使用 Conventional Commit 提交全部实现/文档变更并推送 `main`。
+- [x] 轮询推送 commit 的所有 workflow；全部 required CI 成功后才能报告完成。
+- [x] 确认 `git status --short --branch` 只显示 `main...origin/main`，工作区无变更。

@@ -50,6 +50,13 @@ Deep Student signals with direct architectural value:
 
 ## English
 
+### 2026-09-12 Audit status
+
+Programs A–F have an implemented module/API baseline. Their blanket durability interpretation is narrowed by the reproduced cross-operation rollback defect: acknowledged memory can be lost after a concurrent ingest failure. Close U1 before treating the shared snapshot as an isolated transaction boundary; native evidence remains separate.
+
+Current status: [project audit](../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ### 1. Definitions
 
 `Canonical resource`
@@ -569,6 +576,13 @@ That gives the project:
 5. Multiplatform export and lightweight RAG become much more robust once those substrate layers exist as durable system entities.
 
 ## 中文
+
+### 2026-09-12 审计状态
+
+Program A–F 已有模块/API 实现基线，但整体耐久性结论需收窄：并发 ingest 失败回滚会丢失已确认 memory。完成 U1 后才能把共享 snapshot 当作具备隔离性的事务边界；原生证据仍独立验收。
+
+当前状态：[项目审计](../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
 
 ### 1. 术语定义
 

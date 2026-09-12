@@ -1,5 +1,12 @@
 # 2026-04-07 v1.7.0 - Git LFS 资产迁移方案
 
+## 2026-09-12 审计状态
+
+部分完成：默认 graph payload 清理和 runtime-first/bootstrap 契约已实现，但仍有 5 个 sidecar 路径被 Git 跟踪。严格 no-LFS、跨宿主干净引导和历史迁移未完成。当前以 Tauri Android release routing 为准，旧 universal unsigned release 观察保留为历史。
+
+当前状态：[项目审计](../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
+
 ## 范围
 
 - 在不破坏当前运行时模型、npm 发布链路、桌面/移动发布自动化的前提下，将 Git LFS 从仓库默认交付路径中移除。

@@ -1,5 +1,12 @@
 # 2026-03-04 v1.5.13 - Tauri/Godot Migration Walkthrough Addendum
 
+## 2026-09-12 Audit status
+
+Earlier dates and checkboxes below are historical. Graph-conditioned context is implemented; shared-state isolation, answer execution/transport, matching parity and release evidence remain open. This update reconciles documentation; it does not implement the next units.
+
+Current status: [project audit](../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 ## English Document
 
 ### 2026-06-10 Knowledge Workspace Runtime Walkthrough

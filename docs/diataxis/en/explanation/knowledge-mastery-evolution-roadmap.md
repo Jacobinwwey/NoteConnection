@@ -1,5 +1,12 @@
 # Explanation: Knowledge Mastery Evolution Roadmap
 
+## 2026-09-12 Audit status
+
+Atom/evidence, storage, retrieval, mastery, tutor and memory mechanisms exist. Current release qualification and learning-outcome evidence remain open. Run a learning pilot on the stable local/exact backend; production ANN and native mobile acceptance are separate prerequisites for their own targets, not blanket blockers for Phase-2 measurement. The old 6–9 month outline is not an elapsed-time completion measure.
+
+Current status: [project audit](../../../audits/2026-09-12-project-progress.md). Execution order and acceptance: [U1–U8 convergence plan](../../../plans/2026-09-12-001-refactor-project-convergence-plan.md).
+
+
 This page explains the product and engineering roadmap for moving NoteConnection from a
 knowledge-visualization system into a verifiable local-first learning platform.
 

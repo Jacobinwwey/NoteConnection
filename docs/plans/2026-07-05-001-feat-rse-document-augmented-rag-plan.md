@@ -9,6 +9,12 @@ date: 2026-07-05
 
 ## English
 
+### 2026-09-12 status reassessment
+
+Units 1–7 have an implemented baseline: rich single-message composition, claim/citation trace, localized evidence status and export/replay material now exist. Units 6 and 7 are marked accordingly below. Unit 8 remains open for representative held-out corpus and current runtime/release qualification. The historical six-sentence/900-character policy is superseded by coverage-driven planning and slim/full budgets; it is not a current acceptance target.
+
+Cross-cutting isolation and runtime-safety defects are tracked in the [project audit](../audits/2026-09-12-project-progress.md), with implementation/acceptance in [U1–U8](2026-09-12-001-refactor-project-convergence-plan.md). The older dated implementation notes below are retained as history, not the current status source.
+
 ## Overview
 
 This plan upgrades Knowledge Workspace answers from a narrow, release-contracted summary into a bounded evidence-generation pipeline: retrieve precise segments, expand them with document structure, condition the answer on graph neighborhood evidence, run sufficiency/release checks, and publish one user-facing answer while keeping orchestration detail in trace artifacts.
@@ -341,7 +347,7 @@ flowchart TB
 **Verification:**
 - Runtime latency remains bounded and the system is usable without configured LLM provider.
 
-- [ ] **Unit 6: Rich Single-Message Answer Composer**
+- [x] **Unit 6: Rich Single-Message Answer Composer**
 
 **Goal:** Generate a more complete public answer from the RAG context pack while preserving one-message UX.
 
@@ -396,7 +402,7 @@ flowchart TB
 - The user receives one richer message; internal scoring and orchestration stay in trace/artifacts.
 - `answerClaimCitations` is additive and optional, and export cloning does not share mutable citation/fragment/source arrays with runtime trace objects.
 
-- [ ] **Unit 7: Trace, Status, and Evidence Ledger**
+- [x] **Unit 7: Trace, Status, and Evidence Ledger**
 
 **Goal:** Make the pipeline debuggable and replayable without exposing backend clutter in the chat answer.
 
@@ -669,6 +675,12 @@ flowchart TB
 
 ## 中文
 
+### 2026-09-12 状态复审
+
+单元 1–7 已有实现基线：丰富的单消息 composition、claim/citation trace、本地化 evidence status 与 export/replay 材料均已存在，以下同步勾选单元 6/7。单元 8 继续保持开放，负责代表性留出语料与当前 runtime/release 验收。旧六句/900 字符策略已被 coverage-driven planning 和 slim/full budget 替代，不再是当前验收目标。
+
+跨切片的隔离和 runtime safety 缺陷见[项目审计](../audits/2026-09-12-project-progress.md)，实施与验收见 [U1–U8](2026-09-12-001-refactor-project-convergence-plan.md)。下方旧日期的实施记录保留为历史，不作为当前状态入口。
+
 ## 概览
 
 本计划把 Knowledge Workspace 的回答链路从“窄口径发布摘要”升级为有界的证据生产线：先做精确片段召回，再做文档结构扩展，再用图谱邻域证据组织回答，最后经过充分性与发布审查，只向用户释放一条答案，同时把编排、评分、候选、恢复动作保留在 trace 和检查面板中。
@@ -919,7 +931,7 @@ flowchart TB
 - judge 无法触发递归扩展。
 - malformed JSON 会被 adapter reject 并记录为 judge failure，但不污染公开回答结果。
 
-- [ ] **单元 6：更充分的单消息答案组织器**
+- [x] **单元 6：更充分的单消息答案组织器**
 
 **目标：** 从 RAG context pack 组织更完整的 public answer。
 
@@ -966,7 +978,7 @@ flowchart TB
 - 用户看到一条更充分的消息；内部评分、claim 引用映射与编排仍保留在 trace / artifact。
 - `answerClaimCitations` 是增量可选字段，导出克隆不会与运行时 trace 对象共享 citation / fragment / source 数组引用。
 
-- [ ] **单元 7：Trace、状态显示与 evidence ledger**
+- [x] **单元 7：Trace、状态显示与 evidence ledger**
 
 **目标：** 不把后台细节塞进聊天答案，同时让工程侧可诊断、可回放。
 

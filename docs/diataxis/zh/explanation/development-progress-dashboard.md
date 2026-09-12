@@ -1,22 +1,29 @@
 # 解释：开发进度看板
 
+## 2026-09-12 审计状态
+
+已重新审计本地 `main/e84d6ece`：TypeScript 通过；159 个 Jest suite，1,419 项通过、26 项跳过。生产函数探针复现 ingest 回滚丢失已确认 memory、SSE completed envelope 超预算、fuzzy 匹配漏边。预算档位/cap 已实现，但生产执行未调用 deadline predicate，SSE 未处理背压。按显式审计日期，SQLite/ANN 报告不满足新鲜度/发布资格。本轮未重跑浏览器、打包桌面/Godot 与 Android 验收。
+
+当前状态：[项目审计](../../../audits/2026-09-12-project-progress.md)。实施顺序与验收：[U1–U8 推进计划](../../../plans/2026-09-12-001-refactor-project-convergence-plan.md)。
+
+
 ## 2026-09-03 Adaptive Full 回答预算
 
 桌面 `full` 回答现在增加 additive 的 `responseBudgetMode`：`adaptive`（默认）或 `unbounded`。`adaptive` 根据经过校验的宿主能力提示选择服务端拥有的档位：`standard` 为 `120` 个 fragment / 每片 `8,000` 字符 / RAG `64,000` 字符 / 报告 `48,000` 字符；`extended` 为 `160` / `12,000` / `128,000` / `80,000`；`max` 为 `256` / `16,000` / `256,000` / `160,000`。未知模式或缺失能力均回落到 `adaptive + standard`；客户端不能提交任意数字上限。
 
-`unbounded` 取消当前桌面作用域知识库的产品层 RAG/报告截断，但不会关闭运行时安全控制：超时、处理 fragment 数、报告字符数、序列化字节数和 SSE 背压仍为有限值。安全阀停止拼装时，响应保留已完成章节，并在 summary/trace 暴露 `responseTruncated` 与 `responseTruncationReason`。budget mode 与 capability 纳入 turn-cache identity，因此 adaptive 与 unbounded 不会共享 replay。
+`unbounded` 取消当前桌面作用域知识库的产品层 RAG/报告截断。有限 fragment/report 上限与响应压缩已实现，但 2026-09-12 审计确认生产执行未落实 deadline 元数据，也未处理 SSE 背压。因上限停止拼装时会暴露 `responseTruncated` 与 `responseTruncationReason`，但这尚不是端到端时间/内存保证。budget mode 与 capability 纳入 turn-cache identity，因此 adaptive 与 unbounded 不会共享 replay。
 
 移动端边界保持不变，并在预算选择前强制执行：`responseProfile=mobile_compact` 解析为 `slim`，JSON/SSE 投影移除桌面预算元数据，UI 隐藏预算控件。桌面 UI 持久化 adaptive/unbounded 选择，且只在桌面请求中发送该字段。
 
 重建 `dist` 后的新鲜验证已通过：完整 Jest 与 Agent Workspace contract 继续通过；adaptive 与 unbounded fixture 浏览器探针通过；真实 `waterglass` full adaptive 与 unbounded Chromium 探针均得到 DOM `5,425` 字符、released answer `5,265` 字符、`86` 个 KaTeX 节点，数学公式成对且无 Mermaid/prompt 泄漏，trace 档位分别为 `standard` 与 `unbounded`。
 
-响应序列化边界现在使用同一套有限运行时预算。超大的 JSON、HTTP envelope 和已完成 SSE 事件会被压缩为有界回答，同时保留身份、effective budget 以及明确的 `runtime_serialized_bytes_limit` 状态。专用回归套件覆盖预算内响应不变、数学块成对压缩、HTTP envelope 与 SSE 完成事件。目前 full 验证总量为 `158` 个 Jest suite、`1,414` 个通过、`26` 个跳过。
+序列化压缩及其回归在 2026-09-03 已交付，当时为 `158` suites、`1,414` passed、`26` skipped。2026-09-12 审计重新打开验收：字节检查发生在首次分配之后，且内部 response 未超限时，加入 SSE event envelope 后可能超限而不标记截断。当前证据与 U3 验收见上方链接，旧套件未覆盖该边界。
 
 ## 2026-09-03 Slim/Full 回答模式与同文档 RAG 回退
 
 Agent Workspace 现在提供 additive 的 `responseMode` 契约。`slim` 仍是默认值并保持现有有界回答形状；请求边界同时接受 `definition`/`compact` 作为 slim 别名，以及 `comprehensive`/`report` 作为 full 别名。桌面选择器会在 local storage 持久化 `slim` 或 `full`，并通过 JSON 与 SSE 发送。turn-cache 指纹包含归一化后的 mode，因此 slim 请求不能复用 full 结果，反之亦然。
 
-`full` 是桌面/报告 profile，不是无界转储。检索上限为 80 个 fragment、每个 5,000 字符、总计 30,000 字符；public assembly 再限制为最多 24 个章节、24,000 字符。Mermaid 与提示词脚手架会被移除，Markdown 表格/标题保留，数学块必须保持分隔符平衡。`responseProfile=mobile_compact` 是明确的资源边界：即使调用方请求 full，也会把 effective response mode 强制为 slim，并返回原有有界移动投影。
+初始 `full` profile 使用 80 个 fragment、每片 5,000 字符、RAG 总计 30,000 字符、24 个章节和 24,000 报告字符；这些固定上限已被上方 adaptive 档位替代。Mermaid/prompt 过滤、Markdown 表格/标题保留与数学分隔符成对仍是要求。`responseProfile=mobile_compact` 继续强制 slim 及原有有界移动投影，即使调用方请求 full。
 
 full 章节选择现在只接受与 anchor 文档 `documentId` 和 `sourcePath` 同时匹配的 `graph_neighbor_support`。章节优先级为 `parent_context`、`adjacent_context`、`graph_neighbor_support`、`direct_support`、`conflict`；因此缺失的光学或机制章节可以从同文档图邻居恢复，同时不会泄漏无关文档。回归测试包含跨文档诱饵片段，验证该边界。
 
