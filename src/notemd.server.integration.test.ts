@@ -13,7 +13,7 @@ class TempDir {
   public readonly path: string;
 
   constructor(prefix: string) {
-    this.path = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), `${prefix}-`));
+    this.path = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`)));
   }
 
   public mkdir(relativePath: string): string {
