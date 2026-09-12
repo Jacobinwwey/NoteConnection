@@ -10571,7 +10571,6 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                         matchedAtomCount: 0,
                     }
                 );
-    
                 const memoryActions: AgentConversationMemoryAction[] = [];
                 if (request.persistMemory !== false && message) {
                     const scopeTags: string[] = [];
@@ -10610,7 +10609,6 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                         reason: `Promote ${citations[0].title} to long-term project memory if the same scope is recalled repeatedly.`,
                     });
                 }
-    
                 const invocationId = this.nextId('agent_invocation');
                 const traceScope = queryResult.trace.scope || {
                     source: 'global',
