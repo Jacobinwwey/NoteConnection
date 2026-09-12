@@ -2,7 +2,7 @@
 title: Project convergence results and acceptance boundaries
 date: 2026-09-13
 status: host-accepted-external-gates-open
-source_revision: e1802ea2f4f77a76c08a92378fbe090ef81fb052
+source_revision: 0789a55da0d7701ce5c8bcef855a2a886dcc2805
 baseline_revision: e84d6ece9cce5b82902d4b9335ac096a136a8d2a
 ---
 
@@ -46,7 +46,7 @@ Browser acceptance also exposed a layout defect: positional Grid tracks gave new
 | Evidence gate | `--min-report-count 3` passed again against the archived reports; mirrored latest/dated copies do not count twice |
 | Documentation | Diataxis: 18 entries / 36 language paths / 68 canonical references; MkDocs `--strict` passed |
 
-The packaged runtime is Node **22.22.0**; the dist qualification runtime is Node **22.19.0**. The packaged server is **77,904,488 bytes**, SHA-256 `251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193`. Qualified source fingerprint: `e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f`.
+The packaged runtime is Node **22.22.0**; the dist qualification runtime is Node **22.19.0**. The packaged server is **77,884,180 bytes**, SHA-256 `a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e`. Qualified source fingerprint: `7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943`.
 
 The ANN harness starts `startReferenceAnnService`, an HTTP token-posting prefilter. It proves connector synchronization, representation, fallback and targeted retrieval contracts. It does **not** measure a deployed approximate index or establish production ANN recall/performance. Tauri Rust and browser evidence also do not establish a fresh native WebView/Godot window session.
 
@@ -56,7 +56,7 @@ One initial Windows sidecar write returned `EBUSY`; the unchanged retry succeede
 
 Default host ceilings are **4 MiB/source, 16 MiB cumulative sources, 8 pending turns, 16,384 source lines, 4,096 source facts and 180s maximum deadline**; the normal tier uses 60s. Client hints cannot raise these ceilings. Twelve simultaneous attempts yielded eight completions and four capacity rejections.
 
-The synthetic 2,000-document snapshot is **15,751,932 bytes**. Across five complete writes, p50/p95 were **374.50/379.98ms**; maximum observed heap growth was **235,153,536 bytes (~224 MiB)** and maximum sampled RSS was **342,720,512 bytes (~327 MiB)**. The 500-document p95 was 106.32ms. This is a material cost of whole-snapshot isolation; it is not an OS memory limit. Cooperative cancellation p95 was **1.42ms on an empty corpus with a waiting cooperative backend**, not a large-corpus worst-case guarantee. At 150 files, exact matching used 300 comparisons/build; fuzzy used 22,350. Warmup ordering prevents a meaningful speed comparison from those short timing samples.
+The synthetic 2,000-document snapshot is **15,751,932 bytes**. Across five complete writes, p50/p95 were **361.62/429.65ms**; maximum observed heap growth was **235,199,576 bytes (~224 MiB)** and maximum sampled RSS was **343,818,240 bytes (~328 MiB)**. The 500-document p95 was 118.10ms. This is a material cost of whole-snapshot isolation; it is not an OS memory limit. Cooperative cancellation p95 was **1.15ms on an empty corpus with a waiting cooperative backend**, not a large-corpus worst-case guarantee. At 150 files, exact matching used 300 comparisons/build; fuzzy used 22,350. Warmup ordering prevents a meaningful speed comparison from those short timing samples.
 
 Each quality corpus contains six calibration and eighteen evaluation cases across nine categories, paired in English/Chinese. V2 evaluation documents/questions are disjoint from V1 and were frozen before the wiki-link evidence fix. V1 remains archived; the later frontend-only behavior change did not tune answer heuristics on V2. See [V1 raw measurements](evidence/2026-09-13/answer-quality-v1.json), [V2 raw measurements](evidence/2026-09-13/answer-quality-v2.json) and [runtime measurements](evidence/2026-09-13/convergence-runtime.json).
 
@@ -69,8 +69,8 @@ Each quality corpus contains six calibration and eighteen evaluation cases acros
 | Missed conflict signals | 2/2 | 2/2 |
 | Correct abstention signals | 1/2 | 1/2 |
 | Unbalanced math / out-of-scope citations | 0 / 0 | 0 / 0 |
-| First query p95, ms | 14.26 | 9.94 |
-| Subsequent query p95 / p99, ms | 12.94 / 14.68 | 13.60 / 13.68 |
+| First query p95, ms | 11.76 | 9.32 |
+| Subsequent query p95 / p99, ms | 14.12 / 16.90 | 14.27 / 16.63 |
 
 V1 reference acceptance was 7/18 slim and 15/18 full, with coverage 27/38 and 36/38. **Different corpora are not an improvement/regression experiment.** Quality denominators count each case/mode once, not three timing repetitions; bilingual pairs are correlated. Ingestion precedes timing, memory persistence is disabled, and process/JIT is shared. These milliseconds are not end-to-end browser or source-hydration latency. Probe hits are not an exhaustive hallucination rate.
 
@@ -138,7 +138,7 @@ U1–U6 已验收。U7 已取得新鲜的 Windows dist/打包 sidecar 与参考�
 | 证据门禁 | 对入库报告重新执行 `--min-report-count 3` 通过；latest/dated 镜像不重复计数 |
 | 文档 | Diataxis：18 个入口 / 36 个语言路径 / 68 个 canonical 引用；MkDocs `--strict` 通过 |
 
-打包 runtime 为 Node **22.22.0**，dist 验收 runtime 为 Node **22.19.0**。server 二进制 **77,904,488 bytes**，SHA-256 为 `251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193`。源码指纹为 `e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f`。
+打包 runtime 为 Node **22.22.0**，dist 验收 runtime 为 Node **22.19.0**。server 二进制 **77,884,180 bytes**，SHA-256 为 `a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e`。源码指纹为 `7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943`。
 
 ANN harness 启动的是 `startReferenceAnnService`，即通过 HTTP 提供 token posting 预筛选的参考服务。它证明 connector 同步、表示一致性、fallback 和定向检索契约，**没有测量外部近似索引的生产 recall/性能**。Tauri Rust 与浏览器证据也不等于新启动的原生 WebView/Godot 窗口验收。
 
@@ -148,7 +148,7 @@ ANN harness 启动的是 `startReferenceAnnService`，即通过 HTTP 提供 toke
 
 宿主默认上限为：**单源 4 MiB、累计源 16 MiB、8 个 pending turn、16,384 源行、4,096 源事实、最大 deadline 180s**；普通档为 60s。客户端 hint 不能提高这些上限。12 个同时发起的请求中，8 个完成、4 个因容量被拒绝。
 
-合成 2,000 文档 snapshot 为 **15,751,932 bytes**。五次完整写入 p50/p95 为 **374.50/379.98ms**，最大观察 heap 增量 **235,153,536 bytes（约 224 MiB）**，最大采样 RSS **342,720,512 bytes（约 327 MiB）**；500 文档的 p95 为 106.32ms。这是全 snapshot 隔离的实际成本，不是 OS 内存上限。取消 p95 **1.42ms** 仅对应**空语料、等待中的协作式 backend**，不能外推到大语料最坏情况。150 文件下 exact 每次 300 次比较，fuzzy 为 22,350 次；短时样本受 warmup 顺序影响，不据此宣称 fuzzy 更快。
+合成 2,000 文档 snapshot 为 **15,751,932 bytes**。五次完整写入 p50/p95 为 **361.62/429.65ms**，最大观察 heap 增量 **235,199,576 bytes（约 224 MiB）**，最大采样 RSS **343,818,240 bytes（约 328 MiB）**；500 文档的 p95 为 118.10ms。这是全 snapshot 隔离的实际成本，不是 OS 内存上限。取消 p95 **1.15ms** 仅对应**空语料、等待中的协作式 backend**，不能外推到大语料最坏情况。150 文件下 exact 每次 300 次比较，fuzzy 为 22,350 次；短时样本受 warmup 顺序影响，不据此宣称 fuzzy 更快。
 
 每版质量语料包含 6 个 calibration 与 18 个 evaluation case，覆盖九类问题的中英对照。V2 evaluation 的问题与文档和 V1 分离，并在 wiki-link 证据修复前冻结；V1 报告保留。后续前端行为修复没有针对 V2 调答案规则。原始记录：[V1](evidence/2026-09-13/answer-quality-v1.json)、[V2](evidence/2026-09-13/answer-quality-v2.json)、[运行成本](evidence/2026-09-13/convergence-runtime.json)。
 
@@ -161,8 +161,8 @@ ANN harness 启动的是 `startReferenceAnnService`，即通过 HTTP 提供 toke
 | 冲突漏报 | 2/2 | 2/2 |
 | 正确拒答信号 | 1/2 | 1/2 |
 | 数学不配对 / 越 scope 引用 | 0 / 0 | 0 / 0 |
-| 首次查询 p95，ms | 14.26 | 9.94 |
-| 后续查询 p95 / p99，ms | 12.94 / 14.68 | 13.60 / 13.68 |
+| 首次查询 p95，ms | 11.76 | 9.32 |
+| 后续查询 p95 / p99，ms | 14.12 / 16.90 | 14.27 / 16.63 |
 
 V1 的参考验收为 slim 7/18、full 15/18，覆盖分别为 27/38、36/38。**不同语料不能构成改进/回退实验。** 质量分母按 case/mode 计一次，不把三轮时延采样算作独立正确性样本；中英对照也相关。计时前已完成 ingest，关闭 memory persistence，进程/JIT 共享，因此上述毫秒数不是浏览器或源 hydration 的端到端延迟。探针命中率也不是完整幻觉率。
 

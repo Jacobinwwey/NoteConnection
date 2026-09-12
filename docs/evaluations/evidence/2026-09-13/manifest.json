@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-09-12T21:12:14.147Z",
+  "recordedAt": "2026-09-12T21:45:07.143Z",
   "baselineRevision": "e84d6ece9cce5b82902d4b9335ac096a136a8d2a",
-  "implementationRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
-  "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+  "implementationRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
+  "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
   "artifacts": {
     "dist_node_runtime": {
       "kind": "sidecar_inputs",
@@ -14,8 +14,8 @@
     "packaged_sidecar": {
       "kind": "file",
       "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-      "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
-      "sizeBytes": 77904488
+      "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
+      "sizeBytes": 77884180
     }
   },
   "tests": [
@@ -145,15 +145,15 @@
   "foundation": {
     "sqlite": [
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-05-42-169Z.json",
-        "sha256": "25edd459e5aa81647d66e6e2012f3163f2eb938bc007a164ae3a21b2c0270b8a",
-        "runId": "5ebd893f-69df-4e0e-a041-3f367353a33a",
-        "verifiedAt": "2026-09-12T21:05:42.169Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-latest.json",
+        "sha256": "43f910051db614db7153aaefd7b3235172b0965076fc5ce911d9895a4878b37a",
+        "runId": "84a6611c-4927-4426-9295-a54b1124cb18",
+        "verifiedAt": "2026-09-12T21:41:48.320Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "5ebd893f-69df-4e0e-a041-3f367353a33a",
-          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
-          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "runId": "84a6611c-4927-4426-9295-a54b1124cb18",
+          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
+          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
@@ -164,23 +164,23 @@
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
-              "sizeBytes": 77904488
+              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
+              "sizeBytes": 77884180
             }
           },
           "workloadHash": "3a333a8bcee5d8b3a98c28b50911b3b0b84a8c1b3a9a88f62141b2bb55afa3f9"
         }
       },
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-04-50-246Z.json",
-        "sha256": "ab54b1ca86f72a4cad2020e7b932fe9a5d700731c904a7720bdfb89b93f9921e",
-        "runId": "ffc3f97b-4d24-489e-9361-622eec25205e",
-        "verifiedAt": "2026-09-12T21:04:50.246Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-40-50-770Z.json",
+        "sha256": "42ae835561abb972022d1d7db1891b8f2eba449b17c2a2d94e1d426941ab8875",
+        "runId": "dec28771-b8e5-4578-8c4c-a4297c617f32",
+        "verifiedAt": "2026-09-12T21:40:50.770Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "ffc3f97b-4d24-489e-9361-622eec25205e",
-          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
-          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "runId": "dec28771-b8e5-4578-8c4c-a4297c617f32",
+          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
+          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
@@ -191,23 +191,23 @@
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
-              "sizeBytes": 77904488
+              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
+              "sizeBytes": 77884180
             }
           },
           "workloadHash": "3a333a8bcee5d8b3a98c28b50911b3b0b84a8c1b3a9a88f62141b2bb55afa3f9"
         }
       },
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-03-55-284Z.json",
-        "sha256": "f05693de04adc0e8f68beaf2ee98e03f5fc605dee8c63d0a68908eb7dd251fb0",
-        "runId": "e6c8da8f-55c2-46b2-a4e3-4c6d728d23ab",
-        "verifiedAt": "2026-09-12T21:03:55.284Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-39-54-968Z.json",
+        "sha256": "a21bc670ea2f979bd57cbcaa126f81781fc7dfed2f3fe31c5c84724d3282e445",
+        "runId": "c0bb7c82-5160-4665-b0f2-ae8217828594",
+        "verifiedAt": "2026-09-12T21:39:54.968Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "e6c8da8f-55c2-46b2-a4e3-4c6d728d23ab",
-          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
-          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "runId": "c0bb7c82-5160-4665-b0f2-ae8217828594",
+          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
+          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
@@ -218,8 +218,8 @@
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
-              "sizeBytes": 77904488
+              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
+              "sizeBytes": 77884180
             }
           },
           "workloadHash": "3a333a8bcee5d8b3a98c28b50911b3b0b84a8c1b3a9a88f62141b2bb55afa3f9"
@@ -228,15 +228,15 @@
     ],
     "ann": [
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-06-05-773Z.json",
-        "sha256": "a52319ba5089dfa966d85821757a046bfa58553a38c924651e527bb0391037d5",
-        "runId": "0ce08210-dabd-4184-a081-908275f7993f",
-        "verifiedAt": "2026-09-12T21:06:05.773Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-latest.json",
+        "sha256": "48e0c069965d9ad02d7e8391d058cfd0c5ee16d62406683c582a2013ab4396cf",
+        "runId": "d849f3d2-900b-4cee-b041-f12db6fc611c",
+        "verifiedAt": "2026-09-12T21:42:13.878Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "0ce08210-dabd-4184-a081-908275f7993f",
-          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
-          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "runId": "d849f3d2-900b-4cee-b041-f12db6fc611c",
+          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
+          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
@@ -247,23 +247,23 @@
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
-              "sizeBytes": 77904488
+              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
+              "sizeBytes": 77884180
             }
           },
           "workloadHash": "0ab835f5549369b241fbcd5cf2bf956757a6bcef36c0d3d23570f2d7e83b679c"
         }
       },
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-05-14-219Z.json",
-        "sha256": "b7aac723724bf29c3ff226e8ceacf608a18b1a7bda5f568922f5430ab1dd4d8a",
-        "runId": "fa707a09-1f2f-48d3-9dc9-31f637163df0",
-        "verifiedAt": "2026-09-12T21:05:14.219Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-41-16-519Z.json",
+        "sha256": "02a33734ab1f093b7de78bbe108554c47347fb3755c74c052c0c307abbd1a96f",
+        "runId": "60fefef4-7a5b-4167-9b76-9e2f17e94a6d",
+        "verifiedAt": "2026-09-12T21:41:16.519Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "fa707a09-1f2f-48d3-9dc9-31f637163df0",
-          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
-          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "runId": "60fefef4-7a5b-4167-9b76-9e2f17e94a6d",
+          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
+          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
@@ -274,23 +274,23 @@
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
-              "sizeBytes": 77904488
+              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
+              "sizeBytes": 77884180
             }
           },
           "workloadHash": "0ab835f5549369b241fbcd5cf2bf956757a6bcef36c0d3d23570f2d7e83b679c"
         }
       },
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-04-20-919Z.json",
-        "sha256": "e24dd4d808a2009726f80a8b98e628c3dc9ec59e20fdb2e4b0e1c81b7ceb679f",
-        "runId": "4971d33d-89ef-4ded-8d77-3b081625b3ea",
-        "verifiedAt": "2026-09-12T21:04:20.919Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-40-20-958Z.json",
+        "sha256": "e1d7ad80d94f174dbf3d16f56ea90df4b3b60994eeffed6c40cb25f4dd737cdc",
+        "runId": "98a63e28-6921-4050-8fd1-a68b95fbeb62",
+        "verifiedAt": "2026-09-12T21:40:20.958Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "4971d33d-89ef-4ded-8d77-3b081625b3ea",
-          "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
-          "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+          "runId": "98a63e28-6921-4050-8fd1-a68b95fbeb62",
+          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
+          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
@@ -301,8 +301,8 @@
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
-              "sizeBytes": 77904488
+              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
+              "sizeBytes": 77884180
             }
           },
           "workloadHash": "0ab835f5549369b241fbcd5cf2bf956757a6bcef36c0d3d23570f2d7e83b679c"
@@ -319,13 +319,13 @@
     },
     "answer-quality-v2": {
       "path": "docs/evaluations/evidence/2026-09-13/answer-quality-v2.json",
-      "sha256": "1e0fb982c19e5d423c65566db4597e526776a4158701aaa6446b85a207ff1d58",
+      "sha256": "283e7750f453c6862204eb370cf5ecf3e35b380ac949dc6dd7f8495e6b840090",
       "corpusSha256": "7d0cd1fb36096b0b138194315459ef0253ff2619dd1f107e3380bd10f2a84702",
-      "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052"
+      "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805"
     },
     "runtime": {
       "path": "docs/evaluations/evidence/2026-09-13/convergence-runtime.json",
-      "sha256": "49207469fbfd16a40bc242534cfd8ce1724b0c53fe178e0cbd318728d8e4bc24"
+      "sha256": "9eba87b2bda460365baf72ff784e5513d7cfabd9082a32540d509c30bf3f32d7"
     }
   },
   "qualification": {
@@ -345,12 +345,13 @@
     "Mobile recovery: one initial orphan rename returned pending; five diagnostic reruns plus the final eight-scenario run passed. Initial failure was not reproduced and is not attributed to an established filesystem cause.",
     "Both browser fixture response modes also passed at desktop size; the latest fixture reports represent the final narrow viewport runs.",
     "A source-only CSS fix followed the first v2 confirmation evaluation. The second frozen-v2 evaluation preserves the same answer-quality counts; no answer heuristic was tuned on v2.",
-    "Local logs/screenshots remain ignored diagnostics; copied fixture qualification/evaluation reports are durable records."
+    "Local logs/screenshots remain ignored diagnostics; copied fixture qualification/evaluation reports are durable records.",
+    "The final source cleanup removed two whitespace-only blank lines after the full dual-Node tests. TypeScript compilation, packaged SQLite/reference qualification and unchanged quality counts were verified again against the new fingerprint."
   ],
   "foundationVerifier": {
     "path": "docs/evaluations/evidence/2026-09-13/foundation-release-evidence.json",
-    "sha256": "1a80e6c52b81816caf95ff5c1eff253f4cd8564cbc15c1c51959acaf4b8a6c30",
-    "checkedAt": "2026-09-12T21:12:43.933Z",
+    "sha256": "a9aab2f271d6cbe7642d1a1ae864198e47b6a83a4bfe49ce817d83171cbb1b49",
+    "checkedAt": "2026-09-12T21:46:11.887Z",
     "ok": true,
     "reportCounts": {
       "sqlite": 3,

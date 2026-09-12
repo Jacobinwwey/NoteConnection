@@ -1,5 +1,5 @@
 {
-  "verifiedAt": "2026-09-12T21:04:20.919Z",
+  "verifiedAt": "2026-09-12T21:42:13.878Z",
   "host": {
     "platform": "win32",
     "arch": "x64",
@@ -30,9 +30,9 @@
           "profileId": "smoke",
           "ingestedDocuments": 40,
           "firstPass": {
-            "startupDurationMs": 1600,
+            "startupDurationMs": 1340,
             "startupProbeCount": 6,
-            "ingestDurationMs": 78,
+            "ingestDurationMs": 74,
             "diagnostics": {
               "configuredBackend": "local_vector",
               "backendId": "local-vector-v1",
@@ -47,11 +47,11 @@
               "syncRequestCount": 2,
               "syncSuccessCount": 2,
               "requestCount": 5,
-              "syncedIndexSignature": "f1fc33cd5529ba9740bd9fac9f1bbae50087c313daeea48b2acb8837eaa071d3",
+              "syncedIndexSignature": "26e9471c3c19c338b1bb19c2c6eaff3f8dca28d41c2b4a450602e0eb7e697fd2",
               "syncedAtomCount": 40,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyvi5dx-0007",
-              "durationMs": 0
+              "lastRequestId": "nc-vector-accel-mtywuv1d-0007",
+              "durationMs": 1
             },
             "queries": [
               {
@@ -60,7 +60,7 @@
                 "expectedDocumentId": "",
                 "matchedDocumentId": "",
                 "targetMatched": false,
-                "durationMs": 36
+                "durationMs": 38
               },
               {
                 "phaseId": "anchor_0",
@@ -68,7 +68,7 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_smoke_0",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_smoke_0",
                 "targetMatched": true,
-                "durationMs": 7
+                "durationMs": 8
               },
               {
                 "phaseId": "anchor_20",
@@ -76,7 +76,7 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_smoke_20",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_smoke_20",
                 "targetMatched": true,
-                "durationMs": 5
+                "durationMs": 7
               },
               {
                 "phaseId": "anchor_39",
@@ -91,13 +91,13 @@
               "syncRequestCount": 2,
               "selectRequestCount": 5,
               "syncedAtomCount": 40,
-              "syncedIndexSignature": "f1fc33cd5529ba9740bd9fac9f1bbae50087c313daeea48b2acb8837eaa071d3",
+              "syncedIndexSignature": "26e9471c3c19c338b1bb19c2c6eaff3f8dca28d41c2b4a450602e0eb7e697fd2",
               "tokenPostingCount": 109
             }
           },
           "restartPass": {
-            "startupDurationMs": 1515,
-            "startupProbeCount": 7,
+            "startupDurationMs": 1263,
+            "startupProbeCount": 6,
             "diagnostics": {
               "configuredBackend": "local_vector",
               "backendId": "local-vector-v1",
@@ -112,11 +112,11 @@
               "syncRequestCount": 1,
               "syncSuccessCount": 1,
               "requestCount": 5,
-              "syncedIndexSignature": "f1fc33cd5529ba9740bd9fac9f1bbae50087c313daeea48b2acb8837eaa071d3",
+              "syncedIndexSignature": "26e9471c3c19c338b1bb19c2c6eaff3f8dca28d41c2b4a450602e0eb7e697fd2",
               "syncedAtomCount": 40,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyvi6mk-0006",
-              "durationMs": 1
+              "lastRequestId": "nc-vector-accel-mtywuw31-0006",
+              "durationMs": 0
             },
             "queries": [
               {
@@ -133,7 +133,7 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_smoke_0",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_smoke_0",
                 "targetMatched": true,
-                "durationMs": 5
+                "durationMs": 6
               },
               {
                 "phaseId": "anchor_20",
@@ -141,7 +141,7 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_smoke_20",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_smoke_20",
                 "targetMatched": true,
-                "durationMs": 6
+                "durationMs": 5
               },
               {
                 "phaseId": "anchor_39",
@@ -149,35 +149,35 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_smoke_39",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_smoke_39",
                 "targetMatched": true,
-                "durationMs": 5
+                "durationMs": 7
               }
             ],
             "annState": {
               "syncRequestCount": 3,
               "selectRequestCount": 10,
               "syncedAtomCount": 40,
-              "syncedIndexSignature": "f1fc33cd5529ba9740bd9fac9f1bbae50087c313daeea48b2acb8837eaa071d3",
+              "syncedIndexSignature": "26e9471c3c19c338b1bb19c2c6eaff3f8dca28d41c2b4a450602e0eb7e697fd2",
               "tokenPostingCount": 109
             }
           },
           "performance": {
             "startupDurationMs": {
               "count": 2,
-              "minMs": 1515,
-              "p50Ms": 1557.5,
-              "p95Ms": 1595.75,
-              "p99Ms": 1599.15,
-              "maxMs": 1600,
-              "meanMs": 1557.5
+              "minMs": 1263,
+              "p50Ms": 1301.5,
+              "p95Ms": 1336.15,
+              "p99Ms": 1339.23,
+              "maxMs": 1340,
+              "meanMs": 1301.5
             },
             "ingestDurationMs": {
               "count": 1,
-              "minMs": 78,
-              "p50Ms": 78,
-              "p95Ms": 78,
-              "p99Ms": 78,
-              "maxMs": 78,
-              "meanMs": 78
+              "minMs": 74,
+              "p50Ms": 74,
+              "p95Ms": 74,
+              "p99Ms": 74,
+              "maxMs": 74,
+              "meanMs": 74
             },
             "diagnosticsDurationMs": {
               "count": 2,
@@ -191,11 +191,11 @@
             "queryDurationMs": {
               "count": 8,
               "minMs": 5,
-              "p50Ms": 5.5,
-              "p95Ms": 27.25,
-              "p99Ms": 34.25,
-              "maxMs": 36,
-              "meanMs": 10
+              "p50Ms": 7,
+              "p95Ms": 28.55,
+              "p99Ms": 36.11,
+              "maxMs": 38,
+              "meanMs": 10.875
             }
           },
           "releaseGates": {
@@ -211,21 +211,21 @@
             "metrics": {
               "startupDurationMs": {
                 "count": 2,
-                "minMs": 1515,
-                "p50Ms": 1557.5,
-                "p95Ms": 1595.75,
-                "p99Ms": 1599.15,
-                "maxMs": 1600,
-                "meanMs": 1557.5
+                "minMs": 1263,
+                "p50Ms": 1301.5,
+                "p95Ms": 1336.15,
+                "p99Ms": 1339.23,
+                "maxMs": 1340,
+                "meanMs": 1301.5
               },
               "ingestDurationMs": {
                 "count": 1,
-                "minMs": 78,
-                "p50Ms": 78,
-                "p95Ms": 78,
-                "p99Ms": 78,
-                "maxMs": 78,
-                "meanMs": 78
+                "minMs": 74,
+                "p50Ms": 74,
+                "p95Ms": 74,
+                "p99Ms": 74,
+                "maxMs": 74,
+                "meanMs": 74
               },
               "diagnosticsDurationMs": {
                 "count": 2,
@@ -239,11 +239,11 @@
               "queryDurationMs": {
                 "count": 8,
                 "minMs": 5,
-                "p50Ms": 5.5,
-                "p95Ms": 27.25,
-                "p99Ms": 34.25,
-                "maxMs": 36,
-                "meanMs": 10
+                "p50Ms": 7,
+                "p95Ms": 28.55,
+                "p99Ms": 36.11,
+                "maxMs": 38,
+                "meanMs": 10.875
               }
             },
             "expectedRecall": {
@@ -257,7 +257,7 @@
                 "label": "Startup p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 1595.75,
+                "observed": 1336.15,
                 "required": 18000,
                 "sampleCount": 2
               },
@@ -266,7 +266,7 @@
                 "label": "Ingest p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 78,
+                "observed": 74,
                 "required": 90000,
                 "sampleCount": 1
               },
@@ -284,7 +284,7 @@
                 "label": "Query p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 27.25,
+                "observed": 28.55,
                 "required": 12000,
                 "sampleCount": 8
               },
@@ -293,7 +293,7 @@
                 "label": "Query max must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 36,
+                "observed": 38,
                 "required": 20000,
                 "sampleCount": 8
               },
@@ -325,9 +325,9 @@
           "profileId": "smoke",
           "ingestedDocuments": 40,
           "firstPass": {
-            "startupDurationMs": 1566,
+            "startupDurationMs": 1514,
             "startupProbeCount": 7,
-            "ingestDurationMs": 108,
+            "ingestDurationMs": 62,
             "diagnostics": {
               "configuredBackend": "local_vector",
               "backendId": "local-vector-v1",
@@ -342,10 +342,10 @@
               "syncRequestCount": 2,
               "syncSuccessCount": 2,
               "requestCount": 5,
-              "syncedIndexSignature": "d7b59612de1d11856d8252dbd946536a5141648984df7dac9e563260580615ea",
+              "syncedIndexSignature": "537b14f4fc3b306dc37acc6757444d75b2ae0b4a2ed8d1cf11d0bba79e2a2da3",
               "syncedAtomCount": 40,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyvi80v-0007",
+              "lastRequestId": "nc-vector-accel-mtywuxem-0007",
               "durationMs": 2
             },
             "queries": [
@@ -355,7 +355,7 @@
                 "expectedDocumentId": "",
                 "matchedDocumentId": "",
                 "targetMatched": false,
-                "durationMs": 30
+                "durationMs": 35
               },
               {
                 "phaseId": "anchor_0",
@@ -363,7 +363,7 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_smoke_0",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_smoke_0",
                 "targetMatched": true,
-                "durationMs": 11
+                "durationMs": 10
               },
               {
                 "phaseId": "anchor_20",
@@ -386,12 +386,12 @@
               "syncRequestCount": 2,
               "selectRequestCount": 5,
               "syncedAtomCount": 40,
-              "syncedIndexSignature": "d7b59612de1d11856d8252dbd946536a5141648984df7dac9e563260580615ea",
+              "syncedIndexSignature": "537b14f4fc3b306dc37acc6757444d75b2ae0b4a2ed8d1cf11d0bba79e2a2da3",
               "tokenPostingCount": 109
             }
           },
           "restartPass": {
-            "startupDurationMs": 1512,
+            "startupDurationMs": 1511,
             "startupProbeCount": 7,
             "diagnostics": {
               "configuredBackend": "local_vector",
@@ -407,10 +407,10 @@
               "syncRequestCount": 1,
               "syncSuccessCount": 1,
               "requestCount": 5,
-              "syncedIndexSignature": "d7b59612de1d11856d8252dbd946536a5141648984df7dac9e563260580615ea",
+              "syncedIndexSignature": "537b14f4fc3b306dc37acc6757444d75b2ae0b4a2ed8d1cf11d0bba79e2a2da3",
               "syncedAtomCount": 40,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyvi99n-0006",
+              "lastRequestId": "nc-vector-accel-mtywuyni-0006",
               "durationMs": 1
             },
             "queries": [
@@ -420,7 +420,7 @@
                 "expectedDocumentId": "",
                 "matchedDocumentId": "",
                 "targetMatched": false,
-                "durationMs": 11
+                "durationMs": 9
               },
               {
                 "phaseId": "anchor_0",
@@ -436,7 +436,7 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_smoke_20",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_smoke_20",
                 "targetMatched": true,
-                "durationMs": 7
+                "durationMs": 8
               },
               {
                 "phaseId": "anchor_39",
@@ -444,35 +444,35 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_smoke_39",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_smoke_39",
                 "targetMatched": true,
-                "durationMs": 7
+                "durationMs": 6
               }
             ],
             "annState": {
               "syncRequestCount": 3,
               "selectRequestCount": 10,
               "syncedAtomCount": 40,
-              "syncedIndexSignature": "d7b59612de1d11856d8252dbd946536a5141648984df7dac9e563260580615ea",
+              "syncedIndexSignature": "537b14f4fc3b306dc37acc6757444d75b2ae0b4a2ed8d1cf11d0bba79e2a2da3",
               "tokenPostingCount": 109
             }
           },
           "performance": {
             "startupDurationMs": {
               "count": 2,
-              "minMs": 1512,
-              "p50Ms": 1539,
-              "p95Ms": 1563.3,
-              "p99Ms": 1565.46,
-              "maxMs": 1566,
-              "meanMs": 1539
+              "minMs": 1511,
+              "p50Ms": 1512.5,
+              "p95Ms": 1513.85,
+              "p99Ms": 1513.97,
+              "maxMs": 1514,
+              "meanMs": 1512.5
             },
             "ingestDurationMs": {
               "count": 1,
-              "minMs": 108,
-              "p50Ms": 108,
-              "p95Ms": 108,
-              "p99Ms": 108,
-              "maxMs": 108,
-              "meanMs": 108
+              "minMs": 62,
+              "p50Ms": 62,
+              "p95Ms": 62,
+              "p99Ms": 62,
+              "maxMs": 62,
+              "meanMs": 62
             },
             "diagnosticsDurationMs": {
               "count": 2,
@@ -486,11 +486,11 @@
             "queryDurationMs": {
               "count": 8,
               "minMs": 6,
-              "p50Ms": 7,
-              "p95Ms": 23.35,
-              "p99Ms": 28.67,
-              "maxMs": 30,
-              "meanMs": 10.75
+              "p50Ms": 7.5,
+              "p95Ms": 26.25,
+              "p99Ms": 33.25,
+              "maxMs": 35,
+              "meanMs": 11
             }
           },
           "releaseGates": {
@@ -506,21 +506,21 @@
             "metrics": {
               "startupDurationMs": {
                 "count": 2,
-                "minMs": 1512,
-                "p50Ms": 1539,
-                "p95Ms": 1563.3,
-                "p99Ms": 1565.46,
-                "maxMs": 1566,
-                "meanMs": 1539
+                "minMs": 1511,
+                "p50Ms": 1512.5,
+                "p95Ms": 1513.85,
+                "p99Ms": 1513.97,
+                "maxMs": 1514,
+                "meanMs": 1512.5
               },
               "ingestDurationMs": {
                 "count": 1,
-                "minMs": 108,
-                "p50Ms": 108,
-                "p95Ms": 108,
-                "p99Ms": 108,
-                "maxMs": 108,
-                "meanMs": 108
+                "minMs": 62,
+                "p50Ms": 62,
+                "p95Ms": 62,
+                "p99Ms": 62,
+                "maxMs": 62,
+                "meanMs": 62
               },
               "diagnosticsDurationMs": {
                 "count": 2,
@@ -534,11 +534,11 @@
               "queryDurationMs": {
                 "count": 8,
                 "minMs": 6,
-                "p50Ms": 7,
-                "p95Ms": 23.35,
-                "p99Ms": 28.67,
-                "maxMs": 30,
-                "meanMs": 10.75
+                "p50Ms": 7.5,
+                "p95Ms": 26.25,
+                "p99Ms": 33.25,
+                "maxMs": 35,
+                "meanMs": 11
               }
             },
             "expectedRecall": {
@@ -552,7 +552,7 @@
                 "label": "Startup p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 1563.3,
+                "observed": 1513.85,
                 "required": 27000,
                 "sampleCount": 2
               },
@@ -561,7 +561,7 @@
                 "label": "Ingest p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 108,
+                "observed": 62,
                 "required": 135000,
                 "sampleCount": 1
               },
@@ -579,7 +579,7 @@
                 "label": "Query p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 23.35,
+                "observed": 26.25,
                 "required": 18000,
                 "sampleCount": 8
               },
@@ -588,7 +588,7 @@
                 "label": "Query max must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 30,
+                "observed": 35,
                 "required": 30000,
                 "sampleCount": 8
               },
@@ -629,9 +629,9 @@
           "profileId": "medium",
           "ingestedDocuments": 140,
           "firstPass": {
-            "startupDurationMs": 1564,
-            "startupProbeCount": 7,
-            "ingestDurationMs": 920,
+            "startupDurationMs": 1365,
+            "startupProbeCount": 6,
+            "ingestDurationMs": 1164,
             "diagnostics": {
               "configuredBackend": "local_vector",
               "backendId": "local-vector-v1",
@@ -646,11 +646,11 @@
               "syncRequestCount": 2,
               "syncSuccessCount": 2,
               "requestCount": 5,
-              "syncedIndexSignature": "5438ced29e22c9f423d1fa0d5669a8276d8c2e6303f3d584afa3db8d591e97c4",
+              "syncedIndexSignature": "d8c7be256e5c909b8b8f9bb025e6d1517b3fb1141f70ec23da752c14320e4e28",
               "syncedAtomCount": 140,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyvibdb-0007",
-              "durationMs": 1
+              "lastRequestId": "nc-vector-accel-mtywv0rp-0007",
+              "durationMs": 0
             },
             "queries": [
               {
@@ -659,7 +659,7 @@
                 "expectedDocumentId": "",
                 "matchedDocumentId": "",
                 "targetMatched": false,
-                "durationMs": 88
+                "durationMs": 78
               },
               {
                 "phaseId": "anchor_0",
@@ -690,13 +690,13 @@
               "syncRequestCount": 2,
               "selectRequestCount": 5,
               "syncedAtomCount": 140,
-              "syncedIndexSignature": "5438ced29e22c9f423d1fa0d5669a8276d8c2e6303f3d584afa3db8d591e97c4",
+              "syncedIndexSignature": "d8c7be256e5c909b8b8f9bb025e6d1517b3fb1141f70ec23da752c14320e4e28",
               "tokenPostingCount": 312
             }
           },
           "restartPass": {
-            "startupDurationMs": 1519,
-            "startupProbeCount": 7,
+            "startupDurationMs": 1266,
+            "startupProbeCount": 6,
             "diagnostics": {
               "configuredBackend": "local_vector",
               "backendId": "local-vector-v1",
@@ -711,10 +711,10 @@
               "syncRequestCount": 1,
               "syncSuccessCount": 1,
               "requestCount": 5,
-              "syncedIndexSignature": "5438ced29e22c9f423d1fa0d5669a8276d8c2e6303f3d584afa3db8d591e97c4",
+              "syncedIndexSignature": "d8c7be256e5c909b8b8f9bb025e6d1517b3fb1141f70ec23da752c14320e4e28",
               "syncedAtomCount": 140,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyvicok-0006",
+              "lastRequestId": "nc-vector-accel-mtywv1vd-0006",
               "durationMs": 1
             },
             "queries": [
@@ -724,7 +724,7 @@
                 "expectedDocumentId": "",
                 "matchedDocumentId": "",
                 "targetMatched": false,
-                "durationMs": 39
+                "durationMs": 33
               },
               {
                 "phaseId": "anchor_0",
@@ -732,7 +732,7 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_medium_0",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_medium_0",
                 "targetMatched": true,
-                "durationMs": 30
+                "durationMs": 21
               },
               {
                 "phaseId": "anchor_70",
@@ -740,7 +740,7 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_medium_70",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_medium_70",
                 "targetMatched": true,
-                "durationMs": 20
+                "durationMs": 18
               },
               {
                 "phaseId": "anchor_139",
@@ -748,53 +748,53 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_medium_139",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_medium_139",
                 "targetMatched": true,
-                "durationMs": 32
+                "durationMs": 26
               }
             ],
             "annState": {
               "syncRequestCount": 3,
               "selectRequestCount": 10,
               "syncedAtomCount": 140,
-              "syncedIndexSignature": "5438ced29e22c9f423d1fa0d5669a8276d8c2e6303f3d584afa3db8d591e97c4",
+              "syncedIndexSignature": "d8c7be256e5c909b8b8f9bb025e6d1517b3fb1141f70ec23da752c14320e4e28",
               "tokenPostingCount": 312
             }
           },
           "performance": {
             "startupDurationMs": {
               "count": 2,
-              "minMs": 1519,
-              "p50Ms": 1541.5,
-              "p95Ms": 1561.75,
-              "p99Ms": 1563.55,
-              "maxMs": 1564,
-              "meanMs": 1541.5
+              "minMs": 1266,
+              "p50Ms": 1315.5,
+              "p95Ms": 1360.05,
+              "p99Ms": 1364.01,
+              "maxMs": 1365,
+              "meanMs": 1315.5
             },
             "ingestDurationMs": {
               "count": 1,
-              "minMs": 920,
-              "p50Ms": 920,
-              "p95Ms": 920,
-              "p99Ms": 920,
-              "maxMs": 920,
-              "meanMs": 920
+              "minMs": 1164,
+              "p50Ms": 1164,
+              "p95Ms": 1164,
+              "p99Ms": 1164,
+              "maxMs": 1164,
+              "meanMs": 1164
             },
             "diagnosticsDurationMs": {
               "count": 2,
-              "minMs": 1,
-              "p50Ms": 1,
-              "p95Ms": 1,
-              "p99Ms": 1,
+              "minMs": 0,
+              "p50Ms": 0.5,
+              "p95Ms": 0.95,
+              "p99Ms": 0.99,
               "maxMs": 1,
-              "meanMs": 1
+              "meanMs": 0.5
             },
             "queryDurationMs": {
               "count": 8,
               "minMs": 16,
-              "p50Ms": 26,
-              "p95Ms": 70.85,
-              "p99Ms": 84.57,
-              "maxMs": 88,
-              "meanMs": 33.125
+              "p50Ms": 21.5,
+              "p95Ms": 62.25,
+              "p99Ms": 74.85,
+              "maxMs": 78,
+              "meanMs": 29
             }
           },
           "releaseGates": {
@@ -810,39 +810,39 @@
             "metrics": {
               "startupDurationMs": {
                 "count": 2,
-                "minMs": 1519,
-                "p50Ms": 1541.5,
-                "p95Ms": 1561.75,
-                "p99Ms": 1563.55,
-                "maxMs": 1564,
-                "meanMs": 1541.5
+                "minMs": 1266,
+                "p50Ms": 1315.5,
+                "p95Ms": 1360.05,
+                "p99Ms": 1364.01,
+                "maxMs": 1365,
+                "meanMs": 1315.5
               },
               "ingestDurationMs": {
                 "count": 1,
-                "minMs": 920,
-                "p50Ms": 920,
-                "p95Ms": 920,
-                "p99Ms": 920,
-                "maxMs": 920,
-                "meanMs": 920
+                "minMs": 1164,
+                "p50Ms": 1164,
+                "p95Ms": 1164,
+                "p99Ms": 1164,
+                "maxMs": 1164,
+                "meanMs": 1164
               },
               "diagnosticsDurationMs": {
                 "count": 2,
-                "minMs": 1,
-                "p50Ms": 1,
-                "p95Ms": 1,
-                "p99Ms": 1,
+                "minMs": 0,
+                "p50Ms": 0.5,
+                "p95Ms": 0.95,
+                "p99Ms": 0.99,
                 "maxMs": 1,
-                "meanMs": 1
+                "meanMs": 0.5
               },
               "queryDurationMs": {
                 "count": 8,
                 "minMs": 16,
-                "p50Ms": 26,
-                "p95Ms": 70.85,
-                "p99Ms": 84.57,
-                "maxMs": 88,
-                "meanMs": 33.125
+                "p50Ms": 21.5,
+                "p95Ms": 62.25,
+                "p99Ms": 74.85,
+                "maxMs": 78,
+                "meanMs": 29
               }
             },
             "expectedRecall": {
@@ -856,7 +856,7 @@
                 "label": "Startup p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 1561.75,
+                "observed": 1360.05,
                 "required": 18000,
                 "sampleCount": 2
               },
@@ -865,7 +865,7 @@
                 "label": "Ingest p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 920,
+                "observed": 1164,
                 "required": 90000,
                 "sampleCount": 1
               },
@@ -874,7 +874,7 @@
                 "label": "Query-backend diagnostics p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 1,
+                "observed": 0.95,
                 "required": 9000,
                 "sampleCount": 2
               },
@@ -883,7 +883,7 @@
                 "label": "Query p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 70.85,
+                "observed": 62.25,
                 "required": 12000,
                 "sampleCount": 8
               },
@@ -892,7 +892,7 @@
                 "label": "Query max must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 88,
+                "observed": 78,
                 "required": 20000,
                 "sampleCount": 8
               },
@@ -924,9 +924,9 @@
           "profileId": "medium",
           "ingestedDocuments": 140,
           "firstPass": {
-            "startupDurationMs": 1586,
+            "startupDurationMs": 1528,
             "startupProbeCount": 7,
-            "ingestDurationMs": 1030,
+            "ingestDurationMs": 930,
             "diagnostics": {
               "configuredBackend": "local_vector",
               "backendId": "local-vector-v1",
@@ -941,10 +941,10 @@
               "syncRequestCount": 2,
               "syncSuccessCount": 2,
               "requestCount": 5,
-              "syncedIndexSignature": "3c59e83f730a75f5c0069156c9464a5e067809e4e89b8a795bbcd53b30470cc5",
+              "syncedIndexSignature": "8a6a822d8543b863e08f28ebfde4606382ec63bfbc8aeb2c08ef2c373e53e7e0",
               "syncedAtomCount": 140,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyviewk-0007",
+              "lastRequestId": "nc-vector-accel-mtywv3xi-0007",
               "durationMs": 1
             },
             "queries": [
@@ -954,7 +954,7 @@
                 "expectedDocumentId": "",
                 "matchedDocumentId": "",
                 "targetMatched": false,
-                "durationMs": 82
+                "durationMs": 67
               },
               {
                 "phaseId": "anchor_0",
@@ -962,7 +962,7 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_medium_0",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_medium_0",
                 "targetMatched": true,
-                "durationMs": 30
+                "durationMs": 23
               },
               {
                 "phaseId": "anchor_70",
@@ -970,7 +970,7 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_medium_70",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_medium_70",
                 "targetMatched": true,
-                "durationMs": 32
+                "durationMs": 19
               },
               {
                 "phaseId": "anchor_139",
@@ -978,20 +978,20 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_medium_139",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_medium_139",
                 "targetMatched": true,
-                "durationMs": 23
+                "durationMs": 19
               }
             ],
             "annState": {
               "syncRequestCount": 2,
               "selectRequestCount": 5,
               "syncedAtomCount": 140,
-              "syncedIndexSignature": "3c59e83f730a75f5c0069156c9464a5e067809e4e89b8a795bbcd53b30470cc5",
+              "syncedIndexSignature": "8a6a822d8543b863e08f28ebfde4606382ec63bfbc8aeb2c08ef2c373e53e7e0",
               "tokenPostingCount": 312
             }
           },
           "restartPass": {
-            "startupDurationMs": 1515,
-            "startupProbeCount": 7,
+            "startupDurationMs": 1362,
+            "startupProbeCount": 6,
             "diagnostics": {
               "configuredBackend": "local_vector",
               "backendId": "local-vector-v1",
@@ -1006,11 +1006,11 @@
               "syncRequestCount": 1,
               "syncSuccessCount": 1,
               "requestCount": 5,
-              "syncedIndexSignature": "3c59e83f730a75f5c0069156c9464a5e067809e4e89b8a795bbcd53b30470cc5",
+              "syncedIndexSignature": "8a6a822d8543b863e08f28ebfde4606382ec63bfbc8aeb2c08ef2c373e53e7e0",
               "syncedAtomCount": 140,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyvig6s-0006",
-              "durationMs": 1
+              "lastRequestId": "nc-vector-accel-mtywv55c-0006",
+              "durationMs": 0
             },
             "queries": [
               {
@@ -1019,7 +1019,7 @@
                 "expectedDocumentId": "",
                 "matchedDocumentId": "",
                 "targetMatched": false,
-                "durationMs": 26
+                "durationMs": 99
               },
               {
                 "phaseId": "anchor_0",
@@ -1027,7 +1027,7 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_medium_0",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_medium_0",
                 "targetMatched": true,
-                "durationMs": 22
+                "durationMs": 19
               },
               {
                 "phaseId": "anchor_70",
@@ -1043,53 +1043,53 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_medium_139",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_medium_139",
                 "targetMatched": true,
-                "durationMs": 19
+                "durationMs": 17
               }
             ],
             "annState": {
               "syncRequestCount": 3,
               "selectRequestCount": 10,
               "syncedAtomCount": 140,
-              "syncedIndexSignature": "3c59e83f730a75f5c0069156c9464a5e067809e4e89b8a795bbcd53b30470cc5",
+              "syncedIndexSignature": "8a6a822d8543b863e08f28ebfde4606382ec63bfbc8aeb2c08ef2c373e53e7e0",
               "tokenPostingCount": 312
             }
           },
           "performance": {
             "startupDurationMs": {
               "count": 2,
-              "minMs": 1515,
-              "p50Ms": 1550.5,
-              "p95Ms": 1582.45,
-              "p99Ms": 1585.29,
-              "maxMs": 1586,
-              "meanMs": 1550.5
+              "minMs": 1362,
+              "p50Ms": 1445,
+              "p95Ms": 1519.7,
+              "p99Ms": 1526.34,
+              "maxMs": 1528,
+              "meanMs": 1445
             },
             "ingestDurationMs": {
               "count": 1,
-              "minMs": 1030,
-              "p50Ms": 1030,
-              "p95Ms": 1030,
-              "p99Ms": 1030,
-              "maxMs": 1030,
-              "meanMs": 1030
+              "minMs": 930,
+              "p50Ms": 930,
+              "p95Ms": 930,
+              "p99Ms": 930,
+              "maxMs": 930,
+              "meanMs": 930
             },
             "diagnosticsDurationMs": {
               "count": 2,
-              "minMs": 1,
-              "p50Ms": 1,
-              "p95Ms": 1,
-              "p99Ms": 1,
+              "minMs": 0,
+              "p50Ms": 0.5,
+              "p95Ms": 0.95,
+              "p99Ms": 0.99,
               "maxMs": 1,
-              "meanMs": 1
+              "meanMs": 0.5
             },
             "queryDurationMs": {
               "count": 8,
-              "minMs": 18,
-              "p50Ms": 24.5,
-              "p95Ms": 64.5,
-              "p99Ms": 78.5,
-              "maxMs": 82,
-              "meanMs": 31.5
+              "minMs": 17,
+              "p50Ms": 19,
+              "p95Ms": 87.8,
+              "p99Ms": 96.76,
+              "maxMs": 99,
+              "meanMs": 35.125
             }
           },
           "releaseGates": {
@@ -1105,39 +1105,39 @@
             "metrics": {
               "startupDurationMs": {
                 "count": 2,
-                "minMs": 1515,
-                "p50Ms": 1550.5,
-                "p95Ms": 1582.45,
-                "p99Ms": 1585.29,
-                "maxMs": 1586,
-                "meanMs": 1550.5
+                "minMs": 1362,
+                "p50Ms": 1445,
+                "p95Ms": 1519.7,
+                "p99Ms": 1526.34,
+                "maxMs": 1528,
+                "meanMs": 1445
               },
               "ingestDurationMs": {
                 "count": 1,
-                "minMs": 1030,
-                "p50Ms": 1030,
-                "p95Ms": 1030,
-                "p99Ms": 1030,
-                "maxMs": 1030,
-                "meanMs": 1030
+                "minMs": 930,
+                "p50Ms": 930,
+                "p95Ms": 930,
+                "p99Ms": 930,
+                "maxMs": 930,
+                "meanMs": 930
               },
               "diagnosticsDurationMs": {
                 "count": 2,
-                "minMs": 1,
-                "p50Ms": 1,
-                "p95Ms": 1,
-                "p99Ms": 1,
+                "minMs": 0,
+                "p50Ms": 0.5,
+                "p95Ms": 0.95,
+                "p99Ms": 0.99,
                 "maxMs": 1,
-                "meanMs": 1
+                "meanMs": 0.5
               },
               "queryDurationMs": {
                 "count": 8,
-                "minMs": 18,
-                "p50Ms": 24.5,
-                "p95Ms": 64.5,
-                "p99Ms": 78.5,
-                "maxMs": 82,
-                "meanMs": 31.5
+                "minMs": 17,
+                "p50Ms": 19,
+                "p95Ms": 87.8,
+                "p99Ms": 96.76,
+                "maxMs": 99,
+                "meanMs": 35.125
               }
             },
             "expectedRecall": {
@@ -1151,7 +1151,7 @@
                 "label": "Startup p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 1582.45,
+                "observed": 1519.7,
                 "required": 27000,
                 "sampleCount": 2
               },
@@ -1160,7 +1160,7 @@
                 "label": "Ingest p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 1030,
+                "observed": 930,
                 "required": 135000,
                 "sampleCount": 1
               },
@@ -1169,7 +1169,7 @@
                 "label": "Query-backend diagnostics p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 1,
+                "observed": 0.95,
                 "required": 13500,
                 "sampleCount": 2
               },
@@ -1178,7 +1178,7 @@
                 "label": "Query p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 64.5,
+                "observed": 87.8,
                 "required": 18000,
                 "sampleCount": 8
               },
@@ -1187,7 +1187,7 @@
                 "label": "Query max must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 82,
+                "observed": 99,
                 "required": 30000,
                 "sampleCount": 8
               },
@@ -1228,9 +1228,9 @@
           "profileId": "heavy",
           "ingestedDocuments": 260,
           "firstPass": {
-            "startupDurationMs": 1604,
-            "startupProbeCount": 7,
-            "ingestDurationMs": 2394,
+            "startupDurationMs": 1344,
+            "startupProbeCount": 6,
+            "ingestDurationMs": 2805,
             "diagnostics": {
               "configuredBackend": "local_vector",
               "backendId": "local-vector-v1",
@@ -1245,10 +1245,10 @@
               "syncRequestCount": 2,
               "syncSuccessCount": 2,
               "requestCount": 5,
-              "syncedIndexSignature": "690194449c8695bc46a42a18e44577ebfd949b576528d66b8d77373cdd1873ec",
+              "syncedIndexSignature": "79a5932f2cad3d953d6237ba5f8abe1b3df95ddcf273b3e6df8828492337b9b7",
               "syncedAtomCount": 260,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyvijkz-0007",
+              "lastRequestId": "nc-vector-accel-mtywv8mh-0007",
               "durationMs": 1
             },
             "queries": [
@@ -1266,7 +1266,7 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_heavy_0",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_heavy_0",
                 "targetMatched": true,
-                "durationMs": 53
+                "durationMs": 49
               },
               {
                 "phaseId": "anchor_130",
@@ -1274,7 +1274,7 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_heavy_130",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_heavy_130",
                 "targetMatched": true,
-                "durationMs": 43
+                "durationMs": 42
               },
               {
                 "phaseId": "anchor_259",
@@ -1282,19 +1282,19 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_heavy_259",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_heavy_259",
                 "targetMatched": true,
-                "durationMs": 42
+                "durationMs": 41
               }
             ],
             "annState": {
               "syncRequestCount": 2,
               "selectRequestCount": 5,
               "syncedAtomCount": 260,
-              "syncedIndexSignature": "690194449c8695bc46a42a18e44577ebfd949b576528d66b8d77373cdd1873ec",
+              "syncedIndexSignature": "79a5932f2cad3d953d6237ba5f8abe1b3df95ddcf273b3e6df8828492337b9b7",
               "tokenPostingCount": 556
             }
           },
           "restartPass": {
-            "startupDurationMs": 1386,
+            "startupDurationMs": 1387,
             "startupProbeCount": 6,
             "diagnostics": {
               "configuredBackend": "local_vector",
@@ -1310,11 +1310,11 @@
               "syncRequestCount": 1,
               "syncSuccessCount": 1,
               "requestCount": 5,
-              "syncedIndexSignature": "690194449c8695bc46a42a18e44577ebfd949b576528d66b8d77373cdd1873ec",
+              "syncedIndexSignature": "79a5932f2cad3d953d6237ba5f8abe1b3df95ddcf273b3e6df8828492337b9b7",
               "syncedAtomCount": 260,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyvikxi-0006",
-              "durationMs": 1
+              "lastRequestId": "nc-vector-accel-mtywv9z2-0006",
+              "durationMs": 0
             },
             "queries": [
               {
@@ -1323,7 +1323,7 @@
                 "expectedDocumentId": "",
                 "matchedDocumentId": "",
                 "targetMatched": false,
-                "durationMs": 157
+                "durationMs": 162
               },
               {
                 "phaseId": "anchor_0",
@@ -1339,7 +1339,7 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_heavy_130",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_heavy_130",
                 "targetMatched": true,
-                "durationMs": 44
+                "durationMs": 41
               },
               {
                 "phaseId": "anchor_259",
@@ -1347,53 +1347,53 @@
                 "expectedDocumentId": "doc_external_ann_dist_node_runtime_heavy_259",
                 "matchedDocumentId": "doc_external_ann_dist_node_runtime_heavy_259",
                 "targetMatched": true,
-                "durationMs": 43
+                "durationMs": 42
               }
             ],
             "annState": {
               "syncRequestCount": 3,
               "selectRequestCount": 10,
               "syncedAtomCount": 260,
-              "syncedIndexSignature": "690194449c8695bc46a42a18e44577ebfd949b576528d66b8d77373cdd1873ec",
+              "syncedIndexSignature": "79a5932f2cad3d953d6237ba5f8abe1b3df95ddcf273b3e6df8828492337b9b7",
               "tokenPostingCount": 556
             }
           },
           "performance": {
             "startupDurationMs": {
               "count": 2,
-              "minMs": 1386,
-              "p50Ms": 1495,
-              "p95Ms": 1593.1,
-              "p99Ms": 1601.82,
-              "maxMs": 1604,
-              "meanMs": 1495
+              "minMs": 1344,
+              "p50Ms": 1365.5,
+              "p95Ms": 1384.85,
+              "p99Ms": 1386.57,
+              "maxMs": 1387,
+              "meanMs": 1365.5
             },
             "ingestDurationMs": {
               "count": 1,
-              "minMs": 2394,
-              "p50Ms": 2394,
-              "p95Ms": 2394,
-              "p99Ms": 2394,
-              "maxMs": 2394,
-              "meanMs": 2394
+              "minMs": 2805,
+              "p50Ms": 2805,
+              "p95Ms": 2805,
+              "p99Ms": 2805,
+              "maxMs": 2805,
+              "meanMs": 2805
             },
             "diagnosticsDurationMs": {
               "count": 2,
-              "minMs": 1,
-              "p50Ms": 1,
-              "p95Ms": 1,
-              "p99Ms": 1,
+              "minMs": 0,
+              "p50Ms": 0.5,
+              "p95Ms": 0.95,
+              "p99Ms": 0.99,
               "maxMs": 1,
-              "meanMs": 1
+              "meanMs": 0.5
             },
             "queryDurationMs": {
               "count": 8,
-              "minMs": 42,
-              "p50Ms": 44.5,
-              "p95Ms": 148.25,
-              "p99Ms": 155.25,
-              "maxMs": 157,
-              "meanMs": 69.875
+              "minMs": 41,
+              "p50Ms": 43.5,
+              "p95Ms": 151.5,
+              "p99Ms": 159.9,
+              "maxMs": 162,
+              "meanMs": 69.25
             }
           },
           "releaseGates": {
@@ -1409,39 +1409,39 @@
             "metrics": {
               "startupDurationMs": {
                 "count": 2,
-                "minMs": 1386,
-                "p50Ms": 1495,
-                "p95Ms": 1593.1,
-                "p99Ms": 1601.82,
-                "maxMs": 1604,
-                "meanMs": 1495
+                "minMs": 1344,
+                "p50Ms": 1365.5,
+                "p95Ms": 1384.85,
+                "p99Ms": 1386.57,
+                "maxMs": 1387,
+                "meanMs": 1365.5
               },
               "ingestDurationMs": {
                 "count": 1,
-                "minMs": 2394,
-                "p50Ms": 2394,
-                "p95Ms": 2394,
-                "p99Ms": 2394,
-                "maxMs": 2394,
-                "meanMs": 2394
+                "minMs": 2805,
+                "p50Ms": 2805,
+                "p95Ms": 2805,
+                "p99Ms": 2805,
+                "maxMs": 2805,
+                "meanMs": 2805
               },
               "diagnosticsDurationMs": {
                 "count": 2,
-                "minMs": 1,
-                "p50Ms": 1,
-                "p95Ms": 1,
-                "p99Ms": 1,
+                "minMs": 0,
+                "p50Ms": 0.5,
+                "p95Ms": 0.95,
+                "p99Ms": 0.99,
                 "maxMs": 1,
-                "meanMs": 1
+                "meanMs": 0.5
               },
               "queryDurationMs": {
                 "count": 8,
-                "minMs": 42,
-                "p50Ms": 44.5,
-                "p95Ms": 148.25,
-                "p99Ms": 155.25,
-                "maxMs": 157,
-                "meanMs": 69.875
+                "minMs": 41,
+                "p50Ms": 43.5,
+                "p95Ms": 151.5,
+                "p99Ms": 159.9,
+                "maxMs": 162,
+                "meanMs": 69.25
               }
             },
             "expectedRecall": {
@@ -1455,7 +1455,7 @@
                 "label": "Startup p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 1593.1,
+                "observed": 1384.85,
                 "required": 18000,
                 "sampleCount": 2
               },
@@ -1464,7 +1464,7 @@
                 "label": "Ingest p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 2394,
+                "observed": 2805,
                 "required": 90000,
                 "sampleCount": 1
               },
@@ -1473,7 +1473,7 @@
                 "label": "Query-backend diagnostics p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 1,
+                "observed": 0.95,
                 "required": 9000,
                 "sampleCount": 2
               },
@@ -1482,7 +1482,7 @@
                 "label": "Query p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 148.25,
+                "observed": 151.5,
                 "required": 12000,
                 "sampleCount": 8
               },
@@ -1491,7 +1491,7 @@
                 "label": "Query max must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 157,
+                "observed": 162,
                 "required": 20000,
                 "sampleCount": 8
               },
@@ -1523,9 +1523,9 @@
           "profileId": "heavy",
           "ingestedDocuments": 260,
           "firstPass": {
-            "startupDurationMs": 1516,
-            "startupProbeCount": 7,
-            "ingestDurationMs": 2208,
+            "startupDurationMs": 1473,
+            "startupProbeCount": 6,
+            "ingestDurationMs": 2429,
             "diagnostics": {
               "configuredBackend": "local_vector",
               "backendId": "local-vector-v1",
@@ -1540,10 +1540,10 @@
               "syncRequestCount": 2,
               "syncSuccessCount": 2,
               "requestCount": 5,
-              "syncedIndexSignature": "fde3392e84947f1c63565b5a0db1e01ad05c08cf35c6b79d3ae7be6ef6243ac2",
+              "syncedIndexSignature": "1da271951ab26bdeab2cb43079de7b493b3f626356bd03113e86ea0ea6091680",
               "syncedAtomCount": 260,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyvio2j-0007",
+              "lastRequestId": "nc-vector-accel-mtywvd9q-0007",
               "durationMs": 1
             },
             "queries": [
@@ -1553,7 +1553,7 @@
                 "expectedDocumentId": "",
                 "matchedDocumentId": "",
                 "targetMatched": false,
-                "durationMs": 120
+                "durationMs": 130
               },
               {
                 "phaseId": "anchor_0",
@@ -1561,7 +1561,7 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_0",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_0",
                 "targetMatched": true,
-                "durationMs": 49
+                "durationMs": 53
               },
               {
                 "phaseId": "anchor_130",
@@ -1569,7 +1569,7 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_130",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_130",
                 "targetMatched": true,
-                "durationMs": 43
+                "durationMs": 48
               },
               {
                 "phaseId": "anchor_259",
@@ -1577,19 +1577,19 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_259",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_259",
                 "targetMatched": true,
-                "durationMs": 43
+                "durationMs": 46
               }
             ],
             "annState": {
               "syncRequestCount": 2,
               "selectRequestCount": 5,
               "syncedAtomCount": 260,
-              "syncedIndexSignature": "fde3392e84947f1c63565b5a0db1e01ad05c08cf35c6b79d3ae7be6ef6243ac2",
+              "syncedIndexSignature": "1da271951ab26bdeab2cb43079de7b493b3f626356bd03113e86ea0ea6091680",
               "tokenPostingCount": 556
             }
           },
           "restartPass": {
-            "startupDurationMs": 1546,
+            "startupDurationMs": 1557,
             "startupProbeCount": 7,
             "diagnostics": {
               "configuredBackend": "local_vector",
@@ -1605,10 +1605,10 @@
               "syncRequestCount": 1,
               "syncSuccessCount": 1,
               "requestCount": 5,
-              "syncedIndexSignature": "fde3392e84947f1c63565b5a0db1e01ad05c08cf35c6b79d3ae7be6ef6243ac2",
+              "syncedIndexSignature": "1da271951ab26bdeab2cb43079de7b493b3f626356bd03113e86ea0ea6091680",
               "syncedAtomCount": 260,
               "representationStatus": "aligned",
-              "lastRequestId": "nc-vector-accel-mtyvipjt-0006",
+              "lastRequestId": "nc-vector-accel-mtywverm-0006",
               "durationMs": 1
             },
             "queries": [
@@ -1618,7 +1618,7 @@
                 "expectedDocumentId": "",
                 "matchedDocumentId": "",
                 "targetMatched": false,
-                "durationMs": 158
+                "durationMs": 161
               },
               {
                 "phaseId": "anchor_0",
@@ -1626,7 +1626,7 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_0",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_0",
                 "targetMatched": true,
-                "durationMs": 46
+                "durationMs": 48
               },
               {
                 "phaseId": "anchor_130",
@@ -1634,7 +1634,7 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_130",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_130",
                 "targetMatched": true,
-                "durationMs": 44
+                "durationMs": 46
               },
               {
                 "phaseId": "anchor_259",
@@ -1642,35 +1642,35 @@
                 "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_259",
                 "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_259",
                 "targetMatched": true,
-                "durationMs": 45
+                "durationMs": 46
               }
             ],
             "annState": {
               "syncRequestCount": 3,
               "selectRequestCount": 10,
               "syncedAtomCount": 260,
-              "syncedIndexSignature": "fde3392e84947f1c63565b5a0db1e01ad05c08cf35c6b79d3ae7be6ef6243ac2",
+              "syncedIndexSignature": "1da271951ab26bdeab2cb43079de7b493b3f626356bd03113e86ea0ea6091680",
               "tokenPostingCount": 556
             }
           },
           "performance": {
             "startupDurationMs": {
               "count": 2,
-              "minMs": 1516,
-              "p50Ms": 1531,
-              "p95Ms": 1544.5,
-              "p99Ms": 1545.7,
-              "maxMs": 1546,
-              "meanMs": 1531
+              "minMs": 1473,
+              "p50Ms": 1515,
+              "p95Ms": 1552.8,
+              "p99Ms": 1556.16,
+              "maxMs": 1557,
+              "meanMs": 1515
             },
             "ingestDurationMs": {
               "count": 1,
-              "minMs": 2208,
-              "p50Ms": 2208,
-              "p95Ms": 2208,
-              "p99Ms": 2208,
-              "maxMs": 2208,
-              "meanMs": 2208
+              "minMs": 2429,
+              "p50Ms": 2429,
+              "p95Ms": 2429,
+              "p99Ms": 2429,
+              "maxMs": 2429,
+              "meanMs": 2429
             },
             "diagnosticsDurationMs": {
               "count": 2,
@@ -1683,12 +1683,12 @@
             },
             "queryDurationMs": {
               "count": 8,
-              "minMs": 43,
-              "p50Ms": 45.5,
-              "p95Ms": 144.7,
-              "p99Ms": 155.34,
-              "maxMs": 158,
-              "meanMs": 68.5
+              "minMs": 46,
+              "p50Ms": 48,
+              "p95Ms": 150.15,
+              "p99Ms": 158.83,
+              "maxMs": 161,
+              "meanMs": 72.25
             }
           },
           "releaseGates": {
@@ -1704,21 +1704,21 @@
             "metrics": {
               "startupDurationMs": {
                 "count": 2,
-                "minMs": 1516,
-                "p50Ms": 1531,
-                "p95Ms": 1544.5,
-                "p99Ms": 1545.7,
-                "maxMs": 1546,
-                "meanMs": 1531
+                "minMs": 1473,
+                "p50Ms": 1515,
+                "p95Ms": 1552.8,
+                "p99Ms": 1556.16,
+                "maxMs": 1557,
+                "meanMs": 1515
               },
               "ingestDurationMs": {
                 "count": 1,
-                "minMs": 2208,
-                "p50Ms": 2208,
-                "p95Ms": 2208,
-                "p99Ms": 2208,
-                "maxMs": 2208,
-                "meanMs": 2208
+                "minMs": 2429,
+                "p50Ms": 2429,
+                "p95Ms": 2429,
+                "p99Ms": 2429,
+                "maxMs": 2429,
+                "meanMs": 2429
               },
               "diagnosticsDurationMs": {
                 "count": 2,
@@ -1731,12 +1731,12 @@
               },
               "queryDurationMs": {
                 "count": 8,
-                "minMs": 43,
-                "p50Ms": 45.5,
-                "p95Ms": 144.7,
-                "p99Ms": 155.34,
-                "maxMs": 158,
-                "meanMs": 68.5
+                "minMs": 46,
+                "p50Ms": 48,
+                "p95Ms": 150.15,
+                "p99Ms": 158.83,
+                "maxMs": 161,
+                "meanMs": 72.25
               }
             },
             "expectedRecall": {
@@ -1750,7 +1750,7 @@
                 "label": "Startup p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 1544.5,
+                "observed": 1552.8,
                 "required": 27000,
                 "sampleCount": 2
               },
@@ -1759,7 +1759,7 @@
                 "label": "Ingest p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 2208,
+                "observed": 2429,
                 "required": 135000,
                 "sampleCount": 1
               },
@@ -1777,7 +1777,7 @@
                 "label": "Query p95 must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 144.7,
+                "observed": 150.15,
                 "required": 18000,
                 "sampleCount": 8
               },
@@ -1786,7 +1786,7 @@
                 "label": "Query max must stay within release budget.",
                 "comparison": "lte",
                 "passed": true,
-                "observed": 158,
+                "observed": 161,
                 "required": 30000,
                 "sampleCount": 8
               },
@@ -1818,9 +1818,9 @@
   ],
   "provenance": {
     "schemaVersion": 1,
-    "runId": "4971d33d-89ef-4ded-8d77-3b081625b3ea",
-    "sourceRevision": "e1802ea2f4f77a76c08a92378fbe090ef81fb052",
-    "sourceTreeHash": "e96675a485fb7d3d26fb7acb182d5f2d5081a66eae2f78c7a4ba59adcdfef33f",
+    "runId": "d849f3d2-900b-4cee-b041-f12db6fc611c",
+    "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
+    "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
     "artifacts": {
       "dist_node_runtime": {
         "kind": "sidecar_inputs",
@@ -1831,8 +1831,8 @@
       "packaged_sidecar": {
         "kind": "file",
         "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-        "sha256": "251cff98e2e86dcd008955caa299ef7b5925283df5f286365c0665c4d46c3193",
-        "sizeBytes": 77904488
+        "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
+        "sizeBytes": 77884180
       }
     },
     "workloadHash": "0ab835f5549369b241fbcd5cf2bf956757a6bcef36c0d3d23570f2d7e83b679c"
