@@ -238,8 +238,8 @@ export function registerRenderRoutes(ctx: ServerContext): RouteEntry[] {
                 }
             },
         },
-        
-        
-        
+
+
+
     ];
 }

@@ -341,8 +341,8 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
                 } catch (e) { fail(res, e, 'GET /api/knowledge/memory-policy/diagnostics'); }
             },
         },
-        
-        
+
+
         {
             method: 'GET',
             path: api('/runtime-capability-matrix'),

@@ -3,6 +3,7 @@
  * Verifies the modular route registration and dispatch infrastructure.
  */
 import { registerAllRoutes, type ServerContext } from './index';
+import { DEFAULT_SETTINGS } from '../notemd/constants';
 
 function createMockContext(): ServerContext {
     const scheduleKnowledgeLearningPlatformWarmup = jest.fn();
@@ -19,7 +20,9 @@ function createMockContext(): ServerContext {
         tutorRouter: { getDiagnosticsSummary: () => ({}) } as any,
         memoryPolicyManager: { getDiagnosticsSummary: () => ({}) } as any,
         notemdService: {} as any,
-        loadNotemdSettings: async () => ({}),
+        loadNotemdSettings: async () => structuredClone(DEFAULT_SETTINGS),
+        persistNotemdSettings: async () => structuredClone(DEFAULT_SETTINGS),
+        notemdHttp: {} as any,
         LOOPBACK_HOST: '127.0.0.1',
         finalPort: 3000,
         KNOWLEDGE_GRAPH_STORE_BACKEND: 'file',

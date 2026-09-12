@@ -13,6 +13,8 @@ const SERVER_ENTRY = path.join(REPO_ROOT, 'dist', 'src', 'server.js');
 const FRONTEND_DIR = path.join(REPO_ROOT, 'dist', 'src', 'frontend');
 const LEGACY_EQUIVALENT_PROBES = [
     { method: 'GET', path: '/api/notemd/settings' },
+    { method: 'GET', path: '/api/notemd/capability-manifest' },
+    { method: 'GET', path: '/api/notemd/invocation-contract' },
     { method: 'GET', path: '/api/folders' },
     { method: 'GET', path: '/api/available-targets' },
     { method: 'GET', path: '/api/kb-path' },
@@ -50,8 +52,6 @@ const REGISTRY_ONLY_PROBES = [
     { method: 'GET', path: '/api/knowledge/store-diagnostics', expectedRegistryStatus: 200, expectedLegacyStatus: 404 },
     { method: 'GET', path: '/api/knowledge/query-backend-config', expectedRegistryStatus: 200, expectedLegacyStatus: 404 },
     { method: 'GET', path: '/api/knowledge/runtime-capability-matrix', expectedRegistryStatus: 200, expectedLegacyStatus: 404 },
-    { method: 'GET', path: '/api/notemd/capability-manifest', expectedRegistryStatus: 200, expectedLegacyStatus: 404 },
-    { method: 'GET', path: '/api/notemd/invocation-contract', expectedRegistryStatus: 200, expectedLegacyStatus: 404 },
 ];
 
 const VOLATILE_KEYS = new Set([

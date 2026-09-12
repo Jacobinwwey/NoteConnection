@@ -1,4 +1,15 @@
 import type * as http from 'http';
+import type { LlmProviderClient, NotemdSettings } from '../notemd';
+
+export interface NotemdHttpBoundary {
+    readJsonBody: (req: http.IncomingMessage) => Promise<any>;
+    writeBodyParseErrorResponse: (res: http.ServerResponse, error: unknown) => boolean;
+    writeApiErrorResponse: (res: http.ServerResponse, error: unknown, options: { context: string; requestId?: string }) => void;
+    resolvePathWithinKnowledgeBase: (rawPath: unknown, options?: { expectedType?: 'file' | 'directory' | 'any'; allowMissing?: boolean }) => Promise<string>;
+    writeSseEvent: (res: http.ServerResponse, eventType: string, payload: unknown) => void;
+    finishSseResponse: (res: http.ServerResponse) => Promise<void>;
+    llmClient: LlmProviderClient;
+}
 
 export interface RuntimeRunbookRouteOps {
     getRunbook?: (request?: { checkId?: string }) => Promise<any>;
@@ -60,10 +71,10 @@ export interface ServerContext {
     tutorRouter: any;
     memoryPolicyManager: any;
     notemdService: any;
-    loadNotemdSettings: () => Promise<any>;
-    getNotemdOperationSummary?: () => { total: number; running: number };
+    notemdHttp: NotemdHttpBoundary;
+    loadNotemdSettings: () => Promise<NotemdSettings>;
     executeQueryBackendConfigUpdate?: (payload: unknown) => Promise<Record<string, unknown>>;
-    persistNotemdSettings?: (settingsLike: unknown) => Promise<any>;
+    persistNotemdSettings: (settingsLike: unknown) => Promise<NotemdSettings>;
     loadFrontendSettings?: () => Promise<any>;
     markdownGateway?: any;
     LOOPBACK_HOST: string;

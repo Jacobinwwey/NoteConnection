@@ -22,9 +22,7 @@ import {
     LlmProviderClient,
     NotemdService,
     type LlmProviderConfig,
-    type NotemdSettings,
-    type ProgressEvent,
-    type ProgressReporter,
+    type NotemdSettings
 } from './notemd';
 import {
     applyFrontendSettingsToAppConfig,
@@ -34,17 +32,11 @@ import {
     extractPathModeSettingsFromAppConfig,
     extractNotemdSettingsFromAppConfig,
     loadAppConfigToml,
-    resolveAppConfigPath,
     type FrontendSettings,
     type PathModeSettings,
-    saveAppConfigToml,
+    saveAppConfigToml
 } from './notemd/AppConfigToml';
-import {
-    NOTEMD_PROVIDER_TEMPLATES,
-    applyProviderTemplateToSettings,
-    getNotemdProviderTemplate,
-    mergeProviderTemplatesIntoNotemdSection,
-} from './notemd/providerTemplates';
+
 import {
     MarkdownGateway,
     MARKDOWN_PROTOCOL_VERSION,
@@ -7347,17 +7339,6 @@ const markdownGateway = new MarkdownGateway({
     },
 });
 
-type NotemdOperationState = {
-    id: string;
-    controller: AbortController;
-    status: 'running' | 'done' | 'cancelled' | 'error';
-    createdAt: number;
-    updatedAt: number;
-    logs: ProgressEvent[];
-};
-
-const NOTEMD_ACTIVE_OPERATIONS = new Map<string, NotemdOperationState>();
-
 type AgentConversationTurnExecutionFailure = {
     error: string;
     errorCode: string;
@@ -12600,96 +12581,6 @@ async function persistNotemdSettings(settingsLike: unknown): Promise<NotemdSetti
     return cloneNotemdSettings(normalized);
 }
 
-type NotemdWorkspaceState = {
-    filePath: string;
-    folderPath: string;
-    outputFilePath: string;
-    outputFolderPath: string;
-};
-
-function extractNotemdWorkspaceState(settings: NotemdSettings): NotemdWorkspaceState {
-    return {
-        filePath: String(settings.workspaceFilePath || '').trim(),
-        folderPath: String(settings.workspaceFolderPath || '').trim(),
-        outputFilePath: String(settings.workspaceOutputFilePath || '').trim(),
-        outputFolderPath: String(settings.workspaceOutputFolderPath || '').trim(),
-    };
-}
-
-function normalizeWorkspaceField(
-    source: Record<string, unknown>,
-    keys: string[],
-    fallback: string
-): string {
-    for (const key of keys) {
-        if (!Object.prototype.hasOwnProperty.call(source, key)) {
-            continue;
-        }
-        return String(source[key] || '').trim();
-    }
-    return fallback;
-}
-
-function applyWorkspacePatchToSettings(
-    settings: NotemdSettings,
-    workspacePatch: unknown
-): NotemdSettings {
-    const next = cloneNotemdSettings(settings);
-    if (!isObjectRecord(workspacePatch)) {
-        return next;
-    }
-
-    next.workspaceFilePath = normalizeWorkspaceField(
-        workspacePatch,
-        ['filePath', 'file_path', 'workspaceFilePath', 'workspace_file_path'],
-        next.workspaceFilePath
-    );
-    next.workspaceFolderPath = normalizeWorkspaceField(
-        workspacePatch,
-        ['folderPath', 'folder_path', 'workspaceFolderPath', 'workspace_folder_path'],
-        next.workspaceFolderPath
-    );
-    next.workspaceOutputFilePath = normalizeWorkspaceField(
-        workspacePatch,
-        ['outputFilePath', 'output_file_path', 'workspaceOutputFilePath', 'workspace_output_file_path'],
-        next.workspaceOutputFilePath
-    );
-    next.workspaceOutputFolderPath = normalizeWorkspaceField(
-        workspacePatch,
-        ['outputFolderPath', 'output_folder_path', 'workspaceOutputFolderPath', 'workspace_output_folder_path'],
-        next.workspaceOutputFolderPath
-    );
-
-    return next;
-}
-
-async function persistNotemdWorkspacePatch(workspacePatch: unknown): Promise<NotemdWorkspaceState> {
-    const settings = await loadNotemdSettings();
-    const nextSettings = applyWorkspacePatchToSettings(settings, workspacePatch);
-    const persisted = await persistNotemdSettings(nextSettings);
-    return extractNotemdWorkspaceState(persisted);
-}
-
-async function ensureNotemdProviderTemplatesPersisted(): Promise<{
-    configPath: string;
-    persisted: boolean;
-}> {
-    const appConfig = await loadAppConfigToml();
-    const currentNotemdSection = isObjectRecord(appConfig.notemd) ? appConfig.notemd : {};
-    const nextNotemdSection = mergeProviderTemplatesIntoNotemdSection(currentNotemdSection);
-    const persisted = JSON.stringify(currentNotemdSection) !== JSON.stringify(nextNotemdSection);
-    if (persisted) {
-        await saveAppConfigToml({
-            ...appConfig,
-            notemd: nextNotemdSection,
-        });
-    }
-    return {
-        configPath: resolveAppConfigPath(),
-        persisted,
-    };
-}
-
 function clonePathModeSettings(settings: PathModeSettings): PathModeSettings {
     return JSON.parse(JSON.stringify(settings)) as PathModeSettings;
 }
@@ -12740,36 +12631,6 @@ async function persistFrontendSettings(settingsLike: unknown): Promise<FrontendS
     return cloneFrontendSettings(persisted);
 }
 
-function generateNotemdOperationId(): string {
-    return `notemd-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-}
-
-function createNotemdOperation(operationIdCandidate?: unknown): NotemdOperationState {
-    const requestedId = String(operationIdCandidate || '').trim();
-    const operationId = requestedId || generateNotemdOperationId();
-    const state: NotemdOperationState = {
-        id: operationId,
-        controller: new AbortController(),
-        status: 'running',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        logs: [],
-    };
-    NOTEMD_ACTIVE_OPERATIONS.set(operationId, state);
-    return state;
-}
-
-function finalizeNotemdOperation(state: NotemdOperationState, status: NotemdOperationState['status']): void {
-    state.status = status;
-    state.updatedAt = Date.now();
-    setTimeout(() => {
-        const current = NOTEMD_ACTIVE_OPERATIONS.get(state.id);
-        if (current === state && current.status !== 'running') {
-            NOTEMD_ACTIVE_OPERATIONS.delete(state.id);
-        }
-    }, 60000);
-}
-
 const sseResponseWriters = new WeakMap<http.ServerResponse, SseResponseWriter>();
 
 function writeSseEvent(res: http.ServerResponse, eventType: string, payload: unknown): void {
@@ -12786,41 +12647,6 @@ async function finishSseResponse(res: http.ServerResponse): Promise<void> {
     const writer = sseResponseWriters.get(res);
     if (writer) await writer.finish();
     else res.end();
-}
-
-function createNotemdReporter(state: NotemdOperationState, res?: http.ServerResponse): ProgressReporter {
-    res?.once('close', () => {
-        if (!res.writableFinished && state.status === 'running') state.controller.abort();
-    });
-    return {
-        report: (eventLike) => {
-            const event: ProgressEvent = {
-                ...eventLike,
-                operationId: state.id,
-                timestamp: Date.now(),
-            };
-            if (state.logs.length >= 256) state.logs.shift();
-            state.logs.push(event);
-            state.updatedAt = event.timestamp;
-            if (res) {
-                writeSseEvent(res, event.type, event);
-            }
-        },
-        isCancelled: () => state.controller.signal.aborted,
-    };
-}
-
-function shouldStreamNotemdResponse(req: http.IncomingMessage): boolean {
-    const acceptHeader = typeof req.headers.accept === 'string' ? req.headers.accept : '';
-    if (acceptHeader.includes('text/event-stream')) {
-        return true;
-    }
-    try {
-        const urlObj = new URL(req.url || '/', `http://${LOOPBACK_HOST}:${PORT}`);
-        return urlObj.searchParams.get('stream') === '1';
-    } catch (_error) {
-        return false;
-    }
 }
 
 async function resolveNearestExistingAncestor(candidatePath: string): Promise<string | null> {
@@ -14245,16 +14071,6 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             }
         }
     }
-
-    // --- Strict Registry Mode ---
-    // Why: The inline notemd handlers (~1,147 lines) are a legacy fallback from
-    // the pre-modularization era. The route registry intercepts all covered routes
-    // first (line ~13170), making the inline handlers unreachable in production.
-    // This flag lets us verify 100% coverage in CI before safe deletion.
-    // Conditional (off by default): integration tests start the server without
-    // full registry init and depend on the inline fallback. Once all tests use
-    // the registry, this becomes default and inline handlers can be deleted.
-    const STRICT_REGISTRY = process.env.NOTE_CONNECTION_STRICT_REGISTRY === '1';
     const ROUTE_DISPATCH_MODE = String(process.env.NOTE_CONNECTION_ROUTE_DISPATCH_MODE || 'registry')
         .trim()
         .toLowerCase() === 'legacy'
@@ -14310,12 +14126,7 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         memoryPolicyManager,
         notemdService,
         loadNotemdSettings,
-        getNotemdOperationSummary: () => ({
-            total: NOTEMD_ACTIVE_OPERATIONS.size,
-            running: Array.from(NOTEMD_ACTIVE_OPERATIONS.values()).filter(
-                (operation) => operation.status === 'running'
-            ).length,
-        }),
+        notemdHttp: { readJsonBody, writeBodyParseErrorResponse, writeApiErrorResponse, resolvePathWithinKnowledgeBase, writeSseEvent, finishSseResponse, llmClient: notemdLlmClient },
         executeQueryBackendConfigUpdate: async (payload: unknown) => {
             const requestPayload = normalizeQueryBackendConfigRequestPayload(payload);
             const result = await knowledgeLearningPlatform.updateQueryBackendConfig(requestPayload);
@@ -14352,6 +14163,64 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         getPathBridge: () => pathBridge,
     };
 
+    // These routes keep their complete state/I/O operation in this server.
+    const serverOwnedApiPaths = new Set<string>([
+        '/api/available-targets',
+        '/api/build',
+        '/api/check-cache',
+        '/api/clipboard/image',
+        '/api/clipboard/image-binary',
+        '/api/content',
+        '/api/folders',
+        '/api/frontend/settings',
+        '/api/kb-path',
+        '/api/knowledge/conversation',
+        '/api/knowledge/conversation-memory/add',
+        '/api/knowledge/conversation-memory/delete',
+        '/api/knowledge/conversation-memory/feedback',
+        '/api/knowledge/conversation-memory/search',
+        '/api/knowledge/conversation/turn-cache/diagnostics',
+        '/api/knowledge/conversation/turn-cache/diagnostics/trend',
+        '/api/knowledge/conversation/turn-cache/diagnostics/trend/export',
+        '/api/knowledge/conversation/turn-cache/diagnostics/trend/index',
+        '/api/knowledge/ingest/guardrails/evaluate',
+        '/api/knowledge/mastery/diagnose',
+        '/api/knowledge/mastery/misconceptions',
+        '/api/knowledge/memory/policy',
+        '/api/knowledge/path',
+        '/api/knowledge/quality/evaluate',
+        '/api/knowledge/quality/snapshot',
+        '/api/knowledge/query',
+        '/api/knowledge/query-backend-config',
+        '/api/knowledge/query/compare-backends',
+        '/api/knowledge/runtime-capability-runbook/remediation-event',
+        '/api/knowledge/runtime-capability-runbook/remediation-event/replay',
+        '/api/knowledge/runtime-capability-runbook/remediation-event/replay-schedule',
+        '/api/knowledge/runtime-capability-runbook/remediation-event/replay-schedule/tick',
+        '/api/knowledge/session/action',
+        '/api/knowledge/session/execute',
+        '/api/knowledge/session/history',
+        '/api/knowledge/session/orchestration/config',
+        '/api/knowledge/session/plan',
+        '/api/knowledge/session/plan/evaluate',
+        '/api/knowledge/staleness/rebuild',
+        '/api/knowledge/store/reload',
+        '/api/knowledge/tutor/action',
+        '/api/markdown/chunk',
+        '/api/markdown/index',
+        '/api/markdown/resolve-node',
+        '/api/markdown/resolve-wiki',
+        '/api/path-mode/settings',
+        '/api/render/graphviz',
+        '/api/render/math',
+        '/api/render/mermaid',
+        '/api/restore-cache',
+        '/api/runtime-diagnostics',
+        '/api/runtime-request-trace',
+    ]);
+    let intentionalInlineHits = 0;
+    const inlineFallbacksByFamily: Record<string, number> = {};
+
     // Route migration tracking
     let routeRegistryHits = 0;
     let routeInlineFallbacks = 0;
@@ -14372,10 +14241,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
 
     const routeMigrationStats = {
         totalModularRoutes: allRoutes.length,
-        totalInlineRoutes: 7, // terminal routes (meta/diagnostics/static-serve) — intentionally kept inline
+        totalInlineRoutes: [...serverOwnedApiPaths].filter(pathname => !allRoutes.some(route => route.path === pathname)).length,
         dispatchMode: ROUTE_DISPATCH_MODE,
-        // notemd inline block (~1,147 lines) is 100% registry-covered (30 registry routes > 16 inline).
-        // Pending safe deletion after integration test; set NOTE_CONNECTION_STRICT_REGISTRY=1 to skip inline.
         registryHits: () => routeRegistryHits,
         inlineFallbacks: () => routeInlineFallbacks,
         registryHitRate: () => {
@@ -14383,9 +14250,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             return total === 0 ? '0.0%' : (routeRegistryHits / total * 100).toFixed(1) + '%';
         },
         migrationProgress: () => {
-            const covered = allRoutes.length;
-            const total = covered + 7; // 7 terminal routes intentionally kept inline
-            return (covered / total * 100).toFixed(1) + '%';
+            const registeredPaths = new Set(allRoutes.map(route => route.path));
+            const supportedPaths = new Set([...registeredPaths, ...serverOwnedApiPaths]);
+            return (registeredPaths.size / supportedPaths.size * 100).toFixed(1) + '%';
         },
     };
 
@@ -14449,43 +14316,28 @@ export const startServer = async (options: { port?: number, targetPath?: string 
             return;
         }
 
-        // Route Registry Dispatch: try modular routes first, fall through to legacy inline chain
-        const methodMap = routeMap.get(req.method || 'GET');
-        if (USE_REGISTRY_DISPATCH && methodMap) {
-            const exactRoute = methodMap.get(requestPath);
-            if (exactRoute) {
-                routeRegistryHits++;
-                await exactRoute.handler(req, res, routeContext);
-                return;
-            }
-            for (const prefixRoute of prefixRoutes) {
-                if (requestPath.startsWith(prefixRoute.path) && prefixRoute.method === (req.method || 'GET')) {
-                    routeRegistryHits++;
-                    await prefixRoute.handler(req, res, routeContext);
-                    return;
-                }
-            }
+        const methodMap = routeMap.get(requestMethod);
+        const registeredRoute = methodMap?.get(requestPath)
+            || prefixRoutes.find(route => requestPath.startsWith(route.path) && route.method === requestMethod);
+        if (registeredRoute && (USE_REGISTRY_DISPATCH || requestPath.startsWith('/api/notemd/'))) {
+            routeRegistryHits++;
+            try { await registeredRoute.handler(req, res, routeContext); }
+            catch (error) { writeApiErrorResponse(res, error, { context: requestMethod + ' ' + requestPath, requestId }); }
+            return;
         }
-        if (requestPath.startsWith('/api/')) {
+        if (requestPath.startsWith('/api/notemd/')) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'NoteMD route not found' }));
+            return;
+        }
+        if (serverOwnedApiPaths.has(requestPath)) intentionalInlineHits++;
+        else if (requestPath.startsWith('/api/')) {
             routeInlineFallbacks++;
+            const family = requestPath.split('/')[2] || 'unknown';
+            inlineFallbacksByFamily[family] = (inlineFallbacksByFamily[family] || 0) + 1;
         }
 
-        // ── Inline Chain (Legacy) ──────────────────────────────────
-        // Route distribution:
-        //   Registry-covered: ~80 routes (knowledge:36G+28P, notemd:2G+16P, + data/render)
-        //   Terminal inline:  ~7 routes intentionally kept inline:
-        //     - runtime-diagnostics, runtime-request-trace (meta: report server state)
-        //     - static file serving (requires FRONTEND_DIR + MIME resolution)
-        //     - graph asset serving (requires cliOptions + generated asset paths)
-        //     - generated asset resolution (requires CLI build output paths)
-        //   These are terminal — they require deep server state that can't be
-        //   cleanly exposed through ServerContext without circular dependencies.
-        //   Total:            ~105 route patterns
-        //
-        // The registry dispatch (above) intercepts covered routes first.
-        // Tag [REGISTRY_COVERED] marks routes already handled by registry.
-        // Migration metrics: GET /api/runtime-diagnostics → routeMigration
-
+        // Server-owned operations retain their validation, state and native I/O boundaries.
         if (req.method === 'GET') {
             const getPathname = getRawRequestPathname(req.url);
 
@@ -14512,89 +14364,6 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 const request = normalizeAgentConversationTurnCacheAlertTrendRequestFromQuery(new URL(req.url!, `http://${LOOPBACK_HOST}`).searchParams);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ success: true, result: queryAgentConversationTurnCacheAlertTrendExport(request) }));
-                return;
-            }
-
-            // ── Notemd routes (covered by routes/notemd.ts) ──
-            // [REGISTRY_COVERED: routes/notemd.ts]
-            if (STRICT_REGISTRY && getPathname.startsWith('/api/notemd/')) {
-                res.writeHead(501, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'strict_registry: route must be handled by modular registry', path: getPathname }));
-                routeInlineFallbacks++;
-                return;
-            }
-            if (getPathname === '/api/notemd/settings') {
-                try {
-                    const settings = await loadNotemdSettings();
-                    const activeOperationCount = Array.from(NOTEMD_ACTIVE_OPERATIONS.values()).filter(
-                        (operation) => operation.status === 'running'
-                    ).length;
-
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(
-                        JSON.stringify({
-                            success: true,
-                            settings,
-                            operationSummary: {
-                                total: NOTEMD_ACTIVE_OPERATIONS.size,
-                                running: activeOperationCount,
-                            },
-                        })
-                    );
-                } catch (error) {
-                    writeApiErrorResponse(res, error, {
-                        context: 'API:GET /api/notemd/settings',
-                        requestId,
-                    });
-                }
-                return;
-            }
-
-            if (getPathname === '/api/notemd/provider-templates') {
-                try {
-                    const urlObj = new URL(req.url || '/', `http://${LOOPBACK_HOST}:${finalPort}`);
-                    const persistTemplates = ['1', 'true', 'yes'].includes(
-                        String(urlObj.searchParams.get('persist') || '').trim().toLowerCase()
-                    );
-                    let persistence = { configPath: resolveAppConfigPath(), persisted: false };
-                    if (persistTemplates) {
-                        persistence = await ensureNotemdProviderTemplatesPersisted();
-                    }
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(
-                        JSON.stringify({
-                            success: true,
-                            templates: NOTEMD_PROVIDER_TEMPLATES,
-                            configPath: persistence.configPath,
-                            persisted: persistence.persisted,
-                        })
-                    );
-                } catch (error) {
-                    writeApiErrorResponse(res, error, {
-                        context: 'API:GET /api/notemd/provider-templates',
-                        requestId,
-                    });
-                }
-                return;
-            }
-
-            if (getPathname === '/api/notemd/workspace') {
-                try {
-                    const settings = await loadNotemdSettings();
-                    const workspace = extractNotemdWorkspaceState(settings);
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(
-                        JSON.stringify({
-                            success: true,
-                            workspace,
-                        })
-                    );
-                } catch (error) {
-                    writeApiErrorResponse(res, error, {
-                        context: 'API:GET /api/notemd/workspace',
-                        requestId,
-                    });
-                }
                 return;
             }
 
@@ -14726,6 +14495,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             totalModularRoutes: routeMigrationStats.totalModularRoutes,
                             registryHits: routeMigrationStats.registryHits(),
                             inlineFallbacks: routeMigrationStats.inlineFallbacks(),
+                            intentionalInlineHits,
+                            inlineFallbacksByFamily: { ...inlineFallbacksByFamily },
                             registryHitRate: routeMigrationStats.registryHitRate(),
                             migrationProgress: routeMigrationStats.migrationProgress(),
                             modularRoutes: routeMigrationStats.totalModularRoutes,
@@ -15709,89 +15480,6 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 return;
             }
 
-            // ── Notemd POST routes (covered by routes/notemd.ts) ──
-            // [REGISTRY_COVERED: routes/notemd.ts]
-            if (STRICT_REGISTRY && postPathname.startsWith('/api/notemd/')) {
-                res.writeHead(501, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'strict_registry: route must be handled by modular registry', path: postPathname }));
-                routeInlineFallbacks++;
-                return;
-            }
-            if (postPathname === '/api/notemd/settings') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const settingsCandidate = isObjectRecord(payload) && payload.settings !== undefined
-                        ? payload.settings
-                        : payload;
-                    const settings = await persistNotemdSettings(settingsCandidate);
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, settings }));
-                } catch (error) {
-                    writeApiErrorResponse(res, error, {
-                        context: 'API:POST /api/notemd/settings',
-                        requestId,
-                    });
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/provider-templates/apply') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const rawTemplateId = isObjectRecord(payload)
-                        ? String(payload.templateId || payload.template_id || '').trim()
-                        : '';
-                    if (!rawTemplateId) {
-                        res.writeHead(400, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: 'Missing templateId.' }));
-                        return;
-                    }
-                    const template = getNotemdProviderTemplate(rawTemplateId);
-                    if (!template) {
-                        res.writeHead(404, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: `Unknown provider template: ${rawTemplateId}` }));
-                        return;
-                    }
-
-                    const settings = await loadNotemdSettings();
-                    const updatedSettings = applyProviderTemplateToSettings(settings, rawTemplateId);
-                    const persistedSettings = await persistNotemdSettings(updatedSettings);
-                    const persistence = await ensureNotemdProviderTemplatesPersisted();
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
-                        success: true,
-                        template,
-                        settings: persistedSettings,
-                        configPath: persistence.configPath,
-                        persistedTemplates: persistence.persisted,
-                    }));
-                } catch (error) {
-                    writeApiErrorResponse(res, error, {
-                        context: 'API:POST /api/notemd/provider-templates/apply',
-                        requestId,
-                    });
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/workspace') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const workspaceCandidate = isObjectRecord(payload) && payload.workspace !== undefined
-                        ? payload.workspace
-                        : payload;
-                    const workspace = await persistNotemdWorkspacePatch(workspaceCandidate);
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, workspace }));
-                } catch (error) {
-                    writeApiErrorResponse(res, error, {
-                        context: 'API:POST /api/notemd/workspace',
-                        requestId,
-                    });
-                }
-                return;
-            }
-
             if (postPathname === '/api/path-mode/settings') {
                 try {
                     const payload = await readJsonBody(req);
@@ -16055,698 +15743,6 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         error: String(error),
                         markdownProtocolVersion: MARKDOWN_PROTOCOL_VERSION,
                     }));
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/cancel') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const operationId = String(payload.operationId || '').trim();
-                    if (!operationId) {
-                        res.writeHead(400, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: 'Missing operationId' }));
-                        return;
-                    }
-
-                    const operation = NOTEMD_ACTIVE_OPERATIONS.get(operationId);
-                    if (!operation) {
-                        res.writeHead(404, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: 'Operation not found' }));
-                        return;
-                    }
-
-                    if (operation.status !== 'running') {
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end(
-                            JSON.stringify({
-                                success: false,
-                                operationId,
-                                status: operation.status,
-                                message: 'Operation is not running.',
-                            })
-                        );
-                        return;
-                    }
-
-                    operation.controller.abort();
-                    finalizeNotemdOperation(operation, 'cancelled');
-
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, operationId, status: 'cancelled' }));
-                } catch (error) {
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/cancel');
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, error: String(error) }));
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/test-llm') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const settings = await loadNotemdSettings();
-
-                    const providerName = String(payload.providerName || settings.activeProvider).trim();
-                    const provider = settings.providers.find((item) => item.name === providerName);
-                    if (!provider) {
-                        res.writeHead(400, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: `Unknown provider: ${providerName}` }));
-                        return;
-                    }
-
-                    const result = await notemdLlmClient.testConnection(provider);
-                    const statusCode = result.success ? 200 : 400;
-                    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify(result));
-                } catch (error) {
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/test-llm');
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, error: String(error) }));
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/process-file') {
-                const streamEnabled = shouldStreamNotemdResponse(req);
-                let operation: NotemdOperationState | null = null;
-                try {
-                    const payload = await readJsonBody(req);
-                    const settings = await loadNotemdSettings();
-                    operation = createNotemdOperation(payload.operationId);
-                    const reporter = createNotemdReporter(operation, streamEnabled ? res : undefined);
-
-                    if (streamEnabled) {
-                        res.writeHead(200, {
-                            'Content-Type': 'text/event-stream',
-                            'Cache-Control': 'no-cache',
-                            Connection: 'keep-alive',
-                        });
-                        writeSseEvent(res, 'operation', {
-                            operationId: operation.id,
-                            status: operation.status,
-                        });
-                    }
-
-                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
-                        expectedType: 'file',
-                    });
-                    const resolvedOutputPath = payload.outputPath
-                        ? await resolvePathWithinKnowledgeBase(payload.outputPath, {
-                              expectedType: 'any',
-                              allowMissing: true,
-                          })
-                        : undefined;
-
-                    const result = await notemdService.processFile(
-                        {
-                            filePath: resolvedFilePath,
-                            outputPath: resolvedOutputPath,
-                            createConceptNotes: payload.createConceptNotes === true,
-                            dryRun: payload.dryRun === true,
-                        },
-                        settings,
-                        reporter,
-                        operation.controller.signal
-                    );
-                    void persistNotemdWorkspacePatch({
-                        filePath: resolvedFilePath,
-                        folderPath: path.dirname(resolvedFilePath),
-                        outputFilePath: resolvedOutputPath || result.outputPath || '',
-                        outputFolderPath: path.dirname(resolvedOutputPath || result.outputPath || resolvedFilePath),
-                    }).catch((workspaceError) => {
-                        warnDiagnostic('[NoteMD] Failed to persist workspace state after process-file.', workspaceError);
-                    });
-
-                    finalizeNotemdOperation(operation, 'done');
-                    if (streamEnabled) {
-                        writeSseEvent(res, 'done', {
-                            success: true,
-                            operationId: operation.id,
-                            result,
-                        });
-                        await finishSseResponse(res);
-                    } else {
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end(
-                            JSON.stringify({
-                                success: true,
-                                operationId: operation.id,
-                                result,
-                                logs: operation.logs,
-                            })
-                        );
-                    }
-                } catch (error) {
-                    if (operation) {
-                        finalizeNotemdOperation(operation, operation.controller.signal.aborted ? 'cancelled' : 'error');
-                    }
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        const statusCode = operation?.controller.signal.aborted ? 499 : 403;
-                        const payload = { success: false, error: String((error as Error).message || 'Access denied') };
-                        if (streamEnabled) {
-                            writeSseEvent(res, 'error', payload);
-                            await finishSseResponse(res);
-                        } else {
-                            res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify(payload));
-                        }
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/process-file');
-                    const payload = { success: false, error: String(error) };
-                    if (streamEnabled) {
-                        writeSseEvent(res, 'error', payload);
-                        await finishSseResponse(res);
-                    } else {
-                        res.writeHead(500, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify(payload));
-                    }
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/process-folder') {
-                const streamEnabled = shouldStreamNotemdResponse(req);
-                let operation: NotemdOperationState | null = null;
-                try {
-                    const payload = await readJsonBody(req);
-                    const settings = await loadNotemdSettings();
-                    operation = createNotemdOperation(payload.operationId);
-                    const reporter = createNotemdReporter(operation, streamEnabled ? res : undefined);
-
-                    if (streamEnabled) {
-                        res.writeHead(200, {
-                            'Content-Type': 'text/event-stream',
-                            'Cache-Control': 'no-cache',
-                            Connection: 'keep-alive',
-                        });
-                        writeSseEvent(res, 'operation', {
-                            operationId: operation.id,
-                            status: operation.status,
-                        });
-                    }
-
-                    const resolvedFolderPath = await resolvePathWithinKnowledgeBase(payload.folderPath, {
-                        expectedType: 'directory',
-                    });
-                    const resolvedOutputFolderPath = payload.outputFolderPath
-                        ? await resolvePathWithinKnowledgeBase(payload.outputFolderPath, {
-                              expectedType: 'any',
-                              allowMissing: true,
-                          })
-                        : undefined;
-
-                    const result = await notemdService.processFolder(
-                        {
-                            folderPath: resolvedFolderPath,
-                            outputFolderPath: resolvedOutputFolderPath,
-                            createConceptNotes: payload.createConceptNotes === true,
-                            dryRun: payload.dryRun === true,
-                        },
-                        settings,
-                        reporter,
-                        operation.controller.signal
-                    );
-                    void persistNotemdWorkspacePatch({
-                        folderPath: resolvedFolderPath,
-                        outputFolderPath: resolvedOutputFolderPath || '',
-                    }).catch((workspaceError) => {
-                        warnDiagnostic('[NoteMD] Failed to persist workspace state after process-folder.', workspaceError);
-                    });
-
-                    finalizeNotemdOperation(operation, 'done');
-                    if (streamEnabled) {
-                        writeSseEvent(res, 'done', {
-                            success: true,
-                            operationId: operation.id,
-                            result,
-                        });
-                        await finishSseResponse(res);
-                    } else {
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end(
-                            JSON.stringify({
-                                success: true,
-                                operationId: operation.id,
-                                result,
-                                logs: operation.logs,
-                            })
-                        );
-                    }
-                } catch (error) {
-                    if (operation) {
-                        finalizeNotemdOperation(operation, operation.controller.signal.aborted ? 'cancelled' : 'error');
-                    }
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        const statusCode = operation?.controller.signal.aborted ? 499 : 403;
-                        const payload = { success: false, error: String((error as Error).message || 'Access denied') };
-                        if (streamEnabled) {
-                            writeSseEvent(res, 'error', payload);
-                            await finishSseResponse(res);
-                        } else {
-                            res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify(payload));
-                        }
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/process-folder');
-                    const payload = { success: false, error: String(error) };
-                    if (streamEnabled) {
-                        writeSseEvent(res, 'error', payload);
-                        await finishSseResponse(res);
-                    } else {
-                        res.writeHead(500, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify(payload));
-                    }
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/generate-content') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const settings = await loadNotemdSettings();
-                    let title = String(payload.title || '').trim();
-                    const filePathCandidate = String(payload.filePath || '').trim();
-                    if (!title && filePathCandidate) {
-                        title = path.basename(filePathCandidate, path.extname(filePathCandidate));
-                    }
-                    if (!title) {
-                        res.writeHead(400, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: 'Missing title or filePath' }));
-                        return;
-                    }
-
-                    const content = await notemdService.generateContent(
-                        title,
-                        typeof payload.context === 'string' ? payload.context : undefined,
-                        settings
-                    );
-
-                    let outputPath: string | null = null;
-                    if (payload.outputPath) {
-                        outputPath = await resolvePathWithinKnowledgeBase(payload.outputPath, {
-                            expectedType: 'any',
-                            allowMissing: true,
-                        });
-                    } else if (filePathCandidate) {
-                        outputPath = await resolvePathWithinKnowledgeBase(filePathCandidate, {
-                            expectedType: 'any',
-                            allowMissing: true,
-                        });
-                    }
-                    if (outputPath) {
-                        await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
-                        await fs.promises.writeFile(outputPath, content, 'utf8');
-                    }
-
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(
-                        JSON.stringify({
-                            success: true,
-                            title,
-                            outputPath,
-                            content,
-                        })
-                    );
-                } catch (error) {
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        res.writeHead(403, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/generate-content');
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, error: String(error) }));
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/translate-file') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const settings = await loadNotemdSettings();
-                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
-                        expectedType: 'file',
-                    });
-                    const resolvedOutputPath = payload.outputPath
-                        ? await resolvePathWithinKnowledgeBase(payload.outputPath, {
-                              expectedType: 'any',
-                              allowMissing: true,
-                          })
-                        : undefined;
-                    const targetLanguage = String(payload.targetLanguage || settings.translateLanguage || settings.language).trim();
-                    if (!targetLanguage) {
-                        res.writeHead(400, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: 'Missing targetLanguage' }));
-                        return;
-                    }
-
-                    const result = await notemdService.translateFile(
-                        {
-                            filePath: resolvedFilePath,
-                            outputPath: resolvedOutputPath,
-                            targetLanguage,
-                        },
-                        settings
-                    );
-
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, result }));
-                } catch (error) {
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        res.writeHead(403, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/translate-file');
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, error: String(error) }));
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/translate-folder') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const settings = await loadNotemdSettings();
-                    const resolvedFolderPath = await resolvePathWithinKnowledgeBase(payload.folderPath, {
-                        expectedType: 'directory',
-                    });
-                    const targetLanguage = String(payload.targetLanguage || settings.translateLanguage || settings.language).trim();
-                    if (!targetLanguage) {
-                        res.writeHead(400, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: 'Missing targetLanguage' }));
-                        return;
-                    }
-
-                    const result = await notemdService.translateFolder(
-                        resolvedFolderPath,
-                        targetLanguage,
-                        settings
-                    );
-
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, result }));
-                } catch (error) {
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        res.writeHead(403, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/translate-folder');
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, error: String(error) }));
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/fix-mermaid') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
-                        expectedType: 'file',
-                    });
-                    const inPlace = payload.inPlace !== false;
-                    const result = await notemdService.fixMermaid(resolvedFilePath, inPlace);
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, result }));
-                } catch (error) {
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        res.writeHead(403, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/fix-mermaid');
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, error: String(error) }));
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/fix-formulas') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
-                        expectedType: 'file',
-                    });
-                    const inPlace = payload.inPlace !== false;
-                    const result = await notemdService.fixFormulas(resolvedFilePath, inPlace);
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, result }));
-                } catch (error) {
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        res.writeHead(403, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/fix-formulas');
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, error: String(error) }));
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/check-duplicates') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
-                        expectedType: 'file',
-                    });
-                    const result = await notemdService.checkDuplicates(resolvedFilePath);
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, result }));
-                } catch (error) {
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        res.writeHead(403, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/check-duplicates');
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, error: String(error) }));
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/extract-concepts') {
-                const streamEnabled = shouldStreamNotemdResponse(req);
-                let operation: NotemdOperationState | null = null;
-                try {
-                    const payload = await readJsonBody(req);
-                    const settings = await loadNotemdSettings();
-                    operation = createNotemdOperation(payload.operationId);
-                    const reporter = createNotemdReporter(operation, streamEnabled ? res : undefined);
-
-                    if (streamEnabled) {
-                        res.writeHead(200, {
-                            'Content-Type': 'text/event-stream',
-                            'Cache-Control': 'no-cache',
-                            Connection: 'keep-alive',
-                        });
-                        writeSseEvent(res, 'operation', {
-                            operationId: operation.id,
-                            status: operation.status,
-                        });
-                    }
-
-                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
-                        expectedType: 'file',
-                    });
-                    const result = await notemdService.extractConcepts(
-                        resolvedFilePath,
-                        settings,
-                        reporter,
-                        operation.controller.signal
-                    );
-                    void persistNotemdWorkspacePatch({
-                        filePath: resolvedFilePath,
-                        folderPath: path.dirname(resolvedFilePath),
-                    }).catch((workspaceError) => {
-                        warnDiagnostic('[NoteMD] Failed to persist workspace state after extract-concepts.', workspaceError);
-                    });
-                    finalizeNotemdOperation(operation, 'done');
-
-                    if (streamEnabled) {
-                        writeSseEvent(res, 'done', {
-                            success: true,
-                            operationId: operation.id,
-                            result,
-                        });
-                        await finishSseResponse(res);
-                    } else {
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: true, operationId: operation.id, result, logs: operation.logs }));
-                    }
-                } catch (error) {
-                    if (operation) {
-                        finalizeNotemdOperation(operation, operation.controller.signal.aborted ? 'cancelled' : 'error');
-                    }
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        const statusCode = operation?.controller.signal.aborted ? 499 : 403;
-                        const payload = { success: false, error: String((error as Error).message || 'Access denied') };
-                        if (streamEnabled) {
-                            writeSseEvent(res, 'error', payload);
-                            await finishSseResponse(res);
-                        } else {
-                            res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify(payload));
-                        }
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/extract-concepts');
-                    const payload = { success: false, error: String(error) };
-                    if (streamEnabled) {
-                        writeSseEvent(res, 'error', payload);
-                        await finishSseResponse(res);
-                    } else {
-                        res.writeHead(500, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify(payload));
-                    }
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/one-click-extract') {
-                let operation: NotemdOperationState | null = null;
-                try {
-                    const payload = await readJsonBody(req);
-                    const settings = await loadNotemdSettings();
-                    operation = createNotemdOperation(payload.operationId);
-                    const reporter = createNotemdReporter(operation);
-                    const resolvedFilePath = await resolvePathWithinKnowledgeBase(payload.filePath, {
-                        expectedType: 'file',
-                    });
-                    const result = await notemdService.oneClickExtract(
-                        resolvedFilePath,
-                        settings,
-                        reporter,
-                        operation.controller.signal
-                    );
-                    void persistNotemdWorkspacePatch({
-                        filePath: resolvedFilePath,
-                        folderPath: result.outputFolderPath,
-                        outputFolderPath: result.outputFolderPath,
-                    }).catch((workspaceError) => {
-                        warnDiagnostic('[NoteMD] Failed to persist workspace state after one-click-extract.', workspaceError);
-                    });
-                    finalizeNotemdOperation(operation, 'done');
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, operationId: operation.id, result, logs: operation.logs }));
-                } catch (error) {
-                    if (operation) {
-                        finalizeNotemdOperation(operation, operation.controller.signal.aborted ? 'cancelled' : 'error');
-                    }
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        res.writeHead(403, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/one-click-extract');
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, error: String(error) }));
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/batch-fix-mermaid') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const resolvedFolderPath = await resolvePathWithinKnowledgeBase(payload.folderPath, {
-                        expectedType: 'directory',
-                    });
-                    const result = await notemdService.batchFixMermaid(resolvedFolderPath, payload.inPlace !== false);
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, result }));
-                } catch (error) {
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        res.writeHead(403, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/batch-fix-mermaid');
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, error: String(error) }));
-                }
-                return;
-            }
-
-            if (postPathname === '/api/notemd/generate-folder-content') {
-                try {
-                    const payload = await readJsonBody(req);
-                    const settings = await loadNotemdSettings();
-                    const resolvedFolderPath = await resolvePathWithinKnowledgeBase(payload.folderPath, {
-                        expectedType: 'directory',
-                    });
-                    const result = await notemdService.generateFolderContent(resolvedFolderPath, settings);
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, result }));
-                } catch (error) {
-                    if (writeBodyParseErrorResponse(res, error)) {
-                        return;
-                    }
-                    if (isAccessDeniedError(error)) {
-                        res.writeHead(403, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: false, error: String((error as Error).message || 'Access denied') }));
-                        return;
-                    }
-                    console.error(error);
-                    CrashLogger.log(error, 'API:POST /api/notemd/generate-folder-content');
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, error: String(error) }));
                 }
                 return;
             }
@@ -17045,6 +16041,10 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                 }
                 return;
             }
+        }
+        if (!res.writableEnded && !res.destroyed) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'API route not found' }));
         }
     });
 

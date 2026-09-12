@@ -9,9 +9,10 @@ describe('route registry shadow parity gate', () => {
     };
 
     test('supports an explicit legacy mode without changing the default registry mode', () => {
-        expect(serverSource).toContain('NOTE_CONNECTION_ROUTE_DISPATCH_MODE');
-        expect(serverSource).toContain("ROUTE_DISPATCH_MODE === 'registry'");
-        expect(serverSource).toContain('USE_REGISTRY_DISPATCH && methodMap');
+        expect(serverSource.includes('NOTE_CONNECTION_ROUTE_DISPATCH_MODE')).toBe(true);
+        expect(serverSource.includes("ROUTE_DISPATCH_MODE === 'registry'")).toBe(true);
+        expect(serverSource.includes("registeredRoute && (USE_REGISTRY_DISPATCH || requestPath.startsWith('/api/notemd/'))")).toBe(true);
+        expect(/(?:get|post)Pathname === '\/api\/notemd\//.test(serverSource)).toBe(false);
     });
 
     test('ships an executable parity harness as a release gate', () => {

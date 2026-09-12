@@ -72,7 +72,7 @@ function getFreePort(): Promise<number> {
   });
 }
 
-function requestJson(port: number, method: string, requestPath: string, body?: unknown): Promise<JsonResponse> {
+function requestJson(port: number, method: string, requestPath: string, body?: unknown, headers: Record<string, string> = {}): Promise<JsonResponse> {
   return new Promise((resolve, reject) => {
     const payload = typeof body === 'undefined' ? null : Buffer.from(JSON.stringify(body), 'utf8');
     const req = http.request(
@@ -85,8 +85,9 @@ function requestJson(port: number, method: string, requestPath: string, body?: u
           ? {
               'Content-Type': 'application/json',
               'Content-Length': String(payload.length),
+              ...headers,
             }
-          : undefined,
+          : headers,
       },
       (res) => {
         let text = '';
@@ -212,7 +213,7 @@ describe('NoteMD server integration', () => {
     originalArgv = [...process.argv];
     serverModule = loadFreshServerModule();
     server = await serverModule.startServer({ port });
-  });
+  }, 20000);
 
   async function shutdownServerInstance(instance: Server | null | undefined): Promise<void> {
     if (!instance) {
@@ -484,6 +485,91 @@ describe('NoteMD server integration', () => {
     expect(workspaceResponse.status).toBe(200);
     expect(workspaceResponse.body.workspace.filePath).toBe(kbFilePath);
     expect(workspaceResponse.body.workspace.folderPath).toBe(path.dirname(kbFilePath));
+  });
+
+  test('NoteMD protocol rejects wrong content type, oversized input and missing cancellation targets', async () => {
+    const wrongType = await requestJson(port, 'POST', '/api/notemd/settings', {}, { 'Content-Type': 'text/plain' });
+    expect(wrongType.status).toBe(415);
+    const oversized = await requestJson(port, 'POST', '/api/notemd/settings', { pad: 'x'.repeat(600 * 1024) });
+    expect(oversized.status).toBe(413);
+    const cancel = await requestJson(port, 'POST', '/api/notemd/cancel', { operationId: 'missing-operation' });
+    expect(cancel.status).toBe(404);
+  });
+
+  test('NoteMD protocol rejects files outside the configured workspace without mutation', async () => {
+    const outside = temp.file('outside/rejected.md', '# Outside\n$\nunsafe\n$');
+    const response = await requestJson(port, 'POST', '/api/notemd/fix-formulas', { filePath: outside, inPlace: true });
+    expect(response.status).toBe(403);
+    expect(fs.readFileSync(outside, 'utf8')).toBe('# Outside\n$\nunsafe\n$');
+  });
+
+  test('NoteMD protocol emits one operation and one completion while processing a real file', async () => {
+    const response = await requestJson(port, 'POST', '/api/notemd/process-file', {
+      filePath: kbFilePath, operationId: 'notemd-stream-contract',
+    }, { accept: 'text/event-stream' });
+    expect(response.status).toBe(200);
+    const frames = String(response.body).split('\n\n').filter(Boolean);
+    const operations = frames.filter(frame => frame.startsWith('event: operation\n'));
+    const completed = frames.filter(frame => frame.startsWith('event: done\n'));
+    expect(operations).toHaveLength(1);
+    expect(completed).toHaveLength(1);
+    expect(JSON.parse(completed[0].slice(completed[0].indexOf('data: ') + 6))).toEqual(expect.objectContaining({ success: true, operationId: 'notemd-stream-contract' }));
+  });
+
+  test('NoteMD registry owns aliases and unknown routes without an inline fallback', async () => {
+    const alias = await requestJson(port, 'PUT', '/api/notemd/fix-formulas', { filePath: kbFilePath, inPlace: true });
+    expect(alias.status).toBe(200);
+    expect((await requestJson(port, 'POST', '/api/notemd/unknown', {})).status).toBe(404);
+    const diagnostics = await requestJson(port, 'GET', '/api/runtime-diagnostics');
+    expect(diagnostics.body.routeMigration.registryHits).toBeGreaterThan(0);
+    expect(diagnostics.body.routeMigration.inlineFallbacksByFamily.notemd || 0).toBe(0);
+  });
+
+  test('NoteMD operation IDs cannot replace an active operation and cancellation reaches its owner', async () => {
+    const { NotemdService } = require('./notemd/NotemdService');
+    let entered!: () => void;
+    let release!: () => void;
+    const started = new Promise<void>(resolve => { entered = resolve; });
+    const held = new Promise<void>(resolve => { release = resolve; });
+    let signal: AbortSignal | undefined;
+    const processFile = jest.spyOn(NotemdService.prototype, 'processFile')
+      .mockImplementationOnce(async (...args: unknown[]) => {
+        signal = args[3] as AbortSignal;
+        entered();
+        await held;
+        signal.throwIfAborted();
+        return { outputPath: kbFilePath };
+      }).mockResolvedValueOnce({ outputPath: kbFilePath });
+    const payload = { filePath: kbFilePath, operationId: 'notemd-admission-contract' };
+    const first = requestJson(port, 'POST', '/api/notemd/process-file', payload);
+    try {
+      await started;
+      const duplicate = await requestJson(port, 'POST', '/api/notemd/process-file', payload);
+      expect(duplicate.status).toBe(409);
+      expect(processFile).toHaveBeenCalledTimes(1);
+      expect((await requestJson(port, 'POST', '/api/notemd/cancel', { operationId: payload.operationId })).status).toBe(200);
+      expect(signal?.aborted).toBe(true);
+      release();
+      expect((await first).status).toBe(499);
+    } finally { release(); await first; processFile.mockRestore(); }
+  });
+
+  test('NoteMD authentication is enforced before route dispatch', async () => {
+    const restoreToken = setEnv('NOTE_CONNECTION_AUTH_TOKEN', 'notemd-fixture-token');
+    let authenticated: Server | undefined;
+    try {
+      const authPort = await getFreePort();
+      authenticated = await loadFreshServerModule().startServer({ port: authPort });
+      expect((await requestJson(authPort, 'GET', '/api/notemd/settings')).status).toBe(401);
+      expect((await requestJson(authPort, 'GET', '/api/notemd/settings', undefined, { 'X-NoteConnection-Token': 'notemd-fixture-token' })).status).toBe(200);
+    } finally { await shutdownServerInstance(authenticated); restoreToken(); }
+  });
+
+  test.each(['/batch-fix-formulas', '/batch-generate-content', '/workflow', '/batch-workflow', '/extract-original-text'])('NoteMD registry validates the %s filesystem boundary', async endpoint => {
+    const outside = temp.file('outside/extended.md', '# Outside');
+    const response = await requestJson(port, 'POST', '/api/notemd' + endpoint, { filePath: outside, folderPath: path.dirname(outside), skipGenerate: true });
+    expect(response.status).toBe(403);
+    expect(fs.readFileSync(outside, 'utf8')).toBe('# Outside');
   });
 
   test('extract-concepts and duplicate endpoints return structured results', async () => {

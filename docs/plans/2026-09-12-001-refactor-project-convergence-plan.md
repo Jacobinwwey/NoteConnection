@@ -149,6 +149,8 @@ Pin and document the supported Node matrix. Current local evidence is Node 22.19
 
 ### U6 — converge one route family and its operation ownership
 
+Implementation checkpoint: 10 matching behavior cases passed independently against legacy and registry before deletion (raw JSON: `output/project-convergence-2026-09-12/notemd-{legacy,registry}-parity.json`). The 20 legacy NoteMD handlers and their operation/workspace helpers have been removed from server.ts. Registry now owns operation admission, IDs, cancellation, workspace updates and existing PUT aliases; request parsing, canonical filesystem access and SSE delivery retain shared boundaries. Additional HTTP tests cover auth, unknown routes, batch/workflow path rejection, ID conflicts and cancellation. Four suites pass 71 tests, zero skips. Telemetry separates intentional server-owned handling from registry misses instead of claiming seven inline routes by constant.
+
 - [ ] **U6 / P1 — advance M04; R5, R6**
 
 **Owner/files:** first `src/routes/notemd.ts`, `src/server.ts`, `src/routes/types.ts`; existing `scripts/verify-route-registry-shadow.js`, `src/routes/registry.shadow.contract.test.ts`, `src/notemd.server.integration.test.ts`.
@@ -345,6 +347,8 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 **验收：**required job 不再仅输出 SKIP；原 skip 义务被执行、被行为测试替代，或有理由地退役；CI 包含 U1–U4 回归。依赖：用例可随修复落地，完整验收位于 U1–U4 后。
 
 ### U6：收敛一个路由族及其操作所有权
+
+实现检查点：删除前在 legacy 与 registry 两个实现上分别通过相同的 10 项行为对照（原始 JSON：`output/project-convergence-2026-09-12/notemd-{legacy,registry}-parity.json`）。server.ts 的 20 个 NoteMD 旧 handler 及 operation/workspace helper 已删除。registry 负责操作准入、ID、取消、workspace 更新和原有 PUT 别名；请求解析、文件 canonical 边界和 SSE 传输复用共享实现。新增 HTTP 测试覆盖认证、未知路由、批处理/workflow 路径拒绝、ID 冲突与取消。四套件 71 项通过、零跳过。遥测已区分有意保留的 server-owned 路由与 registry miss，不再用常数宣称只有七个 inline 路由。
 
 - [ ] **U6 / P1 — 推进 M04；R5、R6**
 
