@@ -577,6 +577,28 @@ describe('NoteMD server integration', () => {
     );
   });
 
+  test('turn-cache alert trend restart durability', async () => {
+    await requestJson(port, 'POST', '/api/knowledge/conversation', { userId: 'durability-user', message: 'Graph theory', persistMemory: false });
+    const diagnostics = await requestJson(port, 'GET', '/api/knowledge/conversation/turn-cache/diagnostics');
+    expect(diagnostics.body.result.counters.executionSuccessCount).toBeGreaterThan(0);
+    const trend = await requestJson(port, 'GET', '/api/knowledge/conversation/turn-cache/diagnostics/trend');
+    expect(trend.body.result.records.length).toBeGreaterThan(0);
+    const storagePath = trend.body.result.storage.filePath;
+    const deadline = Date.now() + 3000;
+    while (!fs.existsSync(storagePath) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
+    expect(fs.existsSync(storagePath)).toBe(true);
+    const persisted = JSON.parse(fs.readFileSync(storagePath, 'utf8'));
+    expect(persisted.records.length).toBeGreaterThan(0);
+    await shutdownServerInstance(server);
+    port = await getFreePort();
+    serverModule = loadFreshServerModule();
+    server = await serverModule.startServer({ port });
+    const restored = await requestJson(port, 'GET', '/api/knowledge/conversation/turn-cache/diagnostics/trend/export');
+    expect(restored.status).toBe(200);
+    expect(restored.body.result.storage.lastLoadedRecordCount).toBeGreaterThan(0);
+    expect(restored.body.result.records).toEqual(expect.arrayContaining([expect.objectContaining(persisted.records[0])]));
+  });
+
   test('embedded sqlite graph runtime survives server restart and preserves query/store diagnostics', async () => {
     const sqliteStorePath = path.join(runtimeDataDir, 'knowledge_graph_store.graphdb.v1.sqlite');
     const ingestResponse = await requestJson(port, 'POST', '/api/knowledge/ingest', {

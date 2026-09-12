@@ -20,7 +20,7 @@
 
 ## Build, Test, and Development Commands
 
-This repo is TypeScript/Node-first integrated with Tauri/Godot. (CI uses Node.js 20).
+This repo is TypeScript/Node-first integrated with Tauri/Godot. Supported Node runtimes are 22.19+ within 22.x and 24.x; release CI uses Node.js 24 and convergence CI also covers Node.js 22.19.
 
 ```bash
 npm install            # install dependencies

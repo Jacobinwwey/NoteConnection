@@ -98,7 +98,25 @@ jobs:
         run: npm ci
 
       - name: Run route registry contract tests
-        run: npx jest src/routes/registry.contract.test.ts --no-coverage --runInBand
+        run: npx jest src/routes/registry.contract.test.ts src/notemd.server.integration.test.ts --no-coverage --runInBand
+
+  convergence-contract-gates:
+    name: convergence-node-${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22.19.0", "24"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test:convergence
 
   agent-workspace-contract-gates:
     name: agent-workspace-contract-gates

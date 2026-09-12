@@ -73,7 +73,7 @@ describe('Route Registry', () => {
 
     test('render routes are registered', () => {
         const renderRoutes = routes.filter(r => r.path.startsWith('/api/render') || r.path.startsWith('/api/clipboard'));
-        expect(renderRoutes.length).toBeGreaterThanOrEqual(4);
+        expect(renderRoutes.map(route => route.path).sort()).toEqual(['/api/render/math', '/api/render/mermaid']);
     });
 
     test('no duplicate method+path combinations', () => {

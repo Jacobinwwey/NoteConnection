@@ -1,543 +1,117 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vm from 'vm';
+import { KnowledgeLearningPlatform } from './learning/KnowledgeLearningPlatform';
+import { AGENT_WORKSPACE_OPERATION_IDS, AGENT_WORKSPACE_RESULT_PRESENTATIONS, AGENT_WORKSPACE_EXECUTION_KINDS } from './learning/agentWorkspaceCapabilityContracts';
+import type { AgentWorkspaceCapability } from './learning/agentWorkspaceCapabilityContracts';
 
-function extractUnionLiterals(source: string, typeName: string): string[] {
-    const pattern = new RegExp(`export type\\s+${typeName}\\s*=([\\s\\S]*?);`);
-    const match = source.match(pattern);
-    if (!match) {
-        throw new Error(`Unable to locate type definition for ${typeName}`);
-    }
-    return Array.from(match[1].matchAll(/'([^']+)'/g)).map((item) => item[1]);
-}
+describe('agent workspace capability runtime parity', () => {
+    let diagnostics: any;
+    let capabilities: AgentWorkspaceCapability[];
+    let workspace: any;
+    let fetch: jest.Mock;
 
-function extractObjectLiteralKeys(source: string, constName: string): string[] {
-    const objectLiteral = extractObjectLiteralSource(source, constName);
-    const keys: string[] = [];
-    let objectDepth = 0;
-    let lineStart = true;
-
-    for (let index = 0; index < objectLiteral.length; index += 1) {
-        const character = objectLiteral[index];
-
-        if (character === '{') {
-            objectDepth += 1;
-            lineStart = false;
-            continue;
-        }
-        if (character === '}') {
-            objectDepth -= 1;
-            lineStart = false;
-            continue;
-        }
-        if (character === '\n') {
-            lineStart = true;
-            continue;
-        }
-        if (objectDepth === 1 && lineStart) {
-            if (/\s/.test(character)) {
-                continue;
-            }
-            if (/[a-zA-Z0-9_]/.test(character)) {
-                let cursor = index;
-                while (cursor < objectLiteral.length && /[a-zA-Z0-9_]/.test(objectLiteral[cursor])) {
-                    cursor += 1;
-                }
-                const key = objectLiteral.slice(index, cursor);
-                let separator = cursor;
-                while (separator < objectLiteral.length && /\s/.test(objectLiteral[separator])) {
-                    separator += 1;
-                }
-                if (objectLiteral[separator] === ':') {
-                    keys.push(key);
-                }
-            }
-            lineStart = false;
-            continue;
-        }
-        if (!/\s/.test(character)) {
-            lineStart = false;
-        }
-    }
-
-    return Array.from(new Set(keys));
-}
-
-function extractObjectLiteralSource(source: string, constName: string): string {
-    const constStart = source.indexOf(`const ${constName} = {`);
-    if (constStart < 0) {
-        throw new Error(`Unable to locate constant ${constName}`);
-    }
-
-    const openBraceIndex = source.indexOf('{', constStart);
-    let depth = 0;
-    let endIndex = -1;
-    for (let index = openBraceIndex; index < source.length; index += 1) {
-        const character = source[index];
-        if (character === '{') {
-            depth += 1;
-        } else if (character === '}') {
-            depth -= 1;
-            if (depth === 0) {
-                endIndex = index;
-                break;
-            }
-        }
-    }
-    if (endIndex < 0) {
-        throw new Error(`Unable to parse object literal for ${constName}`);
-    }
-
-    return source.slice(openBraceIndex, endIndex + 1);
-}
-
-function extractArrayLiteralAfterMarker(source: string, marker: string): string {
-    const markerIndex = source.indexOf(marker);
-    if (markerIndex < 0) {
-        throw new Error(`Unable to locate marker: ${marker}`);
-    }
-
-    const openBracketIndex = source.indexOf('[', markerIndex + marker.length);
-    if (openBracketIndex < 0) {
-        throw new Error(`Unable to locate opening array bracket for marker: ${marker}`);
-    }
-
-    let depth = 0;
-    let endIndex = -1;
-    for (let index = openBracketIndex; index < source.length; index += 1) {
-        const character = source[index];
-        if (character === '[') {
-            depth += 1;
-            continue;
-        }
-        if (character === ']') {
-            depth -= 1;
-            if (depth === 0) {
-                endIndex = index;
-                break;
-            }
-        }
-    }
-
-    if (endIndex < 0) {
-        throw new Error(`Unable to resolve closing array bracket for marker: ${marker}`);
-    }
-
-    return source.slice(openBracketIndex, endIndex + 1);
-}
-
-function extractObjectFieldStringLiterals(source: string, fieldName: string): string[] {
-    const pattern = new RegExp(`${fieldName}\\s*:\\s*'([^']+)'`, 'g');
-    return Array.from(source.matchAll(pattern)).map((match) => match[1]);
-}
-
-function extractOperationDefaultResultPresentationsFromFrontend(source: string): Record<string, string> {
-    const registryLiteral = extractObjectLiteralSource(source, 'KNOWLEDGE_OPERATION_TRANSPORT_REGISTRY');
-    const entries = Array.from(
-        registryLiteral.matchAll(
-            /([a-zA-Z0-9_]+)\s*:\s*{[\s\S]*?defaultResultPresentation\s*:\s*'([^']+)'/g
-        )
-    );
-    const mapping: Record<string, string> = {};
-    entries.forEach((entry) => {
-        const operationId = String(entry[1] || '').trim();
-        const resultPresentation = String(entry[2] || '').trim();
-        if (!operationId || !resultPresentation) {
-            return;
-        }
-        mapping[operationId] = resultPresentation;
-    });
-    return mapping;
-}
-
-function extractOperationResultPresentationOverridesFromFrontend(source: string): Record<string, string[]> {
-    const overridesLiteral = extractObjectLiteralSource(source, 'KNOWLEDGE_OPERATION_RESULT_PRESENTATION_OVERRIDES');
-    const entries = Array.from(
-        overridesLiteral.matchAll(
-            /([a-zA-Z0-9_]+)\s*:\s*\[([^\]]*)\]/g
-        )
-    );
-    const mapping: Record<string, string[]> = {};
-    entries.forEach((entry) => {
-        const operationId = String(entry[1] || '').trim();
-        if (!operationId) {
-            return;
-        }
-        const rawArrayLiteral = String(entry[2] || '');
-        const values = Array.from(rawArrayLiteral.matchAll(/'([^']+)'/g))
-            .map((valueMatch) => String(valueMatch[1] || '').trim())
-            .filter(Boolean);
-        mapping[operationId] = Array.from(new Set(values));
-    });
-    return mapping;
-}
-
-function extractOperationAllowedResultPresentationsFromFrontend(source: string): Record<string, string[]> {
-    const defaultMapping = extractOperationDefaultResultPresentationsFromFrontend(source);
-    const overrideMapping = extractOperationResultPresentationOverridesFromFrontend(source);
-    const allOperationIds = new Set<string>([
-        ...Object.keys(defaultMapping),
-        ...Object.keys(overrideMapping),
-    ]);
-    const allowedMapping: Record<string, string[]> = {};
-    allOperationIds.forEach((operationId) => {
-        const values = [
-            String(defaultMapping[operationId] || '').trim(),
-            ...(overrideMapping[operationId] || []),
-        ].filter(Boolean);
-        allowedMapping[operationId] = Array.from(new Set(values));
-    });
-    return allowedMapping;
-}
-
-function extractBackendKnowledgeOperationPairs(conversationCapabilityLiteral: string): Array<{
-    operationId: string;
-    resultPresentation: string;
-}> {
-    const entries = Array.from(
-        String(conversationCapabilityLiteral || '').matchAll(
-            /execution\s*:\s*{[\s\S]*?kind\s*:\s*'knowledge_operation'[\s\S]*?operationId\s*:\s*'([^']+)'[\s\S]*?resultPresentation\s*:\s*'([^']+)'/g
-        )
-    );
-    return entries.map((entry) => ({
-        operationId: String(entry[1] || '').trim(),
-        resultPresentation: String(entry[2] || '').trim(),
-    })).filter((entry) => entry.operationId.length > 0 && entry.resultPresentation.length > 0);
-}
-
-function extractTopLevelObjectLiteralsFromArrayLiteral(arrayLiteralSource: string): string[] {
-    const source = String(arrayLiteralSource || '');
-    const objectLiterals: string[] = [];
-    let inString: '\'' | '"' | '`' | null = null;
-    let isEscaped = false;
-    let objectDepth = 0;
-    let objectStartIndex = -1;
-
-    for (let index = 0; index < source.length; index += 1) {
-        const character = source[index];
-
-        if (inString) {
-            if (isEscaped) {
-                isEscaped = false;
-                continue;
-            }
-            if (character === '\\') {
-                isEscaped = true;
-                continue;
-            }
-            if (character === inString) {
-                inString = null;
-            }
-            continue;
-        }
-
-        if (character === '\'' || character === '"' || character === '`') {
-            inString = character;
-            continue;
-        }
-
-        if (character === '{') {
-            if (objectDepth === 0) {
-                objectStartIndex = index;
-            }
-            objectDepth += 1;
-            continue;
-        }
-
-        if (character === '}') {
-            if (objectDepth <= 0) {
-                continue;
-            }
-            objectDepth -= 1;
-            if (objectDepth === 0 && objectStartIndex >= 0) {
-                objectLiterals.push(source.slice(objectStartIndex, index + 1));
-                objectStartIndex = -1;
-            }
-        }
-    }
-
-    return objectLiterals;
-}
-
-describe('agent workspace capability registry parity', () => {
-    const repoRoot = path.resolve(__dirname, '..');
-    const typesSource = fs.readFileSync(path.join(repoRoot, 'src', 'learning', 'types.ts'), 'utf8');
-    const frontendSource = fs.readFileSync(path.join(repoRoot, 'src', 'frontend', 'agent_workspace.js'), 'utf8');
-    const knowledgePlatformSource = fs.readFileSync(
-        path.join(repoRoot, 'src', 'learning', 'KnowledgeLearningPlatform.ts'),
-        'utf8'
-    );
-
-    const BACKEND_CONTRACT_MARKER = "const capabilities: AgentConversationResponse['knowledgePoints'][number]['capabilities'] =";
-    const backendContractAvailable = knowledgePlatformSource.indexOf(BACKEND_CONTRACT_MARKER) >= 0;
-
-    const backendTest = backendContractAvailable ? test : test.skip;
-
-    let conversationCapabilityLiteral: string;
-    try {
-        conversationCapabilityLiteral = extractArrayLiteralAfterMarker(
-            knowledgePlatformSource,
-            BACKEND_CONTRACT_MARKER
-        );
-    } catch {
-        conversationCapabilityLiteral = '';
-    }
-
-    test.skip('frontend operation transport registry covers AgentConversationCapabilityOperationId union', () => {
-        const operationIds = extractUnionLiterals(typesSource, 'AgentConversationCapabilityOperationId');
-        const frontendOperationIds = extractObjectLiteralKeys(frontendSource, 'KNOWLEDGE_OPERATION_TRANSPORT_REGISTRY');
-        expect(new Set(frontendOperationIds)).toEqual(new Set(operationIds));
-    });
-
-    test.skip('frontend operation request builder registry covers AgentConversationCapabilityOperationId union', () => {
-        const operationIds = extractUnionLiterals(typesSource, 'AgentConversationCapabilityOperationId');
-        const frontendOperationIds = extractObjectLiteralKeys(frontendSource, 'KNOWLEDGE_OPERATION_REQUEST_BUILDERS');
-        expect(new Set(frontendOperationIds)).toEqual(new Set(operationIds));
-    });
-
-    test('frontend operation transport and request builder registries stay aligned', () => {
-        const transportOperationIds = extractObjectLiteralKeys(frontendSource, 'KNOWLEDGE_OPERATION_TRANSPORT_REGISTRY');
-        const requestBuilderOperationIds = extractObjectLiteralKeys(frontendSource, 'KNOWLEDGE_OPERATION_REQUEST_BUILDERS');
-        expect(new Set(transportOperationIds)).toEqual(new Set(requestBuilderOperationIds));
-    });
-
-    test.skip('frontend operation result-presentation override keys stay within operation union', () => {
-        const operationIds = new Set(
-            extractUnionLiterals(typesSource, 'AgentConversationCapabilityOperationId')
-        );
-        const overrideMapping = extractOperationResultPresentationOverridesFromFrontend(frontendSource);
-        Object.keys(overrideMapping).forEach((operationId) => {
-            expect(operationIds.has(operationId)).toBe(true);
-            expect(overrideMapping[operationId].length).toBeGreaterThan(0);
+    beforeAll(async () => {
+        const window: any = {};
+        fetch = jest.fn();
+        vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'frontend', 'agent_workspace.js'), 'utf8'), {
+            window, document: { readyState: 'loading', addEventListener() {}, getElementById() { return null; } },
+            console, Set, Map, fetch,
         });
+        workspace = window.NoteConnectionAgentWorkspace;
+        diagnostics = workspace.getCapabilityRegistryDiagnostics();
+        const platform = new KnowledgeLearningPlatform({ autoPersist: false });
+        await platform.ingestKnowledge({ documents: [{ documentId: 'contract', sourcePath: 'contracts/graph.md', content: '# Graph\n\nGraph theory studies nodes and edges.' }] });
+        const response = await platform.agentConversation({ message: 'Graph theory', persistMemory: false });
+        expect(response.knowledgePoints.length).toBeGreaterThan(0);
+        capabilities = response.knowledgePoints.flatMap(point => point.capabilities) as AgentWorkspaceCapability[];
+        expect(capabilities.length).toBeGreaterThan(0);
     });
 
-    test.skip('frontend operation result-presentation overrides stay within result-presentation union', () => {
-        const resultPresentationIds = new Set(
-            extractUnionLiterals(typesSource, 'AgentConversationCapabilityResultPresentation')
-        );
-        const overrideMapping = extractOperationResultPresentationOverridesFromFrontend(frontendSource);
-        Object.entries(overrideMapping).forEach(([operationId, presentations]) => {
-            expect(operationId).toBeTruthy();
+    test('transport registry covers the exported operation contract', () => {
+        expect(new Set(diagnostics.operationTransports)).toEqual(new Set(AGENT_WORKSPACE_OPERATION_IDS));
+    });
+    test('request builders cover the exported operation contract', () => {
+        expect(new Set(diagnostics.operationRequestBuilders)).toEqual(new Set(AGENT_WORKSPACE_OPERATION_IDS));
+    });
+    test('transports and request builders agree at runtime', () => {
+        expect(new Set(diagnostics.operationTransports)).toEqual(new Set(diagnostics.operationRequestBuilders));
+    });
+    test('override operation keys exist in the exported contract', () => {
+        for (const operation of Object.keys(diagnostics.operationResultPresentationOverrideMap)) expect(AGENT_WORKSPACE_OPERATION_IDS).toContain(operation);
+    });
+    test('override presentations exist in the exported contract', () => {
+        for (const presentations of Object.values(diagnostics.operationResultPresentationOverrideMap) as string[][]) {
             expect(presentations.length).toBeGreaterThan(0);
-            presentations.forEach((presentation) => {
-                expect(resultPresentationIds.has(presentation)).toBe(true);
-            });
-        });
+            for (const presentation of presentations) expect(AGENT_WORKSPACE_RESULT_PRESENTATIONS).toContain(presentation);
+        }
     });
-
-    test('frontend operation allowlists include transport defaults and stay non-empty', () => {
-        const defaultMapping = extractOperationDefaultResultPresentationsFromFrontend(frontendSource);
-        const allowlistMapping = extractOperationAllowedResultPresentationsFromFrontend(frontendSource);
-        const overrideMapping = extractOperationResultPresentationOverridesFromFrontend(frontendSource);
-
-        Object.entries(defaultMapping).forEach(([operationId, defaultPresentation]) => {
-            expect(defaultPresentation).toBeTruthy();
-            const allowlist = allowlistMapping[operationId] || [];
-            expect(allowlist.length).toBeGreaterThan(0);
-            expect(allowlist).toContain(defaultPresentation);
-            expect(new Set(allowlist).size).toBe(allowlist.length);
-        });
-
-        Object.keys(overrideMapping).forEach((operationId) => {
-            expect(defaultMapping[operationId]).toBeDefined();
-        });
+    test('every operation has a nonempty unique allowlist containing its default', () => {
+        for (const operation of AGENT_WORKSPACE_OPERATION_IDS) {
+            const allowed = diagnostics.operationAllowedResultPresentations[operation];
+            expect(allowed).toContain(diagnostics.operationDefaultResultPresentations[operation]);
+            expect(new Set(allowed).size).toBe(allowed.length);
+        }
     });
-
-    test('frontend operation result-presentation overrides only declare non-default presentations', () => {
-        const defaultMapping = extractOperationDefaultResultPresentationsFromFrontend(frontendSource);
-        const overrideMapping = extractOperationResultPresentationOverridesFromFrontend(frontendSource);
-        Object.entries(overrideMapping).forEach(([operationId, overridePresentations]) => {
-            const defaultPresentation = String(defaultMapping[operationId] || '').trim();
-            expect(defaultPresentation).toBeTruthy();
-            overridePresentations.forEach((presentation) => {
-                expect(presentation).not.toBe(defaultPresentation);
-            });
-        });
+    test('overrides declare only non-default presentations', () => {
+        for (const [operation, presentations] of Object.entries(diagnostics.operationResultPresentationOverrideMap) as Array<[string, string[]]>) {
+            expect(presentations).not.toContain(diagnostics.operationDefaultResultPresentations[operation]);
+        }
     });
-
-    test('frontend registry diagnostics expose operation presentation maps', () => {
-        expect(frontendSource).toMatch(
-            /operationResultPresentationOverrideMap\s*:\s*resolveOperationResultPresentationOverrideMap\(\)/
-        );
-        expect(frontendSource).toMatch(
-            /operationInvalidResultPresentationOverrideMap\s*:\s*(resolveOperationInvalidResultPresentationOverrideMap\(\)|invalidOverrideMap)/
-        );
-        expect(frontendSource).toMatch(
-            /operationUnknownResultPresentationOverrideMap\s*:\s*(resolveOperationUnknownResultPresentationOverrideMap\(\)|unknownOverrideMap)/
-        );
-        expect(frontendSource).toMatch(
-            /operationDefaultResultPresentations\s*:\s*resolveOperationDefaultResultPresentationMap\(\)/
-        );
-        expect(frontendSource).toMatch(
-            /operationAllowedResultPresentations\s*:\s*resolveOperationAllowedResultPresentationMap\(\)/
-        );
-        expect(frontendSource).toMatch(
-            /operationResultPresentationOverrideDriftDetected\s*:\s*\(/
-        );
-        expect(frontendSource).toMatch(
-            /operationResultPresentationInvalidOverrideTokenCount\s*:\s*invalidOverrideTokenCount/
-        );
-        expect(frontendSource).toMatch(
-            /operationResultPresentationUnknownOverrideTokenCount\s*:\s*unknownOverrideTokenCount/
-        );
+    test('diagnostics report no invalid or unknown presentation drift', () => {
+        expect(diagnostics.operationResultPresentationOverrideDriftDetected).toBe(false);
+        expect(diagnostics.operationResultPresentationInvalidOverrideTokenCount).toBe(0);
+        expect(diagnostics.operationResultPresentationUnknownOverrideTokenCount).toBe(0);
     });
-
-    test.skip('frontend result presentation registries cover AgentConversationCapabilityResultPresentation union', () => {
-        const presentationIds = extractUnionLiterals(typesSource, 'AgentConversationCapabilityResultPresentation');
-        const customPresentationIds = extractObjectLiteralKeys(frontendSource, 'CUSTOM_RESULT_PRESENTERS');
-        const cardPresentationIds = extractObjectLiteralKeys(frontendSource, 'CARD_RESULT_PRESENTATION_REGISTRY');
-        expect(new Set([...customPresentationIds, ...cardPresentationIds])).toEqual(new Set(presentationIds));
+    test('presenters cover the exported presentation contract', () => {
+        expect(new Set(diagnostics.resultPresentations)).toEqual(new Set(AGENT_WORKSPACE_RESULT_PRESENTATIONS));
     });
-
-    test('frontend card result presentation registry and payload builders stay aligned', () => {
-        const cardPresentationIds = extractObjectLiteralKeys(frontendSource, 'CARD_RESULT_PRESENTATION_REGISTRY');
-        const payloadBuilderPresentationIds = extractObjectLiteralKeys(frontendSource, 'RESULT_PRESENTATION_PAYLOAD_BUILDERS');
-        expect(new Set(cardPresentationIds)).toEqual(new Set(payloadBuilderPresentationIds));
+    test('card presenters and payload builders agree', () => {
+        expect(new Set(diagnostics.cardResultPresentations)).toEqual(new Set(diagnostics.resultPresentationPayloadBuilders));
     });
-
-    test.skip('frontend execution kind handlers cover AgentConversationCapabilityExecutionKind union', () => {
-        const executionKinds = extractUnionLiterals(typesSource, 'AgentConversationCapabilityExecutionKind');
-        const frontendExecutionKinds = extractObjectLiteralKeys(frontendSource, 'CAPABILITY_EXECUTION_KIND_HANDLERS');
-        expect(new Set(frontendExecutionKinds)).toEqual(new Set(executionKinds));
+    test('execution handlers cover the exported execution contract', () => {
+        expect(new Set(diagnostics.executionKinds)).toEqual(new Set(AGENT_WORKSPACE_EXECUTION_KINDS));
     });
-
-    backendTest('backend conversation emitter action set stays governed and union-compatible', () => {
-        const backendActionIds = Array.from(new Set(
-            extractObjectFieldStringLiterals(conversationCapabilityLiteral, 'actionId')
-        ));
-        const explicitActionIds = extractUnionLiterals(typesSource, 'AgentConversationActionId');
-        const tutorActionIds = extractUnionLiterals(typesSource, 'TutorActionKind');
-        const governedActionIds = [
-            'open_focus_mode',
-            'open_learning_path',
-            'generate_quiz',
-            'recap',
-            'generate_transfer',
-            'generate_counterexample',
-            'follow_up',
-            'compare_query_backends',
-            'inspect_conversation_turn_cache_diagnostics',
-            'inspect_conversation_turn_cache_alert_trend',
-            'inspect_conversation_turn_cache_alert_trend_index',
-            'inspect_conversation_turn_cache_alert_trend_export',
-            'inspect_query_backend_diagnostics',
-            'inspect_query_backend_comparison_history',
-            'inspect_query_backend_comparison_trend',
-            'inspect_tutor_adapter_telemetry',
-            'inspect_tutor_trace_diagnostics',
-            'inspect_learning_quality_trend',
-            'inspect_learning_quality_history',
-            'inspect_session_plan_quality_trend',
-            'inspect_session_plan_quality_history',
-            'inspect_runtime_capability_runbook_verify',
-            'inspect_runtime_capability_runbook_history',
-            'inspect_runtime_capability_runbook_checks',
-            'inspect_runtime_capability_runbook_action_queue',
-            'inspect_session_history',
-            'build_study_session',
-            'inspect_conversation_memory',
-        ];
-        const fullActionUnionSet = new Set([...explicitActionIds, ...tutorActionIds]);
-        backendActionIds.forEach((actionId) => {
-            expect(fullActionUnionSet.has(actionId)).toBe(true);
-        });
-        expect(new Set(backendActionIds)).toEqual(new Set(governedActionIds));
-        expect(backendActionIds).not.toContain('analyze_answer');
+    test('real conversation capabilities expose stable unique actions and core operations', () => {
+        const oneAtom = capabilities.filter(capability => capability.targetAtomId === capabilities[0].targetAtomId);
+        expect(new Set(oneAtom.map(capability => capability.capabilityId)).size).toBe(oneAtom.length);
+        expect(oneAtom.map(capability => capability.actionId)).toEqual(expect.arrayContaining(['open_focus_mode', 'open_learning_path', 'build_study_session', 'generate_quiz', 'recap']));
+        expect(oneAtom.map(capability => capability.actionId)).not.toContain('analyze_answer');
     });
-
-    backendTest('backend conversation emitter operation ids stay in parity with frontend transport and request registries', () => {
-        const backendOperationIds = Array.from(new Set(
-            extractObjectFieldStringLiterals(conversationCapabilityLiteral, 'operationId')
-        ));
-        const frontendTransportOperationIds = extractObjectLiteralKeys(frontendSource, 'KNOWLEDGE_OPERATION_TRANSPORT_REGISTRY');
-        const frontendRequestBuilderOperationIds = extractObjectLiteralKeys(frontendSource, 'KNOWLEDGE_OPERATION_REQUEST_BUILDERS');
-
-        expect(new Set(backendOperationIds)).toEqual(new Set(frontendTransportOperationIds));
-        expect(new Set(backendOperationIds)).toEqual(new Set(frontendRequestBuilderOperationIds));
+    test('all emitted operations are executable through both frontend registries', () => {
+        for (const capability of capabilities) if (capability.execution.kind === 'knowledge_operation') {
+            expect(diagnostics.operationTransports).toContain(capability.execution.operationId);
+            expect(diagnostics.operationRequestBuilders).toContain(capability.execution.operationId);
+        }
     });
-
-    backendTest('backend conversation emitter result presentations stay in parity with frontend presenters', () => {
-        const backendResultPresentations = Array.from(new Set(
-            extractObjectFieldStringLiterals(conversationCapabilityLiteral, 'resultPresentation')
-        ));
-        const customPresentationIds = extractObjectLiteralKeys(frontendSource, 'CUSTOM_RESULT_PRESENTERS');
-        const cardPresentationIds = extractObjectLiteralKeys(frontendSource, 'CARD_RESULT_PRESENTATION_REGISTRY');
-        const frontendResultPresentations = new Set([...customPresentationIds, ...cardPresentationIds]);
-
-        expect(new Set(backendResultPresentations)).toEqual(frontendResultPresentations);
+    test('every emitted result presentation has a frontend presenter', () => {
+        for (const capability of capabilities) if (capability.execution.kind === 'knowledge_operation') expect(diagnostics.resultPresentations).toContain(capability.execution.resultPresentation);
     });
-
-    backendTest('backend knowledge-operation execution presentations stay within frontend operation allowlist', () => {
-        const frontendOperationAllowedPresentations = extractOperationAllowedResultPresentationsFromFrontend(frontendSource);
-        const backendOperationPairs = extractBackendKnowledgeOperationPairs(conversationCapabilityLiteral);
-        expect(backendOperationPairs.length).toBeGreaterThan(0);
-
-        const backendOperationPresentationSetByOperationId = new Map<string, Set<string>>();
-        backendOperationPairs.forEach((entry) => {
-            expect(frontendOperationAllowedPresentations[entry.operationId]).toBeDefined();
-            expect(frontendOperationAllowedPresentations[entry.operationId]).toContain(entry.resultPresentation);
-            const knownPresentations = backendOperationPresentationSetByOperationId.get(entry.operationId) || new Set<string>();
-            knownPresentations.add(entry.resultPresentation);
-            backendOperationPresentationSetByOperationId.set(entry.operationId, knownPresentations);
-        });
-
-        backendOperationPresentationSetByOperationId.forEach((presentations) => {
-            expect(presentations.size).toBe(1);
-        });
+    test('emitted operation presentations respect each operation allowlist', () => {
+        for (const capability of capabilities) if (capability.execution.kind === 'knowledge_operation') expect(diagnostics.operationAllowedResultPresentations[capability.execution.operationId]).toContain(capability.execution.resultPresentation);
     });
-
-    backendTest('backend non-default operation presentations require explicit frontend overrides', () => {
-        const defaultMapping = extractOperationDefaultResultPresentationsFromFrontend(frontendSource);
-        const overrideMapping = extractOperationResultPresentationOverridesFromFrontend(frontendSource);
-        const backendOperationPairs = extractBackendKnowledgeOperationPairs(conversationCapabilityLiteral);
-        expect(backendOperationPairs.length).toBeGreaterThan(0);
-
-        backendOperationPairs.forEach(({ operationId, resultPresentation }) => {
-            const defaultPresentation = String(defaultMapping[operationId] || '').trim();
-            expect(defaultPresentation).toBeTruthy();
-            if (resultPresentation !== defaultPresentation) {
-                const operationOverrides = overrideMapping[operationId] || [];
-                expect(operationOverrides).toContain(resultPresentation);
-            }
-        });
+    test('emitted non-default presentations require an explicit override', () => {
+        for (const capability of capabilities) if (capability.execution.kind === 'knowledge_operation') {
+            const { operationId, resultPresentation } = capability.execution;
+            if (resultPresentation !== diagnostics.operationDefaultResultPresentations[operationId]) expect(diagnostics.operationResultPresentationOverrideMap[operationId]).toContain(resultPresentation);
+        }
     });
-
-    backendTest('frontend override presentations must be exercised by backend capability emission', () => {
-        const overrideMapping = extractOperationResultPresentationOverridesFromFrontend(frontendSource);
-        const backendOperationPairs = extractBackendKnowledgeOperationPairs(conversationCapabilityLiteral);
-        const backendOperationPresentations = new Map<string, Set<string>>();
-
-        backendOperationPairs.forEach(({ operationId, resultPresentation }) => {
-            const knownPresentations = backendOperationPresentations.get(operationId) || new Set<string>();
-            knownPresentations.add(resultPresentation);
-            backendOperationPresentations.set(operationId, knownPresentations);
-        });
-
-        Object.entries(overrideMapping).forEach(([operationId, overridePresentations]) => {
-            const backendPresentations = backendOperationPresentations.get(operationId) || new Set<string>();
-            overridePresentations.forEach((presentation) => {
-                expect(backendPresentations.has(presentation)).toBe(true);
-            });
-        });
+    test('tutor override is exercised by actual capability emission', () => {
+        expect(capabilities.some(capability => capability.execution.kind === 'knowledge_operation' && capability.execution.resultPresentation === 'tutor_action_card')).toBe(true);
+        // Workflow-history cards are emitted by artifact workflows, not every conversation.
+        expect(diagnostics.operationAllowedResultPresentations.fetch_workflow_artifacts).toEqual(expect.arrayContaining(['knowledge_run_card', 'knowledge_run_history_card']));
     });
-
-    backendTest('backend conversation emitter capabilities keep executable contract completeness', () => {
-        const capabilityObjectLiterals = extractTopLevelObjectLiteralsFromArrayLiteral(conversationCapabilityLiteral);
-        expect(capabilityObjectLiterals.length).toBeGreaterThan(0);
-
-        capabilityObjectLiterals.forEach((capabilityLiteral) => {
-            expect(capabilityLiteral).toMatch(/capabilityId\s*:\s*`[^`]+`|capabilityId\s*:\s*'[^']+'/);
-            expect(capabilityLiteral).toMatch(/actionId\s*:\s*'[^']+'/);
-            expect(capabilityLiteral).toMatch(/labelKey\s*:\s*'agentWorkspace\.actions\.[^']+'/);
-            expect(capabilityLiteral).toMatch(/failure\s*:\s*{[\s\S]*?messageKey\s*:\s*'agentWorkspace\.messages\.[^']+'/);
-            expect(capabilityLiteral).toMatch(/failure\s*:\s*{[\s\S]*?fallbackMessage\s*:\s*'[^']+'/);
-            expect(capabilityLiteral).toMatch(/execution\s*:\s*{[\s\S]*?kind\s*:\s*'[^']+'/);
-
-            const isKnowledgeOperation = /execution\s*:\s*{[\s\S]*?kind\s*:\s*'knowledge_operation'/.test(capabilityLiteral);
-            if (isKnowledgeOperation) {
-                expect(capabilityLiteral).toMatch(/execution\s*:\s*{[\s\S]*?operationId\s*:\s*'[^']+'/);
-                expect(capabilityLiteral).toMatch(/execution\s*:\s*{[\s\S]*?resultPresentation\s*:\s*'[^']+'/);
-            }
-        });
+    test('every emitted capability has a complete executable identity and label', () => {
+        for (const capability of capabilities) {
+            expect(capability.capabilityId).toBeTruthy(); expect(capability.actionId).toBeTruthy();
+            expect(capability.targetAtomId).toBeTruthy(); expect(capability.label).toBeTruthy();
+            expect(capability.labelKey).toMatch(/^agentWorkspace\.actions\./);
+            expect(diagnostics.executionKinds).toContain(capability.execution.kind);
+        }
+    });
+    test.each([{ execution: { kind: 'unsupported' } }, { actionId: 'open_learning_path' }])('rejects unsupported/missing execution without implicit legacy I/O: %p', async capability => {
+        await workspace.executeCapability({}, capability, {});
+        expect(fetch).not.toHaveBeenCalled();
+        expect(diagnostics.legacyActionFallbacks).toEqual([]);
     });
 });

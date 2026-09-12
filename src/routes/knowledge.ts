@@ -341,28 +341,8 @@ export function registerKnowledgeRoutes(ctx: ServerContext): RouteEntry[] {
                 } catch (e) { fail(res, e, 'GET /api/knowledge/memory-policy/diagnostics'); }
             },
         },
-        {
-            method: 'GET',
-            path: api('/conversation/turn-cache/diagnostics'),
-            handler: async (req, res) => {
-                try {
-                    const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.getAgentConversationTurnCacheDiagnostics({ format: params.get('format') || 'summary' });
-                    ok(res, result);
-                } catch (e) { fail(res, e, 'GET /api/knowledge/conversation/turn-cache/diagnostics'); }
-            },
-        },
-        {
-            method: 'GET',
-            path: api('/conversation/turn-cache/diagnostics/trend'),
-            handler: async (req, res) => {
-                try {
-                    const params = parseQuery(req);
-                    const result = await knowledgeLearningPlatform.getAgentConversationTurnCacheTrend({ limit: Number(params.get('limit')) || 20, windowSize: Number(params.get('windowSize')) || 6, minSamples: Number(params.get('minSamples')) || 3 });
-                    ok(res, result);
-                } catch (e) { fail(res, e, 'GET /api/knowledge/conversation/turn-cache/diagnostics/trend'); }
-            },
-        },
+        
+        
         {
             method: 'GET',
             path: api('/runtime-capability-matrix'),

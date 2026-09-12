@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import type { AgentWorkspaceCapability, AgentWorkspaceOperationId, AgentWorkspaceResultPresentation } from './agentWorkspaceCapabilityContracts';
 import { AsyncLocalStorage } from 'async_hooks';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -9427,16 +9428,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return `${prefix}_${this.idCounter.toString(36)}`;
     }
 
-    private createAgentWorkspaceCapability(input: {
-        capabilityId: string;
-        actionId: string;
-        targetAtomId: string;
-        label: string;
-        labelKey?: string;
-        request?: Record<string, unknown>;
-        execution: Record<string, unknown>;
-    }): Record<string, unknown> {
-        const capability: Record<string, unknown> = {
+    private createAgentWorkspaceCapability(input: AgentWorkspaceCapability): AgentWorkspaceCapability {
+        const capability: AgentWorkspaceCapability = {
             capabilityId: input.capabilityId,
             actionId: input.actionId,
             targetAtomId: input.targetAtomId,
@@ -9452,7 +9445,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         return capability;
     }
 
-    private buildAgentWorkspaceCapabilities(atomId: string): Record<string, unknown>[] {
+    private buildAgentWorkspaceCapabilities(atomId: string): AgentWorkspaceCapability[] {
         const buildTutorCapability = (actionId: string, label: string, actionKind: TutorActionKind) => (
             this.createAgentWorkspaceCapability({
                 capabilityId: `cap_${actionId}_${atomId}`,
@@ -9474,8 +9467,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
             actionId: string,
             label: string,
             labelKey: string,
-            operationId: string,
-            resultPresentation: string,
+            operationId: AgentWorkspaceOperationId,
+            resultPresentation: AgentWorkspaceResultPresentation,
             request = {}
         ) => this.createAgentWorkspaceCapability({
             capabilityId: `cap_${actionId}_${atomId}`,
@@ -10980,6 +10973,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
 
     public getAgentConversationTurnCacheDiagnostics(_request: { format?: string } = {}): any {
         return {
+            available: false,
+            reason: 'turn_cache_is_owned_by_http_runtime',
             generatedAt: this.nowProvider().toISOString(),
             config: {
                 historyLimit: 24,
@@ -10996,7 +10991,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 totalEntries: 0,
             },
             alerts: {
-                summaryStatus: 'pass',
+                summaryStatus: 'unavailable',
                 checks: [],
             },
         };
@@ -11008,6 +11003,8 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
         minSamples?: number;
     } = {}): any {
         return {
+            available: false,
+            reason: 'turn_cache_is_owned_by_http_runtime',
             generatedAt: this.nowProvider().toISOString(),
             config: {
                 historyLimit: Number(_request.limit || 24),

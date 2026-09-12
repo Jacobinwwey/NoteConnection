@@ -14489,6 +14489,32 @@ export const startServer = async (options: { port?: number, targetPath?: string 
         if (req.method === 'GET') {
             const getPathname = getRawRequestPathname(req.url);
 
+            if (getPathname === '/api/knowledge/conversation/turn-cache/diagnostics') {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, result: getAgentConversationTurnCacheDiagnostics() }));
+                return;
+            }
+            if (getPathname === '/api/knowledge/conversation/turn-cache/diagnostics/trend') {
+                getAgentConversationTurnCacheDiagnostics();
+                const request = normalizeAgentConversationTurnCacheAlertTrendRequestFromQuery(new URL(req.url!, `http://${LOOPBACK_HOST}`).searchParams);
+                const result = queryAgentConversationTurnCacheAlertTrend(request);
+                appendRuntimeRunbookVerificationHistoryFromConversationTurnCacheAlertTrend(result);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, result }));
+                return;
+            }
+            if (getPathname === '/api/knowledge/conversation/turn-cache/diagnostics/trend/index') {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, result: snapshotAgentConversationTurnCacheAlertHistoryStorageIndex() }));
+                return;
+            }
+            if (getPathname === '/api/knowledge/conversation/turn-cache/diagnostics/trend/export') {
+                const request = normalizeAgentConversationTurnCacheAlertTrendRequestFromQuery(new URL(req.url!, `http://${LOOPBACK_HOST}`).searchParams);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, result: queryAgentConversationTurnCacheAlertTrendExport(request) }));
+                return;
+            }
+
             // ── Notemd routes (covered by routes/notemd.ts) ──
             // [REGISTRY_COVERED: routes/notemd.ts]
             if (STRICT_REGISTRY && getPathname.startsWith('/api/notemd/')) {
@@ -16903,7 +16929,8 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                         enableGPU,
                         enableGPULayout,
                         memorySavingMode,
-                        deepDebug
+                        deepDebug,
+                        relationRecomputeMode: relationRecomputeMode || 'incremental',
                     });
 
                     // De-duplicate accidental double-submit from frontend.
@@ -16949,7 +16976,13 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                             deepDebug
                         });
                         ACTIVE_GRAPH_TARGET = normalizedRuntimeTarget;
-                        return await syncLearningWorkspaceForTarget(normalizedRuntimeTarget, 'build_graph');
+                        const files = await collectMarkdownFilePaths(targetToBuild!);
+                        const documents = await buildKnowledgeDocumentPayloadsFromPaths(files);
+                        const ingest = await knowledgeLearningPlatform.ingestKnowledge({
+                            incremental: true, documents, ingestedAt: new Date().toISOString(),
+                            relationRecomputeMode: relationRecomputeMode || 'incremental',
+                        });
+                        return { target: normalizedRuntimeTarget, documentCount: documents.length, summary: ingest.summary };
                     })();
                     activeBuildKey = buildKey;
                     activeBuildPromise = buildPromise;

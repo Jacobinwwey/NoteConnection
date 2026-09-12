@@ -401,7 +401,7 @@ describe('server migration settings routes', () => {
     expect(response.body.folders).toEqual(['financial', 'legal']);
   });
 
-  test.skip('returns runtime diagnostics with wasm parity state and no auth token exposure', async () => {
+  test('returns runtime diagnostics with wasm parity state and no auth token exposure', async () => {
     const response = await requestJson(port, 'GET', '/api/runtime-diagnostics');
     expect(response.status).toBe(200);
     expect(response.body).toEqual(
@@ -469,7 +469,7 @@ describe('server migration settings routes', () => {
     expect(serverSource).not.toMatch(/fs\.(existsSync|mkdirSync|readdirSync|writeFileSync|readFileSync|statSync|accessSync)\b/);
   });
 
-  test.skip('merges available targets from folders and cached graph artifacts', async () => {
+  test('merges available targets from folders and cached graph artifacts', async () => {
     const response = await requestJson(port, 'GET', '/api/available-targets');
     expect(response.status).toBe(200);
     expect(response.body.targets).toEqual(['financial', 'legal', 'robotics']);
@@ -486,7 +486,7 @@ describe('server migration settings routes', () => {
     expect(response.body.content).toContain('Inside KB root');
   });
 
-  test.skip('serves /api/content for legacy Knowledge_Base-style paths', async () => {
+  test('serves /api/content for legacy Knowledge_Base-style paths', async () => {
     const legacyPath = 'C:\\snapshot\\NoteConnection_app\\Knowledge_Base\\financial\\overview.md';
     const response = await requestJson(
       port,
@@ -498,7 +498,7 @@ describe('server migration settings routes', () => {
     expect(response.body.content).toContain('Financial Overview');
   });
 
-  test.skip('rejects /api/content requests outside configured KB root', async () => {
+  test('rejects /api/content requests outside configured KB root', async () => {
     const response = await requestJson(
       port,
       'GET',
@@ -513,7 +513,7 @@ describe('server migration settings routes', () => {
     );
   });
 
-  test.skip('check-cache and restore-cache endpoints work for named targets', async () => {
+  test('check-cache and restore-cache endpoints work for named targets', async () => {
     const cacheResponse = await requestJson(port, 'GET', '/api/check-cache?target=financial');
     expect(cacheResponse.status).toBe(200);
     expect(cacheResponse.body).toEqual(
@@ -570,7 +570,7 @@ describe('server migration settings routes', () => {
     );
   });
 
-  test.skip('deduplicates same build request while first build is in-flight', async () => {
+  test('deduplicates same build request while first build is in-flight', async () => {
     const hold = deferred();
     buildGraphMock.mockImplementationOnce(() => hold.promise);
 
@@ -616,7 +616,7 @@ describe('server migration settings routes', () => {
     );
   });
 
-  test.skip('returns 409 when a different build request arrives during active build', async () => {
+  test('returns 409 when a different build request arrives during active build', async () => {
     const hold = deferred();
     buildGraphMock.mockImplementationOnce(() => hold.promise);
 
@@ -643,7 +643,20 @@ describe('server migration settings routes', () => {
     expect(firstResponse.status).toBe(200);
   });
 
-  test.skip('returns 413 when /api/build request body exceeds size limit', async () => {
+  test.each(['incremental', 'none', 'full'])('graph build applies the requested %s recompute contract', async mode => {
+    const response = await requestJson(port, 'POST', '/api/build', { target: 'financial', relationRecomputeMode: mode });
+    expect(response.status).toBe(200);
+    expect(response.body.sync.summary.resolvedRelationRecomputeMode).toBe(mode);
+  });
+
+  test('graph build rejects unsupported recompute before construction', async () => {
+    const calls = buildGraphMock.mock.calls.length;
+    const response = await requestJson(port, 'POST', '/api/build', { target: 'financial', relationRecomputeMode: 'auto' });
+    expect(response.status).toBe(400);
+    expect(buildGraphMock.mock.calls.length).toBe(calls);
+  });
+
+  test('returns 413 when /api/build request body exceeds size limit', async () => {
     const oversizedPayload = {
       target: 'financial',
       pad: 'x'.repeat(700 * 1024)
@@ -658,7 +671,7 @@ describe('server migration settings routes', () => {
     );
   });
 
-  test.skip('returns 400 when /api/build request body contains invalid json', async () => {
+  test('returns 400 when /api/build request body contains invalid json', async () => {
     const response = await requestRaw(
       port,
       'POST',
@@ -936,6 +949,38 @@ describe('server migration settings routes', () => {
     expect(comprehensiveAliasResponse.status).toBe(200);
     expect(comprehensiveAliasResponse.body.result.responseMode).toBe('full');
     expect(comprehensiveAliasResponse.body.result.answer).toContain('Thermal model');
+  });
+
+  test('disconnect cancels a running turn once and its cached failure cannot write memory on replay', async () => {
+    const { KnowledgeLearningPlatform } = require('./learning/KnowledgeLearningPlatform');
+    const started = deferred();
+    const cancelled = deferred();
+    const run = jest.spyOn(KnowledgeLearningPlatform.prototype, 'runAgentConversation').mockImplementationOnce(async (...args: unknown[]) => {
+      const signal = args[1] as AbortSignal;
+      started.resolve();
+      return await new Promise((_resolve, reject) => {
+        const abort = () => { cancelled.resolve(); reject(signal.reason); };
+        if (signal.aborted) abort();
+        else signal.addEventListener('abort', abort, { once: true });
+      });
+    });
+    const payload = { userId: 'disconnected-user', message: 'Financial overview' };
+    const client = http.request({ host: '127.0.0.1', port, path: '/api/knowledge/conversation', method: 'POST', headers: {
+      'content-type': 'application/json', accept: 'text/event-stream', 'x-agent-conversation-turn-id': 'turn_disconnect_regression',
+    } }, response => response.resume());
+    client.on('error', () => undefined);
+    try {
+      client.end(JSON.stringify(payload));
+      await started.promise;
+      client.destroy();
+      await cancelled.promise;
+      const replay = await requestJson(port, 'POST', '/api/knowledge/conversation', payload, { 'x-agent-conversation-turn-id': 'turn_disconnect_regression' });
+      expect(replay.status).toBe(499);
+      expect(replay.body.errorCode).toBe('runtime_cancelled');
+      expect(run).toHaveBeenCalledTimes(1);
+      const memory = await requestJson(port, 'POST', '/api/knowledge/conversation-memory/search', { userId: 'disconnected-user', query: 'Financial overview' });
+      expect(memory.body.result.entries).toHaveLength(0);
+    } finally { client.destroy(); run.mockRestore(); }
   });
 
   test('conversation budget mode is adaptive by default, supports unbounded desktop full, and stays isolated in cache', async () => {
@@ -1303,7 +1348,7 @@ describe('server migration settings routes', () => {
     expect(response.body.svg).toContain('<svg');
   });
 
-  test.skip('returns 415 when /api/kb-path request content type is not json', async () => {
+  test('returns 415 when /api/kb-path request content type is not json', async () => {
     const response = await requestRaw(
       port,
       'POST',
@@ -1322,7 +1367,7 @@ describe('server migration settings routes', () => {
     );
   });
 
-  test.skip('accepts binary PNG upload for clipboard copy without base64 JSON payload', async () => {
+  test('accepts binary PNG upload for clipboard copy without base64 JSON payload', async () => {
     const tinyPng = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+VwAAAABJRU5ErkJggg==',
       'base64'
@@ -1346,7 +1391,7 @@ describe('server migration settings routes', () => {
     );
   });
 
-  test.skip('returns 415 for unsupported binary clipboard content type', async () => {
+  test('returns 415 for unsupported binary clipboard content type', async () => {
     const response = await requestRaw(
       port,
       'POST',
@@ -1365,7 +1410,7 @@ describe('server migration settings routes', () => {
     );
   });
 
-  test.skip('returns 413 when binary clipboard payload exceeds limit', async () => {
+  test('returns 413 when binary clipboard payload exceeds limit', async () => {
     const oversized = Buffer.alloc(TEST_CLIPBOARD_LIMIT_BYTES + 1, 0x00);
     const response = await requestBinary(
       port,

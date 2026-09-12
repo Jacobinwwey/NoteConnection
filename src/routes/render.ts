@@ -238,66 +238,8 @@ export function registerRenderRoutes(ctx: ServerContext): RouteEntry[] {
                 }
             },
         },
-        {
-            method: 'POST',
-            path: '/api/render/graphviz',
-            handler: async (req, res) => {
-                try {
-                    const body = await readBody(req);
-                    const payload = JSON.parse(body);
-                    const source = typeof payload?.source === 'string' ? payload.source : '';
-                    if (!source.trim()) {
-                        json(res, 400, { error: 'Missing source' });
-                        return;
-                    }
-                    json(res, 200, { success: true, message: 'graphviz render route' });
-                } catch (e) { fail(res, e, 'POST /api/render/graphviz'); }
-            },
-        },
-        {
-            method: 'POST',
-            path: '/api/clipboard/image',
-            handler: async (req, res) => {
-                try {
-                    const body = await readBody(req);
-                    const { pngBase64 } = JSON.parse(body);
-                    const normalizedPngBase64 = typeof pngBase64 === 'string' ? pngBase64.trim() : '';
-                    if (!normalizedPngBase64) {
-                        json(res, 400, { error: 'Missing pngBase64' });
-                        return;
-                    }
-                    const { copyPngToClipboard } = await import('../native_clipboard');
-                    const pngBuffer = Buffer.from(normalizedPngBase64, 'base64');
-                    if (!isPngBuffer(pngBuffer)) {
-                        json(res, 400, { error: 'Invalid PNG payload' });
-                        return;
-                    }
-                    await copyPngToClipboard(pngBuffer);
-                    json(res, 200, { ok: true });
-                } catch (e) { fail(res, e, 'POST /api/clipboard/image'); }
-            },
-        },
-        {
-            method: 'POST',
-            path: '/api/clipboard/image-binary',
-            handler: async (req, res) => {
-                try {
-                    const chunks: Buffer[] = [];
-                    req.on('data', (c: Buffer) => chunks.push(c));
-                    await new Promise<void>((resolve, reject) => {
-                        req.on('end', resolve);
-                        req.on('error', reject);
-                    });
-                    const pngBuffer = Buffer.concat(chunks);
-                    if (!isPngBuffer(pngBuffer)) {
-                        json(res, 400, { error: 'Invalid PNG payload' });
-                        return;
-                    }
-                    const { copyPngToClipboard } = await import('../native_clipboard');
-                    await copyPngToClipboard(pngBuffer);
-                    json(res, 200, { ok: true });
-                } catch (e) { fail(res, e, 'POST /api/clipboard/image-binary'); }
-            },
-        },
+        
+        
+        
     ];
 }

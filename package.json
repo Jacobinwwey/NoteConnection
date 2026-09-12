@@ -101,7 +101,7 @@
     "test:migration": "jest src/core/Graph.test.ts src/core/PathEngine.test.ts src/core/TreeLayout.test.ts src/backend/algorithms/CycleDetection.test.ts src/backend/algorithms/TopologicalSort.test.ts src/backend/algorithms/WasmParityHistory.test.ts src/utils/RuntimePaths.test.ts src/server.migration.test.ts src/pkg.sidecar.contract.test.ts src/sidecar.build.lock.contract.test.ts src/sidecar.freshness.contract.test.ts src/foundation.sqlite.runtime.contract.test.ts src/foundation.ann.runtime.contract.test.ts src/foundation.release.evidence.contract.test.ts src/pkg.snapshot.safety.contract.test.ts src/godot.sidecar.bootstrap.contract.test.ts src/release.godot.mirror.contract.test.ts src/sidecar.replacement.boundary.contract.test.ts src/sidecar.supply.readiness.contract.test.ts src/lfs.asset.policy.contract.test.ts src/tauri.frontend.build.contract.test.ts src/mobile.pipeline.test.ts src/mobile.artifact.contract.test.ts src/capacitor.device.utils.contract.test.ts src/capacitor.evidence.contract.test.ts src/runtime.capabilities.test.ts src/runtime.heap.policy.contract.test.ts src/runtime.spool.policy.contract.test.ts src/runtime.transport.adapter.contract.test.ts src/storage.provider.contract.test.ts src/storage.provider.capacitor.content.contract.test.ts src/storage.provider.capacitor.worker.contract.test.ts src/wasm.parity.runtime.contract.test.ts src/wasm.parity.runtime.functional.test.ts src/wasm.parity.output.equivalence.contract.test.ts src/wasm.parity.benchmark.contract.test.ts src/wasm.parity.benchmark.guards.contract.test.ts src/wasm.parity.history.gate.contract.test.ts src/wasm.parity.artifact.probe.contract.test.ts src/wasm.parity.artifact.provisioning.contract.test.ts src/source_manager.loadflow.test.ts src/capacitor.runtime.contract.test.ts src/welcome.loadflow.test.ts src/pathmode.history.contract.test.ts src/android.pathmode.contract.test.ts src/android.pathmode.smoke.contract.test.ts src/pathbridge.handshake.contract.test.ts src/graph.accessibility.contract.test.ts src/detox.pipeline.contract.test.ts src/privacy.manifest.contract.test.ts src/server.port.fallback.contract.test.ts src/sidecar.signature.contract.test.ts src/sbom.policy.contract.test.ts src/sbom.attestation.policy.contract.test.ts src/sidecar.relaunch.contract.test.ts src/tauri.test.runner.contract.test.ts src/learning/conversationComposer.test.ts src/routes/registry.shadow.contract.test.ts src/routes/runtimeRunbookRouteOps.test.ts --runInBand",
     "test:tauri": "node scripts/run-tauri-tests.js",
     "test:agent-workspace:contracts": "jest src/agent_workspace.contract.parity.test.ts src/agent_workspace.frontend.test.ts src/agent_workspace.runtime.behavior.test.ts --runInBand",
-    "test:foundation:rollout-boundary": "echo \"SKIP: foundation rollout boundary test requires AGENT_WORKSPACE_DIAGNOSTICS infrastructure reconciliation\"",
+    "test:foundation:rollout-boundary": "jest src/notemd.server.integration.test.ts src/learning/queryBackend.test.ts src/foundation.release.evidence.contract.test.ts src/runtime.capabilities.test.ts --runInBand --ci",
     "test:conversation-turn-cache:durability": "jest src/notemd.server.integration.test.ts --runInBand --testNamePattern=\"turn-cache alert trend restart durability\"",
     "test:license:contract": "jest src/license.policy.contract.test.ts --runInBand",
     "verify:agent-workspace:runtime": "node scripts/verify-agent-workspace-runtime.js",
@@ -137,7 +137,7 @@
     "debug:runtime:page": "node scripts/capture-noteconnection-runtime-debug.js",
     "debug:runtime:window": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/capture-noteconnection-window.ps1",
     "debug:runtime:webview": "node scripts/capture-noteconnection-webview-debug.js",
-    "test:gates": "npm run test:migration && npm run test:wasm:parity:gates && npm run test:tauri && npm run test:agent-workspace:contracts && npm run test:conversation-turn-cache:durability && npm run test:license:contract && npm run verify:android:env && npm run verify:detox:pipeline && npm run verify:privacy:manifest && npm run verify:pathbridge:strict && npm run verify:sbom -- --contract-only && npm run verify:sbom:attestation -- --contract-only && npm run verify:sidecar:signatures -- --contract-only",
+    "test:gates": "npm run test:migration && npm run test:foundation:rollout-boundary && npm run test:convergence && npm run test:wasm:parity:gates && npm run test:tauri && npm run test:agent-workspace:contracts && npm run test:conversation-turn-cache:durability && npm run test:license:contract && npm run verify:android:env && npm run verify:detox:pipeline && npm run verify:privacy:manifest && npm run verify:pathbridge:strict && npm run verify:sbom -- --contract-only && npm run verify:sbom:attestation -- --contract-only && npm run verify:sidecar:signatures -- --contract-only",
     "prepublishOnly": "npm run build",
     "test": "jest",
     "cleanup:tauri:sidecars": "node scripts/cleanup-tauri-sidecars.js",
@@ -145,7 +145,8 @@
     "docs:site:build": "node scripts/run-mkdocs.js build --config-file mkdocs.yml",
     "docs:site:serve": "node scripts/run-mkdocs.js serve --config-file mkdocs.yml",
     "docs:github-pages:publish": "node -e \"console.log('Use GitHub Actions workflow: Docs GitHub Pages Publish (.github/workflows/docs-github-pages-publish.yml).')\"",
-    "docs:github-pages:rollback": "node -e \"console.log('Run workflow_dispatch for docs-github-pages-publish.yml and set git_ref to the target stable tag/commit.')\""
+    "docs:github-pages:rollback": "node -e \"console.log('Run workflow_dispatch for docs-github-pages-publish.yml and set git_ref to the target stable tag/commit.')\"",
+    "test:convergence": "jest src/learning/KnowledgeLearningPlatform.persistence.test.ts src/learning/agentConversationExecution.test.ts src/learning/vectorAccelerationAdapter.test.ts src/learning/agentConversationSerialization.test.ts src/middleware/SseResponseWriter.test.ts src/backend/GraphBuilder.matching.test.ts src/server.migration.test.ts --runInBand --ci"
   },
   "pkg": {
     "scripts": [
@@ -212,5 +213,8 @@
     "mermaid": "^11.12.3",
     "tslib": "^2.8.1",
     "ws": "^8.19.0"
+  },
+  "engines": {
+    "node": ">=22.19.0 <23 || >=24.0.0 <25"
   }
 }

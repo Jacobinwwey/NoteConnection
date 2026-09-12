@@ -133,6 +133,8 @@ Implemented: exact-phrase candidates use the matcher's ASCII word boundaries; fu
 
 ### U5 — make named CI gates prove their contracts
 
+Implementation checkpoint: all 13 skipped HTTP obligations now execute and pass after removing incomplete data/diagnostic/clipboard/Graphviz registry copies. Native clipboard, filesystem resolution and build admission remain at their complete server owner. Graph rebuild preserves its requested recompute policy, now covered through HTTP. The 13 skipped capability obligations were replaced by runtime registry/emission tests against exported typed contracts; context-dependent artifact presenters are checked at their supported registry rather than required in every conversation. The echo gate now runs SQLite/readiness/backend/evidence assertions. A missing turn-cache durability test was restored, and its HTTP diagnostics now read the actual cache instead of placeholder platform counters. Combined verification: 84 tests, zero skipped. Node support is declared as 22.19+ or 24.x, with both CI lanes for convergence regressions.
+
 - [ ] **U5 / P1 — close F5; R5, R7**
 
 **Owner/files:** `package.json`, `.github/workflows/migration-gates.yml`, `src/server.migration.test.ts`, `src/agent_workspace.contract.parity.test.ts`. Use `src/foundation.release.evidence.contract.test.ts`; create `src/foundation.rollout.boundary.test.ts` for actual rollout behavior if the old suite no longer exists.
@@ -327,6 +329,8 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 **验收：**sequential/worker 与参考 matcher 等价，candidate count/p95 单独测量。常见 token/回退的最坏复杂度仍可能为二次，增加 worker 不改变这一点。依赖：无。
 
 ### U5：让 CI 门禁名称对应真实断言
+
+实现检查点：13 项跳过的 HTTP 义务已恢复并通过；删除不完整的 data/diagnostic/clipboard/Graphviz 注册副本后，由完整 server owner 继续负责原生剪贴板、文件边界和构建准入。构建保留请求的 recompute 策略，改由 HTTP 回归验证。13 项跳过的能力义务已改为运行时注册表/真实能力输出测试，使用导出的类型契约；依赖上下文的 artifact presenter 在所属注册表验证，不要求每次 conversation 都输出。echo gate 已替换为 SQLite/readiness/backend/evidence 断言。缺失的 turn-cache durability 测试已恢复，HTTP 诊断读取真实缓存，取代 platform 占位计数。组合验证 84 项通过、零跳过。支持 Node 22.19+ 与 24.x，CI 为收敛回归配置双版本通道。
 
 - [ ] **U5 / P1 — 关闭 F5；R5、R7**
 
