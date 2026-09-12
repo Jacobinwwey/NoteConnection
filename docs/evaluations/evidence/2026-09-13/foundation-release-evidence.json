@@ -1,23 +1,23 @@
 {
-  "checkedAt": "2026-09-12T21:46:11.887Z",
+  "checkedAt": "2026-09-12T22:21:51.542Z",
   "maxAgeHours": 168,
   "sqlite": {
-    "reportPath": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-latest.json",
+    "reportPath": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T22-19-08-346Z.json",
     "evidenceCommand": "npm run verify:foundation:sqlite-runtime:release",
     "minimumReportCount": 3,
     "reportCount": 3,
     "reportPaths": [
-      "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-latest.json",
-      "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-40-50-770Z.json",
-      "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-39-54-968Z.json"
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T22-19-08-346Z.json",
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T22-17-42-116Z.json",
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T22-16-20-176Z.json"
     ],
     "minimumHostCount": 1,
     "hostCount": 1,
     "hostKeys": [
       "983343981b26ab1985598fc0"
     ],
-    "verifiedAt": "2026-09-12T21:41:48.320Z",
-    "ageHours": 0.0732,
+    "verifiedAt": "2026-09-12T22:19:08.346Z",
+    "ageHours": 0.0453,
     "maxAgeHours": 168,
     "suiteKind": "soak",
     "soakCycles": 5,
@@ -47,22 +47,22 @@
     ]
   },
   "ann": {
-    "reportPath": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-latest.json",
+    "reportPath": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T22-19-48-481Z.json",
     "evidenceCommand": "npm run verify:foundation:ann-runtime:release",
     "minimumReportCount": 3,
     "reportCount": 3,
     "reportPaths": [
-      "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-latest.json",
-      "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-41-16-519Z.json",
-      "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-40-20-958Z.json"
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T22-19-48-481Z.json",
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T22-18-18-542Z.json",
+      "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T22-16-50-600Z.json"
     ],
     "minimumHostCount": 1,
     "hostCount": 1,
     "hostKeys": [
       "983343981b26ab1985598fc0"
     ],
-    "verifiedAt": "2026-09-12T21:42:13.878Z",
-    "ageHours": 0.0661,
+    "verifiedAt": "2026-09-12T22:19:48.481Z",
+    "ageHours": 0.0342,
     "maxAgeHours": 168,
     "suiteKind": "matrix",
     "releaseGatesEnabled": true,
@@ -158,5 +158,8 @@
   },
   "ok": true,
   "errors": [],
-  "warnings": []
+  "warnings": [
+    "sqlite selected dated release evidence instead of the generic latest pointer.",
+    "ann selected dated release evidence instead of the generic latest pointer."
+  ]
 }

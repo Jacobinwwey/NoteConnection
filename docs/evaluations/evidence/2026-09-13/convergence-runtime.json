@@ -1,6 +1,6 @@
 {
-  "measuredAt": "2026-09-12T21:39:51.907Z",
-  "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
+  "measuredAt": "2026-09-12T22:16:16.593Z",
+  "sourceTreeHash": "9990e783b47cc6734dfc84ffbe29eaa3d6e376c57260961ecd3f7ad952b7fcdf",
   "host": {
     "platform": "win32",
     "arch": "x64",
@@ -22,50 +22,50 @@
       "snapshotBytes": 83960,
       "completeMutationLatencyMs": {
         "count": 5,
-        "min": 4.392499999999984,
-        "p50": 4.82650000000001,
-        "p95": 12.356099999999998,
-        "p99": 12.356099999999998,
-        "max": 12.356099999999998
+        "min": 4.7350999999999885,
+        "p50": 4.998400000000004,
+        "p95": 11.768500000000003,
+        "p99": 11.768500000000003,
+        "max": 11.768500000000003
       },
       "observedHeapGrowthBytes": {
         "count": 5,
         "min": 1180576,
-        "p50": 1205168,
+        "p50": 1204816,
         "p95": 1215200,
         "p99": 1215200,
         "max": 1215200
       },
       "samples": [
         {
-          "elapsedMs": 12.356099999999998,
-          "heapGrowthBytes": 1205168,
-          "rssGrowthBytes": 626688,
-          "rssAfterBytes": 47960064
+          "elapsedMs": 6.136600000000001,
+          "heapGrowthBytes": 1204816,
+          "rssGrowthBytes": 606208,
+          "rssAfterBytes": 47828992
         },
         {
-          "elapsedMs": 11.7603,
+          "elapsedMs": 11.768500000000003,
           "heapGrowthBytes": 1180576,
-          "rssGrowthBytes": 1409024,
-          "rssAfterBytes": 48844800
+          "rssGrowthBytes": 1593344,
+          "rssAfterBytes": 48799744
         },
         {
-          "elapsedMs": 4.528700000000015,
+          "elapsedMs": 4.7812999999999874,
           "heapGrowthBytes": 1203400,
-          "rssGrowthBytes": 1077248,
-          "rssAfterBytes": 49201152
+          "rssGrowthBytes": 823296,
+          "rssAfterBytes": 49131520
         },
         {
-          "elapsedMs": 4.82650000000001,
+          "elapsedMs": 4.7350999999999885,
           "heapGrowthBytes": 1208608,
-          "rssGrowthBytes": 1122304,
-          "rssAfterBytes": 49324032
+          "rssGrowthBytes": 774144,
+          "rssAfterBytes": 48824320
         },
         {
-          "elapsedMs": 4.392499999999984,
+          "elapsedMs": 4.998400000000004,
           "heapGrowthBytes": 1215200,
-          "rssGrowthBytes": 1015808,
-          "rssAfterBytes": 49344512
+          "rssGrowthBytes": 790528,
+          "rssAfterBytes": 48877568
         }
       ]
     },
@@ -74,50 +74,50 @@
       "snapshotBytes": 3923926,
       "completeMutationLatencyMs": {
         "count": 5,
-        "min": 85.04660000000001,
-        "p50": 105.93600000000004,
-        "p95": 118.096,
-        "p99": 118.096,
-        "max": 118.096
+        "min": 79.93529999999998,
+        "p50": 84.33600000000001,
+        "p95": 97.2071,
+        "p99": 97.2071,
+        "max": 97.2071
       },
       "observedHeapGrowthBytes": {
         "count": 5,
-        "min": 30001136,
-        "p50": 37718296,
-        "p95": 37771464,
-        "p99": 37771464,
-        "max": 37771464
+        "min": 32019400,
+        "p50": 37724648,
+        "p95": 37742944,
+        "p99": 37742944,
+        "max": 37742944
       },
       "samples": [
         {
-          "elapsedMs": 118.096,
-          "heapGrowthBytes": 30001136,
-          "rssGrowthBytes": 28758016,
-          "rssAfterBytes": 95477760
+          "elapsedMs": 97.2071,
+          "heapGrowthBytes": 32019400,
+          "rssGrowthBytes": 30662656,
+          "rssAfterBytes": 97595392
         },
         {
-          "elapsedMs": 85.04660000000001,
-          "heapGrowthBytes": 37771464,
-          "rssGrowthBytes": 35622912,
-          "rssAfterBytes": 110571520
+          "elapsedMs": 84.33600000000001,
+          "heapGrowthBytes": 37706032,
+          "rssGrowthBytes": 35627008,
+          "rssAfterBytes": 110653440
         },
         {
-          "elapsedMs": 91.4785,
-          "heapGrowthBytes": 37701560,
-          "rssGrowthBytes": 29454336,
-          "rssAfterBytes": 113381376
+          "elapsedMs": 88.45529999999997,
+          "heapGrowthBytes": 37737080,
+          "rssGrowthBytes": 29011968,
+          "rssAfterBytes": 112988160
         },
         {
-          "elapsedMs": 114.60609999999997,
-          "heapGrowthBytes": 37747376,
-          "rssGrowthBytes": 27807744,
-          "rssAfterBytes": 114499584
+          "elapsedMs": 82.10000000000002,
+          "heapGrowthBytes": 37742944,
+          "rssGrowthBytes": 27680768,
+          "rssAfterBytes": 114036736
         },
         {
-          "elapsedMs": 105.93600000000004,
-          "heapGrowthBytes": 37718296,
-          "rssGrowthBytes": 27881472,
-          "rssAfterBytes": 115621888
+          "elapsedMs": 79.93529999999998,
+          "heapGrowthBytes": 37724648,
+          "rssGrowthBytes": 27635712,
+          "rssAfterBytes": 114987008
         }
       ]
     },
@@ -126,57 +126,57 @@
       "snapshotBytes": 15751932,
       "completeMutationLatencyMs": {
         "count": 5,
-        "min": 346.8606999999997,
-        "p50": 361.62249999999995,
-        "p95": 429.65059999999994,
-        "p99": 429.65059999999994,
-        "max": 429.65059999999994
+        "min": 341.97490000000016,
+        "p50": 347.83370000000014,
+        "p95": 379.51309999999967,
+        "p99": 379.51309999999967,
+        "max": 379.51309999999967
       },
       "observedHeapGrowthBytes": {
         "count": 5,
-        "min": 148374296,
-        "p50": 149251576,
-        "p95": 235199576,
-        "p99": 235199576,
-        "max": 235199576
+        "min": 148343248,
+        "p50": 149257608,
+        "p95": 235141976,
+        "p99": 235141976,
+        "max": 235141976
       },
       "samples": [
         {
-          "elapsedMs": 361.62249999999995,
-          "heapGrowthBytes": 235199576,
-          "rssGrowthBytes": 244023296,
-          "rssAfterBytes": 343818240
+          "elapsedMs": 347.2483,
+          "heapGrowthBytes": 235141976,
+          "rssGrowthBytes": 241807360,
+          "rssAfterBytes": 342298624
         },
         {
-          "elapsedMs": 390.8778000000002,
-          "heapGrowthBytes": 149251576,
-          "rssGrowthBytes": 107044864,
-          "rssAfterBytes": 261390336
+          "elapsedMs": 361.68830000000025,
+          "heapGrowthBytes": 149257608,
+          "rssGrowthBytes": 106909696,
+          "rssAfterBytes": 260902912
         },
         {
-          "elapsedMs": 349.96900000000005,
-          "heapGrowthBytes": 149250592,
-          "rssGrowthBytes": 106819584,
-          "rssAfterBytes": 262012928
+          "elapsedMs": 347.83370000000014,
+          "heapGrowthBytes": 149258640,
+          "rssGrowthBytes": 106618880,
+          "rssAfterBytes": 261603328
         },
         {
-          "elapsedMs": 346.8606999999997,
-          "heapGrowthBytes": 149258968,
-          "rssGrowthBytes": 105283584,
-          "rssAfterBytes": 261459968
+          "elapsedMs": 341.97490000000016,
+          "heapGrowthBytes": 149232640,
+          "rssGrowthBytes": 106594304,
+          "rssAfterBytes": 262262784
         },
         {
-          "elapsedMs": 429.65059999999994,
-          "heapGrowthBytes": 148374296,
-          "rssGrowthBytes": 107474944,
-          "rssAfterBytes": 262922240
+          "elapsedMs": 379.51309999999967,
+          "heapGrowthBytes": 148343248,
+          "rssGrowthBytes": 106754048,
+          "rssAfterBytes": 263061504
         }
       ]
     }
   ],
   "sourceAdmission": {
     "rejection": "runtime_source_bytes_limit",
-    "elapsedMs": 3,
+    "elapsedMs": 1,
     "timeoutMs": 60000,
     "maxSourceBytes": 4194304,
     "maxTotalSourceBytes": 16777216,
@@ -195,11 +195,11 @@
   },
   "cooperativeCancellationLatencyMs": {
     "count": 5,
-    "min": 0.09140000000024884,
-    "p50": 0.13300000000026557,
-    "p95": 1.1530000000002474,
-    "p99": 1.1530000000002474,
-    "max": 1.1530000000002474
+    "min": 0.07809999999972206,
+    "p50": 0.129399999999805,
+    "p95": 1.012000000000171,
+    "p99": 1.012000000000171,
+    "max": 1.012000000000171
   },
   "matching": [
     {
@@ -209,11 +209,11 @@
       "keywordEdges": 300,
       "latencyMs": {
         "count": 5,
-        "min": 14.622699999999895,
-        "p50": 15.818900000000212,
-        "p95": 49.16060000000016,
-        "p99": 49.16060000000016,
-        "max": 49.16060000000016
+        "min": 14.180299999999988,
+        "p50": 17.0925000000002,
+        "p95": 46.483999999999924,
+        "p99": 46.483999999999924,
+        "max": 46.483999999999924
       }
     },
     {
@@ -223,15 +223,15 @@
       "keywordEdges": 505,
       "latencyMs": {
         "count": 5,
-        "min": 16.97510000000011,
-        "p50": 17.497199999999793,
-        "p95": 18.13630000000012,
-        "p99": 18.13630000000012,
-        "max": 18.13630000000012
+        "min": 15.430299999999988,
+        "p50": 16.818699999999808,
+        "p95": 18.542999999999665,
+        "p99": 18.542999999999665,
+        "max": 18.542999999999665
       }
     }
   ],
-  "peakProcessRssBytes": 358699008,
+  "peakProcessRssBytes": 357126144,
   "limitations": [
     "Synthetic scale calibration; not a claim about every user knowledge base.",
     "Mutation latency includes snapshot preparation, rollback preimage cloning and durable file persistence.",

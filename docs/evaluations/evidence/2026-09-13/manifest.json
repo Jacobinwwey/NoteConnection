@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-09-12T21:45:07.143Z",
+  "recordedAt": "2026-09-12T22:21:50.625Z",
   "baselineRevision": "e84d6ece9cce5b82902d4b9335ac096a136a8d2a",
-  "implementationRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
-  "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
+  "implementationRevision": "3b8f3aa97ecfded145b470bb9e4521b5cd4e8f54",
+  "sourceTreeHash": "9990e783b47cc6734dfc84ffbe29eaa3d6e376c57260961ecd3f7ad952b7fcdf",
   "artifacts": {
     "dist_node_runtime": {
       "kind": "sidecar_inputs",
       "path": "dist/src",
-      "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
-      "sizeBytes": 27993653
+      "sha256": "3a8cf81dd021c92d6370f4476a47c78feb1dc4c7932d1b8252eb2c490fc1db28",
+      "sizeBytes": 27993660
     },
     "packaged_sidecar": {
       "kind": "file",
       "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-      "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
-      "sizeBytes": 77884180
+      "sha256": "902c35daa5c9d2f0c6884a91b4c6286831697edc8692a3a3d9a1a5aea6ddf38e",
+      "sizeBytes": 77896688
     }
   },
   "tests": [
@@ -38,6 +38,28 @@
       "suites": 162,
       "sourceReport": "output/project-convergence-2026-09-12/test-reports/complete-final-node24-1789246419466.json",
       "sourceReportSha256": "91d3d72419d72bb8532665da3265e421777a1edd8003f732c6586cc98685336d"
+    },
+    {
+      "id": "windows-shortpath-node22",
+      "node": "22.19.0",
+      "configuration": "Windows 8.3 TEMP/TMP alias; native-canonical fixture root",
+      "suites": 4,
+      "passed": 75,
+      "failed": 0,
+      "skipped": 0,
+      "sourceReport": "output/project-convergence-2026-09-12/test-reports/ci-shortpath-fixed-node22-1789250704701.json",
+      "sourceReportSha256": "0ee78e5bd30b684f57d714149468b0827f3c211cf196f9ef0826b6e1ada00d17"
+    },
+    {
+      "id": "windows-shortpath-node24",
+      "node": "24.14.0",
+      "configuration": "Windows 8.3 TEMP/TMP alias; native-canonical fixture root",
+      "suites": 4,
+      "passed": 75,
+      "failed": 0,
+      "skipped": 0,
+      "sourceReport": "output/project-convergence-2026-09-12/test-reports/ci-shortpath-fixed-node24-1789250704767.json",
+      "sourceReportSha256": "78c9da3e09f256436dda6a673da91ab35199aae3de305abfc4a1533c5f7298d2"
     }
   ],
   "browsers": [
@@ -145,81 +167,81 @@
   "foundation": {
     "sqlite": [
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-latest.json",
-        "sha256": "43f910051db614db7153aaefd7b3235172b0965076fc5ce911d9895a4878b37a",
-        "runId": "84a6611c-4927-4426-9295-a54b1124cb18",
-        "verifiedAt": "2026-09-12T21:41:48.320Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T22-19-08-346Z.json",
+        "sha256": "8be4680b133f5e3cf453023ac3ea89e8372e2be1c6e063c7c1f1a7d2133cc037",
+        "runId": "5904bced-9ea2-429e-a4d6-f59f5ce642f5",
+        "verifiedAt": "2026-09-12T22:19:08.346Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "84a6611c-4927-4426-9295-a54b1124cb18",
-          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
-          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
+          "runId": "5904bced-9ea2-429e-a4d6-f59f5ce642f5",
+          "sourceRevision": "3b8f3aa97ecfded145b470bb9e4521b5cd4e8f54",
+          "sourceTreeHash": "9990e783b47cc6734dfc84ffbe29eaa3d6e376c57260961ecd3f7ad952b7fcdf",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
               "path": "dist/src",
-              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
-              "sizeBytes": 27993653
+              "sha256": "3a8cf81dd021c92d6370f4476a47c78feb1dc4c7932d1b8252eb2c490fc1db28",
+              "sizeBytes": 27993660
             },
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
-              "sizeBytes": 77884180
+              "sha256": "902c35daa5c9d2f0c6884a91b4c6286831697edc8692a3a3d9a1a5aea6ddf38e",
+              "sizeBytes": 77896688
             }
           },
           "workloadHash": "3a333a8bcee5d8b3a98c28b50911b3b0b84a8c1b3a9a88f62141b2bb55afa3f9"
         }
       },
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-40-50-770Z.json",
-        "sha256": "42ae835561abb972022d1d7db1891b8f2eba449b17c2a2d94e1d426941ab8875",
-        "runId": "dec28771-b8e5-4578-8c4c-a4297c617f32",
-        "verifiedAt": "2026-09-12T21:40:50.770Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T22-17-42-116Z.json",
+        "sha256": "01652ef33c452da9325ed6e80aeba3dd61643bdfe24b531eaf512f674935fa1a",
+        "runId": "4ba8baed-7c53-4b6e-8b04-9b219381ee38",
+        "verifiedAt": "2026-09-12T22:17:42.116Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "dec28771-b8e5-4578-8c4c-a4297c617f32",
-          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
-          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
+          "runId": "4ba8baed-7c53-4b6e-8b04-9b219381ee38",
+          "sourceRevision": "3b8f3aa97ecfded145b470bb9e4521b5cd4e8f54",
+          "sourceTreeHash": "9990e783b47cc6734dfc84ffbe29eaa3d6e376c57260961ecd3f7ad952b7fcdf",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
               "path": "dist/src",
-              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
-              "sizeBytes": 27993653
+              "sha256": "3a8cf81dd021c92d6370f4476a47c78feb1dc4c7932d1b8252eb2c490fc1db28",
+              "sizeBytes": 27993660
             },
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
-              "sizeBytes": 77884180
+              "sha256": "902c35daa5c9d2f0c6884a91b4c6286831697edc8692a3a3d9a1a5aea6ddf38e",
+              "sizeBytes": 77896688
             }
           },
           "workloadHash": "3a333a8bcee5d8b3a98c28b50911b3b0b84a8c1b3a9a88f62141b2bb55afa3f9"
         }
       },
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T21-39-54-968Z.json",
-        "sha256": "a21bc670ea2f979bd57cbcaa126f81781fc7dfed2f3fe31c5c84724d3282e445",
-        "runId": "c0bb7c82-5160-4665-b0f2-ae8217828594",
-        "verifiedAt": "2026-09-12T21:39:54.968Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-sqlite-runtime-report-2026-09-12T22-16-20-176Z.json",
+        "sha256": "f5f38400e1200b67e97307adcaec7c38fc1a44256531b5d0b88a93a528988272",
+        "runId": "58a5187b-8136-427e-903a-da2486461b18",
+        "verifiedAt": "2026-09-12T22:16:20.176Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "c0bb7c82-5160-4665-b0f2-ae8217828594",
-          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
-          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
+          "runId": "58a5187b-8136-427e-903a-da2486461b18",
+          "sourceRevision": "3b8f3aa97ecfded145b470bb9e4521b5cd4e8f54",
+          "sourceTreeHash": "9990e783b47cc6734dfc84ffbe29eaa3d6e376c57260961ecd3f7ad952b7fcdf",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
               "path": "dist/src",
-              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
-              "sizeBytes": 27993653
+              "sha256": "3a8cf81dd021c92d6370f4476a47c78feb1dc4c7932d1b8252eb2c490fc1db28",
+              "sizeBytes": 27993660
             },
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
-              "sizeBytes": 77884180
+              "sha256": "902c35daa5c9d2f0c6884a91b4c6286831697edc8692a3a3d9a1a5aea6ddf38e",
+              "sizeBytes": 77896688
             }
           },
           "workloadHash": "3a333a8bcee5d8b3a98c28b50911b3b0b84a8c1b3a9a88f62141b2bb55afa3f9"
@@ -228,81 +250,81 @@
     ],
     "ann": [
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-latest.json",
-        "sha256": "48e0c069965d9ad02d7e8391d058cfd0c5ee16d62406683c582a2013ab4396cf",
-        "runId": "d849f3d2-900b-4cee-b041-f12db6fc611c",
-        "verifiedAt": "2026-09-12T21:42:13.878Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T22-19-48-481Z.json",
+        "sha256": "daacd5373abb630d82124b5003f7deeefa4f8975064e46ca3ef4bfe9479c7d6c",
+        "runId": "bbb41bd1-7a10-4641-bd81-a93213afeb2f",
+        "verifiedAt": "2026-09-12T22:19:48.481Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "d849f3d2-900b-4cee-b041-f12db6fc611c",
-          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
-          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
+          "runId": "bbb41bd1-7a10-4641-bd81-a93213afeb2f",
+          "sourceRevision": "3b8f3aa97ecfded145b470bb9e4521b5cd4e8f54",
+          "sourceTreeHash": "9990e783b47cc6734dfc84ffbe29eaa3d6e376c57260961ecd3f7ad952b7fcdf",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
               "path": "dist/src",
-              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
-              "sizeBytes": 27993653
+              "sha256": "3a8cf81dd021c92d6370f4476a47c78feb1dc4c7932d1b8252eb2c490fc1db28",
+              "sizeBytes": 27993660
             },
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
-              "sizeBytes": 77884180
+              "sha256": "902c35daa5c9d2f0c6884a91b4c6286831697edc8692a3a3d9a1a5aea6ddf38e",
+              "sizeBytes": 77896688
             }
           },
           "workloadHash": "0ab835f5549369b241fbcd5cf2bf956757a6bcef36c0d3d23570f2d7e83b679c"
         }
       },
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-41-16-519Z.json",
-        "sha256": "02a33734ab1f093b7de78bbe108554c47347fb3755c74c052c0c307abbd1a96f",
-        "runId": "60fefef4-7a5b-4167-9b76-9e2f17e94a6d",
-        "verifiedAt": "2026-09-12T21:41:16.519Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T22-18-18-542Z.json",
+        "sha256": "4a5d50a0ae69c61079dca4ead7f4934e16e0079c25982a5069d2f414d9730948",
+        "runId": "498f8f73-e0b8-4be5-aa39-1b02db085552",
+        "verifiedAt": "2026-09-12T22:18:18.542Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "60fefef4-7a5b-4167-9b76-9e2f17e94a6d",
-          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
-          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
+          "runId": "498f8f73-e0b8-4be5-aa39-1b02db085552",
+          "sourceRevision": "3b8f3aa97ecfded145b470bb9e4521b5cd4e8f54",
+          "sourceTreeHash": "9990e783b47cc6734dfc84ffbe29eaa3d6e376c57260961ecd3f7ad952b7fcdf",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
               "path": "dist/src",
-              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
-              "sizeBytes": 27993653
+              "sha256": "3a8cf81dd021c92d6370f4476a47c78feb1dc4c7932d1b8252eb2c490fc1db28",
+              "sizeBytes": 27993660
             },
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
-              "sizeBytes": 77884180
+              "sha256": "902c35daa5c9d2f0c6884a91b4c6286831697edc8692a3a3d9a1a5aea6ddf38e",
+              "sizeBytes": 77896688
             }
           },
           "workloadHash": "0ab835f5549369b241fbcd5cf2bf956757a6bcef36c0d3d23570f2d7e83b679c"
         }
       },
       {
-        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T21-40-20-958Z.json",
-        "sha256": "e1d7ad80d94f174dbf3d16f56ea90df4b3b60994eeffed6c40cb25f4dd737cdc",
-        "runId": "98a63e28-6921-4050-8fd1-a68b95fbeb62",
-        "verifiedAt": "2026-09-12T21:40:20.958Z",
+        "path": "docs/evaluations/evidence/2026-09-13/foundation/foundation-ann-runtime-report-2026-09-12T22-16-50-600Z.json",
+        "sha256": "5de5cdd045b3923f96f957e9535a93026982b0808a49f2075e40fc0d0f91749f",
+        "runId": "81b9b831-f0a4-4aa9-a70c-a16a71b876d8",
+        "verifiedAt": "2026-09-12T22:16:50.600Z",
         "provenance": {
           "schemaVersion": 1,
-          "runId": "98a63e28-6921-4050-8fd1-a68b95fbeb62",
-          "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805",
-          "sourceTreeHash": "7cf9aaf38a5e254c873b0c05b8ed1791cfc61efd7fe8c9b81c90b78309e72943",
+          "runId": "81b9b831-f0a4-4aa9-a70c-a16a71b876d8",
+          "sourceRevision": "3b8f3aa97ecfded145b470bb9e4521b5cd4e8f54",
+          "sourceTreeHash": "9990e783b47cc6734dfc84ffbe29eaa3d6e376c57260961ecd3f7ad952b7fcdf",
           "artifacts": {
             "dist_node_runtime": {
               "kind": "sidecar_inputs",
               "path": "dist/src",
-              "sha256": "fddf73b6fd5cf034bbf86512498252cd5cf9622153099fcf247db7b255eadb9a",
-              "sizeBytes": 27993653
+              "sha256": "3a8cf81dd021c92d6370f4476a47c78feb1dc4c7932d1b8252eb2c490fc1db28",
+              "sizeBytes": 27993660
             },
             "packaged_sidecar": {
               "kind": "file",
               "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
-              "sha256": "a2a7a474bd67db656068fcdf9be5490a3d69e2655835037f15cfffc71eba292e",
-              "sizeBytes": 77884180
+              "sha256": "902c35daa5c9d2f0c6884a91b4c6286831697edc8692a3a3d9a1a5aea6ddf38e",
+              "sizeBytes": 77896688
             }
           },
           "workloadHash": "0ab835f5549369b241fbcd5cf2bf956757a6bcef36c0d3d23570f2d7e83b679c"
@@ -319,13 +341,13 @@
     },
     "answer-quality-v2": {
       "path": "docs/evaluations/evidence/2026-09-13/answer-quality-v2.json",
-      "sha256": "283e7750f453c6862204eb370cf5ecf3e35b380ac949dc6dd7f8495e6b840090",
+      "sha256": "01e70054c9bd01896a37c397316b2404cbae123c18b6877bef8f8cc2e7981406",
       "corpusSha256": "7d0cd1fb36096b0b138194315459ef0253ff2619dd1f107e3380bd10f2a84702",
-      "sourceRevision": "0789a55da0d7701ce5c8bcef855a2a886dcc2805"
+      "sourceRevision": "3b8f3aa97ecfded145b470bb9e4521b5cd4e8f54"
     },
     "runtime": {
       "path": "docs/evaluations/evidence/2026-09-13/convergence-runtime.json",
-      "sha256": "9eba87b2bda460365baf72ff784e5513d7cfabd9082a32540d509c30bf3f32d7"
+      "sha256": "9c693afa2f305a5d8c347a83c8111add60c475fb32e32d5a4f307af4c609268c"
     }
   },
   "qualification": {
@@ -346,12 +368,14 @@
     "Both browser fixture response modes also passed at desktop size; the latest fixture reports represent the final narrow viewport runs.",
     "A source-only CSS fix followed the first v2 confirmation evaluation. The second frozen-v2 evaluation preserves the same answer-quality counts; no answer heuristic was tuned on v2.",
     "Local logs/screenshots remain ignored diagnostics; copied fixture qualification/evaluation reports are durable records.",
-    "The final source cleanup removed two whitespace-only blank lines after the full dual-Node tests. TypeScript compilation, packaged SQLite/reference qualification and unchanged quality counts were verified again against the new fingerprint."
+    "The final source cleanup removed two whitespace-only blank lines after the full dual-Node tests. TypeScript compilation, packaged SQLite/reference qualification and unchanged quality counts were verified again against the new fingerprint.",
+    "Initial remote main run 34721154318 exposed two Windows short/long-path fixture assertion failures; production canonical paths were correct. The original assertions pass after canonicalizing the newly created test root with realpathSync.native.",
+    "The Windows short-path fixture correction passed the complete 75-case foundation suite on both Node runtimes. TypeScript compilation, packaged SQLite/reference qualification and unchanged quality counts were verified again against the resulting source fingerprint."
   ],
   "foundationVerifier": {
     "path": "docs/evaluations/evidence/2026-09-13/foundation-release-evidence.json",
-    "sha256": "a9aab2f271d6cbe7642d1a1ae864198e47b6a83a4bfe49ce817d83171cbb1b49",
-    "checkedAt": "2026-09-12T21:46:11.887Z",
+    "sha256": "14c4f42cfc8e11931af52430cd025f347232cc60e9cc4b863e13e60aa7482f29",
+    "checkedAt": "2026-09-12T22:21:51.542Z",
     "ok": true,
     "reportCounts": {
       "sqlite": 3,
