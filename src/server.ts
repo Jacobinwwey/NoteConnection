@@ -14447,6 +14447,9 @@ export const startServer = async (options: { port?: number, targetPath?: string 
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({
                         runtime: {
+                            nodeVersion: process.version,
+                            platform: process.platform,
+                            arch: process.arch,
                             host: LOOPBACK_HOST,
                             port: runtimePort,
                             bridgePort: effectivePathBridgePort,

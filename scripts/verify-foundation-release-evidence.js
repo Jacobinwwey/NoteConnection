@@ -2,6 +2,9 @@
 
 const fs = require('fs');
 const path = require('path');
+const { createHash } = require('crypto');
+const { computeSidecarSourceFingerprint } = require('./sidecar-build-fingerprint');
+const { validateFoundationProvenance } = require('./foundation-evidence-provenance');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const SQLITE_LATEST_REPORT_PATH = path.join(
@@ -148,7 +151,8 @@ function readJsonReport(reportPath, componentId, errors, reportKind = 'latest') 
 }
 
 function resolveComparablePath(filePath) {
-    return path.resolve(filePath).toLowerCase();
+    const resolved = path.resolve(filePath);
+    return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
 }
 
 function listReleaseReportPaths(componentId, latestReportPath) {
@@ -194,6 +198,7 @@ function evaluateReportForHistory(componentId, report, reportPath, options) {
     const errors = [];
     const warnings = [];
     validateFreshnessWindow(componentId, report, reportPath, options, errors, warnings);
+    validateFoundationProvenance(componentId, report, options, errors);
     if (componentId === 'sqlite') {
         validateSqliteReleaseReport(report, errors);
     } else {
@@ -234,6 +239,7 @@ function validateReleaseReportHistory(componentId, latestReportPath, latestRepor
     const reportPaths = listReleaseReportPaths(componentId, latestReportPath);
     const validReportPaths = [];
     const validHostKeys = new Set();
+    const runIdentities = new Set();
 
     reportPaths.forEach((reportPath) => {
         const isLatestReport = resolveComparablePath(reportPath) === latestComparablePath;
@@ -243,6 +249,10 @@ function validateReleaseReportHistory(componentId, latestReportPath, latestRepor
         }
         const evaluation = evaluateReportForHistory(componentId, report, reportPath, options);
         if (evaluation.valid) {
+            const identity = report.provenance && report.provenance.runId
+                || createHash('sha256').update(JSON.stringify(report)).digest('hex');
+            if (runIdentities.has(identity)) return;
+            runIdentities.add(identity);
             validReportPaths.push(reportPath);
             validHostKeys.add(readHostEvidenceKey(report));
             warnings.push(...evaluation.warnings);
@@ -307,7 +317,7 @@ function validateFreshnessWindow(componentId, report, reportPath, options, error
             `Run ${EVIDENCE_COMMANDS[componentId]} first.`
         );
     } else if (ageMs < -FUTURE_CLOCK_TOLERANCE_MS) {
-        warnings.push(`${componentId} release evidence timestamp is in the future relative to verifier clock.`);
+        errors.push(`${componentId} release evidence timestamp is in the future relative to verifier clock.`);
     }
 
     return {
@@ -375,12 +385,29 @@ function validateGateArray(componentId, profileId, modeId, gateContainer, gatePr
         errors.push(`${componentId} profile ${profileId} mode ${modeId} ${gatePropertyName}.pass is not true.`);
     }
     const gates = normalizeArray(gateContainer.gates);
+    const requiredGateIds = componentId === 'sqlite'
+        ? ['startup_p95', 'startup_max', 'ingest_p95', 'ingest_max', 'readiness_p95', 'diagnostics_p95', 'query_p95', 'query_max']
+        : ['startup_p95', 'ingest_p95', 'diagnostics_p95', 'query_p95', 'query_max', 'expected_recall'];
+    for (const gateId of requiredGateIds) {
+        if (!gates.some(gate => gate && gate.gateId === gateId)) errors.push(`${componentId} profile ${profileId} mode ${modeId} is missing gate ${gateId}.`);
+    }
     if (gates.length <= 0) {
         errors.push(`${componentId} profile ${profileId} mode ${modeId} ${gatePropertyName}.gates is empty.`);
     }
     const failedGateIds = gates
         .filter((gate) => !gate || gate.passed !== true)
         .map((gate) => String(gate && gate.gateId || 'unknown'));
+    for (const gate of gates) {
+        if (!gate) continue;
+        const observed = componentId === 'sqlite' ? gate.observedMs : gate.observed;
+        const threshold = componentId === 'sqlite' ? gate.maxAllowedMs : gate.required;
+        const comparison = componentId === 'sqlite' ? 'lte' : gate.comparison;
+        if (!Number.isFinite(observed) || !Number.isFinite(threshold) || threshold <= 0 || !(gate.sampleCount > 0)
+            || !['lte', 'gte'].includes(comparison)
+            || (comparison === 'lte' ? observed > threshold : observed < threshold)) {
+            errors.push(`${componentId} profile ${profileId} mode ${modeId} gate ${gate.gateId} measurements do not support pass.`);
+        }
+    }
     if (failedGateIds.length > 0) {
         errors.push(`${componentId} profile ${profileId} mode ${modeId} failed gates: ${failedGateIds.join(', ')}.`);
     }
@@ -391,6 +418,12 @@ function validateGateArray(componentId, profileId, modeId, gateContainer, gatePr
 }
 
 function validateQuerySamples(componentId, profileId, modeId, modeRun, errors) {
+    const runtime = modeRun && modeRun.runtime;
+    const version = /^v?(\d+)\.(\d+)\./.exec(runtime && runtime.nodeVersion || '');
+    if (!runtime || !runtime.platform || !runtime.arch || !version
+        || !(Number(version[1]) === 24 || Number(version[1]) === 22 && Number(version[2]) >= 19)) {
+        errors.push(`${componentId} profile ${profileId} mode ${modeId} tested runtime identity is missing or unsupported.`);
+    }
     const queryCount = Number(
         modeRun
         && modeRun.performance
@@ -430,8 +463,8 @@ function validateSqliteReleaseReport(report, errors) {
         errors.push(`sqlite release evidence suiteKind must be soak, received: ${suiteKind || 'missing'}.`);
     }
     const soakCycles = Math.max(0, Math.floor(Number(report && report.soakCycles || 0)));
-    if (soakCycles <= 0) {
-        errors.push('sqlite release evidence soakCycles must be a positive integer.');
+    if (soakCycles < 5) {
+        errors.push('sqlite release evidence soakCycles must be at least five.');
     }
 
     const profileRunsById = collectProfileRunsById(report);
@@ -479,6 +512,9 @@ function validateExpectedRecall(profileId, modeId, modeRun, minExpectedRecall, e
     const expectedQueryCount = Math.max(0, Math.floor(Number(expectedRecall.expectedQueryCount || 0)));
     const matchedQueryCount = Math.max(0, Math.floor(Number(expectedRecall.matchedQueryCount || 0)));
     const ratio = Number(expectedRecall.ratio || 0);
+    if (matchedQueryCount > expectedQueryCount || expectedQueryCount > 0 && Math.abs(ratio - matchedQueryCount / expectedQueryCount) > 0.0001) {
+        errors.push(`ann profile ${profileId} mode ${modeId} recall ratio disagrees with its sample counts.`);
+    }
     if (expectedQueryCount <= 0) {
         errors.push(`ann profile ${profileId} mode ${modeId} expectedRecall.expectedQueryCount must be positive.`);
     }
@@ -523,6 +559,7 @@ function validateAnnReleaseReport(report, errors) {
     const minExpectedRecall = Number.isFinite(Number(releaseThresholds.minExpectedRecall))
         ? Number(releaseThresholds.minExpectedRecall)
         : 1;
+    if (minExpectedRecall !== 1) errors.push('ann release evidence cannot relax the required expected recall of 1.');
 
     const profileRunsById = collectProfileRunsById(report);
     const profileSummaries = [];
@@ -576,6 +613,9 @@ function resolveVerifierOptions(options = {}) {
         );
     return {
         now,
+        artifactRoot: path.resolve(options.artifactRoot || REPO_ROOT),
+        sourceTreeHash: computeSidecarSourceFingerprint(REPO_ROOT).digest,
+        artifactIdentities: new Map(),
         maxAgeHours,
         minimumReportCount,
         minimumHostCount,
@@ -596,8 +636,33 @@ function verifyFoundationReleaseEvidence(options = {}) {
     const resolvedOptions = resolveVerifierOptions(options);
     const errors = [];
     const warnings = [];
+    // A matrix/smoke run may overwrite latest; select the newest eligible release run.
+    // Gate failures on that run remain failures, even if older passing runs exist.
+    for (const componentId of ['sqlite', 'ann']) {
+        const key = `${componentId}ReportPath`;
+        const configuredPath = resolvedOptions[key];
+        if (path.basename(configuredPath) !== REPORT_FILE_CONTRACTS[componentId].latestFilename) continue;
+        const candidates = listReleaseReportPaths(componentId, configuredPath).flatMap(reportPath => {
+            const report = readHistoryJsonReport(reportPath, componentId, warnings);
+            if (!report) return [];
+            const releaseKind = componentId === 'sqlite' ? report.suiteKind === 'soak'
+                : report.suiteKind === 'matrix' && report.releaseGatesEnabled === true;
+            const identityErrors = [];
+            validateFreshnessWindow(componentId, report, reportPath, resolvedOptions, identityErrors, []);
+            validateFoundationProvenance(componentId, report, resolvedOptions, identityErrors);
+            return releaseKind && identityErrors.length === 0 ? [{ reportPath, verifiedAt: Date.parse(report.verifiedAt) }] : [];
+        }).sort((left, right) => right.verifiedAt - left.verifiedAt);
+        if (candidates.length) {
+            resolvedOptions[key] = candidates[0].reportPath;
+            if (resolveComparablePath(configuredPath) !== resolveComparablePath(candidates[0].reportPath)) {
+                warnings.push(`${componentId} selected dated release evidence instead of the generic latest pointer.`);
+            }
+        }
+    }
     const sqliteReport = readJsonReport(resolvedOptions.sqliteReportPath, 'sqlite', errors);
     const annReport = readJsonReport(resolvedOptions.annReportPath, 'ann', errors);
+    if (sqliteReport) validateFoundationProvenance('sqlite', sqliteReport, resolvedOptions, errors);
+    if (annReport) validateFoundationProvenance('ann', annReport, resolvedOptions, errors);
     const checkedAt = resolvedOptions.now.toISOString();
 
     const sqliteFreshness = sqliteReport

@@ -20,6 +20,9 @@ describe('foundation release evidence freshness contract', () => {
   const repoRoot = path.resolve(__dirname, '..');
   const packageJsonPath = path.join(repoRoot, 'package.json');
   const scriptPath = path.join(repoRoot, 'scripts', 'verify-foundation-release-evidence.js');
+  const provenance = require('../scripts/foundation-evidence-provenance');
+  const fingerprints = require('../scripts/sidecar-build-fingerprint');
+  let fixtureIdentity: any;
 
   function readJson<T>(filePath: string): T {
     const raw = fs.readFileSync(filePath, 'utf8');
@@ -27,12 +30,43 @@ describe('foundation release evidence freshness contract', () => {
   }
 
   function createTempReportRoot(): string {
-    return fs.mkdtempSync(path.join(os.tmpdir(), 'noteconnection-foundation-release-evidence-'));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'noteconnection-foundation-release-evidence-'));
+    fs.mkdirSync(path.join(root, 'dist', 'src'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src-tauri', 'bin'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'dist', 'src', 'server.js'), 'fixture runtime');
+    const sidecar = path.join(root, 'src-tauri', 'bin', 'fixture-sidecar');
+    fs.writeFileSync(sidecar, 'fixture packaged runtime');
+    fixtureIdentity = { ...provenance.readFoundationRuntimeIdentity(root, sidecar), sourceTreeHash: fingerprints.computeSidecarSourceFingerprint(repoRoot).digest };
+    return root;
   }
 
   function writeJson(filePath: string, value: unknown): void {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    const report: any = structuredClone(value);
+    if (report.profileRuns) {
+      report.host = { nodeVersion: process.version, ...report.host };
+      report.provenance = {
+        schemaVersion: 1, runId: `${report.host.evidenceHostId}-${report.verifiedAt}`,
+        sourceRevision: 'a'.repeat(40), ...fixtureIdentity, workloadHash: provenance.foundationWorkloadHash(report),
+      };
+      for (const profile of report.profileRuns) for (const mode of profile.modes) {
+        mode.runtime = { ...report.host };
+        if (mode.soak) {
+          const provided = new Map(mode.soak.gates.map((gate: any) => [gate.gateId, gate]));
+          mode.soak.gates = ['startup_p95', 'startup_max', 'ingest_p95', 'ingest_max', 'readiness_p95', 'diagnostics_p95', 'query_p95', 'query_max'].map(gateId => ({
+            observedMs: 100, maxAllowedMs: 2500, sampleCount: 8, passed: true, gateId, ...(provided.get(gateId) as object),
+          }));
+        }
+        if (mode.releaseGates) {
+          const provided = new Map(mode.releaseGates.gates.map((gate: any) => [gate.gateId, gate]));
+          mode.releaseGates.gates = ['startup_p95', 'ingest_p95', 'diagnostics_p95', 'query_p95', 'query_max', 'expected_recall'].map(gateId => ({
+            observed: gateId === 'expected_recall' ? 1 : 100, required: gateId === 'expected_recall' ? 1 : 2500,
+            comparison: gateId === 'expected_recall' ? 'gte' : 'lte', sampleCount: 8, passed: true, gateId, ...(provided.get(gateId) as object),
+          }));
+        }
+      }
+    }
+    fs.writeFileSync(filePath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   }
 
   function buildPassingSqliteReport(
@@ -210,7 +244,7 @@ describe('foundation release evidence freshness contract', () => {
       writeJson(sqliteReportPath, buildPassingSqliteReport('2026-06-05T23:00:00.000Z'));
       writeJson(annReportPath, buildPassingAnnReport('2026-06-05T22:00:00.000Z'));
 
-      const result = verifier.verifyFoundationReleaseEvidence({
+      const result = verifier.verifyFoundationReleaseEvidence({ artifactRoot: tempRoot,
         sqliteReportPath,
         annReportPath,
         now,
@@ -243,7 +277,7 @@ describe('foundation release evidence freshness contract', () => {
       writeJson(sqliteReportPath, buildPassingSqliteReport('2026-06-01T00:00:00.000Z'));
       writeJson(annReportPath, buildPassingAnnReport('2026-06-05T22:00:00.000Z'));
 
-      const result = verifier.verifyFoundationReleaseEvidence({
+      const result = verifier.verifyFoundationReleaseEvidence({ artifactRoot: tempRoot,
         sqliteReportPath,
         annReportPath,
         now,
@@ -255,6 +289,80 @@ describe('foundation release evidence freshness contract', () => {
     } finally {
       fs.rmSync(tempRoot, { recursive: true, force: true });
     }
+  });
+
+  test('a later matrix run does not hide a fresh dated SQLite soak', () => {
+    const verifier = require(scriptPath) as FoundationReleaseEvidenceModule;
+    const tempRoot = createTempReportRoot();
+    const sqliteReportPath = path.join(tempRoot, 'foundation-sqlite-runtime-report-latest.json');
+    const annReportPath = path.join(tempRoot, 'foundation-ann-runtime-report-latest.json');
+    try {
+      writeJson(sqliteReportPath, { ...buildPassingSqliteReport('2026-06-05T23:30:00.000Z'), suiteKind: 'matrix' });
+      writeJson(path.join(tempRoot, 'foundation-sqlite-runtime-report-2026-06-05T23-00-00.json'), buildPassingSqliteReport('2026-06-05T23:00:00.000Z'));
+      writeJson(annReportPath, buildPassingAnnReport('2026-06-05T23:00:00.000Z'));
+      const result = verifier.verifyFoundationReleaseEvidence({ artifactRoot: tempRoot,  sqliteReportPath, annReportPath, now: new Date('2026-06-06T00:00:00Z') });
+      expect(result.ok).toBe(true);
+      expect((result.summary.sqlite as any).reportPath).toContain('2026-06-05T23-00-00');
+    } finally { fs.rmSync(tempRoot, { recursive: true, force: true }); }
+  });
+
+  test('latest and dated copies of one run do not count as repeated evidence', () => {
+    const verifier = require(scriptPath) as FoundationReleaseEvidenceModule;
+    const tempRoot = createTempReportRoot();
+    const sqliteReportPath = path.join(tempRoot, 'foundation-sqlite-runtime-report-latest.json');
+    const annReportPath = path.join(tempRoot, 'foundation-ann-runtime-report-latest.json');
+    try {
+      const sqlite = buildPassingSqliteReport('2026-06-05T23:00:00.000Z');
+      const ann = buildPassingAnnReport('2026-06-05T23:00:00.000Z');
+      writeJson(sqliteReportPath, sqlite); writeJson(annReportPath, ann);
+      writeJson(path.join(tempRoot, 'foundation-sqlite-runtime-report-copy.json'), sqlite);
+      writeJson(path.join(tempRoot, 'foundation-ann-runtime-report-copy.json'), ann);
+      const result = verifier.verifyFoundationReleaseEvidence({ artifactRoot: tempRoot,  sqliteReportPath, annReportPath, minReportCount: 2, now: new Date('2026-06-06T00:00:00Z') });
+      expect(result.ok).toBe(false);
+      expect((result.summary.sqlite as any).reportCount).toBe(1);
+      expect((result.summary.ann as any).reportCount).toBe(1);
+    } finally { fs.rmSync(tempRoot, { recursive: true, force: true }); }
+  });
+
+  test.each([
+    ['missing provenance', (report: any) => { delete report.provenance; }],
+    ['wrong source', (report: any) => { report.provenance.sourceTreeHash = 'f'.repeat(64); }],
+    ['wrong artifact', (report: any) => { report.provenance.artifacts.packaged_sidecar.sha256 = 'f'.repeat(64); }],
+    ['changed workload', (report: any) => { report.profileRuns[0].workloadProfile.documentCount++; }],
+    ['unsupported runtime', (report: any) => { report.profileRuns[0].modes[0].runtime.nodeVersion = 'v20.19.0'; }],
+    ['future report', (report: any) => { report.verifiedAt = '2026-06-07T00:00:00Z'; }],
+    ['missing gate', (report: any) => { report.profileRuns[0].modes[0].soak.gates.pop(); }],
+    ['unsubstantiated pass', (report: any) => { report.profileRuns[0].modes[0].soak.gates[0].observedMs = 999999; }],
+  ])('rejects %s even if the report declares passing gates', (_name, mutate) => {
+    const verifier = require(scriptPath) as FoundationReleaseEvidenceModule;
+    const tempRoot = createTempReportRoot();
+    const sqliteReportPath = path.join(tempRoot, 'foundation-sqlite-runtime-report-latest.json');
+    const annReportPath = path.join(tempRoot, 'foundation-ann-runtime-report-latest.json');
+    try {
+      writeJson(sqliteReportPath, buildPassingSqliteReport('2026-06-05T23:00:00Z'));
+      writeJson(annReportPath, buildPassingAnnReport('2026-06-05T23:00:00Z'));
+      const report = readJson<any>(sqliteReportPath);
+      mutate(report);
+      fs.writeFileSync(sqliteReportPath, JSON.stringify(report));
+      const result = verifier.verifyFoundationReleaseEvidence({ artifactRoot: tempRoot, sqliteReportPath, annReportPath, now: new Date('2026-06-06T00:00:00Z') });
+      expect(result.ok).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
+    } finally { fs.rmSync(tempRoot, { recursive: true, force: true }); }
+  });
+
+  test('an eligible recent failure is not masked by an older passing soak', () => {
+    const verifier = require(scriptPath) as FoundationReleaseEvidenceModule;
+    const tempRoot = createTempReportRoot();
+    const sqliteReportPath = path.join(tempRoot, 'foundation-sqlite-runtime-report-latest.json');
+    const annReportPath = path.join(tempRoot, 'foundation-ann-runtime-report-latest.json');
+    try {
+      const failed: any = buildPassingSqliteReport('2026-06-05T23:30:00.000Z');
+      failed.profileRuns[0].modes[0].soak.pass = false;
+      writeJson(sqliteReportPath, failed);
+      writeJson(path.join(tempRoot, 'foundation-sqlite-runtime-report-earlier.json'), buildPassingSqliteReport('2026-06-05T23:00:00.000Z'));
+      writeJson(annReportPath, buildPassingAnnReport('2026-06-05T23:00:00.000Z'));
+      expect(verifier.verifyFoundationReleaseEvidence({ artifactRoot: tempRoot,  sqliteReportPath, annReportPath, now: new Date('2026-06-06T00:00:00Z') }).ok).toBe(false);
+    } finally { fs.rmSync(tempRoot, { recursive: true, force: true }); }
   });
 
   test('accepts repeated sqlite and ANN release evidence when enough fresh history reports exist', () => {
@@ -276,7 +384,7 @@ describe('foundation release evidence freshness contract', () => {
         buildPassingAnnReport('2026-06-05T21:30:00.000Z')
       );
 
-      const result = verifier.verifyFoundationReleaseEvidence({
+      const result = verifier.verifyFoundationReleaseEvidence({ artifactRoot: tempRoot,
         sqliteReportPath,
         annReportPath,
         now,
@@ -320,7 +428,7 @@ describe('foundation release evidence freshness contract', () => {
         buildPassingAnnReport('2026-06-05T21:30:00.000Z', linuxHost)
       );
 
-      const result = verifier.verifyFoundationReleaseEvidence({
+      const result = verifier.verifyFoundationReleaseEvidence({ artifactRoot: tempRoot,
         sqliteReportPath,
         annReportPath,
         now,
@@ -368,7 +476,7 @@ describe('foundation release evidence freshness contract', () => {
         buildPassingAnnReport('2026-06-05T21:30:00.000Z', windowsHost)
       );
 
-      const result = verifier.verifyFoundationReleaseEvidence({
+      const result = verifier.verifyFoundationReleaseEvidence({ artifactRoot: tempRoot,
         sqliteReportPath,
         annReportPath,
         now,
@@ -396,7 +504,7 @@ describe('foundation release evidence freshness contract', () => {
       writeJson(sqliteReportPath, buildPassingSqliteReport('2026-06-05T23:00:00.000Z'));
       writeJson(annReportPath, buildPassingAnnReport('2026-06-05T22:00:00.000Z'));
 
-      const result = verifier.verifyFoundationReleaseEvidence({
+      const result = verifier.verifyFoundationReleaseEvidence({ artifactRoot: tempRoot,
         sqliteReportPath,
         annReportPath,
         now,
@@ -431,7 +539,7 @@ describe('foundation release evidence freshness contract', () => {
         buildNonReleaseAnnReport('2026-06-05T21:00:00.000Z')
       );
 
-      const result = verifier.verifyFoundationReleaseEvidence({
+      const result = verifier.verifyFoundationReleaseEvidence({ artifactRoot: tempRoot,
         sqliteReportPath,
         annReportPath,
         now,

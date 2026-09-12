@@ -76,6 +76,24 @@ describe('sidecar input freshness contract', () => {
         expect(ensureSource).toContain('isSidecarBuildManifestCurrent');
         expect(ensureSource).toContain('Sidecar input fingerprint is missing or stale');
     });
+
+    test('uncompiled source changes invalidate otherwise unchanged packaged inputs', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'noteconnection-source-fingerprint-'));
+        try {
+            fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+            fs.mkdirSync(path.join(root, 'dist', 'src'), { recursive: true });
+            const source = path.join(root, 'src', 'server.ts');
+            fs.writeFileSync(source, 'const revision = 1;\r\n');
+            fs.writeFileSync(path.join(root, 'dist', 'src', 'server.js'), 'const revision = 1;\n');
+            fingerprint.writeSidecarBuildManifest(root, ['server-fixture']);
+            const inputs = fingerprint.computeSidecarInputFingerprint(root).digest;
+            fs.writeFileSync(source, 'const revision = 1;\n');
+            expect(fingerprint.isSidecarBuildManifestCurrent(root)).toBe(true);
+            fs.writeFileSync(source, 'const revision = 2;\n');
+            expect(fingerprint.computeSidecarInputFingerprint(root).digest).toBe(inputs);
+            expect(fingerprint.isSidecarBuildManifestCurrent(root)).toBe(false);
+        } finally { fs.rmSync(root, { recursive: true, force: true }); }
+    });
 });
 
 function repoRoot(): string {

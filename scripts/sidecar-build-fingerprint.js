@@ -59,8 +59,34 @@ function resolveInputFiles(repoRoot) {
 
 function sha256File(filePath) {
   const hash = crypto.createHash('sha256');
-  hash.update(fs.readFileSync(filePath));
+  const descriptor = fs.openSync(filePath, 'r');
+  const chunk = Buffer.allocUnsafe(Math.max(1, Math.min(1024 * 1024, fs.fstatSync(descriptor).size)));
+  try {
+    let count;
+    while ((count = fs.readSync(descriptor, chunk, 0, chunk.length, null)) > 0) hash.update(chunk.subarray(0, count));
+  } finally { fs.closeSync(descriptor); }
   return hash.digest('hex');
+}
+
+function computeSidecarSourceFingerprint(repoRoot) {
+  const root = path.resolve(repoRoot);
+  const files = [];
+  collectFiles(path.join(root, 'src'), 'src', files);
+  collectFiles(path.join(root, 'scripts'), 'scripts', files);
+  for (const relativePath of ['package.json', 'package-lock.json', 'tsconfig.json']) {
+    const absolutePath = path.join(root, relativePath);
+    if (fs.existsSync(absolutePath)) files.push({ absolutePath, relativePath });
+  }
+  files.sort((a, b) => a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0);
+  const digest = crypto.createHash('sha256');
+  for (const file of files) {
+    // Text line endings differ across checkouts; semantic source identity does not.
+    const sourceHash = /\.(?:ts|js|mjs|json|html|css|py|ps1|sh|bat|toml|yml|yaml|md)$/i.test(file.relativePath)
+      ? crypto.createHash('sha256').update(fs.readFileSync(file.absolutePath, 'utf8').replace(/\r\n/g, '\n')).digest('hex')
+      : sha256File(file.absolutePath);
+    digest.update(`${file.relativePath}\0${sourceHash}\n`);
+  }
+  return { algorithm: 'sha256', digest: digest.digest('hex'), fileCount: files.length };
 }
 
 function computeSidecarInputFingerprint(repoRoot) {
@@ -90,6 +116,7 @@ function writeSidecarBuildManifest(repoRoot, targets) {
     targets: Array.from(new Set((Array.isArray(targets) ? targets : []).map((target) => String(target))))
       .sort(),
     fingerprint: computeSidecarInputFingerprint(repoRoot),
+    sourceFingerprint: computeSidecarSourceFingerprint(repoRoot),
   };
   const outputPath = manifestPath(repoRoot);
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
@@ -117,12 +144,15 @@ function isSidecarBuildManifestCurrent(repoRoot) {
   ) {
     return false;
   }
-  return manifest.fingerprint.digest === computeSidecarInputFingerprint(repoRoot).digest;
+  return manifest.fingerprint.digest === computeSidecarInputFingerprint(repoRoot).digest
+    && manifest.sourceFingerprint?.digest === computeSidecarSourceFingerprint(repoRoot).digest;
 }
 
 module.exports = {
   MANIFEST_FILENAME,
   computeSidecarInputFingerprint,
+  computeSidecarSourceFingerprint,
+  sha256File,
   isSidecarBuildManifestCurrent,
   manifestPath,
   readSidecarBuildManifest,

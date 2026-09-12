@@ -5,6 +5,7 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
+const { qualifyFoundationRun } = require('./foundation-evidence-provenance');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const DIST_SERVER_ENTRY = path.join(REPO_ROOT, 'dist', 'src', 'server.js');
@@ -1026,6 +1027,9 @@ async function runScenario(mode, workloadProfile, cliOptions) {
     try {
         runtime = spawnRuntime(mode, { port, bridgePort, connectorPort, fixture });
         const firstStartup = await waitForServer(port, STARTUP_TIMEOUT_MS, { workloadProfile, mode });
+        const identityResponse = await requestJson(port, 'GET', '/api/runtime-diagnostics');
+        assertCondition(identityResponse.status === 200 && identityResponse.body?.runtime?.nodeVersion, 'Missing tested runtime identity');
+        result.runtime = { nodeVersion: identityResponse.body.runtime.nodeVersion, platform: identityResponse.body.runtime.platform, arch: identityResponse.body.runtime.arch };
 
         const ingestResponse = await requestJson(
             port,
@@ -1154,6 +1158,7 @@ async function main() {
         `Missing dist frontend directory: ${DIST_FRONTEND_DIR}. Run npm run build first.`
     );
 
+    const report = await qualifyFoundationRun({ repoRoot: REPO_ROOT, sidecarPath: resolveHostSidecarBinaryPath() }, async () => {
     const report = {
         verifiedAt: new Date().toISOString(),
         host: {
@@ -1182,6 +1187,8 @@ async function main() {
         });
     }
 
+    return report;
+    });
     const reportPaths = writeStructuredReport(report);
     console.log(JSON.stringify(report, null, 2));
     console.log(

@@ -165,6 +165,8 @@ Do not execute mutating requests twice against production for “shadow” verif
 
 ### U7 — qualify concrete desktop/mobile artifacts
 
+Tooling checkpoint: release selection now finds eligible dated reports, deduplicates mirrored run IDs, and keeps the newest comparable failure blocking. Reports bind source content/revision, dist inputs, sidecar bytes, host/runtime and workload; collection rejects edits during a run. Sidecar freshness now includes uncompiled source changes. Verifier checks required gate measurements, at least five SQLite restarts and unchanged ANN recall requirements. Twenty-nine evidence/freshness tests pass. Artifact qualification is pending the final build. ADB reports no connected device; Android native acceptance remains unqualified.
+
 - [ ] **U7 / P1 — close evidence obligations, not feature scope; R7**
 
 **Owner/files:** `scripts/verify-foundation-release-evidence.js`, `scripts/verify-foundation-sqlite-runtime.js`, `scripts/verify-foundation-ann-runtime.js`, `scripts/capture-tauri-android-rss-evidence.js`, `scripts/verify-mobile-artifact.js`, release workflows. Tests: `src/foundation.release.evidence.contract.test.ts`, `src/mobile.artifact.contract.test.ts`.
@@ -178,6 +180,8 @@ Desktop acceptance covers dist and packaged sidecar, SQLite restart/soak, explic
 **Acceptance:** promote only the host/backend combinations actually qualified. Keep G2/G3 native acceptance and G4 canonical-ID cutover separate; no public-ID migration is included. Dependencies: U1–U3 before qualifying a changed runtime; evidence collection tooling can proceed independently. Device access/signing is an explicit external prerequisite.
 
 ### U8 — representative answer and learning-outcome calibration
+
+Corpus checkpoint: version 1.0.0 contains six calibration cases and eighteen held-out bilingual cases across nine categories. Subjects are separate and references were authored before evaluation outputs. The evaluator records independent reference coverage, labelled unsupported-assertion probes, conflict/abstention signals, repeat stability, cold/hot timings and memory observations with explicit denominators. It does not treat runtime sufficiency as an external correctness label. Baseline execution and learner outcome collection remain pending.
 
 - [ ] **U8 / P2 — advance M01/M09/M10/M11; R8**
 
@@ -364,6 +368,8 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 ### U7：验收具体桌面/移动 artifact
 
+工具检查点：release 选择器已检索合格的日期报告，对镜像 run ID 去重，并保留最新可比失败的阻断作用。报告绑定源码内容/修订、dist 输入、sidecar 字节、宿主/runtime 与工作负载；运行过程中修改输入会拒绝证据。sidecar freshness 已覆盖未编译源码变化。验证器校验必要 gate 的实测数值、至少五次 SQLite 重启，以及未放宽的 ANN recall 要求。evidence/freshness 29 项通过。artifact 验收等待最终构建；ADB 当前没有设备，Android 原生验收仍未通过。
+
 - [ ] **U7 / P1 — 关闭证据义务；R7**
 
 **Owner/文件：**`scripts/verify-foundation-release-evidence.js`、`scripts/verify-foundation-sqlite-runtime.js`、`scripts/verify-foundation-ann-runtime.js`、`scripts/capture-tauri-android-rss-evidence.js`、`scripts/verify-mobile-artifact.js`、release workflow。测试：`src/foundation.release.evidence.contract.test.ts`、`src/mobile.artifact.contract.test.ts`。
@@ -377,6 +383,8 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 **验收：**仅提升已实证的 host/backend 组合；G2/G3 原生验收与 G4 canonical-ID 独立，不包含 public-ID 迁移。依赖：变更 runtime 的验收在 U1–U3 后；证据工具可独立推进。设备/签名为明确外部前提。
 
 ### U8：代表性回答与学习成效校准
+
+语料检查点：1.0.0 版包含六个校准用例、十八个独立评估双语用例，覆盖九类任务。校准与评估主题分离，参考事实在观察评估输出前编写。评估器记录独立参考覆盖、已标注不受支持断言探针、冲突/拒答信号、重复稳定性、冷/热时延与内存观测，并保留分母；不把 runtime 的 sufficiency 当作外部正确性标签。基线执行与学习者成效采样尚待完成。
 
 - [ ] **U8 / P2 — 推进 M01/M09/M10/M11；R8**
 
