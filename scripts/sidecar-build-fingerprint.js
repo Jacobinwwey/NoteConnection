@@ -22,6 +22,9 @@ function collectFiles(rootPath, relativeRoot, files) {
     const absolutePath = path.join(rootPath, entry.name);
     const relativePath = path.join(relativeRoot, entry.name).replace(/\\/g, '/');
     if (entry.isDirectory()) {
+      // Cargo's host cache is not source. Materialized runtime files under
+      // dist/src remain fully covered by the separate artifact fingerprint.
+      if (relativePath === 'src/backend/wasm/target') continue;
       collectFiles(absolutePath, relativePath, files);
     } else if (entry.isFile()) {
       files.push({ absolutePath, relativePath });
@@ -79,14 +82,15 @@ function computeSidecarSourceFingerprint(repoRoot) {
   }
   files.sort((a, b) => a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0);
   const digest = crypto.createHash('sha256');
+  digest.update('noteconnection-source-v2\n');
   for (const file of files) {
     // Text line endings differ across checkouts; semantic source identity does not.
-    const sourceHash = /\.(?:ts|js|mjs|json|html|css|py|ps1|sh|bat|toml|yml|yaml|md)$/i.test(file.relativePath)
+    const sourceHash = /\.(?:ts|js|mjs|json|html|css|py|ps1|sh|bat|toml|yml|yaml|md|rs|lock)$/i.test(file.relativePath)
       ? crypto.createHash('sha256').update(fs.readFileSync(file.absolutePath, 'utf8').replace(/\r\n/g, '\n')).digest('hex')
       : sha256File(file.absolutePath);
     digest.update(`${file.relativePath}\0${sourceHash}\n`);
   }
-  return { algorithm: 'sha256', digest: digest.digest('hex'), fileCount: files.length };
+  return { algorithm: 'sha256', version: 2, digest: digest.digest('hex'), fileCount: files.length };
 }
 
 function computeSidecarInputFingerprint(repoRoot) {

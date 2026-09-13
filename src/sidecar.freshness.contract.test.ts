@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 type SidecarFingerprintModule = {
+    computeSidecarSourceFingerprint: (repoRoot: string) => { digest: string; fileCount: number };
     computeSidecarInputFingerprint: (repoRoot: string) => {
         algorithm: string;
         digest: string;
@@ -92,6 +93,64 @@ describe('sidecar input freshness contract', () => {
             fs.writeFileSync(source, 'const revision = 2;\n');
             expect(fingerprint.computeSidecarInputFingerprint(root).digest).toBe(inputs);
             expect(fingerprint.isSidecarBuildManifestCurrent(root)).toBe(false);
+        } finally { fs.rmSync(root, { recursive: true, force: true }); }
+    });
+
+    test('Rust WASM compiler caches do not change source identity', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'noteconnection-source-cache-'));
+        try {
+            const source = path.join(root, 'src', 'backend', 'wasm', 'src');
+            fs.mkdirSync(source, { recursive: true });
+            fs.writeFileSync(path.join(source, 'lib.rs'), 'pub fn compute() {}\n');
+            const before = fingerprint.computeSidecarSourceFingerprint(root);
+            const cache = path.join(root, 'src', 'backend', 'wasm', 'target', 'release');
+            fs.mkdirSync(cache, { recursive: true });
+            fs.writeFileSync(path.join(cache, '.rustc_info.json'), '{"host":"one"}');
+            fs.writeFileSync(path.join(cache, 'compiler-output.rlib'), Buffer.from([0, 1, 2, 3]));
+            expect(fingerprint.computeSidecarSourceFingerprint(root)).toEqual(before);
+            fs.writeFileSync(path.join(source, 'lib.rs'), 'pub fn compute() { panic!(); }\n');
+            expect(fingerprint.computeSidecarSourceFingerprint(root).digest).not.toBe(before.digest);
+        } finally { fs.rmSync(root, { recursive: true, force: true }); }
+    });
+
+    test.each(['Cargo.lock', 'src/lib.rs'])('%s has the same source identity under LF and CRLF checkouts', (relativePath) => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'noteconnection-source-newline-'));
+        try {
+            const file = path.join(root, 'src', 'backend', 'wasm', relativePath);
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, 'first line\nsecond line\n');
+            const before = fingerprint.computeSidecarSourceFingerprint(root).digest;
+            fs.writeFileSync(file, 'first line\r\nsecond line\r\n');
+            expect(fingerprint.computeSidecarSourceFingerprint(root).digest).toBe(before);
+            fs.writeFileSync(file, 'first line\nchanged line\n');
+            expect(fingerprint.computeSidecarSourceFingerprint(root).digest).not.toBe(before);
+        } finally { fs.rmSync(root, { recursive: true, force: true }); }
+    });
+
+    test('ordinary target directories and new tests remain source inputs', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'noteconnection-source-target-'));
+        try {
+            const directory = path.join(root, 'src', 'learning', 'target');
+            fs.mkdirSync(directory, { recursive: true });
+            const initial = fingerprint.computeSidecarSourceFingerprint(root).digest;
+            fs.writeFileSync(path.join(directory, 'Reducer.ts'), 'export const revision = 1;\n');
+            const withSource = fingerprint.computeSidecarSourceFingerprint(root).digest;
+            expect(withSource).not.toBe(initial);
+            fs.writeFileSync(path.join(directory, 'Reducer.test.ts'), 'test("revision", () => {});\n');
+            expect(fingerprint.computeSidecarSourceFingerprint(root).digest).not.toBe(withSource);
+        } finally { fs.rmSync(root, { recursive: true, force: true }); }
+    });
+
+    test('compiled target directories remain fully bound by the artifact input fingerprint', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'noteconnection-dist-target-'));
+        try {
+            const directory = path.join(root, 'dist', 'src', 'backend', 'wasm', 'target');
+            fs.mkdirSync(directory, { recursive: true });
+            const file = path.join(directory, 'runtime.wasm');
+            fs.writeFileSync(file, Buffer.from([0, 1, 2, 3]));
+            const before = fingerprint.computeSidecarInputFingerprint(root).digest;
+            fs.writeFileSync(file, Buffer.from([0, 1, 2, 4]));
+            expect(fingerprint.computeSidecarInputFingerprint(root).digest).not.toBe(before);
         } finally { fs.rmSync(root, { recursive: true, force: true }); }
     });
 });
