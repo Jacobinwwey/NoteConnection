@@ -1,0 +1,66 @@
+name: Foundation Runtime Qualification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundation-runtime-qualification-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualify-runtime:
+    name: Qualify ${{ matrix.os }} artifacts
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            binary: server-x86_64-unknown-linux-gnu
+          - os: windows-latest
+            binary: server-x86_64-pc-windows-msvc.exe
+    defaults:
+      run:
+        shell: bash
+    env:
+      PKG_CACHE_PATH: ${{ github.workspace }}/.pkg-cache
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+          cache: npm
+      - name: Prepare isolated temporary files
+        run: node -e "const fs=require('fs'),path=require('path'); const root=path.join(process.env.GITHUB_WORKSPACE,'.qualification-temp'); fs.mkdirSync(root,{recursive:true}); fs.appendFileSync(process.env.GITHUB_ENV,'TEMP='+root+'\nTMP='+root+'\n');"
+      - run: npm ci
+      - run: npm run build:with-vite
+      - run: npm run build:sidecar
+      - name: Run three fresh SQLite soak and reference connector matrices
+        run: |
+          for attempt in 1 2 3; do
+            node scripts/verify-foundation-sqlite-runtime.js --soak
+            node scripts/verify-foundation-ann-runtime.js --matrix --release-gates
+          done
+      - name: Verify source and artifact qualification
+        run: node scripts/verify-foundation-release-evidence.js --min-report-count 3
+      - name: Archive measured artifacts and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundation-runtime-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            output/verification/foundation-sqlite-runtime/
+            output/verification/foundation-ann-runtime/
+            output/verification/foundation-release-evidence/
+            src-tauri/bin/${{ matrix.binary }}
+            src-tauri/bin/.noteconnection-sidecar-build-manifest.json
+            dist/src/
