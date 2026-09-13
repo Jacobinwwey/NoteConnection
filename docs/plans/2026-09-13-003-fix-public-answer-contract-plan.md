@@ -1,7 +1,7 @@
 ---
 title: "fix: Preserve query subjects, complementary evidence and procedural order"
 date: 2026-09-13
-status: in_progress
+status: completed
 updated: 2026-09-14
 parent: docs/plans/2026-09-13-002-fix-public-evidence-quality-plan.md
 source_revision: 9428f6281665c57e8a07eacb267089371c46c3e4
@@ -11,13 +11,17 @@ source_revision: 9428f6281665c57e8a07eacb267089371c46c3e4
 
 ## English
 
+### Acceptance — 2026-09-14
+
+This follow-up is complete. Node 22.19.0 and 24.14.0 each pass 168 suites / 1,708 tests with zero skips. V1–V6 regressions, HTTP/browser/mobile-host checks, the scoped Windows native session and source-v2 artifact gates pass. Remote-main source commit `1a688f02` passes all five normal workflows; CI run `34786392248` qualifies separate Windows/Linux artifacts, with offline verification and an additional two-host qualification of the same Windows binary. See [final results](../evaluations/2026-09-14-public-evidence-quality-results.md). Native release installers, Android, production ANN and consented learner outcomes retain the parent plan's separate acceptance requirements. Counts and pending statements below are historical implementation checkpoints.
+
 Frozen V3 completed before this follow-up: evaluation acceptance was 19/28 slim and 25/28 full, with 0/25 false conflicts, 0/3 missed conflicts and 2/2 correct unknown-measurement signals in each mode. The initial report is preserved at `docs/evaluations/evidence/2026-09-13-quality/answer-quality-v3-confirmation-initial.json`. It exposed real failures: compound questions were treated as entity names, a Chinese comparison admitted an unrelated building passage, and relevance ranking reordered a three-step replacement procedure. Slim projection also dropped supported complementary definition facts. V3 now becomes regression evidence; do not relabel later runs as independent confirmation.
 
 - [x] R1: Align query-subject interpretation across source admission and release review. Preserve both Chinese comparison operands, separate follow-up questions from entity names, and accept source-backed attribute questions without weakening wrong-entity abstention.
 - [x] R2: Preserve authored procedural order after evidence selection. Ranking may choose clauses; it must not imply an execution order that contradicts the source.
 - [x] R3: Retain bounded, supported complementary claims in the public projection. Preserve math, glossary/artifact filters and compact response limits; distinguish source identity/presentation from assertions and normalize comparison identities across English and Chinese.
 - [x] R4: Recognize explicit Chinese no-answer text containing a quoted question. Keep factual negation controls and version the public-surface measurement correction.
-- [ ] R5: Preserve the first frozen V6 result, run V1–V6 as regressions after the final source-label fix, complete full runtime checks and current artifact qualification, then update bilingual evidence and remote main.
+- [x] R5: Preserve the first frozen V6 result, run V1–V6 as regressions after the final source-label fix, complete full runtime checks and current artifact qualification, then update bilingual evidence and remote main.
 
 V4 is frozen before these production changes: six reused calibration cases and 22 new confirmation cases in `fixtures/answer-quality/v4.json`, SHA-256 `ba3c6936cf9cd67a606248bc98292920cf023f276f0ac68050f11d5e048682c6`. Its confirmation sources do not repeat V1–V3 sources. It covers compound/attribute questions, bilingual comparison subjects, procedure ordering, definition completeness, noisy headings and retained conflict/unknown controls. Curated reference acceptance is not a production error-rate estimate or a learner-outcome result.
 
@@ -35,13 +39,17 @@ The local closure uses V1–V6 as regression data after this final presentation 
 
 ## 中文
 
+### 验收 — 2026-09-14
+
+本后续计划已完成。Node 22.19.0 与 24.14.0 各通过 168 suite / 1,708 test，零跳过；V1–V6 回归、HTTP/浏览器/mobile 宿主检查、限定范围的 Windows 原生会话及 source-v2 产物门禁通过。远端 main 源码提交 `1a688f02` 的五条常规流水线通过；CI run `34786392248` 分别验收 Windows/Linux 产物，完成离线复核，并额外验证同一 Windows binary 的两宿主资格。见[最终结果](../evaluations/2026-09-14-public-evidence-quality-results.md#chinese)。原生发布安装包、Android、生产 ANN 和已取得参与同意的学习效果保留上位计划的独立验收要求；下方旧数量与待办措辞属于历史实现检查点。
+
 V3 在本轮后续修改前完成首次确认：evaluation 验收 slim 19/28、full 25/28；两种模式均为冲突误报 0/25、漏报 0/3、未知测量正确识别 2/2。初次报告保存在 `docs/evaluations/evidence/2026-09-13-quality/answer-quality-v3-confirmation-initial.json`。它暴露了实际缺陷：复合问题被当作完整实体名、中文比较混入建筑资料、相关性排序改变了三步替换操作的执行顺序；slim 投影还遗漏有依据的补充定义事实。V3 从此作为回归证据，后续运行不得重新标注为独立确认。
 
 - [x] R1：统一来源准入和发布审查对查询主体的解释；保留中文比较双方，把追问与实体名分开；有源支持的属性问题应可回答，同时保留错误实体拒答约束。
 - [x] R2：选取证据后保持来源中的操作顺序；相关性排序可以决定选哪些句子，不能制造与来源相反的执行顺序。
 - [x] R3：公开投影保留有界、受支持的补充声明，同时保留公式、变量表/文档噪声过滤及 compact 限制；区分来源身份/排版与事实断言，并统一中英文比较主体的身份归一化。
 - [x] R4：识别包含被引用问句的中文明确拒答；保留事实否定对照，为公开信号修正单独标注评估版本。
-- [ ] R5：保留 V6 首次冻结确认结果，在最终来源标签修复后将 V1–V6 作为回归运行；完成完整 runtime 与当前产物资格验证，再同步双语证据与远端 main。
+- [x] R5：保留 V6 首次冻结确认结果，在最终来源标签修复后将 V1–V6 作为回归运行；完成完整 runtime 与当前产物资格验证，再同步双语证据与远端 main。
 
 V4 在这些生产修改之前冻结：`fixtures/answer-quality/v4.json` 包含六个沿用校准 case 与 22 个新确认 case，SHA-256 为 `ba3c6936cf9cd67a606248bc98292920cf023f276f0ac68050f11d5e048682c6`。确认源不与 V1–V3 重复，覆盖复合/属性问句、双语比较主体、步骤顺序、定义完整度、噪声标题，以及保留的冲突/未知答案对照。人工参考验收不能当作生产错误率或学习效果。
 

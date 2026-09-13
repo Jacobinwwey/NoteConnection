@@ -62,11 +62,13 @@
   },
   "qualification": {
     "localWindowsFoundationContracts": true,
-    "independentHost": false,
+    "independentHost": true,
     "nativeReleaseInstallers": false,
     "androidDevice": false,
     "externalProductionAnn": false,
-    "learnerOutcomes": false
+    "learnerOutcomes": false,
+    "windowsSameArtifactHostCount": 2,
+    "linuxCiHostCount": 1
   },
   "files": [
     {
@@ -98,6 +100,171 @@
       "path": "browser/summary.json",
       "bytes": 2821,
       "sha256": "bdc40e2119b6cf6bf8860b505388f83a741f53f3696769eecfb398d978358ea8"
+    },
+    {
+      "path": "ci/adopted-windows-verification.json",
+      "bytes": 5309,
+      "sha256": "d3a5c37fd3184d8c5e9b4bb31617178d530ce96264e0254bd1e78044e4ee3d50"
+    },
+    {
+      "path": "ci/published-artifacts.json",
+      "bytes": 1744,
+      "sha256": "cbb8e1fada975265b6ec5a8d9ea7d95f9382b69734e5892587bca4cf22792bd0"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-ann-runtime-report-2026-09-13T22-21-47-530Z.json",
+      "bytes": 63711,
+      "sha256": "65ba45d4ae5d47bd981b1e4f89633038502d007132c8a0553502abd0bab058d4"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-ann-runtime-report-2026-09-13T22-22-20-121Z.json",
+      "bytes": 63723,
+      "sha256": "c3701acddceef309d746d585b27f28afd43f5ab87cda3093434c7734af7710a8"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-ann-runtime-report-2026-09-13T22-22-52-857Z.json",
+      "bytes": 63694,
+      "sha256": "da0b26f8a3e0d28441c696938f5eb9012662f5bcdcafc1df07c144b18f2ba3c6"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-sqlite-runtime-report-2026-09-13T22-21-31-861Z.json",
+      "bytes": 44615,
+      "sha256": "89bfcbde291aa57432249a5fd786b2e4ac003f8b4fddf1adb67475a22efc2613"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-sqlite-runtime-report-2026-09-13T22-22-04-652Z.json",
+      "bytes": 44623,
+      "sha256": "ef27a35c023623ed05a89f8ed65da62d13194aa6b4ff29301be6085a1764f600"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-sqlite-runtime-report-2026-09-13T22-22-37-269Z.json",
+      "bytes": 44610,
+      "sha256": "d008ea78a18a9d8f44967f25281efe73f6f9dfe799f3a006a79c0a6de239f2f6"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/offline-verification.json",
+      "bytes": 5540,
+      "sha256": "8c0fe6ae1a641cb76ae75a6188eee2e5f289b48dbaed696f90a1c7d89c3c232c"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/provenance.json",
+      "bytes": 1628,
+      "sha256": "8419991aa2f95bf377560127c814a53aaef3fa0d3c326ba4d7000c9de5e94a0d"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/sidecar-build-manifest.json",
+      "bytes": 90222,
+      "sha256": "8067bdfddbd634f98298072178962f89200dcd56f327a4351afb19195a83b354"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-ann-runtime-report-2026-09-13T22-23-12-712Z.json",
+      "bytes": 63803,
+      "sha256": "64e49e4056594a9389659efb82d306e7f4593f2cfe3608a11af05cf04822254e"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-ann-runtime-report-2026-09-13T22-23-57-587Z.json",
+      "bytes": 63725,
+      "sha256": "d8b30c27766e5dca544c2f5c363fae9501ba82c840b02a1a6f682a9723e0761e"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-ann-runtime-report-2026-09-13T22-24-42-223Z.json",
+      "bytes": 63806,
+      "sha256": "4caec5a2b3f5e281b8eb2d646dfc8e0d98a444fe2a249c7a13dd5f9a8d2bbda2"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-sqlite-runtime-report-2026-09-13T22-22-51-210Z.json",
+      "bytes": 44596,
+      "sha256": "8414b27f61bc804bc9c2dc3312afa7e93b33bb110df86d0ec0e27d93ea3f6a24"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-sqlite-runtime-report-2026-09-13T22-23-36-213Z.json",
+      "bytes": 44553,
+      "sha256": "191b0e1a8292ba35746334549201342c8aeb8f9d5d27d59fac59a71335ff45c6"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-sqlite-runtime-report-2026-09-13T22-24-20-889Z.json",
+      "bytes": 44555,
+      "sha256": "1f08114dfa2e8bc878ffec126bba391a20d38d39f6305976e72f6b2ba419c86a"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/offline-verification.json",
+      "bytes": 5557,
+      "sha256": "a250b626d3cea2587ad578f907d1cff51a98be07c8a8e18d2340972e2e44f199"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/provenance.json",
+      "bytes": 1632,
+      "sha256": "bc18592be6becd80498206afcf777b7603b0d9fbc7312402b911b47ed4e0a8b4"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/sidecar-build-manifest.json",
+      "bytes": 90224,
+      "sha256": "e090ab78a40d16168ae3bca655ba1b2e1bb920f9cf064b6d5d772be4fbbf036e"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-23-12-712Z.json",
+      "bytes": 63803,
+      "sha256": "64e49e4056594a9389659efb82d306e7f4593f2cfe3608a11af05cf04822254e"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-23-57-587Z.json",
+      "bytes": 63725,
+      "sha256": "d8b30c27766e5dca544c2f5c363fae9501ba82c840b02a1a6f682a9723e0761e"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-24-42-223Z.json",
+      "bytes": 63806,
+      "sha256": "4caec5a2b3f5e281b8eb2d646dfc8e0d98a444fe2a249c7a13dd5f9a8d2bbda2"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-46-05-445Z.json",
+      "bytes": 63784,
+      "sha256": "5e5404babebc8015eb991b8665d79e77f0ee0b95a5d8ff8fa6e76f608c74c833"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-46-59-368Z.json",
+      "bytes": 63770,
+      "sha256": "ace3587c556ef8805368f878dd3f4178c6a4a252fc6cdcaab07314516dba2029"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-47-53-726Z.json",
+      "bytes": 63804,
+      "sha256": "6b62429b3eb1905379822479f0ee5aaf034a302e3ac98bac52f28287c7dbda4a"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-22-51-210Z.json",
+      "bytes": 44596,
+      "sha256": "8414b27f61bc804bc9c2dc3312afa7e93b33bb110df86d0ec0e27d93ea3f6a24"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-23-36-213Z.json",
+      "bytes": 44553,
+      "sha256": "191b0e1a8292ba35746334549201342c8aeb8f9d5d27d59fac59a71335ff45c6"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-24-20-889Z.json",
+      "bytes": 44555,
+      "sha256": "1f08114dfa2e8bc878ffec126bba391a20d38d39f6305976e72f6b2ba419c86a"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-45-40-912Z.json",
+      "bytes": 45073,
+      "sha256": "47fdfc23c34a1b06a20c031caeb3e67170d0d9f8f43aac9f0efd5a88b5189af2"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-46-35-067Z.json",
+      "bytes": 45023,
+      "sha256": "6db6ec99d8efbefe55ae8d4c9a9a001642e429bae9a79ee795045cf893d76936"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-47-29-066Z.json",
+      "bytes": 45089,
+      "sha256": "220a2c70b161e2301c55b26113cb0d202ae346bf1208e9f945b6aef9813fe385"
+    },
+    {
+      "path": "ci/windows-two-hosts/verification.json",
+      "bytes": 6236,
+      "sha256": "eb5e2fefbe4f0fc7da0b028e6d33eac4f1e5724016acb3c7596051ca75cf437d"
     },
     {
       "path": "convergence-runtime.json",
@@ -219,5 +386,8 @@
       "bytes": 778082,
       "sha256": "e53033d11c600bd8a62944ef75379ab76497447f623f9024dde7d0efef5597a0"
     }
-  ]
+  ],
+  "publishedArtifacts": "ci/published-artifacts.json",
+  "currentWindowsQualification": "ci/windows-two-hosts/verification.json",
+  "currentLinuxQualification": "ci/run-34786392248/Linux/offline-verification.json"
 }

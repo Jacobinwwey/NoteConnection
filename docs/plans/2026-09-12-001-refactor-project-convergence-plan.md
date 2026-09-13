@@ -169,10 +169,11 @@ Do not execute mutating requests twice against production for “shadow” verif
 
 2026-09-13 host checkpoint (historical): report selection, run-ID deduplication, newest-failure blocking, source/dist/sidecar binding and five-restart requirements are implemented. Three distinct final-build SQLite soak and reference HTTP prefilter matrix runs passed in dist and packaged Windows modes; the strict gate passed against the checked-in archive. The prefilter is a reference token-posting service, not an external approximate index. ADB has no connected device; Android, native-window and independent-host acceptance remain unqualified.
 
-2026-09-14 execution update: the manual `foundation-runtime-qualification.yml` workflow will build and measure separate Windows/Linux artifacts on real CI runners, run three SQLite soak/reference-connector matrices per host, and archive binaries, dist inputs, manifests and strict-gate reports. Qualification remains pending until those jobs and their artifacts are verified. This workflow does not establish native windows, Android or an external production ANN backend.
+2026-09-14 execution update: run `34786392248` qualified separate clean Windows/Linux server artifacts with source fingerprint v2. Each CI host completed three SQLite soaks and three reference connector matrices; downloaded bytes and manifests passed offline verification. The adopted Windows binary also completed three runs per component on the local host, and its archive passes the two-host gate. Native release installers, Android and external production ANN remain separate qualifications.
 
 - [x] U7 tooling, Windows SQLite and reference connector qualification.
-- [ ] U7 external device/host/backend qualification with their own artifacts and measurements.
+- [x] U7 independent Windows/Linux server artifacts and two-host qualification of the same Windows artifact.
+- [ ] U7 native release installers, Android devices and production optional backends with their own artifacts and measurements.
 
 - [ ] **U7 / P1 — close evidence obligations, not feature scope; R7**
 
@@ -379,12 +380,13 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 ### U7：验收具体桌面/移动 artifact
 
-2026-09-14 执行更新：新增手动 `foundation-runtime-qualification.yml` 工作流，在真实 Windows/Linux CI runner 上分别构建和测量产物，每宿主执行三次 SQLite soak/参考连接器 matrix，并归档二进制、dist 输入、manifest 与严格门禁报告。在 job 与产物完成核验前仍保留待验收状态；该工作流不代表原生窗口、Android 或外部生产 ANN 已验收。
+2026-09-14 执行更新：run `34786392248` 以 source fingerprint v2 分别验收干净 Windows/Linux server 产物；每个 CI 宿主完成三轮 SQLite soak 与三轮参考连接器 matrix，下载字节及 manifest 通过离线校验。采用的 Windows binary 又在本机完成每组件三轮，其归档通过两宿主门禁。原生发布安装包、Android 及外部生产 ANN 保留独立验收。
 
 2026-09-13 宿主检查点（历史）：日期选择、run ID 去重、最新失败阻断、源码/dist/sidecar 绑定及至少五次重启要求已实现。最终构建的 SQLite soak 与参考 HTTP 预筛选 matrix 各三次通过，覆盖 Windows dist/packaged；对入库归档执行严格门禁亦通过。预筛选是 token posting 参考服务，不是外部近似索引。ADB 没有在线设备，Android、原生窗口与独立宿主仍未验收。
 
 - [x] U7 工具、Windows SQLite 与参考连接器资格验证。
-- [ ] U7 外部设备/宿主/backend 的独立 artifact 与实测资格。
+- [x] U7 独立 Windows/Linux server 产物及 Windows 同一产物的两宿主资格验证。
+- [ ] U7 原生发布安装包、Android 真机及生产可选 backend 的对应产物/测量资格。
 
 - [ ] **U7 / P1 — 关闭证据义务；R7**
 

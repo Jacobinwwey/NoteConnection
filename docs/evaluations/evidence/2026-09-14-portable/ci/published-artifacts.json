@@ -1,0 +1,60 @@
+{
+  "verifiedAt": "2026-09-13T22:55:04.331Z",
+  "sourceRevision": "e4cdce27c55dbb19f0ba6b4405358661c12d8821",
+  "ciRevision": "1a688f02489cb6b1c566e56f8d11f92d745ea1f8",
+  "sourceTreeHash": "15657ea4ebda7e0eeb7847403d2097abc61b08610431395237a78d2a951b5b94",
+  "ciRunId": 34786392248,
+  "normalActions": [
+    {
+      "id": 34786075632,
+      "name": "Migration Gates",
+      "conclusion": "success"
+    },
+    {
+      "id": 34786075667,
+      "name": "Fixrisk Operational Readiness",
+      "conclusion": "success"
+    },
+    {
+      "id": 34786075720,
+      "name": "Docs Diataxis Site",
+      "conclusion": "success"
+    },
+    {
+      "id": 34786075702,
+      "name": "Mobile E2E Detox Contracts",
+      "conclusion": "success"
+    },
+    {
+      "id": 34786075647,
+      "name": "Docs GitHub Pages Publish",
+      "conclusion": "success"
+    }
+  ],
+  "artifacts": {
+    "Windows": {
+      "kind": "file",
+      "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+      "sha256": "bf08708eea0ed04e1ecb1027885b44964c8f6383f8d96df741386176064eca6d",
+      "sizeBytes": 77896769,
+      "qualifiedHostCount": 2,
+      "sqliteReports": 6,
+      "annReports": 6
+    },
+    "Linux": {
+      "kind": "file",
+      "path": "src-tauri/bin/server-x86_64-unknown-linux-gnu",
+      "sha256": "cff9f0fc2426b3242cd1a3afedc704bbe4f3bb130901f29d957bb73cadf6cb17",
+      "sizeBytes": 94693897,
+      "qualifiedHostCount": 1,
+      "sqliteReports": 3,
+      "annReports": 3
+    }
+  },
+  "cleanBuild": {
+    "localGeneratedBackup": "output/project-convergence-2026-09-12/local-dist-before-ci-34786392248",
+    "removedFromPublishedInputs": "dist/src/frontend.__generated2__",
+    "localOnlyFileCount": 104,
+    "localOnlyUncompressedBytes": 5694853
+  }
+}
