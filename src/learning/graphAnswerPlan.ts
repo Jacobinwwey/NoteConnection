@@ -162,12 +162,18 @@ function isCompoundDefinitionNoiseClause(value: string): boolean {
         || /```|\|\s*[^|]+\s*\|/u.test(normalized);
 }
 
-function isDefinitionNoiseTitle(value: string): boolean {
+function isDefinitionNoiseTitle(value: string, message: string): boolean {
     const normalized = normalize(value);
     if (!normalized) {
         return true;
     }
-    return /(?:preamble|reference|参考文献|参考资料|comparison|compare|比较|对比|常见用例|应用场景|use\s+case|application\s+scenario|关键技术规格|技术规格|technical\s+specification|性能指标|性能特征|统计度量|performance\s+(?:metric|characteristic)|related\s+technology|相关技术|mermaid|code\s+block|table|表格)/iu.test(normalized);
+    const compactTitle = (title: string) => normalizedTopicWords(title).replace(/[^\p{L}\p{N}]+/gu, '');
+    const subject = compactTitle(extractDefinitionQuerySubject(message));
+    if (subject && [normalized, ...normalized.split(/[()（）]/u)].some(title => compactTitle(title) === subject)) {
+        return false;
+    }
+    // Metadata words must be words: "table" must not discard an Immutable/Stable source.
+    return /\b(?:preambles?|references?|comparisons?|compare|use\s+case|application\s+scenario|technical\s+specification|performance\s+(?:metric|characteristic)|related\s+technology|mermaid|code\s+block|tables?)\b|参考文献|参考资料|比较|对比|常见用例|应用场景|关键技术规格|技术规格|性能指标|性能特征|统计度量|相关技术|表格/iu.test(normalized.replace(/[_-]+/gu, ' '));
 }
 
 function isDefinitionNoiseClaim(value: string): boolean {
@@ -963,7 +969,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
     };
 
     const matchedSpans = (anchor?.matchedSpans || [])
-        .filter((span) => !definitionIntent || !isDefinitionNoiseTitle(String(span.title || '')))
+        .filter((span) => !definitionIntent || !isDefinitionNoiseTitle(String(span.title || ''), params.message))
         .filter((span) => !isCompoundLearningDefinitionQuery(params.message)
             || isDefinitionLearningSupportSpan(span, extractDefinitionQuerySubject(params.message)))
         .slice(0, definitionIntent ? 8 : Number.MAX_SAFE_INTEGER);
@@ -985,7 +991,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
     );
     (params.ragContextPack?.fragments || [])
         .filter((fragment) => fragment.role !== 'background')
-        .filter((fragment) => !definitionIntent || !isDefinitionNoiseTitle(String(fragment.title || '')))
+        .filter((fragment) => !definitionIntent || !isDefinitionNoiseTitle(String(fragment.title || ''), params.message))
         .filter((fragment) => !isCompoundLearningDefinitionQuery(params.message)
             || isDefinitionLearningSupportSpan({
                 title: String(fragment.title || ''),

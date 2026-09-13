@@ -16,8 +16,9 @@ function distribution(values) {
     return { count: sorted.length, min: sorted[0] ?? null, p50: percentile(0.5), p95: percentile(0.95), p99: percentile(0.99), max: sorted.at(-1) ?? null };
 }
 
-async function evaluateAnswerQuality({ repeats = 3, corpusPath = CORPUS_PATH, outputRoot = path.join(REPO_ROOT, 'output', 'verification', 'answer-quality') } = {}) {
+async function evaluateAnswerQuality({ repeats = 3, corpusPath = CORPUS_PATH, evaluationRole = 'regression', outputRoot = path.join(REPO_ROOT, 'output', 'verification', 'answer-quality') } = {}) {
     if (!Number.isInteger(repeats) || repeats < 1 || repeats > 20) throw new Error('repeats must be an integer from 1 to 20');
+    if (!['regression', 'confirmation'].includes(evaluationRole)) throw new Error('evaluationRole must be regression or confirmation');
     const { KnowledgeLearningPlatform } = require('../dist/src/learning/KnowledgeLearningPlatform');
     const { ANSWER_QUALITY_MEASUREMENT_PROTOCOL, parseAnswerQualityCorpus, measureAnswerQuality, summarizeAnswerQuality } = require('../dist/src/learning/AnswerQualityEvaluation');
     const { serializeAgentConversationResponse } = require('../dist/src/learning/agentConversationSerialization');
@@ -72,7 +73,7 @@ async function evaluateAnswerQuality({ repeats = 3, corpusPath = CORPUS_PATH, ou
     if (revision.status !== 0) throw new Error('Cannot record evaluation source revision');
     const report = {
         evaluatedAt: new Date().toISOString(), measurementProtocol: ANSWER_QUALITY_MEASUREMENT_PROTOCOL,
-        corpusVersion: corpus.version, corpusRole: corpus.usageRole,
+        corpusVersion: corpus.version, corpusRole: corpus.usageRole, evaluationRole,
         corpusSha256: createHash('sha256').update(corpusBytes).digest('hex'), sourceRevision: revision.stdout.trim(),
         sourceTreeHash: computeSidecarSourceFingerprint(REPO_ROOT).digest,
         executionCompleted: !rows.some(row => row.error) && rows.length === corpus.cases.length * 2,
@@ -102,12 +103,12 @@ async function evaluateAnswerQuality({ repeats = 3, corpusPath = CORPUS_PATH, ou
 if (require.main === module) {
     const args = process.argv.slice(2);
     const options = {};
-    const names = { '--repeats': 'repeats', '--corpus': 'corpusPath', '--output-root': 'outputRoot' };
+    const names = { '--repeats': 'repeats', '--corpus': 'corpusPath', '--output-root': 'outputRoot', '--evaluation-role': 'evaluationRole' };
     for (let index = 0; index < args.length; index += 2) {
         const name = names[args[index]];
         const value = args[index + 1];
         if (!name || !value || value.startsWith('--') || Object.hasOwn(options, name)) {
-            throw new Error('Usage: node scripts/evaluate-answer-quality.js [--repeats 1..20] [--corpus path] [--output-root path]');
+            throw new Error('Usage: node scripts/evaluate-answer-quality.js [--repeats 1..20] [--corpus path] [--output-root path] [--evaluation-role regression|confirmation]');
         }
         options[name] = name === 'repeats' ? Number(value) : value;
     }

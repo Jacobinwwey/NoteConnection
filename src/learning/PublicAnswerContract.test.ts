@@ -10,8 +10,20 @@ const cases = corpus.cases.filter(entry => [
     'v3-sets-en', 'v3-index-swap-en', 'v3-memory-fences-en', 'v3-transaction-isolation-zh',
     'v3-channels-zh', 'v3-checksum-en', 'v3-stable-reference-zh',
 ].includes(entry.id));
+const observedV4 = parseAnswerQualityCorpus(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../fixtures/answer-quality/v4.json'), 'utf8')));
+cases.push(...observedV4.cases.filter(entry => ['v4-receives-en', 'v4-content-addressing-en'].includes(entry.id)));
 
 describe.each(['slim', 'full'] as const)('public answer contracts in %s', responseMode => {
+    test('treats a requested table concept as subject matter', async () => {
+        const platform = new KnowledgeLearningPlatform({ autoPersist: false });
+        await platform.ingestKnowledge({ relationRecomputeMode: 'none', documents: [
+            { documentId: 'dispatch-table', sourcePath: 'quality/dispatch.md', content: '# Dispatch Table\nA dispatch table maps operation codes to executable targets.' },
+        ] });
+        const response = await platform.agentConversation({ message: 'What is a dispatch table?', answerLanguage: 'en', responseMode, persistMemory: false });
+        expect(response.answer).toContain('maps operation codes');
+        expect(response.answerReleaseReview?.decision).not.toBe('abstain');
+    });
+
     test('keeps a short Chinese definition and its supported constraint', async () => {
         const platform = new KnowledgeLearningPlatform({ autoPersist: false });
         await platform.ingestKnowledge({ relationRecomputeMode: 'none', documents: [

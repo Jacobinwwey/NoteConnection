@@ -3869,7 +3869,7 @@ function isIncompletePublicGraphClaim(value: string): boolean {
 
 function isDefinitionComparisonOrArtifactClaim(value: string): boolean {
     const normalized = normalizeWhitespace(value);
-    return /\b(?:compare|comparison|contrast|versus|vs\.?|plastic\s+cup|metal\s+cup|ceramic\s+(?:mug|cup)|table|technologies|context\s+paragraph|local\s+window|technical\s+document|subsequent\s+branch)\b/iu.test(normalized)
+    return /\b(?:compare|comparison|contrast|versus|vs\.?|plastic\s+cup|metal\s+cup|ceramic\s+(?:mug|cup)|technologies|context\s+paragraph|local\s+window|technical\s+document|subsequent\s+branch)\b/iu.test(normalized)
         || /\b(?:validates?\s+(?:the\s+)?source|source\s+anchoring|same\s+clause\s+appears\s+in\s+multiple\s+sections)\b/iu.test(normalized)
         || /相关技术|比较|对比|塑料杯|金属杯|陶瓷杯|流体容器技术比较|上下文段落|后续分支|本技术文档|技术规格|性能特征|核心概念|我们将从|我们将|本节|本章/u.test(normalized);
 }
@@ -5574,7 +5574,17 @@ function evaluatePolarityConsistency(context: AnswerReleaseReviewContext): {
     comparableSentenceCount: number;
     conflicts: PolaritySentenceConflict[];
 } {
-    const answerSentences = extractPolaritySentences(context.draftAnswer, context.responseMode);
+    const sourceHeadings = new Set([
+        ...context.knowledgePoints.map(point => point.title),
+        ...context.citations.map(citation => citation.title),
+        ...(context.ragContextPack?.fragments || []).flatMap(fragment => [fragment.title || '', ...(fragment.headingPath || [])]),
+    ].map(title => normalizeWhitespace(title).toLowerCase()).filter(Boolean));
+    // A known source title is identity/presentation, not a positive assertion.
+    // Unknown headings remain subject to the same contradiction checks as prose.
+    const omitSourceTitleHeadings = (text: string) => text.replace(/^ {0,3}#{1,6}[\t ]+(.+?)(?:[\t ]+#+[\t ]*)?$/gmu, (heading, title: string) => (
+        sourceHeadings.has(normalizeWhitespace(title).toLowerCase()) ? '' : heading
+    ));
+    const answerSentences = extractPolaritySentences(omitSourceTitleHeadings(context.draftAnswer), context.responseMode);
     if (answerSentences.length <= 0) {
         return {
             passed: true,
@@ -5583,7 +5593,7 @@ function evaluatePolarityConsistency(context: AnswerReleaseReviewContext): {
         };
     }
     const supportSentences = buildSupportCandidates(context).flatMap((candidate) => (
-        extractPolaritySentences(candidate.text, context.responseMode).map((sentence) => ({
+        extractPolaritySentences(omitSourceTitleHeadings(candidate.text), context.responseMode).map((sentence) => ({
             ...sentence,
             label: candidate.label,
         }))
