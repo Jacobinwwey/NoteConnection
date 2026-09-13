@@ -44,6 +44,8 @@ describe('ragPublicText', () => {
         expect(shouldRejectPublicEvidenceClause('所有推理过程以英文进行，最终输出为简体中文。')).toBe(true);
         expect(shouldRejectPublicEvidenceClause('Operators must resolve the active owner before publishing.')).toBe(true);
         expect(shouldRejectPublicEvidenceClause('The glass wall conducts heat into the environment.')).toBe(false);
+        expect(shouldRejectPublicEvidenceClause('This clause is intentionally beyond the public definition budget and should remain internal.')).toBe(true);
+        expect(shouldRejectPublicEvidenceClause('The response budget limits serialized bytes.')).toBe(false);
     });
 
     test('removes fenced diagram payloads instead of exposing renderer source', () => {

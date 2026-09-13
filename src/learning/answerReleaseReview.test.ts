@@ -3302,6 +3302,18 @@ describe('answerReleaseReview', () => {
         expect(review.publicAnswer).not.toContain('is not a transparent container');
     });
 
+    test('does not trust a source label attached to an unsupported assertion', () => {
+        const review = reviewAnswerRelease({
+            message: 'what is water glass',
+            draftAnswer: 'Water Glass: Water glass is not a transparent container filled with water.',
+            knowledgePoints: [makeKnowledgePoint()],
+            citations: [makeKnowledgePoint().citation as KnowledgeCitation],
+            usedScope: scopedWaterglass, graphContext: makeGraphContext(),
+        });
+        expect(review.failedGateIds).toContain('claim_polarity_consistency');
+        expect(review.publicAnswer).not.toContain('is not a transparent container');
+    });
+
     test('does not raise a polarity conflict when support includes an unrelated negative sentence', () => {
         const point = makeKnowledgePoint({
             summary: 'Water glass is not plastic. Water glass is a transparent container filled with water.',

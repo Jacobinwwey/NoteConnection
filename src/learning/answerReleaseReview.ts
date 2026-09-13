@@ -52,6 +52,7 @@ export interface AnswerReleaseReviewContext {
 type AnswerReleaseSupportCandidate = {
     label: string;
     text: string;
+    sourceText: string;
 };
 
 type RagAnswerCompleteness = {
@@ -1614,6 +1615,7 @@ function buildSupportCandidates(
                 candidates.push({
                     label: title,
                     text,
+                    sourceText: String(fragment.text || ''),
                 });
             }
         });
@@ -1626,6 +1628,7 @@ function buildSupportCandidates(
             candidates.push({
                 label: title,
                 text,
+                sourceText: String(citation.snippet || ''),
             });
         }
     });
@@ -1637,10 +1640,33 @@ function buildSupportCandidates(
             candidates.push({
                 label: title,
                 text,
+                sourceText: String(point.evidenceSnippet || point.summary || ''),
             });
         }
     });
     return candidates;
+}
+
+function removeSupportedSourceLabels(context: AnswerReleaseReviewContext, answer: string): string {
+    const sourceClausesByLabel = new Map<string, Set<string>>();
+    const clauseKey = (text: string) => stripTerminalSentencePunctuation(normalizeWhitespace(naturalizeRagPublicEvidenceClause(text)));
+    for (const source of buildSupportCandidates(context)) {
+        const label = normalizeWhitespace(source.label).toLowerCase();
+        const clauses = sourceClausesByLabel.get(label) || new Set<string>();
+        for (const clause of segmentRagEvidenceClauses(source.sourceText)) clauses.add(clauseKey(clause));
+        sourceClausesByLabel.set(label, clauses);
+    }
+    return segmentRagEvidenceClauses(answer).map(clause => {
+        for (const separator of clause.matchAll(/[:：]/gu)) {
+            const label = clauseKey(clause.slice(0, separator.index)).toLowerCase();
+            const sourceClauses = sourceClausesByLabel.get(label);
+            const body = clause.slice(separator.index! + 1).trim();
+            // A source prefix is presentation only when the complete remaining
+            // clause is quoted from that source. Labels cannot legitimize a changed assertion.
+            if (body && sourceClauses?.has(clauseKey(body))) return body;
+        }
+        return clause;
+    }).join('\n');
 }
 
 function isGraphOrderSupportedRelationKind(
@@ -5132,7 +5158,7 @@ function evaluateSubjectConsistency(context: AnswerReleaseReviewContext): {
     comparableFrameCount: number;
     conflicts: SubjectFrameConflict[];
 } {
-    const answerFrames = extractSubjectFrames(context.draftAnswer);
+    const answerFrames = extractSubjectFrames(removeSupportedSourceLabels(context, context.draftAnswer));
     if (answerFrames.length <= 0) {
         return {
             passed: true,
@@ -5584,7 +5610,7 @@ function evaluatePolarityConsistency(context: AnswerReleaseReviewContext): {
     const omitSourceTitleHeadings = (text: string) => text.replace(/^ {0,3}#{1,6}[\t ]+(.+?)(?:[\t ]+#+[\t ]*)?$/gmu, (heading, title: string) => (
         sourceHeadings.has(normalizeWhitespace(title).toLowerCase()) ? '' : heading
     ));
-    const answerSentences = extractPolaritySentences(omitSourceTitleHeadings(context.draftAnswer), context.responseMode);
+    const answerSentences = extractPolaritySentences(omitSourceTitleHeadings(removeSupportedSourceLabels(context, context.draftAnswer)), context.responseMode);
     if (answerSentences.length <= 0) {
         return {
             passed: true,

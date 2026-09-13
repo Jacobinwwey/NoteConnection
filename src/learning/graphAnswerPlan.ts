@@ -566,12 +566,12 @@ function isDiscourseContinuation(clause: string): boolean {
     return /^(?:(?:it|its|they|their|this|these|such|therefore|thus|hence|also|additionally|moreover|however|because|thereby|consequently|as a result)\b|(?:其|它|该|这些|这种|同时|此外|因此|所以|由此|并且|而且|其中|随后|进而))/iu.test(normalize(clause));
 }
 
-const CHINESE_CONTEXT_SEGMENTER = new Intl.Segmenter('zh', { granularity: 'word' });
+const CONTEXT_WORD_SEGMENTER = new Intl.Segmenter('zh', { granularity: 'word' });
 const CHINESE_CONTEXT_FUNCTION_WORDS = new Set(['可以', '可能', '已经', '同一', '以及', '因为', '所以', '需要', '能够', '进行', '这种', '这个', '这些', '它们']);
 
-function chineseContextFeatures(value: string): Set<string> {
+function sourceContextFeatures(value: string): Set<string> {
     const features = new Set<string>();
-    for (const part of CHINESE_CONTEXT_SEGMENTER.segment(value)) {
+    for (const part of CONTEXT_WORD_SEGMENTER.segment(value)) {
         if (!part.isWordLike) continue;
         const word = normalizedTopicWords(part.segment);
         if (/^(?:again|repeat|repeated|repeating|再次|重复|再度)$/u.test(word)) {
@@ -590,9 +590,8 @@ function chineseContextFeatures(value: string): Set<string> {
 
 function publicEvidenceClausesShareContext(left: string, right: string): boolean {
     if (graphClaimSemanticSimilarity(normalizedTopicWords(left), normalizedTopicWords(right)) >= 0.16) return true;
-    if (!/\p{Script=Han}/u.test(`${left} ${right}`)) return false;
-    const leftFeatures = chineseContextFeatures(left);
-    const rightFeatures = chineseContextFeatures(right);
+    const leftFeatures = sourceContextFeatures(left);
+    const rightFeatures = sourceContextFeatures(right);
     const shorterSize = Math.min(leftFeatures.size, rightFeatures.size);
     // A short continuation need not repeat the complete entity description.
     // Word segmentation avoids treating an entire Chinese sentence as one identity token.

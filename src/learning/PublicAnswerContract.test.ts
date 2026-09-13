@@ -14,6 +14,8 @@ const observedV4 = parseAnswerQualityCorpus(JSON.parse(fs.readFileSync(path.reso
 cases.push(...observedV4.cases.filter(entry => ['v4-receives-en', 'v4-content-addressing-en'].includes(entry.id)));
 const observedV5 = parseAnswerQualityCorpus(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../fixtures/answer-quality/v5.json'), 'utf8')));
 cases.push(...observedV5.cases.filter(entry => ['v5-iterator-en', 'v5-reentrant-lock-zh', 'v5-replication-zh'].includes(entry.id)));
+const observedV6 = parseAnswerQualityCorpus(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../fixtures/answer-quality/v6.json'), 'utf8')));
+cases.push(...observedV6.cases.filter(entry => ['v6-locking-en', 'v6-queue-en', 'v6-repeatable-command-en', 'v6-read-isolation-zh'].includes(entry.id)));
 
 describe.each(['slim', 'full'] as const)('public answer contracts in %s', responseMode => {
     test('keeps an unrelated Chinese sentence out after an explicit comparison subject', async () => {
