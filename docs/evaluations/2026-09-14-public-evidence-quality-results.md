@@ -66,12 +66,14 @@ This is a Windows **development executable** session using a packaged Node sidec
 | Post-fix HTTP/browser/mobile host checks | HTTP: 55 groups / 92 cases; five browser cases; mobile projection and eight recovery scenarios pass. Rust: 30 ordinary tests plus the explicitly executed semantic probe. |
 | Post-fix SQLite/reference connector evidence | Three SQLite soaks and three reference matrices pass in dist and packaged modes; the checked-in archive passes the strict gate without warnings. |
 | Independent Windows/Linux CI artifacts | Workflow ready; dispatch and artifact verification pending |
-| Remote main | Publication and SHA-matched Actions verification pending |
+| Remote main | Published as `be2eed37`; Migration Gates and docs/mobile jobs pass. The new qualification workflow is being corrected and reverified. |
 
 Final source fingerprint: `880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244`.
 Windows sidecar SHA-256: `931916d2f39b2737edac394bb8ffb5c71f571664c59770ff2438fc94b121cdb8` (77,917,101 bytes). The measured sidecar embeds Node 22.22.0; host test runners are 22.19.0 and 24.14.0. The [final local manifest](evidence/2026-09-14-native-fix/manifest.json) lists every archived file hash.
 
 The reference ANN harness is an HTTP token-posting prefilter. It verifies synchronization, representation, fallback and targeted retrieval, not a deployed approximate index. Each host must be checked against its own binary and manifest; a Linux binary cannot satisfy a Windows artifact identity.
+
+Initial remote checks found two workflow defects: its Node 22.19 pin violated the existing Node 24 CI baseline, and the Windows job invoked the complete desktop bundle's Godot provisioning after successfully building the server. The workflow now pins Node 24.14.0 and calls the existing server-sidecar build operation. This preserves the server-only qualification scope. FR-010 now passes 42/42 checks locally; the [failure/correction record](evidence/2026-09-14-native-fix/ci/workflow-correction.json) preserves the initial outcomes. No production source or artifact fingerprint changed.
 
 ### Remaining acceptance and direction
 
@@ -138,12 +140,14 @@ V3–V6 的首次确认均在对应生产修改前冻结，[初次报告](eviden
 | 修复后 HTTP/浏览器/mobile 宿主检查 | HTTP 55 组 / 92 case、五个浏览器场景、移动投影及八个恢复场景通过；Rust 30 项常规测试及显式运行的语义探针通过。 |
 | 修复后 SQLite/参考连接器证据 | SQLite soak 与参考 matrix 各三次通过，覆盖 dist/packaged；入库归档严格门禁通过、无警告。 |
 | 独立 Windows/Linux CI 产物 | 工作流就绪，待 dispatch 和 artifact 复核 |
-| 远端 main | 待发布及 SHA 对齐的 Actions 验证 |
+| 远端 main | 已发布为 `be2eed37`；Migration Gates 及文档/移动任务通过，新增资格工作流正在修正并复验。 |
 
 最终源码指纹：`880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244`。
 Windows sidecar SHA-256：`931916d2f39b2737edac394bb8ffb5c71f571664c59770ff2438fc94b121cdb8`，大小 77,917,101 bytes。实测 sidecar 内嵌 Node 22.22.0，宿主测试 runner 为 22.19.0 与 24.14.0；[最终本机 manifest](evidence/2026-09-14-native-fix/manifest.json)列出全部归档文件哈希。
 
 参考 ANN harness 是 HTTP token-posting 预筛选器，验证同步、表示一致性、fallback 与定向检索，不是已部署的近似索引。各宿主必须使用自己的 binary/manifest 校验，Linux binary 不能满足 Windows artifact 身份。
+
+首次远端检查发现两项工作流问题：Node 22.19 pin 不符合现有 Node 24 CI 基线；Windows 在服务端构建成功后继续触发完整桌面 bundle 的 Godot 依赖准备。现将工作流固定为 Node 24.14.0，调用已有 server-sidecar 构建入口，保持仅验收服务端的范围。FR-010 本机现通过 42/42；[失败与修正记录](evidence/2026-09-14-native-fix/ci/workflow-correction.json)保留首次结果。生产源码及产物指纹没有变化。
 
 ### 剩余验收与方向
 

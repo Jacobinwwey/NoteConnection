@@ -272,6 +272,11 @@
       "path": "tests/node24.json",
       "bytes": 775917,
       "sha256": "16cd34712e4f04a05eb938227f305da88edbf7ab13a49a4960066779b1d7b3bf"
+    },
+    {
+      "path": "ci/workflow-correction.json",
+      "bytes": 32666,
+      "sha256": "28088d4c016e764ed95fca170d2d7a265939757ec3ec9f734c77edc226e57085"
     }
   ],
   "archiveTextEncoding": "UTF-8, LF; raw native logs retained as gzip"

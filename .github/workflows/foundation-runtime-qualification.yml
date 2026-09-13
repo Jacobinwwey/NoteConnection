@@ -34,13 +34,14 @@ jobs:
           lfs: false
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.19.0'
+          node-version: '24.14.0'
           cache: npm
       - name: Prepare isolated temporary files
         run: node -e "const fs=require('fs'),path=require('path'); const root=path.join(process.env.GITHUB_WORKSPACE,'.qualification-temp'); fs.mkdirSync(root,{recursive:true}); fs.appendFileSync(process.env.GITHUB_ENV,'TEMP='+root+'\nTMP='+root+'\n');"
       - run: npm ci
       - run: npm run build:with-vite
-      - run: npm run build:sidecar
+      - name: Build the measured server sidecar
+        run: node scripts/build-sidecar.js
       - name: Run three fresh SQLite soak and reference connector matrices
         run: |
           for attempt in 1 2 3; do
