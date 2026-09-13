@@ -1,0 +1,29 @@
+{
+  "capturedAt": "2026-09-13T19:09:03.640Z",
+  "title": "NoteConnection Knowledge Graph",
+  "visible": true,
+  "nodes": [
+    {
+      "id": "Alpha",
+      "sourceUri": "note://workspace/v1/acceptance/alpha.md",
+      "canonicalId": "acceptance/alpha"
+    },
+    {
+      "id": "Beta",
+      "sourceUri": "note://workspace/v1/acceptance/beta.md",
+      "canonicalId": "acceptance/beta"
+    }
+  ],
+  "edgeCount": 2,
+  "welcomeButtons": [
+    {
+      "id": "btn-start-tutorial",
+      "text": "🎓 Start Interactive Tutorial"
+    },
+    {
+      "id": "btn-explore",
+      "text": "Start Exploring (Skip Tutorial)"
+    }
+  ],
+  "pathSocket": 1
+}

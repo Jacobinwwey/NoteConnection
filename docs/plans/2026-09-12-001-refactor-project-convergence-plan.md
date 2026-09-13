@@ -3,19 +3,19 @@ title: "refactor: Close state, runtime, and release contracts"
 type: refactor
 status: partial_acceptance
 date: 2026-09-12
-updated: 2026-09-13
+updated: 2026-09-14
 origin: docs/audits/2026-09-12-project-progress.md
 source_revision: e84d6ece9cce5b82902d4b9335ac096a136a8d2a
-implementation_revision: 3b8f3aa97ecfded145b470bb9e4521b5cd4e8f54
+implementation_revision: 8564294bc6757e6ea2a18e06ba482f5a618a95ad
 ---
 
 # Project Convergence Implementation Plan / 项目收敛实施计划
 
 ## English
 
-### Acceptance checkpoint — 2026-09-13
+### Acceptance checkpoint — 2026-09-14
 
-U1–U6 are implemented and accepted. Both Node 22.19.0 and 24.14.0 passed 162 suites / 1,528 tests with zero skips. U7 has three fresh Windows SQLite soak and reference HTTP prefilter matrix runs, bound to the final source and packaged bytes. U8 has archived bilingual V1/V2 quality and allocation measurements. Android/native-window, independent-host, external production ANN and learner-outcome acceptance remain open; U7/U8 therefore retain unchecked overall acceptance boxes. See [final results and evidence](../evaluations/2026-09-13-convergence-results.md) for the precise limits, the browser layout fix found during acceptance, and prioritized quality follow-up. Earlier per-slice test counts below record implementation checkpoints, not the final suite totals.
+U1–U6 remain accepted. The public-evidence and configured-workspace follow-ups pass 168 suites / 1,703 tests on each of Node 22.19.0 and 24.14.0, with zero skips. V1–V6 final regressions pass with the initial confirmation history retained. A real Windows development session verifies an external workspace, Bridge layout, Tauri/Godot visibility transitions, grounded answer and clean shutdown; it first exposed and then verified the selected-root fix. Final artifact and remote qualification are tracked in the [September 14 follow-up](../evaluations/2026-09-14-public-evidence-quality-results.md). U7/U8 retain overall partial acceptance for unqualified targets and consented learner outcomes. Earlier slice counts below are historical implementation checkpoints.
 
 ### Outcome and constraints
 
@@ -167,7 +167,7 @@ Do not execute mutating requests twice against production for “shadow” verif
 
 ### U7 — qualify concrete desktop/mobile artifacts
 
-Final host checkpoint: report selection, run-ID deduplication, newest-failure blocking, source/dist/sidecar binding and five-restart requirements are implemented. Three distinct final-build SQLite soak and reference HTTP prefilter matrix runs passed in dist and packaged Windows modes; the strict gate passed against the checked-in archive. The prefilter is a reference token-posting service, not an external approximate index. ADB has no connected device; Android, native-window and independent-host acceptance remain unqualified.
+2026-09-13 host checkpoint (historical): report selection, run-ID deduplication, newest-failure blocking, source/dist/sidecar binding and five-restart requirements are implemented. Three distinct final-build SQLite soak and reference HTTP prefilter matrix runs passed in dist and packaged Windows modes; the strict gate passed against the checked-in archive. The prefilter is a reference token-posting service, not an external approximate index. ADB has no connected device; Android, native-window and independent-host acceptance remain unqualified.
 
 2026-09-14 execution update: the manual `foundation-runtime-qualification.yml` workflow will build and measure separate Windows/Linux artifacts on real CI runners, run three SQLite soak/reference-connector matrices per host, and archive binaries, dist inputs, manifests and strict-gate reports. Qualification remains pending until those jobs and their artifacts are verified. This workflow does not establish native windows, Android or an external production ANN backend.
 
@@ -188,10 +188,11 @@ Desktop acceptance covers dist and packaged sidecar, SQLite restart/soak, explic
 
 ### U8 — representative answer and learning-outcome calibration
 
-Measurement checkpoint: V1 is archived; V2 contains six calibration and eighteen disjoint confirmation cases with references frozen before the wiki-link evidence fix. Final V2 reference acceptance is 8/18 slim and 13/18 full; coverage is 28/36 and 36/36. Full responses still show two topic-leakage probe hits and both modes miss 2/2 conflict signals. The 2,000-document snapshot cost and cooperative cancellation limits are measured in the results record. These measurements complete the baseline, not general answer-quality or learner-outcome acceptance.
+2026-09-13 measurement checkpoint (historical): V1 is archived; V2 contains six calibration and eighteen disjoint confirmation cases with references frozen before the wiki-link evidence fix. Final V2 reference acceptance is 8/18 slim and 13/18 full; coverage is 28/36 and 36/36. Full responses still show two topic-leakage probe hits and both modes miss 2/2 conflict signals. The 2,000-document snapshot cost and cooperative cancellation limits are measured in the results record. These measurements complete the baseline, not general answer-quality or learner-outcome acceptance.
 
 - [x] U8 versioned bilingual corpora, reproducible measurements and consent-based pilot protocol.
-- [ ] U8 broader topic/conflict quality validation and consented learner observations.
+- [x] U8 topic/conflict controls and V1–V6 regressions, with initial confirmation reports preserved.
+- [ ] U8 independent final-quality generalization and consented learner observations.
 
 - [ ] **U8 / P2 — advance M01/M09/M10/M11; R8**
 
@@ -224,9 +225,9 @@ Documentation policy: update English and Chinese status together and link the re
 
 ## 中文
 
-### 验收检查点 — 2026-09-13
+### 验收检查点 — 2026-09-14
 
-U1–U6 已实现并验收。Node 22.19.0 与 24.14.0 均通过 162 suite / 1,528 test，零跳过。U7 的 Windows SQLite soak 与参考 HTTP 预筛选 matrix 各三次通过，绑定最终源码和打包字节。U8 的双语 V1/V2 质量与分配测量已归档。Android/原生窗口、独立宿主、外部生产 ANN 与学习效果仍开放，因此 U7/U8 的整体验收框保留未勾选。精确边界、验收中发现的浏览器布局修复及质量后续优先级见[最终结果与证据](../evaluations/2026-09-13-convergence-results.md#chinese)。下方旧的分阶段测试数量属于实现检查点，不是最终总数。
+U1–U6 保持已验收。公开证据与所选知识库后续修复在 Node 22.19.0、24.14.0 各通过 168 suite / 1,703 test，零跳过。V1–V6 最终回归通过，首次确认历史保留。真实 Windows development 会话验证外部知识库、Bridge layout、Tauri/Godot 显隐切换、有源回答及正常退出，并实际发现和验证了 root 修复。最终产物与远端资格见[九月十四日后续结果](../evaluations/2026-09-14-public-evidence-quality-results.md#chinese)。U7/U8 对未验收目标与取得同意后的学习效果保留整体部分验收状态；下方旧的分阶段数量属于历史实现检查点。
 
 ### 目标与约束
 
@@ -380,7 +381,7 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 2026-09-14 执行更新：新增手动 `foundation-runtime-qualification.yml` 工作流，在真实 Windows/Linux CI runner 上分别构建和测量产物，每宿主执行三次 SQLite soak/参考连接器 matrix，并归档二进制、dist 输入、manifest 与严格门禁报告。在 job 与产物完成核验前仍保留待验收状态；该工作流不代表原生窗口、Android 或外部生产 ANN 已验收。
 
-最终宿主检查点：日期选择、run ID 去重、最新失败阻断、源码/dist/sidecar 绑定及至少五次重启要求已实现。最终构建的 SQLite soak 与参考 HTTP 预筛选 matrix 各三次通过，覆盖 Windows dist/packaged；对入库归档执行严格门禁亦通过。预筛选是 token posting 参考服务，不是外部近似索引。ADB 没有在线设备，Android、原生窗口与独立宿主仍未验收。
+2026-09-13 宿主检查点（历史）：日期选择、run ID 去重、最新失败阻断、源码/dist/sidecar 绑定及至少五次重启要求已实现。最终构建的 SQLite soak 与参考 HTTP 预筛选 matrix 各三次通过，覆盖 Windows dist/packaged；对入库归档执行严格门禁亦通过。预筛选是 token posting 参考服务，不是外部近似索引。ADB 没有在线设备，Android、原生窗口与独立宿主仍未验收。
 
 - [x] U7 工具、Windows SQLite 与参考连接器资格验证。
 - [ ] U7 外部设备/宿主/backend 的独立 artifact 与实测资格。
@@ -399,10 +400,11 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 ### U8：代表性回答与学习成效校准
 
-测量检查点：V1 已归档，V2 包含六个校准与十八个独立确认用例，参考在 wiki-link 证据修复前冻结。最终 V2 参考验收 slim 8/18、full 13/18，覆盖分别为 28/36、36/36。full 仍命中两个主题泄漏探针，两种模式均漏报 2/2 冲突信号。2,000 文档 snapshot 成本与协作式取消的测量边界已记录。这些结果完成基线，不代表一般回答质量或真实学习成效已经验收。
+2026-09-13 测量检查点（历史）：V1 已归档，V2 包含六个校准与十八个独立确认用例，参考在 wiki-link 证据修复前冻结。最终 V2 参考验收 slim 8/18、full 13/18，覆盖分别为 28/36、36/36。full 仍命中两个主题泄漏探针，两种模式均漏报 2/2 冲突信号。2,000 文档 snapshot 成本与协作式取消的测量边界已记录。这些结果完成基线，不代表一般回答质量或真实学习成效已经验收。
 
 - [x] U8 版本化双语语料、可复现测量与知情同意 pilot 协议。
-- [ ] U8 更广的主题/冲突质量验证及已取得参与同意的学习者观察。
+- [x] U8 主题/冲突对照与 V1–V6 回归，保留首次确认报告。
+- [ ] U8 最终质量的独立泛化验证及已取得参与同意的学习者观察。
 
 - [ ] **U8 / P2 — 推进 M01/M09/M10/M11；R8**
 

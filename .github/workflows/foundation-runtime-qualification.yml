@@ -64,3 +64,10 @@ jobs:
             src-tauri/bin/${{ matrix.binary }}
             src-tauri/bin/.noteconnection-sidecar-build-manifest.json
             dist/src/
+            package.json
+            package-lock.json
+            npm-shrinkwrap.json
+            tsconfig.json
+            scripts/build-sidecar.js
+            scripts/build-markdown-worker.js
+            scripts/sidecar-build-fingerprint.js

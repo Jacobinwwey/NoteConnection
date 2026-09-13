@@ -1,0 +1,80 @@
+{
+  "graph": {
+    "nodes": 0,
+    "edges": 0
+  },
+  "body": "All Folders\nacceptance\nLoad\nChange Knowledge Base...\nReset to Default Location\nPath Mode\nNoteMD\nKnowledge Workspace\nCurrent Path: E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-window-smoke-1789324229859\\Knowledge_Base\nKnowledge Workspace\nGrounded conversation, knowledge search, and guided learning\nClose\nGrounded Conversation\nScoped knowledge, citations, and guided learning actions\nKnowledge Scope\nAll Folders\nacceptance\nScope: acceptance\nAnswer language\nEnglish\nChinese\nMatches software language\nAnswer detail\nSlim\nFull report\nShort grounded answer\nFull report budget\nAdaptive\nNo product cap\nHost-adaptive report budget\nLearner ID\nKnowledge workspace ready. Start with a grounded question, then open focus or guided learning from cited knowledge matches.\nNo scoped knowledge matches.\nAsk the scoped knowledge corpus\nSend\nIdle\n/api/knowledge/conversation\nNoteConnection\n▼\nNodes 0 | Edges 0\n Show All\n Incoming Only\n Outgoing Only\nDegree Basis\n All  In  Out\nColor By\n Degree  Cluster\nSize By\n Uniform  Degree  Centrality\nLabel Opacity 100%\n🎲\nRenderer\n SVG  Canvas\nLayout\n Force  DAG (Hierarchical)\nSimulation\nFreeze Layout\nSpeed (Damping) 0.95\nMin Degree 0 \nShow Orphans\nExport Image Save Layout (JSON) Analysis & Export\nv1.0.0\n\nRenderer svg. Visible nodes 0 of 0. Visible edges 0. Focus mode inactive. Selected node none. Filters min degree 0. Orphan nodes hidden. Cluster filter all.\n\nGraph initialized: Renderer svg. Visible nodes 0 of 0. Visible edges 0. Focus mode inactive. Selected node none. Filters min degree 0. Orphan nodes hidden. Cluster filter all.\n❄️\n❓\n⚙️ Settings\nWelcome to NoteConnection\n\nIt looks like your Knowledge Graph is empty.\n\n1. Select Source\n\nUse the dropdown in the top-left corner to choose a folder from your Knowledge_Base.\n\n🎓 Start Interactive Tutorial\nNeed Help?\n▼\n\nHere's a complete guide to get started:\n\nWant a guided tour? Launch the interactive tutorial",
+  "dialogs": [
+    {
+      "id": "",
+      "display": "flex",
+      "text": "\n        \n          NoteMD Workspace\n          Close\n        \n        \n      "
+    }
+  ],
+  "buttons": [
+    {
+      "id": "btn-load-source",
+      "text": "Load"
+    },
+    {
+      "id": "btn-change-kb-path",
+      "text": "Change Knowledge Base..."
+    },
+    {
+      "id": "btn-reset-kb-path",
+      "text": "Reset to Default Location"
+    },
+    {
+      "id": "btn-path-mode",
+      "text": "Path Mode"
+    },
+    {
+      "id": "btn-notemd",
+      "text": "NoteMD"
+    },
+    {
+      "id": "btn-open-agent-workspace",
+      "text": "Knowledge Workspace"
+    },
+    {
+      "id": "btn-close-agent-workspace",
+      "text": "Close"
+    },
+    {
+      "id": "btn-agent-workspace-send",
+      "text": "Send"
+    },
+    {
+      "id": "btn-random-focus",
+      "text": "🎲"
+    },
+    {
+      "id": "export-btn",
+      "text": "Export Image"
+    },
+    {
+      "id": "save-layout-btn",
+      "text": "Save Layout (JSON)"
+    },
+    {
+      "id": "analysis-btn",
+      "text": "Analysis & Export"
+    },
+    {
+      "id": "btn-quick-freeze",
+      "text": "❄️"
+    },
+    {
+      "id": "btn-help",
+      "text": "❓"
+    },
+    {
+      "id": "btn-open-settings",
+      "text": "⚙️ Settings"
+    },
+    {
+      "id": "btn-start-tutorial",
+      "text": "🎓 Start Interactive Tutorial"
+    }
+  ]
+}

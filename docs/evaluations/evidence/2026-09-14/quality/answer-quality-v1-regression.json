@@ -1,0 +1,3926 @@
+{
+  "evaluatedAt": "2026-09-13T17:27:13.070Z",
+  "measurementProtocol": "answer-quality-public-surface-v3",
+  "corpusVersion": "1.0.0",
+  "evaluationRole": "regression",
+  "corpusSha256": "76cf05c3623476034ba9f7933178ee590fe889cc7b80b6a1b75a8b87e8c83efd",
+  "sourceRevision": "f39e0b7bc2213ba8af64074f96feb829965a5ac0",
+  "sourceTreeHash": "a7a130f89739ac059233af6861386a2f5fd592c457d755a6e45dd94760cd4467",
+  "executionCompleted": true,
+  "conditions": {
+    "backend": "local-hybrid-v1",
+    "responseModes": [
+      "slim",
+      "full"
+    ],
+    "repeats": 3,
+    "clock": "fixed knowledge timestamp; real monotonic execution timers",
+    "node": "v22.19.0",
+    "platform": "win32",
+    "arch": "x64",
+    "logicalCpus": 16,
+    "totalMemoryBytes": 68494569472,
+    "peakProcessRssBytes": 133718016,
+    "coldDefinition": "First query on a new ingested platform instance; process/JIT is shared.",
+    "hotDefinition": "Subsequent queries on the same platform instance; memory persistence disabled."
+  },
+  "measurementLimits": [
+    "Reference acceptance and fact coverage use pre-authored patterns, not the runtime sufficiency judge.",
+    "Unsupported assertion probes detect labelled counterfactuals only. They are not an exhaustive hallucination rate.",
+    "Conflict and abstention are public-surface signals. Abstention includes a grounded absence of measurements, independently of the runtime release label; paraphrase and negation errors require manual adjudication.",
+    "Correctness denominators count each case/mode once, not its timing repetitions. Bilingual pairs are correlated.",
+    "Memory samples are before/after values; peakProcessRssBytes is a process-wide high-water mark, not per-turn peak heap.",
+    "No learning-outcome data or participant observations were collected."
+  ],
+  "learningOutcomesQualified": false,
+  "groups": [
+    {
+      "split": "calibration",
+      "responseMode": "slim",
+      "quality": {
+        "cases": 6,
+        "referenceAcceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "referenceFactCoverage": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 6,
+        "min": 5.251599999999996,
+        "p50": 10.02619999999996,
+        "p95": 70.182,
+        "p99": 70.182,
+        "max": 70.182
+      },
+      "hotLatencyMs": {
+        "count": 12,
+        "min": 6.800599999999974,
+        "p50": 9.653200000000027,
+        "p95": 13.739100000000008,
+        "p99": 13.739100000000008,
+        "max": 13.739100000000008
+      }
+    },
+    {
+      "split": "calibration",
+      "responseMode": "full",
+      "quality": {
+        "cases": 6,
+        "referenceAcceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "referenceFactCoverage": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 6,
+        "min": 4.858699999999999,
+        "p50": 6.463399999999979,
+        "p95": 8.974100000000021,
+        "p99": 8.974100000000021,
+        "max": 8.974100000000021
+      },
+      "hotLatencyMs": {
+        "count": 12,
+        "min": 6.118100000000027,
+        "p50": 8.555800000000033,
+        "p95": 12.654700000000048,
+        "p99": 12.654700000000048,
+        "max": 12.654700000000048
+      }
+    },
+    {
+      "split": "evaluation",
+      "responseMode": "slim",
+      "quality": {
+        "cases": 18,
+        "referenceAcceptance": {
+          "numerator": 18,
+          "denominator": 18,
+          "rate": 1
+        },
+        "referenceFactCoverage": {
+          "numerator": 38,
+          "denominator": 38,
+          "rate": 1
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 20,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 2,
+          "denominator": 2,
+          "rate": 1
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 18,
+        "min": 4.627799999999979,
+        "p50": 7.425500000000056,
+        "p95": 11.938499999999976,
+        "p99": 11.938499999999976,
+        "max": 11.938499999999976
+      },
+      "hotLatencyMs": {
+        "count": 36,
+        "min": 5.5791000000000395,
+        "p50": 9.298099999999977,
+        "p95": 14.718899999999849,
+        "p99": 16.82000000000005,
+        "max": 16.82000000000005
+      }
+    },
+    {
+      "split": "evaluation",
+      "responseMode": "full",
+      "quality": {
+        "cases": 18,
+        "referenceAcceptance": {
+          "numerator": 18,
+          "denominator": 18,
+          "rate": 1
+        },
+        "referenceFactCoverage": {
+          "numerator": 38,
+          "denominator": 38,
+          "rate": 1
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 20,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 2,
+          "denominator": 2,
+          "rate": 1
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 18,
+        "min": 4.552000000000021,
+        "p50": 7.082800000000134,
+        "p95": 9.365600000000086,
+        "p99": 9.365600000000086,
+        "max": 9.365600000000086
+      },
+      "hotLatencyMs": {
+        "count": 36,
+        "min": 5.6672000000000935,
+        "p50": 9.039400000000114,
+        "p95": 12.373299999999972,
+        "p99": 12.977300000000014,
+        "max": 12.977300000000014
+      }
+    }
+  ],
+  "rows": [
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "A directed acyclic graph is a directed graph with no directed cycles.\n\nA topological ordering exists for every finite directed acyclic graph.",
+      "citations": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "snippet": "# Directed Acyclic Graph A directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph.",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Directed Acyclic Graph\nA directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph.",
+      "citations": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "snippet": "# Directed Acyclic Graph A directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph.",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "有向无环图是不含有向环的有向图。\n\n有限有向无环图存在拓扑排序。",
+      "citations": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "snippet": "# 有向无环图 有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 有向无环图\n有向无环图是不含有向环的有向图。 有限有向无环图存在拓扑排序。",
+      "citations": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "snippet": "# 有向无环图 有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Unbounded queuing increases latency because requests wait behind accumulated work.\n\nLimiting admission rejects excess work before it consumes queue memory.",
+      "citations": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "snippet": "# Unbounded Queuing Unbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory.",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Unbounded Queuing\nUnbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory.",
+      "citations": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "snippet": "# Unbounded Queuing Unbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory.",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "无界排队会增加延迟，因为请求必须等待前面累积的工作。\n\n限制准入可以在额外请求占用队列内存之前拒绝它们。",
+      "citations": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "snippet": "# 无界排队 无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 无界排队\n无界排队会增加延迟，因为请求必须等待前面累积的工作。 限制准入可以在额外请求占用队列内存之前拒绝它们。",
+      "citations": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "snippet": "# 无界排队 无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\nThe Cobalt log retention period is 7 days.\n\nThe Cobalt log retention period is 30 days.",
+      "citations": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "snippet": "# Cobalt Log The Cobalt log retention period is 7 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "snippet": "# Cobalt Log Policy The Cobalt log retention period is 30 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\n# Cobalt Log\nThe Cobalt log retention period is 7 days. This policy is active.\n\n# Cobalt Log Policy\nThe Cobalt log retention period is 30 days. This policy is active.\n\nConflicting source observations:\nCobalt Log: The Cobalt log retention period is 7 days. This policy is active.\nCobalt Log Policy: The Cobalt log retention period is 30 days. This policy is active.",
+      "citations": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "snippet": "# Cobalt Log The Cobalt log retention period is 7 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "snippet": "# Cobalt Log Policy The Cobalt log retention period is 30 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "来源中的观测存在冲突，现有证据无法确定哪一项正确。\n\n蓝钴日志的保留周期是7天。\n\n该策略当前有效。\n\n蓝钴日志策略 蓝钴日志的保留周期是30天。\n\n来源中的冲突记录： 蓝钴日志: 蓝钴日志的保留周期是7天。当前证据覆盖仍然有限，因此这只能作为基于已命中材料的部分回答。",
+      "citations": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "snippet": "# 蓝钴日志 蓝钴日志的保留周期是7天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "snippet": "# 蓝钴日志策略 蓝钴日志的保留周期是30天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "来源中的观测存在冲突，现有证据无法确定哪一项正确。\n\n# 蓝钴日志\n蓝钴日志的保留周期是7天。 该策略当前有效。\n\n# 蓝钴日志策略\n蓝钴日志的保留周期是30天。 该策略当前有效。\n\n来源中的冲突记录：\n蓝钴日志: 蓝钴日志的保留周期是7天。 该策略当前有效。\n蓝钴日志策略: 蓝钴日志的保留周期是30天。 该策略当前有效。",
+      "citations": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "snippet": "# 蓝钴日志 蓝钴日志的保留周期是7天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "snippet": "# 蓝钴日志策略 蓝钴日志的保留周期是30天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-idempotency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Idempotent registration returns a stored result for repeated requests with the same key.\n\nThe state change is committed at most once for that key.\n\nThis contract does not guarantee delivery over an unreliable network.",
+      "citations": [
+        {
+          "documentId": "eval-idempotency-en-doc-1",
+          "snippet": "# Idempotent Registration Idempotent registration returns a stored result for repeated requests with the same key. The state change is committed at most once for that key. This contract does not guarantee delivery over an unreliable network.",
+          "sourcePath": "evaluation/eval-idempotency-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-idempotency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Idempotent Registration\nIdempotent registration returns a stored result for repeated requests with the same key. The state change is committed at most once for that key. This contract does not guarantee delivery over an unreliable network.",
+      "citations": [
+        {
+          "documentId": "eval-idempotency-en-doc-1",
+          "snippet": "# Idempotent Registration Idempotent registration returns a stored result for repeated requests with the same key. The state change is committed at most once for that key. This contract does not guarantee delivery over an unreliable network.",
+          "sourcePath": "evaluation/eval-idempotency-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-idempotency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "幂等注册对相同键的重复请求返回已保存的结果。\n\n对于该键，状态变更最多提交一次。\n\n这一契约不保证不可靠网络上的消息送达。",
+      "citations": [
+        {
+          "documentId": "eval-idempotency-zh-doc-1",
+          "snippet": "# 幂等注册 幂等注册对相同键的重复请求返回已保存的结果。对于该键，状态变更最多提交一次。这一契约不保证不可靠网络上的消息送达。",
+          "sourcePath": "evaluation/eval-idempotency-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-idempotency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 幂等注册\n幂等注册对相同键的重复请求返回已保存的结果。 对于该键，状态变更最多提交一次。 这一契约不保证不可靠网络上的消息送达。",
+      "citations": [
+        {
+          "documentId": "eval-idempotency-zh-doc-1",
+          "snippet": "# 幂等注册 幂等注册对相同键的重复请求返回已保存的结果。对于该键，状态变更最多提交一次。这一契约不保证不可靠网络上的消息送达。",
+          "sourcePath": "evaluation/eval-idempotency-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-snapshot-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Snapshot A snapshot stores the complete state at a checkpoint.\n\nRestoring a snapshot starts from that recorded state.\n\nJournal A journal records an ordered sequence of state changes.\n\nJournal: Recovery replays the recorded changes in order.",
+      "citations": [
+        {
+          "documentId": "eval-snapshot-en-doc-1",
+          "snippet": "# Snapshot A snapshot stores the complete state at a checkpoint. Restoring a snapshot starts from that recorded state. [[Journal]]",
+          "sourcePath": "evaluation/eval-snapshot-en/source-1.md"
+        },
+        {
+          "documentId": "eval-snapshot-en-doc-2",
+          "snippet": "# Journal A journal records an ordered sequence of state changes. Recovery replays the recorded changes in order. [[Snapshot]]",
+          "sourcePath": "evaluation/eval-snapshot-en/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-snapshot-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Snapshot\nA snapshot stores the complete state at a checkpoint. Restoring a snapshot starts from that recorded state. [[Journal]]\n\n# Journal\nA journal records an ordered sequence of state changes. Recovery replays the recorded changes in order. [[Snapshot]]",
+      "citations": [
+        {
+          "documentId": "eval-snapshot-en-doc-1",
+          "snippet": "# Snapshot A snapshot stores the complete state at a checkpoint. Restoring a snapshot starts from that recorded state. [[Journal]]",
+          "sourcePath": "evaluation/eval-snapshot-en/source-1.md"
+        },
+        {
+          "documentId": "eval-snapshot-en-doc-2",
+          "snippet": "# Journal A journal records an ordered sequence of state changes. Recovery replays the recorded changes in order. [[Snapshot]]",
+          "sourcePath": "evaluation/eval-snapshot-en/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-snapshot-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "变更日志记录有序的状态变更序列。\n\n变更日志: 恢复时按顺序重放这些变更。\n\n快照记录检查点时的完整状态。\n\n恢复快照从该状态开始。",
+      "citations": [
+        {
+          "documentId": "eval-snapshot-zh-doc-2",
+          "snippet": "# 变更日志 变更日志记录有序的状态变更序列。恢复时按顺序重放这些变更。[[快照]]",
+          "sourcePath": "evaluation/eval-snapshot-zh/source-2.md"
+        },
+        {
+          "documentId": "eval-snapshot-zh-doc-1",
+          "snippet": "# 快照 快照记录检查点时的完整状态。恢复快照从该状态开始。[[变更日志]]",
+          "sourcePath": "evaluation/eval-snapshot-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-snapshot-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 快照\n快照记录检查点时的完整状态。 恢复快照从该状态开始。[[变更日志]]\n\n# 变更日志\n变更日志记录有序的状态变更序列。 恢复时按顺序重放这些变更。[[快照]]",
+      "citations": [
+        {
+          "documentId": "eval-snapshot-zh-doc-2",
+          "snippet": "# 变更日志 变更日志记录有序的状态变更序列。恢复时按顺序重放这些变更。[[快照]]",
+          "sourcePath": "evaluation/eval-snapshot-zh/source-2.md"
+        },
+        {
+          "documentId": "eval-snapshot-zh-doc-1",
+          "snippet": "# 快照 快照记录检查点时的完整状态。恢复快照从该状态开始。[[变更日志]]",
+          "sourcePath": "evaluation/eval-snapshot-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-retries-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Synchronized retries overload a recovering server because many clients retry at the same moment after a shared outage.\n\nRandomized delay spreads retry traffic over time and reduces simultaneous load.",
+      "citations": [
+        {
+          "documentId": "eval-retries-en-doc-1",
+          "snippet": "# Synchronized Retries Synchronized retries overload a recovering server because many clients retry at the same moment after a shared outage. Randomized delay spreads retry traffic over time and reduces simultaneous load.",
+          "sourcePath": "evaluation/eval-retries-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-retries-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Synchronized Retries\nSynchronized retries overload a recovering server because many clients retry at the same moment after a shared outage. Randomized delay spreads retry traffic over time and reduces simultaneous load.",
+      "citations": [
+        {
+          "documentId": "eval-retries-en-doc-1",
+          "snippet": "# Synchronized Retries Synchronized retries overload a recovering server because many clients retry at the same moment after a shared outage. Randomized delay spreads retry traffic over time and reduces simultaneous load.",
+          "sourcePath": "evaluation/eval-retries-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-retries-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "同步重试会压垮恢复中的服务器，因为多个客户端在共同故障后同时重试。\n\n加入随机延迟可以分散重试流量，减少同一时刻的负载。",
+      "citations": [
+        {
+          "documentId": "eval-retries-zh-doc-1",
+          "snippet": "# 同步重试 同步重试会压垮恢复中的服务器，因为多个客户端在共同故障后同时重试。加入随机延迟可以分散重试流量，减少同一时刻的负载。",
+          "sourcePath": "evaluation/eval-retries-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-retries-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 同步重试\n同步重试会压垮恢复中的服务器，因为多个客户端在共同故障后同时重试。 加入随机延迟可以分散重试流量，减少同一时刻的负载。",
+      "citations": [
+        {
+          "documentId": "eval-retries-zh-doc-1",
+          "snippet": "# 同步重试 同步重试会压垮恢复中的服务器，因为多个客户端在共同故障后同时重试。加入随机延迟可以分散重试流量，减少同一时刻的负载。",
+          "sourcePath": "evaluation/eval-retries-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-replacement-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "multi_step",
+      "referenceFactCount": 4,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3",
+        "fact-4"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Safe Snapshot Replacement Perform these steps in order: 1.\n\nWrite the new state to a temporary file.\n\n2.\n\nFlush the temporary file contents.\n\n3.\n\nAtomically rename the temporary file over the old snapshot.\n\n4.\n\nAcknowledge the write only after the replacement succeeds.\n\nA failed replac\n\nA failed replacement must not acknowledge success.",
+      "citations": [
+        {
+          "documentId": "eval-replacement-en-doc-1",
+          "snippet": "# Safe Snapshot Replacement Perform these steps in order: 1. Write the new state to a temporary file. 2. Flush the temporary file contents. 3. Atomically rename the temporary file over the old snapshot. 4. Acknowledge the write only after the replacement succeeds. A failed replac",
+          "sourcePath": "evaluation/eval-replacement-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-replacement-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "multi_step",
+      "referenceFactCount": 4,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3",
+        "fact-4"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Safe Snapshot Replacement\nPerform these steps in order:\n1. Write the new state to a temporary file.\n2. Flush the temporary file contents.\n3. Atomically rename the temporary file over the old snapshot.\n4. Acknowledge the write only after the replacement succeeds.\nA failed replacement must not acknowledge success.",
+      "citations": [
+        {
+          "documentId": "eval-replacement-en-doc-1",
+          "snippet": "# Safe Snapshot Replacement Perform these steps in order: 1. Write the new state to a temporary file. 2. Flush the temporary file contents. 3. Atomically rename the temporary file over the old snapshot. 4. Acknowledge the write only after the replacement succeeds. A failed replac",
+          "sourcePath": "evaluation/eval-replacement-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-replacement-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "multi_step",
+      "referenceFactCount": 4,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3",
+        "fact-4"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "安全快照替换 按顺序执行以下步骤： 1.\n\n将新状态写入临时文件。\n\n2.\n\n刷新临时文件内容。\n\n3.\n\n原子重命名临时文件，替换旧快照。\n\n4.\n\n替换成功后才确认写入。\n\n替换失败不能确认成功。安全快照替换 按顺序执行以下步骤： 1。\n\n2。\n\n3。\n\n4。",
+      "citations": [
+        {
+          "documentId": "eval-replacement-zh-doc-1",
+          "snippet": "# 安全快照替换 按顺序执行以下步骤： 1. 将新状态写入临时文件。 2. 刷新临时文件内容。 3. 原子重命名临时文件，替换旧快照。 4. 替换成功后才确认写入。 替换失败不能确认成功。",
+          "sourcePath": "evaluation/eval-replacement-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-replacement-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "multi_step",
+      "referenceFactCount": 4,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3",
+        "fact-4"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 安全快照替换\n按顺序执行以下步骤：\n1. 将新状态写入临时文件。\n2. 刷新临时文件内容。\n3. 原子重命名临时文件，替换旧快照。\n4. 替换成功后才确认写入。\n替换失败不能确认成功。",
+      "citations": [
+        {
+          "documentId": "eval-replacement-zh-doc-1",
+          "snippet": "# 安全快照替换 按顺序执行以下步骤： 1. 将新状态写入临时文件。 2. 刷新临时文件内容。 3. 原子重命名临时文件，替换旧快照。 4. 替换成功后才确认写入。 替换失败不能确认成功。",
+          "sourcePath": "evaluation/eval-replacement-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-capacity-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\nThe Helios buffer capacity is 64 MB.\n\nThe Helios buffer capacity is 128 MB.",
+      "citations": [
+        {
+          "documentId": "eval-capacity-en-doc-1",
+          "snippet": "# Helios Buffer The Helios buffer capacity is 64 MB. This specification is active.",
+          "sourcePath": "evaluation/eval-capacity-en/source-1.md"
+        },
+        {
+          "documentId": "eval-capacity-en-doc-2",
+          "snippet": "# Helios Buffer Specification The Helios buffer capacity is 128 MB. This specification is active.",
+          "sourcePath": "evaluation/eval-capacity-en/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-capacity-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\nConflicting source observations:\nHelios Buffer: The Helios buffer capacity is 64 MB. This specification is active.\nHelios Buffer Specification: The Helios buffer capacity is 128 MB. This specification is active.\n\n# Helios Buffer\nThe Helios buffer capacity is 64 MB. This specification is active.\n\n# Helios Buffer Specification\nThe Helios buffer capacity is 128 MB. This specification is active.",
+      "citations": [
+        {
+          "documentId": "eval-capacity-en-doc-1",
+          "snippet": "# Helios Buffer The Helios buffer capacity is 64 MB. This specification is active.",
+          "sourcePath": "evaluation/eval-capacity-en/source-1.md"
+        },
+        {
+          "documentId": "eval-capacity-en-doc-2",
+          "snippet": "# Helios Buffer Specification The Helios buffer capacity is 128 MB. This specification is active.",
+          "sourcePath": "evaluation/eval-capacity-en/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-capacity-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "来源中的观测存在冲突，现有证据无法确定哪一项正确。\n\n这份规格当前有效。\n\n白鹭缓冲区规格 白鹭缓冲区容量是128MB。\n\n来源中的冲突记录： 白鹭缓冲区: 白鹭缓冲区容量是64MB。\n\n白鹭缓冲区容量是64MB。当前证据覆盖仍然有限，因此这只能作为基于已命中材料的部分回答。",
+      "citations": [
+        {
+          "documentId": "eval-capacity-zh-doc-1",
+          "snippet": "# 白鹭缓冲区 白鹭缓冲区容量是64MB。这份规格当前有效。",
+          "sourcePath": "evaluation/eval-capacity-zh/source-1.md"
+        },
+        {
+          "documentId": "eval-capacity-zh-doc-2",
+          "snippet": "# 白鹭缓冲区规格 白鹭缓冲区容量是128MB。这份规格当前有效。",
+          "sourcePath": "evaluation/eval-capacity-zh/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-capacity-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "来源中的观测存在冲突，现有证据无法确定哪一项正确。\n\n来源中的冲突记录：\n白鹭缓冲区: 白鹭缓冲区容量是64MB。 这份规格当前有效。\n白鹭缓冲区规格: 白鹭缓冲区容量是128MB。 这份规格当前有效。\n\n# 白鹭缓冲区\n白鹭缓冲区容量是64MB。 这份规格当前有效。\n\n# 白鹭缓冲区规格\n白鹭缓冲区容量是128MB。 这份规格当前有效。",
+      "citations": [
+        {
+          "documentId": "eval-capacity-zh-doc-1",
+          "snippet": "# 白鹭缓冲区 白鹭缓冲区容量是64MB。这份规格当前有效。",
+          "sourcePath": "evaluation/eval-capacity-zh/source-1.md"
+        },
+        {
+          "documentId": "eval-capacity-zh-doc-2",
+          "snippet": "# 白鹭缓冲区规格 白鹭缓冲区容量是128MB。这份规格当前有效。",
+          "sourcePath": "evaluation/eval-capacity-zh/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "revise",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-missing-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 2,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "I could not ground the answer inside the current scope \"eval-missing-en-doc-1\". I cannot give a grounded answer to \"What is the isotope ratio of an Asterion core?\" yet. Refine the wording, widen the scope, or add the missing note.",
+      "citations": [
+        {
+          "documentId": "eval-missing-en-doc-1",
+          "snippet": "# Bloom Filter A Bloom filter is a probabilistic membership structure. These notes contain no measurements of isotope ratios.",
+          "sourcePath": "evaluation/eval-missing-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "abstain",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-missing-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 2,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "I could not ground the answer inside the current scope \"eval-missing-en-doc-1\". I cannot give a grounded answer to \"What is the isotope ratio of an Asterion core?\" yet. Refine the wording, widen the scope, or add the missing note.",
+      "citations": [
+        {
+          "documentId": "eval-missing-en-doc-1",
+          "snippet": "# Bloom Filter A Bloom filter is a probabilistic membership structure. These notes contain no measurements of isotope ratios.",
+          "sourcePath": "evaluation/eval-missing-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "abstain",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-missing-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 2,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "这些笔记没有提供同位素比例的测量数据。\n\n布隆过滤器是一种概率型成员查询结构。",
+      "citations": [
+        {
+          "documentId": "eval-missing-zh-doc-1",
+          "snippet": "# 布隆过滤器 布隆过滤器是一种概率型成员查询结构。这些笔记没有提供同位素比例的测量数据。",
+          "sourcePath": "evaluation/eval-missing-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-missing-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 2,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 布隆过滤器\n布隆过滤器是一种概率型成员查询结构。 这些笔记没有提供同位素比例的测量数据。",
+      "citations": [
+        {
+          "documentId": "eval-missing-zh-doc-1",
+          "snippet": "# 布隆过滤器 布隆过滤器是一种概率型成员查询结构。这些笔记没有提供同位素比例的测量数据。",
+          "sourcePath": "evaluation/eval-missing-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-drift-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "topic_drift",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Lease expiry ends a time-limited ownership grant when its deadline passes.\n\nA client must reacquire a new lease before performing protected writes.",
+      "citations": [
+        {
+          "documentId": "eval-drift-en-doc-1",
+          "snippet": "# Lease Expiry Lease expiry ends a time-limited ownership grant when its deadline passes. A client must reacquire a new lease before performing protected writes.",
+          "sourcePath": "evaluation/eval-drift-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-drift-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "topic_drift",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Lease Expiry\nLease expiry ends a time-limited ownership grant when its deadline passes. A client must reacquire a new lease before performing protected writes.",
+      "citations": [
+        {
+          "documentId": "eval-drift-en-doc-1",
+          "snippet": "# Lease Expiry Lease expiry ends a time-limited ownership grant when its deadline passes. A client must reacquire a new lease before performing protected writes.",
+          "sourcePath": "evaluation/eval-drift-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-drift-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "topic_drift",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "租约到期指有时限的所有权授权在截止时间之后失效。\n\n客户端必须重新取得租约，才能继续执行受保护的写入。",
+      "citations": [
+        {
+          "documentId": "eval-drift-zh-doc-1",
+          "snippet": "# 租约到期 租约到期指有时限的所有权授权在截止时间之后失效。客户端必须重新取得租约，才能继续执行受保护的写入。",
+          "sourcePath": "evaluation/eval-drift-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-drift-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "topic_drift",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 租约到期\n租约到期指有时限的所有权授权在截止时间之后失效。 客户端必须重新取得租约，才能继续执行受保护的写入。",
+      "citations": [
+        {
+          "documentId": "eval-drift-zh-doc-1",
+          "snippet": "# 租约到期 租约到期指有时限的所有权授权在截止时间之后失效。客户端必须重新取得租约，才能继续执行受保护的写入。",
+          "sourcePath": "evaluation/eval-drift-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-math-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "math",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Series Resistance (formula block):\n\n$$\nR_{total} = R_1 + R_2\n$$\n\nThe total resistance of two resistors connected in series is the sum of their individual resistances.\n\n$$\nR_{total} = R_1 + R_2\n$$\n\n This relation assumes ideal resistors connected in a single series path.",
+      "citations": [
+        {
+          "documentId": "eval-math-en-doc-1",
+          "snippet": "$$ R_{total} = R_1 + R_2 $$",
+          "sourcePath": "evaluation/eval-math-en/source-1.md"
+        },
+        {
+          "documentId": "eval-math-en-doc-1",
+          "snippet": "# Series Resistance The total resistance of two resistors connected in series is the sum of their individual resistances. $$ R_{total} = R_1 + R_2 $$ This relation assumes ideal resistors connected in a single series path.",
+          "sourcePath": "evaluation/eval-math-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-math-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "math",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Series Resistance\nThe total resistance of two resistors connected in series is the sum of their individual resistances.\n\n$$\nR_{total} = R_1 + R_2\n$$\n\nThis relation assumes ideal resistors connected in a single series path.",
+      "citations": [
+        {
+          "documentId": "eval-math-en-doc-1",
+          "snippet": "$$ R_{total} = R_1 + R_2 $$",
+          "sourcePath": "evaluation/eval-math-en/source-1.md"
+        },
+        {
+          "documentId": "eval-math-en-doc-1",
+          "snippet": "# Series Resistance The total resistance of two resistors connected in series is the sum of their individual resistances. $$ R_{total} = R_1 + R_2 $$ This relation assumes ideal resistors connected in a single series path.",
+          "sourcePath": "evaluation/eval-math-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-math-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "math",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "$$\nR_{总} = R_1 + R_2\n$$\n\n 这个关系适用于连接在单一串联路径上的理想电阻。\n\n串联电阻 两个电阻串联时，总电阻等于两个电阻的阻值之和。",
+      "citations": [
+        {
+          "documentId": "eval-math-zh-doc-1",
+          "snippet": "$$ R_{总} = R_1 + R_2 $$",
+          "sourcePath": "evaluation/eval-math-zh/source-1.md"
+        },
+        {
+          "documentId": "eval-math-zh-doc-1",
+          "snippet": "# 串联电阻 两个电阻串联时，总电阻等于两个电阻的阻值之和。 $$ R_{总} = R_1 + R_2 $$ 这个关系适用于连接在单一串联路径上的理想电阻。",
+          "sourcePath": "evaluation/eval-math-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-math-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "math",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 串联电阻\n两个电阻串联时，总电阻等于两个电阻的阻值之和。\n\n$$\nR_{总} = R_1 + R_2\n$$\n\n这个关系适用于连接在单一串联路径上的理想电阻。",
+      "citations": [
+        {
+          "documentId": "eval-math-zh-doc-1",
+          "snippet": "$$ R_{总} = R_1 + R_2 $$",
+          "sourcePath": "evaluation/eval-math-zh/source-1.md"
+        },
+        {
+          "documentId": "eval-math-zh-doc-1",
+          "snippet": "# 串联电阻 两个电阻串联时，总电阻等于两个电阻的阻值之和。 $$ R_{总} = R_1 + R_2 $$ 这个关系适用于连接在单一串联路径上的理想电阻。",
+          "sourcePath": "evaluation/eval-math-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-headings-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "noisy_headings",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "A fencing token is a monotonically increasing number attached to an ownership grant.\n\nThe storage system rejects writes carrying an older token than the newest accepted token.",
+      "citations": [
+        {
+          "documentId": "eval-headings-en-doc-1",
+          "snippet": "### Fencing Token A fencing token is a monotonically increasing number attached to an ownership grant. The storage system rejects writes carrying an older token than the newest accepted token.",
+          "sourcePath": "evaluation/eval-headings-en/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-en-doc-1",
+          "snippet": "## Table of Contents",
+          "sourcePath": "evaluation/eval-headings-en/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-en-doc-1",
+          "snippet": "## Revision History The heading names are editorial metadata.",
+          "sourcePath": "evaluation/eval-headings-en/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-en-doc-1",
+          "snippet": "# Introduction",
+          "sourcePath": "evaluation/eval-headings-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-headings-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "noisy_headings",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "### Fencing Token\nA fencing token is a monotonically increasing number attached to an ownership grant. The storage system rejects writes carrying an older token than the newest accepted token.\n\n## Revision History\nThe heading names are editorial metadata.",
+      "citations": [
+        {
+          "documentId": "eval-headings-en-doc-1",
+          "snippet": "### Fencing Token A fencing token is a monotonically increasing number attached to an ownership grant. The storage system rejects writes carrying an older token than the newest accepted token.",
+          "sourcePath": "evaluation/eval-headings-en/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-en-doc-1",
+          "snippet": "## Table of Contents",
+          "sourcePath": "evaluation/eval-headings-en/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-en-doc-1",
+          "snippet": "## Revision History The heading names are editorial metadata.",
+          "sourcePath": "evaluation/eval-headings-en/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-en-doc-1",
+          "snippet": "# Introduction",
+          "sourcePath": "evaluation/eval-headings-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-headings-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "noisy_headings",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "栅栏令牌是附加在所有权授权上的单调递增编号。\n\n修订历史 这些标题是编辑元数据。\n\n这些标题是编辑元数据。\n\n存储系统拒绝携带旧于最新已接受令牌的写入。",
+      "citations": [
+        {
+          "documentId": "eval-headings-zh-doc-1",
+          "snippet": "### 栅栏令牌 栅栏令牌是附加在所有权授权上的单调递增编号。存储系统拒绝携带旧于最新已接受令牌的写入。",
+          "sourcePath": "evaluation/eval-headings-zh/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-zh-doc-1",
+          "snippet": "## 目录",
+          "sourcePath": "evaluation/eval-headings-zh/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-zh-doc-1",
+          "snippet": "## 修订历史 这些标题是编辑元数据。",
+          "sourcePath": "evaluation/eval-headings-zh/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-zh-doc-1",
+          "snippet": "# 引言",
+          "sourcePath": "evaluation/eval-headings-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "eval-headings-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "noisy_headings",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "### 栅栏令牌\n栅栏令牌是附加在所有权授权上的单调递增编号。 存储系统拒绝携带旧于最新已接受令牌的写入。\n\n## 修订历史\n这些标题是编辑元数据。",
+      "citations": [
+        {
+          "documentId": "eval-headings-zh-doc-1",
+          "snippet": "### 栅栏令牌 栅栏令牌是附加在所有权授权上的单调递增编号。存储系统拒绝携带旧于最新已接受令牌的写入。",
+          "sourcePath": "evaluation/eval-headings-zh/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-zh-doc-1",
+          "snippet": "## 目录",
+          "sourcePath": "evaluation/eval-headings-zh/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-zh-doc-1",
+          "snippet": "## 修订历史 这些标题是编辑元数据。",
+          "sourcePath": "evaluation/eval-headings-zh/source-1.md"
+        },
+        {
+          "documentId": "eval-headings-zh-doc-1",
+          "snippet": "# 引言",
+          "sourcePath": "evaluation/eval-headings-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    }
+  ],
+  "timings": [
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 70.182,
+      "heapUsedBefore": 9784208,
+      "heapUsedAfter": 15051648,
+      "rssBefore": 47923200,
+      "rssAfter": 54337536
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 13.739100000000008,
+      "heapUsedBefore": 11440864,
+      "heapUsedAfter": 12210840,
+      "rssBefore": 54845440,
+      "rssAfter": 57794560
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.804300000000012,
+      "heapUsedBefore": 12399752,
+      "heapUsedAfter": 13259608,
+      "rssBefore": 58195968,
+      "rssAfter": 58052608
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.8733,
+      "heapUsedBefore": 13341560,
+      "heapUsedAfter": 16224544,
+      "rssBefore": 58052608,
+      "rssAfter": 58220544
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.879099999999994,
+      "heapUsedBefore": 12425664,
+      "heapUsedAfter": 16552016,
+      "rssBefore": 58241024,
+      "rssAfter": 58773504
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.113799999999998,
+      "heapUsedBefore": 16562216,
+      "heapUsedAfter": 16360736,
+      "rssBefore": 58773504,
+      "rssAfter": 59269120
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 29.56370000000001,
+      "heapUsedBefore": 16497032,
+      "heapUsedAfter": 17279488,
+      "rssBefore": 59359232,
+      "rssAfter": 62099456
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.171899999999994,
+      "heapUsedBefore": 17554552,
+      "heapUsedAfter": 16683624,
+      "rssBefore": 62169088,
+      "rssAfter": 62095360
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 12.525000000000034,
+      "heapUsedBefore": 16694728,
+      "heapUsedAfter": 16871664,
+      "rssBefore": 62201856,
+      "rssAfter": 63062016
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.463399999999979,
+      "heapUsedBefore": 16964912,
+      "heapUsedAfter": 19090824,
+      "rssBefore": 63086592,
+      "rssAfter": 63410176
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.555800000000033,
+      "heapUsedBefore": 19100472,
+      "heapUsedAfter": 18320168,
+      "rssBefore": 63410176,
+      "rssAfter": 63377408
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.751199999999983,
+      "heapUsedBefore": 18329112,
+      "heapUsedAfter": 18043888,
+      "rssBefore": 63377408,
+      "rssAfter": 64241664
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.805099999999982,
+      "heapUsedBefore": 18168064,
+      "heapUsedAfter": 21284512,
+      "rssBefore": 64249856,
+      "rssAfter": 65073152
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.000100000000032,
+      "heapUsedBefore": 21296912,
+      "heapUsedAfter": 16723728,
+      "rssBefore": 65085440,
+      "rssAfter": 68173824
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.875,
+      "heapUsedBefore": 16738376,
+      "heapUsedAfter": 20621384,
+      "rssBefore": 68177920,
+      "rssAfter": 68698112
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.90440000000001,
+      "heapUsedBefore": 20740704,
+      "heapUsedAfter": 23238696,
+      "rssBefore": 68808704,
+      "rssAfter": 71221248
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.278099999999995,
+      "heapUsedBefore": 23249048,
+      "heapUsedAfter": 19199688,
+      "rssBefore": 71233536,
+      "rssAfter": 71487488
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.118100000000027,
+      "heapUsedBefore": 19209976,
+      "heapUsedAfter": 22593080,
+      "rssBefore": 71487488,
+      "rssAfter": 71798784
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.251599999999996,
+      "heapUsedBefore": 22666488,
+      "heapUsedAfter": 24912896,
+      "rssBefore": 71798784,
+      "rssAfter": 72245248
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.800599999999974,
+      "heapUsedBefore": 24922264,
+      "heapUsedAfter": 19380800,
+      "rssBefore": 72257536,
+      "rssAfter": 72617984
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.211000000000013,
+      "heapUsedBefore": 19392376,
+      "heapUsedAfter": 22696008,
+      "rssBefore": 72617984,
+      "rssAfter": 72916992
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.858699999999999,
+      "heapUsedBefore": 22771160,
+      "heapUsedAfter": 24649616,
+      "rssBefore": 72921088,
+      "rssAfter": 73076736
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.699900000000014,
+      "heapUsedBefore": 24658104,
+      "heapUsedAfter": 18939208,
+      "rssBefore": 73076736,
+      "rssAfter": 73015296
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.1276000000000295,
+      "heapUsedBefore": 18947432,
+      "heapUsedAfter": 22044008,
+      "rssBefore": 73015296,
+      "rssAfter": 73269248
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 15.488300000000038,
+      "heapUsedBefore": 22231584,
+      "heapUsedAfter": 20635000,
+      "rssBefore": 73363456,
+      "rssAfter": 72781824
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 12.428799999999967,
+      "heapUsedBefore": 20646504,
+      "heapUsedAfter": 20354480,
+      "rssBefore": 72781824,
+      "rssAfter": 75354112
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 13.300900000000013,
+      "heapUsedBefore": 20366912,
+      "heapUsedAfter": 20661832,
+      "rssBefore": 75358208,
+      "rssAfter": 73854976
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.974100000000021,
+      "heapUsedBefore": 20768392,
+      "heapUsedAfter": 19154736,
+      "rssBefore": 73854976,
+      "rssAfter": 73883648
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.70980000000003,
+      "heapUsedBefore": 19170064,
+      "heapUsedAfter": 18074032,
+      "rssBefore": 73883648,
+      "rssAfter": 73981952
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.615300000000047,
+      "heapUsedBefore": 18089096,
+      "heapUsedAfter": 25614952,
+      "rssBefore": 73981952,
+      "rssAfter": 74403840
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 10.02619999999996,
+      "heapUsedBefore": 25715744,
+      "heapUsedAfter": 21212008,
+      "rssBefore": 74403840,
+      "rssAfter": 74424320
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.653200000000027,
+      "heapUsedBefore": 21223696,
+      "heapUsedAfter": 25227504,
+      "rssBefore": 74428416,
+      "rssAfter": 75399168
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 12.240599999999972,
+      "heapUsedBefore": 25236672,
+      "heapUsedAfter": 22041848,
+      "rssBefore": 75399168,
+      "rssAfter": 74387456
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.801499999999976,
+      "heapUsedBefore": 22135048,
+      "heapUsedAfter": 25237552,
+      "rssBefore": 74387456,
+      "rssAfter": 75268096
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.116100000000017,
+      "heapUsedBefore": 25247792,
+      "heapUsedAfter": 22069512,
+      "rssBefore": 75268096,
+      "rssAfter": 74821632
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 12.654700000000048,
+      "heapUsedBefore": 22079488,
+      "heapUsedAfter": 26820000,
+      "rssBefore": 74821632,
+      "rssAfter": 75735040
+    },
+    {
+      "caseId": "eval-idempotency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.388199999999983,
+      "heapUsedBefore": 26912696,
+      "heapUsedAfter": 23934576,
+      "rssBefore": 75735040,
+      "rssAfter": 75038720
+    },
+    {
+      "caseId": "eval-idempotency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.707599999999957,
+      "heapUsedBefore": 23948040,
+      "heapUsedAfter": 21749952,
+      "rssBefore": 75038720,
+      "rssAfter": 75845632
+    },
+    {
+      "caseId": "eval-idempotency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.565200000000004,
+      "heapUsedBefore": 21766840,
+      "heapUsedAfter": 28147768,
+      "rssBefore": 75849728,
+      "rssAfter": 77918208
+    },
+    {
+      "caseId": "eval-idempotency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.140900000000101,
+      "heapUsedBefore": 28242896,
+      "heapUsedAfter": 32555528,
+      "rssBefore": 78073856,
+      "rssAfter": 82198528
+    },
+    {
+      "caseId": "eval-idempotency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.14790000000005,
+      "heapUsedBefore": 32567248,
+      "heapUsedAfter": 23640536,
+      "rssBefore": 82214912,
+      "rssAfter": 81317888
+    },
+    {
+      "caseId": "eval-idempotency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.634400000000028,
+      "heapUsedBefore": 23651992,
+      "heapUsedAfter": 28981520,
+      "rssBefore": 81317888,
+      "rssAfter": 83382272
+    },
+    {
+      "caseId": "eval-idempotency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.233600000000024,
+      "heapUsedBefore": 29067160,
+      "heapUsedAfter": 31671376,
+      "rssBefore": 83464192,
+      "rssAfter": 86450176
+    },
+    {
+      "caseId": "eval-idempotency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.259500000000003,
+      "heapUsedBefore": 31681360,
+      "heapUsedAfter": 34991032,
+      "rssBefore": 86462464,
+      "rssAfter": 89284608
+    },
+    {
+      "caseId": "eval-idempotency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 16.82000000000005,
+      "heapUsedBefore": 35004688,
+      "heapUsedAfter": 22361768,
+      "rssBefore": 89309184,
+      "rssAfter": 89698304
+    },
+    {
+      "caseId": "eval-idempotency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.762100000000032,
+      "heapUsedBefore": 22443080,
+      "heapUsedAfter": 24776632,
+      "rssBefore": 89698304,
+      "rssAfter": 89874432
+    },
+    {
+      "caseId": "eval-idempotency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.397399999999948,
+      "heapUsedBefore": 24785336,
+      "heapUsedAfter": 27790400,
+      "rssBefore": 89874432,
+      "rssAfter": 90800128
+    },
+    {
+      "caseId": "eval-idempotency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.398400000000038,
+      "heapUsedBefore": 27798840,
+      "heapUsedAfter": 31450656,
+      "rssBefore": 90800128,
+      "rssAfter": 91488256
+    },
+    {
+      "caseId": "eval-snapshot-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 11.09319999999991,
+      "heapUsedBefore": 31567920,
+      "heapUsedAfter": 36547920,
+      "rssBefore": 91488256,
+      "rssAfter": 93147136
+    },
+    {
+      "caseId": "eval-snapshot-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.03589999999997,
+      "heapUsedBefore": 36562160,
+      "heapUsedAfter": 24553280,
+      "rssBefore": 93163520,
+      "rssAfter": 92573696
+    },
+    {
+      "caseId": "eval-snapshot-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.383600000000001,
+      "heapUsedBefore": 24570312,
+      "heapUsedAfter": 30620224,
+      "rssBefore": 92581888,
+      "rssAfter": 92606464
+    },
+    {
+      "caseId": "eval-snapshot-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.121899999999982,
+      "heapUsedBefore": 30739176,
+      "heapUsedAfter": 35013784,
+      "rssBefore": 92606464,
+      "rssAfter": 94470144
+    },
+    {
+      "caseId": "eval-snapshot-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.625299999999925,
+      "heapUsedBefore": 35025736,
+      "heapUsedAfter": 24886904,
+      "rssBefore": 94498816,
+      "rssAfter": 92323840
+    },
+    {
+      "caseId": "eval-snapshot-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.33680000000004,
+      "heapUsedBefore": 24898592,
+      "heapUsedAfter": 31496800,
+      "rssBefore": 92323840,
+      "rssAfter": 92921856
+    },
+    {
+      "caseId": "eval-snapshot-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.89689999999996,
+      "heapUsedBefore": 31626744,
+      "heapUsedAfter": 35608512,
+      "rssBefore": 92921856,
+      "rssAfter": 93442048
+    },
+    {
+      "caseId": "eval-snapshot-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.7029,
+      "heapUsedBefore": 35618672,
+      "heapUsedAfter": 23651504,
+      "rssBefore": 93442048,
+      "rssAfter": 93569024
+    },
+    {
+      "caseId": "eval-snapshot-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.691000000000031,
+      "heapUsedBefore": 23663912,
+      "heapUsedAfter": 29198792,
+      "rssBefore": 93573120,
+      "rssAfter": 94654464
+    },
+    {
+      "caseId": "eval-snapshot-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.837299999999914,
+      "heapUsedBefore": 29329976,
+      "heapUsedAfter": 32741224,
+      "rssBefore": 94654464,
+      "rssAfter": 94863360
+    },
+    {
+      "caseId": "eval-snapshot-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.040100000000052,
+      "heapUsedBefore": 32750496,
+      "heapUsedAfter": 36877280,
+      "rssBefore": 94863360,
+      "rssAfter": 95518720
+    },
+    {
+      "caseId": "eval-snapshot-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.423800000000028,
+      "heapUsedBefore": 36886288,
+      "heapUsedAfter": 24550336,
+      "rssBefore": 95518720,
+      "rssAfter": 94191616
+    },
+    {
+      "caseId": "eval-retries-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.164200000000051,
+      "heapUsedBefore": 24667488,
+      "heapUsedAfter": 29234136,
+      "rssBefore": 94191616,
+      "rssAfter": 94199808
+    },
+    {
+      "caseId": "eval-retries-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.754500000000007,
+      "heapUsedBefore": 29247112,
+      "heapUsedAfter": 34275440,
+      "rssBefore": 94216192,
+      "rssAfter": 94384128
+    },
+    {
+      "caseId": "eval-retries-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.415700000000015,
+      "heapUsedBefore": 34291144,
+      "heapUsedAfter": 25192592,
+      "rssBefore": 94396416,
+      "rssAfter": 94478336
+    },
+    {
+      "caseId": "eval-retries-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.271399999999971,
+      "heapUsedBefore": 25310912,
+      "heapUsedAfter": 29274872,
+      "rssBefore": 94478336,
+      "rssAfter": 93442048
+    },
+    {
+      "caseId": "eval-retries-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.653099999999995,
+      "heapUsedBefore": 29285976,
+      "heapUsedAfter": 33654272,
+      "rssBefore": 93442048,
+      "rssAfter": 93745152
+    },
+    {
+      "caseId": "eval-retries-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.300899999999956,
+      "heapUsedBefore": 33665112,
+      "heapUsedAfter": 24522944,
+      "rssBefore": 93745152,
+      "rssAfter": 94740480
+    },
+    {
+      "caseId": "eval-retries-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.571300000000065,
+      "heapUsedBefore": 24633688,
+      "heapUsedAfter": 27054320,
+      "rssBefore": 94097408,
+      "rssAfter": 94515200
+    },
+    {
+      "caseId": "eval-retries-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.5791000000000395,
+      "heapUsedBefore": 27063736,
+      "heapUsedAfter": 30048912,
+      "rssBefore": 94392320,
+      "rssAfter": 94822400
+    },
+    {
+      "caseId": "eval-retries-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.28690000000006,
+      "heapUsedBefore": 30060600,
+      "heapUsedAfter": 33619424,
+      "rssBefore": 94822400,
+      "rssAfter": 95318016
+    },
+    {
+      "caseId": "eval-retries-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.552000000000021,
+      "heapUsedBefore": 33725944,
+      "heapUsedAfter": 35954088,
+      "rssBefore": 95318016,
+      "rssAfter": 95449088
+    },
+    {
+      "caseId": "eval-retries-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.412599999999998,
+      "heapUsedBefore": 35962624,
+      "heapUsedAfter": 22554088,
+      "rssBefore": 95449088,
+      "rssAfter": 94601216
+    },
+    {
+      "caseId": "eval-retries-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.083899999999971,
+      "heapUsedBefore": 22562360,
+      "heapUsedAfter": 25905696,
+      "rssBefore": 94601216,
+      "rssAfter": 94908416
+    },
+    {
+      "caseId": "eval-replacement-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 9.56230000000005,
+      "heapUsedBefore": 26029544,
+      "heapUsedAfter": 35496448,
+      "rssBefore": 94908416,
+      "rssAfter": 95952896
+    },
+    {
+      "caseId": "eval-replacement-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 12.124199999999973,
+      "heapUsedBefore": 35531864,
+      "heapUsedAfter": 30139040,
+      "rssBefore": 94937088,
+      "rssAfter": 94855168
+    },
+    {
+      "caseId": "eval-replacement-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 13.721499999999992,
+      "heapUsedBefore": 30154744,
+      "heapUsedAfter": 25367928,
+      "rssBefore": 94855168,
+      "rssAfter": 94556160
+    },
+    {
+      "caseId": "eval-replacement-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.459100000000035,
+      "heapUsedBefore": 25497520,
+      "heapUsedAfter": 33009016,
+      "rssBefore": 94556160,
+      "rssAfter": 94474240
+    },
+    {
+      "caseId": "eval-replacement-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.81070000000011,
+      "heapUsedBefore": 33022984,
+      "heapUsedAfter": 27308712,
+      "rssBefore": 94474240,
+      "rssAfter": 94601216
+    },
+    {
+      "caseId": "eval-replacement-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.559099999999944,
+      "heapUsedBefore": 27322416,
+      "heapUsedAfter": 36571944,
+      "rssBefore": 94601216,
+      "rssAfter": 95363072
+    },
+    {
+      "caseId": "eval-replacement-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.283999999999992,
+      "heapUsedBefore": 36686456,
+      "heapUsedAfter": 25967568,
+      "rssBefore": 95363072,
+      "rssAfter": 95215616
+    },
+    {
+      "caseId": "eval-replacement-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.298099999999977,
+      "heapUsedBefore": 25985024,
+      "heapUsedAfter": 32021176,
+      "rssBefore": 95215616,
+      "rssAfter": 96296960
+    },
+    {
+      "caseId": "eval-replacement-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.639899999999898,
+      "heapUsedBefore": 32033080,
+      "heapUsedAfter": 38937976,
+      "rssBefore": 96296960,
+      "rssAfter": 96235520
+    },
+    {
+      "caseId": "eval-replacement-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.40179999999998,
+      "heapUsedBefore": 39049744,
+      "heapUsedAfter": 24740456,
+      "rssBefore": 96235520,
+      "rssAfter": 95260672
+    },
+    {
+      "caseId": "eval-replacement-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.593499999999949,
+      "heapUsedBefore": 24750896,
+      "heapUsedAfter": 29726160,
+      "rssBefore": 95260672,
+      "rssAfter": 96321536
+    },
+    {
+      "caseId": "eval-replacement-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.0791999999999,
+      "heapUsedBefore": 29737472,
+      "heapUsedAfter": 35594856,
+      "rssBefore": 96321536,
+      "rssAfter": 96948224
+    },
+    {
+      "caseId": "eval-capacity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 11.35730000000001,
+      "heapUsedBefore": 35735376,
+      "heapUsedAfter": 28362968,
+      "rssBefore": 96956416,
+      "rssAfter": 95240192
+    },
+    {
+      "caseId": "eval-capacity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.859800000000064,
+      "heapUsedBefore": 28374856,
+      "heapUsedAfter": 37089120,
+      "rssBefore": 95240192,
+      "rssAfter": 95870976
+    },
+    {
+      "caseId": "eval-capacity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 12.463399999999979,
+      "heapUsedBefore": 37103192,
+      "heapUsedAfter": 30598008,
+      "rssBefore": 95870976,
+      "rssAfter": 95985664
+    },
+    {
+      "caseId": "eval-capacity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 9.17859999999996,
+      "heapUsedBefore": 30733040,
+      "heapUsedAfter": 37983184,
+      "rssBefore": 96206848,
+      "rssAfter": 95412224
+    },
+    {
+      "caseId": "eval-capacity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 11.316100000000006,
+      "heapUsedBefore": 37998360,
+      "heapUsedAfter": 29926920,
+      "rssBefore": 95412224,
+      "rssAfter": 98615296
+    },
+    {
+      "caseId": "eval-capacity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 12.977300000000014,
+      "heapUsedBefore": 29941832,
+      "heapUsedAfter": 38446296,
+      "rssBefore": 98615296,
+      "rssAfter": 96108544
+    },
+    {
+      "caseId": "eval-capacity-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.331800000000044,
+      "heapUsedBefore": 38580192,
+      "heapUsedAfter": 25732312,
+      "rssBefore": 96108544,
+      "rssAfter": 96215040
+    },
+    {
+      "caseId": "eval-capacity-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.674299999999903,
+      "heapUsedBefore": 25744432,
+      "heapUsedAfter": 30408352,
+      "rssBefore": 96215040,
+      "rssAfter": 97202176
+    },
+    {
+      "caseId": "eval-capacity-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.068500000000085,
+      "heapUsedBefore": 30418776,
+      "heapUsedAfter": 35923184,
+      "rssBefore": 97202176,
+      "rssAfter": 98267136
+    },
+    {
+      "caseId": "eval-capacity-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.2934999999999945,
+      "heapUsedBefore": 36051256,
+      "heapUsedAfter": 39949904,
+      "rssBefore": 98267136,
+      "rssAfter": 98504704
+    },
+    {
+      "caseId": "eval-capacity-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.158400000000029,
+      "heapUsedBefore": 39960280,
+      "heapUsedAfter": 26782416,
+      "rssBefore": 98504704,
+      "rssAfter": 96305152
+    },
+    {
+      "caseId": "eval-capacity-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.354399999999941,
+      "heapUsedBefore": 26792528,
+      "heapUsedAfter": 32377664,
+      "rssBefore": 96305152,
+      "rssAfter": 97345536
+    },
+    {
+      "caseId": "eval-missing-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.983600000000024,
+      "heapUsedBefore": 32488976,
+      "heapUsedAfter": 36135208,
+      "rssBefore": 97345536,
+      "rssAfter": 97460224
+    },
+    {
+      "caseId": "eval-missing-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.08159999999998,
+      "heapUsedBefore": 36144816,
+      "heapUsedAfter": 25538352,
+      "rssBefore": 97460224,
+      "rssAfter": 96395264
+    },
+    {
+      "caseId": "eval-missing-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.384599999999864,
+      "heapUsedBefore": 25549168,
+      "heapUsedAfter": 29911896,
+      "rssBefore": 96399360,
+      "rssAfter": 96829440
+    },
+    {
+      "caseId": "eval-missing-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.7853999999999814,
+      "heapUsedBefore": 30020624,
+      "heapUsedAfter": 33549944,
+      "rssBefore": 96829440,
+      "rssAfter": 96829440
+    },
+    {
+      "caseId": "eval-missing-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.6672000000000935,
+      "heapUsedBefore": 33557920,
+      "heapUsedAfter": 37487808,
+      "rssBefore": 96829440,
+      "rssAfter": 96833536
+    },
+    {
+      "caseId": "eval-missing-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.983899999999949,
+      "heapUsedBefore": 37495520,
+      "heapUsedAfter": 26328584,
+      "rssBefore": 96833536,
+      "rssAfter": 96604160
+    },
+    {
+      "caseId": "eval-missing-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.627799999999979,
+      "heapUsedBefore": 26431984,
+      "heapUsedAfter": 28971984,
+      "rssBefore": 96604160,
+      "rssAfter": 96784384
+    },
+    {
+      "caseId": "eval-missing-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.3737999999998465,
+      "heapUsedBefore": 28982072,
+      "heapUsedAfter": 32073456,
+      "rssBefore": 96784384,
+      "rssAfter": 97185792
+    },
+    {
+      "caseId": "eval-missing-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.501800000000003,
+      "heapUsedBefore": 32082624,
+      "heapUsedAfter": 35801992,
+      "rssBefore": 97189888,
+      "rssAfter": 97841152
+    },
+    {
+      "caseId": "eval-missing-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.898199999999861,
+      "heapUsedBefore": 35905264,
+      "heapUsedAfter": 38002808,
+      "rssBefore": 97882112,
+      "rssAfter": 97067008
+    },
+    {
+      "caseId": "eval-missing-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.462199999999939,
+      "heapUsedBefore": 38010992,
+      "heapUsedAfter": 24732680,
+      "rssBefore": 97067008,
+      "rssAfter": 96555008
+    },
+    {
+      "caseId": "eval-missing-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.958399999999983,
+      "heapUsedBefore": 24740600,
+      "heapUsedAfter": 27976888,
+      "rssBefore": 96555008,
+      "rssAfter": 97652736
+    },
+    {
+      "caseId": "eval-drift-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.425500000000056,
+      "heapUsedBefore": 28122608,
+      "heapUsedAfter": 31872512,
+      "rssBefore": 97660928,
+      "rssAfter": 97660928
+    },
+    {
+      "caseId": "eval-drift-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.412699999999859,
+      "heapUsedBefore": 31884264,
+      "heapUsedAfter": 36087744,
+      "rssBefore": 97673216,
+      "rssAfter": 97824768
+    },
+    {
+      "caseId": "eval-drift-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.582300000000032,
+      "heapUsedBefore": 36102024,
+      "heapUsedAfter": 26676032,
+      "rssBefore": 97828864,
+      "rssAfter": 96944128
+    },
+    {
+      "caseId": "eval-drift-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.286400000000185,
+      "heapUsedBefore": 26816144,
+      "heapUsedAfter": 29907392,
+      "rssBefore": 96944128,
+      "rssAfter": 96948224
+    },
+    {
+      "caseId": "eval-drift-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.835700000000088,
+      "heapUsedBefore": 29917672,
+      "heapUsedAfter": 33529016,
+      "rssBefore": 96948224,
+      "rssAfter": 97280000
+    },
+    {
+      "caseId": "eval-drift-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.307999999999993,
+      "heapUsedBefore": 33539032,
+      "heapUsedAfter": 37539168,
+      "rssBefore": 97280000,
+      "rssAfter": 97562624
+    },
+    {
+      "caseId": "eval-drift-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.856000000000222,
+      "heapUsedBefore": 37668408,
+      "heapUsedAfter": 25238664,
+      "rssBefore": 97562624,
+      "rssAfter": 96608256
+    },
+    {
+      "caseId": "eval-drift-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.026299999999992,
+      "heapUsedBefore": 25248016,
+      "heapUsedAfter": 28613392,
+      "rssBefore": 96608256,
+      "rssAfter": 97140736
+    },
+    {
+      "caseId": "eval-drift-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.57340000000022,
+      "heapUsedBefore": 28624968,
+      "heapUsedAfter": 32610448,
+      "rssBefore": 97140736,
+      "rssAfter": 97579008
+    },
+    {
+      "caseId": "eval-drift-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.175200000000132,
+      "heapUsedBefore": 32737520,
+      "heapUsedAfter": 35075400,
+      "rssBefore": 97579008,
+      "rssAfter": 97771520
+    },
+    {
+      "caseId": "eval-drift-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.898299999999836,
+      "heapUsedBefore": 35083880,
+      "heapUsedAfter": 38047224,
+      "rssBefore": 97771520,
+      "rssAfter": 98181120
+    },
+    {
+      "caseId": "eval-drift-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.148799999999937,
+      "heapUsedBefore": 38055440,
+      "heapUsedAfter": 25370456,
+      "rssBefore": 98181120,
+      "rssAfter": 97267712
+    },
+    {
+      "caseId": "eval-math-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 11.938499999999976,
+      "heapUsedBefore": 25548776,
+      "heapUsedAfter": 34766480,
+      "rssBefore": 97271808,
+      "rssAfter": 97615872
+    },
+    {
+      "caseId": "eval-math-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 11.401499999999942,
+      "heapUsedBefore": 34781432,
+      "heapUsedAfter": 30999288,
+      "rssBefore": 97615872,
+      "rssAfter": 96489472
+    },
+    {
+      "caseId": "eval-math-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 12.194799999999987,
+      "heapUsedBefore": 31016704,
+      "heapUsedAfter": 25513360,
+      "rssBefore": 96493568,
+      "rssAfter": 96440320
+    },
+    {
+      "caseId": "eval-math-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 9.365600000000086,
+      "heapUsedBefore": 25697192,
+      "heapUsedAfter": 33564120,
+      "rssBefore": 96440320,
+      "rssAfter": 96903168
+    },
+    {
+      "caseId": "eval-math-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 12.26480000000015,
+      "heapUsedBefore": 33576480,
+      "heapUsedAfter": 26179040,
+      "rssBefore": 96903168,
+      "rssAfter": 98816000
+    },
+    {
+      "caseId": "eval-math-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 12.373299999999972,
+      "heapUsedBefore": 26191136,
+      "heapUsedAfter": 35337264,
+      "rssBefore": 98889728,
+      "rssAfter": 97120256
+    },
+    {
+      "caseId": "eval-math-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 9.837500000000091,
+      "heapUsedBefore": 35513792,
+      "heapUsedAfter": 24069000,
+      "rssBefore": 97120256,
+      "rssAfter": 97476608
+    },
+    {
+      "caseId": "eval-math-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.926400000000058,
+      "heapUsedBefore": 24083192,
+      "heapUsedAfter": 29903824,
+      "rssBefore": 97480704,
+      "rssAfter": 98377728
+    },
+    {
+      "caseId": "eval-math-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.517100000000028,
+      "heapUsedBefore": 29914592,
+      "heapUsedAfter": 36487928,
+      "rssBefore": 98377728,
+      "rssAfter": 99827712
+    },
+    {
+      "caseId": "eval-math-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.082800000000134,
+      "heapUsedBefore": 36666216,
+      "heapUsedAfter": 40754280,
+      "rssBefore": 98435072,
+      "rssAfter": 98951168
+    },
+    {
+      "caseId": "eval-math-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.846199999999953,
+      "heapUsedBefore": 40764320,
+      "heapUsedAfter": 27666408,
+      "rssBefore": 98951168,
+      "rssAfter": 97984512
+    },
+    {
+      "caseId": "eval-math-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.039400000000114,
+      "heapUsedBefore": 27676184,
+      "heapUsedAfter": 33202056,
+      "rssBefore": 97984512,
+      "rssAfter": 99098624
+    },
+    {
+      "caseId": "eval-headings-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 10.173399999999901,
+      "heapUsedBefore": 33401304,
+      "heapUsedAfter": 25242272,
+      "rssBefore": 99098624,
+      "rssAfter": 98304000
+    },
+    {
+      "caseId": "eval-headings-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 11.504500000000007,
+      "heapUsedBefore": 25255968,
+      "heapUsedAfter": 34786536,
+      "rssBefore": 98304000,
+      "rssAfter": 98529280
+    },
+    {
+      "caseId": "eval-headings-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 12.821300000000065,
+      "heapUsedBefore": 34802880,
+      "heapUsedAfter": 31823520,
+      "rssBefore": 98533376,
+      "rssAfter": 97673216
+    },
+    {
+      "caseId": "eval-headings-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.782000000000153,
+      "heapUsedBefore": 32025192,
+      "heapUsedAfter": 39235712,
+      "rssBefore": 97673216,
+      "rssAfter": 97681408
+    },
+    {
+      "caseId": "eval-headings-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.607200000000148,
+      "heapUsedBefore": 39248136,
+      "heapUsedAfter": 31277104,
+      "rssBefore": 97681408,
+      "rssAfter": 98639872
+    },
+    {
+      "caseId": "eval-headings-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.863800000000083,
+      "heapUsedBefore": 31289264,
+      "heapUsedAfter": 39716944,
+      "rssBefore": 98643968,
+      "rssAfter": 98287616
+    },
+    {
+      "caseId": "eval-headings-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 9.727599999999939,
+      "heapUsedBefore": 39904784,
+      "heapUsedAfter": 30192688,
+      "rssBefore": 98287616,
+      "rssAfter": 98516992
+    },
+    {
+      "caseId": "eval-headings-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 11.9829000000002,
+      "heapUsedBefore": 30203760,
+      "heapUsedAfter": 37557184,
+      "rssBefore": 98516992,
+      "rssAfter": 101126144
+    },
+    {
+      "caseId": "eval-headings-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 14.718899999999849,
+      "heapUsedBefore": 37570848,
+      "heapUsedAfter": 31059120,
+      "rssBefore": 101130240,
+      "rssAfter": 99614720
+    },
+    {
+      "caseId": "eval-headings-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.918900000000122,
+      "heapUsedBefore": 31244968,
+      "heapUsedAfter": 36431240,
+      "rssBefore": 99627008,
+      "rssAfter": 98656256
+    },
+    {
+      "caseId": "eval-headings-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.587999999999965,
+      "heapUsedBefore": 36441024,
+      "heapUsedAfter": 29358632,
+      "rssBefore": 98656256,
+      "rssAfter": 98779136
+    },
+    {
+      "caseId": "eval-headings-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.963399999999865,
+      "heapUsedBefore": 29368152,
+      "heapUsedAfter": 36479088,
+      "rssBefore": 98779136,
+      "rssAfter": 100306944
+    }
+  ]
+}
