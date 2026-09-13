@@ -14,7 +14,7 @@ Frozen V3 completed before this follow-up: evaluation acceptance was 19/28 slim 
 
 - [x] R1: Align query-subject interpretation across source admission and release review. Preserve both Chinese comparison operands, separate follow-up questions from entity names, and accept source-backed attribute questions without weakening wrong-entity abstention.
 - [x] R2: Preserve authored procedural order after evidence selection. Ranking may choose clauses; it must not imply an execution order that contradicts the source.
-- [ ] R3: Retain bounded, supported complementary claims in the public projection. Preserve math, glossary/artifact filters and compact response limits; distinguish source identity/presentation from assertions and normalize comparison identities across English and Chinese.
+- [x] R3: Retain bounded, supported complementary claims in the public projection. Preserve math, glossary/artifact filters and compact response limits; distinguish source identity/presentation from assertions and normalize comparison identities across English and Chinese.
 - [x] R4: Recognize explicit Chinese no-answer text containing a quoted question. Keep factual negation controls and version the public-surface measurement correction.
 - [ ] R5: Run the V1–V5 regressions, frozen V6, full runtime checks and current artifact qualification; update bilingual evidence and remote main after verification.
 
@@ -34,7 +34,7 @@ V3 在本轮后续修改前完成首次确认：evaluation 验收 slim 19/28、f
 
 - [x] R1：统一来源准入和发布审查对查询主体的解释；保留中文比较双方，把追问与实体名分开；有源支持的属性问题应可回答，同时保留错误实体拒答约束。
 - [x] R2：选取证据后保持来源中的操作顺序；相关性排序可以决定选哪些句子，不能制造与来源相反的执行顺序。
-- [ ] R3：公开投影保留有界、受支持的补充声明，同时保留公式、变量表/文档噪声过滤及 compact 限制；区分来源身份/排版与事实断言，并统一中英文比较主体的身份归一化。
+- [x] R3：公开投影保留有界、受支持的补充声明，同时保留公式、变量表/文档噪声过滤及 compact 限制；区分来源身份/排版与事实断言，并统一中英文比较主体的身份归一化。
 - [x] R4：识别包含被引用问句的中文明确拒答；保留事实否定对照，为公开信号修正单独标注评估版本。
 - [ ] R5：执行 V1–V5 回归、冻结 V6、完整 runtime 检查与当前产物资格验证；验证后同步双语证据与远端 main。
 

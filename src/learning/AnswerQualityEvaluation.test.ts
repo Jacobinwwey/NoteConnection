@@ -37,6 +37,31 @@ describe('independent answer-quality measurements', () => {
         expect(measurement.unsupportedClaimIds).toEqual(['unsupported-1']);
         expect(measurement.passed).toBe(false);
     });
+
+    test.each([
+        'A write conflict can cause a transaction to retry.',
+        'Conflict serializability preserves an equivalent serial schedule.',
+        '键冲突需要额外的消解策略。',
+        '写写冲突可以用版本校验检测。',
+        'There is no conflict between the source observations.',
+        'There is no conflicting evidence.',
+        '来源之间没有冲突。',
+    ])('does not confuse a domain conflict or its negation with conflicting evidence: %s', answer => {
+        const entry = parseAnswerQualityCorpus(raw).cases[0];
+        expect(measureAnswerQuality(entry, { answer, citations: [] } as unknown as AgentConversationResponse).conflictSignalled).toBe(false);
+    });
+
+    test.each([
+        'The source observations conflict; the available evidence does not establish which is correct.',
+        'The measurements disagree.',
+        'The evidence is inconsistent.',
+        'Conflicting evidence for the clock rate: 3 Hz and 8 Hz.',
+        '来源中的观测存在冲突，现有证据无法确定哪一项正确。',
+        '两份报告之间存在矛盾。',
+    ])('recognizes an explicit source disagreement: %s', answer => {
+        const entry = parseAnswerQualityCorpus(raw).cases[0];
+        expect(measureAnswerQuality(entry, { answer, citations: [] } as unknown as AgentConversationResponse).conflictSignalled).toBe(true);
+    });
     test('retains explicit denominators and reports undefined rates when no opportunities exist', () => {
         const entry = parseAnswerQualityCorpus(raw).cases.find(item => item.id === 'eval-missing-en')!;
         const measurement = measureAnswerQuality(entry, { answer: 'Insufficient evidence.', citations: [], answerReleaseReview: { decision: 'abstain' } } as unknown as AgentConversationResponse);

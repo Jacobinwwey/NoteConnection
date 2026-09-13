@@ -1,7 +1,7 @@
 import type { AgentConversationResponse, KnowledgeDocumentInput } from './types';
 
 // Legacy reports without a protocol field used the release label and a narrower no-answer vocabulary.
-export const ANSWER_QUALITY_MEASUREMENT_PROTOCOL = 'answer-quality-public-surface-v2.1';
+export const ANSWER_QUALITY_MEASUREMENT_PROTOCOL = 'answer-quality-public-surface-v3';
 
 export const ANSWER_QUALITY_CATEGORIES = [
     'definition', 'comparison', 'causal', 'multi_step', 'conflict', 'missing_evidence', 'topic_drift', 'math', 'noisy_headings',
@@ -105,15 +105,25 @@ function publicAnswerSignalsAbstention(answer: string): boolean {
         || /(?:档案|存档|资料|材料|笔记|文档|记录|报告|来源)(?:中|里)?(?:没有|暂无)(?:提供|给出|记录|收录|报告|标明|包含)?[^，,。！？;；]{0,80}(?:测量(?:值|数据|结果)?|实验数据|参数值|熔点|数值)/u.test(answer);
 }
 
+function publicAnswerSignalsEvidenceConflict(answer: string): boolean {
+    const text = answer.replace(/\b(?:no|without)\s+(?:evidence of\s+)?(?:conflicts?|conflicting|contradictions?|contradictory|inconsistenc(?:y|ies)|inconsistent)\b/giu, '')
+        .replace(/(?:没有|不存在|无)(?:明显)?(?:冲突|矛盾|分歧)/gu, '');
+    // A conflict between sources is different from a fact about write conflicts,
+    // hash collisions or conflict serializability. Require a disclosure about evidence.
+    return /\b(?:sources?|evidence|observations?|measurements?|reports?|statements?)\s+(?:(?:is|are|was|were|remain|remains|appear|appears|seem|seems)\s+)?(?:in\s+conflict|conflict(?:s|ing)?|contradict(?:s|ory)?|disagree(?:s)?|inconsistent)\b/iu.test(text)
+        || /\b(?:conflicting|contradictory|inconsistent)\s+(?:source\s+)?(?:evidence|observations?|measurements?|reports?|statements?|sources?)\b/iu.test(text)
+        || /\b(?:conflict|contradiction|disagreement|inconsistency)\s+(?:between|among)\s+(?:the\s+)?(?:source\s+)?(?:evidence|observations?|measurements?|reports?|statements?|sources?)\b/iu.test(text)
+        || /(?:来源|证据|观测(?:结果)?|测量(?:值|记录))(?:之间|彼此|相互|中的观测|中的记录|中|结果)?(?:存在|出现|发生|有|相互|互相|彼此)?(?:冲突|矛盾|分歧|不一致)/u.test(text)
+        || /(?:报告|记录|陈述)(?:之间|彼此|相互)(?:存在|出现|发生|有)?(?:冲突|矛盾|分歧|不一致)/u.test(text);
+}
+
 export function measureAnswerQuality(entry: AnswerQualityCase, response: AgentConversationResponse) {
     const answer = response.answer.replace(/\*\*|`/g, '').replace(/\s+/g, ' ').trim();
     const matches = (pattern: string) => new RegExp(pattern, 'iu').test(answer);
     const coveredFactIds = entry.reference.facts.filter(fact => fact.patterns.some(matches)).map(fact => fact.id);
     const missingFactIds = entry.reference.facts.filter(fact => !coveredFactIds.includes(fact.id)).map(fact => fact.id);
     const unsupportedClaimIds = entry.reference.unsupportedClaims.filter(claim => matches(claim.pattern)).map(claim => claim.id);
-    const conflictText = answer.replace(/\b(?:no|without)\s+(?:evidence of\s+)?(?:conflicts?|contradictions?)\b/giu, '')
-        .replace(/(?:没有|不存在|无)(?:明显)?(?:冲突|矛盾|分歧)/gu, '');
-    const conflictSignalled = /\b(?:conflict|contradict|inconsisten)|冲突|矛盾|不一致|分歧/iu.test(conflictText);
+    const conflictSignalled = publicAnswerSignalsEvidenceConflict(answer);
     const abstentionSignalled = publicAnswerSignalsAbstention(answer);
     let stepOffset = 0;
     const orderedStepsSatisfied = (entry.reference.orderedSteps || []).every(pattern => {

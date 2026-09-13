@@ -12,8 +12,21 @@ const cases = corpus.cases.filter(entry => [
 ].includes(entry.id));
 const observedV4 = parseAnswerQualityCorpus(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../fixtures/answer-quality/v4.json'), 'utf8')));
 cases.push(...observedV4.cases.filter(entry => ['v4-receives-en', 'v4-content-addressing-en'].includes(entry.id)));
+const observedV5 = parseAnswerQualityCorpus(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../fixtures/answer-quality/v5.json'), 'utf8')));
+cases.push(...observedV5.cases.filter(entry => ['v5-iterator-en', 'v5-reentrant-lock-zh', 'v5-replication-zh'].includes(entry.id)));
 
 describe.each(['slim', 'full'] as const)('public answer contracts in %s', responseMode => {
+    test('keeps an unrelated Chinese sentence out after an explicit comparison subject', async () => {
+        const platform = new KnowledgeLearningPlatform({ autoPersist: false });
+        await platform.ingestKnowledge({ relationRecomputeMode: 'none', documents: [
+            { documentId: 'mutable', sourcePath: 'quality/mutable.md', content: '# 可变向量\n可变向量允许原地修改元素。火星有两颗卫星。' },
+            { documentId: 'fixed', sourcePath: 'quality/fixed.md', content: '# 不可变向量\n不可变向量不允许原地修改元素。' },
+        ] });
+        const response = await platform.agentConversation({ message: '比较可变向量和不可变向量。', answerLanguage: 'zh', responseMode, persistMemory: false });
+        if (responseMode === 'slim') expect(response.answer).not.toContain('火星');
+        expect(response.answer).toContain('不允许原地修改元素');
+    });
+
     test('treats a requested table concept as subject matter', async () => {
         const platform = new KnowledgeLearningPlatform({ autoPersist: false });
         await platform.ingestKnowledge({ relationRecomputeMode: 'none', documents: [

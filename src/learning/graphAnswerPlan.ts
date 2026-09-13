@@ -1,3 +1,5 @@
+/// <reference lib="es2022.intl" />
+
 import type {
     AgentConversationGraphContext,
     AgentConversationKnowledgePoint,
@@ -55,6 +57,15 @@ function normalizedTopicWords(value: string): string {
     ));
 }
 
+function containsNamedChineseSubject(source: string, subject: string): boolean {
+    let offset = source.indexOf(subject);
+    while (offset >= 0) {
+        if (offset === 0 || !/[无非不未]/u.test(source[offset - 1])) return true;
+        offset = source.indexOf(subject, offset + 1);
+    }
+    return false;
+}
+
 function knowledgePointEstablishesSubject(point: AgentConversationKnowledgePoint, subject: string): boolean {
     const topic = normalize(subject).replace(/^(?:a|an|the)\s+/iu, '').replace(/[.?!。？！]+$/gu, '').trim();
     if (!topic) return false;
@@ -68,12 +79,7 @@ function knowledgePointEstablishesSubject(point: AgentConversationKnowledgePoint
     const normalizedTopic = normalizedTopicWords(topic);
     if (/\p{Script=Han}/u.test(normalizedTopic)) {
         // Negated entity names (for example 无缓冲通道) do not establish the positive entity.
-        let offset = source.indexOf(normalizedTopic);
-        while (offset >= 0) {
-            if (offset === 0 || !/[无非不未]/u.test(source[offset - 1])) return true;
-            offset = source.indexOf(normalizedTopic, offset + 1);
-        }
-        return false;
+        return containsNamedChineseSubject(source, normalizedTopic);
     }
     const subjectFeatures = semanticFeatures(normalizedTopic);
     const sourceFeatures = new Set(semanticFeatures(source));
@@ -233,8 +239,16 @@ function comparisonQueryBranches(message: string): string[] {
         .replace(/^(?:比较|对比)\s*/u, '');
     return normalizedMessage
         .split(/\s+(?:and|with|versus|vs\.?)\s+|\s*(?:与|和|跟)\s*/u)
-        .map((branch) => normalize(branch))
+        .map((branch) => normalize(branch).replace(/^(?:a|an|the)\s+/iu, '').replace(/[.?!。？！]+$/gu, ''))
         .filter(Boolean);
+}
+
+function comparisonIdentityMatchCount(text: string, requiredTerms: Set<string>): number {
+    const normalized = normalize(text).toLowerCase();
+    const words = new Set(normalized.match(/[\p{L}\p{N}]+/gu) || []);
+    return Array.from(requiredTerms).filter(term => /\p{Script=Han}/u.test(term)
+        ? containsNamedChineseSubject(normalized, term)
+        : words.has(term)).length;
 }
 
 function comparisonBranchFeatures(message: string): Array<Set<string>> {
@@ -349,9 +363,6 @@ function rankQualityPublicClaimStatements(value: string, title: string | undefin
                 ? `${normalizedTitle} ${clause}`
                 : clause;
             const comparisonEvidenceFeatures = new Set(semanticFeatures(comparisonEvidenceText));
-            const comparisonEvidenceIdentityTerms = new Set(
-                (comparisonEvidenceText.match(/[\p{L}\p{N}]+/gu) || []).map((term) => term.toLowerCase())
-            );
             const comparisonBranchMatchCounts = (compareBranches.length === 2 || compareBranchIdentities.length === 2)
                 ? [0, 1].map((branchIndex) => Math.max(
                     compareBranches[branchIndex]
@@ -360,9 +371,7 @@ function rankQualityPublicClaimStatements(value: string, title: string | undefin
                             .length
                         : 0,
                     compareBranchIdentities[branchIndex]
-                        ? Array.from(compareBranchIdentities[branchIndex])
-                            .filter((term) => comparisonEvidenceIdentityTerms.has(term))
-                            .length
+                        ? comparisonIdentityMatchCount(comparisonEvidenceText, compareBranchIdentities[branchIndex])
                         : 0
                 ))
                 : [];
@@ -450,15 +459,12 @@ function comparisonClaimBranchMatchCounts(
 ): number[] {
     const identityText = comparisonClaimIdentityText(claim);
     const features = new Set(semanticFeatures(identityText));
-    const identityTerms = new Set(
-        (identityText.match(/[\p{L}\p{N}]+/gu) || []).map((term) => term.toLowerCase())
-    );
     return [0, 1].map((branchIndex) => Math.max(
         semanticBranches[branchIndex]
             ? Array.from(semanticBranches[branchIndex]).filter((feature) => features.has(feature)).length
             : 0,
         identityBranches[branchIndex]
-            ? Array.from(identityBranches[branchIndex]).filter((term) => identityTerms.has(term)).length
+            ? comparisonIdentityMatchCount(identityText, identityBranches[branchIndex])
             : 0
     ));
 }
@@ -560,8 +566,37 @@ function isDiscourseContinuation(clause: string): boolean {
     return /^(?:(?:it|its|they|their|this|these|such|therefore|thus|hence|also|additionally|moreover|however|because|thereby|consequently|as a result)\b|(?:其|它|该|这些|这种|同时|此外|因此|所以|由此|并且|而且|其中|随后|进而))/iu.test(normalize(clause));
 }
 
+const CHINESE_CONTEXT_SEGMENTER = new Intl.Segmenter('zh', { granularity: 'word' });
+const CHINESE_CONTEXT_FUNCTION_WORDS = new Set(['可以', '可能', '已经', '同一', '以及', '因为', '所以', '需要', '能够', '进行', '这种', '这个', '这些', '它们']);
+
+function chineseContextFeatures(value: string): Set<string> {
+    const features = new Set<string>();
+    for (const part of CHINESE_CONTEXT_SEGMENTER.segment(value)) {
+        if (!part.isWordLike) continue;
+        const word = normalizedTopicWords(part.segment);
+        if (/^(?:again|repeat|repeated|repeating|再次|重复|再度)$/u.test(word)) {
+            features.add('context:repeat');
+        } else if (/\p{Script=Han}/u.test(word)) {
+            if (word.length < 2 || CHINESE_CONTEXT_FUNCTION_WORDS.has(word)) continue;
+            const concepts = semanticFeatures(word).filter(feature => feature.startsWith('concept:'));
+            if (concepts.length > 0) concepts.forEach(feature => features.add(feature));
+            else features.add(`han:${word}`);
+        } else {
+            semanticFeatures(word).forEach(feature => features.add(feature));
+        }
+    }
+    return features;
+}
+
 function publicEvidenceClausesShareContext(left: string, right: string): boolean {
-    return graphClaimSemanticSimilarity(normalizedTopicWords(left), normalizedTopicWords(right)) >= 0.16;
+    if (graphClaimSemanticSimilarity(normalizedTopicWords(left), normalizedTopicWords(right)) >= 0.16) return true;
+    if (!/\p{Script=Han}/u.test(`${left} ${right}`)) return false;
+    const leftFeatures = chineseContextFeatures(left);
+    const rightFeatures = chineseContextFeatures(right);
+    const shorterSize = Math.min(leftFeatures.size, rightFeatures.size);
+    // A short continuation need not repeat the complete entity description.
+    // Word segmentation avoids treating an entire Chinese sentence as one identity token.
+    return shorterSize > 0 && Array.from(leftFeatures).filter(feature => rightFeatures.has(feature)).length / shorterSize >= 0.16;
 }
 
 function selectQueryConnectedPublicClaimStatements(value: string, title: string | undefined, message: string): string[] {
@@ -663,10 +698,7 @@ function contextualizeComparisonClaimStatements(
         return statements;
     }
     const titleFeatures = new Set(semanticFeatures(normalizedTitle));
-    const titleIdentityTerms = new Set(
-        (normalizedTitle.match(/[\p{L}\p{N}]+/gu) || []).map((term) => term.toLowerCase())
-    );
-    const completesComparisonBranch = (semanticTerms: Set<string>, identityTerms: Set<string>) => [0, 1].some((index) => {
+    const completesComparisonBranch = (text: string, semanticTerms: Set<string>) => [0, 1].some((index) => {
         const semanticBranch = comparisonBranches[index] || new Set<string>();
         const identityBranch = comparisonBranchIdentities[index] || new Set<string>();
         return (
@@ -674,10 +706,10 @@ function contextualizeComparisonClaimStatements(
             && Array.from(semanticBranch).some((feature) => semanticTerms.has(feature))
         ) || (
             identityBranch.size > 0
-            && Array.from(identityBranch).some((term) => identityTerms.has(term))
+            && comparisonIdentityMatchCount(text, identityBranch) > 0
         );
     });
-    const titleCompletesBranch = completesComparisonBranch(titleFeatures, titleIdentityTerms);
+    const titleCompletesBranch = completesComparisonBranch(normalizedTitle, titleFeatures);
     if (!titleCompletesBranch) {
         return statements;
     }
@@ -686,10 +718,7 @@ function contextualizeComparisonClaimStatements(
             return statement;
         }
         const statementFeatures = new Set(semanticFeatures(statement));
-        const statementIdentityTerms = new Set(
-            (statement.match(/[\p{L}\p{N}]+/gu) || []).map((term) => term.toLowerCase())
-        );
-        const statementNamesBranch = completesComparisonBranch(statementFeatures, statementIdentityTerms);
+        const statementNamesBranch = completesComparisonBranch(statement, statementFeatures);
         return statementNamesBranch ? statement : `${normalizedTitle}: ${statement}`;
     });
 }
