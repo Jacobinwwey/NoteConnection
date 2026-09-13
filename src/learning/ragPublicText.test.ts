@@ -1,10 +1,15 @@
 import {
     naturalizeRagPublicEvidenceClause,
     shouldRejectPublicEvidenceClause,
+    shouldRejectCompareProcedureEvidenceClause,
 } from './ragPublicText';
 import { KnowledgeLearningPlatform } from './KnowledgeLearningPlatform';
 
 describe('ragPublicText', () => {
+    test('retains numbered procedure evidence for a how-should request', () => {
+        expect(shouldRejectCompareProcedureEvidenceClause('Step 1: Validate the candidate.', 'How should the index be replaced?')).toBe(false);
+        expect(shouldRejectCompareProcedureEvidenceClause('Step 1: Validate the candidate.', 'Compare the two indexes.')).toBe(true);
+    });
     test.each(['[[Checkpoint]]', '[[Checkpoint]] [[Mutation log]]', '1. [[Checkpoint]] 2. [[Mutation log]]'])('rejects link-only navigation as factual evidence: %s', text => {
         expect(shouldRejectPublicEvidenceClause(text)).toBe(true);
     });

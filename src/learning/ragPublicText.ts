@@ -1,3 +1,5 @@
+import { isProcedureRequest } from './answerTaskPlan';
+
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
@@ -85,7 +87,7 @@ export function shouldRejectPublicEvidenceClause(value: string): boolean {
         || /\b(?:the following table|the table below)\b/iu.test(normalized)
         || /(?:下表|以下表格|表中)(?:列出|展示|给出|包含)/u.test(normalized)
         || /(?:参数\s*\(Parameter\)|Parameter).{0,160}(?:单位\s*\(Unit\)|Unit).{0,160}:---/iu.test(normalized)
-        || /(?:遵从您的指示|所有推理过程|最终输出为|仅基于标题|根据您的要求生成|本技术文档旨在)/u.test(normalized);
+        || /(?:遵从您的指示|所有推理过程|最终输出|仅基于标题|根据您的要求生成|本技术文档旨在)/u.test(normalized);
 }
 
 export function shouldRejectCompareProcedureEvidenceClause(value: string, query: string): boolean {
@@ -94,8 +96,7 @@ export function shouldRejectCompareProcedureEvidenceClause(value: string, query:
     if (!normalizedClause) {
         return false;
     }
-    if (/\b(?:how to|how do|procedure|procedural|workflow|runbook|steps?|step\s*\d+|sequence)\b/u.test(normalizedQuery)
-        || /(?:如何|怎么|怎样|步骤|流程)/u.test(normalizedQuery)) {
+    if (isProcedureRequest(normalizedQuery)) {
         return false;
     }
     return /^(?:(?:procedure|workflow|runbook)\s*[:\uFF1A-]|(?:step\s*\d+|steps?|步骤\s*\d+)\b)/u.test(normalizedClause)

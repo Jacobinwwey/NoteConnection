@@ -27,6 +27,7 @@ import {
 } from './ragPublicText';
 import { scoreRagEvidenceClause, segmentRagEvidenceClauses } from './ragEvidenceQuality';
 import {
+    extractDefinitionQuerySubject,
     formatDisplayMathBlocks,
     formatLearningRouteAnswer,
     formatTaskAwareAnswer,
@@ -3852,7 +3853,7 @@ function preservePlannedGraphAnswerClaims(
 
 function isIncompletePublicGraphClaim(value: string): boolean {
     const normalized = normalizeWhitespace(value);
-    if (normalized.length < 16 || /^\d+(?:\.\d+)*[.\u3001)]?$/u.test(normalized)) {
+    if (normalized.length < (containsCjk(normalized) ? 5 : 16) || /^\d+(?:\.\d+)*[.\u3001)]?$/u.test(normalized)) {
         return true;
     }
     const endsWithTerminalPunctuation = /[.!?\u3002\uFF01\uFF1F]$/u.test(normalized);
@@ -4223,6 +4224,13 @@ function selectPublicGraphPlanStatements(
             .filter((entry) => ['composition', 'boundary', 'attribute'].includes(entry.claim.role))
             .filter((entry) => !isFullDocumentDefinitionNoiseStatement(entry.claim.statement))
             .forEach(appendBoundedCandidate);
+        // Extraction may classify several independent supported facts as definitions.
+        // Keep those complements within the same cap instead of silently dropping them by role.
+        indexedSelected
+            .filter((entry) => entry.claim.required && entry.claim.role === 'definition')
+            .filter((entry) => !isStandaloneVariableDefinitionClaim(entry.claim.statement))
+            .filter((entry) => !isUnrelatedVariableGlossaryClaim(entry.claim.statement, String(message || '')))
+            .forEach(appendBoundedCandidate);
         selected = boundedCandidates
             .sort((left, right) => left.index - right.index)
             .map(({ claim }) => claim);
@@ -4567,7 +4575,7 @@ function normalizeQuerySubject(value: string): string {
 function stripDefinitionQuestionPredicate(value: string): string {
     return normalizeWhitespace(value)
         .replace(
-            /^(?:a|an|the)\s+(?:prerequisite|precondition|requirement|dependency|dependencies)\s+(?:for|of)\s+/iu,
+            /^(?:(?:a|an|the)\s+)?(?:prerequisite|precondition|requirement|dependency|dependencies)\s+(?:for|of)\s+/iu,
             ''
         )
         .replace(
@@ -4575,23 +4583,6 @@ function stripDefinitionQuestionPredicate(value: string): string {
             ''
         )
         .trim();
-}
-
-function extractDefinitionQuerySubject(message: string): string {
-    const normalizedMessage = normalizeWhitespace(message);
-    if (!normalizedMessage) {
-        return '';
-    }
-    const englishMatch = normalizedMessage.match(
-        /^(?:what\s+is|what'?s|what\s+are|who\s+is|define|definition\s+of|meaning\s+of)\s+([^?.!;:\n\r。！？；：]+)/iu
-    );
-    if (englishMatch?.[1]) {
-        return normalizeQuerySubject(stripDefinitionQuestionPredicate(englishMatch[1]));
-    }
-    const chineseMatch = normalizedMessage.match(
-        /^(?:什么是|指的是什么|定义(?:是什么)?|是什么意思)\s*([^?？!！。；;：:\n\r]+)/u
-    );
-    return chineseMatch?.[1] ? normalizeQuerySubject(chineseMatch[1]) : '';
 }
 
 function querySubjectFeatures(value: string): string[] {
@@ -4647,7 +4638,9 @@ function collectQuerySubjectEvidenceLabels(context: AnswerReleaseReviewContext):
 }
 
 function evaluateQuerySubjectAlignment(context: AnswerReleaseReviewContext): QuerySubjectAlignmentResult {
-    const subject = extractDefinitionQuerySubject(context.message);
+    const subject = isDefinitionIntentQuery(context.message)
+        ? normalizeQuerySubject(stripDefinitionQuestionPredicate(extractDefinitionQuerySubject(context.message)))
+        : '';
     if (!subject || querySubjectFeatures(subject).length <= 0) {
         return {
             passed: true,
@@ -4663,6 +4656,20 @@ function evaluateQuerySubjectAlignment(context: AnswerReleaseReviewContext): Que
         .map((label) => ({ label, score: scoreQuerySubjectAgainstLabel(subject, label) }))
         .filter((entry) => entry.score > 0)
         .sort((left, right) => right.score - left.score);
+    const attributeQuery = /^(.+?)\s+(?:for|of)\s+(.+)$/iu.exec(subject);
+    if ((scoredLabels[0]?.score || 0) < 0.9 && attributeQuery
+        && labels.some(label => scoreQuerySubjectAgainstLabel(attributeQuery[2], label) >= 0.9)) {
+        // A title can name an entity while its body states the requested attribute.
+        // Require both witnesses; sharing an attribute with a different entity is insufficient.
+        const attributeSubject = `${attributeQuery[2]} ${attributeQuery[1]}`;
+        for (const candidate of buildSupportCandidates(context)) {
+            for (const frame of extractSubjectFrames(candidate.text)) {
+                const score = scoreQuerySubjectAgainstLabel(attributeSubject, frame.subject);
+                if (score >= 0.9) scoredLabels.push({ label: `${candidate.label}: ${frame.subject}`, score });
+            }
+        }
+        scoredLabels.sort((left, right) => right.score - left.score);
+    }
     const bestScore = scoredLabels[0]?.score || 0;
     return {
         passed: bestScore >= 0.9,

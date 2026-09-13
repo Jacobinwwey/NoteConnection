@@ -1,4 +1,5 @@
 import { isOpsAdapter } from './store';
+import { isComparisonRequest, isProcedureRequest } from './answerTaskPlan';
 import type { KnowledgeGraphStore, KnowledgeGraphOpsAdapter, PathQueryResult } from './store';
 import type {
     AgentConversationGraphConnectionPath,
@@ -204,25 +205,10 @@ function classifyConversationIntent(message: string): GraphContextAssemblyIntent
     if (!normalized) {
         return 'generic';
     }
-    if (
-        normalized.includes('compare')
-        || normalized.includes('difference')
-        || normalized.includes('vs')
-        || normalized.includes('区分')
-        || normalized.includes('对比')
-    ) {
+    if (isComparisonRequest(normalized)) {
         return 'compare';
     }
-    if (
-        normalized.includes('how to')
-        || normalized.includes('how do')
-        || normalized.includes('steps')
-        || normalized.includes('plan')
-        || normalized.includes('如何')
-        || normalized.includes('怎么')
-        || normalized.includes('步骤')
-        || normalized.includes('方案')
-    ) {
+    if (isProcedureRequest(normalized)) {
         return 'how_to';
     }
     if (

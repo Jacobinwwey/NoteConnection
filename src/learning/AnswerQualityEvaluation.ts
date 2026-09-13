@@ -1,7 +1,7 @@
 import type { AgentConversationResponse, KnowledgeDocumentInput } from './types';
 
 // Legacy reports without a protocol field used the release label and a narrower no-answer vocabulary.
-export const ANSWER_QUALITY_MEASUREMENT_PROTOCOL = 'answer-quality-public-surface-v2';
+export const ANSWER_QUALITY_MEASUREMENT_PROTOCOL = 'answer-quality-public-surface-v2.1';
 
 export const ANSWER_QUALITY_CATEGORIES = [
     'definition', 'comparison', 'causal', 'multi_step', 'conflict', 'missing_evidence', 'topic_drift', 'math', 'noisy_headings',
@@ -87,6 +87,7 @@ export function parseAnswerQualityCorpus(input: unknown): AnswerQualityCorpus {
 function publicAnswerSignalsAbstention(answer: string): boolean {
     if (/insufficient (?:local |source )?evidence|no (?:scoped|relevant|matching) (?:knowledge|evidence)|证据不足|没有(?:足够|相关)证据|暂无相关证据/iu.test(answer)) return true;
     if (/\b(?:i|we) (?:cannot|can't|can’t|could not) (?:answer|(?:give|provide) (?:a )?(?:grounded|reliable|supported) answer)/iu.test(answer)
+        || /我(?:暂时)?(?:不能|无法)对“[^”]*”给出有依据的回答/u.test(answer)
         || /(?:资料|证据|材料|信息)不足以(?:确定|给出|回答)|我(?:暂时)?(?:不能|无法)[^。！？]{0,160}(?:有依据的回答|确定)/u.test(answer)) return true;
 
     // The missing object must be a measurement. "No data loss" and negative

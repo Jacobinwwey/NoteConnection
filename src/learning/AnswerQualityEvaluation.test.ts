@@ -54,6 +54,7 @@ describe('independent answer-quality measurements', () => {
         '现有资料未记录这个样品的测量值。',
         '笔记中没有该参数的测量结果。',
         '当前资料不足以确定这个参数的数值。',
+        '我暂时不能对“什么是热预算，它有什么用途？”给出有依据的回答。',
     ])('recognizes an evidence-based unknown answer independently of its release label: %s', answer => {
         const entry = parseAnswerQualityCorpus(raw).cases.find(item => item.id === 'eval-missing-en')!;
         const measurement = measureAnswerQuality(entry, { answer, citations: [], answerReleaseReview: { decision: 'release' } } as unknown as AgentConversationResponse);

@@ -38,23 +38,38 @@ function isDefinitionRequest(message: string): boolean {
         || /什么是|何谓|定义|解释|介绍/u.test(normalized);
 }
 
+export function isComparisonRequest(message: string): boolean {
+    return /\b(?:compare|contrast|difference|versus|vs)\b|区别|区分|对比|比较/iu.test(message);
+}
+
+export function isProcedureRequest(message: string): boolean {
+    return /\b(?:how\s+(?:to|should|can|do)|steps?|procedure|procedural|workflow|runbook|sequence|plan)\b|如何|怎么|怎样|步骤|流程|方案/iu.test(message);
+}
+
 function isLearningRouteRequest(message: string): boolean {
     const normalized = normalize(message).toLowerCase();
     return /\b(?:learn|learning|study|studying|knowledge\s+points?|learning\s+path|what\s+should\s+i\s+learn|which\s+concepts?)\b/u.test(normalized)
         || /学习|知识点|学习路径|学哪些|先学|应该通过|如何学习|怎么学习/u.test(normalized);
 }
 
-function extractSubject(message: string, fallbackTitle: string): string {
+export function extractDefinitionQuerySubject(message: string): string {
     const normalized = normalize(message);
     const match = normalized.match(
-        /^(?:what\s+is|what'?s|what\s+are|define|definition\s+of|meaning\s+of|explain)\s+(.+?)(?=\?|？|!|！|\.|,|，|;|；|\b(?:which|what|how|should|learn|study)\b|$)/iu
+        /^(?:what\s+is|what'?s|what\s+are|who\s+is|define|definition\s+of|meaning\s+of|explain)\s+([^?？!！。.,，;；:：\n\r]+)/iu
     ) || normalized.match(
-        /^(?:什么是|何谓|解释(?:一下)?|介绍(?:一下)?)\s*(.+?)(?=\?|？|!|！|。|，|,|；|;|我应该|应该通过|通过哪些|哪些知识点|如何学习|怎么学习|$)/u
+        /^(?:什么是|何谓|指的是什么|定义(?:是什么)?|是什么意思|解释(?:一下)?|介绍(?:一下)?|请(?:解释|介绍)(?:一下)?)\s*([^?？!！。.,，;；:：\n\r]+)/u
     );
-    const subject = normalize(match?.[1] || fallbackTitle)
+    return normalize(match?.[1] || '')
+        .replace(/\s+(?:and|as\s+well\s+as)\s+(?:what|which|how|why|when|where|who|its|their)\b.*$/iu, '')
+        .replace(/\s+(?:which|what|how|should|learn|study)\b.*$/iu, '')
+        .replace(/(?:我应该|应该通过|通过哪些|哪些知识点|如何学习|怎么学习|及其|以及它|以及其).*$/u, '')
         .replace(/^(?:a|an|the)\s+/iu, '')
         .replace(/[?？!！。.,，;；]+$/gu, '')
-        .trim() || normalize(fallbackTitle);
+        .trim();
+}
+
+function extractSubject(message: string, fallbackTitle: string): string {
+    const subject = extractDefinitionQuerySubject(message) || normalize(fallbackTitle);
     const normalizedFallback = normalize(fallbackTitle);
     return normalizedFallback && compact(subject) === compact(normalizedFallback)
         ? normalizedFallback

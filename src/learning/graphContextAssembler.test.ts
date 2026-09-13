@@ -761,7 +761,7 @@ describe('assembleAgentConversationGraphContext', () => {
         }));
     });
 
-    test('prioritizes contrast successors over procedural sequence nodes for compare intent', async () => {
+    test.each(['compare water glass and plastic cup', '比较 water glass 和 plastic cup'])('prioritizes contrast successors over procedural sequence nodes: %s', async message => {
         const atoms: KnowledgeAtom[] = [
             createAtom({
                 id: 'atom_water_glass',
@@ -819,7 +819,7 @@ describe('assembleAgentConversationGraphContext', () => {
         ];
 
         const result = await assembleAgentConversationGraphContext({
-            message: 'compare water glass and plastic cup',
+            message,
             usedScope: globalScope,
             knowledgePoints,
             store: new InMemoryOpsStore(atoms, edges),

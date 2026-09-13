@@ -17,7 +17,7 @@ import {
 import { graphClaimSemanticSimilarity, semanticFeatures } from './graphClaimMatcher';
 import { graphClaimsCanShareCoverage } from './graphAnswerQualityPolicy';
 import { scoreRagEvidenceClause, segmentRagEvidenceClauses } from './ragEvidenceQuality';
-import { buildAnswerTaskPlan } from './answerTaskPlan';
+import { buildAnswerTaskPlan, extractDefinitionQuerySubject, isComparisonRequest, isProcedureRequest } from './answerTaskPlan';
 
 export interface BuildGraphAnswerPlanParams {
     message: string;
@@ -47,22 +47,6 @@ function hasBalancedMathDelimiters(value: string): boolean {
     }
     const inlineSource = source.replace(/(?<!\\)\$\$/gu, '');
     return ((inlineSource.match(/(?<!\\)\$/gu) || []).length % 2) === 0;
-}
-
-function definitionSubjectFromMessage(message: string): string {
-    const normalized = normalize(message);
-    const match = normalized.match(
-        /^(?:what\s+is|what'?s|what\s+are|define|definition\s+of|meaning\s+of|explain|什么是|何谓|解释(?:一下)?|介绍(?:一下)?|请(?:解释|介绍)(?:一下)?)\s*([^?？!！。.,，;；\n\r]+)/iu
-    );
-    if (!match?.[1]) {
-        return '';
-    }
-    return normalize(match[1])
-        .replace(/\s+(?:我应该|应该|how\s+should|what\s+should).*$/iu, '')
-        .replace(/\s+and\s+(?:its|their|what|how)\b.*$|(?:及其|以及它|以及其).*/iu, '')
-        .replace(/^(?:a|an|the)\s+/iu, '')
-        .trim()
-        .toLowerCase();
 }
 
 function normalizedTopicWords(value: string): string {
@@ -103,7 +87,7 @@ export function selectQueryConnectedKnowledgePoints(
 ): AgentConversationKnowledgePoint[] {
     const subjects = classifyIntent(message) === 'compare'
         ? comparisonQueryBranches(message)
-        : comparisonQueryBranches(definitionSubjectFromMessage(message));
+        : comparisonQueryBranches(extractDefinitionQuerySubject(message));
     const requestedSubjects = subjects.filter(Boolean);
     if (requestedSubjects.length === 0) return knowledgePoints;
     const subjectMatches = requestedSubjects.map(subject => knowledgePoints.filter(point => knowledgePointEstablishesSubject(point, subject)));
@@ -394,6 +378,17 @@ function rankQualityPublicClaimStatements(value: string, title: string | undefin
                 order,
             };
         });
+    // An adjacent sentence may describe an established operand without repeating
+    // its name. Require shared source content; a matching fragment title alone is insufficient.
+    for (let index = 1; index < candidates.length; index += 1) {
+        const candidate = candidates[index];
+        const previous = candidates[index - 1];
+        if (candidate.comparisonBranchCoverage === 0 && previous.comparisonBranchCoverage > 0
+            && publicEvidenceClausesShareContext(candidate.clause, previous.clause)) {
+            candidate.comparisonBranchMatchCounts = [...previous.comparisonBranchMatchCounts];
+            candidate.comparisonBranchCoverage = previous.comparisonBranchCoverage;
+        }
+    }
     return candidates.sort((left, right) => (
         Number(left.incompleteEnding) - Number(right.incompleteEnding)
         || right.comparisonBranchCoverage - left.comparisonBranchCoverage
@@ -559,13 +554,8 @@ function isDiscourseContinuation(clause: string): boolean {
     return /^(?:(?:it|its|they|their|this|these|such|therefore|thus|hence|also|additionally|moreover|however|because|thereby|consequently|as a result)\b|(?:其|它|该|这些|这种|同时|此外|因此|所以|由此|并且|而且|其中|随后|进而))/iu.test(normalize(clause));
 }
 
-function sharesAcceptedEvidenceContext(
-    candidate: ReturnType<typeof rankQualityPublicClaimStatements>[number],
-    accepted: ReturnType<typeof rankQualityPublicClaimStatements>
-): boolean {
-    return accepted.some((acceptedCandidate) => (
-        graphClaimSemanticSimilarity(candidate.clause, acceptedCandidate.clause) >= 0.16
-    ));
+function publicEvidenceClausesShareContext(left: string, right: string): boolean {
+    return graphClaimSemanticSimilarity(normalizedTopicWords(left), normalizedTopicWords(right)) >= 0.16;
 }
 
 function selectQueryConnectedPublicClaimStatements(value: string, title: string | undefined, message: string): string[] {
@@ -605,7 +595,7 @@ function selectQueryConnectedPublicClaimStatements(value: string, title: string 
                 && acceptedCandidates.includes(precedingCandidate)
                 && isDiscourseContinuation(candidate.clause)
             );
-            if (sharesAcceptedEvidenceContext(candidate, acceptedCandidates) || followsAcceptedEvidence) {
+            if (acceptedCandidates.some(accepted => publicEvidenceClausesShareContext(candidate.clause, accepted.clause)) || followsAcceptedEvidence) {
                 acceptedCandidates.push(candidate);
                 acceptedNewCandidate = true;
             }
@@ -700,9 +690,9 @@ function contextualizeComparisonClaimStatements(
 
 function classifyIntent(message: string): GraphAnswerPlan['intent'] {
     const value = normalize(message).toLowerCase();
-    if (/\b(?:compare|contrast|difference|versus|vs)\b/u.test(value) || /区别|对比/u.test(value)) return 'compare';
+    if (isComparisonRequest(value)) return 'compare';
     if (/\b(?:why|cause|mechanism|reason|consequence)\b/u.test(value) || /为什么|原因|机制|导致/u.test(value)) return 'causal';
-    if (/\b(?:how to|steps?|procedure|workflow)\b/u.test(value) || /如何|怎么|步骤/u.test(value)) return 'procedure';
+    if (isProcedureRequest(value)) return 'procedure';
     if (/\b(?:what is|explain|define)\b/u.test(value) || /什么是|解释/u.test(value)) return 'definition';
     return 'generic';
 }
@@ -975,7 +965,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
     const matchedSpans = (anchor?.matchedSpans || [])
         .filter((span) => !definitionIntent || !isDefinitionNoiseTitle(String(span.title || '')))
         .filter((span) => !isCompoundLearningDefinitionQuery(params.message)
-            || isDefinitionLearningSupportSpan(span, definitionSubjectFromMessage(params.message)))
+            || isDefinitionLearningSupportSpan(span, extractDefinitionQuerySubject(params.message)))
         .slice(0, definitionIntent ? 8 : Number.MAX_SAFE_INTEGER);
     matchedSpans.forEach((span, spanIndex) => {
         const spanClaims = makeClaimsFromMatchedSpan({
@@ -1000,7 +990,7 @@ export function buildGraphAnswerPlan(params: BuildGraphAnswerPlanParams): GraphA
             || isDefinitionLearningSupportSpan({
                 title: String(fragment.title || ''),
                 snippet: String(fragment.text || ''),
-            } as NonNullable<AgentConversationKnowledgePoint['matchedSpans']>[number], definitionSubjectFromMessage(params.message)))
+            } as NonNullable<AgentConversationKnowledgePoint['matchedSpans']>[number], extractDefinitionQuerySubject(params.message)))
         .filter((fragment) => (
             fragment.role !== 'graph_neighbor_support'
             || selectedSupportingAtomIds.size <= 0
