@@ -1,0 +1,1098 @@
+{
+  "schemaVersion": 1,
+  "version": "4.0",
+  "authoredAt": "2026-09-13",
+  "backend": "local-hybrid-v1",
+  "usageRole": "confirmation frozen after V3 findings and before compound-query, projection and sequence fixes",
+  "cases": [
+    {
+      "id": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "query": "What is a directed acyclic graph?",
+      "documents": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md",
+          "language": "en",
+          "content": "# Directed Acyclic Graph\nA directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "no directed cycles"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "topological order"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "contains directed cycles"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是有向无环图？",
+      "documents": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md",
+          "language": "zh",
+          "content": "# 有向无环图\n有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "不含有向环"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "拓扑排序"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "一定包含有向环"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "query": "Why does unbounded queuing increase latency?",
+      "documents": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md",
+          "language": "en",
+          "content": "# Unbounded Queuing\nUnbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "wait|waiting"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "admission|reject"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "eliminates all latency"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "query": "为什么无界排队会增加延迟？",
+      "documents": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md",
+          "language": "zh",
+          "content": "# 无界排队\n无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "等待"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "准入|拒绝"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "消除所有延迟"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the retention period for the Cobalt log?",
+      "documents": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md",
+          "language": "en",
+          "content": "# Cobalt Log\nThe Cobalt log retention period is 7 days. This policy is active."
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md",
+          "language": "en",
+          "content": "# Cobalt Log Policy\nThe Cobalt log retention period is 30 days. This policy is active."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "query": "蓝钴日志的保留周期是多少？",
+      "documents": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md",
+          "language": "zh",
+          "content": "# 蓝钴日志\n蓝钴日志的保留周期是7天。该策略当前有效。"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md",
+          "language": "zh",
+          "content": "# 蓝钴日志策略\n蓝钴日志的保留周期是30天。该策略当前有效。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-lease-token-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "query": "What is a lease token and what does it prevent?",
+      "documents": [
+        {
+          "documentId": "v4-lease-token-en-0",
+          "sourcePath": "evaluation-v4/lease-token-en/source-0.md",
+          "content": "# Lease Token\nA lease token identifies the generation of a resource lease. It prevents an outdated lease holder from issuing accepted writes."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "identifies the generation"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "outdated lease holder"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-bulkhead-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是舱壁隔离，它如何限制故障传播？",
+      "documents": [
+        {
+          "documentId": "v4-bulkhead-zh-0",
+          "sourcePath": "evaluation-v4/bulkhead-zh/source-0.md",
+          "content": "# 舱壁隔离\n舱壁隔离为不同依赖分配独立的资源池。某个依赖耗尽资源时，其他资源池仍可提供服务，从而限制故障传播。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "独立的资源池"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "限制故障传播"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-lease-interval-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "query": "What is the expiration interval for the Saffron lease?",
+      "documents": [
+        {
+          "documentId": "v4-lease-interval-en-0",
+          "sourcePath": "evaluation-v4/lease-interval-en/source-0.md",
+          "content": "# Saffron Lease\nThe Saffron lease expiration interval is 8 minutes."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "8 minutes"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-cache-expiry-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "青藤缓存的失效时长是多少？",
+      "documents": [
+        {
+          "documentId": "v4-cache-expiry-zh-0",
+          "sourcePath": "evaluation-v4/cache-expiry-zh/source-0.md",
+          "content": "# 青藤缓存\n青藤缓存的失效时长是12分钟。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "12分钟"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-persistent-queue-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "query": "比较持久队列和非持久队列。",
+      "documents": [
+        {
+          "documentId": "v4-persistent-queue-zh-0",
+          "sourcePath": "evaluation-v4/persistent-queue-zh/source-0.md",
+          "content": "# 持久队列\n持久队列把已接受的元素写入持久存储，以便进程重启后恢复。"
+        },
+        {
+          "documentId": "v4-persistent-queue-zh-1",
+          "sourcePath": "evaluation-v4/persistent-queue-zh/source-1.md",
+          "content": "# 非持久队列\n非持久队列仅在内存保存元素，进程结束后元素不再保留。"
+        },
+        {
+          "documentId": "v4-persistent-queue-zh-2",
+          "sourcePath": "evaluation-v4/persistent-queue-zh/source-2.md",
+          "content": "# 公交排队\n公交排队区域沿着车站护栏设置，乘客需要按顺序上车。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "持久存储"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "重启后恢复"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "仅在内存"
+            ]
+          },
+          {
+            "id": "fact-4",
+            "patterns": [
+              "不再保留"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "transit-leakage",
+            "pattern": "车站护栏|乘客|公交"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-receives-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "query": "Compare a blocking receive and a nonblocking receive.",
+      "documents": [
+        {
+          "documentId": "v4-receives-en-0",
+          "sourcePath": "evaluation-v4/receives-en/source-0.md",
+          "content": "# Blocking Receive\nA blocking receive waits until an item becomes available."
+        },
+        {
+          "documentId": "v4-receives-en-1",
+          "sourcePath": "evaluation-v4/receives-en/source-1.md",
+          "content": "# Nonblocking Receive\nA nonblocking receive returns immediately when no item is available."
+        },
+        {
+          "documentId": "v4-receives-en-2",
+          "sourcePath": "evaluation-v4/receives-en/source-2.md",
+          "content": "# Receiving Room\nA receiving room stores incoming parcels beside a loading dock."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "waits until an item"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "returns immediately"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "room-leakage",
+            "pattern": "parcels|loading dock"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-stateful-services-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "query": "对比有状态服务与无状态服务。",
+      "documents": [
+        {
+          "documentId": "v4-stateful-services-zh-0",
+          "sourcePath": "evaluation-v4/stateful-services-zh/source-0.md",
+          "content": "# 有状态服务\n有状态服务在处理请求之间保留会话状态。"
+        },
+        {
+          "documentId": "v4-stateful-services-zh-1",
+          "sourcePath": "evaluation-v4/stateful-services-zh/source-1.md",
+          "content": "# 无状态服务\n无状态服务不在请求之间保留会话状态，因此实例可独立处理请求。"
+        },
+        {
+          "documentId": "v4-stateful-services-zh-2",
+          "sourcePath": "evaluation-v4/stateful-services-zh/source-2.md",
+          "content": "# 客户服务\n客户服务中心在节假日安排电话值班。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "有状态服务.{0,30}保留会话状态"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "不在请求之间保留会话状态"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "独立处理请求"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "support-center-leakage",
+            "pattern": "节假日|电话值班"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-sync-writes-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "query": "Compare a synchronous write and an asynchronous write.",
+      "documents": [
+        {
+          "documentId": "v4-sync-writes-en-0",
+          "sourcePath": "evaluation-v4/sync-writes-en/source-0.md",
+          "content": "# Synchronous Write\nA synchronous write waits for completion before returning to its caller."
+        },
+        {
+          "documentId": "v4-sync-writes-en-1",
+          "sourcePath": "evaluation-v4/sync-writes-en/source-1.md",
+          "content": "# Asynchronous Write\nAn asynchronous write returns before completion and reports completion later."
+        },
+        {
+          "documentId": "v4-sync-writes-en-2",
+          "sourcePath": "evaluation-v4/sync-writes-en/source-2.md",
+          "content": "# Writing Desk\nA writing desk has wooden drawers for storing paper."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "waits for completion"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "returns before completion"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "reports completion later"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "desk-leakage",
+            "pattern": "wooden drawers|storing paper"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-cache-refresh-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "multi_step",
+      "query": "How should the Cedar cache be refreshed safely?",
+      "documents": [
+        {
+          "documentId": "v4-cache-refresh-en-0",
+          "sourcePath": "evaluation-v4/cache-refresh-en/source-0.md",
+          "content": "# Cedar Cache Refresh\nFirst download a replacement into a separate cache generation. Then validate the replacement checksum. Finally switch the active generation pointer."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "download a replacement"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "validate the replacement checksum"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "switch the active generation pointer"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false,
+        "orderedSteps": [
+          "download a replacement",
+          "validate the replacement checksum",
+          "switch the active generation pointer"
+        ]
+      }
+    },
+    {
+      "id": "v4-index-directory-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "multi_step",
+      "query": "如何安全切换索引目录？",
+      "documents": [
+        {
+          "documentId": "v4-index-directory-zh-0",
+          "sourcePath": "evaluation-v4/index-directory-zh/source-0.md",
+          "content": "# 索引目录切换\n首先生成新的候选索引目录。然后校验候选目录的文件清单。最后更新活动目录指向。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "生成新的候选索引目录"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "校验候选目录的文件清单"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "更新活动目录指向"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false,
+        "orderedSteps": [
+          "生成新的候选索引目录",
+          "校验候选目录的文件清单",
+          "更新活动目录指向"
+        ]
+      }
+    },
+    {
+      "id": "v4-certificate-rotation-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "multi_step",
+      "query": "How should the public certificate be rotated?",
+      "documents": [
+        {
+          "documentId": "v4-certificate-rotation-en-0",
+          "sourcePath": "evaluation-v4/certificate-rotation-en/source-0.md",
+          "content": "# Public Certificate Rotation\nFirst create a replacement certificate. Next validate its certificate chain. Finally switch the active certificate reference."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "create a replacement certificate"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "validate its certificate chain"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "switch the active certificate reference"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false,
+        "orderedSteps": [
+          "create a replacement certificate",
+          "validate its certificate chain",
+          "switch the active certificate reference"
+        ]
+      }
+    },
+    {
+      "id": "v4-config-snapshot-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "multi_step",
+      "query": "如何更新本地配置快照？",
+      "documents": [
+        {
+          "documentId": "v4-config-snapshot-zh-0",
+          "sourcePath": "evaluation-v4/config-snapshot-zh/source-0.md",
+          "content": "# 本地配置快照更新\n先把新的配置写入临时文件。接着校验临时文件的内容。最后原子替换活动配置快照。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "写入临时文件"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "校验临时文件的内容"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "原子替换活动配置快照"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false,
+        "orderedSteps": [
+          "写入临时文件",
+          "校验临时文件的内容",
+          "原子替换活动配置快照"
+        ]
+      }
+    },
+    {
+      "id": "v4-content-addressing-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "topic_drift",
+      "query": "Explain content addressing.",
+      "documents": [
+        {
+          "documentId": "v4-content-addressing-en-0",
+          "sourcePath": "evaluation-v4/content-addressing-en/source-0.md",
+          "content": "# Content Addressing\nContent addressing identifies a payload using a digest of its bytes. Verification recomputes the digest from the payload bytes."
+        },
+        {
+          "documentId": "v4-content-addressing-en-1",
+          "sourcePath": "evaluation-v4/content-addressing-en/source-1.md",
+          "content": "# Immutable Payload Cache\nContent addressing allows a cache to recognize identical payloads by their digest."
+        },
+        {
+          "documentId": "v4-content-addressing-en-2",
+          "sourcePath": "evaluation-v4/content-addressing-en/source-2.md",
+          "content": "# Postal Addressing\nPostal addressing prints a street name on an envelope."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "digest of its bytes"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "recomputes the digest"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "recognize identical payloads"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "postal-leakage",
+            "pattern": "street name|envelope"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-reference-counts-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "解释引用计数。",
+      "documents": [
+        {
+          "documentId": "v4-reference-counts-zh-0",
+          "sourcePath": "evaluation-v4/reference-counts-zh/source-0.md",
+          "content": "# 引用计数\n引用计数记录对象当前持有的引用数量。计数归零时可以回收对象。循环引用需要额外的回收机制处理。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "引用数量"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "计数归零"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "循环引用需要额外的回收机制"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-capability-urls-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "noisy_headings",
+      "query": "Explain capability URLs.",
+      "documents": [
+        {
+          "documentId": "v4-capability-urls-en-0",
+          "sourcePath": "evaluation-v4/capability-urls-en/source-0.md",
+          "content": "# Capability URLs\n\n## Author Context\nThis document will introduce capability URLs.\n\n## Core\nA capability URL grants access to its holder through an unguessable reference. Possession of a capability URL must be treated as a secret."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "grants access to its holder"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "treated as a secret"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-hash-commitments-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "noisy_headings",
+      "query": "解释哈希承诺。",
+      "documents": [
+        {
+          "documentId": "v4-hash-commitments-zh-0",
+          "sourcePath": "evaluation-v4/hash-commitments-zh/source-0.md",
+          "content": "# 哈希承诺\n\n## 导言\n本文档将介绍哈希承诺。\n\n## 机制\n哈希承诺把数据映射为摘要，用于在揭示数据前固定承诺。揭示时接收方重新计算摘要以校验承诺。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "揭示数据前固定承诺"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "重新计算摘要以校验承诺"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-read-permission-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "query": "What is a read permission?",
+      "documents": [
+        {
+          "documentId": "v4-read-permission-en-0",
+          "sourcePath": "evaluation-v4/read-permission-en/source-0.md",
+          "content": "# Read Permission\nA read permission authorizes reading a resource. It does not grant permission to modify that resource."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "authorizes reading"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "does not grant permission to modify"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-snapshot-view-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是快照视图？",
+      "documents": [
+        {
+          "documentId": "v4-snapshot-view-zh-0",
+          "sourcePath": "evaluation-v4/snapshot-view-zh/source-0.md",
+          "content": "# 快照视图\n快照视图读取某个确定时间点的数据版本。之后发生的写入不会改变这次读取所见的版本。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "确定时间点的数据版本"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "写入不会改变"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-softening-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "query": "What is the Lumen alloy softening temperature?",
+      "documents": [
+        {
+          "documentId": "v4-softening-en-0",
+          "sourcePath": "evaluation-v4/softening-en/source-0.md",
+          "content": "# Lumen Alloy Softening Temperature\nThe archive does not contain a measured value for the softening temperature."
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    },
+    {
+      "id": "v4-softening-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "query": "锆云合金的软化温度是多少？",
+      "documents": [
+        {
+          "documentId": "v4-softening-zh-0",
+          "sourcePath": "evaluation-v4/softening-zh/source-0.md",
+          "content": "# 锆云合金软化温度\n现有资料没有提供锆云合金软化温度的测量数据。"
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    },
+    {
+      "id": "v4-pulse-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the Jasper pulse rate?",
+      "documents": [
+        {
+          "documentId": "v4-pulse-en-0",
+          "sourcePath": "evaluation-v4/pulse-en/source-0.md",
+          "content": "# Jasper Pulse Rate\nThe Jasper pulse rate is 3 Hz."
+        },
+        {
+          "documentId": "v4-pulse-en-1",
+          "sourcePath": "evaluation-v4/pulse-en/source-1.md",
+          "content": "# Jasper Pulse Rate Report\nThe Jasper pulse rate is 8 Hz."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "3 Hz"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "8 Hz"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v4-pulse-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "query": "碧石脉冲频率是多少？",
+      "documents": [
+        {
+          "documentId": "v4-pulse-zh-0",
+          "sourcePath": "evaluation-v4/pulse-zh/source-0.md",
+          "content": "# 碧石脉冲频率\n碧石脉冲频率是3赫兹。"
+        },
+        {
+          "documentId": "v4-pulse-zh-1",
+          "sourcePath": "evaluation-v4/pulse-zh/source-1.md",
+          "content": "# 碧石脉冲频率报告\n碧石脉冲频率是8赫兹。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "3赫兹"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "8赫兹"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    }
+  ]
+}
