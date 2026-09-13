@@ -45,6 +45,40 @@ describe('independent answer-quality measurements', () => {
         expect(summary.correctAbstentionRate).toEqual({ numerator: 1, denominator: 1, rate: 1 });
         expect(summary.missedConflictRate.rate).toBeNull();
     });
+    test.each([
+        'The archive does not provide a measured melting point for the sample.',
+        'The notes contain no measurements of the sample temperature.',
+        'The requested measurement has not been recorded in the available sources.',
+        'I cannot give a grounded answer from these notes.',
+        '星云合金记录 存档没有提供星云合金熔点的测量数据。',
+        '现有资料未记录这个样品的测量值。',
+        '笔记中没有该参数的测量结果。',
+        '当前资料不足以确定这个参数的数值。',
+    ])('recognizes an evidence-based unknown answer independently of its release label: %s', answer => {
+        const entry = parseAnswerQualityCorpus(raw).cases.find(item => item.id === 'eval-missing-en')!;
+        const measurement = measureAnswerQuality(entry, { answer, citations: [], answerReleaseReview: { decision: 'release' } } as unknown as AgentConversationResponse);
+        expect(measurement.abstentionSignalled).toBe(true);
+    });
+    test.each([
+        'The journal ensures there is no data loss after acknowledgement.',
+        'The source does not report data loss during the experiment.',
+        'The database does not provide serializable isolation.',
+        'The measured signal is not 12 Hz; it is 18 Hz.',
+        'The archive reports no conflict between these measurements.',
+        '日志确保确认后没有数据丢失。',
+        '资料没有记录任何数据丢失。',
+        '定标频率不是12赫兹，而是18赫兹。',
+        '实验报告中没有数据泄漏。',
+    ])('does not label a factual negation as an unknown answer: %s', answer => {
+        const entry = parseAnswerQualityCorpus(raw).cases.find(item => item.id === 'eval-missing-en')!;
+        const measurement = measureAnswerQuality(entry, { answer, citations: [] } as unknown as AgentConversationResponse);
+        expect(measurement.abstentionSignalled).toBe(false);
+    });
+    test('does not use an internal abstain label to claim that the public answer discloses uncertainty', () => {
+        const entry = parseAnswerQualityCorpus(raw).cases.find(item => item.id === 'eval-missing-en')!;
+        const measurement = measureAnswerQuality(entry, { answer: 'The melting point is 900 K.', citations: [], answerReleaseReview: { decision: 'abstain' } } as unknown as AgentConversationResponse);
+        expect(measurement.abstentionSignalled).toBe(false);
+    });
     test('catches reversed procedural steps and unbalanced math', () => {
         const entry = parseAnswerQualityCorpus(raw).cases.find(item => item.id === 'eval-replacement-en')!;
         const response = { answer: 'Acknowledge then rename, flush the temporary file. $R_1', citations: [] } as unknown as AgentConversationResponse;

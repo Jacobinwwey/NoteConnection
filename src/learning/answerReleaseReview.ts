@@ -4303,6 +4303,27 @@ function isVerifiedRagConflictDisclosurePlan(
         ));
 }
 
+function discloseRagEvidenceConflicts(context: AnswerReleaseReviewContext, answer: string): string {
+    const conflicts = (context.ragContextPack?.fragments || []).filter(fragment => (
+        fragment.role === 'conflict' && !fragment.truncated && fragment.citationIds.length > 0
+    ));
+    if (conflicts.length === 0) return answer;
+    const useChinese = useChineseAnswerLanguage(context);
+    let publicAnswer = answer;
+    for (const fragment of conflicts) {
+        const heading = fragment.text.split('\n', 1)[0];
+        if (heading.startsWith('Conflicting evidence for ')) {
+            publicAnswer = publicAnswer.split(heading).join(useChinese ? '来源中的冲突记录：' : 'Conflicting source observations:');
+        }
+    }
+    // Claim projection can discard supplemental text. The release boundary owns
+    // this conclusion so slim/full and every transport expose the same uncertainty.
+    const notice = useChinese
+        ? '来源中的观测存在冲突，现有证据无法确定哪一项正确。'
+        : 'The source observations conflict; the available evidence does not establish which is correct.';
+    return publicAnswer.startsWith(notice) ? publicAnswer : `${notice}\n\n${publicAnswer}`;
+}
+
 function collectCitationBackedRagFragments(context: AnswerReleaseReviewContext): RagEvidenceFragment[] {
     if (!hasUsableRagEvidenceContext(context)) {
         return [];
@@ -6387,6 +6408,9 @@ export function reviewAnswerRelease(context: AnswerReleaseReviewContext): Answer
             decision = 'abstain';
         }
         }
+    }
+    if (decision !== 'abstain') {
+        publicAnswer = discloseRagEvidenceConflicts(context, publicAnswer);
     }
     if (
         decision !== 'abstain'

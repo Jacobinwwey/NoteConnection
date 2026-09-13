@@ -1,5 +1,8 @@
 import type { AgentConversationResponse, KnowledgeDocumentInput } from './types';
 
+// Legacy reports without a protocol field used the release label and a narrower no-answer vocabulary.
+export const ANSWER_QUALITY_MEASUREMENT_PROTOCOL = 'answer-quality-public-surface-v2';
+
 export const ANSWER_QUALITY_CATEGORIES = [
     'definition', 'comparison', 'causal', 'multi_step', 'conflict', 'missing_evidence', 'topic_drift', 'math', 'noisy_headings',
 ] as const;
@@ -81,6 +84,26 @@ export function parseAnswerQualityCorpus(input: unknown): AnswerQualityCorpus {
     return corpus;
 }
 
+function publicAnswerSignalsAbstention(answer: string): boolean {
+    if (/insufficient (?:local |source )?evidence|no (?:scoped|relevant|matching) (?:knowledge|evidence)|证据不足|没有(?:足够|相关)证据|暂无相关证据/iu.test(answer)) return true;
+    if (/\b(?:i|we) (?:cannot|can't|can’t|could not) (?:answer|(?:give|provide) (?:a )?(?:grounded|reliable|supported) answer)/iu.test(answer)
+        || /(?:资料|证据|材料|信息)不足以(?:确定|给出|回答)|我(?:暂时)?(?:不能|无法)[^。！？]{0,160}(?:有依据的回答|确定)/u.test(answer)) return true;
+
+    // The missing object must be a measurement. "No data loss" and negative
+    // capability statements are factual answers, not evidence of abstention.
+    const source = String.raw`\b(?:archives?|sources?|notes?|records?|reports?|evidence|documents?|documentation|materials?|datasets?)\b`;
+    const measurement = String.raw`\b(?:measurements?|measured (?:values?|data|melting points?)|measurement (?:data|results?)|melting points?|parameter values?|requested data)\b`;
+    const object = String.raw`\s+(?:(?:a|an|the|any|reliable|available|recorded|relevant|usable|experimental|exact|requested|[\w-]+['’]s)\s+){0,5}`;
+    const absentMeasurement = [
+        `${source}\\s+(?:does not|do not|did not|doesn't|doesn’t|has not|have not)\\s+(?:provide|contain|record|report|specify|document|include|state)\\b${object}${measurement}`,
+        `${source}\\s+(?:contains?|provides?|records?|reports?|includes?|has|have)\\s+no${object}${measurement}`,
+        `${measurement}\\s+(?:has not been|have not been|is not|are not|was not|were not)\\s+(?:recorded|reported|provided|documented|available)\\b`,
+    ];
+    if (absentMeasurement.some(pattern => new RegExp(pattern, 'iu').test(answer))) return true;
+    return /(?:档案|存档|资料|材料|笔记|文档|记录|报告|来源)(?:中|里)?(?:尚未|未|并未)(?:提供|给出|记录|收录|报告|标明|包含|测得)[^，,。！？;；]{0,80}(?:测量(?:值|数据|结果)?|实验数据|参数值|熔点|数值)/u.test(answer)
+        || /(?:档案|存档|资料|材料|笔记|文档|记录|报告|来源)(?:中|里)?(?:没有|暂无)(?:提供|给出|记录|收录|报告|标明|包含)?[^，,。！？;；]{0,80}(?:测量(?:值|数据|结果)?|实验数据|参数值|熔点|数值)/u.test(answer);
+}
+
 export function measureAnswerQuality(entry: AnswerQualityCase, response: AgentConversationResponse) {
     const answer = response.answer.replace(/\*\*|`/g, '').replace(/\s+/g, ' ').trim();
     const matches = (pattern: string) => new RegExp(pattern, 'iu').test(answer);
@@ -90,8 +113,7 @@ export function measureAnswerQuality(entry: AnswerQualityCase, response: AgentCo
     const conflictText = answer.replace(/\b(?:no|without)\s+(?:evidence of\s+)?(?:conflicts?|contradictions?)\b/giu, '')
         .replace(/(?:没有|不存在|无)(?:明显)?(?:冲突|矛盾|分歧)/gu, '');
     const conflictSignalled = /\b(?:conflict|contradict|inconsisten)|冲突|矛盾|不一致|分歧/iu.test(conflictText);
-    const abstentionSignalled = response.answerReleaseReview?.decision === 'abstain'
-        || /insufficient (?:local |source )?evidence|no (?:scoped|relevant|matching) (?:knowledge|evidence)|证据不足|没有(?:足够|相关)证据|暂无相关证据/iu.test(answer);
+    const abstentionSignalled = publicAnswerSignalsAbstention(answer);
     let stepOffset = 0;
     const orderedStepsSatisfied = (entry.reference.orderedSteps || []).every(pattern => {
         const match = new RegExp(pattern, 'iu').exec(answer.slice(stepOffset));

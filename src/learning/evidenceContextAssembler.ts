@@ -11,6 +11,7 @@ import type {
 import { buildRagContextPack, estimateRagTokenCount } from './ragContextPack';
 import { conditionRagFragmentsByGraphPlan } from './graphConditionedContext';
 import type { AgentConversationExecution } from './agentConversationExecution';
+import { iterateRagEvidenceClauses } from './ragEvidenceQuality';
 
 export interface RagEvidenceSourceLookup {
     documentId: string;
@@ -88,27 +89,35 @@ interface ParentFragmentDraft {
     score: number;
 }
 
-interface ComparableEvidenceFact {
+type ComparableEvidenceFact = {
     subjectKey: string;
     subjectLabel: string;
     valueKey: string;
     valueLabel: string;
-    factKind: 'measurement' | 'quantity' | 'date' | 'state' | 'location' | 'identity' | 'endpoint' | 'dependency' | 'format' | 'protocol' | 'version' | 'port' | 'status_code';
     block: SourceBlock;
     citationIds: string[];
     item: KnowledgeQueryItem;
-}
+} & ({
+    factKind: 'measurement';
+    measurement: {
+        dimension: string;
+        magnitude: number;
+        relation: 'equal' | 'not_equal';
+    };
+} | {
+    factKind: 'quantity' | 'date' | 'state' | 'location' | 'identity' | 'endpoint' | 'dependency' | 'format' | 'protocol' | 'version' | 'port' | 'status_code';
+});
 
 type ComparableTemporalScopeKey = 'current' | 'historical' | 'planned';
 type ComparableFactScopeKey =
     | `temporal:${ComparableTemporalScopeKey}`
     | `environment:${string}`
     | `version:${string}`
-    | `platform:${string}`;
+    | `platform:${string}`
+    | `time:${string}`;
 
 const DEFAULT_PARAGRAPH_WINDOW = 5;
 const MAX_GRAPH_NEIGHBOR_DOCUMENT_CONTEXT_FRAGMENTS = 2;
-const COMPARABLE_NUMERIC_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?)\s+(?:is|=|:)\s*(?:±|\+\/-|\+\s*\/\s*-)?\s*(-?\d+(?:\.\d+)?)\s*(mm|cm|m|um|µm|nm|kg|g|mg|s|ms|%|deg|degree|degrees|c|k)\b/gi;
 const COMPARABLE_QUANTITY_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:count|limit|threshold|budget|quota|capacity|size|window|attempts|retries))\s+(?:is|are|=|:)\s*(-?\d+(?:\.\d+)?)\b/gi;
 const COMPARABLE_DATE_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:date|year|deadline|cutoff|cut-off|version|release|revision|effective))\s+(?:is|=|:)\s*(\d{4}(?:-\d{2}-\d{2})?)\b/gi;
 const COMPARABLE_STATE_FACT_PATTERN = /\b(?:the\s+)?([a-z][a-z0-9 -]{2,80}?(?:status|state|mode|flag|policy|availability|setting|gate|switch))\s+(?:is|=|:)\s*(enabled|disabled|active|inactive|available|unavailable|supported|unsupported|allowed|blocked|required|optional|open|closed|on|off)\b/gi;
@@ -188,6 +197,59 @@ const COMPARABLE_PLATFORM_SCOPE_ALIASES: Record<string, string> = {
     mobile: 'mobile',
 };
 const COMPARABLE_PLATFORM_SCOPE_PATTERN = /\b(?:in|for|on|under|within)\s+(?:the\s+)?(windows|win32|macos|mac|linux|android|ios|web|desktop|mobile)(?:\s+(?:platform|os|runtime|client|app|build|target))?\b|\b(windows|win32|macos|mac|linux|android|ios|web|desktop|mobile)\s+(?:platform|os|runtime|client|app|build|target)\b/i;
+const COMPARABLE_TIME_SCOPE_PATTERN = /\b(?:in|during|on|as of)\s+(\d{4}(?:-\d{2}(?:-\d{2})?)?)\b/i;
+
+const MEASUREMENT_UNIT_GROUPS: Array<{ aliases: string[]; dimension: string; scale: number; offset?: number }> = [
+    { aliases: ['m', 'meter', 'meters', 'metre', 'metres', '米'], dimension: 'length', scale: 1 },
+    { aliases: ['cm', '厘米'], dimension: 'length', scale: 1e-2 },
+    { aliases: ['mm', '毫米'], dimension: 'length', scale: 1e-3 },
+    { aliases: ['um', 'µm', 'μm', '微米'], dimension: 'length', scale: 1e-6 },
+    { aliases: ['nm', '纳米'], dimension: 'length', scale: 1e-9 },
+    { aliases: ['kg', '千克', '公斤'], dimension: 'mass', scale: 1 },
+    { aliases: ['g', 'gram', 'grams', '克'], dimension: 'mass', scale: 1e-3 },
+    { aliases: ['mg', '毫克'], dimension: 'mass', scale: 1e-6 },
+    { aliases: ['s', 'second', 'seconds', '秒'], dimension: 'duration', scale: 1 },
+    { aliases: ['ms', 'millisecond', 'milliseconds', '毫秒'], dimension: 'duration', scale: 1e-3 },
+    { aliases: ['us', 'µs', 'μs', '微秒'], dimension: 'duration', scale: 1e-6 },
+    { aliases: ['min', 'minute', 'minutes', '分钟'], dimension: 'duration', scale: 60 },
+    { aliases: ['h', 'hour', 'hours', '小时'], dimension: 'duration', scale: 3600 },
+    { aliases: ['d', 'day', 'days', '天', '日'], dimension: 'duration', scale: 86400 },
+    { aliases: ['Hz', 'hz', 'hertz', '赫兹'], dimension: 'frequency', scale: 1 },
+    { aliases: ['kHz', 'khz', '千赫兹'], dimension: 'frequency', scale: 1000 },
+    { aliases: ['K', 'kelvin', '开尔文'], dimension: 'temperature', scale: 1 },
+    { aliases: ['C', 'c', '°C', '°c', '℃', '摄氏度'], dimension: 'temperature', scale: 1, offset: 273.15 },
+    { aliases: ['deg', 'degree', 'degrees', '度'], dimension: 'angle', scale: Math.PI / 180 },
+    { aliases: ['rad', 'radian', 'radians', '弧度'], dimension: 'angle', scale: 1 },
+    { aliases: ['%'], dimension: 'ratio', scale: 0.01 },
+];
+const MEASUREMENT_UNITS = new Map(MEASUREMENT_UNIT_GROUPS.flatMap(group => group.aliases.map(alias => [alias, group] as const)));
+const MEASUREMENT_UNIT_PATTERN = Array.from(MEASUREMENT_UNITS.keys()).sort((left, right) => right.length - left.length).join('|');
+const MEASUREMENT_NUMBER_PATTERN = /[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?/i;
+const MEASUREMENT_PREFIX_PATTERNS = [
+    /(?<![\p{L}\p{N}])([\p{L}][\p{L}\p{N} _-]{1,100}?)(?:\s+(?:is|are)\s+|\s*[:=]\s*)(not\s+)?/u,
+    /(?<![\p{L}\p{N}])([\p{L}][\p{L}\p{N} _-]{1,100}?)\s*(?:(并不是|不是|不为|不等于|并非)|是|为|等于|：)\s*/u,
+];
+const MEASUREMENT_FACT_PATTERNS = MEASUREMENT_PREFIX_PATTERNS.map(prefix => new RegExp(
+    prefix.source + /(?:(?:\+\s*\/\s*-|±)\s*)?/.source + '(' + MEASUREMENT_NUMBER_PATTERN.source + ')' + /\s*/.source
+    + '(' + MEASUREMENT_UNIT_PATTERN + ')' + /(?![a-z0-9_])/.source,
+    'giu'
+));
+const MEASUREMENT_UNIT_SUFFIX_PATTERN = new RegExp('^\\s*(?:' + MEASUREMENT_UNIT_PATTERN + ')(?![a-z0-9_])', 'iu');
+
+const CHINESE_SCOPE_TERMS: Record<string, string> = {
+    当前: ' current ', 目前: ' current ', 现行: ' current ', 历史: ' historical ', 旧版: ' historical ',
+    计划: ' planned ', 未来: ' planned ', 生产环境: ' production environment ', 测试环境: ' test environment ',
+    开发环境: ' development environment ', 预发环境: ' staging environment ', 预生产环境: ' staging environment ',
+    版本: ' version ', 安卓平台: ' android platform ', 桌面平台: ' desktop platform ', 移动平台: ' mobile platform ',
+};
+const CHINESE_SCOPE_PATTERN = new RegExp(Object.keys(CHINESE_SCOPE_TERMS).sort((a, b) => b.length - a.length).join('|'), 'gu');
+
+function normalizeScopeLanguage(value: string): string {
+    return value.replace(CHINESE_SCOPE_PATTERN, term => CHINESE_SCOPE_TERMS[term])
+        .replace(/(\d{4})年(?:(\d{1,2})月)?(?:(\d{1,2})日)?/gu, (_match, year: string, month?: string, day?: string) => (
+            ` in ${year}${month ? `-${month.padStart(2, '0')}` : ''}${day ? `-${day.padStart(2, '0')}` : ''} `
+        ));
+}
 
 function normalizeWhitespace(value: string): string {
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -434,7 +496,7 @@ function normalizeComparableFactSubject(value: string): string {
     return normalizeWhitespace(value)
         .toLowerCase()
         .replace(/^(the|a|an)\s+/i, '')
-        .replace(/[^a-z0-9]+/g, ' ')
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
         .trim();
 }
 
@@ -444,7 +506,8 @@ function comparableFactSentenceTail(blockText: string, match: RegExpMatchArray):
         return '';
     }
     const tail = String(blockText || '').slice(matchIndex + String(match[0] || '').length);
-    return normalizeWhitespace(tail.split(/[.!?]/)[0] || '');
+    const boundary = /[!?。！？；;\r\n]|\.(?!\d)/u.exec(tail);
+    return normalizeWhitespace(boundary ? tail.slice(0, boundary.index) : tail);
 }
 
 function comparableFactTemporalScopeKey(subjectLabel: string, sentenceTail: string): ComparableTemporalScopeKey | null {
@@ -490,6 +553,8 @@ function comparableFactPlatformScopeKey(subjectLabel: string, sentenceTail: stri
 }
 
 function comparableFactScopeKeys(subjectLabel: string, sentenceTail: string): ComparableFactScopeKey[] {
+    subjectLabel = normalizeScopeLanguage(subjectLabel);
+    sentenceTail = normalizeScopeLanguage(sentenceTail);
     const scopeKeys: ComparableFactScopeKey[] = [];
     const temporalScopeKey = comparableFactTemporalScopeKey(subjectLabel, sentenceTail);
     if (temporalScopeKey) {
@@ -507,28 +572,91 @@ function comparableFactScopeKeys(subjectLabel: string, sentenceTail: string): Co
     if (platformScopeKey) {
         scopeKeys.push(`platform:${platformScopeKey}`);
     }
+    const timeScope = COMPARABLE_TIME_SCOPE_PATTERN.exec(`${subjectLabel} ${sentenceTail}`)?.[1];
+    if (timeScope) scopeKeys.push(`time:${timeScope}`);
     return scopeKeys.sort();
 }
 
 function comparableFactSubjectKey(subjectLabel: string, scopeKeys: ComparableFactScopeKey[]): string {
+    subjectLabel = normalizeScopeLanguage(subjectLabel);
     const scopedSubjectLabel = scopeKeys.some((scopeKey) => scopeKey.startsWith('temporal:'))
         ? normalizeWhitespace(subjectLabel).replace(COMPARABLE_TEMPORAL_SCOPE_PATTERN, '')
         : subjectLabel;
-    const subjectKey = normalizeComparableFactSubject(scopedSubjectLabel);
+    const subjectKey = normalizeComparableFactSubject(scopedSubjectLabel
+        .replace(COMPARABLE_ENVIRONMENT_SCOPE_PATTERN, '')
+        .replace(COMPARABLE_PLATFORM_SCOPE_PATTERN, '')
+        .replace(COMPARABLE_VERSION_SCOPE_PATTERN, '')
+        .replace(COMPARABLE_TIME_SCOPE_PATTERN, ''));
     return scopeKeys.length > 0 && subjectKey
         ? `${subjectKey}@scope:${scopeKeys.join('+')}`
         : subjectKey;
 }
 
-function normalizeComparableFactUnit(value: string): string {
-    const normalized = normalizeWhitespace(value).toLowerCase();
-    if (normalized === 'um') {
-        return 'µm';
+function measurementScopeKeys(text: string): ComparableFactScopeKey[] | null {
+    const normalized = normalizeScopeLanguage(text);
+    const keys = new Set<ComparableFactScopeKey>();
+    for (const pattern of [COMPARABLE_TEMPORAL_SCOPE_PATTERN, COMPARABLE_ENVIRONMENT_SCOPE_PATTERN,
+        COMPARABLE_VERSION_SCOPE_PATTERN, COMPARABLE_PLATFORM_SCOPE_PATTERN, COMPARABLE_TIME_SCOPE_PATTERN]) {
+        for (const match of normalized.matchAll(new RegExp(pattern.source, 'gi'))) {
+            comparableFactScopeKeys('', match[0]).forEach(key => keys.add(key));
+        }
     }
-    if (normalized === 'degree' || normalized === 'degrees') {
-        return 'deg';
+    // A coordinated qualifier ("in production or staging") is not a single scope.
+    if (Array.from(keys).some(key => key.startsWith('environment:'))) {
+        for (const word of normalized.toLowerCase().match(/\b[a-z]+\b/g) || []) {
+            const environment = COMPARABLE_ENVIRONMENT_SCOPE_ALIASES[word];
+            if (environment) keys.add(`environment:${environment}`);
+        }
     }
-    return normalized;
+    if (Array.from(keys).some(key => key.startsWith('platform:'))) {
+        for (const word of normalized.toLowerCase().match(/\b[a-z0-9]+\b/g) || []) {
+            const platform = COMPARABLE_PLATFORM_SCOPE_ALIASES[word];
+            if (platform) keys.add(`platform:${platform}`);
+        }
+    }
+    const dimensions = new Set<string>();
+    for (const key of keys) {
+        const dimension = key.slice(0, key.indexOf(':'));
+        if (dimensions.has(dimension)) return null;
+        dimensions.add(dimension);
+    }
+    return Array.from(keys).sort();
+}
+
+function measurementHeadingScopeKeys(headingPath: string[]): ComparableFactScopeKey[] | null {
+    const byDimension = new Map<string, ComparableFactScopeKey>();
+    for (const heading of headingPath) {
+        const keys = measurementScopeKeys(`in ${heading}`);
+        if (!keys) return null;
+        for (const key of keys) byDimension.set(key.slice(0, key.indexOf(':')), key);
+    }
+    return Array.from(byDimension.values()).sort();
+}
+
+function measurementAssertionScopeKeys(
+    headingKeys: ComparableFactScopeKey[],
+    paragraphKeys: ComparableFactScopeKey[],
+    clauseKeys: ComparableFactScopeKey[]
+): ComparableFactScopeKey[] {
+    const byDimension = new Map<string, ComparableFactScopeKey>();
+    for (const key of [...headingKeys, ...paragraphKeys, ...clauseKeys]) {
+        byDimension.set(key.slice(0, key.indexOf(':')), key);
+    }
+    return Array.from(byDimension.values()).sort();
+}
+
+function standaloneMeasurementScopeKeys(clause: string): ComparableFactScopeKey[] | null {
+    const normalized = normalizeScopeLanguage(clause).replace(/[.:：。]+$/u, '').trim();
+    const keys = measurementScopeKeys(`in ${normalized}`);
+    if (!keys?.length) return null;
+    const remainder = `in ${normalized}`
+        .replace(COMPARABLE_TEMPORAL_SCOPE_PATTERN, '')
+        .replace(COMPARABLE_ENVIRONMENT_SCOPE_PATTERN, '')
+        .replace(COMPARABLE_VERSION_SCOPE_PATTERN, '')
+        .replace(COMPARABLE_PLATFORM_SCOPE_PATTERN, '')
+        .replace(COMPARABLE_TIME_SCOPE_PATTERN, '')
+        .replace(/\b(?:in|for|on|under|within|during|as of|the)\b/gi, '').trim();
+    return remainder ? null : keys;
 }
 
 function normalizeComparableDateValue(value: string): string | null {
@@ -656,30 +784,50 @@ function extractComparableEvidenceFacts(params: {
         params.execution?.recordSourceFact();
         facts.push(fact);
     };
-    for (const match of String(params.block.text || '').matchAll(COMPARABLE_NUMERIC_FACT_PATTERN)) {
-        const subjectLabel = normalizeWhitespace(match[1]);
-        const scopeKeys = comparableFactScopeKeys(
-            subjectLabel,
-            comparableFactSentenceTail(params.block.text, match)
-        );
-        const subjectKey = comparableFactSubjectKey(subjectLabel, scopeKeys);
-        const value = Number(match[2]);
-        const unit = normalizeComparableFactUnit(match[3]);
-        if (!subjectKey || !Number.isFinite(value) || !unit) {
-            continue;
+    const headingKeys = measurementHeadingScopeKeys(params.block.headingPath);
+    let paragraphKeys: ComparableFactScopeKey[] = [];
+    for (const clause of iterateRagEvidenceClauses(params.block.text)) {
+        params.execution?.assertActive();
+        const inheritedKeys = paragraphKeys;
+        // Only an immediately preceding standalone qualifier is unambiguous.
+        paragraphKeys = standaloneMeasurementScopeKeys(clause) || [];
+        const clauseKeys = measurementScopeKeys(clause);
+        if (!headingKeys || !clauseKeys) continue;
+        if (/\b(?:approximately|roughly|about|at least|at most|between|range)\b|大约|约为|至少|至多|范围/iu.test(clause)) continue;
+        const scopeKeys = measurementAssertionScopeKeys(headingKeys, inheritedKeys, clauseKeys);
+        for (const pattern of MEASUREMENT_FACT_PATTERNS) {
+            for (const match of clause.matchAll(pattern)) {
+                params.execution?.assertActive();
+                const tail = clause.slice(match.index! + match[0].length);
+                if (/^\s*(?:[\/^*]|(?:[-–—~～]|to|至|到)\s*[+-]?\d)/iu.test(tail)) continue;
+                const subjectLabel = normalizeWhitespace(match[1]);
+                const subjectKey = comparableFactSubjectKey(subjectLabel, scopeKeys);
+                const tolerance = /(?:\btolerance|公差|容差)$/iu.test(subjectLabel);
+                // A named tolerance defines a half-width; an uncertain observation does not define an exact value.
+                if (/±|\+\s*\/\s*-/u.test(clause)
+                    && (!tolerance || !/±|\+\s*\/\s*-/u.test(match[0]))) continue;
+                // SI symbol case is significant: µM is not µm, nor Ms milliseconds.
+                const unit = MEASUREMENT_UNITS.get(match[4])
+                    || (match[4].length > 2 ? MEASUREMENT_UNITS.get(match[4].toLowerCase()) : undefined);
+                if (!subjectKey || !unit) continue;
+                const converted = Number(match[3]) * unit.scale + (tolerance ? 0 : (unit.offset || 0));
+                if (!Number.isFinite(converted) || (tolerance && converted < 0)) continue;
+                // Significant digits remove conversion noise without rounding tiny measurements to zero.
+                const magnitude = Number(converted.toPrecision(15));
+                const relation = match[2] ? 'not_equal' : 'equal';
+                const dimension = tolerance ? `tolerance:${unit.dimension}` : unit.dimension;
+                appendFact({
+                    subjectKey, subjectLabel,
+                    valueKey: `${dimension}:${relation}:${magnitude}`,
+                    valueLabel: `${match[2] || ''}${match[3]} ${match[4]}`,
+                    factKind: 'measurement', measurement: { dimension, magnitude, relation },
+                    block: params.block, citationIds: params.citationIds, item: params.item,
+                });
+            }
         }
-        appendFact({
-            subjectKey,
-            subjectLabel,
-            valueKey: `${Number(value.toFixed(12))}:${unit}`,
-            valueLabel: `${match[2]} ${match[3]}`,
-            factKind: 'measurement',
-            block: params.block,
-            citationIds: params.citationIds,
-            item: params.item,
-        });
     }
     for (const match of String(params.block.text || '').matchAll(COMPARABLE_QUANTITY_FACT_PATTERN)) {
+        if (MEASUREMENT_UNIT_SUFFIX_PATTERN.test(params.block.text.slice(match.index! + match[0].length))) continue;
         const subjectLabel = normalizeWhitespace(match[1]);
         const scopeKeys = comparableFactScopeKeys(
             subjectLabel,
@@ -1060,6 +1208,17 @@ function comparableFactDocumentKey(fact: ComparableEvidenceFact): string {
     return `${fact.item.atom.documentId}\n${fact.item.atom.sourcePath}`;
 }
 
+function comparableEvidenceFactsConflict(left: ComparableEvidenceFact, right: ComparableEvidenceFact): boolean {
+    if (left.subjectKey !== right.subjectKey || left.factKind !== right.factKind) return false;
+    if (left.factKind === 'measurement' && right.factKind === 'measurement') {
+        if (left.measurement.dimension !== right.measurement.dimension) return false;
+        const sameMagnitude = left.measurement.magnitude === right.measurement.magnitude;
+        if (left.measurement.relation !== right.measurement.relation) return sameMagnitude;
+        return left.measurement.relation === 'equal' && !sameMagnitude;
+    }
+    return left.valueKey !== right.valueKey;
+}
+
 function buildConflictFragments(
     group: DocumentEvidenceGroup,
     facts: ComparableEvidenceFact[],
@@ -1071,10 +1230,7 @@ function buildConflictFragments(
 
     facts.forEach((left, leftIndex) => {
         facts.slice(leftIndex + 1).forEach((right) => {
-            if (left.subjectKey !== right.subjectKey || left.factKind !== right.factKind) {
-                return;
-            }
-            if (left.valueKey === right.valueKey) {
+            if (!comparableEvidenceFactsConflict(left, right)) {
                 return;
             }
             const blockDistance = Math.abs(left.block.startLine - right.block.startLine);
@@ -1151,10 +1307,7 @@ function buildCrossDocumentConflictFragments(facts: ComparableEvidenceFact[], ex
             if (comparableFactDocumentKey(left) === comparableFactDocumentKey(right)) {
                 return;
             }
-            if (left.subjectKey !== right.subjectKey || left.factKind !== right.factKind) {
-                return;
-            }
-            if (left.valueKey === right.valueKey) {
+            if (!comparableEvidenceFactsConflict(left, right)) {
                 return;
             }
             const orderedSourceKeys = [comparableFactDocumentKey(left), comparableFactDocumentKey(right)].sort();

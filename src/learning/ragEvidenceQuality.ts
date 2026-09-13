@@ -15,7 +15,7 @@ function isClauseBoundary(source: string, index: number): boolean {
     if (/\r|\n|;/u.test(character)) {
         return true;
     }
-    if (character === '.' && /\d/u.test(source[index - 1] || '') && /\d/u.test(source[index + 1] || '')) {
+    if (character === '.' && /[\d\s=+\-(]/u.test(source[index - 1] || ' ') && /\d/u.test(source[index + 1] || '')) {
         return false;
     }
     return /[.!?。！？；]/u.test(character);
@@ -25,12 +25,11 @@ function isClauseBoundary(source: string, index: number): boolean {
  * Splits source evidence at discourse boundaries while retaining decimal numbers and
  * mathematical notation. The caller still owns filtering and public-text naturalization.
  */
-export function segmentRagEvidenceClauses(value: string): string[] {
+export function* iterateRagEvidenceClauses(value: string): IterableIterator<string> {
     const source = String(value || '');
     if (!source) {
-        return [];
+        return;
     }
-    const clauses: string[] = [];
     let start = 0;
     for (let index = 0; index < source.length; index += 1) {
         if (!isClauseBoundary(source, index)) {
@@ -39,15 +38,18 @@ export function segmentRagEvidenceClauses(value: string): string[] {
         const includeBoundary = /[.!?。！？]/u.test(source[index]);
         const clause = normalizeWhitespace(source.slice(start, includeBoundary ? index + 1 : index));
         if (clause) {
-            clauses.push(clause);
+            yield clause;
         }
         start = index + 1;
     }
     const remainder = normalizeWhitespace(source.slice(start));
     if (remainder) {
-        clauses.push(remainder);
+        yield remainder;
     }
-    return clauses;
+}
+
+export function segmentRagEvidenceClauses(value: string): string[] {
+    return Array.from(iterateRagEvidenceClauses(value));
 }
 
 function delimiterBalance(value: string): boolean {

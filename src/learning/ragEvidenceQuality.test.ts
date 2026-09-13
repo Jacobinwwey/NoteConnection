@@ -17,6 +17,12 @@ describe('ragEvidenceQuality', () => {
         expect(documentary.documentaryPenalty).toBeGreaterThan(0);
     });
 
+    test('preserves leading decimal measurements without joining numbered sentences', () => {
+        expect(segmentRagEvidenceClauses('The offset is -.25 ms. The duration is .5 s; 1. Next observation.')).toEqual([
+            'The offset is -.25 ms.', 'The duration is .5 s', '1.', 'Next observation.',
+        ]);
+    });
+
     test('penalizes unbalanced mathematical fragments', () => {
         const quality = scoreRagEvidenceClause('The flux is q = kA(T1 - T2 / L.');
         expect(quality.hasBalancedDelimiters).toBe(false);

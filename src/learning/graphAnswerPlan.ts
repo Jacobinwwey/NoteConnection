@@ -106,10 +106,12 @@ export function selectQueryConnectedKnowledgePoints(
         : comparisonQueryBranches(definitionSubjectFromMessage(message));
     const requestedSubjects = subjects.filter(Boolean);
     if (requestedSubjects.length === 0) return knowledgePoints;
-    const selected = knowledgePoints.filter(point => requestedSubjects.some(subject => knowledgePointEstablishesSubject(point, subject)));
-    // A phrase can describe a graph chain rather than one entity. Without a positive
-    // subject witness, retain candidates for the existing release/abstention review.
-    return selected.length > 0 ? selected : knowledgePoints;
+    const subjectMatches = requestedSubjects.map(subject => knowledgePoints.filter(point => knowledgePointEstablishesSubject(point, subject)));
+    // An unmatched phrase may describe a comparison aspect or graph chain. Partial
+    // recognition must not discard that branch's graph support before intent-aware assembly.
+    if (subjectMatches.some(matches => matches.length === 0)) return knowledgePoints;
+    const selected = new Set(subjectMatches.flat());
+    return knowledgePoints.filter(point => selected.has(point));
 }
 
 function definitionTitleMatchesSubject(title: string, subject: string): boolean {
