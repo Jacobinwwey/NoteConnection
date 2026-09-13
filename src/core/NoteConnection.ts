@@ -13,6 +13,8 @@ export interface BuildOptions {
     memorySavingMode?: boolean;
     deepDebug?: boolean;
     projectRoot?: string; // Optional override for project root
+    /** Source identity and containment root; defaults to projectRoot/Knowledge_Base. */
+    knowledgeBaseRoot?: string;
     outputPrefix?: string; // Optional output filename prefix (e.g. for CLI run timestamps)
     onLog?: (msg: string) => void;
 }
@@ -72,7 +74,7 @@ export class NoteConnection {
 
         // 2. Resolve Directory
         const projectRoot = options.projectRoot || path.resolve(__dirname, '..', '..');
-        const kbRoot = path.join(projectRoot, 'Knowledge_Base');
+        const kbRoot = path.resolve(options.knowledgeBaseRoot || path.join(projectRoot, 'Knowledge_Base'));
         
         let conceptDir: string;
         if (options.targetPath) {

@@ -35,11 +35,17 @@ export class FileLoader {
     workspaceRoot: string = dirPath,
   ): Promise<RawFile[]> {
     const filePaths: string[] = [];
-    const identityRoot = path.resolve(workspaceRoot);
-    
     if (!fs.existsSync(dirPath)) {
       console.warn(`Directory not found: ${dirPath}`);
       return [];
+    }
+
+    // Compare canonical directories before scanning: an alias must neither
+    // escape the workspace nor give the same source a second relative identity.
+    const identityRoot = fs.realpathSync.native(workspaceRoot);
+    const scanRoot = fs.realpathSync.native(dirPath);
+    if (scanRoot !== identityRoot) {
+      normalizeResourceRelativePath(identityRoot, scanRoot);
     }
 
     // 1. Gather all file paths first (Sequential directory scan is safer for handles)
@@ -63,7 +69,7 @@ export class FileLoader {
         }
     }
 
-    await scanDir(dirPath);
+    await scanDir(scanRoot);
 
     // 2. Read files with concurrency limit
     const results: RawFile[] = [];

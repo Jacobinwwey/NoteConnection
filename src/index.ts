@@ -8,7 +8,7 @@ export async function buildGraph(options: BuildOptions | string, maxWorkers?: nu
   const projectRoot = runtimePaths.projectRoot;
   const runtimeDataDir = runtimePaths.runtimeDataDir;
   
-  let buildOptions: BuildOptions = { projectRoot };
+  let buildOptions: BuildOptions = { projectRoot, knowledgeBaseRoot: runtimePaths.kbRoot };
 
   if (typeof options === 'string') {
       // Legacy signature support
@@ -20,7 +20,11 @@ export async function buildGraph(options: BuildOptions | string, maxWorkers?: nu
       buildOptions.deepDebug = deepDebug;
   } else {
       // New object signature
-      buildOptions = { ...options, projectRoot };
+      buildOptions = {
+          ...options,
+          projectRoot,
+          knowledgeBaseRoot: options.knowledgeBaseRoot ?? runtimePaths.kbRoot,
+      };
       
       // Map frontend 'target' to backend 'targetPath'
       // Frontend uses 'target', BuildOptions interface expects 'targetPath'
