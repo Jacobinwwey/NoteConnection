@@ -1,0 +1,1393 @@
+{
+  "schemaVersion": 1,
+  "version": "3.0.0",
+  "authoredAt": "2026-09-13",
+  "backend": "local-hybrid-v1",
+  "usageRole": "confirmation_frozen_before_source_admission_and_measurement_conflict_fixes",
+  "description": {
+    "en": "Six reused calibration cases and twenty-eight new bilingual confirmation cases. Includes multi-source topic controls, equivalent units, separate time/environment/version scopes and negative measurement constraints. Authored before implementation; not a random production sample.",
+    "zh": "六个复用校准用例和二十八个新双语确认用例，包含多来源主题对照、等价单位、不同时间/环境/版本及否定测量约束；在实现前冻结，不是生产随机样本。"
+  },
+  "cases": [
+    {
+      "id": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "query": "What is a directed acyclic graph?",
+      "documents": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md",
+          "language": "en",
+          "content": "# Directed Acyclic Graph\nA directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "no directed cycles"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "topological order"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "contains directed cycles"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是有向无环图？",
+      "documents": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md",
+          "language": "zh",
+          "content": "# 有向无环图\n有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "不含有向环"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "拓扑排序"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "一定包含有向环"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "query": "Why does unbounded queuing increase latency?",
+      "documents": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md",
+          "language": "en",
+          "content": "# Unbounded Queuing\nUnbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "wait|waiting"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "admission|reject"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "eliminates all latency"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "query": "为什么无界排队会增加延迟？",
+      "documents": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md",
+          "language": "zh",
+          "content": "# 无界排队\n无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "等待"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "准入|拒绝"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "消除所有延迟"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the retention period for the Cobalt log?",
+      "documents": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md",
+          "language": "en",
+          "content": "# Cobalt Log\nThe Cobalt log retention period is 7 days. This policy is active."
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md",
+          "language": "en",
+          "content": "# Cobalt Log Policy\nThe Cobalt log retention period is 30 days. This policy is active."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "query": "蓝钴日志的保留周期是多少？",
+      "documents": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md",
+          "language": "zh",
+          "content": "# 蓝钴日志\n蓝钴日志的保留周期是7天。该策略当前有效。"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md",
+          "language": "zh",
+          "content": "# 蓝钴日志策略\n蓝钴日志的保留周期是30天。该策略当前有效。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-retry-budget-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "query": "What is a retry budget and what does it protect?",
+      "documents": [
+        {
+          "documentId": "v3-retry-budget-en-0",
+          "sourcePath": "evaluation-v3/retry-budget-en/source-0.md",
+          "language": "en",
+          "content": "# Retry Budget\nA retry budget limits how many retry attempts a client may issue. It prevents retry traffic from amplifying an overloaded dependency."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "limits how many retry"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "amplifying|amplification"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-idempotency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是幂等键，它解决什么问题？",
+      "documents": [
+        {
+          "documentId": "v3-idempotency-zh-0",
+          "sourcePath": "evaluation-v3/idempotency-zh/source-0.md",
+          "language": "zh",
+          "content": "# 幂等键\n幂等键是调用者为同一次逻辑请求提供的稳定标识。服务端通过幂等键识别重复请求，避免重复执行副作用。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "稳定标识"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "避免重复执行副作用"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-sets-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "query": "Compare a hash set and a sorted set.",
+      "documents": [
+        {
+          "documentId": "v3-sets-en-0",
+          "sourcePath": "evaluation-v3/sets-en/source-0.md",
+          "language": "en",
+          "content": "# Hash Set\nA hash set represents unique elements using a hash table. It does not maintain element order. [[Sorted Set]]"
+        },
+        {
+          "documentId": "v3-sets-en-1",
+          "sourcePath": "evaluation-v3/sets-en/source-1.md",
+          "language": "en",
+          "content": "# Sorted Set\nA sorted set represents unique elements in sorted order. Ordered traversal follows the element comparator. [[Hash Set]]"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "hash table"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "does not maintain element order"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "sorted order"
+            ]
+          },
+          {
+            "id": "fact-4",
+            "patterns": [
+              "comparator"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-filters-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "query": "比较布隆过滤器和哈希集合。",
+      "documents": [
+        {
+          "documentId": "v3-filters-zh-0",
+          "sourcePath": "evaluation-v3/filters-zh/source-0.md",
+          "language": "zh",
+          "content": "# 布隆过滤器\n布隆过滤器使用位数组表示成员关系，可能误报存在。布隆过滤器不能列举所表示的元素。"
+        },
+        {
+          "documentId": "v3-filters-zh-1",
+          "sourcePath": "evaluation-v3/filters-zh/source-1.md",
+          "language": "zh",
+          "content": "# 哈希集合\n哈希集合保存实际元素并支持精确成员查询。哈希集合可以列举所保存的元素。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "位数组"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "误报"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "精确成员查询"
+            ]
+          },
+          {
+            "id": "fact-4",
+            "patterns": [
+              "可以列举"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-batching-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "causal",
+      "query": "Why does batching reduce per-item setup overhead?",
+      "documents": [
+        {
+          "documentId": "v3-batching-en-0",
+          "sourcePath": "evaluation-v3/batching-en/source-0.md",
+          "language": "en",
+          "content": "# Batching Overhead\nBatching spreads a fixed setup cost over multiple items. Therefore the setup cost paid by each item decreases as the batch contains more items."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "fixed setup cost"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "each item decreases"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-batching-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "causal",
+      "query": "为什么批处理能降低单项的初始化开销？",
+      "documents": [
+        {
+          "documentId": "v3-batching-zh-0",
+          "sourcePath": "evaluation-v3/batching-zh/source-0.md",
+          "language": "zh",
+          "content": "# 批处理开销\n批处理把固定初始化开销分摊到多个项目。因此批次中的项目越多，每个项目承担的初始化开销越低。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "分摊"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "开销越低"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-index-swap-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "multi_step",
+      "query": "How should a local index generation be replaced safely?",
+      "documents": [
+        {
+          "documentId": "v3-index-swap-en-0",
+          "sourcePath": "evaluation-v3/index-swap-en/source-0.md",
+          "language": "en",
+          "content": "# Local Index Generation Replacement\nFirst build a candidate generation beside the active generation.\n\nThen validate the candidate against the committed document set.\n\nFinally atomically replace the active generation pointer."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "build a candidate"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "validate the candidate"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "atomically replace"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false,
+        "orderedSteps": [
+          "build a candidate",
+          "validate the candidate",
+          "atomically replace"
+        ]
+      }
+    },
+    {
+      "id": "v3-index-swap-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "multi_step",
+      "query": "如何安全替换本地索引版本？",
+      "documents": [
+        {
+          "documentId": "v3-index-swap-zh-0",
+          "sourcePath": "evaluation-v3/index-swap-zh/source-0.md",
+          "language": "zh",
+          "content": "# 本地索引版本替换\n首先在活动索引旁构建候选版本。\n\n然后用已提交文档集合验证候选版本。\n\n最后原子替换活动版本指针。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "构建候选版本"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "验证候选版本"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "原子替换"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false,
+        "orderedSteps": [
+          "构建候选版本",
+          "验证候选版本",
+          "原子替换"
+        ]
+      }
+    },
+    {
+      "id": "v3-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the Meridian probe sampling frequency?",
+      "documents": [
+        {
+          "documentId": "v3-frequency-en-0",
+          "sourcePath": "evaluation-v3/frequency-en/source-0.md",
+          "language": "en",
+          "content": "# Meridian Probe Sampling Frequency\nThe Meridian probe sampling frequency is 32 Hz. This record is current."
+        },
+        {
+          "documentId": "v3-frequency-en-1",
+          "sourcePath": "evaluation-v3/frequency-en/source-1.md",
+          "language": "en",
+          "content": "# Meridian Probe Sampling Frequency Record\nThe Meridian probe sampling frequency is 48 Hz. This record is current."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "32\\s*Hz"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "48\\s*Hz"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-retention-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "query": "北辰日志的保留时长是多少？",
+      "documents": [
+        {
+          "documentId": "v3-retention-zh-0",
+          "sourcePath": "evaluation-v3/retention-zh/source-0.md",
+          "language": "zh",
+          "content": "# 北辰日志保留时长\n北辰日志的保留时长是14天。这是当前记录。"
+        },
+        {
+          "documentId": "v3-retention-zh-1",
+          "sourcePath": "evaluation-v3/retention-zh/source-1.md",
+          "language": "zh",
+          "content": "# 北辰日志保留时长记录\n北辰日志的保留时长是28天。这是当前记录。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "14\\s*天"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "28\\s*天"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-negative-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "query": "Are the Vega clock rate records consistent?",
+      "documents": [
+        {
+          "documentId": "v3-negative-frequency-en-0",
+          "sourcePath": "evaluation-v3/negative-frequency-en/source-0.md",
+          "language": "en",
+          "content": "# Vega Clock Rate\nThe Vega clock rate is 80 Hz."
+        },
+        {
+          "documentId": "v3-negative-frequency-en-1",
+          "sourcePath": "evaluation-v3/negative-frequency-en/source-1.md",
+          "language": "en",
+          "content": "# Vega Clock Rate Constraint\nThe Vega clock rate is not 80 Hz."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "is 80\\s*Hz"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "not 80\\s*Hz"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-negative-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "query": "灵犀时钟的频率记录有哪些？",
+      "documents": [
+        {
+          "documentId": "v3-negative-frequency-zh-0",
+          "sourcePath": "evaluation-v3/negative-frequency-zh/source-0.md",
+          "language": "zh",
+          "content": "# 灵犀时钟频率\n灵犀时钟的频率不是40赫兹。"
+        },
+        {
+          "documentId": "v3-negative-frequency-zh-1",
+          "sourcePath": "evaluation-v3/negative-frequency-zh/source-1.md",
+          "language": "zh",
+          "content": "# 灵犀时钟频率记录\n灵犀时钟的频率是80赫兹。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "不是40\\s*赫兹"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "是80\\s*赫兹"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-equivalent-period-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "query": "How is the Atlas pulse period specified?",
+      "documents": [
+        {
+          "documentId": "v3-equivalent-period-en-0",
+          "sourcePath": "evaluation-v3/equivalent-period-en/source-0.md",
+          "language": "en",
+          "content": "# Atlas Pulse Period\nThe Atlas pulse period is 1 s."
+        },
+        {
+          "documentId": "v3-equivalent-period-en-1",
+          "sourcePath": "evaluation-v3/equivalent-period-en/source-1.md",
+          "language": "en",
+          "content": "# Atlas Pulse Period Record\nThe Atlas pulse period is 1000 ms."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "1\\s*s"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "1000\\s*ms"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-equivalent-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "query": "星河采样频率如何记录？",
+      "documents": [
+        {
+          "documentId": "v3-equivalent-frequency-zh-0",
+          "sourcePath": "evaluation-v3/equivalent-frequency-zh/source-0.md",
+          "language": "zh",
+          "content": "# 星河采样频率\n星河采样频率是2千赫兹。"
+        },
+        {
+          "documentId": "v3-equivalent-frequency-zh-1",
+          "sourcePath": "evaluation-v3/equivalent-frequency-zh/source-1.md",
+          "language": "zh",
+          "content": "# 星河采样频率记录\n星河采样频率是2000赫兹。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "2\\s*千赫兹"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "2000\\s*赫兹"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-historical-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "query": "How do the current and historical Mariner retention settings differ?",
+      "documents": [
+        {
+          "documentId": "v3-historical-en-0",
+          "sourcePath": "evaluation-v3/historical-en/source-0.md",
+          "language": "en",
+          "content": "# Mariner Retention\n## Historical\nThe Mariner retention period is 30 days."
+        },
+        {
+          "documentId": "v3-historical-en-1",
+          "sourcePath": "evaluation-v3/historical-en/source-1.md",
+          "language": "en",
+          "content": "# Mariner Retention\n## Current\nThe Mariner retention period is 7 days."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "30\\s*days"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "7\\s*days"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-environment-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "query": "生产和测试环境中的紫杉重试间隔分别是多少？",
+      "documents": [
+        {
+          "documentId": "v3-environment-zh-0",
+          "sourcePath": "evaluation-v3/environment-zh/source-0.md",
+          "language": "zh",
+          "content": "# 紫杉重试间隔\n## 生产环境\n紫杉重试间隔是10毫秒。"
+        },
+        {
+          "documentId": "v3-environment-zh-1",
+          "sourcePath": "evaluation-v3/environment-zh/source-1.md",
+          "language": "zh",
+          "content": "# 紫杉重试间隔\n## 测试环境\n紫杉重试间隔是50毫秒。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "10\\s*毫秒"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "50\\s*毫秒"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-version-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "query": "How is the Beacon timeout recorded for versions 1.1 and 1.2?",
+      "documents": [
+        {
+          "documentId": "v3-version-en-0",
+          "sourcePath": "evaluation-v3/version-en/source-0.md",
+          "language": "en",
+          "content": "# Beacon Timeout\nThe Beacon timeout is 4 ms for version 1.1."
+        },
+        {
+          "documentId": "v3-version-en-1",
+          "sourcePath": "evaluation-v3/version-en/source-1.md",
+          "language": "en",
+          "content": "# Beacon Timeout\nThe Beacon timeout is 8 ms for version 1.2."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "4\\s*ms"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "8\\s*ms"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "1\\.1"
+            ]
+          },
+          {
+            "id": "fact-4",
+            "patterns": [
+              "1\\.2"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-dimensions-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "query": "青岚信号的两个测量记录分别是什么？",
+      "documents": [
+        {
+          "documentId": "v3-dimensions-zh-0",
+          "sourcePath": "evaluation-v3/dimensions-zh/source-0.md",
+          "language": "zh",
+          "content": "# 青岚信号测量\n青岚信号读数是5赫兹。"
+        },
+        {
+          "documentId": "v3-dimensions-zh-1",
+          "sourcePath": "evaluation-v3/dimensions-zh/source-1.md",
+          "language": "zh",
+          "content": "# 青岚信号测量记录\n青岚信号读数是5毫秒。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "5\\s*赫兹"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "5\\s*毫秒"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-unknown-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "query": "What is the Titan service error budget?",
+      "documents": [
+        {
+          "documentId": "v3-unknown-en-0",
+          "sourcePath": "evaluation-v3/unknown-en/source-0.md",
+          "language": "en",
+          "content": "# Titan Service Records\nThe records do not specify an error budget for the Titan service."
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [
+          {
+            "id": "invented-budget",
+            "pattern": "budget is 99"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    },
+    {
+      "id": "v3-unknown-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "query": "澄空样品的质量是多少？",
+      "documents": [
+        {
+          "documentId": "v3-unknown-zh-0",
+          "sourcePath": "evaluation-v3/unknown-zh/source-0.md",
+          "language": "zh",
+          "content": "# 澄空样品记录\n资料未提供澄空样品的质量测量数据。"
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [
+          {
+            "id": "invented-mass",
+            "pattern": "质量是10克"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    },
+    {
+      "id": "v3-memory-fences-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "topic_drift",
+      "query": "Explain memory fences.",
+      "documents": [
+        {
+          "documentId": "v3-memory-fences-en-0",
+          "sourcePath": "evaluation-v3/memory-fences-en/source-0.md",
+          "language": "en",
+          "content": "# Memory Fences\nMemory fences constrain the reordering of memory accesses. Their ordering guarantees depend on the fence kind."
+        },
+        {
+          "documentId": "v3-memory-fences-en-1",
+          "sourcePath": "evaluation-v3/memory-fences-en/source-1.md",
+          "language": "en",
+          "content": "# Acquire Memory Fence\nAn acquire memory fence orders following memory accesses after the fence."
+        },
+        {
+          "documentId": "v3-memory-fences-en-2",
+          "sourcePath": "evaluation-v3/memory-fences-en/source-2.md",
+          "language": "en",
+          "content": "# Memory Training\nMemory training uses mnemonics. Spaced practice helps recall lists."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "reordering"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "fence kind"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "following memory accesses"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "mnemonic-leakage",
+            "pattern": "mnemonics|recall lists"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-transaction-isolation-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "topic_drift",
+      "query": "解释数据库事务隔离。",
+      "documents": [
+        {
+          "documentId": "v3-transaction-isolation-zh-0",
+          "sourcePath": "evaluation-v3/transaction-isolation-zh/source-0.md",
+          "language": "zh",
+          "content": "# 数据库事务隔离\n数据库事务隔离限制并发事务之间的可见性。隔离级别决定允许观察到哪些并发现象。"
+        },
+        {
+          "documentId": "v3-transaction-isolation-zh-1",
+          "sourcePath": "evaluation-v3/transaction-isolation-zh/source-1.md",
+          "language": "zh",
+          "content": "# 医院隔离\n医院隔离病房用于减少疾病传播。病房需要专门的清洁安排。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "可见性"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "隔离级别"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "ward-leakage",
+            "pattern": "病房|疾病传播"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-read-write-locks-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "topic_drift",
+      "query": "Compare a read lock and a write lock.",
+      "documents": [
+        {
+          "documentId": "v3-read-write-locks-en-0",
+          "sourcePath": "evaluation-v3/read-write-locks-en/source-0.md",
+          "language": "en",
+          "content": "# Read Lock\nA read lock permits multiple readers to hold the lock concurrently."
+        },
+        {
+          "documentId": "v3-read-write-locks-en-1",
+          "sourcePath": "evaluation-v3/read-write-locks-en/source-1.md",
+          "language": "en",
+          "content": "# Write Lock\nA write lock gives one writer exclusive access."
+        },
+        {
+          "documentId": "v3-read-write-locks-en-2",
+          "sourcePath": "evaluation-v3/read-write-locks-en/source-2.md",
+          "language": "en",
+          "content": "# Lock Painting\nDecorative lock painting uses metallic paint and a small brush."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "multiple readers"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "exclusive access"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "paint-leakage",
+            "pattern": "metallic paint|small brush"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-channels-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "topic_drift",
+      "query": "比较无缓冲通道和缓冲通道。",
+      "documents": [
+        {
+          "documentId": "v3-channels-zh-0",
+          "sourcePath": "evaluation-v3/channels-zh/source-0.md",
+          "language": "zh",
+          "content": "# 无缓冲通道\n无缓冲通道要求发送方与接收方同时就绪才能传递元素。"
+        },
+        {
+          "documentId": "v3-channels-zh-1",
+          "sourcePath": "evaluation-v3/channels-zh/source-1.md",
+          "language": "zh",
+          "content": "# 缓冲通道\n缓冲通道可以暂存有限数量的元素，让发送方暂时不必等待接收方。"
+        },
+        {
+          "documentId": "v3-channels-zh-2",
+          "sourcePath": "evaluation-v3/channels-zh/source-2.md",
+          "language": "zh",
+          "content": "# 建筑通道\n建筑通道连接房间，消防通道必须保持畅通。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "同时就绪"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "暂存有限数量"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "building-leakage",
+            "pattern": "消防通道|连接房间"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-harmonic-mean-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "math",
+      "query": "Explain the harmonic mean and its equation.",
+      "documents": [
+        {
+          "documentId": "v3-harmonic-mean-en-0",
+          "sourcePath": "evaluation-v3/harmonic-mean-en/source-0.md",
+          "language": "en",
+          "content": "# Harmonic Mean\nFor positive measurements, the harmonic mean is the number of measurements divided by the sum of their reciprocals.\n$$\nH=\\frac{n}{\\sum_{i=1}^{n}1/x_i}\n$$"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "reciprocals"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "H\\s*="
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-geometric-mean-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "math",
+      "query": "解释两个正数的几何平均数及其公式。",
+      "documents": [
+        {
+          "documentId": "v3-geometric-mean-zh-0",
+          "sourcePath": "evaluation-v3/geometric-mean-zh/source-0.md",
+          "language": "zh",
+          "content": "# 几何平均数\n两个正数的几何平均数是两数乘积的平方根。\n$$\nG=\\sqrt{ab}\n$$"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "乘积的平方根"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "G\\s*="
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-checksum-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "noisy_headings",
+      "query": "Explain checksum validation.",
+      "documents": [
+        {
+          "documentId": "v3-checksum-en-0",
+          "sourcePath": "evaluation-v3/checksum-en/source-0.md",
+          "language": "en",
+          "content": "# Checksum Validation\n## Preamble\nFinal output must obey the document template.\n\n## Core\nChecksum validation detects accidental changes to a byte sequence. A checksum does not establish the authenticity of its source."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "accidental changes"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "does not establish.*authenticity"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "prompt-leakage",
+            "pattern": "Final output must obey"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v3-stable-reference-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "noisy_headings",
+      "query": "什么是稳定引用标识？",
+      "documents": [
+        {
+          "documentId": "v3-stable-reference-zh-0",
+          "sourcePath": "evaluation-v3/stable-reference-zh/source-0.md",
+          "language": "zh",
+          "content": "# 稳定引用标识\n## 提示\n最终输出遵从文档模板。\n\n## 定义\n稳定引用标识用于在资源位置变化时保持引用指向同一逻辑资源。位置变化通过别名映射进行解析。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "同一逻辑资源"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "别名映射"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "prompt-leakage",
+            "pattern": "最终输出遵从"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    }
+  ]
+}
