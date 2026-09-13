@@ -52,16 +52,64 @@ function hasBalancedMathDelimiters(value: string): boolean {
 function definitionSubjectFromMessage(message: string): string {
     const normalized = normalize(message);
     const match = normalized.match(
-        /^(?:what\s+is|what'?s|what\s+are|define|definition\s+of|meaning\s+of|什么是|何谓|解释(?:一下)?|介绍(?:一下)?|请(?:解释|介绍)(?:一下)?)\s*([^?？!！。.;；\n\r]+)/iu
+        /^(?:what\s+is|what'?s|what\s+are|define|definition\s+of|meaning\s+of|explain|什么是|何谓|解释(?:一下)?|介绍(?:一下)?|请(?:解释|介绍)(?:一下)?)\s*([^?？!！。.,，;；\n\r]+)/iu
     );
     if (!match?.[1]) {
         return '';
     }
     return normalize(match[1])
         .replace(/\s+(?:我应该|应该|how\s+should|what\s+should).*$/iu, '')
+        .replace(/\s+and\s+(?:its|their|what|how)\b.*$|(?:及其|以及它|以及其).*/iu, '')
         .replace(/^(?:a|an|the)\s+/iu, '')
         .trim()
         .toLowerCase();
+}
+
+function normalizedTopicWords(value: string): string {
+    return normalize(value).toLowerCase().replace(/\b([a-z]{4,})s\b/gu, (word, base: string) => (
+        /(?:ss|us|is)$/u.test(word) ? word : base
+    ));
+}
+
+function knowledgePointEstablishesSubject(point: AgentConversationKnowledgePoint, subject: string): boolean {
+    const topic = normalize(subject).replace(/^(?:a|an|the)\s+/iu, '').replace(/[.?!。？！]+$/gu, '').trim();
+    if (!topic) return false;
+    const compact = (value: string) => normalizedTopicWords(value).replace(/[^\p{L}\p{N}]+/gu, '');
+    const aliases = [point.title, ...String(point.title || '').split(/[()（）]/u)];
+    if (aliases.some(alias => compact(alias) === compact(topic))) return true;
+    const source = normalizedTopicWords([
+        point.title, point.summary, point.evidenceSnippet,
+        ...(point.matchedSpans || []).flatMap(span => [span.title, span.snippet]),
+    ].filter(Boolean).join('\n'));
+    const normalizedTopic = normalizedTopicWords(topic);
+    if (/\p{Script=Han}/u.test(normalizedTopic)) {
+        // Negated entity names (for example 无缓冲通道) do not establish the positive entity.
+        let offset = source.indexOf(normalizedTopic);
+        while (offset >= 0) {
+            if (offset === 0 || !/[无非不未]/u.test(source[offset - 1])) return true;
+            offset = source.indexOf(normalizedTopic, offset + 1);
+        }
+        return false;
+    }
+    const subjectFeatures = semanticFeatures(normalizedTopic);
+    const sourceFeatures = new Set(semanticFeatures(source));
+    return subjectFeatures.length > 0 && subjectFeatures.every(feature => sourceFeatures.has(feature));
+}
+
+/** Source admission precedes RAG reads so citations, graph anchoring and composition share one decision. */
+export function selectQueryConnectedKnowledgePoints(
+    message: string,
+    knowledgePoints: AgentConversationKnowledgePoint[]
+): AgentConversationKnowledgePoint[] {
+    const subjects = classifyIntent(message) === 'compare'
+        ? comparisonQueryBranches(message)
+        : comparisonQueryBranches(definitionSubjectFromMessage(message));
+    const requestedSubjects = subjects.filter(Boolean);
+    if (requestedSubjects.length === 0) return knowledgePoints;
+    const selected = knowledgePoints.filter(point => requestedSubjects.some(subject => knowledgePointEstablishesSubject(point, subject)));
+    // A phrase can describe a graph chain rather than one entity. Without a positive
+    // subject witness, retain candidates for the existing release/abstention review.
+    return selected.length > 0 ? selected : knowledgePoints;
 }
 
 function definitionTitleMatchesSubject(title: string, subject: string): boolean {

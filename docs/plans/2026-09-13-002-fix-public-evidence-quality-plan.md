@@ -14,7 +14,7 @@ This executes the remaining local U8 work in the parent plan. U1–U6 remain acc
 
 Current evidence: V2 full replies include unrelated in-scope material; graph planning marks its claims as required because retrieval scores above one are clamped to one. Measurement conflicts miss Chinese, Hz and day units, and the existing comparator can incorrectly treat different units as contradictions. The Chinese unknown-measurement answer is already truthful; the evaluation signal misses it. Preserve the distinction between runtime defects and measurement defects.
 
-- [ ] Q1: Make one planning decision govern admitted evidence sources and full-report fragments. Retain all requested comparison operands, same-source context and justified supporting sources; preserve raw retrieval evidence for audit. Source scope and retrieval score do not prove topic relevance.
+- [x] Q1: Make one planning decision govern admitted evidence sources and full-report fragments. Retain all requested comparison operands, same-source context and justified supporting sources; preserve raw retrieval evidence for audit. Source scope and retrieval score do not prove topic relevance.
 - [ ] Q2: Compare measurements only when subject, dimension, time/environment/version/platform and assertion constraints are compatible. Normalize equivalent units, preserve negation, and keep unsupported/ambiguous comparisons undecided. Add positive and negative controls before extending extraction.
 - [ ] Q3: Carry detected conflicts into the actual public answer with both observations and citations. Keep slim/full, release review, wire budgets and replay consistent.
 - [ ] Q4: Validate the no-answer measurement signal against grounded unknown answers and factual negations. Version the evaluation protocol and retain old results; do not force correct unknown answers into a generic template to satisfy a regex.
@@ -34,7 +34,7 @@ Acceptance requires failing-before/passing-after behavior and controls for false
 
 当前证据：V2 full 回答混入同 scope 无关内容；graph planner 把大于一的 retrieval score 截成一后，将这些 claim 标为必需。测量冲突提取缺少中文、Hz 和天单位，原比较器还可能把不同单位误判为冲突。中文未知测量答案本身已经诚实，漏报发生在评估信号；运行缺陷和测量缺陷必须分开修复。
 
-- [ ] Q1：由一次规划决策约束准入证据源与 full 正文片段；保留全部比较对象、同源上下文及有依据的支持来源，原始检索证据继续可审计。scope 和 retrieval score 不能替代主题相关性。
+- [x] Q1：由一次规划决策约束准入证据源与 full 正文片段；保留全部比较对象、同源上下文及有依据的支持来源，原始检索证据继续可审计。scope 和 retrieval score 不能替代主题相关性。
 - [ ] Q2：主体、量纲、时间/环境/版本/平台及断言约束可比时才比较测量值；归一化等价单位，保留否定语义，无法比较的情况保持未判定。先增加正反对照，再扩展提取。
 - [ ] Q3：把已检测冲突传到真实公开答案，保留双方观察与引用，保持 slim/full、release review、wire budget、replay 一致。
 - [ ] Q4：用有依据的未知答案和事实否定验证拒答测量信号，版本化评估协议并保留旧报告；不为满足 regex 把正确未知答案改成泛化模板。

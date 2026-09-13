@@ -153,7 +153,7 @@ import {
     mergeAgentConversationKnowledgePoints,
 } from './conversationComposer';
 import { assembleAgentConversationGraphContext } from './graphContextAssembler';
-import { buildGraphAnswerPlan } from './graphAnswerPlan';
+import { buildGraphAnswerPlan, selectQueryConnectedKnowledgePoints } from './graphAnswerPlan';
 import { resolveGraphExpansionPolicy, type GraphExpansionPolicy } from './graphExpansionPolicy';
 import {
     assembleRagEvidenceContext,
@@ -10540,10 +10540,17 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     asOf: generatedAt,
                     scope: request.scope,
                 });
-                const knowledgePoints = mergeAgentConversationKnowledgePoints(
+                const retrievedKnowledgePoints = mergeAgentConversationKnowledgePoints(
                     queryResult.items,
                     (atomId) => this.buildAgentWorkspaceCapabilities(atomId)
                 );
+                const knowledgePoints = selectQueryConnectedKnowledgePoints(message, retrievedKnowledgePoints);
+                const admittedDocumentIds = new Set(knowledgePoints.map(point => point.documentId));
+                const excludedSources = new Map(queryResult.items
+                    .filter(item => !admittedDocumentIds.has(item.atom.documentId))
+                    .map(item => [item.atom.documentId, item.atom.sourcePath]));
+                const excludedDocumentIds = new Set(excludedSources.keys());
+                const conversationQueryItems = queryResult.items.filter(item => admittedDocumentIds.has(item.atom.documentId));
                 const citations = knowledgePoints
                     .flatMap((point) => (
                         Array.isArray(point.citations) && point.citations.length > 0
@@ -10651,7 +10658,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                     message,
                     ragEvidenceProfile.graphNeighborLimit,
                     traceScope
-                );
+                ).filter(item => !excludedDocumentIds.has(item.atom.documentId));
                 const preRagGraphAnswerPlan = buildGraphAnswerPlan({
                     message,
                     knowledgePoints: conversationKnowledgePoints,
@@ -10665,7 +10672,7 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                 const firstReviewedRag = await this.assembleReviewedRagEvidenceContext({
                     execution,
                     query: message || 'local knowledge',
-                    items: queryResult.items,
+                    items: conversationQueryItems,
                     graphNeighborItems,
                     graphContext,
                     graphAnswerPlan: preRagGraphAnswerPlan,
@@ -10684,11 +10691,11 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                         message,
                         AGENT_RAG_RECOVERY_GRAPH_NEIGHBOR_LIMIT,
                         traceScope
-                    );
+                    ).filter(item => !excludedDocumentIds.has(item.atom.documentId));
                     const recoveredReviewedRag = await this.assembleReviewedRagEvidenceContext({
                     execution,
                         query: message || 'local knowledge',
-                        items: queryResult.items,
+                        items: conversationQueryItems,
                         graphNeighborItems: recoveryGraphNeighborItems,
                         graphContext,
                         graphAnswerPlan: preRagGraphAnswerPlan,
@@ -10725,6 +10732,15 @@ export class KnowledgeLearningPlatform implements KnowledgeLearningPlatformAPI {
                         );
                     }
                 }
+                ragContextPack.sourceDecisions.push(...Array.from(excludedSources, ([documentId, sourcePath]) => ({
+                    documentId,
+                    sourcePath,
+                    sourceBoundary: 'direct_span_only' as const,
+                    status: 'fragment_dropped' as const,
+                    reason: 'query_subject_mismatch',
+                    charsRead: 0,
+                    fragmentsSelected: 0,
+                })));
                 const activeConversationAtomIds = collectAgentConversationAtomIds(conversationKnowledgePoints);
                 await execution.yieldCheckpoint();
                 const scopedWorkspace = this.resolveWorkspaceContextForAtomIds(activeConversationAtomIds);
