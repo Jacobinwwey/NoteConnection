@@ -1,0 +1,806 @@
+{
+  "schemaVersion": 1,
+  "version": "5.0",
+  "authoredAt": "2026-09-13",
+  "backend": "local-hybrid-v1",
+  "usageRole": "confirmation frozen after V4 findings and before heading-polarity and title-noise corrections",
+  "cases": [
+    {
+      "id": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "query": "What is a directed acyclic graph?",
+      "documents": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md",
+          "language": "en",
+          "content": "# Directed Acyclic Graph\nA directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "no directed cycles"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "topological order"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "contains directed cycles"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是有向无环图？",
+      "documents": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md",
+          "language": "zh",
+          "content": "# 有向无环图\n有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "不含有向环"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "拓扑排序"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "一定包含有向环"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "query": "Why does unbounded queuing increase latency?",
+      "documents": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md",
+          "language": "en",
+          "content": "# Unbounded Queuing\nUnbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "wait|waiting"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "admission|reject"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "eliminates all latency"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "query": "为什么无界排队会增加延迟？",
+      "documents": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md",
+          "language": "zh",
+          "content": "# 无界排队\n无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "等待"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "准入|拒绝"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "消除所有延迟"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the retention period for the Cobalt log?",
+      "documents": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md",
+          "language": "en",
+          "content": "# Cobalt Log\nThe Cobalt log retention period is 7 days. This policy is active."
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md",
+          "language": "en",
+          "content": "# Cobalt Log Policy\nThe Cobalt log retention period is 30 days. This policy is active."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "query": "蓝钴日志的保留周期是多少？",
+      "documents": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md",
+          "language": "zh",
+          "content": "# 蓝钴日志\n蓝钴日志的保留周期是7天。该策略当前有效。"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md",
+          "language": "zh",
+          "content": "# 蓝钴日志策略\n蓝钴日志的保留周期是30天。该策略当前有效。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-immutable-cursor-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "query": "Explain immutable cursors.",
+      "documents": [
+        {
+          "documentId": "v5-immutable-cursor-en-0",
+          "sourcePath": "evaluation-v5/immutable-cursor-en/source-0.md",
+          "content": "# Immutable Cursors\nAn immutable cursor identifies a fixed position in a result stream. Its position does not change after the cursor is returned."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "fixed position"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "does not change"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-stable-state-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "query": "What is a stable state?",
+      "documents": [
+        {
+          "documentId": "v5-stable-state-en-0",
+          "sourcePath": "evaluation-v5/stable-state-en/source-0.md",
+          "content": "# Stable State\nA stable state returns toward its equilibrium after a small disturbance. Stability depends on the system dynamics."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "equilibrium"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "system dynamics"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-hash-table-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "query": "What is a hash table?",
+      "documents": [
+        {
+          "documentId": "v5-hash-table-en-0",
+          "sourcePath": "evaluation-v5/hash-table-en/source-0.md",
+          "content": "# Hash Table\nA hash table places keys into buckets using a hash function. Collisions require a resolution strategy."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "buckets"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "Collisions require a resolution strategy"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-reference-counting-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "query": "Explain reference counting.",
+      "documents": [
+        {
+          "documentId": "v5-reference-counting-en-0",
+          "sourcePath": "evaluation-v5/reference-counting-en/source-0.md",
+          "content": "# Reference Counting\nReference counting tracks how many owners retain an object. A zero count permits releasing the object."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "how many owners"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "zero count"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-write-cache-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "query": "Compare a write-through cache and a write-back cache.",
+      "documents": [
+        {
+          "documentId": "v5-write-cache-en-0",
+          "sourcePath": "evaluation-v5/write-cache-en/source-0.md",
+          "content": "# Write-through Cache\nA write-through cache updates its backing store before acknowledging a write."
+        },
+        {
+          "documentId": "v5-write-cache-en-1",
+          "sourcePath": "evaluation-v5/write-cache-en/source-1.md",
+          "content": "# Write-back Cache\nA write-back cache does not update its backing store immediately. Pending changes are written back later."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "before acknowledging"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "does not update"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "written back later"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-iterator-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "query": "Compare an eager iterator and a lazy iterator.",
+      "documents": [
+        {
+          "documentId": "v5-iterator-en-0",
+          "sourcePath": "evaluation-v5/iterator-en/source-0.md",
+          "content": "# Eager Iterator\nAn eager iterator materializes its input elements before iteration starts."
+        },
+        {
+          "documentId": "v5-iterator-en-1",
+          "sourcePath": "evaluation-v5/iterator-en/source-1.md",
+          "content": "# Lazy Iterator\nA lazy iterator does not materialize every element in advance. It produces elements when requested."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "before iteration starts"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "does not materialize"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "when requested"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-stable-url-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "解释稳定资源地址。",
+      "documents": [
+        {
+          "documentId": "v5-stable-url-zh-0",
+          "sourcePath": "evaluation-v5/stable-url-zh/source-0.md",
+          "content": "# 稳定资源地址\n稳定资源地址在资源移动后仍标识同一逻辑对象。别名记录把旧位置解析为当前位置。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "同一逻辑对象"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "旧位置解析为当前位置"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-immutable-cursor-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是不可变游标？",
+      "documents": [
+        {
+          "documentId": "v5-immutable-cursor-zh-0",
+          "sourcePath": "evaluation-v5/immutable-cursor-zh/source-0.md",
+          "content": "# 不可变游标\n不可变游标标识结果流中的固定位置。游标返回后，其位置不会发生变化。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "固定位置"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "位置不会发生变化"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-hash-table-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是哈希表？",
+      "documents": [
+        {
+          "documentId": "v5-hash-table-zh-0",
+          "sourcePath": "evaluation-v5/hash-table-zh/source-0.md",
+          "content": "# 哈希表\n哈希表根据哈希函数把键放入桶中。键冲突需要额外的消解策略。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "放入桶中"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "消解策略"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-reference-counting-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是引用所有权计数？",
+      "documents": [
+        {
+          "documentId": "v5-reference-counting-zh-0",
+          "sourcePath": "evaluation-v5/reference-counting-zh/source-0.md",
+          "content": "# 引用所有权计数\n引用所有权计数记录持有对象的所有者数量。计数归零后可以释放对象。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "所有者数量"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "计数归零后可以释放对象"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-reentrant-lock-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "query": "比较可重入锁和不可重入锁。",
+      "documents": [
+        {
+          "documentId": "v5-reentrant-lock-zh-0",
+          "sourcePath": "evaluation-v5/reentrant-lock-zh/source-0.md",
+          "content": "# 可重入锁\n可重入锁允许同一线程再次取得已经持有的锁。"
+        },
+        {
+          "documentId": "v5-reentrant-lock-zh-1",
+          "sourcePath": "evaluation-v5/reentrant-lock-zh/source-1.md",
+          "content": "# 不可重入锁\n不可重入锁不允许同一线程再次取得已经持有的锁。重复请求可能导致等待。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "允许同一线程再次取得"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "不允许同一线程再次取得"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "重复请求可能导致等待"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-replication-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "query": "对比同步复制与异步复制。",
+      "documents": [
+        {
+          "documentId": "v5-replication-zh-0",
+          "sourcePath": "evaluation-v5/replication-zh/source-0.md",
+          "content": "# 同步复制\n同步复制在副本确认接收后才确认写入。"
+        },
+        {
+          "documentId": "v5-replication-zh-1",
+          "sourcePath": "evaluation-v5/replication-zh/source-1.md",
+          "content": "# 异步复制\n异步复制不等待副本确认就可以返回写入结果。复制传播可能存在延迟。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "副本确认接收后"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "不等待副本确认"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "传播可能存在延迟"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-wrong-entity-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "query": "What is the retention interval for the Vega journal?",
+      "documents": [
+        {
+          "documentId": "v5-wrong-entity-en-0",
+          "sourcePath": "evaluation-v5/wrong-entity-en/source-0.md",
+          "content": "# Nova Journal\nThe Nova journal retention interval is 6 days."
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [
+          {
+            "id": "wrong-entity-value",
+            "pattern": "6 days"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    },
+    {
+      "id": "v5-unknown-interval-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "query": "青岚记录的保留时长是多少？",
+      "documents": [
+        {
+          "documentId": "v5-unknown-interval-zh-0",
+          "sourcePath": "evaluation-v5/unknown-interval-zh/source-0.md",
+          "content": "# 青岚记录\n现有资料未提供青岚记录保留时长的测量数据。"
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    },
+    {
+      "id": "v5-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the Quartz beacon frequency?",
+      "documents": [
+        {
+          "documentId": "v5-frequency-en-0",
+          "sourcePath": "evaluation-v5/frequency-en/source-0.md",
+          "content": "# Quartz Beacon Frequency\nThe Quartz beacon frequency is 13 Hz."
+        },
+        {
+          "documentId": "v5-frequency-en-1",
+          "sourcePath": "evaluation-v5/frequency-en/source-1.md",
+          "content": "# Quartz Beacon Frequency Record\nThe Quartz beacon frequency is 17 Hz."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "13 Hz"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "17 Hz"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v5-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "query": "石英信标频率是多少？",
+      "documents": [
+        {
+          "documentId": "v5-frequency-zh-0",
+          "sourcePath": "evaluation-v5/frequency-zh/source-0.md",
+          "content": "# 石英信标频率\n石英信标频率是13赫兹。"
+        },
+        {
+          "documentId": "v5-frequency-zh-1",
+          "sourcePath": "evaluation-v5/frequency-zh/source-1.md",
+          "content": "# 石英信标频率记录\n石英信标频率是17赫兹。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "13赫兹"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "17赫兹"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    }
+  ]
+}
