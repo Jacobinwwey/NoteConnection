@@ -6,7 +6,7 @@ date: 2026-09-12
 updated: 2026-09-14
 origin: docs/audits/2026-09-12-project-progress.md
 source_revision: e84d6ece9cce5b82902d4b9335ac096a136a8d2a
-implementation_revision: 8564294bc6757e6ea2a18e06ba482f5a618a95ad
+implementation_revision: e4cdce27c55dbb19f0ba6b4405358661c12d8821
 ---
 
 # Project Convergence Implementation Plan / 项目收敛实施计划
@@ -15,7 +15,7 @@ implementation_revision: 8564294bc6757e6ea2a18e06ba482f5a618a95ad
 
 ### Acceptance checkpoint — 2026-09-14
 
-U1–U6 remain accepted. The public-evidence and configured-workspace follow-ups pass 168 suites / 1,703 tests on each of Node 22.19.0 and 24.14.0, with zero skips. V1–V6 final regressions pass with the initial confirmation history retained. A real Windows development session verifies an external workspace, Bridge layout, Tauri/Godot visibility transitions, grounded answer and clean shutdown; it first exposed and then verified the selected-root fix. Final artifact and remote qualification are tracked in the [September 14 follow-up](../evaluations/2026-09-14-public-evidence-quality-results.md). U7/U8 retain overall partial acceptance for unqualified targets and consented learner outcomes. Earlier slice counts below are historical implementation checkpoints.
+U1–U6 remain accepted. The public-evidence and configured-workspace follow-ups pass 168 suites / 1,708 tests on each of Node 22.19.0 and 24.14.0, with zero skips. V1–V6 final regressions pass with the initial confirmation history retained. A real Windows development session verifies an external workspace, Bridge layout, Tauri/Godot visibility transitions, grounded answer and clean shutdown; it first exposed and then verified the selected-root fix. Final artifact and remote qualification are tracked in the [September 14 follow-up](../evaluations/2026-09-14-public-evidence-quality-results.md). U7/U8 retain overall partial acceptance for unqualified targets and consented learner outcomes. Earlier slice counts below are historical implementation checkpoints.
 
 ### Outcome and constraints
 
@@ -227,7 +227,7 @@ Documentation policy: update English and Chinese status together and link the re
 
 ### 验收检查点 — 2026-09-14
 
-U1–U6 保持已验收。公开证据与所选知识库后续修复在 Node 22.19.0、24.14.0 各通过 168 suite / 1,703 test，零跳过。V1–V6 最终回归通过，首次确认历史保留。真实 Windows development 会话验证外部知识库、Bridge layout、Tauri/Godot 显隐切换、有源回答及正常退出，并实际发现和验证了 root 修复。最终产物与远端资格见[九月十四日后续结果](../evaluations/2026-09-14-public-evidence-quality-results.md#chinese)。U7/U8 对未验收目标与取得同意后的学习效果保留整体部分验收状态；下方旧的分阶段数量属于历史实现检查点。
+U1–U6 保持已验收。公开证据与所选知识库后续修复在 Node 22.19.0、24.14.0 各通过 168 suite / 1,708 test，零跳过。V1–V6 最终回归通过，首次确认历史保留。真实 Windows development 会话验证外部知识库、Bridge layout、Tauri/Godot 显隐切换、有源回答及正常退出，并实际发现和验证了 root 修复。最终产物与远端资格见[九月十四日后续结果](../evaluations/2026-09-14-public-evidence-quality-results.md#chinese)。U7/U8 对未验收目标与取得同意后的学习效果保留整体部分验收状态；下方旧的分阶段数量属于历史实现检查点。
 
 ### 目标与约束
 

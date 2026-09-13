@@ -2,8 +2,8 @@
 title: "Public evidence quality and native workspace follow-up"
 date: 2026-09-14
 status: local_verified_pending_remote
-source_revision: 8564294bc6757e6ea2a18e06ba482f5a618a95ad
-source_tree_hash: 880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244
+source_revision: e4cdce27c55dbb19f0ba6b4405358661c12d8821
+source_tree_hash: 15657ea4ebda7e0eeb7847403d2097abc61b08610431395237a78d2a951b5b94
 parent: docs/plans/2026-09-12-001-refactor-project-convergence-plan.md
 ---
 
@@ -11,7 +11,7 @@ parent: docs/plans/2026-09-12-001-refactor-project-convergence-plan.md
 
 ## English
 
-The source-selection, measurement-comparison and public-answer fixes are implemented. A fresh native session then exposed a separate configured-workspace bug that the passing host suites did not cover; that defect is now fixed and reproduced successfully through Tauri, its packaged sidecar and Godot. Local runtime qualification is complete; remote-main and independent-host verification are pending. This record follows the [September 13 baseline](2026-09-13-convergence-results.md); it does not rewrite that experiment.
+The source-selection, measurement-comparison and public-answer fixes are implemented. A fresh native session then exposed a separate configured-workspace bug that the passing host suites did not cover; that defect is now fixed and reproduced successfully through Tauri, its packaged sidecar and Godot. The version-2 source/artifact archive passes all local gates; independent-host and final remote-main verification are pending. This record follows the [September 13 baseline](2026-09-13-convergence-results.md); it does not rewrite that experiment.
 
 ### Implementation and ownership
 
@@ -58,34 +58,38 @@ This is a Windows **development executable** session using a packaged Node sidec
 
 | Surface | Current result |
 |---|---|
-| Node 22.19.0, final root fix | 168 suites / 1,703 tests; zero failures or skips |
-| Node 24.14.0, final root fix | 168 suites / 1,703 tests; zero failures or skips |
+| Node 22.19.0, final root fix | 168 suites / 1,708 tests; zero failures or skips |
+| Node 24.14.0, final root fix | 168 suites / 1,708 tests; zero failures or skips |
 | Build | TypeScript, Vite, 40 frontend runtime assets and Windows sidecar build pass |
-| Quality | V1–V6 regression checks and answer-stability controls pass on `8564294b` |
+| Quality | V1–V6 regression checks and answer-stability controls pass on `e4cdce27` |
 | Native Windows development session | Graph, Bridge, actual window transitions, grounded answer and shutdown verified |
 | Post-fix HTTP/browser/mobile host checks | HTTP: 55 groups / 92 cases; five browser cases; mobile projection and eight recovery scenarios pass. Rust: 30 ordinary tests plus the explicitly executed semantic probe. |
 | Post-fix SQLite/reference connector evidence | Three SQLite soaks and three reference matrices pass in dist and packaged modes; the checked-in archive passes the strict gate without warnings. |
 | Independent Windows/Linux CI artifacts | Workflow ready; dispatch and artifact verification pending |
 | Remote main | Published as `be2eed37`; Migration Gates and docs/mobile jobs pass. The new qualification workflow is being corrected and reverified. |
 
-Final source fingerprint: `880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244`.
-Windows sidecar SHA-256: `931916d2f39b2737edac394bb8ffb5c71f571664c59770ff2438fc94b121cdb8` (77,917,101 bytes). The measured sidecar embeds Node 22.22.0; host test runners are 22.19.0 and 24.14.0. The [final local manifest](evidence/2026-09-14-native-fix/manifest.json) lists every archived file hash.
+Final source fingerprint v2: `15657ea4ebda7e0eeb7847403d2097abc61b08610431395237a78d2a951b5b94` (583 source inputs).
+Windows sidecar SHA-256: `38b31584e3f500ec8ac16ad32817bea6af0253ffbdb1e3d08efd06d3093c98c6` (77,919,828 bytes). The measured sidecar embeds Node 22.22.0; host test runners are 22.19.0 and 24.14.0. The [final v2 manifest](evidence/2026-09-14-portable/manifest.json) lists current evidence; the [root-fix checkpoint](evidence/2026-09-14-native-fix/manifest.json) remains unchanged.
 
 The reference ANN harness is an HTTP token-posting prefilter. It verifies synchronization, representation, fallback and targeted retrieval, not a deployed approximate index. Each host must be checked against its own binary and manifest; a Linux binary cannot satisfy a Windows artifact identity.
 
 Initial remote checks found two workflow defects: its Node 22.19 pin violated the existing Node 24 CI baseline, and the Windows job invoked the complete desktop bundle's Godot provisioning after successfully building the server. The workflow now pins Node 24.14.0 and calls the existing server-sidecar build operation. This preserves the server-only qualification scope. FR-010 now passes 42/42 checks locally; the [failure/correction record](evidence/2026-09-14-native-fix/ci/workflow-correction.json) preserves the initial outcomes. No production source or artifact fingerprint changed.
 
+### Portable source identity
+
+Both jobs in run `34781056955` passed their host gates. Offline comparison then exposed a source-fingerprint defect: 184 local Rust compiler-cache files were included, and Windows `Cargo.lock` line endings produced a different clean-checkout digest. The [initial reconciliation](evidence/2026-09-14-portable/fingerprint-portability-initial.json) preserves those observations. Version 2 excludes only `src/backend/wasm/target`, normalizes Rust/lockfile text and retains every real source/test and compiled input. Three regression probes failed before the fix; 41 relevant checks now pass. [Git blobs, Windows checkout simulation and the local cache-bearing tree now agree](evidence/2026-09-14-portable/source-reconciliation-v2.json). This changes build evidence, not business runtime behavior; the native-session record above remains tied to its original runtime artifact.
+
 ### Remaining acceptance and direction
 
 U1–U6 remain accepted. Q1–Q4, R1–R4 and N1–N3 are implemented; their publication/qualification checkpoints remain open until the final gates finish. U7/U8 retain overall partial acceptance. Android still needs a signed arm64 device run covering SAF permission/error/retry, process death/reopen, projection continuity and measured RSS under the existing 25 MiB payload / 256 MiB RSS limits. The current ADB device list is empty. Production ANN qualification and consented 7/28-day learner observations remain separate.
 
-Prioritize a representative corpus and an explicit write-latency/heap SLO before replacing whole-snapshot commits with a journal. The final 2,000-document measurement (five writes, 15,751,932-byte snapshot) has p50/p95 394.02/396.46 ms, maximum observed heap growth 235,182,648 bytes (~224 MiB), and maximum sampled RSS 343,973,888 bytes (~328 MiB). Empty-corpus cooperative cancellation p95 is 1.09 ms; it is not a large-corpus worst-case bound. A small API surface does not remove snapshot allocation. Keep exact matching semantics ahead of candidate-index speed: fuzzy fallback remains quadratic in the worst case. Do not promote a global route switch, public-ID cutover, mobile SQLite/WASM expansion or a frontend rewrite from these passing probes. The next quality step should use independently collected examples under one frozen measurement protocol, with the final regression corpus retained as a release guard.
+Prioritize a representative corpus and an explicit write-latency/heap SLO before replacing whole-snapshot commits with a journal. The final 2,000-document measurement (five writes, 15,751,932-byte snapshot) has p50/p95 343.11/358.00 ms, maximum observed heap growth 235,244,432 bytes (~224 MiB), and maximum sampled RSS 344,633,344 bytes (~329 MiB). Empty-corpus cooperative cancellation p95 is 0.97 ms; it is not a large-corpus worst-case bound. A small API surface does not remove snapshot allocation. Keep exact matching semantics ahead of candidate-index speed: fuzzy fallback remains quadratic in the worst case. Do not promote a global route switch, public-ID cutover, mobile SQLite/WASM expansion or a frontend rewrite from these passing probes. The next quality step should use independently collected examples under one frozen measurement protocol, with the final regression corpus retained as a release guard.
 
 <a id="chinese"></a>
 
 ## 中文
 
-来源选择、测量比较和公开回答修复均已实现。随后启动的真实原生会话又发现了既有宿主测试未覆盖的自定义知识库缺陷；该问题已修复，并通过 Tauri、打包 sidecar 与 Godot 复验。本机 runtime 资格已完成，远端 main 与独立宿主验证待完成。本记录接续[九月十三日基线](2026-09-13-convergence-results.md#chinese)，不改写之前的实验。
+来源选择、测量比较和公开回答修复均已实现。随后启动的真实原生会话又发现了既有宿主测试未覆盖的自定义知识库缺陷；该问题已修复，并通过 Tauri、打包 sidecar 与 Godot 复验。v2 源码/产物归档已通过全部本机门禁，独立宿主与最终远端 main 验证待完成。本记录接续[九月十三日基线](2026-09-13-convergence-results.md#chinese)，不改写之前的实验。
 
 ### 实现与所有权
 
@@ -132,25 +136,29 @@ V3–V6 的首次确认均在对应生产修改前冻结，[初次报告](eviden
 
 | 验证面 | 当前结果 |
 |---|---|
-| Node 22.19.0，最终 root 修复 | 168 suite / 1,703 test；零失败、零跳过 |
-| Node 24.14.0，最终 root 修复 | 168 suite / 1,703 test；零失败、零跳过 |
+| Node 22.19.0，最终 root 修复 | 168 suite / 1,708 test；零失败、零跳过 |
+| Node 24.14.0，最终 root 修复 | 168 suite / 1,708 test；零失败、零跳过 |
 | Build | TypeScript、Vite、40 个前端 runtime asset 与 Windows sidecar 构建通过 |
-| Quality | `8564294b` 上 V1–V6 回归及答案稳定性对照通过 |
+| Quality | `e4cdce27` 上 V1–V6 回归及答案稳定性对照通过 |
 | Windows development 原生会话 | 建图、Bridge、实际窗口切换、有源回答和退出通过 |
 | 修复后 HTTP/浏览器/mobile 宿主检查 | HTTP 55 组 / 92 case、五个浏览器场景、移动投影及八个恢复场景通过；Rust 30 项常规测试及显式运行的语义探针通过。 |
 | 修复后 SQLite/参考连接器证据 | SQLite soak 与参考 matrix 各三次通过，覆盖 dist/packaged；入库归档严格门禁通过、无警告。 |
 | 独立 Windows/Linux CI 产物 | 工作流就绪，待 dispatch 和 artifact 复核 |
 | 远端 main | 已发布为 `be2eed37`；Migration Gates 及文档/移动任务通过，新增资格工作流正在修正并复验。 |
 
-最终源码指纹：`880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244`。
-Windows sidecar SHA-256：`931916d2f39b2737edac394bb8ffb5c71f571664c59770ff2438fc94b121cdb8`，大小 77,917,101 bytes。实测 sidecar 内嵌 Node 22.22.0，宿主测试 runner 为 22.19.0 与 24.14.0；[最终本机 manifest](evidence/2026-09-14-native-fix/manifest.json)列出全部归档文件哈希。
+最终源码指纹 v2：`15657ea4ebda7e0eeb7847403d2097abc61b08610431395237a78d2a951b5b94`，覆盖 583 个源码输入。
+Windows sidecar SHA-256：`38b31584e3f500ec8ac16ad32817bea6af0253ffbdb1e3d08efd06d3093c98c6`，大小 77,919,828 bytes。实测 sidecar 内嵌 Node 22.22.0，宿主测试 runner 为 22.19.0 与 24.14.0；[最终 v2 manifest](evidence/2026-09-14-portable/manifest.json)列出当前证据，根目录修复的[检查点 manifest](evidence/2026-09-14-native-fix/manifest.json)保持原样。
 
 参考 ANN harness 是 HTTP token-posting 预筛选器，验证同步、表示一致性、fallback 与定向检索，不是已部署的近似索引。各宿主必须使用自己的 binary/manifest 校验，Linux binary 不能满足 Windows artifact 身份。
 
 首次远端检查发现两项工作流问题：Node 22.19 pin 不符合现有 Node 24 CI 基线；Windows 在服务端构建成功后继续触发完整桌面 bundle 的 Godot 依赖准备。现将工作流固定为 Node 24.14.0，调用已有 server-sidecar 构建入口，保持仅验收服务端的范围。FR-010 本机现通过 42/42；[失败与修正记录](evidence/2026-09-14-native-fix/ci/workflow-correction.json)保留首次结果。生产源码及产物指纹没有变化。
 
+### 可跨宿主复核的源码身份
+
+run `34781056955` 的两个 job 均通过宿主门禁，随后离线比对发现源码指纹规则错误：计入了 184 个本机 Rust 编译缓存文件，Windows `Cargo.lock` 换行也改变了干净 checkout 摘要。[初次核对记录](evidence/2026-09-14-portable/fingerprint-portability-initial.json)保留了观察结果。v2 仅排除 `src/backend/wasm/target`，归一化 Rust/lockfile 文本，同时继续覆盖全部真实源码/测试和编译输入。三个回归探针在修复前失败，41 项相关检查现已通过；[Git blob、Windows checkout 模拟与带缓存本机目录的指纹现已一致](evidence/2026-09-14-portable/source-reconciliation-v2.json)。此次变化属于构建证据，不改变业务 runtime 行为；上方原生会话记录仍绑定其原始运行产物。
+
 ### 剩余验收与方向
 
 U1–U6 保持已验收；Q1–Q4、R1–R4、N1–N3 已实现，其发布/资格检查点在最终门禁完成前保持开放。U7/U8 整体仍为部分验收。Android 仍需签名 arm64 真机执行 SAF 授权/错误/重试、process death/reopen、投影连续性及 RSS 测量，保持既有 25 MiB payload / 256 MiB RSS 限制；当前 ADB 设备列表为空。生产 ANN 与已取得同意的 7/28 天学习观察保留独立验收。
 
-先定义代表性语料与明确的写入延迟/heap SLO，再评估用 journal 替代整快照提交；最终 2,000 文档测量（五次写入、15,751,932-byte snapshot）的 p50/p95 为 394.02/396.46 ms，最大观察 heap 增量 235,182,648 bytes（约 224 MiB），最大采样 RSS 343,973,888 bytes（约 328 MiB）；空语料协作式取消 p95 为 1.09 ms，不是大语料最坏界限。接口变小不会减少 snapshot 分配。候选索引优化应先保 exact matching 语义，fuzzy fallback 最坏情况仍为二次复杂度。不凭这些探针通过就推进全局 route switch、public-ID 切换、移动 SQLite/WASM 扩张或前端重写。下一轮质量工作应在冻结同一测量协议后使用独立采集样本，并保留最终回归语料作为发布门禁。
+先定义代表性语料与明确的写入延迟/heap SLO，再评估用 journal 替代整快照提交；最终 2,000 文档测量（五次写入、15,751,932-byte snapshot）的 p50/p95 为 343.11/358.00 ms，最大观察 heap 增量 235,244,432 bytes（约 224 MiB），最大采样 RSS 344,633,344 bytes（约 329 MiB）；空语料协作式取消 p95 为 0.97 ms，不是大语料最坏界限。接口变小不会减少 snapshot 分配。候选索引优化应先保 exact matching 语义，fuzzy fallback 最坏情况仍为二次复杂度。不凭这些探针通过就推进全局 route switch、public-ID 切换、移动 SQLite/WASM 扩张或前端重写。下一轮质量工作应在冻结同一测量协议后使用独立采集样本，并保留最终回归语料作为发布门禁。
