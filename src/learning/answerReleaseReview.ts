@@ -4174,11 +4174,13 @@ function selectPublicGraphPlanStatements(
         };
 
         const indexedSelected = selected.map((claim, index) => ({ claim, index }));
-        const leadingDefinition = indexedSelected.find((entry) => (
+        const definitionCandidates = indexedSelected.filter((entry) => (
             entry.claim.role === 'definition'
             && !isFormulaOnlyPublicGraphClaim(entry.claim.statement)
             && !isStandaloneVariableDefinitionClaim(entry.claim.statement)
         ));
+        const leadingDefinition = definitionCandidates.find(entry => extractNormalizedPublicMathExpressions(entry.claim.statement).length === 0)
+            || definitionCandidates[0];
         if (leadingDefinition) {
             appendBoundedCandidate(leadingDefinition);
         }

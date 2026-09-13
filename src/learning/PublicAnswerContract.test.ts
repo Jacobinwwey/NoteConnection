@@ -16,6 +16,10 @@ const observedV5 = parseAnswerQualityCorpus(JSON.parse(fs.readFileSync(path.reso
 cases.push(...observedV5.cases.filter(entry => ['v5-iterator-en', 'v5-reentrant-lock-zh', 'v5-replication-zh'].includes(entry.id)));
 const observedV6 = parseAnswerQualityCorpus(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../fixtures/answer-quality/v6.json'), 'utf8')));
 cases.push(...observedV6.cases.filter(entry => ['v6-locking-en', 'v6-queue-en', 'v6-repeatable-command-en', 'v6-read-isolation-zh'].includes(entry.id)));
+const observedV1 = parseAnswerQualityCorpus(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../fixtures/answer-quality/v1.json'), 'utf8')));
+const observedV2 = parseAnswerQualityCorpus(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../fixtures/answer-quality/v2.json'), 'utf8')));
+cases.push(...observedV1.cases.filter(entry => ['eval-capacity-en', 'eval-capacity-zh', 'eval-math-zh'].includes(entry.id)));
+cases.push(...observedV2.cases.filter(entry => entry.id === 'confirm-collections-zh'));
 
 describe.each(['slim', 'full'] as const)('public answer contracts in %s', responseMode => {
     test('keeps an unrelated Chinese sentence out after an explicit comparison subject', async () => {

@@ -924,13 +924,8 @@ function claimsCoverDifferentComparisonBranches(
     const rightIdentity = collectClaimIdentity(right);
     const leftFeatures = new Set(semanticFeatures(leftIdentity));
     const rightFeatures = new Set(semanticFeatures(rightIdentity));
-    const leftTerms = new Set((leftIdentity.match(/[\p{L}\p{N}]+/gu) || []).map((term) => term.toLowerCase()));
-    const rightTerms = new Set((rightIdentity.match(/[\p{L}\p{N}]+/gu) || []).map((term) => term.toLowerCase()));
     const branchMatches = (features: Set<string>, branch: Set<string>) => (
         Array.from(branch).some((feature) => features.has(feature))
-    );
-    const branchIdentityMatches = (terms: Set<string>, branch: Set<string>) => (
-        Array.from(branch).some((term) => terms.has(term))
     );
     return [0, 1].some((index) => {
         const semanticBranch = comparisonBranches[index] || new Set<string>();
@@ -940,7 +935,8 @@ function claimsCoverDifferentComparisonBranches(
             && branchMatches(leftFeatures, semanticBranch) !== branchMatches(rightFeatures, semanticBranch)
         ) || (
             identityBranch.size > 0
-            && branchIdentityMatches(leftTerms, identityBranch) !== branchIdentityMatches(rightTerms, identityBranch)
+            && (comparisonIdentityMatchCount(leftIdentity, identityBranch) > 0)
+                !== (comparisonIdentityMatchCount(rightIdentity, identityBranch) > 0)
         );
     });
 }

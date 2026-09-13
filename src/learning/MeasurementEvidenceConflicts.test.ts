@@ -11,6 +11,15 @@ async function measurementEvidence(first: string, second: string) {
 
 const measurements: Array<[string, string, string, boolean]> = [
     ['different frequencies', 'The calibration rate is 12 Hz.', 'The calibration rate is 18 Hz.', true],
+    ['storage capacity', 'The calibration capacity is 64 MB.', 'The calibration capacity is 128 MB.', true],
+    ['Chinese storage capacity', '定标缓冲区容量是64MB。', '定标缓冲区容量是128MB。', true],
+    ['decimal storage units', 'The calibration capacity is 1 MB.', 'The calibration capacity is 1000000 B.', false],
+    ['binary storage units', 'The calibration capacity is 1 MiB.', 'The calibration capacity is 1048576 B.', false],
+    ['decimal and binary storage units differ', 'The calibration capacity is 1 MB.', 'The calibration capacity is 1 MiB.', true],
+    ['bits and bytes', 'The calibration capacity is 1 B.', 'The calibration capacity is 8 b.', false],
+    ['megabits and megabytes', 'The calibration capacity is 1 MB.', 'The calibration capacity is 8 Mb.', false],
+    ['case-distinct storage units', 'The calibration capacity is 1 MB.', 'The calibration capacity is 1 Mb.', true],
+    ['opposed storage constraint', 'The calibration capacity is 1 MB.', 'The calibration capacity is not 1000000 B.', true],
     ['Chinese frequencies', '定标频率是12赫兹。', '定标频率是18赫兹。', true],
     ['day durations', 'The calibration retention period is 7 days.', 'The calibration retention period is 30 days.', true],
     ['Chinese day durations', '定标记录保留周期是7天。', '定标记录保留周期是30天。', true],

@@ -60,6 +60,7 @@ export function extractDefinitionQuerySubject(message: string): string {
         /^(?:什么是|何谓|指的是什么|定义(?:是什么)?|是什么意思|解释(?:一下)?|介绍(?:一下)?|请(?:解释|介绍)(?:一下)?)\s*([^?？!！。.,，;；:：\n\r]+)/u
     );
     return normalize(match?.[1] || '')
+        .replace(/\s+according\s+to\s+(?:the\s+)?(?:(?:active|current|available|provided|cited)\s+)?(?:notes?|sources?|evidence|records?|documents?)\s*$/iu, '')
         .replace(/\s+(?:and|as\s+well\s+as)\s+(?:what|which|how|why|when|where|who|its|their)\b.*$/iu, '')
         .replace(/\s+(?:which|what|how|should|learn|study)\b.*$/iu, '')
         .replace(/(?:我应该|应该通过|通过哪些|哪些知识点|如何学习|怎么学习|及其|以及它|以及其).*$/u, '')

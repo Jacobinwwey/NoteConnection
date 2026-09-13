@@ -200,6 +200,15 @@ const COMPARABLE_PLATFORM_SCOPE_PATTERN = /\b(?:in|for|on|under|within)\s+(?:the
 const COMPARABLE_TIME_SCOPE_PATTERN = /\b(?:in|during|on|as of)\s+(\d{4}(?:-\d{2}(?:-\d{2})?)?)\b/i;
 
 const MEASUREMENT_UNIT_GROUPS: Array<{ aliases: string[]; dimension: string; scale: number; offset?: number }> = [
+    { aliases: ['B', 'byte', 'bytes', '字节'], dimension: 'information', scale: 1 },
+    { aliases: ['b', 'bit', 'bits', '比特'], dimension: 'information', scale: 1 / 8 },
+    { aliases: ['kB', 'kilobyte', 'kilobytes'], dimension: 'information', scale: 1000 },
+    { aliases: ['MB', 'megabyte', 'megabytes', '兆字节'], dimension: 'information', scale: 1e6 },
+    { aliases: ['Mb', 'megabit', 'megabits'], dimension: 'information', scale: 1e6 / 8 },
+    { aliases: ['GB', 'gigabyte', 'gigabytes'], dimension: 'information', scale: 1e9 },
+    { aliases: ['KiB', 'kibibyte', 'kibibytes'], dimension: 'information', scale: 1024 },
+    { aliases: ['MiB', 'mebibyte', 'mebibytes'], dimension: 'information', scale: 1024 ** 2 },
+    { aliases: ['GiB', 'gibibyte', 'gibibytes'], dimension: 'information', scale: 1024 ** 3 },
     { aliases: ['m', 'meter', 'meters', 'metre', 'metres', '米'], dimension: 'length', scale: 1 },
     { aliases: ['cm', '厘米'], dimension: 'length', scale: 1e-2 },
     { aliases: ['mm', '毫米'], dimension: 'length', scale: 1e-3 },
