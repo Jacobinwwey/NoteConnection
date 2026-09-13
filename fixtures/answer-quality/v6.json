@@ -1,0 +1,703 @@
+{
+  "schemaVersion": 1,
+  "version": "6.0",
+  "authoredAt": "2026-09-13",
+  "backend": "local-hybrid-v1",
+  "usageRole": "confirmation frozen before comparison identity, Chinese context and evidence-conflict measurement corrections",
+  "cases": [
+    {
+      "id": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "query": "What is a directed acyclic graph?",
+      "documents": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md",
+          "language": "en",
+          "content": "# Directed Acyclic Graph\nA directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "no directed cycles"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "topological order"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "contains directed cycles"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "query": "什么是有向无环图？",
+      "documents": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md",
+          "language": "zh",
+          "content": "# 有向无环图\n有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "不含有向环"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "拓扑排序"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "一定包含有向环"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "query": "Why does unbounded queuing increase latency?",
+      "documents": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md",
+          "language": "en",
+          "content": "# Unbounded Queuing\nUnbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "wait|waiting"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "admission|reject"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "eliminates all latency"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "query": "为什么无界排队会增加延迟？",
+      "documents": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md",
+          "language": "zh",
+          "content": "# 无界排队\n无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "等待"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "准入|拒绝"
+            ]
+          }
+        ],
+        "unsupportedClaims": [
+          {
+            "id": "unsupported-1",
+            "pattern": "消除所有延迟"
+          }
+        ],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the retention period for the Cobalt log?",
+      "documents": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md",
+          "language": "en",
+          "content": "# Cobalt Log\nThe Cobalt log retention period is 7 days. This policy is active."
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md",
+          "language": "en",
+          "content": "# Cobalt Log Policy\nThe Cobalt log retention period is 30 days. This policy is active."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "query": "蓝钴日志的保留周期是多少？",
+      "documents": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md",
+          "language": "zh",
+          "content": "# 蓝钴日志\n蓝钴日志的保留周期是7天。该策略当前有效。"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md",
+          "language": "zh",
+          "content": "# 蓝钴日志策略\n蓝钴日志的保留周期是30天。该策略当前有效。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "7"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "30"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v6-locking-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "query": "Compare a pessimistic lock and an optimistic lock.",
+      "documents": [
+        {
+          "documentId": "v6-locking-en-0",
+          "sourcePath": "evaluation-v6/locking-en/source-0.md",
+          "content": "# Pessimistic Lock\nA pessimistic lock excludes competing writers before a protected update."
+        },
+        {
+          "documentId": "v6-locking-en-1",
+          "sourcePath": "evaluation-v6/locking-en/source-1.md",
+          "content": "# Optimistic Lock\nAn optimistic lock validates the observed version before committing an update. It rejects the update when that version has changed."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "excludes competing writers"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "validates the observed version"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "rejects the update"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v6-locking-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "query": "比较悲观锁与乐观锁。",
+      "documents": [
+        {
+          "documentId": "v6-locking-zh-0",
+          "sourcePath": "evaluation-v6/locking-zh/source-0.md",
+          "content": "# 悲观锁\n悲观锁在执行更新前排除其他写入者。"
+        },
+        {
+          "documentId": "v6-locking-zh-1",
+          "sourcePath": "evaluation-v6/locking-zh/source-1.md",
+          "content": "# 乐观锁\n乐观锁在提交更新前校验读取到的版本。乐观锁在版本变化时拒绝该次更新。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "排除其他写入者"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "校验读取到的版本"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "版本变化时拒绝"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v6-queue-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "query": "Compare an event queue and a callback queue.",
+      "documents": [
+        {
+          "documentId": "v6-queue-en-0",
+          "sourcePath": "evaluation-v6/queue-en/source-0.md",
+          "content": "# Event Queue\nAn event queue stores event messages until they are consumed."
+        },
+        {
+          "documentId": "v6-queue-en-1",
+          "sourcePath": "evaluation-v6/queue-en/source-1.md",
+          "content": "# Callback Queue\nA callback queue stores function invocations. It runs the functions when the executor is ready."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "event messages"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "function invocations"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "executor is ready"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v6-writers-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "query": "比较单写者队列和多写者队列。",
+      "documents": [
+        {
+          "documentId": "v6-writers-zh-0",
+          "sourcePath": "evaluation-v6/writers-zh/source-0.md",
+          "content": "# 单写者队列\n单写者队列仅允许一个生产者写入元素。"
+        },
+        {
+          "documentId": "v6-writers-zh-1",
+          "sourcePath": "evaluation-v6/writers-zh/source-1.md",
+          "content": "# 多写者队列\n多写者队列允许多个生产者并发写入元素。写入次序由并发协调决定。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "一个生产者"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "多个生产者并发写入"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "并发协调"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v6-repeatable-command-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "query": "Compare a repeatable command and a one-shot command.",
+      "documents": [
+        {
+          "documentId": "v6-repeatable-command-en-0",
+          "sourcePath": "evaluation-v6/repeatable-command-en/source-0.md",
+          "content": "# Repeatable Command\nA repeatable command may be issued again with the same request identifier. Repeated requests reuse the prior outcome."
+        },
+        {
+          "documentId": "v6-repeatable-command-en-1",
+          "sourcePath": "evaluation-v6/repeatable-command-en/source-1.md",
+          "content": "# One-shot Command\nA one-shot command consumes its invocation token. That token cannot authorize another invocation."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "issued again"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "reuse the prior outcome"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "consumes its invocation token"
+            ]
+          },
+          {
+            "id": "fact-4",
+            "patterns": [
+              "cannot authorize another invocation"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v6-read-isolation-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "query": "比较可重复读与读已提交。",
+      "documents": [
+        {
+          "documentId": "v6-read-isolation-zh-0",
+          "sourcePath": "evaluation-v6/read-isolation-zh/source-0.md",
+          "content": "# 可重复读\n可重复读维持同一事务内多次读取的一致性。再次读取使用原有快照。"
+        },
+        {
+          "documentId": "v6-read-isolation-zh-1",
+          "sourcePath": "evaluation-v6/read-isolation-zh/source-1.md",
+          "content": "# 读已提交\n读已提交只允许读取已经提交的数据。后续读取可能看到新提交的版本。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "多次读取的一致性"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "原有快照"
+            ]
+          },
+          {
+            "id": "fact-3",
+            "patterns": [
+              "已经提交的数据"
+            ]
+          },
+          {
+            "id": "fact-4",
+            "patterns": [
+              "新提交的版本"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v6-write-conflict-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "query": "Explain write conflict detection.",
+      "documents": [
+        {
+          "documentId": "v6-write-conflict-en-0",
+          "sourcePath": "evaluation-v6/write-conflict-en/source-0.md",
+          "content": "# Write Conflict Detection\nWrite conflict detection identifies competing writes to the same logical item. A detected write conflict can cause a transaction to retry."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "competing writes"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "transaction to retry"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v6-write-conflict-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "query": "解释写写冲突。",
+      "documents": [
+        {
+          "documentId": "v6-write-conflict-zh-0",
+          "sourcePath": "evaluation-v6/write-conflict-zh/source-0.md",
+          "content": "# 写写冲突\n写写冲突发生于两笔事务更新相同的数据项。写写冲突可以通过锁或版本校验来检测。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "更新相同的数据项"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "锁或版本校验"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v6-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "query": "What is the Orion sampler frequency?",
+      "documents": [
+        {
+          "documentId": "v6-frequency-en-0",
+          "sourcePath": "evaluation-v6/frequency-en/source-0.md",
+          "content": "# Orion Sampler Frequency\nThe Orion sampler frequency is 18 Hz."
+        },
+        {
+          "documentId": "v6-frequency-en-1",
+          "sourcePath": "evaluation-v6/frequency-en/source-1.md",
+          "content": "# Orion Sampler Frequency Report\nThe Orion sampler frequency is 27 Hz."
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "18 Hz"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "27 Hz"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v6-temperature-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "query": "云杉探头温度是多少？",
+      "documents": [
+        {
+          "documentId": "v6-temperature-zh-0",
+          "sourcePath": "evaluation-v6/temperature-zh/source-0.md",
+          "content": "# 云杉探头温度\n云杉探头温度是8摄氏度。"
+        },
+        {
+          "documentId": "v6-temperature-zh-1",
+          "sourcePath": "evaluation-v6/temperature-zh/source-1.md",
+          "content": "# 云杉探头温度记录\n云杉探头温度是12摄氏度。"
+        }
+      ],
+      "reference": {
+        "facts": [
+          {
+            "id": "fact-1",
+            "patterns": [
+              "8摄氏度"
+            ]
+          },
+          {
+            "id": "fact-2",
+            "patterns": [
+              "12摄氏度"
+            ]
+          }
+        ],
+        "unsupportedClaims": [],
+        "expectsConflict": true,
+        "expectsAbstention": false
+      }
+    },
+    {
+      "id": "v6-unmeasured-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "query": "What is the Nacre alloy yield temperature?",
+      "documents": [
+        {
+          "documentId": "v6-unmeasured-en-0",
+          "sourcePath": "evaluation-v6/unmeasured-en/source-0.md",
+          "content": "# Nacre Alloy Yield Temperature\nThe archive does not provide a measured value for the yield temperature."
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    },
+    {
+      "id": "v6-unmeasured-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "query": "岩霜材料的转变温度是多少？",
+      "documents": [
+        {
+          "documentId": "v6-unmeasured-zh-0",
+          "sourcePath": "evaluation-v6/unmeasured-zh/source-0.md",
+          "content": "# 岩霜材料转变温度\n现有资料没有提供岩霜材料转变温度的测量数据。"
+        }
+      ],
+      "reference": {
+        "facts": [],
+        "unsupportedClaims": [],
+        "expectsConflict": false,
+        "expectsAbstention": true
+      }
+    }
+  ]
+}
