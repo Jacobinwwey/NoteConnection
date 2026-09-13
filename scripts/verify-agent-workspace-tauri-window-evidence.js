@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { stripVTControlCharacters } = require('node:util');
 
 const { verifyAgentWorkspaceTauri } = require('./verify-agent-workspace-tauri');
 const {
@@ -103,15 +104,21 @@ function runRustWindowEvidenceTests(options = {}) {
                 'src-tauri/Cargo.toml',
                 pattern,
                 '--',
-                '--nocapture',
+                '--show-output',
             ],
             {
                 timeoutMs,
             }
         );
+        // Cargo exits successfully when a filter matches no tests. Capture the
+        // named libtest verdict, with output shown after it to avoid interleaving.
+        const output = stripVTControlCharacters(result.stdout);
+        const namedTestPassed = new RegExp(`^test (?:[^\\s]+::)?${pattern} \\.\\.\\. ok\\s*$`, 'm').test(output);
         return {
             pattern,
             ...result,
+            passed: result.exitCode === 0 && namedTestPassed,
+            evidenceFailure: result.exitCode !== 0 ? 'cargo_failed' : namedTestPassed ? null : 'required_test_did_not_pass',
         };
     });
 }
@@ -209,11 +216,13 @@ async function verifyAgentWorkspaceTauriWindowEvidence(options = {}) {
             exitCode: result.exitCode,
             timedOut: result.timedOut,
             errorMessage: result.errorMessage,
+            passed: result.passed,
+            evidenceFailure: result.evidenceFailure,
             logPath,
         };
     });
 
-    const failedTests = tests.filter((test) => test.exitCode !== 0);
+    const failedTests = tests.filter((test) => !test.passed);
     const report = {
         generatedAt,
         artifacts: {
