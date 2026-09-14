@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { createHash } = require('node:crypto');
 const { sha256File, computeSidecarSourceFingerprint } = require('./sidecar-build-fingerprint');
 
 const root = path.resolve(__dirname, '..');
@@ -34,6 +35,19 @@ function verifyInstalledPayload(directory, expectedFiles) {
     assert.equal(observed.sha256, expected.sha256, `Installed hash differs for ${expected.name}`);
     return observed;
   });
+}
+
+function fingerprintTauriInstallerExecutable(executable, bundleCode) {
+  assert(['NSS', 'MSI'].includes(bundleCode), 'Unsupported Tauri Windows bundle marker');
+  const bytes = fs.readFileSync(executable);
+  const marker = Buffer.from('__TAURI_BUNDLE_TYPE_VAR_UNK');
+  const offset = bytes.indexOf(marker);
+  assert(offset >= 0 && bytes.indexOf(marker, offset + marker.length) === -1, 'Expected exactly one unstamped Tauri bundle marker');
+  // tauri-utils 2.8 replaces these three bytes while packaging, then restores
+  // the build executable. Derive the exact packaged hash; every other byte is
+  // still checked, including when two installer formats share one build.
+  Buffer.from(bundleCode).copy(bytes, offset + marker.length - 3);
+  return { name: 'npm.exe', bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
 }
 
 function runInstaller(executable, args, logPath, spawnOptions = {}) {
@@ -104,7 +118,7 @@ async function qualifyMsiInstaller(installer, directory, expectedFiles) {
   const runtimeDirectory = path.join(directory, 'msi-runtime');
   const report = { installer, installerSha256: sha256File(installer), installDirectory };
   try {
-    report.install = runInstaller('msiexec.exe', ['/i', installer, '/qn', '/norestart', `INSTALLDIR=${installDirectory}`, '/l*v', path.join(directory, 'msi-install-detail.log')], path.join(directory, 'msi-install.log'));
+    report.install = runInstaller('msiexec.exe', ['/i', `"${installer}"`, '/qn', '/norestart', `INSTALLDIR="${installDirectory}"`, '/l*v', `"${path.join(directory, 'msi-install-detail.log')}"`], path.join(directory, 'msi-install.log'), { windowsVerbatimArguments: true });
     report.payload = verifyInstalledPayload(installDirectory, expectedFiles);
     report.registrations = installedRegistrations();
     assert.equal(report.registrations.length, 1, 'MSI must register one installed product');
@@ -112,7 +126,7 @@ async function qualifyMsiInstaller(installer, directory, expectedFiles) {
   } catch (error) { report.error = error.stack || String(error); }
   finally {
     try {
-      report.uninstall = runInstaller('msiexec.exe', ['/x', installer, '/qn', '/norestart', '/l*v', path.join(directory, 'msi-uninstall-detail.log')], path.join(directory, 'msi-uninstall.log'));
+      report.uninstall = runInstaller('msiexec.exe', ['/x', `"${installer}"`, '/qn', '/norestart', '/l*v', `"${path.join(directory, 'msi-uninstall-detail.log')}"`], path.join(directory, 'msi-uninstall.log'), { windowsVerbatimArguments: true });
       report.removal = await verifyUninstalled(installDirectory, expectedFiles);
       if (report.runtime?.passed) {
         assert(fs.existsSync(path.join(runtimeDirectory, 'runtime/graph_data.json')), 'Uninstall must preserve external runtime data');
@@ -131,13 +145,17 @@ async function main() {
   assert(!fs.existsSync(directory), 'Installer evidence directory must be fresh');
   fs.mkdirSync(directory, { recursive: true });
   const version = require('../package.json').version;
-  const expectedFiles = Object.entries({
-    'npm.exe': 'src-tauri/target/release/npm.exe',
+  const sidecarFiles = Object.entries({
     'server.exe': 'src-tauri/bin/server-x86_64-pc-windows-msvc.exe',
     'godot.exe': 'src-tauri/bin/godot-x86_64-pc-windows-msvc.exe',
     'markdown-worker.exe': 'src-tauri/bin/markdown-worker-x86_64-pc-windows-msvc.exe',
     'path_mode.pck': 'output/desktop/path_mode.pck',
   }).map(([name, relative]) => ({ name, bytes: fs.statSync(path.join(root, relative)).size, sha256: sha256File(path.join(root, relative)) }));
+  const executable = path.join(root, 'src-tauri/target/release/npm.exe');
+  const expectedFiles = {
+    nsis: [fingerprintTauriInstallerExecutable(executable, 'NSS'), ...sidecarFiles],
+    msi: [fingerprintTauriInstallerExecutable(executable, 'MSI'), ...sidecarFiles],
+  };
   const report = {
     generatedAt: new Date().toISOString(), sourceRevision: process.env.GITHUB_SHA,
     runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT,
@@ -145,8 +163,8 @@ async function main() {
     signingScope: 'Installer behavior only; signing trust is not qualified.',
   };
   try {
-    report.nsis = await qualifyNsisInstaller(path.join(root, `src-tauri/target/release/bundle/nsis/NoteConnection_${version}_x64-setup.exe`), directory, expectedFiles);
-    report.msi = await qualifyMsiInstaller(path.join(root, `src-tauri/target/release/bundle/msi/NoteConnection_${version}_x64_en-US.msi`), directory, expectedFiles);
+    report.nsis = await qualifyNsisInstaller(path.join(root, `src-tauri/target/release/bundle/nsis/NoteConnection_${version}_x64-setup.exe`), directory, expectedFiles.nsis);
+    report.msi = await qualifyMsiInstaller(path.join(root, `src-tauri/target/release/bundle/msi/NoteConnection_${version}_x64_en-US.msi`), directory, expectedFiles.msi);
     report.passed = report.nsis.passed && report.msi.passed;
   } catch (error) { report.error = error.stack || String(error); report.passed = false; }
   fs.writeFileSync(path.join(directory, 'report.json'), JSON.stringify(report, null, 2) + '\n');
@@ -155,4 +173,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch(error => { console.error(error); process.exitCode = 1; });
-module.exports = { verifyInstalledPayload };
+module.exports = { verifyInstalledPayload, fingerprintTauriInstallerExecutable };

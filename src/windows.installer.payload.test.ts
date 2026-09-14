@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-const { verifyInstalledPayload } = require('../scripts/verify-windows-installers');
+const { verifyInstalledPayload, fingerprintTauriInstallerExecutable } = require('../scripts/verify-windows-installers');
 const { sha256File } = require('../scripts/sidecar-build-fingerprint');
 
 describe('installed Windows payload verification', () => {
@@ -28,5 +28,22 @@ describe('installed Windows payload verification', () => {
   test('rejects same-sized stale resources', () => {
     fs.writeFileSync(path.join(directory, 'path_mode.pck'), 'GDPC altered');
     expect(() => verifyInstalledPayload(directory, expected)).toThrow(/hash differs/);
+  });
+
+  test.each(['NSS', 'MSI'])('checks the exact Tauri %s stamp without ignoring executable bytes', (bundleCode) => {
+    const executable = path.join(directory, 'build.exe');
+    fs.writeFileSync(executable, 'PE before\0__TAURI_BUNDLE_TYPE_VAR_UNK\0PE after');
+    const fingerprint = fingerprintTauriInstallerExecutable(executable, bundleCode);
+    fs.writeFileSync(path.join(directory, 'npm.exe'), `PE before\0__TAURI_BUNDLE_TYPE_VAR_${bundleCode}\0PE after`);
+    expect(verifyInstalledPayload(directory, [fingerprint])).toEqual([fingerprint]);
+    fs.writeFileSync(path.join(directory, 'npm.exe'), `PE edited\0__TAURI_BUNDLE_TYPE_VAR_${bundleCode}\0PE after`);
+    expect(() => verifyInstalledPayload(directory, [fingerprint])).toThrow(/hash differs/);
+    expect(fs.readFileSync(executable, 'utf8')).toContain('_VAR_UNK');
+  });
+
+  test.each(['missing marker', '__TAURI_BUNDLE_TYPE_VAR_UNK__TAURI_BUNDLE_TYPE_VAR_UNK'])('rejects missing or ambiguous bundle stamps (%s)', (contents) => {
+    const executable = path.join(directory, 'build.exe');
+    fs.writeFileSync(executable, contents);
+    expect(() => fingerprintTauriInstallerExecutable(executable, 'NSS')).toThrow(/exactly one/);
   });
 });

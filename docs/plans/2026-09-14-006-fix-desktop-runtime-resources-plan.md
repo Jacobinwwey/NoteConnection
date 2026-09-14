@@ -28,6 +28,10 @@ P4 remains open until fresh NSIS/MSI installation and uninstallation pass on a d
 
 Source checkpoint: Node 22.19.0 and 24.14.0 each pass 170 suites / 1,731 tests with zero failures or skips; 34 ordinary Rust tests, both separately executed Wry window tests, and the explicit Rust mobile semantic probe pass. The full run first detected test discovery entering archived compiled output; Jest now discovers the actual `src/` suites. Supply-readiness consumes the centralized Godot configuration while still rejecting missing digest pins. Pack tests also reject a symlinked runtime root and files added during export; both regressions failed before their fixes. TypeScript/Vite, 40 frontend runtime assets and a real Godot 4.6 import/export pass. These checks precede fresh installer execution.
 
+Remote source `031f85f8`: native-window run `34892491842` and Windows/Linux foundation run `34898619256` pass. Initial installer run `34892491904` correctly remains failed. It exposed verifier assumptions: Tauri temporarily stamps `UNK` as `NSS`/`MSI` in each bundled executable; msiexec requires quotes around a property's value, not around the whole `NAME=value` argument. The follow-up derives the exact stamped hash while checking all other bytes. Seven payload tests and actual NSIS/MSI byte comparisons pass. A missing-package probe reproduces the old quoting timeout and returns expected error 1619 with corrected quoting; no package was installed by that probe.
+
+Artifact scope: the local PCK includes five ignored HDR `.exr` files (179,271,168 bytes); clean CI contains tracked runtime sources without those optional backgrounds (311,164 bytes in the initial run). Preserve each input manifest separately. Do not infer byte reproducibility or equivalent optional-background coverage from the same source commit.
+
 ## 中文
 
 W1–W5 窗口契约已经完成，但未执行安装后应用的启动链路。当前 Tauri bundle 只声明 sidecar executable，没有 Godot 项目资源；`resolve_godot_project_path` 回落到 `cwd/path_mode`。此外，Godot 项目声明 4.6，而桌面 release provisioning 固定 4.3。这些是明确的打包风险，尚不是安装包验收证据。
@@ -45,3 +49,7 @@ W1–W5 窗口契约已经完成，但未执行安装后应用的启动链路。
 P4 仍待一次性 Windows runner 上的新 NSIS／MSI 安装、卸载通过。新增 qualification workflow 检查安装文件哈希、含空格路径、源码目录外启动、图／布局、前端负责的退出操作、进程退出和运行数据保留。Godot 原生按钮输入继续单独记录。截图工具已支持 DPI awareness，避免缩放屏幕截断证据。最终源码／产物验收和远端发布仍属于 P5。
 
 源码检查点：Node 22.19.0 与 24.14.0 各通过 170 个 suite／1,731 个测试，零失败、零跳过；34 项常规 Rust 测试、分别执行的两项真实 Wry 窗口测试，以及显式 Rust 移动语义探针均通过。首次全量执行发现 Jest 扫入了归档的编译输出，现在测试发现范围限定在真正的 `src/` 套件。Supply-readiness 已读取集中式 Godot 配置，仍会拒绝缺失的摘要固定值。资源包测试补齐了顶层符号链接目录和导出期间新增文件的拒绝，两项均已验证修复前失败。TypeScript／Vite、40 项前端运行资源及实际 Godot 4.6 导入／导出通过。这些检查尚不代表新的安装行为已经验收。
+
+远端源码 `031f85f8`：真实窗口 run `34892491842` 及 Windows／Linux foundation run `34898619256` 通过。首次安装包 run `34892491904` 继续保留为失败；它暴露了校验器的两项假设错误：Tauri 会在打包时临时将 executable 中的 `UNK` 标记改为 `NSS`／`MSI`；msiexec 要求给属性值加引号，而不是给整个 `NAME=value` 参数加引号。后续修复按实际打包标记派生预期哈希，其他字节仍逐一约束。7 项 payload 测试及真实 NSIS／MSI 字节比对通过。使用不存在安装包的探针复现了旧参数写法超时，修正后立即返回预期错误 1619；该探针没有安装任何包。
+
+产物范围：本机 PCK 包含五个被忽略的 HDR `.exr` 文件，大小为 179,271,168 字节；干净 CI 仅含跟踪的运行资源，没有这些可选背景，首次 run 中为 311,164 字节。各自保留输入清单；不能仅凭相同源码提交声称字节可复现或可选背景覆盖等价。
