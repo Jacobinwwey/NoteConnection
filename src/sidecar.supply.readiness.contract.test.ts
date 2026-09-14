@@ -147,6 +147,18 @@ describe('sidecar supply readiness contract', () => {
     expect(result.artifacts.godot.sourceKindsAvailable).toContain('download');
   });
 
+  test('does not accept a malformed centralized archive digest', () => {
+    const fakeRepo = temp.mkdir('repo');
+    temp.mkdir(path.join('repo', '.github', 'workflows'));
+    temp.mkdir(path.join('repo', 'config'));
+    fs.copyFileSync(path.join(repoRoot, '.github/workflows/release-desktop-multi-os.yml'), path.join(fakeRepo, '.github/workflows/release-desktop-multi-os.yml'));
+    const runtime = JSON.parse(fs.readFileSync(path.join(repoRoot, 'config/godot-desktop-runtime.json'), 'utf8'));
+    runtime.archives.windows.sha256 = 'unverified';
+    fs.writeFileSync(path.join(fakeRepo, 'config/godot-desktop-runtime.json'), JSON.stringify(runtime));
+    const result = utils.evaluateSidecarSupplyReadiness({ repoRoot: fakeRepo, platform: 'linux', arch: 'x64', env: {} });
+    expect(result.ci.releaseWorkflowArchiveDigestPinned).toBe(false);
+  });
+
   test('current repo pins archive digests and can disable upstream fallback for mirror-only release smoke runs', () => {
     const result = utils.evaluateSidecarSupplyReadiness({
       repoRoot,

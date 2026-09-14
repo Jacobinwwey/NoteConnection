@@ -11,7 +11,7 @@
   - `src/notemd/`: NoteMD LLM-powered Markdown processing.
   - `src/utils/`: Runtime path resolution (`RuntimePaths.ts`), cross-platform detection (`platform.ts`).
 - `src/frontend/`: Static UI (HTML/CSS/vanilla JS + ES modules). Employs Web Workers (`path_worker.js`, `simulationWorker.js`) to offload rendering and physics. Uses Vite for ES module bundling (6 chunks: main, graph-app, graph-state, agent-workspace, path-mode, path-workbench, path-worker). Extracted ES modules: `i18n.mjs`, `runtime_bridge.mjs`, `main.mjs`, `path_worker_bridge.mjs`, `workbench_state.mjs`, `graph_state.mjs`. Legacy IIFE files (`.js`) coexist with ES module versions (`.mjs`).
-- `path_mode/`: Godot 4.3 UI layer (Forward+ Vulkan renderer, GL Compatibility fallback for mobile).
+- `path_mode/`: Godot 4.6 UI layer (Forward+ Vulkan renderer, GL Compatibility fallback for mobile).
 - `src-tauri/`: Tauri v2 (Rust) desktop shell. Platform configs at `tauri.{linux,macos,windows,android}.conf.json`; sidecar binaries at `bin/`.
 - `scripts/`: Build helpers (~50 scripts: sidecar build, verification, benchmarking, docs).
 - `android/`: Capacitor Android project (deprecated; Tauri Android is the active mobile path).

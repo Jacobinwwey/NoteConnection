@@ -1,0 +1,20 @@
+{
+  "version": "4.6",
+  "releaseTag": "4.6-stable",
+  "mirrorTag": "godot-mirror-v4.6-stable",
+  "upstreamBaseUrl": "https://github.com/godotengine/godot/releases/download/4.6-stable",
+  "archives": {
+    "windows": {
+      "name": "Godot_v4.6-stable_win64.exe.zip",
+      "sha256": "5c9177625c0dca18c92ba6328203c7b5a9596c85ef9d7c968396f0272d8f10d9"
+    },
+    "linux": {
+      "name": "Godot_v4.6-stable_linux.x86_64.zip",
+      "sha256": "6bcc59dfd1d670e918c77eae06e82b9dc5699de13d353dc3a4b3b6b307b6dc06"
+    },
+    "macos": {
+      "name": "Godot_v4.6-stable_macos.universal.zip",
+      "sha256": "fc15ceb6280420f117ab4ef62332654db0088078faeeb9025dd814276185ed3b"
+    }
+  }
+}

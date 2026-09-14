@@ -76,6 +76,34 @@ describe('resolveRuntimePaths', () => {
     expect(resolved.kbRoot).toBe(path.resolve(kbRoot));
   });
 
+  test('keeps packaged runtime manifests in the writable runtime directory', () => {
+    const previousPkg = Object.getOwnPropertyDescriptor(process, 'pkg');
+    Object.defineProperty(process, 'pkg', { configurable: true, value: { entrypoint: '/snapshot/app/server.js' } });
+    restoreEnv.push(() => {
+      if (previousPkg) Object.defineProperty(process, 'pkg', previousPkg);
+      else Reflect.deleteProperty(process, 'pkg');
+    });
+    const projectRoot = temp.mkdir('packaged_assets');
+    temp.mkdir(path.join('packaged_assets', 'dist', 'src', 'frontend'));
+    const runtimeDataDir = temp.mkdir('user_runtime');
+    restoreEnv.push(setEnv('NOTE_CONNECTION_PROJECT_ROOT', projectRoot));
+    restoreEnv.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', runtimeDataDir));
+
+    const resolved = resolveRuntimePaths(temp.child('module'));
+    expect('runtimeManifestPath' in resolved ? resolved.runtimeManifestPath : undefined)
+      .toBe(path.join(runtimeDataDir, 'active-sidecar-runtime.json'));
+  });
+
+  test('preserves the development manifest location used by diagnostic tools', () => {
+    const projectRoot = temp.mkdir('project');
+    temp.mkdir(path.join('project', 'Knowledge_Base'));
+    restoreEnv.push(setEnv('NOTE_CONNECTION_PROJECT_ROOT', projectRoot));
+    restoreEnv.push(setEnv('NOTE_CONNECTION_RUNTIME_DATA_DIR', temp.mkdir('runtime')));
+    const resolved = resolveRuntimePaths(temp.child('module'));
+    expect('runtimeManifestPath' in resolved ? resolved.runtimeManifestPath : undefined)
+      .toBe(path.join(projectRoot, 'tmp', 'active-sidecar-runtime.json'));
+  });
+
   test('normalizes env kb path that points to a folder inside Knowledge_Base', () => {
     const projectRoot = temp.mkdir('project');
     const kbRoot = temp.mkdir(path.join('project', 'Knowledge_Base'));

@@ -31,13 +31,21 @@ function fileReady(filePath) {
   return !isLfsPointerFile(filePath);
 }
 
+function readWorkflowGodotRuntime(repoRoot, workflow) {
+  if (!/run:\s*node scripts\/write-godot-desktop-ci-env\.js/.test(workflow)) return null;
+  const source = readTextIfExists(path.join(repoRoot, 'config', 'godot-desktop-runtime.json'));
+  return source ? JSON.parse(source) : null;
+}
+
 function detectReleaseWorkflowDirectUpstreamDownload(repoRoot) {
   const workflowPath = path.join(repoRoot, '.github', 'workflows', 'release-desktop-multi-os.yml');
   const workflow = readTextIfExists(workflowPath);
   if (!workflow) {
     return false;
   }
-  return /github\.com\/godotengine\/godot\/releases\/download/i.test(workflow);
+  const runtime = readWorkflowGodotRuntime(repoRoot, workflow);
+  return /github\.com\/godotengine\/godot\/releases\/download/i.test(workflow)
+    || /^https:\/\/github\.com\/godotengine\/godot\/releases\/download\//i.test(runtime?.upstreamBaseUrl || '');
 }
 
 function detectReleaseWorkflowMirrorFirstDownload(repoRoot) {
@@ -60,12 +68,15 @@ function detectReleaseWorkflowArchiveDigestPinned(repoRoot) {
   const hasEnvPins = /GODOT_WINDOWS_ARCHIVE_SHA256:\s*"([a-f0-9]{64})"/i.test(workflow)
     && /GODOT_LINUX_ARCHIVE_SHA256:\s*"([a-f0-9]{64})"/i.test(workflow)
     && /GODOT_MACOS_ARCHIVE_SHA256:\s*"([a-f0-9]{64})"/i.test(workflow);
+  const runtime = readWorkflowGodotRuntime(repoRoot, workflow);
+  const hasConfigPins = ['windows', 'linux', 'macos'].every(platform =>
+    /^[a-f0-9]{64}$/i.test(runtime?.archives?.[platform]?.sha256 || ''));
   const hasMirrorSeedingCheck = /sha256sum "\$ARCHIVE_PATH"/i.test(workflow);
   const hasWindowsCheck = /Get-FileHash -Path \$archive -Algorithm SHA256/i.test(workflow);
   const hasLinuxCheck = /sha256sum build\/godot\/godot-linux\.zip/i.test(workflow);
   const hasMacosCheck = /sha256sum build\/godot\/godot-macos\.zip/i.test(workflow);
 
-  return hasEnvPins && hasMirrorSeedingCheck && hasWindowsCheck && hasLinuxCheck && hasMacosCheck;
+  return (hasEnvPins || hasConfigPins) && hasMirrorSeedingCheck && hasWindowsCheck && hasLinuxCheck && hasMacosCheck;
 }
 
 function detectReleaseWorkflowMirrorOnlyModeAvailable(repoRoot) {

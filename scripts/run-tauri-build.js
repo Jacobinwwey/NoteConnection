@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const { spawnSync } = require('child_process');
+const { prepareDesktopGodotPack } = require('./prepare-desktop-godot-pack');
 
 function extractFrontendBuildMode(argv) {
   const passthroughArgs = [];
@@ -55,7 +56,9 @@ function main() {
   const cargoIncremental = String(process.env.CARGO_INCREMENTAL || '0');
   const rustflags = buildLowMemoryRustflags(process.env.RUSTFLAGS);
 
-  const tauriArgs = ['tauri', 'build', '--ci', ...passthroughArgs];
+  const pack = prepareDesktopGodotPack();
+  console.log(`[Tauri Build Runner] Godot resource pack: ${pack.pack.path} (${pack.pack.sha256})`);
+  const tauriArgs = ['tauri', 'build', '--ci', '--config', 'src-tauri/tauri.desktop.conf.json', ...passthroughArgs];
   const isWindows = process.platform === 'win32';
   const execCommand = isWindows ? 'cmd.exe' : 'npx';
   const execArgs = isWindows ? ['/d', '/s', '/c', 'npx', ...tauriArgs] : tauriArgs;

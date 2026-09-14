@@ -1,6 +1,7 @@
 param(
     [string]$TitleContains = 'NoteConnection',
     [string]$OutputPath = '',
+    [int]$ProcessId = 0,
     [int]$MatchIndex = 0,
     [switch]$ActivateWindow
 )
@@ -32,6 +33,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 public static class NoteConnectionWindowCapture {
+    [DllImport("user32.dll")]
+    public static extern bool SetProcessDPIAware();
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT {
         public int Left;
@@ -122,8 +125,10 @@ public static class NoteConnectionWindowCapture {
 }
 "@
 
+# PrintWindow copies physical pixels; virtualized window bounds truncate captures on scaled displays.
+[NoteConnectionWindowCapture]::SetProcessDPIAware() | Out-Null
 $windows = [NoteConnectionWindowCapture]::FindWindows($TitleContains) |
-    Where-Object { $_.Rect.Right -gt $_.Rect.Left -and $_.Rect.Bottom -gt $_.Rect.Top } |
+    Where-Object { $_.Rect.Right -gt $_.Rect.Left -and $_.Rect.Bottom -gt $_.Rect.Top -and ($ProcessId -eq 0 -or $_.ProcessId -eq $ProcessId) } |
     Sort-Object Title, ProcessId
 
 if (-not $windows -or $windows.Count -eq 0) {

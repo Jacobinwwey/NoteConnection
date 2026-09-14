@@ -1,0 +1,93 @@
+name: Windows Installer Qualification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'codex/**']
+    paths:
+      - 'src-tauri/src/**'
+      - 'src-tauri/tauri*.conf.json'
+      - 'path_mode/**'
+      - 'config/godot-desktop-runtime.json'
+      - 'scripts/prepare-desktop-godot-pack.js'
+      - 'scripts/verify-desktop-runtime.js'
+      - 'scripts/verify-windows-installers.js'
+      - 'scripts/*desktop-runtime*.ps1'
+      - 'scripts/capture-noteconnection-window.ps1'
+      - '.github/workflows/windows-installer-qualification.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-installer-qualification-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualify-installers:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      CARGO_BUILD_JOBS: '1'
+      CARGO_INCREMENTAL: '0'
+      CARGO_PROFILE_RELEASE_DEBUG: '0'
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '1'
+      RUSTFLAGS: '-C codegen-units=1'
+      PKG_CACHE_PATH: ${{ github.workspace }}/.pkg-cache
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.14.0'
+          cache: npm
+      - name: Isolate temporary files and fetch only Godot runtime assets
+        shell: pwsh
+        run: |
+          $tempRoot = Join-Path $env:GITHUB_WORKSPACE '.installer-temp'
+          New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "TEMP=$tempRoot`nTMP=$tempRoot"
+          git lfs pull --include="path_mode/assets/**" --exclude=""
+          if ($LASTEXITCODE -ne 0) { throw 'Godot runtime asset hydration failed' }
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - name: Provision the checksummed Godot engine without publishing a release
+        shell: pwsh
+        run: |
+          $runtime = Get-Content config/godot-desktop-runtime.json -Raw | ConvertFrom-Json
+          $archiveRoot = Join-Path $env:GITHUB_WORKSPACE 'output/godot-provision'
+          New-Item -ItemType Directory -Path $archiveRoot -Force | Out-Null
+          $archive = Join-Path $archiveRoot $runtime.archives.windows.name
+          Invoke-WebRequest -Uri ($runtime.upstreamBaseUrl + '/' + $runtime.archives.windows.name) -OutFile $archive
+          $digest = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($digest -ne $runtime.archives.windows.sha256) { throw 'Godot archive digest mismatch' }
+          Expand-Archive -LiteralPath $archive -DestinationPath (Join-Path $archiveRoot 'extracted')
+          $binary = Join-Path (Join-Path $archiveRoot 'extracted') ([System.IO.Path]::GetFileNameWithoutExtension($runtime.archives.windows.name))
+          Copy-Item -LiteralPath $binary -Destination 'src-tauri/bin/godot-x86_64-pc-windows-msvc.exe' -Force
+      - run: npm run build:with-vite
+      - run: node scripts/build-sidecar.js
+      - run: node scripts/prepare-desktop-godot-pack.js
+      - name: Build fresh MSI and NSIS installers
+        run: node node_modules/@tauri-apps/cli/tauri.js build --ci --bundles nsis,msi --config src-tauri/tauri.desktop.conf.json
+      - name: Install, run and uninstall both artifacts
+        run: node scripts/verify-windows-installers.js
+      - name: Archive installer bytes and execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+            output/desktop/godot-pack.json
+            output/desktop/godot-import.log
+            output/desktop/godot-export.log
+            output/verification/windows-installers/*/*.json
+            output/verification/windows-installers/*/*.log
+            output/verification/windows-installers/*/*-runtime/report.json
+            output/verification/windows-installers/*/*-runtime/native*.png
+            output/verification/windows-installers/*/*-runtime/native*.json
+            output/verification/windows-installers/*/*-runtime/native.log

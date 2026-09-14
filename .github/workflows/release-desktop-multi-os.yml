@@ -35,14 +35,6 @@ permissions:
 
 env:
   GODOT_ALLOW_UPSTREAM_FALLBACK: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.allow_godot_upstream_fallback != 'false' }}
-  GODOT_MIRROR_TAG: "godot-mirror-v4.3-stable"
-  GODOT_UPSTREAM_BASE_URL: "https://github.com/godotengine/godot/releases/download/4.3-stable"
-  GODOT_WINDOWS_ARCHIVE_NAME: "Godot_v4.3-stable_win64.exe.zip"
-  GODOT_WINDOWS_ARCHIVE_SHA256: "8f2c75b734bd956027ae3ca92c41f78b5d5a255dacc0f20e4e3c523c545ad410"
-  GODOT_LINUX_ARCHIVE_NAME: "Godot_v4.3-stable_linux.x86_64.zip"
-  GODOT_LINUX_ARCHIVE_SHA256: "7de56444b130b10af84d19c7e0cf63cf9e9937ee4ba94364c3b7dd114253ca21"
-  GODOT_MACOS_ARCHIVE_NAME: "Godot_v4.3-stable_macos.universal.zip"
-  GODOT_MACOS_ARCHIVE_SHA256: "d17940b913b3f3bf54c941eeb09042099d93865c6e2638e09e20f7c649aa474a"
 
 jobs:
   ensure-release:
@@ -90,6 +82,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_ref != '' && github.event.inputs.source_ref || github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Load the desktop Godot runtime contract
+        run: node scripts/write-godot-desktop-ci-env.js
       - name: Ensure Godot mirror release exists
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -231,6 +232,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Load the desktop Godot runtime contract
+        run: node scripts/write-godot-desktop-ci-env.js
+
       - name: Prepare Godot sidecar binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -257,7 +261,7 @@ jobs:
             throw "Downloaded Godot archive digest mismatch (expected $($env:GODOT_WINDOWS_ARCHIVE_SHA256.ToLower()), got $actualSha256)."
           }
           Expand-Archive -Path $archive -DestinationPath "build\godot\extract" -Force
-          $godotExe = Get-ChildItem -Path "build\godot\extract" -Filter "Godot_v4.3-stable_win64.exe" -Recurse | Select-Object -First 1
+          $godotExe = Get-ChildItem -Path "build\godot\extract" -Filter ([System.IO.Path]::GetFileNameWithoutExtension($env:GODOT_WINDOWS_ARCHIVE_NAME)) -Recurse | Select-Object -First 1
           if (-not $godotExe) {
             $godotExe = Get-ChildItem -Path "build\godot\extract" -Filter "*.exe" -Recurse | Where-Object { $_.Name -notmatch "_console\.exe$" } | Sort-Object Length -Descending | Select-Object -First 1
           }
@@ -290,7 +294,7 @@ jobs:
             exit 1
           fi
           unzip -q -o build/godot/godot-linux.zip -d build/godot/extract
-          GODOT_BIN="$(find build/godot/extract -maxdepth 2 -type f -name 'Godot_v4.3-stable_linux.x86_64' | head -n 1)"
+          GODOT_BIN="$(find build/godot/extract -maxdepth 2 -type f -name "${GODOT_LINUX_ARCHIVE_NAME%.zip}" | head -n 1)"
           if [ -z "${GODOT_BIN}" ]; then
             echo "Failed to locate extracted Godot Linux executable."
             exit 1

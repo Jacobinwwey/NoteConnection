@@ -17,10 +17,8 @@ describe('release workflow godot mirror contract', () => {
     expect(workflow).toContain('description: "Allow desktop release jobs to fall back to the upstream Godot release when the project mirror is unavailable."');
     expect(workflow).toContain('default: true');
     expect(workflow).toContain('type: boolean');
-    expect(workflow).toContain('GODOT_MIRROR_TAG: "godot-mirror-v4.3-stable"');
-    expect(workflow).toContain('GODOT_WINDOWS_ARCHIVE_SHA256: "8f2c75b734bd956027ae3ca92c41f78b5d5a255dacc0f20e4e3c523c545ad410"');
-    expect(workflow).toContain('GODOT_LINUX_ARCHIVE_SHA256: "7de56444b130b10af84d19c7e0cf63cf9e9937ee4ba94364c3b7dd114253ca21"');
-    expect(workflow).toContain('GODOT_MACOS_ARCHIVE_SHA256: "d17940b913b3f3bf54c941eeb09042099d93865c6e2638e09e20f7c649aa474a"');
+    expect(workflow.match(/node scripts\/write-godot-desktop-ci-env\.js/g)).toHaveLength(2);
+    expect(workflow).toContain('${GODOT_LINUX_ARCHIVE_NAME%.zip}');
     expect(workflow).toContain(
       "GODOT_ALLOW_UPSTREAM_FALLBACK: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.allow_godot_upstream_fallback != 'false' }}"
     );
@@ -46,5 +44,29 @@ describe('release workflow godot mirror contract', () => {
     expect(workflow).toContain('ACTUAL_SHA256="$(sha256sum build/godot/godot-linux.zip | awk \'{print $1}\')"');
     expect(workflow).toContain('ACTUAL_SHA256="$(sha256sum build/godot/godot-macos.zip | awk \'{print $1}\')"');
     expect(workflow).toContain('needs: [ensure-release, ensure-godot-mirror-assets]');
+  });
+
+  test('exports checksummed engine archives matching the declared Godot project version', () => {
+    const runtime = require('../config/godot-desktop-runtime.json');
+    const { writeGodotDesktopCiEnvironment } = require('../scripts/write-godot-desktop-ci-env');
+    const project = fs.readFileSync(path.join(repoRoot, 'path_mode/project.godot'), 'utf8');
+    expect(project).toContain(`PackedStringArray("${runtime.version}"`);
+    const directory = fs.mkdtempSync(path.join(fs.realpathSync(require('os').tmpdir()), 'godot-ci-env-'));
+    const destination = path.join(directory, 'env');
+    try {
+      writeGodotDesktopCiEnvironment(destination);
+      const environment = Object.fromEntries(fs.readFileSync(destination, 'utf8').trim().split('\n').map(line => {
+        const separator = line.indexOf('=');
+        return [line.slice(0, separator), line.slice(separator + 1)];
+      }));
+      expect(environment.GODOT_MIRROR_TAG).toBe(runtime.mirrorTag);
+      for (const platform of ['windows', 'linux', 'macos']) {
+        const archive = runtime.archives[platform];
+        expect(archive.name).toContain(`Godot_v${runtime.version}-stable`);
+        expect(archive.sha256).toMatch(/^[a-f0-9]{64}$/);
+        expect(environment[`GODOT_${platform.toUpperCase()}_ARCHIVE_NAME`]).toBe(archive.name);
+        expect(environment[`GODOT_${platform.toUpperCase()}_ARCHIVE_SHA256`]).toBe(archive.sha256);
+      }
+    } finally { fs.rmSync(directory, { recursive: true, force: true }); }
   });
 });

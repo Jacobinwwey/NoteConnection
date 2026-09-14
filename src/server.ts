@@ -319,7 +319,7 @@ const activeKnowledgeWorkspaceSyncs = new Map<string, Promise<{
         relationRecomputeLatencyMs: number;
     };
 }>>();
-const SIDECAR_RUNTIME_MANIFEST = path.join(runtimePaths.projectRoot, 'tmp', 'active-sidecar-runtime.json');
+const SIDECAR_RUNTIME_MANIFEST = runtimePaths.runtimeManifestPath;
 const notemdService = new NotemdService();
 const notemdLlmClient = new LlmProviderClient();
 const API_REQUEST_TRACE_MAX_RECORDS = 400;
@@ -13033,8 +13033,9 @@ async function writeSidecarRuntimeManifest(finalPort: number): Promise<void> {
                 generatedAt: new Date().toISOString(),
                 pid: process.pid,
             }, null, 2),
-            'utf8'
+            { encoding: 'utf8', mode: 0o600 }
         );
+        await fs.promises.chmod(SIDECAR_RUNTIME_MANIFEST, 0o600);
     } catch (error) {
         warnDiagnostic('[Sidecar] Failed to write runtime manifest:', error);
     }

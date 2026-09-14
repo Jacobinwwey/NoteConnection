@@ -8,6 +8,7 @@ export interface RuntimePaths {
     projectRoot: string;
     frontendDir: string;
     runtimeDataDir: string;
+    runtimeManifestPath: string;
     kbRoot: string;
 }
 
@@ -144,6 +145,11 @@ export function resolveRuntimePaths(moduleDir: string): RuntimePaths {
         throw new Error(`Unable to provision writable runtime data directory: ${runtimeDataDirCandidate}`);
     }
     const runtimeDataDir = path.resolve(runtimeDataDirCandidate);
+    // pkg's projectRoot is a virtual, read-only asset tree. Mutable discovery
+    // credentials belong to the writable runtime directory in packaged builds.
+    const runtimeManifestPath = (process as NodeJS.Process & { pkg?: unknown }).pkg
+        ? path.join(runtimeDataDir, 'active-sidecar-runtime.json')
+        : path.join(projectRoot, 'tmp', 'active-sidecar-runtime.json');
 
     const kbCandidates = uniqPaths(
         [
@@ -162,6 +168,7 @@ export function resolveRuntimePaths(moduleDir: string): RuntimePaths {
         projectRoot,
         frontendDir,
         runtimeDataDir,
+        runtimeManifestPath,
         kbRoot
     };
 }

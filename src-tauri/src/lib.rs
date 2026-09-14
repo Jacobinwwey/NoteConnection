@@ -635,14 +635,33 @@ fn ensure_startup_kb_path() -> String {
 }
 
 #[cfg(not(target_os = "android"))]
-fn resolve_godot_project_path(project_root: &Path) -> PathBuf {
-    if let Ok(custom) = std::env::var("NOTE_CONNECTION_GODOT_PROJECT") {
+fn resolve_godot_launch_arguments(resource_dir: &Path, project_root: &Path) -> Result<Vec<String>, String> {
+    if let Some(custom) = std::env::var("NOTE_CONNECTION_GODOT_PROJECT").ok().filter(|value| !value.is_empty()) {
         let candidate = PathBuf::from(custom);
-        if candidate.exists() && candidate.is_dir() {
-            return candidate;
+        if !candidate.join("project.godot").is_file() {
+            return Err(format!("Configured Godot project has no project.godot: {}", candidate.display()));
+        }
+        return Ok(vec!["--path".to_string(), candidate.to_string_lossy().into_owned()]);
+    }
+
+    let resource_pack = resource_dir.join("path_mode.pck");
+    if resource_pack.is_file() {
+        return Ok(vec!["--main-pack".to_string(), resource_pack.to_string_lossy().into_owned()]);
+    }
+
+    // A release must use installed resources, never an incidental project in
+    // the launcher's working directory. Source projects remain a dev fallback.
+    #[cfg(debug_assertions)]
+    {
+        let development_project = project_root.join("path_mode");
+        if development_project.join("project.godot").is_file() {
+            return Ok(vec!["--path".to_string(), development_project.to_string_lossy().into_owned()]);
         }
     }
-    project_root.join("path_mode")
+    #[cfg(not(debug_assertions))]
+    let _ = project_root;
+
+    Err(format!("Godot resource pack is missing: {}", resource_pack.display()))
 }
 
 #[cfg(all(not(target_os = "android"), target_os = "windows", target_arch = "x86_64"))]
@@ -716,12 +735,6 @@ fn resolve_godot_executable(project_root: &Path) -> Option<PathBuf> {
 
     let mut candidates: Vec<PathBuf> = Vec::new();
 
-    let sidecar_dir = project_root.join("src-tauri").join("bin");
-    candidates.push(sidecar_dir.join(host_godot_sidecar_name()));
-    for alias in host_godot_binary_aliases() {
-        candidates.push(sidecar_dir.join(alias));
-    }
-
     if let Some(dir) = exec_dir {
         candidates.push(dir.join(host_godot_sidecar_name()));
         for alias in host_godot_binary_aliases() {
@@ -730,6 +743,17 @@ fn resolve_godot_executable(project_root: &Path) -> Option<PathBuf> {
         }
         candidates.push(dir.join("bin").join(host_godot_sidecar_name()));
     }
+
+    #[cfg(debug_assertions)]
+    {
+        let sidecar_dir = project_root.join("src-tauri").join("bin");
+        candidates.push(sidecar_dir.join(host_godot_sidecar_name()));
+        for alias in host_godot_binary_aliases() {
+            candidates.push(sidecar_dir.join(alias));
+        }
+    }
+    #[cfg(not(debug_assertions))]
+    let _ = project_root;
 
     candidates
         .into_iter()
@@ -2080,18 +2104,38 @@ fn default_sidecar_runtime_config() -> SidecarRuntimeConfig {
 }
 
 #[cfg(not(target_os = "android"))]
-fn reserve_loopback_port() -> u16 {
-    TcpListener::bind("127.0.0.1:0")
-        .and_then(|listener| listener.local_addr())
-        .map(|address| address.port())
-        .unwrap_or(0)
+fn bind_private_loopback_listener() -> std::io::Result<TcpListener> {
+    // A customized OS ephemeral range can include browser-blocked ports such as
+    // 6666. The private range avoids those ports for both HTTP and WebSocket.
+    const PRIVATE_PORT_START: u32 = 49152;
+    const PRIVATE_PORT_COUNT: u32 = 16384;
+    let start = (SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos() % u128::from(PRIVATE_PORT_COUNT)) as u32;
+    for offset in 0..PRIVATE_PORT_COUNT {
+        let port = (PRIVATE_PORT_START + (start + offset) % PRIVATE_PORT_COUNT) as u16;
+        match TcpListener::bind(("127.0.0.1", port)) {
+            Ok(listener) => return Ok(listener),
+            Err(error) if matches!(error.kind(), std::io::ErrorKind::AddrInUse | std::io::ErrorKind::PermissionDenied) => continue,
+            Err(error) => return Err(error),
+        }
+    }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::AddrNotAvailable,
+        "No browser-compatible loopback port is available in 49152..=65535",
+    ))
 }
 
 #[cfg(not(target_os = "android"))]
 fn build_sidecar_runtime_config() -> SidecarRuntimeConfig {
     let host = "127.0.0.1".to_string();
-    let port = reserve_loopback_port();
-    let bridge_port = reserve_loopback_port();
+    // Hold both probes until selection finishes so the endpoints cannot share a
+    // port. The sidecar still fails fast if another process wins the later bind.
+    let http_listener = bind_private_loopback_listener().expect("Cannot select the sidecar HTTP port");
+    let bridge_listener = bind_private_loopback_listener().expect("Cannot select the sidecar Bridge port");
+    let port = http_listener.local_addr().expect("Bound HTTP listener has no address").port();
+    let bridge_port = bridge_listener.local_addr().expect("Bound Bridge listener has no address").port();
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
@@ -2946,15 +2990,15 @@ pub fn run() {
                     startup_multi_window.confirm_before_full_shutdown_from_godot;
                 let godot_sync_language = startup_multi_window.sync_language;
                 let godot_ui_language = startup_lang.clone();
+                let godot_resource_dir = app.path().resource_dir()?;
                 tauri::async_runtime::spawn(async move {
-                    let godot_project = resolve_godot_project_path(&project_root);
-                    if !godot_project.exists() {
-                        eprintln!(
-                            "[Rust] Godot project path does not exist: {}",
-                            godot_project.to_string_lossy()
-                        );
-                        return;
-                    }
+                    let godot_launch_arguments = match resolve_godot_launch_arguments(&godot_resource_dir, &project_root) {
+                        Ok(arguments) => arguments,
+                        Err(error) => {
+                            eprintln!("[Rust] Cannot start Godot: {}", error);
+                            return;
+                        }
+                    };
 
                     match resolve_godot_executable(&project_root) {
                         Some(godot_exe) => {
@@ -2964,6 +3008,7 @@ pub fn run() {
                             );
                             let mut godot_command = std::process::Command::new(&godot_exe);
                             godot_command
+                                .args(godot_launch_arguments)
                                 .env("NOTE_CONNECTION_PORT", godot_runtime.port.to_string())
                                 .env(
                                     "NOTE_CONNECTION_BRIDGE_PORT",
@@ -3005,17 +3050,11 @@ pub fn run() {
                             if godot_single_window_mode {
                                 godot_command
                                     .env("NOTE_CONNECTION_START_HIDDEN", "1")
-                                    .args([
-                                        "--path",
-                                        godot_project.to_string_lossy().as_ref(),
-                                        "--nc-start-hidden",
-                                        "--minimized",
-                                    ]);
+                                    .args(["--nc-start-hidden", "--minimized"]);
                             } else {
                                 godot_command
                                     .env("NOTE_CONNECTION_START_HIDDEN", "0")
-                                    .env("NOTE_CONNECTION_FORCE_VISIBLE", "1")
-                                    .args(["--path", godot_project.to_string_lossy().as_ref()]);
+                                    .env("NOTE_CONNECTION_FORCE_VISIBLE", "1");
                             }
 
                             match godot_command.spawn() {
@@ -3071,6 +3110,17 @@ mod tests {
     use super::*;
     use std::sync::MutexGuard;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[cfg(not(target_os = "android"))]
+    #[test]
+    fn desktop_runtime_ports_are_distinct_and_browser_compatible() {
+        for _ in 0..32 {
+            let runtime = build_sidecar_runtime_config();
+            assert!((49152..=65535).contains(&runtime.port), "HTTP port {} is outside the private range", runtime.port);
+            assert!((49152..=65535).contains(&runtime.bridge_port), "Bridge port {} is outside the private range", runtime.bridge_port);
+            assert_ne!(runtime.port, runtime.bridge_port);
+        }
+    }
 
     #[test]
     fn mobile_corpus_budget_rejects_oversized_document_sets() {
@@ -3861,6 +3911,54 @@ reader_media_scale = 1.5
 
         let resolved = resolve_godot_executable(&temp.path).expect("expected executable path");
         assert_eq!(resolved, executable);
+    }
+
+    #[cfg(not(target_os = "android"))]
+    #[test]
+    fn godot_resource_pack_takes_precedence_over_launcher_working_directory() {
+        let _lock = lock_test_env();
+        let _override = EnvVarGuard::set("NOTE_CONNECTION_GODOT_PROJECT", "");
+        let resources = TempDir::new("godot_installed_resources");
+        let launcher = TempDir::new("godot_unrelated_launcher");
+        fs::write(resources.child("path_mode.pck"), b"GDPC").unwrap();
+        fs::create_dir_all(launcher.child("path_mode")).unwrap();
+        fs::write(launcher.child("path_mode/project.godot"), "config_version=5").unwrap();
+        assert_eq!(
+            resolve_godot_launch_arguments(&resources.path, &launcher.path).unwrap(),
+            vec!["--main-pack".to_string(), resources.child("path_mode.pck").to_string_lossy().into_owned()]
+        );
+    }
+
+    #[cfg(not(target_os = "android"))]
+    #[test]
+    fn godot_project_override_requires_a_project_marker() {
+        let _lock = lock_test_env();
+        let resources = TempDir::new("godot_override_resources");
+        let custom = TempDir::new("godot_override_project");
+        let _override = EnvVarGuard::set("NOTE_CONNECTION_GODOT_PROJECT", custom.path.to_str().unwrap());
+        fs::write(resources.child("path_mode.pck"), b"GDPC").unwrap();
+        assert!(resolve_godot_launch_arguments(&resources.path, &resources.path).unwrap_err().contains("project.godot"));
+        fs::write(custom.child("project.godot"), "config_version=5").unwrap();
+        assert_eq!(
+            resolve_godot_launch_arguments(&resources.path, &resources.path).unwrap(),
+            vec!["--path".to_string(), custom.path.to_string_lossy().into_owned()]
+        );
+    }
+
+    #[cfg(all(not(target_os = "android"), debug_assertions))]
+    #[test]
+    fn godot_development_fallback_rejects_missing_project_resources() {
+        let _lock = lock_test_env();
+        let _override = EnvVarGuard::set("NOTE_CONNECTION_GODOT_PROJECT", "");
+        let resources = TempDir::new("godot_missing_pack");
+        let project = TempDir::new("godot_dev_project");
+        assert!(resolve_godot_launch_arguments(&resources.path, &project.path).unwrap_err().contains("resource pack"));
+        fs::create_dir_all(project.child("path_mode")).unwrap();
+        fs::write(project.child("path_mode/project.godot"), "config_version=5").unwrap();
+        assert_eq!(
+            resolve_godot_launch_arguments(&resources.path, &project.path).unwrap(),
+            vec!["--path".to_string(), project.child("path_mode").to_string_lossy().into_owned()]
+        );
     }
 
     #[test]
