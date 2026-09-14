@@ -6,7 +6,7 @@ date: 2026-09-12
 updated: 2026-09-14
 origin: docs/audits/2026-09-12-project-progress.md
 source_revision: e84d6ece9cce5b82902d4b9335ac096a136a8d2a
-implementation_revision: e4cdce27c55dbb19f0ba6b4405358661c12d8821
+implementation_revision: 894ec1d0e083e2eab444ccf1f1e465eeb45b4947
 ---
 
 # Project Convergence Implementation Plan / 项目收敛实施计划
@@ -18,6 +18,8 @@ implementation_revision: e4cdce27c55dbb19f0ba6b4405358661c12d8821
 U1–U6 remain accepted. The public-evidence and configured-workspace follow-ups pass 168 suites / 1,708 tests on each of Node 22.19.0 and 24.14.0, with zero skips. V1–V6 final regressions pass with the initial confirmation history retained. A real Windows development session verifies an external workspace, Bridge layout, Tauri/Godot visibility transitions, grounded answer and clean shutdown; it first exposed and then verified the selected-root fix. Final artifact and remote qualification are tracked in the [September 14 follow-up](../evaluations/2026-09-14-public-evidence-quality-results.md). U7/U8 retain overall partial acceptance for unqualified targets and consented learner outcomes. Earlier slice counts below are historical implementation checkpoints.
 
 ### Outcome and constraints
+
+The subsequent [native-window follow-up](../evaluations/2026-09-14-native-window-results.md) closes the two missing named tests and the ordinary Rust verdict gap. Node 22/24 now each pass 168 suites / 1,715 tests. The exact CI native-test binary passes on two Windows hosts. Renewed Windows/Linux server artifacts pass their own qualification, including two-host evidence for the same Windows sidecar. Signed native installers, Android devices and independent learner/quality acceptance remain separate.
 
 Deliver a local-first knowledge/learning runtime whose acknowledged writes survive unrelated failures, whose answer work is bounded before allocation, and whose release claims are backed by target-specific evidence.
 
@@ -173,6 +175,7 @@ Do not execute mutating requests twice against production for “shadow” verif
 
 - [x] U7 tooling, Windows SQLite and reference connector qualification.
 - [x] U7 independent Windows/Linux server artifacts and two-host qualification of the same Windows artifact.
+- [x] U7 named real Wry window tests, with the same test executable verified on two Windows hosts (run `34792199163`); renewed server qualification in run `34792256467`.
 - [ ] U7 native release installers, Android devices and production optional backends with their own artifacts and measurements.
 
 - [ ] **U7 / P1 — close evidence obligations, not feature scope; R7**
@@ -231,6 +234,8 @@ Documentation policy: update English and Chinese status together and link the re
 U1–U6 保持已验收。公开证据与所选知识库后续修复在 Node 22.19.0、24.14.0 各通过 168 suite / 1,708 test，零跳过。V1–V6 最终回归通过，首次确认历史保留。真实 Windows development 会话验证外部知识库、Bridge layout、Tauri/Godot 显隐切换、有源回答及正常退出，并实际发现和验证了 root 修复。最终产物与远端资格见[九月十四日后续结果](../evaluations/2026-09-14-public-evidence-quality-results.md#chinese)。U7/U8 对未验收目标与取得同意后的学习效果保留整体部分验收状态；下方旧的分阶段数量属于历史实现检查点。
 
 ### 目标与约束
+
+随后完成的[原生窗口后续修复](../evaluations/2026-09-14-native-window-results.md#chinese)补齐两个缺失命名测试及普通 Rust verdict 门禁。Node 22/24 现各通过 168 suite / 1,715 test；同一 CI native-test binary 在两个 Windows 宿主均通过。更新的 Windows/Linux server 产物分别完成资格验证，同一 Windows sidecar 也具备两宿主证据。签名原生安装包、Android 真机及独立学习效果/质量验收仍分别保留。
 
 交付一个本地优先的知识/学习 runtime：已确认写入不被无关失败抹掉，回答工作在分配前受到约束，发布声明有对应目标环境的证据。
 
@@ -386,6 +391,7 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 
 - [x] U7 工具、Windows SQLite 与参考连接器资格验证。
 - [x] U7 独立 Windows/Linux server 产物及 Windows 同一产物的两宿主资格验证。
+- [x] U7 真实 Wry 命名窗口测试，同一测试 executable 在两个 Windows 宿主验证（run `34792199163`）；server 更新资格见 run `34792256467`。
 - [ ] U7 原生发布安装包、Android 真机及生产可选 backend 的对应产物/测量资格。
 
 - [ ] **U7 / P1 — 关闭证据义务；R7**

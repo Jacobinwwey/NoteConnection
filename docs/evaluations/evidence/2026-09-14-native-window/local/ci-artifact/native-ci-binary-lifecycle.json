@@ -1,0 +1,14 @@
+{
+  "label": "native-ci-binary-lifecycle",
+  "command": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\ci-native-34792199163\\src-tauri\\target\\debug\\deps\\npm_lib-268d820b6fb6bbab.exe",
+  "args": [
+    "pathmode_window_real_app_window_lifecycle_emits_toggle_events",
+    "--ignored",
+    "--show-output"
+  ],
+  "startedAt": "2026-09-14T00:47:22.521Z",
+  "completedAt": "2026-09-14T00:47:25.012Z",
+  "exitCode": 0,
+  "signal": null,
+  "logPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\native-ci-binary-lifecycle.log"
+}

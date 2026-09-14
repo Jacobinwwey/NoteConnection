@@ -1,7 +1,7 @@
 ---
 title: "fix: Execute native window acceptance tests"
 type: fix
-status: in_progress
+status: complete
 date: 2026-09-14
 origin: docs/plans/2026-09-12-001-refactor-project-convergence-plan.md
 source_revision: 0027e6d39ed2a26b68ac5884360012b183710a1c
@@ -18,8 +18,8 @@ Use the existing Tauri command owner and real Wry windows. Keep interactive test
 - [x] W1: Record the current missing-test failure and regressions for empty/ignored/failed Rust evidence.
 - [x] W2: Implement the two named real-window tests, including missing-main rejection, default hide/restore, configuration overrides, event order and cleanup.
 - [x] W3: Require actual named verdicts in both Rust wrappers; run native tests explicitly and preserve raw failure evidence.
-- [ ] W4: Execute native tests and affected Node/Rust contracts; bind the record to the source and test executable, and review the acceptance limits. Local execution passes; archival binding follows the source commit.
-- [ ] W5: Update both language records, qualify any changed server artifact inputs, and integrate verified changes into remote main.
+- [x] W4: Execute native tests and affected Node/Rust contracts; bind the record to the source and test executable, and review the acceptance limits. Both Node versions pass 1,715 tests; the same CI native binary passes on CI and the local Windows host.
+- [x] W5: Update both language records, qualify changed server artifact inputs, and integrate verified changes into remote main. See the [results and artifact record](../evaluations/2026-09-14-native-window-results.md).
 
 This closes an executable-test gap. Signed release installers, signed arm64 device behavior/RSS, an optional production ANN backend and consented 7/28-day learner observations remain separate acceptance requirements. No release tag or unverified promotion is part of this change.
 
@@ -32,7 +32,7 @@ U7 仍缺少可执行的原生窗口验收。严格 wrapper 要求两个不存�
 - [x] W1：记录当前缺失测试失败，并补空筛选/ignored/失败的 Rust 证据回归。
 - [x] W2：实现两个命名原生窗口测试，覆盖缺少 main 的拒绝、默认隐藏/恢复、配置覆盖、事件顺序及清理。
 - [x] W3：两类 Rust wrapper 均要求实际命名 verdict，显式运行 native 测试并保留原始失败证据。
-- [ ] W4：执行 native 测试及受影响 Node/Rust 合约，将记录绑定源码和测试可执行文件，并复核验收边界。本机执行通过，归档绑定将在源码提交后完成。
-- [ ] W5：同步双语记录，重新验收发生变化的 server artifact 输入，将验证后的变更整合到远端 main。
+- [x] W4：执行 native 测试及受影响 Node/Rust 合约，将记录绑定源码和测试可执行文件，并复核验收边界。两个 Node 版本各通过 1,715 项测试，同一 CI native binary 在 CI 和本机 Windows 上均通过。
+- [x] W5：同步双语记录，重新验收变更后的 server artifact 输入，将验证后的变更整合到远端 main。见[结果与产物记录](../evaluations/2026-09-14-native-window-results.md#chinese)。
 
 本轮关闭可执行测试缺口。签名发布安装包、签名 arm64 真机行为/RSS、可选生产 ANN backend 及取得同意后的 7/28 天学习者观察仍各自验收；不创建 release tag，也不提升未经验证的目标。

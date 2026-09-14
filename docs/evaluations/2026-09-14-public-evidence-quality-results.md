@@ -52,7 +52,7 @@ After the fix, the [native session record](evidence/2026-09-14-native-fix/native
 - Entering Path Mode hides the Tauri main window and shows the actual Godot window. Clicking Godot's **Exit** restores Tauri and hides Godot; Win32 visibility and emitted events agree.
 - The native Knowledge Workspace renders a source-backed Alpha answer with its source reference. Application shutdown exits successfully and stops the owned children.
 
-This is a Windows **development executable** session using a packaged Node sidecar, Godot **4.6**, Vulkan Forward+ and a Radeon RX 7900 XT. It is not a signed installer qualification or evidence for another native host. The two historical Rust window-test names are still absent; this recorded session does not make that named-test gate pass. Configuration, profiles, runtime data and synthetic knowledge files were isolated on E:.
+This is a Windows **development executable** session using a packaged Node sidecar, Godot **4.6**, Vulkan Forward+ and a Radeon RX 7900 XT. It is not a signed installer qualification or evidence for another native host. The two historical Rust window-test names were absent at this checkpoint; this recorded session did not satisfy that gate. The later [native-window results](2026-09-14-native-window-results.md) provide separate executable evidence and renewed artifact identities. Configuration, profiles, runtime data and synthetic knowledge files were isolated on E:.
 
 ### Verification and artifact identity
 
@@ -132,7 +132,7 @@ V3–V6 的首次确认均在对应生产修改前冻结，[初次报告](eviden
 - 进入 Path Mode 后，Tauri 主窗口隐藏、实际 Godot 窗口显示；点击 Godot 的 **Exit** 后主窗口恢复、Godot 隐藏，Win32 visibility 与事件记录一致。
 - 原生 Knowledge Workspace 输出受来源支持的 Alpha 回答并展示来源引用；正常退出成功，所属子进程随之停止。
 
-本次采用 Windows **development executable**、打包 Node sidecar、Godot **4.6**、Vulkan Forward+ 与 Radeon RX 7900 XT。它不等于签名安装包资格，也不是其他原生宿主的证据。两个历史 Rust 窗口测试名仍然缺失，本次会话不会使该 named-test gate 通过。配置、profile、runtime data 和合成知识文件均隔离在 E:。
+本次采用 Windows **development executable**、打包 Node sidecar、Godot **4.6**、Vulkan Forward+ 与 Radeon RX 7900 XT。它不等于签名安装包资格，也不是其他原生宿主的证据。在此检查点，两个历史 Rust 窗口测试名仍然缺失，本次会话未满足该门禁。后续[原生窗口结果](2026-09-14-native-window-results.md#chinese)提供了独立的可执行证据及更新后的产物身份。配置、profile、runtime data 和合成知识文件均隔离在 E:。
 
 ### 验证及产物身份
 

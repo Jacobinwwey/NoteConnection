@@ -1,0 +1,2429 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-14T00:22:17.836Z",
+  "targets": [
+    "server-x86_64-pc-windows-msvc.exe"
+  ],
+  "fingerprint": {
+    "algorithm": "sha256",
+    "digest": "047e6f35d211ae9ea9efe5e1a3b481e3330410b680938bdb83d061de0c5938f8",
+    "files": [
+      {
+        "path": "dist/src/agent_workspace.contract.parity.test.js",
+        "size": 9849,
+        "sha256": "121a6cd6f7a8611255af08b21b9001899d9e1dadbdb1d734010e80a768de9237"
+      },
+      {
+        "path": "dist/src/agent_workspace.frontend.test.js",
+        "size": 618571,
+        "sha256": "e0655e86cd108da81557b8c10e2870ed7441ef4358f66068b0aebf44525adf0b"
+      },
+      {
+        "path": "dist/src/agent_workspace.locale.contract.test.js",
+        "size": 4739,
+        "sha256": "7e7b496e2aab9d5dc50621bb7913afcf6c4a3cb79e92433334aceaf52c9f11e7"
+      },
+      {
+        "path": "dist/src/agent_workspace.runtime.behavior.test.js",
+        "size": 257177,
+        "sha256": "85dcca632afc7c0a74742fb632a6d8cabfe40c7fb7d48fa65d7631673ad1fa98"
+      },
+      {
+        "path": "dist/src/android.knowledgebase.picker.contract.test.js",
+        "size": 5908,
+        "sha256": "cf211d979cf33e0fa5404c19fdc6e650eab2f4ffa91b71378b8bbdb83e2ba24c"
+      },
+      {
+        "path": "dist/src/android.pathmode.contract.test.js",
+        "size": 3535,
+        "sha256": "1356d493090f168d8f991f21d39bc1c00ff878cb58c62d2fa0c553013ae88361"
+      },
+      {
+        "path": "dist/src/android.pathmode.smoke.contract.test.js",
+        "size": 2634,
+        "sha256": "7cb0374ab8440fa6050d68e485305fc8050c4ff2ef41e2674d60eca4f8f4a36b"
+      },
+      {
+        "path": "dist/src/backend/algorithms/CycleDetection.js",
+        "size": 5894,
+        "sha256": "cdd57d2fa031be3b32d755f97474b3c5a0c99f153ce15911d0911a8bb8af9ddc"
+      },
+      {
+        "path": "dist/src/backend/algorithms/CycleDetection.test.js",
+        "size": 3762,
+        "sha256": "4109003155046c5302afc8fa0ffa826df6e2e43262d4f471974efd37fdc8286a"
+      },
+      {
+        "path": "dist/src/backend/algorithms/HybridEngine.js",
+        "size": 3711,
+        "sha256": "955a1073d51afc92071e12cc0f83460f981a6659fe08b974640a04e15afb8fd7"
+      },
+      {
+        "path": "dist/src/backend/algorithms/LayoutEngine.js",
+        "size": 7662,
+        "sha256": "95c32b9a4a5e8c1b0df8f332713303a0a539b424b6aaded91ed912f7741add65"
+      },
+      {
+        "path": "dist/src/backend/algorithms/StatisticalAnalyzer.js",
+        "size": 14343,
+        "sha256": "93b302318bd925979977611f9032f4fc6e605929dae6ae47e6069ed09bc0f4d7"
+      },
+      {
+        "path": "dist/src/backend/algorithms/TopologicalSort.js",
+        "size": 5328,
+        "sha256": "3555a46b7505301a1f0183199d1e95752558b7b00d3a72665e1e0d939ec9db05"
+      },
+      {
+        "path": "dist/src/backend/algorithms/TopologicalSort.test.js",
+        "size": 3349,
+        "sha256": "a8add52129a5277eaf4c632096a9257e6a1b1d108a562c194fc9fa9cd7343f01"
+      },
+      {
+        "path": "dist/src/backend/algorithms/VectorSpace.js",
+        "size": 4348,
+        "sha256": "da18c2e17ec85f752345f0d3286a9bc38a3d460bdb085f5db80ef6cbf8748b64"
+      },
+      {
+        "path": "dist/src/backend/algorithms/WasmParityArtifactProbe.js",
+        "size": 3677,
+        "sha256": "b59442747a179109b150b0a8b5689fb8fa0a42dcecdcd50fbecc716665ce1218"
+      },
+      {
+        "path": "dist/src/backend/algorithms/WasmParityBenchmark.js",
+        "size": 4582,
+        "sha256": "74e1346302f127705ecdc470c27c783dc2f1ace533e61ce28d0805eea25c3d4d"
+      },
+      {
+        "path": "dist/src/backend/algorithms/WasmParityBenchmarkGuards.js",
+        "size": 7369,
+        "sha256": "d20d4eef76e95e750066933b0e38484073b3143a9e296f76b499d6b50df3e645"
+      },
+      {
+        "path": "dist/src/backend/algorithms/WasmParityHistory.js",
+        "size": 9589,
+        "sha256": "fa8f77e2d40f4c3e0d589d7c55a9d41524d1271b18af999aba32578d64d70467"
+      },
+      {
+        "path": "dist/src/backend/algorithms/WasmParityHistory.test.js",
+        "size": 11673,
+        "sha256": "4262d378f9ff2796ec068febbd45ed2acfa24d5e8164bbb7b2aed9b3a4e5b0b4"
+      },
+      {
+        "path": "dist/src/backend/algorithms/WasmParityRuntime.js",
+        "size": 17330,
+        "sha256": "db1d0643a37828c3b73478e2880b306b85ce1392666fe4f02d5b76da8f4dde7a"
+      },
+      {
+        "path": "dist/src/backend/build_dag.js",
+        "size": 5911,
+        "sha256": "080554800f3ca9a55a4f33e870fbcd75666749f8b01eae78ba31dc4997ff16b7"
+      },
+      {
+        "path": "dist/src/backend/CommunityDetection.js",
+        "size": 2228,
+        "sha256": "c80dcca8458678d1870574c50a82cd308367a73b4bdba1f7814ed1d12285de28"
+      },
+      {
+        "path": "dist/src/backend/config.js",
+        "size": 835,
+        "sha256": "7d33ac1dbd92e6cc5ca10be30447a890e521c56687e9f12f1d0fab54fd65e906"
+      },
+      {
+        "path": "dist/src/backend/controller.js",
+        "size": 4391,
+        "sha256": "29fb3c61a80b441aa22575c9e4711a13b1838a46eb5f8906e20ad223f11f9856"
+      },
+      {
+        "path": "dist/src/backend/FileLoader.js",
+        "size": 5388,
+        "sha256": "c1fcfaf7f65f8148b9601d7176562957b2a73588c2a592ecfc2b4dc08ae2945a"
+      },
+      {
+        "path": "dist/src/backend/FileLoader.test.js",
+        "size": 6054,
+        "sha256": "8fd329a9d18af5e3abe75777cabebd2623d02e586eaf8a4ce14b5cd04b1b42f3"
+      },
+      {
+        "path": "dist/src/backend/graph.js",
+        "size": 4348,
+        "sha256": "f4ac6d15c79ff43593f4296caa97d3675852953e2ca0b64846dc404d29f2a850"
+      },
+      {
+        "path": "dist/src/backend/GraphBuilder.identity.test.js",
+        "size": 3620,
+        "sha256": "9c56bacc238c593b7a610f90c634dd77c08420f636241c16d86d8ec8c22fc72c"
+      },
+      {
+        "path": "dist/src/backend/GraphBuilder.js",
+        "size": 25157,
+        "sha256": "afc761478476d945b4e59bf7c57d388c5965fee3d317059a81805f1641ceec6d"
+      },
+      {
+        "path": "dist/src/backend/GraphBuilder.matching.test.js",
+        "size": 6556,
+        "sha256": "502e855fb3c39907ce05fc9971eeb70fe3ea79911df2708a45c03d50afedcdea"
+      },
+      {
+        "path": "dist/src/backend/GraphMetrics.js",
+        "size": 14122,
+        "sha256": "5252790841c9d32cc90b8f8815d9b7030efcb29ac14d266f51b7f89251648a89"
+      },
+      {
+        "path": "dist/src/backend/main.js",
+        "size": 2697,
+        "sha256": "3a15855a1d50706e4c47b367f2e07c08ce20ba270b76e36c2702b98ecbe4eb55"
+      },
+      {
+        "path": "dist/src/backend/parser.js",
+        "size": 3589,
+        "sha256": "0c1086494cdbec7f572764313c3eaf182caa0c187ca1d93b0428341156220a89"
+      },
+      {
+        "path": "dist/src/backend/ResourceIdentity.js",
+        "size": 6963,
+        "sha256": "15c32290f51776f092c6ae535fad68d37300919dab51b0017a81bb4c7a882802"
+      },
+      {
+        "path": "dist/src/backend/ResourceIdentity.test.js",
+        "size": 4899,
+        "sha256": "68353acf3e6d2f54f91a5a32699afefbe68ff43fd0df1fe5c593f2b3c97c675a"
+      },
+      {
+        "path": "dist/src/backend/test_robustness.js",
+        "size": 4575,
+        "sha256": "ad3747d5dc4dd44f0e7de9792bf604e8ad5b5d4598459cb4896413314396ab00"
+      },
+      {
+        "path": "dist/src/backend/test_robustness/test_hybrid.js",
+        "size": 2749,
+        "sha256": "f52cbf93d9047a53e77745ec869b2ebb7f48547ae509e89745561eb6648db502"
+      },
+      {
+        "path": "dist/src/backend/test_robustness/test_metrics_parallel.js",
+        "size": 2931,
+        "sha256": "7f705ac1d6baa65f79e4d61689adbaef84c2aa8508f0fdf1a6bf513a19f193bf"
+      },
+      {
+        "path": "dist/src/backend/test_robustness/test_statistics.js",
+        "size": 2666,
+        "sha256": "47b035a02c3503a4dae6fe8a5c4345f42a2152667aa689ed43f40e967783f95e"
+      },
+      {
+        "path": "dist/src/backend/test_robustness/test_vector.js",
+        "size": 2293,
+        "sha256": "aa731536e49e55a7c1f7aba2776faf17e04a2e15cd1901bdc9e1974497231f6f"
+      },
+      {
+        "path": "dist/src/backend/types.js",
+        "size": 101,
+        "sha256": "963dab301dd99db6a562f2b4c03e67e27b50ee37152f882f7107c5fd10a7c07e"
+      },
+      {
+        "path": "dist/src/backend/utils/CrashLogger.js",
+        "size": 3967,
+        "sha256": "d8777800efba63e39698c3f6404710337fa348ea598128ac8a46ce3dc6d7c241"
+      },
+      {
+        "path": "dist/src/backend/utils/frontmatterParser.js",
+        "size": 4760,
+        "sha256": "4890968c3e669cf6a84967961a78d3b37771aaeaf66cff086dba38d126050b42"
+      },
+      {
+        "path": "dist/src/backend/utils/PerformanceLogger.js",
+        "size": 6251,
+        "sha256": "3701c9997bdc46dbee8a58f82c5f5a0946e4e6bbc1c267b0c6d0d47bc753cc93"
+      },
+      {
+        "path": "dist/src/backend/utils/stringUtils.js",
+        "size": 2284,
+        "sha256": "fa115d2acf1a241874c3bd2b5009812f46edae0ca37ef1ffb6314d114ac49552"
+      },
+      {
+        "path": "dist/src/backend/utils/WorkerRuntime.js",
+        "size": 3255,
+        "sha256": "17722a2e62865bd910ad61e8e55daa1a9ad97b97fa7f4c5ba8b90c319bcbfd8b"
+      },
+      {
+        "path": "dist/src/backend/wasm/noteconnection_compute.wasm",
+        "size": 208751,
+        "sha256": "c89d7c6980ac00c6360adf6aa6b3c89133eeae4b7ec2aab2296982b5367f9a28"
+      },
+      {
+        "path": "dist/src/backend/workers/betweennessWorker.js",
+        "size": 2474,
+        "sha256": "727d5fc5cf28e106074f7113788a9e936bfe666464ba70b237c9a4e79661d1de"
+      },
+      {
+        "path": "dist/src/backend/workers/keywordMatchWorker.js",
+        "size": 3221,
+        "sha256": "47ada93ef677c3d00c1aa524a0228c8a458c74f527a02eb0e2e8bab6b151df59"
+      },
+      {
+        "path": "dist/src/backend/workers/layoutWorker.js",
+        "size": 2645,
+        "sha256": "5368cadaf22fbbbbc8624bc7ba3fa38bf845a454c939dca49bf4357cb3829153"
+      },
+      {
+        "path": "dist/src/backend/workers/statisticalWorker.js",
+        "size": 3107,
+        "sha256": "830388c6b04d945a83e896c50f2d68eb24fb08d16a126c322fb6eaeab03b5b2e"
+      },
+      {
+        "path": "dist/src/capacitor.bridge.serialization.contract.test.js",
+        "size": 2737,
+        "sha256": "1737bf303a86a4e03d5352990dfc8ff1e64609980de4a86f36bc145c59687526"
+      },
+      {
+        "path": "dist/src/capacitor.device.utils.contract.test.js",
+        "size": 5412,
+        "sha256": "75fd374030b2bb32c81b6578bf682c3eaf4c1e2208225535e121e66894657bb9"
+      },
+      {
+        "path": "dist/src/capacitor.evidence.contract.test.js",
+        "size": 10675,
+        "sha256": "e63210ba4b6fe404ef22f30e26b34e44b928582485b0105b9cd1df9c3ffe869c"
+      },
+      {
+        "path": "dist/src/capacitor.runtime.contract.test.js",
+        "size": 6889,
+        "sha256": "3a44bc3d335772a512091e72f9c8cd8f2b62f1fef0a67227e8cface424226a1b"
+      },
+      {
+        "path": "dist/src/content.path.sandbox.contract.test.js",
+        "size": 2751,
+        "sha256": "2e148aeb06094d7fa702c01ffb8936fe741fd97a120a86611ea30f2be9abf899"
+      },
+      {
+        "path": "dist/src/copy.assets.contract.test.js",
+        "size": 5229,
+        "sha256": "5faa878c4715735e002f47030c1f32ff8bedb6cf0c44f8df7160e14d2c0a5f1e"
+      },
+      {
+        "path": "dist/src/core/Graph.js",
+        "size": 11889,
+        "sha256": "1c7240cb0c85ba9a30c17753c8874953f6086784ecfea12273f9a3e0045d84e2"
+      },
+      {
+        "path": "dist/src/core/Graph.test.js",
+        "size": 4738,
+        "sha256": "5997a5541df1492a8363d27859b5cbe8d643329cdb0ea51f044029a11070d3d4"
+      },
+      {
+        "path": "dist/src/core/NoteConnection.js",
+        "size": 5793,
+        "sha256": "28fe3685c2242b03b041f273dc8f72d844fd9979cfae692d10e9906a5dcc2c4c"
+      },
+      {
+        "path": "dist/src/core/OrbitalState.js",
+        "size": 5545,
+        "sha256": "204e1589896231d9952e9e235fed777857047983b9592d31db86b4e99a333a9f"
+      },
+      {
+        "path": "dist/src/core/PathBridge.js",
+        "size": 82814,
+        "sha256": "fd09a24d2ec7c195bd7a708f40e967094ac79aa69dd5f3b9bffbacaef960345f"
+      },
+      {
+        "path": "dist/src/core/PathEngine.js",
+        "size": 30464,
+        "sha256": "a4629812bc41aea3ffd59210062fd164271a38fc7117268b67f9c4cead39cc11"
+      },
+      {
+        "path": "dist/src/core/PathEngine.test.js",
+        "size": 4371,
+        "sha256": "01ec7c6803bd16df07867fc3473bc1fb1d2171e1075257c21df727db6a4e4395"
+      },
+      {
+        "path": "dist/src/core/ResourceReference.js",
+        "size": 733,
+        "sha256": "5aba4263555db401d3b0be91c7d3b7bb581074f72ea03780f0a9d338a21447a7"
+      },
+      {
+        "path": "dist/src/core/TreeLayout.test.js",
+        "size": 8280,
+        "sha256": "b88c772ae6138a5f9a12cf4039602ca4143bb43899ce2e6308071043d025e49b"
+      },
+      {
+        "path": "dist/src/core/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/crashlogger.contract.test.js",
+        "size": 980,
+        "sha256": "a80bd9f39be2c83c9092825ef4f058693777fc9c38e17aa6e11fb2971fddc78b"
+      },
+      {
+        "path": "dist/src/detox.pipeline.contract.test.js",
+        "size": 4035,
+        "sha256": "4ce10a5c610b255fedaf2f45fe34b339713488e0e3b30ede8ff7b2143f9ca1cd"
+      },
+      {
+        "path": "dist/src/export/index.js",
+        "size": 859,
+        "sha256": "25cba28276c620195212ee546f8e0aa22158a3b4b1403fb8f2665f9ef32dae22"
+      },
+      {
+        "path": "dist/src/export/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/export/WorkspaceExportBundle.js",
+        "size": 54906,
+        "sha256": "e9ace1fad6c482370bfbb84ab3d51b35736dad755e3fca6d2a4d8e038803ff01"
+      },
+      {
+        "path": "dist/src/export/WorkspaceExportBundle.test.js",
+        "size": 70056,
+        "sha256": "c7342d6b759f06138294e8ec0a0af7fe5ac5b45887139b11aeea8248df40d331"
+      },
+      {
+        "path": "dist/src/fixrisk.issue.verifier.contract.test.js",
+        "size": 7725,
+        "sha256": "e1a49cbc297d55846d66a6c61b5b27ae89d553c99fb3dfe33d0630c535f2b4b9"
+      },
+      {
+        "path": "dist/src/foundation.ann.runtime.contract.test.js",
+        "size": 4585,
+        "sha256": "e15520c994198a65d111ded408d39ed4f215fb138b767af3f21c7340649226db"
+      },
+      {
+        "path": "dist/src/foundation.release.evidence.contract.test.js",
+        "size": 28561,
+        "sha256": "7e52e3f554c48272197745677134aa2ee52a62facaaccc570bb627fca1ac42c6"
+      },
+      {
+        "path": "dist/src/foundation.sqlite.runtime.contract.test.js",
+        "size": 5285,
+        "sha256": "6c5a8a377c7da66dc99700ef207563a815b049dd6cd222553304f964d5d39fc4"
+      },
+      {
+        "path": "dist/src/frontend.locale.contract.test.js",
+        "size": 2659,
+        "sha256": "22ff5ab1846787c226e7c180aafd01473c39dce421d82135b6073701dac68eae"
+      },
+      {
+        "path": "dist/src/frontend.runtime.assets.contract.test.js",
+        "size": 4772,
+        "sha256": "8436c3b889494706eb5d46a1248b6cdcc1c4c2db7a6a4b66be0370d040fcc63d"
+      },
+      {
+        "path": "dist/src/frontend/agent_workspace_runtime.js",
+        "size": 234777,
+        "sha256": "e5f8598a7ce3a813c2d3f51faaae8258af5a32c7c5e8472937401effc3ad6dd1"
+      },
+      {
+        "path": "dist/src/frontend/agent_workspace.js",
+        "size": 292023,
+        "sha256": "8ea5ceb892c74e207e5eb3020039deed305b825cf843d35cdcf1aff9f4de4095"
+      },
+      {
+        "path": "dist/src/frontend/analysis.js",
+        "size": 24315,
+        "sha256": "cc5210031ef0797fc2a4936a4c34ce9051b0af14e53b3a213685950380edfc3e"
+      },
+      {
+        "path": "dist/src/frontend/app_highlight_integration.js",
+        "size": 9781,
+        "sha256": "bf879e3036c5072d7aaec54d382bf8761352a31bafca6dc8469b0e213ff81b59"
+      },
+      {
+        "path": "dist/src/frontend/app.js",
+        "size": 276345,
+        "sha256": "a62f3467a5f14196d8d5521eef82238b5f434c72a93e47d5f65ca82fbe90aa8d"
+      },
+      {
+        "path": "dist/src/frontend/focus_mode_interactions.js",
+        "size": 956,
+        "sha256": "e25972ea3f01979764d4b960d8e16520d83a54fc9118a51b35e31755a8ec9db2"
+      },
+      {
+        "path": "dist/src/frontend/godot_future_path_renderer.js",
+        "size": 24574,
+        "sha256": "91c46bf9c237a00f94ae4e99482f71977dc56829fe55e9aff13134404bc319e8"
+      },
+      {
+        "path": "dist/src/frontend/godot_tree_interactions.js",
+        "size": 6315,
+        "sha256": "56a756bde8164fe23c85bef3993bbc5a68575b28f2014ae9e2199927ba84bcbc"
+      },
+      {
+        "path": "dist/src/frontend/graph_state.mjs",
+        "size": 3798,
+        "sha256": "e089093ef9a05a136f74c9b9060a5812868616f320e704651e1c87398143e360"
+      },
+      {
+        "path": "dist/src/frontend/help.html",
+        "size": 2054,
+        "sha256": "a38a84dbf0a192daf7e94e90da5888f2b7c126d0d3996ad2ec4c4e9e63e0bf2e"
+      },
+      {
+        "path": "dist/src/frontend/help.js",
+        "size": 1209,
+        "sha256": "85f5b2c883058e3188f27581a70e7864024666cc16607278f64cf13b1def299e"
+      },
+      {
+        "path": "dist/src/frontend/hosted_future_path_runtime.js",
+        "size": 6953,
+        "sha256": "361f3e7fa0c52e630eb0cf8503e0efdd1f9caa2c405f124192fce41013874d86"
+      },
+      {
+        "path": "dist/src/frontend/i18n.js",
+        "size": 9055,
+        "sha256": "c3de266818304bd9e7d50643bff3edd468216f10ccf60041933a45e01c8133e9"
+      },
+      {
+        "path": "dist/src/frontend/i18n.mjs",
+        "size": 6394,
+        "sha256": "ac8991971184615642e69667ab421dbe1bbc057f7fb4d464b33c66c2146ee511"
+      },
+      {
+        "path": "dist/src/frontend/index.html",
+        "size": 69056,
+        "sha256": "6a59a8b1c3e7608ac5a0bdb60bb6ec3ea853c7f104b9e2a90bf17dc4bbeefedd"
+      },
+      {
+        "path": "dist/src/frontend/knowledge_projection_contract.js",
+        "size": 10483,
+        "sha256": "55da88a053b7f17c8d15c25608f0660765329bebda9c443538a4bc083d937fdc"
+      },
+      {
+        "path": "dist/src/frontend/knowledge_projection_store.js",
+        "size": 8510,
+        "sha256": "4d28e09b5670e20f7943d682620cdcbd0cd4a232bc5159536ef3d8443f16a764"
+      },
+      {
+        "path": "dist/src/frontend/language_selector.js",
+        "size": 7887,
+        "sha256": "27668207eca3ece91f580beba9f599af93cbae948145e2e4fffe999c3c227302"
+      },
+      {
+        "path": "dist/src/frontend/layout_gpu.js",
+        "size": 19306,
+        "sha256": "835496773e07bcd7716df8f0c37302bb0be1c6eb7784f673153dbac0f4715111"
+      },
+      {
+        "path": "dist/src/frontend/libs/d3.v7.min.js",
+        "size": 279706,
+        "sha256": "f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10cc7af921fc158fceb86539"
+      },
+      {
+        "path": "dist/src/frontend/libs/gpu-browser.min.js",
+        "size": 398051,
+        "sha256": "5ecf71248ff13dd5412152fa3407d17a1ca4e306e3033a2c3cb1dca2849d760b"
+      },
+      {
+        "path": "dist/src/frontend/libs/jszip.min.js",
+        "size": 97630,
+        "sha256": "acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/contrib/auto-render.min.js",
+        "size": 3467,
+        "sha256": "bb53eb953394531aae36fdd537065c4244eb8542901a3ce914601d932675b8ac"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_AMS-Regular.ttf",
+        "size": 63632,
+        "sha256": "68534840bcfdd2bffb6f0e8deb48684dd01e7f04ea2813267577afb906de1d13"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_AMS-Regular.woff",
+        "size": 33516,
+        "sha256": "30da91e84c893f875e252689faebdc590b2871145e8adc7f9a9d4dbd8ce0b251"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_AMS-Regular.woff2",
+        "size": 28076,
+        "sha256": "0cdd387c9590a1a9f9794560022dbb59654a7d86f187aa0c81495ad42d3a7308"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Caligraphic-Bold.ttf",
+        "size": 12368,
+        "sha256": "07d8e303ce4fc12b4bb54f1004170dd190a1f3db45d400fe68060df3e0897268"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Caligraphic-Bold.woff",
+        "size": 7716,
+        "sha256": "1ae6bd7475590e97e7f145a89e09ccde322f7a6bc0b91607b1c8b8ee28290fed"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Caligraphic-Bold.woff2",
+        "size": 6912,
+        "sha256": "de7701e42cf1f4cf0b766c03fb27977207eee2f4fd5d76fa82188406da43ea4c"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Caligraphic-Regular.ttf",
+        "size": 12344,
+        "sha256": "ed0b74372feefcbb9c0666b2e210da37b7e49fa7fbbf3eeb11db5f693dacfbb7"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Caligraphic-Regular.woff",
+        "size": 7656,
+        "sha256": "3398dd02302557a793f2863f88e02d96ce10df2abffa07c8e9fa90775116e65c"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Caligraphic-Regular.woff2",
+        "size": 6908,
+        "sha256": "5d53e70ad607c2352162dec9e0923fb54ecdafaccbf604cd8dcf7d00facb989b"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Fraktur-Bold.ttf",
+        "size": 19584,
+        "sha256": "9163df9c7122432e6495b4229fa9071cf9ae86a758ae5efc4924ec2e1a6dbce1"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Fraktur-Bold.woff",
+        "size": 13296,
+        "sha256": "9be7ceb88004ab8ad124082246fbfcca4091e36385d4ec6ed1df67375dad50fb"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Fraktur-Bold.woff2",
+        "size": 11348,
+        "sha256": "74444efd593c005e3f4573b44524704c0af0a937fe911cca9e94068d0d140d3f"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Fraktur-Regular.ttf",
+        "size": 19572,
+        "sha256": "1e6f9579e90e2cac37f8f60a597c436e075c114385652b7cbeb0dec0421291b3"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Fraktur-Regular.woff",
+        "size": 13208,
+        "sha256": "5e28753be717dac97f559f49bc10be9cf3c124ddcabda6659d11cb68febc6463"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Fraktur-Regular.woff2",
+        "size": 11316,
+        "sha256": "51814d270d06ff0255dba0799994fa4d8c84d11f09951d47595f4abb1f3602dc"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-Bold.ttf",
+        "size": 51336,
+        "sha256": "138ac28d1663b3037e9c5f52371fa5c63d8324f4a38d22cd573e6ea3a3fd0cf8"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-Bold.woff",
+        "size": 29912,
+        "sha256": "c76c5d696297d51b9cb1639c7da4334f0e7dec81b42b11213b5e25ef671bb822"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-Bold.woff2",
+        "size": 25324,
+        "sha256": "0f60d1b897938ec918c8ce073092411baf9438f6739465693ff18b0f9d20b021"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-BoldItalic.ttf",
+        "size": 32968,
+        "sha256": "70ee1f64a20f2048c21940ef46d0144fd215baa953ca69afd1e31e98544f708f"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-BoldItalic.woff",
+        "size": 19412,
+        "sha256": "a6f7ec0d846ac7ad975adb8959c37ed49b94acbc4ae436db9ce9e20287e4a64c"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-BoldItalic.woff2",
+        "size": 16780,
+        "sha256": "99cd42a3c072d918f2f44984a807cf7aa16e13545fd0875fc07c6c65f99e715b"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-Italic.ttf",
+        "size": 33580,
+        "sha256": "0d85ae7cc30f23790a7f1a58c4a112fdca8aae769b6ba11429af1d98b1b6cb3a"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-Italic.woff",
+        "size": 19676,
+        "sha256": "f1d6ef86f3b11a528bd5185199bd2443ecb2b0dead96d88674b5a2c12be24bdf"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-Italic.woff2",
+        "size": 16988,
+        "sha256": "97479ca6cce906abc961ecac96faa5f9ca2e61b8e7670d475826bcdee9a7c267"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-Regular.ttf",
+        "size": 53580,
+        "sha256": "d0332f52868370fd83ae7fa46470f90c8f2eab2fcf12bc4f88080b340c95a830"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-Regular.woff",
+        "size": 30772,
+        "sha256": "c6368d87e8a1a3a5d337623d83d8dc4b868f242a9ad476237d6f8d1e0f168cdc"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Main-Regular.woff2",
+        "size": 26272,
+        "sha256": "c2342cd8b869e01752a9321dc17213fc40d4d04c79688c1d43f2cf316abd7866"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Math-BoldItalic.ttf",
+        "size": 31196,
+        "sha256": "f9377ab0271cda59af24bcffbd46a4d0c8a3572ffafdbb38de2ad5ea7b0d5ee5"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Math-BoldItalic.woff",
+        "size": 18668,
+        "sha256": "850c0af5c2238497febaf5e461d880bf458c341f42f4f330f1b1ab5698b1998e"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Math-BoldItalic.woff2",
+        "size": 16400,
+        "sha256": "dc47344dbb6cb5b655c8460d561f4df5f501b90c804ad3c6cec65fe322351ab1"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Math-Italic.ttf",
+        "size": 31308,
+        "sha256": "08ce98e51b04d58945a301e639e02b6998af29fdfd61a7b8afdd07bbfc479d4a"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Math-Italic.woff",
+        "size": 18748,
+        "sha256": "8a8d244581371912b8f3f5a23e2437cb2a59cd9bcaebb0346e722c05737a2571"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Math-Italic.woff2",
+        "size": 16440,
+        "sha256": "7af58c5ec8f132a2ddde9027c6d7814decce4d3b822a11192a42a20e2e973264"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_SansSerif-Bold.ttf",
+        "size": 24504,
+        "sha256": "1ece03f79f95277d57dc7f6b435a74e1379b0d46104a8530286b60ff49369ea0"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_SansSerif-Bold.woff",
+        "size": 14408,
+        "sha256": "ece03cfd83e22c212cdef66feb8442d25a083beb988db3f1883f3f9738d750ba"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_SansSerif-Bold.woff2",
+        "size": 12216,
+        "sha256": "e99ae51144bf1232efcc1bfe5add36262c6866b0faab24fa75740e1b98577a62"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_SansSerif-Italic.ttf",
+        "size": 22364,
+        "sha256": "3931dd81faed86ba021bb2bbdc36f5bed9a38d6b4f4077aca59b265aa1b02083"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_SansSerif-Italic.woff",
+        "size": 14112,
+        "sha256": "91ee67500cc0129aa0ace3ac5c61ff1692102f0f31d02b69347fba35dcb75bf2"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_SansSerif-Italic.woff2",
+        "size": 12028,
+        "sha256": "00b26ac825e2095056396e0553b8ac26d3f8ad158c3826e28b4c45b385c4714a"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_SansSerif-Regular.ttf",
+        "size": 19436,
+        "sha256": "f36ea897e19f4a2e571d1e900e4e3710e438deb05a842486045ba0a3e616a4ad"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_SansSerif-Regular.woff",
+        "size": 12316,
+        "sha256": "11e4dc8a6471ff6d6ee561d53d10fde8f7489e798257ff449c5d37c197435605"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_SansSerif-Regular.woff2",
+        "size": 10344,
+        "sha256": "68e8c73ef42afd3ccec58bf0fba302cce448938e7fc020a5e31f8a952eee1342"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Script-Regular.ttf",
+        "size": 16648,
+        "sha256": "1c67f068fea8bb09bf099c088b1cf64bd27516a6e07f4684344873564bb66a67"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Script-Regular.woff",
+        "size": 10588,
+        "sha256": "d96cdf2b3bdd4d64a8fd5f74a4c467f123a8a73931cd435889f08ffaf9bf947a"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Script-Regular.woff2",
+        "size": 9644,
+        "sha256": "036d4e95149b69ff9bcc0cd55771efeb25ffa3947293e69acd78d5ac328c684b"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size1-Regular.ttf",
+        "size": 12228,
+        "sha256": "95b6d2f1a50173bfedb8c63e1d1c99b10427d0a4df4201cb44513b226951a22b"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size1-Regular.woff",
+        "size": 6496,
+        "sha256": "c943cc986384f59e86bea5fd7dc50a9c4dfe567a7c05eb40d6790720dead97c9"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size1-Regular.woff2",
+        "size": 5468,
+        "sha256": "6b47c40166b6dbe21a5dfca7718413f2147fd2399be1ba605d8ad39cedf25dfe"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size2-Regular.ttf",
+        "size": 11508,
+        "sha256": "a6b2099fb555c60e3a0db3a08842ebf1d732c6eb4e4bf44913613bed4fc4e39b"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size2-Regular.woff",
+        "size": 6188,
+        "sha256": "2014c523c3210bcc166648c4d4cc57f05b747df07a24277bf71c51e67dc79e3d"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size2-Regular.woff2",
+        "size": 5208,
+        "sha256": "d04c54219f9eaec6d4d4fd42dfb28785975a4794d6b2fc71e566b9cd6db842dd"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size3-Regular.ttf",
+        "size": 7588,
+        "sha256": "500e04d54f0d51666332c9d2089aa803be22aa878eca539e59fa53c6e522b082"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size3-Regular.woff",
+        "size": 4420,
+        "sha256": "6ab6b62e9b62dae2c00dd90f791bd10950be0ecc3490d7d6045f51c2e8fe0949"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size3-Regular.woff2",
+        "size": 3624,
+        "sha256": "73d591271b1604960cb10bb90fee021670af7297017e0e98480b332d11f51995"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size4-Regular.ttf",
+        "size": 10364,
+        "sha256": "c647367d1dd4e162468717d020e1fc0f1dc5c26ebfdffbe55261713bf88c5877"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size4-Regular.woff",
+        "size": 5980,
+        "sha256": "99f9c6750b489c9462bf04900bd3f939df9b829339daaaaa99ef5495cdddea58"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Size4-Regular.woff2",
+        "size": 4928,
+        "sha256": "a4af7d414440a1c1790825cfb700cf9cf43b0f2c4b04f0ebc523011ad9853ec0"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Typewriter-Regular.ttf",
+        "size": 27556,
+        "sha256": "f01f3e87d9c6a61c0c081ceb577abd864eb00a612f7ac1620dd6915fad2ef5aa"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Typewriter-Regular.woff",
+        "size": 16028,
+        "sha256": "e14fed02b1aba7ce9f5afd5844b5d0321b22351febc720e0de8b8723527609f7"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/fonts/KaTeX_Typewriter-Regular.woff2",
+        "size": 13568,
+        "sha256": "71d517d67827787cfabdf186914cc3358eda539e37931941f2b2fd4a21f68c0b"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/katex.min.css",
+        "size": 23732,
+        "sha256": "e189fd0238811989c3646dcebda8bc0cfb1ec791b79e60cf9d18f05a49c8a016"
+      },
+      {
+        "path": "dist/src/frontend/libs/katex/katex.min.js",
+        "size": 276705,
+        "sha256": "6b909443e6c8f6e5d24cc4872fe909a54770762047ae95e3f34f55ec2e6f6c3a"
+      },
+      {
+        "path": "dist/src/frontend/libs/marked.min.js",
+        "size": 41404,
+        "sha256": "e131975cfd9e6fd19a98ae2e1328e57232af7208198798834534b8e5326ed386"
+      },
+      {
+        "path": "dist/src/frontend/libs/mermaid.min.js",
+        "size": 2754895,
+        "sha256": "d0830a6c05546e9edb8fe20a8f545f3e0dc7c4c3134d584bad9c13a99d7a71e0"
+      },
+      {
+        "path": "dist/src/frontend/libs/path_core.js",
+        "size": 48551,
+        "sha256": "530822cf757b8aa0516f37bb85d3e9308d476ed70fa888d8b20781302b4a0e9f"
+      },
+      {
+        "path": "dist/src/frontend/loading.js",
+        "size": 4849,
+        "sha256": "0d0b3223e739eaff2447b8ff39e8773915ae624feb5bc65c10802355f026b269"
+      },
+      {
+        "path": "dist/src/frontend/locales/en.json",
+        "size": 53959,
+        "sha256": "0cf85e10d2eb236768f5e5c09f6a884d658dc53259550e33f68d5733aa6b70b8"
+      },
+      {
+        "path": "dist/src/frontend/locales/zh.json",
+        "size": 53082,
+        "sha256": "64af81fae691ae6ec36a70bd198c92846427a77231a1bec720e866b5ebd03559"
+      },
+      {
+        "path": "dist/src/frontend/main.mjs",
+        "size": 2312,
+        "sha256": "49fc75a6c4023b6c56c16f54016f11db3637ac4b697c1c67bb69ba9ec0febdea"
+      },
+      {
+        "path": "dist/src/frontend/manual.html",
+        "size": 4417,
+        "sha256": "fbf9002d4c4b645b17015264823566ec0a5b1ab2d39e355726dcec9c0ef38893"
+      },
+      {
+        "path": "dist/src/frontend/markdown_runtime.js",
+        "size": 32432,
+        "sha256": "9ff5b12283dbce1ede23f03910540b19f1f4d165fcbd73278860d2e8b3d4e29d"
+      },
+      {
+        "path": "dist/src/frontend/mobile_budget_runtime.js",
+        "size": 1248,
+        "sha256": "a59994a97d1e42a5130daa7a5ff98c5a60f01d2b0d4e25adff4fc653b3c7e04f"
+      },
+      {
+        "path": "dist/src/frontend/mobile_exact_analyzer.js",
+        "size": 16574,
+        "sha256": "991f7177837760770aeb9d0f49b3df782a7ca918790198d925656d2b75023fcd"
+      },
+      {
+        "path": "dist/src/frontend/mobile_identity_contract.js",
+        "size": 8794,
+        "sha256": "7316b59f4d1d1b649a4b7803f122733273c51390be9f0b0e39edef0a938280b7"
+      },
+      {
+        "path": "dist/src/frontend/mobile_semantic_comparator.js",
+        "size": 9673,
+        "sha256": "5b646079643a531942f45a4d96c6de5d2f6851a9bb38a86d20824ac57637e59a"
+      },
+      {
+        "path": "dist/src/frontend/nodeHighlight.js",
+        "size": 14909,
+        "sha256": "21699c5247fd5fde0d803433d9a06808e97e7c14d8481850e6020220986971db"
+      },
+      {
+        "path": "dist/src/frontend/notemd.css",
+        "size": 5500,
+        "sha256": "b7694e5b52f0ddc51900e96de2b44750d9c12c7ff9aa4ed61c138eda260b44de"
+      },
+      {
+        "path": "dist/src/frontend/notemd.html",
+        "size": 6445,
+        "sha256": "609166c226d6a592bbd6ea878f6e7a91dc3829d144480d397e66f91974a03309"
+      },
+      {
+        "path": "dist/src/frontend/notemd.js",
+        "size": 28320,
+        "sha256": "41e611aaa8957eff80e7aabbd1e3c330a55b8e4ce4c1e678805ca99c093fd013"
+      },
+      {
+        "path": "dist/src/frontend/path_app.js",
+        "size": 238616,
+        "sha256": "373ec0ca6a9047dd3c215e3c0b1f5514b8f76d4362da97c2c172431650ea7aff"
+      },
+      {
+        "path": "dist/src/frontend/path_layout.mjs",
+        "size": 5173,
+        "sha256": "d12045246090814ff6b59e86390641db652d0914d1a7f1752891becf1c2cf2fa"
+      },
+      {
+        "path": "dist/src/frontend/path_mermaid_utils.mjs",
+        "size": 4100,
+        "sha256": "fbab61842e2390c284542d6ce62e43c0e17868df48ed0d854486a9cd15eadb21"
+      },
+      {
+        "path": "dist/src/frontend/path_modules_bridge.js",
+        "size": 18743,
+        "sha256": "e9b5500aede65f251b7f5aaaebd64dbf57d3cd9b5c8fe867731185414cadba78"
+      },
+      {
+        "path": "dist/src/frontend/path_state.mjs",
+        "size": 3629,
+        "sha256": "06c4479b7878d6bcd32887b238c18b6e77d30c8bda239de1370509bc3c6d2a73"
+      },
+      {
+        "path": "dist/src/frontend/path_styles.css",
+        "size": 6555,
+        "sha256": "bd1367cd7665fb9c6b84abe24249a46950b9516c21641c519ac920bfef277402"
+      },
+      {
+        "path": "dist/src/frontend/path_worker_bridge.mjs",
+        "size": 2704,
+        "sha256": "39ff414b507bd3783b3eb7a42e3dc4c68b23cc4011194c47fda5b7f3c25a989b"
+      },
+      {
+        "path": "dist/src/frontend/path_worker.js",
+        "size": 12375,
+        "sha256": "a78880029324b65e94b966a15e60e17214fbf5ad5298fed420d5029b5aba14f4"
+      },
+      {
+        "path": "dist/src/frontend/path.html",
+        "size": 8719,
+        "sha256": "4919eff52b2c7172516846d1f78032e99ec0cbbc5bbdd5dae166731b6ddd3021"
+      },
+      {
+        "path": "dist/src/frontend/reader.js",
+        "size": 57908,
+        "sha256": "4bf6418bf361a1fcea26a4c2118f9ae6a2d7b60f0325219547f29654cc5c70bd"
+      },
+      {
+        "path": "dist/src/frontend/README.md",
+        "size": 26553,
+        "sha256": "3a5f167e0b2bfe2337f24c838ca0d91cacf25babeb160c3db205aa0257b7c6fb"
+      },
+      {
+        "path": "dist/src/frontend/runtime_bridge.js",
+        "size": 17747,
+        "sha256": "2c65bb22f37998724bb31cc155b5009e0d8ca48bf1e1b5137c90177b81adb4e2"
+      },
+      {
+        "path": "dist/src/frontend/runtime_bridge.mjs",
+        "size": 12548,
+        "sha256": "3ea696c6cf485318cb371630cd940706be1a930f9766222ef289e3993a1138de"
+      },
+      {
+        "path": "dist/src/frontend/settings.js",
+        "size": 17447,
+        "sha256": "a2254d85b0d8695f9365288fc6431943b5083b9d0f78eb719779bee8a2acae08"
+      },
+      {
+        "path": "dist/src/frontend/simulationWorker.js",
+        "size": 15968,
+        "sha256": "4c4b72c7144c2ff9194ab932d6efecc87368acd64df9f45c746972289d09f45a"
+      },
+      {
+        "path": "dist/src/frontend/source_manager.js",
+        "size": 62982,
+        "sha256": "86d997fa7b70486f475ac3b67a349b3f2cd673efa3bec436a0618d96acd9068f"
+      },
+      {
+        "path": "dist/src/frontend/storage_provider.js",
+        "size": 90574,
+        "sha256": "c529bced85711807b37c09f5e341103ffcbdcaf83ad08a412763321161430320"
+      },
+      {
+        "path": "dist/src/frontend/styles_analysis.css",
+        "size": 3328,
+        "sha256": "73927a1ebbc982dfbfda5fcd15d41b2ac14ec8b6784f055df71a06acb351c47d"
+      },
+      {
+        "path": "dist/src/frontend/styles.css",
+        "size": 80673,
+        "sha256": "42cadd1813b8632a2364d634062c74a78ce6529c753b2b83ae4dfdecb3b7eed9"
+      },
+      {
+        "path": "dist/src/frontend/tutorial.css",
+        "size": 2558,
+        "sha256": "4c22c5f923b81a6816b30e4e94082a605af8f4199a8c491f679013a12eeb9d76"
+      },
+      {
+        "path": "dist/src/frontend/tutorial.js",
+        "size": 26460,
+        "sha256": "80acad37b507afd1529f54e297aea9dd88a96d2650028760e7c3fd9b1b3966b1"
+      },
+      {
+        "path": "dist/src/frontend/User_Manual_zh.md",
+        "size": 14549,
+        "sha256": "aa826b88d6321041bd4bda7c1d0b052d1dd014d9c546a722124901ba2c5202fc"
+      },
+      {
+        "path": "dist/src/frontend/User_Manual.md",
+        "size": 15390,
+        "sha256": "76e5fe86294d37dc07dc850a29e076eb1cabcbda0106d8f7e43b982b954fb85f"
+      },
+      {
+        "path": "dist/src/frontend/welcome.js",
+        "size": 13251,
+        "sha256": "ce237f631e621da875ac8c44d3c6f582cb852d53b97341dc97d98d36113e3717"
+      },
+      {
+        "path": "dist/src/frontend/workbench_state.mjs",
+        "size": 4209,
+        "sha256": "849a9780af16d5a68e64a6c8fc09a8610bb0855991c134284ba82f1021136743"
+      },
+      {
+        "path": "dist/src/frontend/workspace_panes.js",
+        "size": 527703,
+        "sha256": "b0da4d0fcc4f53aef3d89f1f42326543460b796bea85999f53a362c512b33239"
+      },
+      {
+        "path": "dist/src/generated/mermaid_runtime.js",
+        "size": 3849900,
+        "sha256": "8c3582304c82dcc9a2fae8bdc092448cc3b544517b1df190e86f3f62fddc2b8d"
+      },
+      {
+        "path": "dist/src/generated/resvg_runtime.js",
+        "size": 3305026,
+        "sha256": "f49aefd4ff7e8781af507e6af1e1b277cf11b02ff87f4a07d95366cd5ba0bfaa"
+      },
+      {
+        "path": "dist/src/godot.sidecar.bootstrap.contract.test.js",
+        "size": 11317,
+        "sha256": "0e65db2056edec49e1639e9aa519fb150ce3b5bc9d5f506fbff6821c09209577"
+      },
+      {
+        "path": "dist/src/graph.accessibility.contract.test.js",
+        "size": 3924,
+        "sha256": "31cd6e98b21e1b9ae8d87b4035ab124dfd7cecb2c53fe3e5b0950a1e79a4000e"
+      },
+      {
+        "path": "dist/src/graph.answer.operator.contract.test.js",
+        "size": 3397,
+        "sha256": "bec565c6f85955c662e4bb07f0f7eb292c26f737c39c28c85e2908fed3226fcb"
+      },
+      {
+        "path": "dist/src/index.js",
+        "size": 6926,
+        "sha256": "d2bc7f2c2ce182507e2a83219f46c04082e9f8b84159e8325c85a09896705dd7"
+      },
+      {
+        "path": "dist/src/index.knowledge-root.test.js",
+        "size": 5922,
+        "sha256": "f280dddbfdea5602c4dd671994197d229870d10c9b5e4ff2a8e7b87c69bbbb64"
+      },
+      {
+        "path": "dist/src/indexing/IndexLifecycle.js",
+        "size": 8552,
+        "sha256": "621174de909f3e1a1f7925b02bfc093521bb246bebcc596c3dfa5e2c34257b73"
+      },
+      {
+        "path": "dist/src/indexing/IndexLifecycle.test.js",
+        "size": 3422,
+        "sha256": "0c16f80327175722bd7f91c6d5c1ef5a94b6a3e560a2c8248330fe312d680f96"
+      },
+      {
+        "path": "dist/src/indexing/SegmentBuilder.js",
+        "size": 2298,
+        "sha256": "fa89aa6438fa0580ee6bf832cb8360229f2231c3c8a1b01f919f2a67191a428d"
+      },
+      {
+        "path": "dist/src/indexing/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/indexing/UnitBuilder.js",
+        "size": 1831,
+        "sha256": "193e8b98009bfa367c5c048cb960783a8b7f4ddc51f558929be41d4fb299f25a"
+      },
+      {
+        "path": "dist/src/knowledge_projection_store.test.js",
+        "size": 10392,
+        "sha256": "63b64462ad03a5f358a74e7b51f0f4ca21d55d0b7fc9f9b1a47f4b9c699f4463"
+      },
+      {
+        "path": "dist/src/knowledge_projection.contract.test.js",
+        "size": 6040,
+        "sha256": "5a4866b57fb232413047d86fed9fdc4eeb14f021a25916f00d1a68e5d67572ad"
+      },
+      {
+        "path": "dist/src/knowledge.api.contract.test.js",
+        "size": 8099,
+        "sha256": "bf2ecf0e85a97b6fe4067a3b4712df54f82080d50e606677c83cc4d3524145bd"
+      },
+      {
+        "path": "dist/src/learning/agentConversationExecution.js",
+        "size": 9033,
+        "sha256": "406afd079c7dba3585df1c42cbbb17ddf20849755121abbf414a5047217f8e5c"
+      },
+      {
+        "path": "dist/src/learning/agentConversationExecution.test.js",
+        "size": 12641,
+        "sha256": "3c248f8fa6889485e4f1c72f14cf6250ac081acbac28f22eecc95d2620fc5b8b"
+      },
+      {
+        "path": "dist/src/learning/agentConversationSerialization.js",
+        "size": 12769,
+        "sha256": "d0fb6a5ef7322ea16e7dc4d8c15f754eac96b84a39e88e355b0132c39b0e0c89"
+      },
+      {
+        "path": "dist/src/learning/agentConversationSerialization.test.js",
+        "size": 9014,
+        "sha256": "f84b677208956c1f07322c901bdedda09f8bb7501735c1bcf175bd062b13fe5d"
+      },
+      {
+        "path": "dist/src/learning/agentResponseBudget.js",
+        "size": 7398,
+        "sha256": "361df13426de76922c338f882136de6505deeb8cbae351d566fe2b3fbf1809d3"
+      },
+      {
+        "path": "dist/src/learning/agentResponseBudget.test.js",
+        "size": 4892,
+        "sha256": "71f60330f16379b0f8d0fbe56e5943bf94399bb488056f5d4665597c6dab8219"
+      },
+      {
+        "path": "dist/src/learning/agentWorkspaceCapabilityContracts.js",
+        "size": 2620,
+        "sha256": "9adf718de142b7f887bf44b8e1ab4c4bf7d9f2568dec24fdf8dbf0308b438bad"
+      },
+      {
+        "path": "dist/src/learning/AnswerQualityEvaluation.js",
+        "size": 11674,
+        "sha256": "029d67fa98fc469cda27d1930788c00e71c67ce2f9cda492387c8b130a84fcc4"
+      },
+      {
+        "path": "dist/src/learning/AnswerQualityEvaluation.test.js",
+        "size": 8826,
+        "sha256": "1e5642322abaca45905996f5b8d76ccb29167cb9f17e07d6c528d25790ea6213"
+      },
+      {
+        "path": "dist/src/learning/answerReleaseReview.js",
+        "size": 240840,
+        "sha256": "2ef91527436cf9de3f9e91fccb3b2b736b87017768b441744ab190988f879ada"
+      },
+      {
+        "path": "dist/src/learning/answerReleaseReview.test.js",
+        "size": 198772,
+        "sha256": "45fcf88175a4823a9c43f46fe325e787a3c621cf0b6327c393b36024cf90912c"
+      },
+      {
+        "path": "dist/src/learning/answerTaskPlan.js",
+        "size": 20733,
+        "sha256": "4f693df1a4722c61fd7d8ccacc19bc6e257ecec0510c975c60facdcf98490d21"
+      },
+      {
+        "path": "dist/src/learning/api.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/learning/conversationComposer.js",
+        "size": 83724,
+        "sha256": "a6805dbd5c7f8cca5e62f672a3afdc673c0ac80f1db72c9b24651c388c5359bc"
+      },
+      {
+        "path": "dist/src/learning/conversationComposer.test.js",
+        "size": 157493,
+        "sha256": "634e6646c55e0a10bbdaf121ab8cafbef3119eb4750dc8337b408f7ed3e75a0c"
+      },
+      {
+        "path": "dist/src/learning/domains/ConversationManager.js",
+        "size": 2932,
+        "sha256": "10adcb5e3adc549dcd546350d3535147fde53f5347dab97ea2f56b6d8584f679"
+      },
+      {
+        "path": "dist/src/learning/domains/index.js",
+        "size": 2297,
+        "sha256": "ae116b5487f4c0f738fab37ead176ad27b2609153cf1bdbbd72a2467de12e7a5"
+      },
+      {
+        "path": "dist/src/learning/domains/KnowledgeIngestor.js",
+        "size": 11097,
+        "sha256": "3fd96c1c2208e036b48179bb851662ca54c6fce8b445a35596b0f499abcbcbad"
+      },
+      {
+        "path": "dist/src/learning/domains/KnowledgeQuerier.js",
+        "size": 7785,
+        "sha256": "9b1e9f47c824455392f0f392f3cce54eaee221ba78e76ecc7a14e96c9d7131c3"
+      },
+      {
+        "path": "dist/src/learning/domains/MasteryEngine.js",
+        "size": 18545,
+        "sha256": "fec7f825004f279eae7e2fd7438c05a0a7817d7a99d21ea59c56df8a667cb87a"
+      },
+      {
+        "path": "dist/src/learning/domains/MemoryPolicyManager.js",
+        "size": 18990,
+        "sha256": "be3b1007f8f4182de137cd8ba94b410de69114a2745658133812aa9293df3abc"
+      },
+      {
+        "path": "dist/src/learning/domains/QualityEvaluator.js",
+        "size": 14235,
+        "sha256": "d5ba52c1b0a587f18b8b745288b0493a0cbbdaab466d7e1f7ea0670e63a4ffb3"
+      },
+      {
+        "path": "dist/src/learning/domains/TutorRouter.js",
+        "size": 14735,
+        "sha256": "a3fa4a61feeab9587f1ed9257b67835780105def3d47b70e3c89d3b1c29289fa"
+      },
+      {
+        "path": "dist/src/learning/domains/types.js",
+        "size": 287,
+        "sha256": "a62a5328a9fabe96dcd69281cc1889c57e9b960532007995a8cb69a16559c96c"
+      },
+      {
+        "path": "dist/src/learning/errors.js",
+        "size": 1055,
+        "sha256": "e10dfa5c7dc86070ca41bba357f0675d7e769f368c935694a35f2d38a8f5f81b"
+      },
+      {
+        "path": "dist/src/learning/evidenceContextAssembler.js",
+        "size": 64723,
+        "sha256": "a73ec46aae87e7b85026f9f6d9e5dbff0dfc37c4e5b1a52879eac3a412741a1a"
+      },
+      {
+        "path": "dist/src/learning/evidenceContextAssembler.test.js",
+        "size": 304541,
+        "sha256": "078be895d0a4d4399474aeb02feb0c610ec9d93fef2fe7163af6bf3346877187"
+      },
+      {
+        "path": "dist/src/learning/graphAnswerCoverage.js",
+        "size": 1557,
+        "sha256": "0131af5853f59cec4e4b6a068bccca97c469cea167e86f7219a17d7649969683"
+      },
+      {
+        "path": "dist/src/learning/graphAnswerCoverage.test.js",
+        "size": 4538,
+        "sha256": "b6189f642901069815e4a4e2f54ec2ccc0b2101bbf182de8082bd2753073ad69"
+      },
+      {
+        "path": "dist/src/learning/graphAnswerCoverageCalibration.js",
+        "size": 5859,
+        "sha256": "992a77b7c0899317f18975789a646fbc2f06e2655d9ef54c03ada340d2d60916"
+      },
+      {
+        "path": "dist/src/learning/graphAnswerCoverageCalibration.test.js",
+        "size": 2234,
+        "sha256": "949f50bd94bfed729ce0030e838826c9f4074791726451ca2715ca75a791198e"
+      },
+      {
+        "path": "dist/src/learning/graphAnswerFacts.js",
+        "size": 4161,
+        "sha256": "beed882c696be224b4ebe29c44006c56f4ada26545e28fb9aab3f10b3eb2de1c"
+      },
+      {
+        "path": "dist/src/learning/graphAnswerFacts.test.js",
+        "size": 1547,
+        "sha256": "d1462c9effc46a8fc05ec0b2e46af224c3554e795e78112ebb147dfd4b85dd6c"
+      },
+      {
+        "path": "dist/src/learning/graphAnswerPlan.js",
+        "size": 48045,
+        "sha256": "f7dd215e9ddc2f64b5ee7fe6e9c3b4bc2f9ec369f490047125ef4a0edba1a913"
+      },
+      {
+        "path": "dist/src/learning/graphAnswerPlan.test.js",
+        "size": 44820,
+        "sha256": "0df494508409ec14e427f07337f8dd42f833f3c5bb029b66baacdccde9fbc0c7"
+      },
+      {
+        "path": "dist/src/learning/graphAnswerQualityCalibration.js",
+        "size": 13486,
+        "sha256": "707f384cd7a2c9b3a10fe8547665bd64a45e01f5f47f21019e7b3afc9ca9fa62"
+      },
+      {
+        "path": "dist/src/learning/graphAnswerQualityCalibration.test.js",
+        "size": 5218,
+        "sha256": "f70689884cce2de1d6f9234e330e2bfa7a691d7f7ef4b16818ca1c7fddcb3aea"
+      },
+      {
+        "path": "dist/src/learning/graphAnswerQualityPolicy.js",
+        "size": 2159,
+        "sha256": "9c0073bdab5fa2b54e6fb36506ac9c098b5ae01491961e73d37873968dadbd2a"
+      },
+      {
+        "path": "dist/src/learning/graphClaimMatcher.js",
+        "size": 5972,
+        "sha256": "a6d687a67057ab319dfb4c9f617db9f4c9513b80030ac7140bbde12f7d0ada91"
+      },
+      {
+        "path": "dist/src/learning/graphConditionedContext.js",
+        "size": 4103,
+        "sha256": "9ca654bd6dd32ca62aab9406ee5257d63f4c5665e0af1d39ca92361928925bf8"
+      },
+      {
+        "path": "dist/src/learning/graphConditionedContext.test.js",
+        "size": 3750,
+        "sha256": "10d7fa06940cb3a4914ef7a4aae4360dd22eee4003fa206c9b4c1f3f52244818"
+      },
+      {
+        "path": "dist/src/learning/graphContextAssembler.js",
+        "size": 38243,
+        "sha256": "81e126258cd5ee14d40b29efa27645fa7999be40ca521c5ca1d827fbaad6f39d"
+      },
+      {
+        "path": "dist/src/learning/graphContextAssembler.test.js",
+        "size": 39718,
+        "sha256": "9fb1f783b59ab30325d6a8281515b2bd54f9285831c6f61a9705cbefb3a05949"
+      },
+      {
+        "path": "dist/src/learning/graphExpansionPolicy.js",
+        "size": 867,
+        "sha256": "47e6b3af92b29dbb3ea76d6ce76b6ed9903d28b684b752d46beaddbfdb94f821"
+      },
+      {
+        "path": "dist/src/learning/graphExpansionPolicy.test.js",
+        "size": 1268,
+        "sha256": "3cf754fe469a8957a303fa84747c9310eaebbf831589b94bd21cda97587f2daf"
+      },
+      {
+        "path": "dist/src/learning/identityMetadata.test.js",
+        "size": 1350,
+        "sha256": "70296fbc6e624baff4a9273ddae9b71a8c3df8ac6fe4e92ade7a471b2e73fe92"
+      },
+      {
+        "path": "dist/src/learning/index.js",
+        "size": 1445,
+        "sha256": "57bd7d8e69c9399201421e99cafdddd5f41aacf33efc096d9e56e4e68bb1e580"
+      },
+      {
+        "path": "dist/src/learning/KnowledgeLearningPlatform.js",
+        "size": 572556,
+        "sha256": "5cbf10a5c7003fc98e29bbce5458c89aaae3ea498400939aba616e0566eb00b9"
+      },
+      {
+        "path": "dist/src/learning/KnowledgeLearningPlatform.persistence.test.js",
+        "size": 37530,
+        "sha256": "192236973b69d3c4a93f578c70be0b9b619e4f0c1c92076c325563edf3dd712e"
+      },
+      {
+        "path": "dist/src/learning/KnowledgeLearningPlatform.program-f.test.js",
+        "size": 4722,
+        "sha256": "eeca65f36bce03842c73e130a4391b29233a25f3cf5a028e5b5c8551e2f971fa"
+      },
+      {
+        "path": "dist/src/learning/KnowledgeLearningPlatform.test.js",
+        "size": 150950,
+        "sha256": "3916e9d76e10c565af5c95ad11c4e8fde3693eaf92eacddec76b74e9393f401a"
+      },
+      {
+        "path": "dist/src/learning/KnowledgeWorkspaceConversationRegression.js",
+        "size": 152376,
+        "sha256": "6d772c16e6d6ffb8c43baec22906dc43ca5bfcec605352dab7a33e8cb7854661"
+      },
+      {
+        "path": "dist/src/learning/KnowledgeWorkspaceConversationRegression.test.js",
+        "size": 218517,
+        "sha256": "f8e7182475185799a8abdf99eaba814c06708470c3b9f1cf9d439f8e629ad49d"
+      },
+      {
+        "path": "dist/src/learning/MeasurementEvidenceConflicts.test.js",
+        "size": 7961,
+        "sha256": "569002ecbb85443d2638435326f2eaaa0ec0e95191d15b7bba595ff8da100556"
+      },
+      {
+        "path": "dist/src/learning/mobileAnswerProjection.js",
+        "size": 4491,
+        "sha256": "24c19a92ffa533357fe29d92f6d63db85f6f6f8eb26ef3f4e667fcd66eb572f7"
+      },
+      {
+        "path": "dist/src/learning/mobileAnswerProjection.test.js",
+        "size": 5781,
+        "sha256": "1685d1e300074b4bc93a65006ea96e4395be2b5b53b16468cb6c5a0719286a72"
+      },
+      {
+        "path": "dist/src/learning/PublicAnswerContract.test.js",
+        "size": 7367,
+        "sha256": "93cd58099d7e5aa984c7ae123488e31e01eacd3fc20d9afb1b2e1ab875324778"
+      },
+      {
+        "path": "dist/src/learning/PublicEvidenceSelection.test.js",
+        "size": 6580,
+        "sha256": "a7af08e2e11dcd47c4cc60fa21093054426f30e5e913caf7f0a0a691f7a0f486"
+      },
+      {
+        "path": "dist/src/learning/PublicMeasurementDisclosure.test.js",
+        "size": 4823,
+        "sha256": "1d4a6728d1b36a5867d137afbfcdd03442360dc3c11f79ce8e724621a2b248ad"
+      },
+      {
+        "path": "dist/src/learning/queryBackend.js",
+        "size": 84754,
+        "sha256": "35937543b074121d8719251e1bf93082b485c6711073ada6a5cb58f619f04172"
+      },
+      {
+        "path": "dist/src/learning/queryBackend.test.js",
+        "size": 48291,
+        "sha256": "375552728a2b7e7a6bde47f2cdc5dd5c52c156203eec376bffc7abd50892f9f7"
+      },
+      {
+        "path": "dist/src/learning/ragContextPack.js",
+        "size": 16096,
+        "sha256": "23bafc19f66e3e4a7ba05bf46013c44d03ee509c1d2669aa5645ed947ca5e3da"
+      },
+      {
+        "path": "dist/src/learning/ragContextPack.test.js",
+        "size": 13442,
+        "sha256": "65e3ccbb60e4ea1cb8f01a8ad3611dbd632d58b039a1c2018c7bf04e1ba7dae0"
+      },
+      {
+        "path": "dist/src/learning/ragEvidenceQuality.js",
+        "size": 3541,
+        "sha256": "5caae827d89accd29ef195587f4ff360735d62be7f8b413576a98690ffb3fb54"
+      },
+      {
+        "path": "dist/src/learning/ragEvidenceQuality.test.js",
+        "size": 1796,
+        "sha256": "978af10d3911d0c7975e28f7893685d65e0cb360efab89074694719adddd7070"
+      },
+      {
+        "path": "dist/src/learning/ragPublicText.js",
+        "size": 5073,
+        "sha256": "ddf846c54ed4acf01c9f0811ec1f1e88267337d3908dc5033dae98db0cd70c42"
+      },
+      {
+        "path": "dist/src/learning/ragPublicText.test.js",
+        "size": 5720,
+        "sha256": "0d12e335168e5fb41c9492269452abb4b2730d29b85a7b627750d608452f9978"
+      },
+      {
+        "path": "dist/src/learning/ragSufficiencyJudge.js",
+        "size": 6631,
+        "sha256": "ca2eceb4b9589c3397b2b3501ffb764716feb9c046a89e441fb8d8215f65ef44"
+      },
+      {
+        "path": "dist/src/learning/ragSufficiencyJudge.test.js",
+        "size": 8275,
+        "sha256": "aace88757103e6d1d6b989ce21bc7c7ad67023a6a7f9ff773b048bff224505ad"
+      },
+      {
+        "path": "dist/src/learning/ragSufficiencyProviderJudge.js",
+        "size": 8009,
+        "sha256": "c467cc5569c5abc34f680481233ce140d8083a3dd133d36970679f26d6d1c095"
+      },
+      {
+        "path": "dist/src/learning/ragSufficiencyProviderJudge.test.js",
+        "size": 9729,
+        "sha256": "ae59f73e474783be3ce0b8f47b10c1a9cd1183cd084e0a6510e5b35d24710315"
+      },
+      {
+        "path": "dist/src/learning/requestNormalization.js",
+        "size": 14458,
+        "sha256": "83ea8b0aca5aad3f2faf3f3f33b921446596c6663e9d85a8e14809afb19e0c57"
+      },
+      {
+        "path": "dist/src/learning/requestNormalization.test.js",
+        "size": 4425,
+        "sha256": "1e0c8f3811bba63c302e063f7e3aca5962500f4a7c02cae9a7fddc2de003d23d"
+      },
+      {
+        "path": "dist/src/learning/runtimeCapability.js",
+        "size": 285622,
+        "sha256": "fa62d8481cfdf054be61f5db6eb7cf9f087378205edbb7f4f2806f60865d6954"
+      },
+      {
+        "path": "dist/src/learning/runtimeCapability.test.js",
+        "size": 189413,
+        "sha256": "6eda31ab4e2f1a4854de45d1ae726231e341e640594f311b84666164398939f8"
+      },
+      {
+        "path": "dist/src/learning/store.js",
+        "size": 59897,
+        "sha256": "1f7759080a21e4fd0745cc84c1042bebc245bcfcb79473e9716c7948fc8c051f"
+      },
+      {
+        "path": "dist/src/learning/store.test.js",
+        "size": 68780,
+        "sha256": "e267b6947e0d5510936d57b81fbebb3895b477379e44e76e2b9209e7394fe7e8"
+      },
+      {
+        "path": "dist/src/learning/tutorAdapter.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/learning/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/learning/vectorAccelerationAdapter.js",
+        "size": 46743,
+        "sha256": "9101c96ee85f1fdd3e16bad74e9a6da11ab4863bdccbc56b91b7b9d850d49404"
+      },
+      {
+        "path": "dist/src/learning/vectorAccelerationAdapter.test.js",
+        "size": 21895,
+        "sha256": "223f1de98809b5419ab4a68acc4fc4d7d823a470d0dad5e2ef0461adec0ef7c6"
+      },
+      {
+        "path": "dist/src/learning/workspaceHydration.js",
+        "size": 7014,
+        "sha256": "523c63f74ac3ed458df151f05fc05a1f49d2a9610e52061838df3c160673436f"
+      },
+      {
+        "path": "dist/src/learning/workspaceHydration.test.js",
+        "size": 1553,
+        "sha256": "c91cac5792c982955a8171b31771be4ebdc99a7b576b1f0c63b298b799b6941d"
+      },
+      {
+        "path": "dist/src/lfs.asset.policy.contract.test.js",
+        "size": 7920,
+        "sha256": "1e0b3bb330fcd10e7c25c7eccbf88afe3bb71e9e69425c74067b35b66097103a"
+      },
+      {
+        "path": "dist/src/license.policy.contract.test.js",
+        "size": 3270,
+        "sha256": "5b14eb2f83264c8efb804ae0c776a54d612fe3ebf22e8c055a21b7b4b234b199"
+      },
+      {
+        "path": "dist/src/markdown/MarkdownGateway.js",
+        "size": 37948,
+        "sha256": "ffda5c3aa55d67565b94d11ecfc815517e335f70a4baa860305990668aed1708"
+      },
+      {
+        "path": "dist/src/markdown/MarkdownGateway.test.js",
+        "size": 8368,
+        "sha256": "9ef7d26b128970a7af40f2f335b9f075c66b1f54ebadcccf69a5e6230ddfc257"
+      },
+      {
+        "path": "dist/src/memory/MemoryGovernance.js",
+        "size": 3110,
+        "sha256": "2a1190ac4a8ad001057d9025bc27663ae41f5aa2e830733d8404742eb3b18084"
+      },
+      {
+        "path": "dist/src/memory/MemoryGovernance.test.js",
+        "size": 1903,
+        "sha256": "eca7d628e64fc8509ad073fa252937f6afc47a3f5e3b27bd23a9b3cc77cdf3ff"
+      },
+      {
+        "path": "dist/src/memory/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/mermaid.frontend.guard.contract.test.js",
+        "size": 4199,
+        "sha256": "e9a692f8b2e5c63190327557785457fe3426037c5416499f150e8bf85a8f768e"
+      },
+      {
+        "path": "dist/src/middleware/auth.js",
+        "size": 1367,
+        "sha256": "3a6d8e78fa995576bc73b27102f769f5d587a75f1246f9350f925d9470bcaedc"
+      },
+      {
+        "path": "dist/src/middleware/auth.test.js",
+        "size": 1857,
+        "sha256": "fa67853d8658452566fbc0da1062b17f86230d738499d14cd299178528717e78"
+      },
+      {
+        "path": "dist/src/middleware/body-parser.js",
+        "size": 1430,
+        "sha256": "8c1f854eacfc20c5c4d0c8d9c17e760404d4797fc64cf67d35f35f9b1d9d8020"
+      },
+      {
+        "path": "dist/src/middleware/cors.js",
+        "size": 1586,
+        "sha256": "2b32671fa1cbb9b514e0ca26b37771d2425742269d12e24347d8deff87860529"
+      },
+      {
+        "path": "dist/src/middleware/index.js",
+        "size": 2763,
+        "sha256": "4795c788ca30f41e78602270652417a60642dabe81e771e4ddccc4929771c0b3"
+      },
+      {
+        "path": "dist/src/middleware/request-trace.js",
+        "size": 4096,
+        "sha256": "6d77c5c1e737bcc1db6480eea2520770bc1179d7515005b0ccbce06119ca7091"
+      },
+      {
+        "path": "dist/src/middleware/SseResponseWriter.js",
+        "size": 4674,
+        "sha256": "89ba86f111aeb41d587098fc368f05830414a377990321c98c33da5a22e3caf4"
+      },
+      {
+        "path": "dist/src/middleware/SseResponseWriter.test.js",
+        "size": 2670,
+        "sha256": "a717ea72e007fad831b4b7fe3e0693deaf7a28b0245cfdd2398a1df2aeb47661"
+      },
+      {
+        "path": "dist/src/mobile_exact_analyzer.test.js",
+        "size": 5283,
+        "sha256": "7bc5d20d071f2eb4c8c13b0262dfc85aa87994f346fd7ebfe62e306168a37c71"
+      },
+      {
+        "path": "dist/src/mobile.android.evidence.contract.test.js",
+        "size": 7994,
+        "sha256": "c17bba2ea0162a95d4456c1ca44ca75a066f87eae805e192151844c6e5bc2505"
+      },
+      {
+        "path": "dist/src/mobile.android.signing.contract.test.js",
+        "size": 3703,
+        "sha256": "12f346f179b07ddac8307644a6c7afe50087dd08b5312b7d8da31e844889b562"
+      },
+      {
+        "path": "dist/src/mobile.artifact.contract.test.js",
+        "size": 6262,
+        "sha256": "03f609e72ec782ab2697d0ec6726808d0137a04012e02943a3e47938bb7dd0b8"
+      },
+      {
+        "path": "dist/src/mobile.budget.contract.test.js",
+        "size": 5549,
+        "sha256": "52577467e11d691276186e1bfd81dcd1efc1815b8493c949318a6923adcc2e35"
+      },
+      {
+        "path": "dist/src/mobile.canonical-id.readiness.test.js",
+        "size": 2575,
+        "sha256": "fce38107bdf580e687cba0325cae34ce8b0b434843516cc80ef7c0cf92d1b4c3"
+      },
+      {
+        "path": "dist/src/mobile.graph.parity.contract.test.js",
+        "size": 8414,
+        "sha256": "a4c540dea271d93c87c60ec84256abefcbc9a5af1d1dc1a296ea06ae03c8a148"
+      },
+      {
+        "path": "dist/src/mobile.identity.contract.test.js",
+        "size": 3516,
+        "sha256": "4323e2d5a238e1e37ae75a8d8e26d6e6710e62d89a6901b6613a3bef3c0c1624"
+      },
+      {
+        "path": "dist/src/mobile.identity.corpus.manifest.test.js",
+        "size": 3410,
+        "sha256": "cfd207d8a3d17daa3e4dd4f58e849e54cc1e6008732c2004d043e6d97fb60de5"
+      },
+      {
+        "path": "dist/src/mobile.identity.corpus.test.js",
+        "size": 2414,
+        "sha256": "9b6cc4462a713c0f13af413ed0f8f9db8d62e0a34b9a4aec2670c61b660795a8"
+      },
+      {
+        "path": "dist/src/mobile.native.recovery.contract.test.js",
+        "size": 3433,
+        "sha256": "6bcd61eb509b6d3c850e851e1bc5b248929accb156db23b377e0d03a8d31d45e"
+      },
+      {
+        "path": "dist/src/mobile.pipeline.test.js",
+        "size": 12272,
+        "sha256": "859db8f3599cd104435e2b2e494c9a2fa8b91964ea9f16acd8c345aeacdaf18f"
+      },
+      {
+        "path": "dist/src/mobile.profile.contract.test.js",
+        "size": 13179,
+        "sha256": "5aeeeddcfdae2ac2a4a9961b97c80aa09b23e3624d7d45e9791606f1821e4973"
+      },
+      {
+        "path": "dist/src/mobile.semantic.parity.test.js",
+        "size": 4532,
+        "sha256": "9ec5c533b6f2270ebbc422817938fbb360ea4589da47838dfdbdf203d0eee132"
+      },
+      {
+        "path": "dist/src/native_clipboard.js",
+        "size": 4445,
+        "sha256": "1f777fafbe23cde66fbf7817e0d28b7e12a366250ad8efc0d2f5bd5b51937abd"
+      },
+      {
+        "path": "dist/src/notemd.agent.manifest.test.js",
+        "size": 3578,
+        "sha256": "7db804a6f94a19957fd97b7e37db238c31407779cb77a85eee5f32b4900b8e4e"
+      },
+      {
+        "path": "dist/src/notemd.api.contract.test.js",
+        "size": 3505,
+        "sha256": "24a6720c95e48800ae72ff637c2ab37095606c795491adf9004d9dd8da11a9fb"
+      },
+      {
+        "path": "dist/src/notemd.app_config_toml.test.js",
+        "size": 9231,
+        "sha256": "dd99b7eb0850ef4e81d02f250fe04900b30b9e8953b8f1eba838192dc9c3ade6"
+      },
+      {
+        "path": "dist/src/notemd.batch.workflow.test.js",
+        "size": 5875,
+        "sha256": "81cb3bc7fd712c019d1d03df5f00e747216a3f6aae0c8d0472d2b97f030baeb7"
+      },
+      {
+        "path": "dist/src/notemd.cli.api.test.js",
+        "size": 11945,
+        "sha256": "39d36488b807da966e3fe24780326ca03ad66024884d166f39e95d660bd878b4"
+      },
+      {
+        "path": "dist/src/notemd.cli.e2e.test.js",
+        "size": 6569,
+        "sha256": "9a2132609fd4a3c5495eb0ddfec59bb81f318be2264a14ca06ad512366173e53"
+      },
+      {
+        "path": "dist/src/notemd.core.test.js",
+        "size": 13168,
+        "sha256": "c9dc2a989bd84aa6049e295c2b34a82e1cafdd2200cf586f62127750a4ac774b"
+      },
+      {
+        "path": "dist/src/notemd.diagram.pipeline.test.js",
+        "size": 11276,
+        "sha256": "abba2319e0b1b1fdb25db22045f50975ff54d1a5db593168334e87bd4ce3b941"
+      },
+      {
+        "path": "dist/src/notemd.embed.refresh.contract.test.js",
+        "size": 3187,
+        "sha256": "43f234cac79451cf8f4ba5314c18e931cdb917a415c55bc0cd203498ab767958"
+      },
+      {
+        "path": "dist/src/notemd.providerTemplates.test.js",
+        "size": 1881,
+        "sha256": "80c32d2650525223728483d4df290f059c006979620545500be8a68e43109a8f"
+      },
+      {
+        "path": "dist/src/notemd.server.integration.test.js",
+        "size": 33969,
+        "sha256": "c3b6574b733191af7bb9adcdb27e6f953781ec024bad5503b579645d0dfef586"
+      },
+      {
+        "path": "dist/src/notemd.workflow.pipeline.test.js",
+        "size": 8295,
+        "sha256": "d7c8e4449b71c099933ed870b767b89e72c044ad81d866df126b3518d4082c55"
+      },
+      {
+        "path": "dist/src/notemd/AppConfigToml.js",
+        "size": 30757,
+        "sha256": "e0538cf6b9db6fe6aab13328750c6cd83ac7f964cf6e5a039117f7cad8cf0012"
+      },
+      {
+        "path": "dist/src/notemd/BatchProcessor.js",
+        "size": 3202,
+        "sha256": "d8b6715c731da78c7bc86f1ab4fa47fde4585a6dec8288e1738821a5b971873c"
+      },
+      {
+        "path": "dist/src/notemd/cli/commands.js",
+        "size": 14884,
+        "sha256": "8b2176ec3af81cb17a0e900a9f32d159e4e206a4cd67d0e51b780a7671708886"
+      },
+      {
+        "path": "dist/src/notemd/cli/dispatcher.js",
+        "size": 11318,
+        "sha256": "3152d5818b8f982b997a2a2a8f6136a255c3f0d891332a1845a76b175229fb71"
+      },
+      {
+        "path": "dist/src/notemd/cli/index.js",
+        "size": 6795,
+        "sha256": "2662473e9903219f3b0e3d4d1ecf5e4aaed2c8cf0c8325919986a2d057434d6a"
+      },
+      {
+        "path": "dist/src/notemd/cli/parser.js",
+        "size": 2007,
+        "sha256": "cbcfc348e28c5ccd2cb6d72b46f650d657f5d6bcb3fb437185b24486e78b4813"
+      },
+      {
+        "path": "dist/src/notemd/cli/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/notemd/constants.js",
+        "size": 5091,
+        "sha256": "28050ba8bdd7fd63402c10b14819c0719cc2c2ffa061ef3fc91016e53bfdd26d"
+      },
+      {
+        "path": "dist/src/notemd/ContentGenerator.js",
+        "size": 8478,
+        "sha256": "0c1cb0af539d696597494b8257d97321eb64d66e25355302a92d6665ac308b9d"
+      },
+      {
+        "path": "dist/src/notemd/diagram/diagramGenerationService.js",
+        "size": 4479,
+        "sha256": "c823d02ad303ee3eafcf1fe7c08fc09006a23a47777d316fd12adc68f2c8edeb"
+      },
+      {
+        "path": "dist/src/notemd/diagram/diagramSpec.js",
+        "size": 3253,
+        "sha256": "39e410c7c6c6adc1b636f3782608ac66a7656789266b12fb8f1ab6ae50c19fd4"
+      },
+      {
+        "path": "dist/src/notemd/diagram/diagramSpecResponseParser.js",
+        "size": 6113,
+        "sha256": "62b75c2c4c747ca5e32be21cb2bfda201f2fe1885df10bc1fa318dc582d1790e"
+      },
+      {
+        "path": "dist/src/notemd/diagram/intent.js",
+        "size": 4650,
+        "sha256": "75ad40b565c2d2c5da48de64c0ca6cfd2c20f6d66ce842c4a73fc587ff5c1194"
+      },
+      {
+        "path": "dist/src/notemd/diagram/planner.js",
+        "size": 3323,
+        "sha256": "66f72eb30b7748ebcc90c9fa5f53c6384357552ee48c60dbce565dab83fefe12"
+      },
+      {
+        "path": "dist/src/notemd/diagram/prompts/diagramSpecPrompt.js",
+        "size": 2352,
+        "sha256": "787dba9ec787c07bdaeb53f4bc9c71bc68988dee050adda79c6d515f446990e3"
+      },
+      {
+        "path": "dist/src/notemd/diagram/types.js",
+        "size": 505,
+        "sha256": "55e3499b4eaa37b145d1ea7dc70daa319a6705ce9a640ef1b1d605e77af71738"
+      },
+      {
+        "path": "dist/src/notemd/DuplicateDetector.js",
+        "size": 3076,
+        "sha256": "746550baf3eec28a995249237c300d4679725d10a9b4815bad3eabb2a0dbdad6"
+      },
+      {
+        "path": "dist/src/notemd/FileProcessor.js",
+        "size": 17664,
+        "sha256": "8c016998dca350eaf7dd2afc4ae8940ccc127e22bf21ba8559f86fff0fd29b9f"
+      },
+      {
+        "path": "dist/src/notemd/FormulaFixer.js",
+        "size": 2408,
+        "sha256": "248e8bc3cfe4c37e30555e6051c73ce629280ebf3095f65be5c10330f9a6a445"
+      },
+      {
+        "path": "dist/src/notemd/index.js",
+        "size": 3344,
+        "sha256": "87adcc5748d2648458583d7d365d50d322a63239b47638564b1075160c4614f1"
+      },
+      {
+        "path": "dist/src/notemd/LlmProvider.js",
+        "size": 21958,
+        "sha256": "e2cb701031a685c7c1282f3e549ac4cb15e6ce8e6fbc5a12cb6848384965a7e2"
+      },
+      {
+        "path": "dist/src/notemd/LlmProviderDefinitions.js",
+        "size": 9776,
+        "sha256": "5a7aa96073d5d588b3ea690e4089b2966a8d1bb8ee6dcd8027a7fb0905aa319d"
+      },
+      {
+        "path": "dist/src/notemd/MermaidProcessor.js",
+        "size": 17701,
+        "sha256": "b0f37de0ab17f347824d965dbe188605deb6cc891c995946565cf5ac2b07fed7"
+      },
+      {
+        "path": "dist/src/notemd/NotemdService.js",
+        "size": 36885,
+        "sha256": "713e9f5c7ab3f224e771ca6227cf6264c4bbe58bfb85c4c901d98d02715c68ba"
+      },
+      {
+        "path": "dist/src/notemd/operations/capabilityManifest.js",
+        "size": 1048,
+        "sha256": "1c8c0e4a13cf643445095623b9910a6a5bb806374fd96bc637d5b6687bb5749d"
+      },
+      {
+        "path": "dist/src/notemd/operations/cliContracts.js",
+        "size": 649,
+        "sha256": "08423e9db088e35f4d205877cbf298586a963cdfe6f68b68f4c07337245a2c8b"
+      },
+      {
+        "path": "dist/src/notemd/operations/configProfileCommands.js",
+        "size": 4760,
+        "sha256": "ec6f694aaa8f5b7e9ac82e649de11e7f336178d72d35ccd8e06ea540262a3d78"
+      },
+      {
+        "path": "dist/src/notemd/operations/registry.contract.test.js",
+        "size": 4461,
+        "sha256": "164eed091d7e6971256d3af241301372dd6647cc9cb48b9bafc92867fa902f04"
+      },
+      {
+        "path": "dist/src/notemd/operations/registry.js",
+        "size": 34055,
+        "sha256": "5672ee86343f5f867cb8f12215174bc312d6e67ee39fe7dce08e16f8cdb1cbf6"
+      },
+      {
+        "path": "dist/src/notemd/operations/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/notemd/progressReporter.js",
+        "size": 271,
+        "sha256": "8e37d5ae8847da31e05bc0ece252164080af97dbecf67087a3b4f5824c7edc42"
+      },
+      {
+        "path": "dist/src/notemd/PromptManager.js",
+        "size": 4792,
+        "sha256": "7c848e16f8cca9d9845b3d65e11299b699276e66cf1911d4a9a7393c7d946d32"
+      },
+      {
+        "path": "dist/src/notemd/providerDiagnostics.js",
+        "size": 10463,
+        "sha256": "70c95d91229da1427b4cf77412287f5ed6caa0ea54978f8528b72a4dffced746"
+      },
+      {
+        "path": "dist/src/notemd/providerProfiles.js",
+        "size": 1544,
+        "sha256": "e3cf825ef15f8f1e906206aca24da262eaf46bfdfebf1d5d3bb48319851c2b8d"
+      },
+      {
+        "path": "dist/src/notemd/providerTemplates.js",
+        "size": 9693,
+        "sha256": "0c26cb164a56d8a6e5cfc87f60dcbf3f8627f2c8b98d0e351d2e9386a2db4f49"
+      },
+      {
+        "path": "dist/src/notemd/search/DuckDuckGoProvider.js",
+        "size": 1547,
+        "sha256": "c1ffa151e8a281f3a14759f3e4f34fc7cc572a4ed97b101949b62e545b2e1aec"
+      },
+      {
+        "path": "dist/src/notemd/search/SearchManager.js",
+        "size": 496,
+        "sha256": "f0dc5972c09c0cb249cb8d808bf798404e98e07d75cd0e6bf56b90e7db002eb1"
+      },
+      {
+        "path": "dist/src/notemd/search/SearchProvider.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/notemd/search/TavilyProvider.js",
+        "size": 1651,
+        "sha256": "2a739bb7cfae4b3eb4fa00c75d32560fed468a2b6d04e457ad8f5b7923b9e523"
+      },
+      {
+        "path": "dist/src/notemd/Translator.js",
+        "size": 9949,
+        "sha256": "ffb4b1c5795135f27c39bea7c4706803127caef0a1130824b75c758007a8889f"
+      },
+      {
+        "path": "dist/src/notemd/types.js",
+        "size": 1135,
+        "sha256": "74e7382429dbb5d13906b1f1ff4b87c84c2e1595dfb5c6514c95e759f42f168d"
+      },
+      {
+        "path": "dist/src/pathbridge.handshake.contract.test.js",
+        "size": 26075,
+        "sha256": "5f61b93f3da18828c8c129dcb4a8acc6584dcd9c9fde1db764892b97f8a27516"
+      },
+      {
+        "path": "dist/src/pathbridge.host-adapter.contract.test.js",
+        "size": 5371,
+        "sha256": "954605dcca59e32ddfd9d6e50d25dd0a03e8e6f823afcb5d2b771438dac9cc4a"
+      },
+      {
+        "path": "dist/src/pathbridge.strict.policy.contract.test.js",
+        "size": 3847,
+        "sha256": "f1136ef6ebf862a05ca47279dc5db9f3a920e5c230fc28a057d8dcf419510677"
+      },
+      {
+        "path": "dist/src/pathcore.bundle.contract.test.js",
+        "size": 4380,
+        "sha256": "5138ea5eaac1897814e7b752c45d33a2108b24117d7ea5a48dd2d27ce4e41436"
+      },
+      {
+        "path": "dist/src/pathmode.background.contract.test.js",
+        "size": 3666,
+        "sha256": "e74d04ebb4c2b48d000e20f3fce5da37e6e2c4e8cfbda00ec47d83471d672ac4"
+      },
+      {
+        "path": "dist/src/pathmode.history.contract.test.js",
+        "size": 2537,
+        "sha256": "32efc593df71c8aee5228d6cfb0ecff868059fb629f10a976ab448cc25ca7852"
+      },
+      {
+        "path": "dist/src/pathmode.settings.api.contract.test.js",
+        "size": 2855,
+        "sha256": "afe2a37f8c31997f115f51f13b5b72adcaa07f86164ea6beb023a3934d99649a"
+      },
+      {
+        "path": "dist/src/pkg.sidecar.contract.test.js",
+        "size": 3445,
+        "sha256": "9da4f85671d194b466f58bd754ed19f11d87534f1fe1e420e8db49904ee0604c"
+      },
+      {
+        "path": "dist/src/pkg.snapshot.safety.contract.test.js",
+        "size": 2946,
+        "sha256": "c5280a085583f0169c9000a75363579c8cd6bdc495d260ad00099a560fd7d7b9"
+      },
+      {
+        "path": "dist/src/platform/ExportProfile.js",
+        "size": 3584,
+        "sha256": "31bd9bfce50ea5bf868cc2f872dba8c2af12976773f06a84579db4096ea3a490"
+      },
+      {
+        "path": "dist/src/platform/MobileBudget.js",
+        "size": 662,
+        "sha256": "5d06cb19f4608b8074d110855b8c6c898efad0bc7a9e6331a10a48f30625fe09"
+      },
+      {
+        "path": "dist/src/platform/PlatformCapabilities.js",
+        "size": 2830,
+        "sha256": "1f24b7acf545688a635833c962207b26ffc3aeb86479032b0f7257f46e07da22"
+      },
+      {
+        "path": "dist/src/platform/PlatformCapabilities.test.js",
+        "size": 2173,
+        "sha256": "f579d615010989a2ac4d426294691a34e8468eb4337c8ced9f06334e684d469b"
+      },
+      {
+        "path": "dist/src/platform/RenderMaterializer.js",
+        "size": 1596,
+        "sha256": "70d8de5cc8ca987626e2873f96d205cdc16acb8f6ea1e1496d1d90ea453eca8c"
+      },
+      {
+        "path": "dist/src/platform/RenderMaterializer.test.js",
+        "size": 1435,
+        "sha256": "4bd9ddd5cbfeea08ecc12708caddb836c12ceef9a0a4b25a79bf100c474d53ae"
+      },
+      {
+        "path": "dist/src/privacy.manifest.contract.test.js",
+        "size": 4108,
+        "sha256": "a7221c55e2d8f51ad48c05750f480bb7226acd9a3207c1447048ec92c025eaa2"
+      },
+      {
+        "path": "dist/src/query_backend.external_http.integration.test.js",
+        "size": 17508,
+        "sha256": "5f29d48254ee874477583daff79a6c32d51d4f459e2f28bb65ada17b612ef360"
+      },
+      {
+        "path": "dist/src/reader_renderer.js",
+        "size": 70805,
+        "sha256": "1ce265888bd3f38e8cf48f2ddf99e80120fd363d9cca6a055de6c710fd3295aa"
+      },
+      {
+        "path": "dist/src/reader_renderer.test.js",
+        "size": 18780,
+        "sha256": "5935f3ac230073c186e745e33abb3044491de524444c2ad8363b783a31722a78"
+      },
+      {
+        "path": "dist/src/release.godot.mirror.contract.test.js",
+        "size": 4828,
+        "sha256": "779c5ed54a10b27e23fa4a4844637fe19ce78cdbb863f1726d1a927d8ea8e90a"
+      },
+      {
+        "path": "dist/src/resources/ResourceRegistry.js",
+        "size": 11165,
+        "sha256": "63cbafbda31aa53be08715b1d24a797ebde4792b8db2461c149fbb250bf31887"
+      },
+      {
+        "path": "dist/src/resources/ResourceRegistry.test.js",
+        "size": 4813,
+        "sha256": "caa7f7ae37042f262b2df60c0a4ceca7baf08c8d3f9980afcf0b167edb66881d"
+      },
+      {
+        "path": "dist/src/resources/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/routes/agentWorkspaceDiagnostics.js",
+        "size": 6773,
+        "sha256": "c0e89959bf6e546e05bfa9b58feab935c4413ea5a7ef3a38bbecefd605bdee90"
+      },
+      {
+        "path": "dist/src/routes/index.js",
+        "size": 824,
+        "sha256": "63b015270eeea5924951bd6a24fa4190cb9928edc233bb52e2e91166cebc443c"
+      },
+      {
+        "path": "dist/src/routes/knowledge.js",
+        "size": 41962,
+        "sha256": "dd38094e821c85387563e1b35f0f5a9b8806b70cb833cdecf51f476a2dbd5e34"
+      },
+      {
+        "path": "dist/src/routes/knowledgePayload.js",
+        "size": 9390,
+        "sha256": "445cb940158eabfd782995a52087d6dac069a698dd69feec7670c18a1d56e1e0"
+      },
+      {
+        "path": "dist/src/routes/knowledgePayload.test.js",
+        "size": 2382,
+        "sha256": "6277da23822d0595f98940831082a03c0da2fd24dcfe9266100f0d3ba889f612"
+      },
+      {
+        "path": "dist/src/routes/markdown.js",
+        "size": 12836,
+        "sha256": "1791ecca409ef33d4296dd74abb2a9e8ece6715f7fb644b572d71bf0f3896a04"
+      },
+      {
+        "path": "dist/src/routes/notemd.js",
+        "size": 67107,
+        "sha256": "d076563a8e2b7296a581b30e522d528226c2691573b1e18fb7afeb077430cc50"
+      },
+      {
+        "path": "dist/src/routes/registry.contract.test.js",
+        "size": 6631,
+        "sha256": "732852a13e0ba157d2a8c963fe00688a2335773f33b2e86f5f580554ce40a4fd"
+      },
+      {
+        "path": "dist/src/routes/registry.shadow.contract.test.js",
+        "size": 1578,
+        "sha256": "759b2df5597cebe84fe001d1b16e80529eb423c5851c88bc72cfd5e8f64901c6"
+      },
+      {
+        "path": "dist/src/routes/render.js",
+        "size": 11224,
+        "sha256": "48472888e2ecf09c88ee513c3665132a208b8df8db25fe28de86272010624fe8"
+      },
+      {
+        "path": "dist/src/routes/runtimeRunbookRouteOps.js",
+        "size": 7324,
+        "sha256": "eb4cf6b6ca6f243c4d8bdac847f88f012183a38849947af908a1d422d075338c"
+      },
+      {
+        "path": "dist/src/routes/runtimeRunbookRouteOps.test.js",
+        "size": 8074,
+        "sha256": "a4bdf9ea63437de3555a1b0290619ec7aad3db7e2f54c75f5697329f5c43a5e4"
+      },
+      {
+        "path": "dist/src/routes/settings.js",
+        "size": 191,
+        "sha256": "f7a359fcc619555a69c28efcdbfee61f738f21f3c3ecb920a86d36d420c8f9cf"
+      },
+      {
+        "path": "dist/src/routes/staticFiles.js",
+        "size": 3568,
+        "sha256": "bf43c52e479f14cca72e2fb900de99545ced06708bc33ea4ea67a6fb3f750121"
+      },
+      {
+        "path": "dist/src/routes/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/runtime.capabilities.test.js",
+        "size": 6809,
+        "sha256": "c8c4da789aa01e30c7b35311f9f0133f45e8a196aa58991f46ccd8f55918c012"
+      },
+      {
+        "path": "dist/src/runtime.heap.policy.contract.test.js",
+        "size": 5149,
+        "sha256": "bdf14951b0c431ff0a4e2bf83552e0929f325c44424a50581259ab548b3aecc5"
+      },
+      {
+        "path": "dist/src/runtime.spool.policy.contract.test.js",
+        "size": 2696,
+        "sha256": "46448c137827272c409691a149fd41ce5bd1cfe0f1fbd1ccf390b0ef93cf20f8"
+      },
+      {
+        "path": "dist/src/runtime.transport.adapter.contract.test.js",
+        "size": 8819,
+        "sha256": "4ce89f4c9e7b2a9b931a1dcf70437a86f4078f712f4555b07363dd01def858df"
+      },
+      {
+        "path": "dist/src/sbom.attestation.policy.contract.test.js",
+        "size": 39569,
+        "sha256": "555976e23812c9a2275bff564ca9c1d8b3ce5252747472daf308541b788fdeb8"
+      },
+      {
+        "path": "dist/src/sbom.policy.contract.test.js",
+        "size": 4220,
+        "sha256": "0ab4a1545a85e3db02ad2d84dcfb602446faab04a1076b74ace92a846e5465a8"
+      },
+      {
+        "path": "dist/src/server.js",
+        "size": 598680,
+        "sha256": "0d0b72c0602516864e9c9f2708cf590544e8693841e886197764d63c3da8f1f9"
+      },
+      {
+        "path": "dist/src/server.migration.test.js",
+        "size": 57108,
+        "sha256": "19d2e2c626593baca7472afcfea95652f32b8016e86e3153d707a996c3103797"
+      },
+      {
+        "path": "dist/src/server.port.fallback.contract.test.js",
+        "size": 10886,
+        "sha256": "1b10b449e4dd6d908ab074256f13b64a21cc9dfab4434451718d60265b3887ac"
+      },
+      {
+        "path": "dist/src/session/SessionStateStore.js",
+        "size": 3535,
+        "sha256": "9afc351a49a192326400119357b220032dba9d255f621eb7bc494c1a78846362"
+      },
+      {
+        "path": "dist/src/session/SessionStateStore.test.js",
+        "size": 2220,
+        "sha256": "c7546a063cd110f68254e33e191bd444c9c05ca5be2b369608825ebf1f0eff43"
+      },
+      {
+        "path": "dist/src/session/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/settings.runtime.contract.test.js",
+        "size": 2376,
+        "sha256": "4ed52109a4b772f8d83178bba881e11ddcaa6fc565f1bef986b776730ba21d80"
+      },
+      {
+        "path": "dist/src/shared/types.contract.test.js",
+        "size": 5040,
+        "sha256": "315cbf587941f3cf4b0dcc0650675dd57f48209e567ced39098445bf5290e105"
+      },
+      {
+        "path": "dist/src/shared/types.js",
+        "size": 912,
+        "sha256": "2f959b46d0abf194f84c5de02b5728d1075d6d01dc8d73859552cac501de558e"
+      },
+      {
+        "path": "dist/src/sidecar.build.lock.contract.test.js",
+        "size": 9265,
+        "sha256": "28b4ad84f96435bcf0b95de04384b820df34afcbbb326db77346b036c15732ea"
+      },
+      {
+        "path": "dist/src/sidecar.freshness.contract.test.js",
+        "size": 10390,
+        "sha256": "26de58da7d7c99f34f3da9a90baf05bae643740c70406d5560159ca75260165a"
+      },
+      {
+        "path": "dist/src/sidecar.relaunch.contract.test.js",
+        "size": 2333,
+        "sha256": "9f5218788be30221804a413c65a033f1bc49bb98e4f565255a3b104ffccf3e8e"
+      },
+      {
+        "path": "dist/src/sidecar.replacement.boundary.contract.test.js",
+        "size": 8102,
+        "sha256": "a00038b010f12c46819f54cf1eb3c247c03ad67311ed95a6e5d840e57bf28c28"
+      },
+      {
+        "path": "dist/src/sidecar.signature.contract.test.js",
+        "size": 2895,
+        "sha256": "59835a505f5c802e292ecc2f489ecc7a4db00e4f532dd59c60363e05b70c1fab"
+      },
+      {
+        "path": "dist/src/sidecar.supply.readiness.contract.test.js",
+        "size": 7006,
+        "sha256": "54a222156813797ac89b7fcacfdef73d7384f30683b232885b6dd303d3f1a6c5"
+      },
+      {
+        "path": "dist/src/source_manager.loadflow.test.js",
+        "size": 12187,
+        "sha256": "82e1a72e0e09017933c147cc002898c9a2ad62c54d71d61494878e240fba42d1"
+      },
+      {
+        "path": "dist/src/startup.layout.snapshot.contract.test.js",
+        "size": 2885,
+        "sha256": "09d44e11b3e22184944923c20af00e9443845e3dedc3012c36925043063b217b"
+      },
+      {
+        "path": "dist/src/storage.provider.capacitor.content.contract.test.js",
+        "size": 3035,
+        "sha256": "b4b7e634ee35b80127a771d0a6ddd58e08db6adb8b6f74013572a86258f33d1e"
+      },
+      {
+        "path": "dist/src/storage.provider.capacitor.worker.contract.test.js",
+        "size": 3359,
+        "sha256": "8dafc461eea852db689e2523ad9a8c05368c5cec1f808ab805e181da4044360b"
+      },
+      {
+        "path": "dist/src/storage.provider.contract.test.js",
+        "size": 11926,
+        "sha256": "b542acee5fba0f1389ee23c0a7e0555a56f3e11b2d052bc62ef113d59454e976"
+      },
+      {
+        "path": "dist/src/tauri.frontend.build.contract.test.js",
+        "size": 3626,
+        "sha256": "232ea869e0ebd362fe8fd2b1e803b2b25979809cf39e176748ee645b1378ae60"
+      },
+      {
+        "path": "dist/src/tauri.sidecar.cleanup.contract.test.js",
+        "size": 6305,
+        "sha256": "41a4fda4be211e032fd8ebe2bf99c10195f3c65e17216e381824eb48c0657bcf"
+      },
+      {
+        "path": "dist/src/tauri.test.runner.contract.test.js",
+        "size": 3948,
+        "sha256": "bd11a2075195663d9ec810f790a7525317b4cf931d57f5a8264966022c3f72e9"
+      },
+      {
+        "path": "dist/src/tauri.window.evidence.execution.test.js",
+        "size": 4578,
+        "sha256": "aed535d22fcdc5b38965fc5e0c5d8cce0e5ea490ed379954436f50032c107672"
+      },
+      {
+        "path": "dist/src/utils/platform.js",
+        "size": 5484,
+        "sha256": "cf907b8466acf7c2a0f935a44b188f4c2a85feee8c99f4f3971f7e4460d14766"
+      },
+      {
+        "path": "dist/src/utils/RuntimePaths.js",
+        "size": 6039,
+        "sha256": "3d8dd8eb6b90b51a88b8c582e7c6f306dbdfbbd8cbbebe97f399fe3eb13f712e"
+      },
+      {
+        "path": "dist/src/utils/RuntimePaths.test.js",
+        "size": 7373,
+        "sha256": "8925bc4ebe789ccf6e69825f3c26d03bd2d622ca18d2be6cb2018106fa4415ca"
+      },
+      {
+        "path": "dist/src/wasm.parity.artifact.probe.contract.test.js",
+        "size": 4257,
+        "sha256": "e41055212b0592a55e418e56394f67471f36476ffb771cdce9cb934add24c647"
+      },
+      {
+        "path": "dist/src/wasm.parity.artifact.provisioning.contract.test.js",
+        "size": 2376,
+        "sha256": "c0a89bbf659910772678de62b081437b916b46c9d37286decdc90bf2b1fae625"
+      },
+      {
+        "path": "dist/src/wasm.parity.benchmark.contract.test.js",
+        "size": 3168,
+        "sha256": "56487363225178834e5337dffb54230ce1a62aecb6353d9a922deaa5859df136"
+      },
+      {
+        "path": "dist/src/wasm.parity.benchmark.guards.contract.test.js",
+        "size": 10483,
+        "sha256": "ef27552a023d72e7f8cc911463464acac78f9de45afc49a353f6865b57d6fcfb"
+      },
+      {
+        "path": "dist/src/wasm.parity.history.gate.contract.test.js",
+        "size": 6136,
+        "sha256": "c203ce058d134b2b824180c8cdaecee651698fba6550e1c828c51508398a86e2"
+      },
+      {
+        "path": "dist/src/wasm.parity.output.equivalence.contract.test.js",
+        "size": 11091,
+        "sha256": "ca12222be17f1b2089b94b4fbb13a8d51d474ca515478e50d6bc353f3943326f"
+      },
+      {
+        "path": "dist/src/wasm.parity.runtime.contract.test.js",
+        "size": 5212,
+        "sha256": "c36cfba925d075fda6a24d0c4d9f6fc92c1c129b76ea22fcb592c438e610e13c"
+      },
+      {
+        "path": "dist/src/wasm.parity.runtime.functional.test.js",
+        "size": 11008,
+        "sha256": "08a2e7288c3c7ecb683c63774d828eeff9a82ffd5ae707e5cac0d1f2954c2ade"
+      },
+      {
+        "path": "dist/src/welcome.loadflow.test.js",
+        "size": 2348,
+        "sha256": "b9253cb6edcfd7d4b63e5c2af6ed2e4c595da6dcd8c39ddcce498b50c8c84828"
+      },
+      {
+        "path": "dist/src/workflows/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/workflows/WorkflowArtifactStore.js",
+        "size": 3729,
+        "sha256": "c8bb96f66bcae109e1569f330b6cd4ce5d15b6e352455c64f1984b40de7c3aa8"
+      },
+      {
+        "path": "dist/src/workflows/WorkflowArtifactStore.test.js",
+        "size": 3650,
+        "sha256": "a64c59eede6122df3afb8d45ffb93063a86717f48167bd29a5eddea1edab8270"
+      },
+      {
+        "path": "dist/src/workspace/types.js",
+        "size": 77,
+        "sha256": "d43aa81f5bc89faa359e0f97c814ba25155591ff078fbb9bfd40f8c7c9683230"
+      },
+      {
+        "path": "dist/src/workspace/WorkspaceRegistry.js",
+        "size": 5842,
+        "sha256": "2410caf3bcad8cd45c673ce0c1c29e8ba3e294e8446609b48476a3f4c9b32404"
+      },
+      {
+        "path": "dist/src/workspace/WorkspaceRegistry.test.js",
+        "size": 1420,
+        "sha256": "6f5fb479640e9ec10a74d1e6eb089cc18bb18c1c31f58a3d4b98a3363d1d5570"
+      },
+      {
+        "path": "package-lock.json",
+        "size": 365687,
+        "sha256": "8a3582860d3269ac9c9965bbee1d434ed89321a4a3c3de3a2a9427d74dbb6552"
+      },
+      {
+        "path": "package.json",
+        "size": 21408,
+        "sha256": "d47e8690ca42fe9b935f82904e0dd47d096c71d181759aee2c00146be8ec4b45"
+      },
+      {
+        "path": "scripts/build-markdown-worker.js",
+        "size": 4381,
+        "sha256": "5e64c1266fcad043423775c6c596d12581f54ac318103d634477c0dbeb87c56c"
+      },
+      {
+        "path": "scripts/build-sidecar.js",
+        "size": 5458,
+        "sha256": "d843f7b00cdc98f49a4aac460d8bca52c3c5c16ed0fcf3376e45163cda5a47df"
+      },
+      {
+        "path": "scripts/sidecar-build-fingerprint.js",
+        "size": 5825,
+        "sha256": "900b59ae7ccaff5b20474c82b7605078fc506ee13d2131a19cabe3f74c67b3dc"
+      },
+      {
+        "path": "tsconfig.json",
+        "size": 705,
+        "sha256": "0043ad3a1377873c50c05be84fe08433aa63301bc16accedd496272f321766a9"
+      }
+    ]
+  },
+  "sourceFingerprint": {
+    "algorithm": "sha256",
+    "version": 2,
+    "digest": "ec3b8b547300109d991ff922eb680e00db3c3efbecb02b16a319e21896c0d1ca",
+    "fileCount": 583
+  }
+}
