@@ -1,0 +1,138 @@
+{
+  "conclusion": "success",
+  "headSha": "894ec1d0e083e2eab444ccf1f1e465eeb45b4947",
+  "jobs": [
+    {
+      "completedAt": "2026-09-14T00:25:06Z",
+      "conclusion": "success",
+      "databaseId": 103818372995,
+      "name": "windows-native-window",
+      "startedAt": "2026-09-14T00:16:49Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-14T00:16:51Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-14T00:16:50Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:17:01Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "startedAt": "2026-09-14T00:16:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:17:22Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "startedAt": "2026-09-14T00:17:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:17:23Z",
+          "conclusion": "success",
+          "name": "Prepare isolated temporary files",
+          "number": 4,
+          "startedAt": "2026-09-14T00:17:22Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:17:40Z",
+          "conclusion": "success",
+          "name": "Run npm ci",
+          "number": 5,
+          "startedAt": "2026-09-14T00:17:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:17:56Z",
+          "conclusion": "success",
+          "name": "Run npm run build:with-vite",
+          "number": 6,
+          "startedAt": "2026-09-14T00:17:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:18:04Z",
+          "conclusion": "success",
+          "name": "Select Rust stable",
+          "number": 7,
+          "startedAt": "2026-09-14T00:17:56Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:24:23Z",
+          "conclusion": "success",
+          "name": "Compile native tests before the bounded execution checks",
+          "number": 8,
+          "startedAt": "2026-09-14T00:18:04Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:24:37Z",
+          "conclusion": "success",
+          "name": "Execute ordinary Rust window contracts",
+          "number": 9,
+          "startedAt": "2026-09-14T00:24:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:24:59Z",
+          "conclusion": "success",
+          "name": "Execute each real Wry window test in a separate process",
+          "number": 10,
+          "startedAt": "2026-09-14T00:24:37Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:25:00Z",
+          "conclusion": "success",
+          "name": "Bind test executables to the workflow source",
+          "number": 11,
+          "startedAt": "2026-09-14T00:24:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:25:02Z",
+          "conclusion": "success",
+          "name": "Archive native execution evidence",
+          "number": 12,
+          "startedAt": "2026-09-14T00:25:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:25:02Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v4",
+          "number": 23,
+          "startedAt": "2026-09-14T00:25:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:25:05Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v4",
+          "number": 24,
+          "startedAt": "2026-09-14T00:25:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:25:05Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 25,
+          "startedAt": "2026-09-14T00:25:05Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/Jacobinwwey/NoteConnection/actions/runs/34792199163/job/103818372995"
+    }
+  ],
+  "status": "completed"
+}

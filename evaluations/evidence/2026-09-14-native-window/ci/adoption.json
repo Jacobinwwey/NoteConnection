@@ -1,0 +1,33 @@
+{
+  "sourceRevision": "894ec1d0e083e2eab444ccf1f1e465eeb45b4947",
+  "sourceFingerprint": {
+    "algorithm": "sha256",
+    "version": 2,
+    "digest": "ec3b8b547300109d991ff922eb680e00db3c3efbecb02b16a319e21896c0d1ca",
+    "fileCount": 583
+  },
+  "adoptedAt": "2026-09-14T00:47:29.144Z",
+  "backup": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\dist-before-ci-34792256467",
+  "artifacts": [
+    {
+      "platform": "Windows",
+      "binary": {
+        "kind": "file",
+        "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+        "sha256": "d1ae523376a28c996f66ce766b70958c72b8df58f2a6357ac9a6c6e312c56f24",
+        "sizeBytes": 77905528
+      },
+      "compiledInputsDigest": "047e6f35d211ae9ea9efe5e1a3b481e3330410b680938bdb83d061de0c5938f8"
+    },
+    {
+      "platform": "Linux",
+      "binary": {
+        "kind": "file",
+        "path": "src-tauri/bin/server-x86_64-unknown-linux-gnu",
+        "sha256": "334b79588a1dd3e6a931ab58157c568a9ea42a258cdf2923e8c996837a6f9fad",
+        "sizeBytes": 94695648
+      },
+      "compiledInputsDigest": "0154d1fb987711b3b2e081c6300b51c95525682b7c0d3286c4f960ff9f5cdab9"
+    }
+  ]
+}

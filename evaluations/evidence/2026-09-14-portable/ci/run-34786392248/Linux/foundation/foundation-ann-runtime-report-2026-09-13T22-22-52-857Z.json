@@ -1,0 +1,1840 @@
+{
+  "verifiedAt": "2026-09-13T22:22:52.857Z",
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "nodeVersion": "v24.14.0",
+    "evidenceHostId": "3e5d74777a5deaf10303079b"
+  },
+  "suiteKind": "matrix",
+  "releaseGatesEnabled": true,
+  "releaseThresholds": {
+    "maxStartupP95Ms": 18000,
+    "maxIngestP95Ms": 90000,
+    "maxDiagnosticsP95Ms": 9000,
+    "maxQueryP95Ms": 12000,
+    "maxQueryMaxMs": 20000,
+    "minExpectedRecall": 1,
+    "packagedModeMultiplier": 1.5
+  },
+  "profileRuns": [
+    {
+      "workloadProfile": {
+        "profileId": "smoke",
+        "documentCount": 40,
+        "minSyncedAtomCount": 40
+      },
+      "modes": [
+        {
+          "mode": "dist_node_runtime",
+          "profileId": "smoke",
+          "ingestedDocuments": 40,
+          "firstPass": {
+            "startupDurationMs": 766,
+            "startupProbeCount": 4,
+            "ingestDurationMs": 61,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 2,
+              "syncSuccessCount": 2,
+              "requestCount": 5,
+              "syncedIndexSignature": "04f0a8eb078093b0cfd792801ede598a9c749add68a73d52b45fcfdb557e542d",
+              "syncedAtomCount": 40,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0dqz43-0007",
+              "durationMs": 1
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 5,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 42
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_smoke_0",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_smoke_0",
+                "targetMatched": true,
+                "durationMs": 7
+              },
+              {
+                "phaseId": "anchor_20",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_smoke_20",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_smoke_20",
+                "targetMatched": true,
+                "durationMs": 6
+              },
+              {
+                "phaseId": "anchor_39",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_smoke_39",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_smoke_39",
+                "targetMatched": true,
+                "durationMs": 5
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 2,
+              "selectRequestCount": 5,
+              "syncedAtomCount": 40,
+              "syncedIndexSignature": "04f0a8eb078093b0cfd792801ede598a9c749add68a73d52b45fcfdb557e542d",
+              "tokenPostingCount": 109
+            }
+          },
+          "restartPass": {
+            "startupDurationMs": 761,
+            "startupProbeCount": 4,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 1,
+              "syncSuccessCount": 1,
+              "requestCount": 5,
+              "syncedIndexSignature": "04f0a8eb078093b0cfd792801ede598a9c749add68a73d52b45fcfdb557e542d",
+              "syncedAtomCount": 40,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0dqzql-0006",
+              "durationMs": 1
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 5,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 13
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_smoke_0",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_smoke_0",
+                "targetMatched": true,
+                "durationMs": 7
+              },
+              {
+                "phaseId": "anchor_20",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_smoke_20",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_smoke_20",
+                "targetMatched": true,
+                "durationMs": 6
+              },
+              {
+                "phaseId": "anchor_39",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_smoke_39",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_smoke_39",
+                "targetMatched": true,
+                "durationMs": 7
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 3,
+              "selectRequestCount": 10,
+              "syncedAtomCount": 40,
+              "syncedIndexSignature": "04f0a8eb078093b0cfd792801ede598a9c749add68a73d52b45fcfdb557e542d",
+              "tokenPostingCount": 109
+            }
+          },
+          "performance": {
+            "startupDurationMs": {
+              "count": 2,
+              "minMs": 761,
+              "p50Ms": 763.5,
+              "p95Ms": 765.75,
+              "p99Ms": 765.95,
+              "maxMs": 766,
+              "meanMs": 763.5
+            },
+            "ingestDurationMs": {
+              "count": 1,
+              "minMs": 61,
+              "p50Ms": 61,
+              "p95Ms": 61,
+              "p99Ms": 61,
+              "maxMs": 61,
+              "meanMs": 61
+            },
+            "diagnosticsDurationMs": {
+              "count": 2,
+              "minMs": 1,
+              "p50Ms": 1,
+              "p95Ms": 1,
+              "p99Ms": 1,
+              "maxMs": 1,
+              "meanMs": 1
+            },
+            "queryDurationMs": {
+              "count": 8,
+              "minMs": 5,
+              "p50Ms": 7,
+              "p95Ms": 31.85,
+              "p99Ms": 39.97,
+              "maxMs": 42,
+              "meanMs": 11.625
+            }
+          },
+          "releaseGates": {
+            "profileId": "smoke",
+            "thresholds": {
+              "maxStartupP95Ms": 18000,
+              "maxIngestP95Ms": 90000,
+              "maxDiagnosticsP95Ms": 9000,
+              "maxQueryP95Ms": 12000,
+              "maxQueryMaxMs": 20000,
+              "minExpectedRecall": 1
+            },
+            "metrics": {
+              "startupDurationMs": {
+                "count": 2,
+                "minMs": 761,
+                "p50Ms": 763.5,
+                "p95Ms": 765.75,
+                "p99Ms": 765.95,
+                "maxMs": 766,
+                "meanMs": 763.5
+              },
+              "ingestDurationMs": {
+                "count": 1,
+                "minMs": 61,
+                "p50Ms": 61,
+                "p95Ms": 61,
+                "p99Ms": 61,
+                "maxMs": 61,
+                "meanMs": 61
+              },
+              "diagnosticsDurationMs": {
+                "count": 2,
+                "minMs": 1,
+                "p50Ms": 1,
+                "p95Ms": 1,
+                "p99Ms": 1,
+                "maxMs": 1,
+                "meanMs": 1
+              },
+              "queryDurationMs": {
+                "count": 8,
+                "minMs": 5,
+                "p50Ms": 7,
+                "p95Ms": 31.85,
+                "p99Ms": 39.97,
+                "maxMs": 42,
+                "meanMs": 11.625
+              }
+            },
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "gates": [
+              {
+                "gateId": "startup_p95",
+                "label": "Startup p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 765.75,
+                "required": 18000,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "ingest_p95",
+                "label": "Ingest p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 61,
+                "required": 90000,
+                "sampleCount": 1
+              },
+              {
+                "gateId": "diagnostics_p95",
+                "label": "Query-backend diagnostics p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 1,
+                "required": 9000,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "query_p95",
+                "label": "Query p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 31.85,
+                "required": 12000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "query_max",
+                "label": "Query max must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 42,
+                "required": 20000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "expected_recall",
+                "label": "Targeted ANN queries must retrieve their expected documents.",
+                "comparison": "gte",
+                "passed": true,
+                "observed": 1,
+                "required": 1,
+                "sampleCount": 6
+              }
+            ],
+            "pass": true
+          },
+          "runtime": {
+            "nodeVersion": "v24.14.0",
+            "platform": "linux",
+            "arch": "x64"
+          },
+          "expectedRecall": {
+            "expectedQueryCount": 6,
+            "matchedQueryCount": 6,
+            "ratio": 1
+          }
+        },
+        {
+          "mode": "packaged_sidecar",
+          "profileId": "smoke",
+          "ingestedDocuments": 40,
+          "firstPass": {
+            "startupDurationMs": 1011,
+            "startupProbeCount": 5,
+            "ingestDurationMs": 40,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 2,
+              "syncSuccessCount": 2,
+              "requestCount": 5,
+              "syncedIndexSignature": "ffc4a4ee131f90170d79b15b6f80e59f6fcb35528bca349b3f96653e6b051b55",
+              "syncedAtomCount": 40,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0dr0ly-0007",
+              "durationMs": 1
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 5,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 31
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_smoke_0",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_smoke_0",
+                "targetMatched": true,
+                "durationMs": 11
+              },
+              {
+                "phaseId": "anchor_20",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_smoke_20",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_smoke_20",
+                "targetMatched": true,
+                "durationMs": 7
+              },
+              {
+                "phaseId": "anchor_39",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_smoke_39",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_smoke_39",
+                "targetMatched": true,
+                "durationMs": 6
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 2,
+              "selectRequestCount": 5,
+              "syncedAtomCount": 40,
+              "syncedIndexSignature": "ffc4a4ee131f90170d79b15b6f80e59f6fcb35528bca349b3f96653e6b051b55",
+              "tokenPostingCount": 109
+            }
+          },
+          "restartPass": {
+            "startupDurationMs": 1008,
+            "startupProbeCount": 5,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 1,
+              "syncSuccessCount": 1,
+              "requestCount": 5,
+              "syncedIndexSignature": "ffc4a4ee131f90170d79b15b6f80e59f6fcb35528bca349b3f96653e6b051b55",
+              "syncedAtomCount": 40,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0dr1fd-0006",
+              "durationMs": 1
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 5,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 13
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_smoke_0",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_smoke_0",
+                "targetMatched": true,
+                "durationMs": 6
+              },
+              {
+                "phaseId": "anchor_20",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_smoke_20",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_smoke_20",
+                "targetMatched": true,
+                "durationMs": 8
+              },
+              {
+                "phaseId": "anchor_39",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_smoke_39",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_smoke_39",
+                "targetMatched": true,
+                "durationMs": 6
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 3,
+              "selectRequestCount": 10,
+              "syncedAtomCount": 40,
+              "syncedIndexSignature": "ffc4a4ee131f90170d79b15b6f80e59f6fcb35528bca349b3f96653e6b051b55",
+              "tokenPostingCount": 109
+            }
+          },
+          "performance": {
+            "startupDurationMs": {
+              "count": 2,
+              "minMs": 1008,
+              "p50Ms": 1009.5,
+              "p95Ms": 1010.85,
+              "p99Ms": 1010.97,
+              "maxMs": 1011,
+              "meanMs": 1009.5
+            },
+            "ingestDurationMs": {
+              "count": 1,
+              "minMs": 40,
+              "p50Ms": 40,
+              "p95Ms": 40,
+              "p99Ms": 40,
+              "maxMs": 40,
+              "meanMs": 40
+            },
+            "diagnosticsDurationMs": {
+              "count": 2,
+              "minMs": 1,
+              "p50Ms": 1,
+              "p95Ms": 1,
+              "p99Ms": 1,
+              "maxMs": 1,
+              "meanMs": 1
+            },
+            "queryDurationMs": {
+              "count": 8,
+              "minMs": 6,
+              "p50Ms": 7.5,
+              "p95Ms": 24.7,
+              "p99Ms": 29.74,
+              "maxMs": 31,
+              "meanMs": 11
+            }
+          },
+          "releaseGates": {
+            "profileId": "smoke",
+            "thresholds": {
+              "maxStartupP95Ms": 27000,
+              "maxIngestP95Ms": 135000,
+              "maxDiagnosticsP95Ms": 13500,
+              "maxQueryP95Ms": 18000,
+              "maxQueryMaxMs": 30000,
+              "minExpectedRecall": 1
+            },
+            "metrics": {
+              "startupDurationMs": {
+                "count": 2,
+                "minMs": 1008,
+                "p50Ms": 1009.5,
+                "p95Ms": 1010.85,
+                "p99Ms": 1010.97,
+                "maxMs": 1011,
+                "meanMs": 1009.5
+              },
+              "ingestDurationMs": {
+                "count": 1,
+                "minMs": 40,
+                "p50Ms": 40,
+                "p95Ms": 40,
+                "p99Ms": 40,
+                "maxMs": 40,
+                "meanMs": 40
+              },
+              "diagnosticsDurationMs": {
+                "count": 2,
+                "minMs": 1,
+                "p50Ms": 1,
+                "p95Ms": 1,
+                "p99Ms": 1,
+                "maxMs": 1,
+                "meanMs": 1
+              },
+              "queryDurationMs": {
+                "count": 8,
+                "minMs": 6,
+                "p50Ms": 7.5,
+                "p95Ms": 24.7,
+                "p99Ms": 29.74,
+                "maxMs": 31,
+                "meanMs": 11
+              }
+            },
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "gates": [
+              {
+                "gateId": "startup_p95",
+                "label": "Startup p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 1010.85,
+                "required": 27000,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "ingest_p95",
+                "label": "Ingest p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 40,
+                "required": 135000,
+                "sampleCount": 1
+              },
+              {
+                "gateId": "diagnostics_p95",
+                "label": "Query-backend diagnostics p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 1,
+                "required": 13500,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "query_p95",
+                "label": "Query p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 24.7,
+                "required": 18000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "query_max",
+                "label": "Query max must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 31,
+                "required": 30000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "expected_recall",
+                "label": "Targeted ANN queries must retrieve their expected documents.",
+                "comparison": "gte",
+                "passed": true,
+                "observed": 1,
+                "required": 1,
+                "sampleCount": 6
+              }
+            ],
+            "pass": true
+          },
+          "runtime": {
+            "nodeVersion": "v22.22.0",
+            "platform": "linux",
+            "arch": "x64"
+          },
+          "expectedRecall": {
+            "expectedQueryCount": 6,
+            "matchedQueryCount": 6,
+            "ratio": 1
+          }
+        }
+      ]
+    },
+    {
+      "workloadProfile": {
+        "profileId": "medium",
+        "documentCount": 140,
+        "minSyncedAtomCount": 140
+      },
+      "modes": [
+        {
+          "mode": "dist_node_runtime",
+          "profileId": "medium",
+          "ingestedDocuments": 140,
+          "firstPass": {
+            "startupDurationMs": 760,
+            "startupProbeCount": 4,
+            "ingestDurationMs": 401,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 2,
+              "syncSuccessCount": 2,
+              "requestCount": 5,
+              "syncedIndexSignature": "6c982ed3f7b1de09b290f098a8623a45f001b00542fa3875a518b6522ab170ad",
+              "syncedAtomCount": 140,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0dr2g2-0007",
+              "durationMs": 0
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 8,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 75
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_medium_0",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_medium_0",
+                "targetMatched": true,
+                "durationMs": 21
+              },
+              {
+                "phaseId": "anchor_70",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_medium_70",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_medium_70",
+                "targetMatched": true,
+                "durationMs": 19
+              },
+              {
+                "phaseId": "anchor_139",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_medium_139",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_medium_139",
+                "targetMatched": true,
+                "durationMs": 19
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 2,
+              "selectRequestCount": 5,
+              "syncedAtomCount": 140,
+              "syncedIndexSignature": "6c982ed3f7b1de09b290f098a8623a45f001b00542fa3875a518b6522ab170ad",
+              "tokenPostingCount": 312
+            }
+          },
+          "restartPass": {
+            "startupDurationMs": 761,
+            "startupProbeCount": 4,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 1,
+              "syncSuccessCount": 1,
+              "requestCount": 5,
+              "syncedIndexSignature": "6c982ed3f7b1de09b290f098a8623a45f001b00542fa3875a518b6522ab170ad",
+              "syncedAtomCount": 140,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0dr352-0006",
+              "durationMs": 1
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 8,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 39
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_medium_0",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_medium_0",
+                "targetMatched": true,
+                "durationMs": 31
+              },
+              {
+                "phaseId": "anchor_70",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_medium_70",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_medium_70",
+                "targetMatched": true,
+                "durationMs": 25
+              },
+              {
+                "phaseId": "anchor_139",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_medium_139",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_medium_139",
+                "targetMatched": true,
+                "durationMs": 27
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 3,
+              "selectRequestCount": 10,
+              "syncedAtomCount": 140,
+              "syncedIndexSignature": "6c982ed3f7b1de09b290f098a8623a45f001b00542fa3875a518b6522ab170ad",
+              "tokenPostingCount": 312
+            }
+          },
+          "performance": {
+            "startupDurationMs": {
+              "count": 2,
+              "minMs": 760,
+              "p50Ms": 760.5,
+              "p95Ms": 760.95,
+              "p99Ms": 760.99,
+              "maxMs": 761,
+              "meanMs": 760.5
+            },
+            "ingestDurationMs": {
+              "count": 1,
+              "minMs": 401,
+              "p50Ms": 401,
+              "p95Ms": 401,
+              "p99Ms": 401,
+              "maxMs": 401,
+              "meanMs": 401
+            },
+            "diagnosticsDurationMs": {
+              "count": 2,
+              "minMs": 0,
+              "p50Ms": 0.5,
+              "p95Ms": 0.95,
+              "p99Ms": 0.99,
+              "maxMs": 1,
+              "meanMs": 0.5
+            },
+            "queryDurationMs": {
+              "count": 8,
+              "minMs": 19,
+              "p50Ms": 26,
+              "p95Ms": 62.4,
+              "p99Ms": 72.48,
+              "maxMs": 75,
+              "meanMs": 32
+            }
+          },
+          "releaseGates": {
+            "profileId": "medium",
+            "thresholds": {
+              "maxStartupP95Ms": 18000,
+              "maxIngestP95Ms": 90000,
+              "maxDiagnosticsP95Ms": 9000,
+              "maxQueryP95Ms": 12000,
+              "maxQueryMaxMs": 20000,
+              "minExpectedRecall": 1
+            },
+            "metrics": {
+              "startupDurationMs": {
+                "count": 2,
+                "minMs": 760,
+                "p50Ms": 760.5,
+                "p95Ms": 760.95,
+                "p99Ms": 760.99,
+                "maxMs": 761,
+                "meanMs": 760.5
+              },
+              "ingestDurationMs": {
+                "count": 1,
+                "minMs": 401,
+                "p50Ms": 401,
+                "p95Ms": 401,
+                "p99Ms": 401,
+                "maxMs": 401,
+                "meanMs": 401
+              },
+              "diagnosticsDurationMs": {
+                "count": 2,
+                "minMs": 0,
+                "p50Ms": 0.5,
+                "p95Ms": 0.95,
+                "p99Ms": 0.99,
+                "maxMs": 1,
+                "meanMs": 0.5
+              },
+              "queryDurationMs": {
+                "count": 8,
+                "minMs": 19,
+                "p50Ms": 26,
+                "p95Ms": 62.4,
+                "p99Ms": 72.48,
+                "maxMs": 75,
+                "meanMs": 32
+              }
+            },
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "gates": [
+              {
+                "gateId": "startup_p95",
+                "label": "Startup p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 760.95,
+                "required": 18000,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "ingest_p95",
+                "label": "Ingest p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 401,
+                "required": 90000,
+                "sampleCount": 1
+              },
+              {
+                "gateId": "diagnostics_p95",
+                "label": "Query-backend diagnostics p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 0.95,
+                "required": 9000,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "query_p95",
+                "label": "Query p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 62.4,
+                "required": 12000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "query_max",
+                "label": "Query max must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 75,
+                "required": 20000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "expected_recall",
+                "label": "Targeted ANN queries must retrieve their expected documents.",
+                "comparison": "gte",
+                "passed": true,
+                "observed": 1,
+                "required": 1,
+                "sampleCount": 6
+              }
+            ],
+            "pass": true
+          },
+          "runtime": {
+            "nodeVersion": "v24.14.0",
+            "platform": "linux",
+            "arch": "x64"
+          },
+          "expectedRecall": {
+            "expectedQueryCount": 6,
+            "matchedQueryCount": 6,
+            "ratio": 1
+          }
+        },
+        {
+          "mode": "packaged_sidecar",
+          "profileId": "medium",
+          "ingestedDocuments": 140,
+          "firstPass": {
+            "startupDurationMs": 1007,
+            "startupProbeCount": 5,
+            "ingestDurationMs": 383,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 2,
+              "syncSuccessCount": 2,
+              "requestCount": 5,
+              "syncedIndexSignature": "12f5d47069bf63e286d5610758f7034a176ca1898bdcccd378fa49a73dd09d32",
+              "syncedAtomCount": 140,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0dr4dj-0007",
+              "durationMs": 2
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 8,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 92
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_medium_0",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_medium_0",
+                "targetMatched": true,
+                "durationMs": 44
+              },
+              {
+                "phaseId": "anchor_70",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_medium_70",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_medium_70",
+                "targetMatched": true,
+                "durationMs": 24
+              },
+              {
+                "phaseId": "anchor_139",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_medium_139",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_medium_139",
+                "targetMatched": true,
+                "durationMs": 18
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 2,
+              "selectRequestCount": 5,
+              "syncedAtomCount": 140,
+              "syncedIndexSignature": "12f5d47069bf63e286d5610758f7034a176ca1898bdcccd378fa49a73dd09d32",
+              "tokenPostingCount": 312
+            }
+          },
+          "restartPass": {
+            "startupDurationMs": 1043,
+            "startupProbeCount": 5,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 1,
+              "syncSuccessCount": 1,
+              "requestCount": 5,
+              "syncedIndexSignature": "12f5d47069bf63e286d5610758f7034a176ca1898bdcccd378fa49a73dd09d32",
+              "syncedAtomCount": 140,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0dr5ai-0006",
+              "durationMs": 1
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 8,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 49
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_medium_0",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_medium_0",
+                "targetMatched": true,
+                "durationMs": 29
+              },
+              {
+                "phaseId": "anchor_70",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_medium_70",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_medium_70",
+                "targetMatched": true,
+                "durationMs": 26
+              },
+              {
+                "phaseId": "anchor_139",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_medium_139",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_medium_139",
+                "targetMatched": true,
+                "durationMs": 23
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 3,
+              "selectRequestCount": 10,
+              "syncedAtomCount": 140,
+              "syncedIndexSignature": "12f5d47069bf63e286d5610758f7034a176ca1898bdcccd378fa49a73dd09d32",
+              "tokenPostingCount": 312
+            }
+          },
+          "performance": {
+            "startupDurationMs": {
+              "count": 2,
+              "minMs": 1007,
+              "p50Ms": 1025,
+              "p95Ms": 1041.2,
+              "p99Ms": 1042.64,
+              "maxMs": 1043,
+              "meanMs": 1025
+            },
+            "ingestDurationMs": {
+              "count": 1,
+              "minMs": 383,
+              "p50Ms": 383,
+              "p95Ms": 383,
+              "p99Ms": 383,
+              "maxMs": 383,
+              "meanMs": 383
+            },
+            "diagnosticsDurationMs": {
+              "count": 2,
+              "minMs": 1,
+              "p50Ms": 1.5,
+              "p95Ms": 1.95,
+              "p99Ms": 1.99,
+              "maxMs": 2,
+              "meanMs": 1.5
+            },
+            "queryDurationMs": {
+              "count": 8,
+              "minMs": 18,
+              "p50Ms": 27.5,
+              "p95Ms": 76.95,
+              "p99Ms": 88.99,
+              "maxMs": 92,
+              "meanMs": 38.125
+            }
+          },
+          "releaseGates": {
+            "profileId": "medium",
+            "thresholds": {
+              "maxStartupP95Ms": 27000,
+              "maxIngestP95Ms": 135000,
+              "maxDiagnosticsP95Ms": 13500,
+              "maxQueryP95Ms": 18000,
+              "maxQueryMaxMs": 30000,
+              "minExpectedRecall": 1
+            },
+            "metrics": {
+              "startupDurationMs": {
+                "count": 2,
+                "minMs": 1007,
+                "p50Ms": 1025,
+                "p95Ms": 1041.2,
+                "p99Ms": 1042.64,
+                "maxMs": 1043,
+                "meanMs": 1025
+              },
+              "ingestDurationMs": {
+                "count": 1,
+                "minMs": 383,
+                "p50Ms": 383,
+                "p95Ms": 383,
+                "p99Ms": 383,
+                "maxMs": 383,
+                "meanMs": 383
+              },
+              "diagnosticsDurationMs": {
+                "count": 2,
+                "minMs": 1,
+                "p50Ms": 1.5,
+                "p95Ms": 1.95,
+                "p99Ms": 1.99,
+                "maxMs": 2,
+                "meanMs": 1.5
+              },
+              "queryDurationMs": {
+                "count": 8,
+                "minMs": 18,
+                "p50Ms": 27.5,
+                "p95Ms": 76.95,
+                "p99Ms": 88.99,
+                "maxMs": 92,
+                "meanMs": 38.125
+              }
+            },
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "gates": [
+              {
+                "gateId": "startup_p95",
+                "label": "Startup p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 1041.2,
+                "required": 27000,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "ingest_p95",
+                "label": "Ingest p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 383,
+                "required": 135000,
+                "sampleCount": 1
+              },
+              {
+                "gateId": "diagnostics_p95",
+                "label": "Query-backend diagnostics p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 1.95,
+                "required": 13500,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "query_p95",
+                "label": "Query p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 76.95,
+                "required": 18000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "query_max",
+                "label": "Query max must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 92,
+                "required": 30000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "expected_recall",
+                "label": "Targeted ANN queries must retrieve their expected documents.",
+                "comparison": "gte",
+                "passed": true,
+                "observed": 1,
+                "required": 1,
+                "sampleCount": 6
+              }
+            ],
+            "pass": true
+          },
+          "runtime": {
+            "nodeVersion": "v22.22.0",
+            "platform": "linux",
+            "arch": "x64"
+          },
+          "expectedRecall": {
+            "expectedQueryCount": 6,
+            "matchedQueryCount": 6,
+            "ratio": 1
+          }
+        }
+      ]
+    },
+    {
+      "workloadProfile": {
+        "profileId": "heavy",
+        "documentCount": 260,
+        "minSyncedAtomCount": 260
+      },
+      "modes": [
+        {
+          "mode": "dist_node_runtime",
+          "profileId": "heavy",
+          "ingestedDocuments": 260,
+          "firstPass": {
+            "startupDurationMs": 760,
+            "startupProbeCount": 4,
+            "ingestDurationMs": 1302,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 2,
+              "syncSuccessCount": 2,
+              "requestCount": 5,
+              "syncedIndexSignature": "25901ea304f0148b9ed75732169dae0c4a53e6668646c4f1620ffe52dfe5faf7",
+              "syncedAtomCount": 260,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0dr753-0007",
+              "durationMs": 1
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 10,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 145
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_heavy_0",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_heavy_0",
+                "targetMatched": true,
+                "durationMs": 54
+              },
+              {
+                "phaseId": "anchor_130",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_heavy_130",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_heavy_130",
+                "targetMatched": true,
+                "durationMs": 56
+              },
+              {
+                "phaseId": "anchor_259",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_heavy_259",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_heavy_259",
+                "targetMatched": true,
+                "durationMs": 47
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 2,
+              "selectRequestCount": 5,
+              "syncedAtomCount": 260,
+              "syncedIndexSignature": "25901ea304f0148b9ed75732169dae0c4a53e6668646c4f1620ffe52dfe5faf7",
+              "tokenPostingCount": 556
+            }
+          },
+          "restartPass": {
+            "startupDurationMs": 782,
+            "startupProbeCount": 4,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 1,
+              "syncSuccessCount": 1,
+              "requestCount": 5,
+              "syncedIndexSignature": "25901ea304f0148b9ed75732169dae0c4a53e6668646c4f1620ffe52dfe5faf7",
+              "syncedAtomCount": 260,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0dr835-0006",
+              "durationMs": 1
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 10,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 263
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_heavy_0",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_heavy_0",
+                "targetMatched": true,
+                "durationMs": 50
+              },
+              {
+                "phaseId": "anchor_130",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_heavy_130",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_heavy_130",
+                "targetMatched": true,
+                "durationMs": 51
+              },
+              {
+                "phaseId": "anchor_259",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_dist_node_runtime_heavy_259",
+                "matchedDocumentId": "doc_external_ann_dist_node_runtime_heavy_259",
+                "targetMatched": true,
+                "durationMs": 55
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 3,
+              "selectRequestCount": 10,
+              "syncedAtomCount": 260,
+              "syncedIndexSignature": "25901ea304f0148b9ed75732169dae0c4a53e6668646c4f1620ffe52dfe5faf7",
+              "tokenPostingCount": 556
+            }
+          },
+          "performance": {
+            "startupDurationMs": {
+              "count": 2,
+              "minMs": 760,
+              "p50Ms": 771,
+              "p95Ms": 780.9,
+              "p99Ms": 781.78,
+              "maxMs": 782,
+              "meanMs": 771
+            },
+            "ingestDurationMs": {
+              "count": 1,
+              "minMs": 1302,
+              "p50Ms": 1302,
+              "p95Ms": 1302,
+              "p99Ms": 1302,
+              "maxMs": 1302,
+              "meanMs": 1302
+            },
+            "diagnosticsDurationMs": {
+              "count": 2,
+              "minMs": 1,
+              "p50Ms": 1,
+              "p95Ms": 1,
+              "p99Ms": 1,
+              "maxMs": 1,
+              "meanMs": 1
+            },
+            "queryDurationMs": {
+              "count": 8,
+              "minMs": 47,
+              "p50Ms": 54.5,
+              "p95Ms": 221.7,
+              "p99Ms": 254.74,
+              "maxMs": 263,
+              "meanMs": 90.125
+            }
+          },
+          "releaseGates": {
+            "profileId": "heavy",
+            "thresholds": {
+              "maxStartupP95Ms": 18000,
+              "maxIngestP95Ms": 90000,
+              "maxDiagnosticsP95Ms": 9000,
+              "maxQueryP95Ms": 12000,
+              "maxQueryMaxMs": 20000,
+              "minExpectedRecall": 1
+            },
+            "metrics": {
+              "startupDurationMs": {
+                "count": 2,
+                "minMs": 760,
+                "p50Ms": 771,
+                "p95Ms": 780.9,
+                "p99Ms": 781.78,
+                "maxMs": 782,
+                "meanMs": 771
+              },
+              "ingestDurationMs": {
+                "count": 1,
+                "minMs": 1302,
+                "p50Ms": 1302,
+                "p95Ms": 1302,
+                "p99Ms": 1302,
+                "maxMs": 1302,
+                "meanMs": 1302
+              },
+              "diagnosticsDurationMs": {
+                "count": 2,
+                "minMs": 1,
+                "p50Ms": 1,
+                "p95Ms": 1,
+                "p99Ms": 1,
+                "maxMs": 1,
+                "meanMs": 1
+              },
+              "queryDurationMs": {
+                "count": 8,
+                "minMs": 47,
+                "p50Ms": 54.5,
+                "p95Ms": 221.7,
+                "p99Ms": 254.74,
+                "maxMs": 263,
+                "meanMs": 90.125
+              }
+            },
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "gates": [
+              {
+                "gateId": "startup_p95",
+                "label": "Startup p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 780.9,
+                "required": 18000,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "ingest_p95",
+                "label": "Ingest p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 1302,
+                "required": 90000,
+                "sampleCount": 1
+              },
+              {
+                "gateId": "diagnostics_p95",
+                "label": "Query-backend diagnostics p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 1,
+                "required": 9000,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "query_p95",
+                "label": "Query p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 221.7,
+                "required": 12000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "query_max",
+                "label": "Query max must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 263,
+                "required": 20000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "expected_recall",
+                "label": "Targeted ANN queries must retrieve their expected documents.",
+                "comparison": "gte",
+                "passed": true,
+                "observed": 1,
+                "required": 1,
+                "sampleCount": 6
+              }
+            ],
+            "pass": true
+          },
+          "runtime": {
+            "nodeVersion": "v24.14.0",
+            "platform": "linux",
+            "arch": "x64"
+          },
+          "expectedRecall": {
+            "expectedQueryCount": 6,
+            "matchedQueryCount": 6,
+            "ratio": 1
+          }
+        },
+        {
+          "mode": "packaged_sidecar",
+          "profileId": "heavy",
+          "ingestedDocuments": 260,
+          "firstPass": {
+            "startupDurationMs": 1008,
+            "startupProbeCount": 5,
+            "ingestDurationMs": 1227,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 2,
+              "syncSuccessCount": 2,
+              "requestCount": 5,
+              "syncedIndexSignature": "5f2af6335ff6cd4c6375431634965d09e0e1abc1869d021248d0b80f3a71a864",
+              "syncedAtomCount": 260,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0dra45-0007",
+              "durationMs": 1
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 10,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 155
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_0",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_0",
+                "targetMatched": true,
+                "durationMs": 65
+              },
+              {
+                "phaseId": "anchor_130",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_130",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_130",
+                "targetMatched": true,
+                "durationMs": 78
+              },
+              {
+                "phaseId": "anchor_259",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_259",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_259",
+                "targetMatched": true,
+                "durationMs": 52
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 2,
+              "selectRequestCount": 5,
+              "syncedAtomCount": 260,
+              "syncedIndexSignature": "5f2af6335ff6cd4c6375431634965d09e0e1abc1869d021248d0b80f3a71a864",
+              "tokenPostingCount": 556
+            }
+          },
+          "restartPass": {
+            "startupDurationMs": 1102,
+            "startupProbeCount": 5,
+            "diagnostics": {
+              "configuredBackend": "local_vector",
+              "backendId": "local-vector-v1",
+              "runtimeReady": true,
+              "vectorIndexStatus": "ready",
+              "vectorIndexPersisted": true,
+              "accelerationMode": "ann_prefilter",
+              "lastSelectionMode": "token_prefilter",
+              "lastCandidateCount": 1,
+              "healthStatus": "ready",
+              "indexSyncStatus": "ready",
+              "syncRequestCount": 1,
+              "syncSuccessCount": 1,
+              "requestCount": 5,
+              "syncedIndexSignature": "5f2af6335ff6cd4c6375431634965d09e0e1abc1869d021248d0b80f3a71a864",
+              "syncedAtomCount": 260,
+              "representationStatus": "aligned",
+              "lastRequestId": "nc-vector-accel-mu0drb9x-0006",
+              "durationMs": 1
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 10,
+                "expectedDocumentId": "",
+                "matchedDocumentId": "",
+                "targetMatched": false,
+                "durationMs": 206
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_0",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_0",
+                "targetMatched": true,
+                "durationMs": 62
+              },
+              {
+                "phaseId": "anchor_130",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_130",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_130",
+                "targetMatched": true,
+                "durationMs": 56
+              },
+              {
+                "phaseId": "anchor_259",
+                "itemCount": 1,
+                "expectedDocumentId": "doc_external_ann_packaged_sidecar_heavy_259",
+                "matchedDocumentId": "doc_external_ann_packaged_sidecar_heavy_259",
+                "targetMatched": true,
+                "durationMs": 56
+              }
+            ],
+            "annState": {
+              "syncRequestCount": 3,
+              "selectRequestCount": 10,
+              "syncedAtomCount": 260,
+              "syncedIndexSignature": "5f2af6335ff6cd4c6375431634965d09e0e1abc1869d021248d0b80f3a71a864",
+              "tokenPostingCount": 556
+            }
+          },
+          "performance": {
+            "startupDurationMs": {
+              "count": 2,
+              "minMs": 1008,
+              "p50Ms": 1055,
+              "p95Ms": 1097.3,
+              "p99Ms": 1101.06,
+              "maxMs": 1102,
+              "meanMs": 1055
+            },
+            "ingestDurationMs": {
+              "count": 1,
+              "minMs": 1227,
+              "p50Ms": 1227,
+              "p95Ms": 1227,
+              "p99Ms": 1227,
+              "maxMs": 1227,
+              "meanMs": 1227
+            },
+            "diagnosticsDurationMs": {
+              "count": 2,
+              "minMs": 1,
+              "p50Ms": 1,
+              "p95Ms": 1,
+              "p99Ms": 1,
+              "maxMs": 1,
+              "meanMs": 1
+            },
+            "queryDurationMs": {
+              "count": 8,
+              "minMs": 52,
+              "p50Ms": 63.5,
+              "p95Ms": 188.15,
+              "p99Ms": 202.43,
+              "maxMs": 206,
+              "meanMs": 91.25
+            }
+          },
+          "releaseGates": {
+            "profileId": "heavy",
+            "thresholds": {
+              "maxStartupP95Ms": 27000,
+              "maxIngestP95Ms": 135000,
+              "maxDiagnosticsP95Ms": 13500,
+              "maxQueryP95Ms": 18000,
+              "maxQueryMaxMs": 30000,
+              "minExpectedRecall": 1
+            },
+            "metrics": {
+              "startupDurationMs": {
+                "count": 2,
+                "minMs": 1008,
+                "p50Ms": 1055,
+                "p95Ms": 1097.3,
+                "p99Ms": 1101.06,
+                "maxMs": 1102,
+                "meanMs": 1055
+              },
+              "ingestDurationMs": {
+                "count": 1,
+                "minMs": 1227,
+                "p50Ms": 1227,
+                "p95Ms": 1227,
+                "p99Ms": 1227,
+                "maxMs": 1227,
+                "meanMs": 1227
+              },
+              "diagnosticsDurationMs": {
+                "count": 2,
+                "minMs": 1,
+                "p50Ms": 1,
+                "p95Ms": 1,
+                "p99Ms": 1,
+                "maxMs": 1,
+                "meanMs": 1
+              },
+              "queryDurationMs": {
+                "count": 8,
+                "minMs": 52,
+                "p50Ms": 63.5,
+                "p95Ms": 188.15,
+                "p99Ms": 202.43,
+                "maxMs": 206,
+                "meanMs": 91.25
+              }
+            },
+            "expectedRecall": {
+              "expectedQueryCount": 6,
+              "matchedQueryCount": 6,
+              "ratio": 1
+            },
+            "gates": [
+              {
+                "gateId": "startup_p95",
+                "label": "Startup p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 1097.3,
+                "required": 27000,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "ingest_p95",
+                "label": "Ingest p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 1227,
+                "required": 135000,
+                "sampleCount": 1
+              },
+              {
+                "gateId": "diagnostics_p95",
+                "label": "Query-backend diagnostics p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 1,
+                "required": 13500,
+                "sampleCount": 2
+              },
+              {
+                "gateId": "query_p95",
+                "label": "Query p95 must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 188.15,
+                "required": 18000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "query_max",
+                "label": "Query max must stay within release budget.",
+                "comparison": "lte",
+                "passed": true,
+                "observed": 206,
+                "required": 30000,
+                "sampleCount": 8
+              },
+              {
+                "gateId": "expected_recall",
+                "label": "Targeted ANN queries must retrieve their expected documents.",
+                "comparison": "gte",
+                "passed": true,
+                "observed": 1,
+                "required": 1,
+                "sampleCount": 6
+              }
+            ],
+            "pass": true
+          },
+          "runtime": {
+            "nodeVersion": "v22.22.0",
+            "platform": "linux",
+            "arch": "x64"
+          },
+          "expectedRecall": {
+            "expectedQueryCount": 6,
+            "matchedQueryCount": 6,
+            "ratio": 1
+          }
+        }
+      ]
+    }
+  ],
+  "provenance": {
+    "schemaVersion": 1,
+    "runId": "d1e204f0-d428-4750-b4c9-4d067fee7c8f",
+    "sourceRevision": "1a688f02489cb6b1c566e56f8d11f92d745ea1f8",
+    "sourceTreeHash": "15657ea4ebda7e0eeb7847403d2097abc61b08610431395237a78d2a951b5b94",
+    "artifacts": {
+      "dist_node_runtime": {
+        "kind": "sidecar_inputs",
+        "path": "dist/src",
+        "sha256": "f365f463eb93074369e4c788a349929981ee5d06ca9dd0ef67a83ef3f7ed7ff0",
+        "sizeBytes": 22364696
+      },
+      "packaged_sidecar": {
+        "kind": "file",
+        "path": "src-tauri/bin/server-x86_64-unknown-linux-gnu",
+        "sha256": "cff9f0fc2426b3242cd1a3afedc704bbe4f3bb130901f29d957bb73cadf6cb17",
+        "sizeBytes": 94693897
+      }
+    },
+    "workloadHash": "0ab835f5549369b241fbcd5cf2bf956757a6bcef36c0d3d23570f2d7e83b679c"
+  }
+}

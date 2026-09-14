@@ -1,0 +1,3923 @@
+{
+  "evaluatedAt": "2026-09-13T21:37:07.562Z",
+  "measurementProtocol": "answer-quality-public-surface-v3",
+  "corpusVersion": "2.0.0",
+  "corpusRole": "confirmatory_holdout_frozen_before_link_evidence_fix",
+  "evaluationRole": "regression",
+  "corpusSha256": "7d0cd1fb36096b0b138194315459ef0253ff2619dd1f107e3380bd10f2a84702",
+  "sourceRevision": "e4cdce27c55dbb19f0ba6b4405358661c12d8821",
+  "sourceTreeHash": "15657ea4ebda7e0eeb7847403d2097abc61b08610431395237a78d2a951b5b94",
+  "executionCompleted": true,
+  "conditions": {
+    "backend": "local-hybrid-v1",
+    "responseModes": [
+      "slim",
+      "full"
+    ],
+    "repeats": 3,
+    "clock": "fixed knowledge timestamp; real monotonic execution timers",
+    "node": "v22.19.0",
+    "platform": "win32",
+    "arch": "x64",
+    "logicalCpus": 16,
+    "totalMemoryBytes": 68494569472,
+    "peakProcessRssBytes": 131993600,
+    "coldDefinition": "First query on a new ingested platform instance; process/JIT is shared.",
+    "hotDefinition": "Subsequent queries on the same platform instance; memory persistence disabled."
+  },
+  "measurementLimits": [
+    "Reference acceptance and fact coverage use pre-authored patterns, not the runtime sufficiency judge.",
+    "Unsupported assertion probes detect labelled counterfactuals only. They are not an exhaustive hallucination rate.",
+    "Conflict and abstention are public-surface signals. Abstention includes a grounded absence of measurements, independently of the runtime release label; paraphrase and negation errors require manual adjudication.",
+    "Correctness denominators count each case/mode once, not its timing repetitions. Bilingual pairs are correlated.",
+    "Memory samples are before/after values; peakProcessRssBytes is a process-wide high-water mark, not per-turn peak heap.",
+    "No learning-outcome data or participant observations were collected."
+  ],
+  "learningOutcomesQualified": false,
+  "groups": [
+    {
+      "split": "calibration",
+      "responseMode": "slim",
+      "quality": {
+        "cases": 6,
+        "referenceAcceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "referenceFactCoverage": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 6,
+        "min": 4.699400000000196,
+        "p50": 5.518700000000081,
+        "p95": 9.96490000000017,
+        "p99": 9.96490000000017,
+        "max": 9.96490000000017
+      },
+      "hotLatencyMs": {
+        "count": 12,
+        "min": 5.680399999999963,
+        "p50": 7.8154000000001815,
+        "p95": 14.359699999999975,
+        "p99": 14.359699999999975,
+        "max": 14.359699999999975
+      }
+    },
+    {
+      "split": "calibration",
+      "responseMode": "full",
+      "quality": {
+        "cases": 6,
+        "referenceAcceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "referenceFactCoverage": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 6,
+        "min": 4.439899999999852,
+        "p50": 5.157399999999825,
+        "p95": 9.311499999999796,
+        "p99": 9.311499999999796,
+        "max": 9.311499999999796
+      },
+      "hotLatencyMs": {
+        "count": 12,
+        "min": 5.541699999999992,
+        "p50": 7.192299999999932,
+        "p95": 11.864199999999983,
+        "p99": 11.864199999999983,
+        "max": 11.864199999999983
+      }
+    },
+    {
+      "split": "evaluation",
+      "responseMode": "slim",
+      "quality": {
+        "cases": 18,
+        "referenceAcceptance": {
+          "numerator": 18,
+          "denominator": 18,
+          "rate": 1
+        },
+        "referenceFactCoverage": {
+          "numerator": 36,
+          "denominator": 36,
+          "rate": 1
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 2,
+          "denominator": 2,
+          "rate": 1
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 18,
+        "min": 4.457800000000134,
+        "p50": 5.992000000000189,
+        "p95": 15.289600000000064,
+        "p99": 15.289600000000064,
+        "max": 15.289600000000064
+      },
+      "hotLatencyMs": {
+        "count": 36,
+        "min": 5.771200000000135,
+        "p50": 8.92699999999968,
+        "p95": 15.034500000000207,
+        "p99": 23.639700000000175,
+        "max": 23.639700000000175
+      }
+    },
+    {
+      "split": "evaluation",
+      "responseMode": "full",
+      "quality": {
+        "cases": 18,
+        "referenceAcceptance": {
+          "numerator": 18,
+          "denominator": 18,
+          "rate": 1
+        },
+        "referenceFactCoverage": {
+          "numerator": 36,
+          "denominator": 36,
+          "rate": 1
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 2,
+          "denominator": 2,
+          "rate": 1
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 18,
+        "min": 3.6664999999998145,
+        "p50": 6.126800000000003,
+        "p95": 10.598199999999906,
+        "p99": 10.598199999999906,
+        "max": 10.598199999999906
+      },
+      "hotLatencyMs": {
+        "count": 36,
+        "min": 5.318699999999808,
+        "p50": 8.389500000000226,
+        "p95": 16.191400000000158,
+        "p99": 19.30079999999998,
+        "max": 19.30079999999998
+      }
+    }
+  ],
+  "rows": [
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "A directed acyclic graph is a directed graph with no directed cycles.\n\nA topological ordering exists for every finite directed acyclic graph.",
+      "citations": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "snippet": "# Directed Acyclic Graph A directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph.",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Directed Acyclic Graph\nA directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph.",
+      "citations": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "snippet": "# Directed Acyclic Graph A directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph.",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "有向无环图是不含有向环的有向图。\n\n有限有向无环图存在拓扑排序。",
+      "citations": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "snippet": "# 有向无环图 有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 有向无环图\n有向无环图是不含有向环的有向图。 有限有向无环图存在拓扑排序。",
+      "citations": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "snippet": "# 有向无环图 有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Unbounded queuing increases latency because requests wait behind accumulated work.\n\nLimiting admission rejects excess work before it consumes queue memory.",
+      "citations": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "snippet": "# Unbounded Queuing Unbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory.",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Unbounded Queuing\nUnbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory.",
+      "citations": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "snippet": "# Unbounded Queuing Unbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory.",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "无界排队会增加延迟，因为请求必须等待前面累积的工作。\n\n限制准入可以在额外请求占用队列内存之前拒绝它们。",
+      "citations": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "snippet": "# 无界排队 无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 无界排队\n无界排队会增加延迟，因为请求必须等待前面累积的工作。 限制准入可以在额外请求占用队列内存之前拒绝它们。",
+      "citations": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "snippet": "# 无界排队 无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\nThe Cobalt log retention period is 7 days.\n\nThe Cobalt log retention period is 30 days.",
+      "citations": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "snippet": "# Cobalt Log The Cobalt log retention period is 7 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "snippet": "# Cobalt Log Policy The Cobalt log retention period is 30 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\n# Cobalt Log\nThe Cobalt log retention period is 7 days. This policy is active.\n\n# Cobalt Log Policy\nThe Cobalt log retention period is 30 days. This policy is active.\n\nConflicting source observations:\nCobalt Log: The Cobalt log retention period is 7 days. This policy is active.\nCobalt Log Policy: The Cobalt log retention period is 30 days. This policy is active.",
+      "citations": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "snippet": "# Cobalt Log The Cobalt log retention period is 7 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "snippet": "# Cobalt Log Policy The Cobalt log retention period is 30 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "来源中的观测存在冲突，现有证据无法确定哪一项正确。\n\n蓝钴日志的保留周期是7天。\n\n该策略当前有效。\n\n蓝钴日志策略 蓝钴日志的保留周期是30天。\n\n来源中的冲突记录： 蓝钴日志: 蓝钴日志的保留周期是7天。当前证据覆盖仍然有限，因此这只能作为基于已命中材料的部分回答。",
+      "citations": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "snippet": "# 蓝钴日志 蓝钴日志的保留周期是7天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "snippet": "# 蓝钴日志策略 蓝钴日志的保留周期是30天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "来源中的观测存在冲突，现有证据无法确定哪一项正确。\n\n# 蓝钴日志\n蓝钴日志的保留周期是7天。 该策略当前有效。\n\n# 蓝钴日志策略\n蓝钴日志的保留周期是30天。 该策略当前有效。\n\n来源中的冲突记录：\n蓝钴日志: 蓝钴日志的保留周期是7天。 该策略当前有效。\n蓝钴日志策略: 蓝钴日志的保留周期是30天。 该策略当前有效。",
+      "citations": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "snippet": "# 蓝钴日志 蓝钴日志的保留周期是7天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "snippet": "# 蓝钴日志策略 蓝钴日志的保留周期是30天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-replay-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Deterministic replay reconstructs an earlier state from recorded inputs in the recorded order.\n\nThe same starting state and inputs must produce the same resulting state.",
+      "citations": [
+        {
+          "documentId": "confirm-replay-en-0",
+          "snippet": "# Deterministic Replay Deterministic replay reconstructs an earlier state from recorded inputs in the recorded order. The same starting state and inputs must produce the same resulting state.",
+          "sourcePath": "evaluation-v2/confirm-replay-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-replay-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Deterministic Replay\nDeterministic replay reconstructs an earlier state from recorded inputs in the recorded order. The same starting state and inputs must produce the same resulting state.",
+      "citations": [
+        {
+          "documentId": "confirm-replay-en-0",
+          "snippet": "# Deterministic Replay Deterministic replay reconstructs an earlier state from recorded inputs in the recorded order. The same starting state and inputs must produce the same resulting state.",
+          "sourcePath": "evaluation-v2/confirm-replay-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-replay-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "确定性回放按照记录的顺序，从已记录输入重建之前的状态。\n\n相同初始状态和输入必须产生相同结果状态。",
+      "citations": [
+        {
+          "documentId": "confirm-replay-zh-0",
+          "snippet": "# 确定性回放 确定性回放按照记录的顺序，从已记录输入重建之前的状态。相同初始状态和输入必须产生相同结果状态。",
+          "sourcePath": "evaluation-v2/confirm-replay-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-replay-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 确定性回放\n确定性回放按照记录的顺序，从已记录输入重建之前的状态。 相同初始状态和输入必须产生相同结果状态。",
+      "citations": [
+        {
+          "documentId": "confirm-replay-zh-0",
+          "snippet": "# 确定性回放 确定性回放按照记录的顺序，从已记录输入重建之前的状态。相同初始状态和输入必须产生相同结果状态。",
+          "sourcePath": "evaluation-v2/confirm-replay-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-collections-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Queue A queue removes items in first-in-first-out order.\n\nStack A stack removes items in last-in-first-out order.",
+      "citations": [
+        {
+          "documentId": "confirm-collections-en-0",
+          "snippet": "# Queue A queue removes items in first-in-first-out order. [[Stack]]",
+          "sourcePath": "evaluation-v2/confirm-collections-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-collections-en-1",
+          "snippet": "# Stack A stack removes items in last-in-first-out order. [[Queue]]",
+          "sourcePath": "evaluation-v2/confirm-collections-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-collections-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Queue\nA queue removes items in first-in-first-out order. [[Stack]]\n\n# Stack\nA stack removes items in last-in-first-out order. [[Queue]]",
+      "citations": [
+        {
+          "documentId": "confirm-collections-en-0",
+          "snippet": "# Queue A queue removes items in first-in-first-out order. [[Stack]]",
+          "sourcePath": "evaluation-v2/confirm-collections-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-collections-en-1",
+          "snippet": "# Stack A stack removes items in last-in-first-out order. [[Queue]]",
+          "sourcePath": "evaluation-v2/confirm-collections-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-collections-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "栈按后进先出的顺序移除元素。\n\n队列按先进先出的顺序移除元素。",
+      "citations": [
+        {
+          "documentId": "confirm-collections-zh-1",
+          "snippet": "# 栈 栈按后进先出的顺序移除元素。[[队列]]",
+          "sourcePath": "evaluation-v2/confirm-collections-zh/source-1.md"
+        },
+        {
+          "documentId": "confirm-collections-zh-0",
+          "snippet": "# 队列 队列按先进先出的顺序移除元素。[[栈]]",
+          "sourcePath": "evaluation-v2/confirm-collections-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-collections-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 队列\n队列按先进先出的顺序移除元素。[[栈]]\n\n# 栈\n栈按后进先出的顺序移除元素。[[队列]]",
+      "citations": [
+        {
+          "documentId": "confirm-collections-zh-1",
+          "snippet": "# 栈 栈按后进先出的顺序移除元素。[[队列]]",
+          "sourcePath": "evaluation-v2/confirm-collections-zh/source-1.md"
+        },
+        {
+          "documentId": "confirm-collections-zh-0",
+          "snippet": "# 队列 队列按先进先出的顺序移除元素。[[栈]]",
+          "sourcePath": "evaluation-v2/confirm-collections-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-pressure-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Backpressure reduces buffer growth because the producer waits when the consumer cannot accept more work.\n\nProduction resumes when the consumer has capacity.",
+      "citations": [
+        {
+          "documentId": "confirm-pressure-en-0",
+          "snippet": "# Backpressure Backpressure reduces buffer growth because the producer waits when the consumer cannot accept more work. Production resumes when the consumer has capacity.",
+          "sourcePath": "evaluation-v2/confirm-pressure-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-pressure-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Backpressure\nBackpressure reduces buffer growth because the producer waits when the consumer cannot accept more work. Production resumes when the consumer has capacity.",
+      "citations": [
+        {
+          "documentId": "confirm-pressure-en-0",
+          "snippet": "# Backpressure Backpressure reduces buffer growth because the producer waits when the consumer cannot accept more work. Production resumes when the consumer has capacity.",
+          "sourcePath": "evaluation-v2/confirm-pressure-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-pressure-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "背压能减少缓冲区增长，因为消费者无法接收更多工作时，生产者会等待。\n\n消费者恢复容量之后，生产者再继续工作。",
+      "citations": [
+        {
+          "documentId": "confirm-pressure-zh-0",
+          "snippet": "# 背压 背压能减少缓冲区增长，因为消费者无法接收更多工作时，生产者会等待。消费者恢复容量之后，生产者再继续工作。",
+          "sourcePath": "evaluation-v2/confirm-pressure-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-pressure-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 背压\n背压能减少缓冲区增长，因为消费者无法接收更多工作时，生产者会等待。 消费者恢复容量之后，生产者再继续工作。",
+      "citations": [
+        {
+          "documentId": "confirm-pressure-zh-0",
+          "snippet": "# 背压 背压能减少缓冲区增长，因为消费者无法接收更多工作时，生产者会等待。消费者恢复容量之后，生产者再继续工作。",
+          "sourcePath": "evaluation-v2/confirm-pressure-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-rotation-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "multi_step",
+      "referenceFactCount": 4,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3",
+        "fact-4"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Scoped Credential Rotation Rotate the credential in this order: 1.\n\nCreate a replacement credential with the required scope.\n\n2.\n\nDeploy the replacement to the consumer.\n\n3.\n\nVerify that the consumer succeeds with the replacement.\n\n4.\n\nRevoke the previous credential.",
+      "citations": [
+        {
+          "documentId": "confirm-rotation-en-0",
+          "snippet": "# Scoped Credential Rotation Rotate the credential in this order: 1. Create a replacement credential with the required scope. 2. Deploy the replacement to the consumer. 3. Verify that the consumer succeeds with the replacement. 4. Revoke the previous credential.",
+          "sourcePath": "evaluation-v2/confirm-rotation-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-rotation-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "multi_step",
+      "referenceFactCount": 4,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3",
+        "fact-4"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Scoped Credential Rotation\nRotate the credential in this order:\n1. Create a replacement credential with the required scope.\n2. Deploy the replacement to the consumer.\n3. Verify that the consumer succeeds with the replacement.\n4. Revoke the previous credential.",
+      "citations": [
+        {
+          "documentId": "confirm-rotation-en-0",
+          "snippet": "# Scoped Credential Rotation Rotate the credential in this order: 1. Create a replacement credential with the required scope. 2. Deploy the replacement to the consumer. 3. Verify that the consumer succeeds with the replacement. 4. Revoke the previous credential.",
+          "sourcePath": "evaluation-v2/confirm-rotation-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-rotation-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "multi_step",
+      "referenceFactCount": 4,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3",
+        "fact-4"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "按顺序执行以下步骤： 1.\n\n创建具有所需权限的新凭据。\n\n2.\n\n部署新凭据到使用方。\n\n3.\n\n验证使用方通过新凭据正常工作。\n\n4.\n\n撤销旧凭据。按顺序执行以下步骤： 1。\n\n2。\n\n3。\n\n4。",
+      "citations": [
+        {
+          "documentId": "confirm-rotation-zh-0",
+          "snippet": "# 限定权限凭据轮换 按顺序执行以下步骤： 1. 创建具有所需权限的新凭据。 2. 部署新凭据到使用方。 3. 验证使用方通过新凭据正常工作。 4. 撤销旧凭据。",
+          "sourcePath": "evaluation-v2/confirm-rotation-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-rotation-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "multi_step",
+      "referenceFactCount": 4,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3",
+        "fact-4"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 限定权限凭据轮换\n按顺序执行以下步骤：\n1. 创建具有所需权限的新凭据。\n2. 部署新凭据到使用方。\n3. 验证使用方通过新凭据正常工作。\n4. 撤销旧凭据。",
+      "citations": [
+        {
+          "documentId": "confirm-rotation-zh-0",
+          "snippet": "# 限定权限凭据轮换 按顺序执行以下步骤： 1. 创建具有所需权限的新凭据。 2. 部署新凭据到使用方。 3. 验证使用方通过新凭据正常工作。 4. 撤销旧凭据。",
+          "sourcePath": "evaluation-v2/confirm-rotation-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\nThe Orion sensor rate is 20 Hz.\n\nThe Orion sensor rate is 60 Hz.",
+      "citations": [
+        {
+          "documentId": "confirm-frequency-en-0",
+          "snippet": "# Orion Sensor Rate The Orion sensor rate is 20 Hz. This is the active record.",
+          "sourcePath": "evaluation-v2/confirm-frequency-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-frequency-en-1",
+          "snippet": "# Orion Sensor Rate Record The Orion sensor rate is 60 Hz. This is the active record.",
+          "sourcePath": "evaluation-v2/confirm-frequency-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\n# Orion Sensor Rate\nThe Orion sensor rate is 20 Hz. This is the active record.\n\n# Orion Sensor Rate Record\nThe Orion sensor rate is 60 Hz. This is the active record.\n\nConflicting source observations:\nOrion Sensor Rate: The Orion sensor rate is 20 Hz. This is the active record.\nOrion Sensor Rate Record: The Orion sensor rate is 60 Hz. This is the active record.",
+      "citations": [
+        {
+          "documentId": "confirm-frequency-en-0",
+          "snippet": "# Orion Sensor Rate The Orion sensor rate is 20 Hz. This is the active record.",
+          "sourcePath": "evaluation-v2/confirm-frequency-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-frequency-en-1",
+          "snippet": "# Orion Sensor Rate Record The Orion sensor rate is 60 Hz. This is the active record.",
+          "sourcePath": "evaluation-v2/confirm-frequency-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "来源中的观测存在冲突，现有证据无法确定哪一项正确。\n\n苍穹传感器的刷新频率是20赫兹。\n\n苍穹传感器的刷新频率是60赫兹。\n\n来源中的冲突记录： 苍穹传感器刷新频率: 苍穹传感器的刷新频率是20赫兹。\n\n这是当前有效的记录。\n\n苍穹传感器刷新频率记录: 苍穹传感器的刷新频率是60赫兹。当前证据覆盖仍然有限，因此这只能作为基于已命中材料的部分回答。",
+      "citations": [
+        {
+          "documentId": "confirm-frequency-zh-0",
+          "snippet": "# 苍穹传感器刷新频率 苍穹传感器的刷新频率是20赫兹。这是当前有效的记录。",
+          "sourcePath": "evaluation-v2/confirm-frequency-zh/source-0.md"
+        },
+        {
+          "documentId": "confirm-frequency-zh-1",
+          "snippet": "# 苍穹传感器刷新频率记录 苍穹传感器的刷新频率是60赫兹。这是当前有效的记录。",
+          "sourcePath": "evaluation-v2/confirm-frequency-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "来源中的观测存在冲突，现有证据无法确定哪一项正确。\n\n# 苍穹传感器刷新频率\n苍穹传感器的刷新频率是20赫兹。 这是当前有效的记录。\n\n# 苍穹传感器刷新频率记录\n苍穹传感器的刷新频率是60赫兹。 这是当前有效的记录。\n\n来源中的冲突记录：\n苍穹传感器刷新频率: 苍穹传感器的刷新频率是20赫兹。 这是当前有效的记录。\n苍穹传感器刷新频率记录: 苍穹传感器的刷新频率是60赫兹。 这是当前有效的记录。",
+      "citations": [
+        {
+          "documentId": "confirm-frequency-zh-0",
+          "snippet": "# 苍穹传感器刷新频率 苍穹传感器的刷新频率是20赫兹。这是当前有效的记录。",
+          "sourcePath": "evaluation-v2/confirm-frequency-zh/source-0.md"
+        },
+        {
+          "documentId": "confirm-frequency-zh-1",
+          "snippet": "# 苍穹传感器刷新频率记录 苍穹传感器的刷新频率是60赫兹。这是当前有效的记录。",
+          "sourcePath": "evaluation-v2/confirm-frequency-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-unknown-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "I could not ground the answer inside the current scope \"confirm-unknown-en-0\". I cannot give a grounded answer to \"What is the melting point of Nebula alloy?\" yet. Refine the wording, widen the scope, or add the missing note.",
+      "citations": [
+        {
+          "documentId": "confirm-unknown-en-0",
+          "snippet": "# Nebula Alloy Records The archive contains no measurement of the melting point of Nebula alloy.",
+          "sourcePath": "evaluation-v2/confirm-unknown-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "abstain",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-unknown-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "I could not ground the answer inside the current scope \"confirm-unknown-en-0\". I cannot give a grounded answer to \"What is the melting point of Nebula alloy?\" yet. Refine the wording, widen the scope, or add the missing note.",
+      "citations": [
+        {
+          "documentId": "confirm-unknown-en-0",
+          "snippet": "# Nebula Alloy Records The archive contains no measurement of the melting point of Nebula alloy.",
+          "sourcePath": "evaluation-v2/confirm-unknown-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "abstain",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-unknown-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "星云合金记录 存档没有提供星云合金熔点的测量数据。",
+      "citations": [
+        {
+          "documentId": "confirm-unknown-zh-0",
+          "snippet": "# 星云合金记录 存档没有提供星云合金熔点的测量数据。",
+          "sourcePath": "evaluation-v2/confirm-unknown-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-unknown-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 星云合金记录\n存档没有提供星云合金熔点的测量数据。",
+      "citations": [
+        {
+          "documentId": "confirm-unknown-zh-0",
+          "snippet": "# 星云合金记录 存档没有提供星云合金熔点的测量数据。",
+          "sourcePath": "evaluation-v2/confirm-unknown-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-wal-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "topic_drift",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "A write-ahead log records a change durably before the corresponding data page is written.\n\nRecovery uses the durable log to reconstruct changes that were not yet applied to data pages.",
+      "citations": [
+        {
+          "documentId": "confirm-wal-en-0",
+          "snippet": "# Write Ahead Log Ordering A write-ahead log records a change durably before the corresponding data page is written. Recovery uses the durable log to reconstruct changes that were not yet applied to data pages.",
+          "sourcePath": "evaluation-v2/confirm-wal-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-wal-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "topic_drift",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Write Ahead Log Ordering\nA write-ahead log records a change durably before the corresponding data page is written. Recovery uses the durable log to reconstruct changes that were not yet applied to data pages.",
+      "citations": [
+        {
+          "documentId": "confirm-wal-en-0",
+          "snippet": "# Write Ahead Log Ordering A write-ahead log records a change durably before the corresponding data page is written. Recovery uses the durable log to reconstruct changes that were not yet applied to data pages.",
+          "sourcePath": "evaluation-v2/confirm-wal-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-wal-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "topic_drift",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "预写日志先持久记录变更，再写入对应的数据页。\n\n恢复时可以通过持久日志重建尚未应用到数据页的变更。",
+      "citations": [
+        {
+          "documentId": "confirm-wal-zh-0",
+          "snippet": "# 预写日志的写入顺序 预写日志先持久记录变更，再写入对应的数据页。恢复时可以通过持久日志重建尚未应用到数据页的变更。",
+          "sourcePath": "evaluation-v2/confirm-wal-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-wal-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "topic_drift",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 预写日志的写入顺序\n预写日志先持久记录变更，再写入对应的数据页。 恢复时可以通过持久日志重建尚未应用到数据页的变更。",
+      "citations": [
+        {
+          "documentId": "confirm-wal-zh-0",
+          "snippet": "# 预写日志的写入顺序 预写日志先持久记录变更，再写入对应的数据页。恢复时可以通过持久日志重建尚未应用到数据页的变更。",
+          "sourcePath": "evaluation-v2/confirm-wal-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-throughput-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "math",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Average throughput is the number of completed operations divided by the elapsed time.\n\nAverage Throughput:\n\n$$\nQ = \\frac{N}{t}\n$$\n\n Here N is the completed operation count and t is a positive duration.\n\nAverage Throughput (formula block):\n\n$$\nQ = \\frac{N}{t}\n$$",
+      "citations": [
+        {
+          "documentId": "confirm-throughput-en-0",
+          "snippet": "# Average Throughput Average throughput is the number of completed operations divided by the elapsed time. $$ Q = \\frac{N}{t} $$ Here N is the completed operation count and t is a positive duration.",
+          "sourcePath": "evaluation-v2/confirm-throughput-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-throughput-en-0",
+          "snippet": "$$ Q = \\frac{N}{t} $$",
+          "sourcePath": "evaluation-v2/confirm-throughput-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-throughput-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "math",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Average Throughput\nAverage throughput is the number of completed operations divided by the elapsed time.\n\n$$\nQ = \\frac{N}{t}\n$$\n\nHere N is the completed operation count and t is a positive duration.",
+      "citations": [
+        {
+          "documentId": "confirm-throughput-en-0",
+          "snippet": "# Average Throughput Average throughput is the number of completed operations divided by the elapsed time. $$ Q = \\frac{N}{t} $$ Here N is the completed operation count and t is a positive duration.",
+          "sourcePath": "evaluation-v2/confirm-throughput-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-throughput-en-0",
+          "snippet": "$$ Q = \\frac{N}{t} $$",
+          "sourcePath": "evaluation-v2/confirm-throughput-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-mean-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "math",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "$$\nM = \\frac{a+b}{2}\n$$\n\n 其中 a 和 b 是两个实数。\n\n两个数的算术平均数等于它们的和除以二。\n\n其中 a 和 b 是两个实数。",
+      "citations": [
+        {
+          "documentId": "confirm-mean-zh-0",
+          "snippet": "$$ M = \\frac{a+b}{2} $$",
+          "sourcePath": "evaluation-v2/confirm-mean-zh/source-0.md"
+        },
+        {
+          "documentId": "confirm-mean-zh-0",
+          "snippet": "# 两个数的算术平均数 两个数的算术平均数等于它们的和除以二。 $$ M = \\frac{a+b}{2} $$ 其中 a 和 b 是两个实数。",
+          "sourcePath": "evaluation-v2/confirm-mean-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-mean-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "math",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 两个数的算术平均数\n两个数的算术平均数等于它们的和除以二。\n\n$$\nM = \\frac{a+b}{2}\n$$\n\n其中 a 和 b 是两个实数。",
+      "citations": [
+        {
+          "documentId": "confirm-mean-zh-0",
+          "snippet": "$$ M = \\frac{a+b}{2} $$",
+          "sourcePath": "evaluation-v2/confirm-mean-zh/source-0.md"
+        },
+        {
+          "documentId": "confirm-mean-zh-0",
+          "snippet": "# 两个数的算术平均数 两个数的算术平均数等于它们的和除以二。 $$ M = \\frac{a+b}{2} $$ 其中 a 和 b 是两个实数。",
+          "sourcePath": "evaluation-v2/confirm-mean-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-digest-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "noisy_headings",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "A content digest is a fixed-length fingerprint computed from content bytes.\n\nIdentical bytes produce the same digest under the same algorithm.\n\nThese headings organize the source document.",
+      "citations": [
+        {
+          "documentId": "confirm-digest-en-0",
+          "snippet": "### Content Digest A content digest is a fixed-length fingerprint computed from content bytes. Identical bytes produce the same digest under the same algorithm.",
+          "sourcePath": "evaluation-v2/confirm-digest-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-en-0",
+          "snippet": "## Contents",
+          "sourcePath": "evaluation-v2/confirm-digest-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-en-0",
+          "snippet": "## Revision Notes These headings organize the source document.",
+          "sourcePath": "evaluation-v2/confirm-digest-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-en-0",
+          "snippet": "# Overview",
+          "sourcePath": "evaluation-v2/confirm-digest-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-digest-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "noisy_headings",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "### Content Digest\nA content digest is a fixed-length fingerprint computed from content bytes. Identical bytes produce the same digest under the same algorithm.\n\n## Revision Notes\nThese headings organize the source document.",
+      "citations": [
+        {
+          "documentId": "confirm-digest-en-0",
+          "snippet": "### Content Digest A content digest is a fixed-length fingerprint computed from content bytes. Identical bytes produce the same digest under the same algorithm.",
+          "sourcePath": "evaluation-v2/confirm-digest-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-en-0",
+          "snippet": "## Contents",
+          "sourcePath": "evaluation-v2/confirm-digest-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-en-0",
+          "snippet": "## Revision Notes These headings organize the source document.",
+          "sourcePath": "evaluation-v2/confirm-digest-en/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-en-0",
+          "snippet": "# Overview",
+          "sourcePath": "evaluation-v2/confirm-digest-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-digest-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "noisy_headings",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "内容摘要是根据内容字节计算的固定长度指纹。\n\n相同字节在相同算法下产生相同摘要。\n\n修订说明 这些标题用于组织源文档。\n\n这些标题用于组织源文档。",
+      "citations": [
+        {
+          "documentId": "confirm-digest-zh-0",
+          "snippet": "### 内容摘要 内容摘要是根据内容字节计算的固定长度指纹。相同字节在相同算法下产生相同摘要。",
+          "sourcePath": "evaluation-v2/confirm-digest-zh/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-zh-0",
+          "snippet": "## 目录",
+          "sourcePath": "evaluation-v2/confirm-digest-zh/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-zh-0",
+          "snippet": "## 修订说明 这些标题用于组织源文档。",
+          "sourcePath": "evaluation-v2/confirm-digest-zh/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-zh-0",
+          "snippet": "# 概述",
+          "sourcePath": "evaluation-v2/confirm-digest-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "confirm-digest-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "noisy_headings",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "### 内容摘要\n内容摘要是根据内容字节计算的固定长度指纹。 相同字节在相同算法下产生相同摘要。\n\n## 修订说明\n这些标题用于组织源文档。",
+      "citations": [
+        {
+          "documentId": "confirm-digest-zh-0",
+          "snippet": "### 内容摘要 内容摘要是根据内容字节计算的固定长度指纹。相同字节在相同算法下产生相同摘要。",
+          "sourcePath": "evaluation-v2/confirm-digest-zh/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-zh-0",
+          "snippet": "## 目录",
+          "sourcePath": "evaluation-v2/confirm-digest-zh/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-zh-0",
+          "snippet": "## 修订说明 这些标题用于组织源文档。",
+          "sourcePath": "evaluation-v2/confirm-digest-zh/source-0.md"
+        },
+        {
+          "documentId": "confirm-digest-zh-0",
+          "snippet": "# 概述",
+          "sourcePath": "evaluation-v2/confirm-digest-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    }
+  ],
+  "timings": [
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.663299999999936,
+      "heapUsedBefore": 44276696,
+      "heapUsedAfter": 48556480,
+      "rssBefore": 116654080,
+      "rssAfter": 116658176
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.5202999999999065,
+      "heapUsedBefore": 48566552,
+      "heapUsedAfter": 53336712,
+      "rssBefore": 116658176,
+      "rssAfter": 116809728
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.850999999999885,
+      "heapUsedBefore": 53346288,
+      "heapUsedAfter": 30478576,
+      "rssBefore": 116809728,
+      "rssAfter": 102260736
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.157399999999825,
+      "heapUsedBefore": 30643160,
+      "heapUsedAfter": 34188936,
+      "rssBefore": 102260736,
+      "rssAfter": 102260736
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.978800000000092,
+      "heapUsedBefore": 34199152,
+      "heapUsedAfter": 38195600,
+      "rssBefore": 102260736,
+      "rssAfter": 102412288
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.840799999999945,
+      "heapUsedBefore": 38205552,
+      "heapUsedAfter": 29160696,
+      "rssBefore": 102412288,
+      "rssAfter": 102391808
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.699400000000196,
+      "heapUsedBefore": 29315736,
+      "heapUsedAfter": 32227672,
+      "rssBefore": 102391808,
+      "rssAfter": 102535168
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.144199999999955,
+      "heapUsedBefore": 32235720,
+      "heapUsedAfter": 35729536,
+      "rssBefore": 102535168,
+      "rssAfter": 102928384
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.8154000000001815,
+      "heapUsedBefore": 35737320,
+      "heapUsedAfter": 39851424,
+      "rssBefore": 102928384,
+      "rssAfter": 103743488
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.06009999999992,
+      "heapUsedBefore": 40004248,
+      "heapUsedAfter": 27798616,
+      "rssBefore": 103743488,
+      "rssAfter": 102744064
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.541699999999992,
+      "heapUsedBefore": 27806848,
+      "heapUsedAfter": 30817744,
+      "rssBefore": 102744064,
+      "rssAfter": 103137280
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.378600000000006,
+      "heapUsedBefore": 30825712,
+      "heapUsedAfter": 34455880,
+      "rssBefore": 103137280,
+      "rssAfter": 103755776
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.75890000000004,
+      "heapUsedBefore": 34618568,
+      "heapUsedAfter": 38607888,
+      "rssBefore": 103755776,
+      "rssAfter": 103755776
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.680399999999963,
+      "heapUsedBefore": 38617704,
+      "heapUsedAfter": 43066352,
+      "rssBefore": 103755776,
+      "rssAfter": 103899136
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.074600000000146,
+      "heapUsedBefore": 43075904,
+      "heapUsedAfter": 30790032,
+      "rssBefore": 103899136,
+      "rssAfter": 100532224
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.634999999999991,
+      "heapUsedBefore": 30952600,
+      "heapUsedAfter": 34452976,
+      "rssBefore": 100532224,
+      "rssAfter": 100900864
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.484200000000101,
+      "heapUsedBefore": 34463072,
+      "heapUsedAfter": 38412472,
+      "rssBefore": 100909056,
+      "rssAfter": 101244928
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.636799999999994,
+      "heapUsedBefore": 38422304,
+      "heapUsedAfter": 29276952,
+      "rssBefore": 101244928,
+      "rssAfter": 101244928
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.518700000000081,
+      "heapUsedBefore": 29434664,
+      "heapUsedAfter": 31984304,
+      "rssBefore": 101244928,
+      "rssAfter": 101388288
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.186500000000024,
+      "heapUsedBefore": 31992488,
+      "heapUsedAfter": 35120568,
+      "rssBefore": 101388288,
+      "rssAfter": 101781504
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.131200000000035,
+      "heapUsedBefore": 35128488,
+      "heapUsedAfter": 38902384,
+      "rssBefore": 101781504,
+      "rssAfter": 102604800
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.439899999999852,
+      "heapUsedBefore": 39055496,
+      "heapUsedAfter": 41360800,
+      "rssBefore": 102604800,
+      "rssAfter": 102752256
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.8279999999999745,
+      "heapUsedBefore": 41369160,
+      "heapUsedAfter": 28551352,
+      "rssBefore": 102752256,
+      "rssAfter": 101638144
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.192299999999932,
+      "heapUsedBefore": 28559448,
+      "heapUsedAfter": 32002760,
+      "rssBefore": 101638144,
+      "rssAfter": 102641664
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 9.96490000000017,
+      "heapUsedBefore": 32184528,
+      "heapUsedAfter": 40855072,
+      "rssBefore": 102690816,
+      "rssAfter": 103575552
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 14.359699999999975,
+      "heapUsedBefore": 40865624,
+      "heapUsedAfter": 34908336,
+      "rssBefore": 103587840,
+      "rssAfter": 101949440
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 13.713900000000194,
+      "heapUsedBefore": 34918624,
+      "heapUsedAfter": 28840032,
+      "rssBefore": 101969920,
+      "rssAfter": 101093376
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 9.311499999999796,
+      "heapUsedBefore": 29023856,
+      "heapUsedAfter": 36795120,
+      "rssBefore": 101093376,
+      "rssAfter": 101097472
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 11.864199999999983,
+      "heapUsedBefore": 36810320,
+      "heapUsedAfter": 29333168,
+      "rssBefore": 101097472,
+      "rssAfter": 101482496
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.671299999999974,
+      "heapUsedBefore": 29348104,
+      "heapUsedAfter": 38328848,
+      "rssBefore": 101482496,
+      "rssAfter": 101355520
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.988800000000083,
+      "heapUsedBefore": 38517720,
+      "heapUsedAfter": 42310512,
+      "rssBefore": 101363712,
+      "rssAfter": 101806080
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.658399999999801,
+      "heapUsedBefore": 42319816,
+      "heapUsedAfter": 30694176,
+      "rssBefore": 101806080,
+      "rssAfter": 101851136
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 13.081300000000283,
+      "heapUsedBefore": 30703216,
+      "heapUsedAfter": 36220976,
+      "rssBefore": 101851136,
+      "rssAfter": 102526976
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.617200000000139,
+      "heapUsedBefore": 36397464,
+      "heapUsedAfter": 40153112,
+      "rssBefore": 102526976,
+      "rssAfter": 102748160
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.63299999999981,
+      "heapUsedBefore": 40163224,
+      "heapUsedAfter": 30081312,
+      "rssBefore": 102748160,
+      "rssAfter": 101634048
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.73739999999998,
+      "heapUsedBefore": 30091160,
+      "heapUsedAfter": 35457624,
+      "rssBefore": 101634048,
+      "rssAfter": 103112704
+    },
+    {
+      "caseId": "confirm-replay-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.5198999999997795,
+      "heapUsedBefore": 35621736,
+      "heapUsedAfter": 39928256,
+      "rssBefore": 103112704,
+      "rssAfter": 103116800
+    },
+    {
+      "caseId": "confirm-replay-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.63989999999967,
+      "heapUsedBefore": 39939696,
+      "heapUsedAfter": 30237496,
+      "rssBefore": 103129088,
+      "rssAfter": 102072320
+    },
+    {
+      "caseId": "confirm-replay-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.7215000000001055,
+      "heapUsedBefore": 30250512,
+      "heapUsedAfter": 35456088,
+      "rssBefore": 102080512,
+      "rssAfter": 102367232
+    },
+    {
+      "caseId": "confirm-replay-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.141099999999824,
+      "heapUsedBefore": 35619312,
+      "heapUsedAfter": 39204912,
+      "rssBefore": 102367232,
+      "rssAfter": 102449152
+    },
+    {
+      "caseId": "confirm-replay-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.389500000000226,
+      "heapUsedBefore": 39215432,
+      "heapUsedAfter": 29707824,
+      "rssBefore": 102449152,
+      "rssAfter": 102178816
+    },
+    {
+      "caseId": "confirm-replay-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.430399999999736,
+      "heapUsedBefore": 29718080,
+      "heapUsedAfter": 34278648,
+      "rssBefore": 102178816,
+      "rssAfter": 101515264
+    },
+    {
+      "caseId": "confirm-replay-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.983600000000024,
+      "heapUsedBefore": 34434344,
+      "heapUsedAfter": 37039224,
+      "rssBefore": 101515264,
+      "rssAfter": 101892096
+    },
+    {
+      "caseId": "confirm-replay-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.335700000000088,
+      "heapUsedBefore": 37048032,
+      "heapUsedAfter": 40266512,
+      "rssBefore": 101900288,
+      "rssAfter": 102412288
+    },
+    {
+      "caseId": "confirm-replay-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.647400000000289,
+      "heapUsedBefore": 40277392,
+      "heapUsedAfter": 29746024,
+      "rssBefore": 102412288,
+      "rssAfter": 101576704
+    },
+    {
+      "caseId": "confirm-replay-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.1570999999999,
+      "heapUsedBefore": 29899144,
+      "heapUsedAfter": 32278264,
+      "rssBefore": 101576704,
+      "rssAfter": 101740544
+    },
+    {
+      "caseId": "confirm-replay-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.177599999999984,
+      "heapUsedBefore": 32286560,
+      "heapUsedAfter": 35253240,
+      "rssBefore": 101740544,
+      "rssAfter": 102273024
+    },
+    {
+      "caseId": "confirm-replay-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.805699999999888,
+      "heapUsedBefore": 35261272,
+      "heapUsedAfter": 38869648,
+      "rssBefore": 102273024,
+      "rssAfter": 103501824
+    },
+    {
+      "caseId": "confirm-collections-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.085899999999583,
+      "heapUsedBefore": 39049032,
+      "heapUsedAfter": 43063392,
+      "rssBefore": 103501824,
+      "rssAfter": 103505920
+    },
+    {
+      "caseId": "confirm-collections-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.921400000000176,
+      "heapUsedBefore": 43074200,
+      "heapUsedAfter": 30803232,
+      "rssBefore": 103510016,
+      "rssAfter": 101326848
+    },
+    {
+      "caseId": "confirm-collections-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.9683,
+      "heapUsedBefore": 30815624,
+      "heapUsedAfter": 35717096,
+      "rssBefore": 101330944,
+      "rssAfter": 102244352
+    },
+    {
+      "caseId": "confirm-collections-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.957300000000032,
+      "heapUsedBefore": 35898200,
+      "heapUsedAfter": 39404632,
+      "rssBefore": 102244352,
+      "rssAfter": 102428672
+    },
+    {
+      "caseId": "confirm-collections-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.851300000000265,
+      "heapUsedBefore": 39414408,
+      "heapUsedAfter": 29706536,
+      "rssBefore": 102428672,
+      "rssAfter": 102203392
+    },
+    {
+      "caseId": "confirm-collections-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.830399999999827,
+      "heapUsedBefore": 29716048,
+      "heapUsedAfter": 34183992,
+      "rssBefore": 102203392,
+      "rssAfter": 102510592
+    },
+    {
+      "caseId": "confirm-collections-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.813300000000254,
+      "heapUsedBefore": 34362184,
+      "heapUsedAfter": 36957176,
+      "rssBefore": 102510592,
+      "rssAfter": 102707200
+    },
+    {
+      "caseId": "confirm-collections-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.262500000000273,
+      "heapUsedBefore": 36966208,
+      "heapUsedAfter": 40234952,
+      "rssBefore": 102707200,
+      "rssAfter": 103174144
+    },
+    {
+      "caseId": "confirm-collections-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.92699999999968,
+      "heapUsedBefore": 40245416,
+      "heapUsedAfter": 29965696,
+      "rssBefore": 103174144,
+      "rssAfter": 102780928
+    },
+    {
+      "caseId": "confirm-collections-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.039400000000114,
+      "heapUsedBefore": 30142792,
+      "heapUsedAfter": 32659104,
+      "rssBefore": 102780928,
+      "rssAfter": 102957056
+    },
+    {
+      "caseId": "confirm-collections-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.173499999999876,
+      "heapUsedBefore": 32667856,
+      "heapUsedAfter": 35886232,
+      "rssBefore": 102957056,
+      "rssAfter": 103440384
+    },
+    {
+      "caseId": "confirm-collections-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.35530000000017,
+      "heapUsedBefore": 35894720,
+      "heapUsedAfter": 39718176,
+      "rssBefore": 103440384,
+      "rssAfter": 104181760
+    },
+    {
+      "caseId": "confirm-pressure-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.403199999999742,
+      "heapUsedBefore": 39879568,
+      "heapUsedAfter": 44166800,
+      "rssBefore": 104181760,
+      "rssAfter": 104198144
+    },
+    {
+      "caseId": "confirm-pressure-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.330600000000231,
+      "heapUsedBefore": 44177760,
+      "heapUsedAfter": 31291360,
+      "rssBefore": 104198144,
+      "rssAfter": 102658048
+    },
+    {
+      "caseId": "confirm-pressure-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.824800000000323,
+      "heapUsedBefore": 31303928,
+      "heapUsedAfter": 36493512,
+      "rssBefore": 102662144,
+      "rssAfter": 102936576
+    },
+    {
+      "caseId": "confirm-pressure-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.126800000000003,
+      "heapUsedBefore": 36656736,
+      "heapUsedAfter": 40360384,
+      "rssBefore": 102936576,
+      "rssAfter": 102940672
+    },
+    {
+      "caseId": "confirm-pressure-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.88130000000001,
+      "heapUsedBefore": 40370504,
+      "heapUsedAfter": 30649504,
+      "rssBefore": 102940672,
+      "rssAfter": 102707200
+    },
+    {
+      "caseId": "confirm-pressure-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.056500000000142,
+      "heapUsedBefore": 30659360,
+      "heapUsedAfter": 35234472,
+      "rssBefore": 102707200,
+      "rssAfter": 102981632
+    },
+    {
+      "caseId": "confirm-pressure-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.352399999999761,
+      "heapUsedBefore": 35390704,
+      "heapUsedAfter": 38007280,
+      "rssBefore": 102981632,
+      "rssAfter": 102350848
+    },
+    {
+      "caseId": "confirm-pressure-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.519999999999982,
+      "heapUsedBefore": 38016120,
+      "heapUsedAfter": 41181032,
+      "rssBefore": 102350848,
+      "rssAfter": 102817792
+    },
+    {
+      "caseId": "confirm-pressure-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.939600000000155,
+      "heapUsedBefore": 41191280,
+      "heapUsedAfter": 29884184,
+      "rssBefore": 102821888,
+      "rssAfter": 102555648
+    },
+    {
+      "caseId": "confirm-pressure-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.50649999999996,
+      "heapUsedBefore": 30037568,
+      "heapUsedAfter": 32385368,
+      "rssBefore": 102555648,
+      "rssAfter": 102699008
+    },
+    {
+      "caseId": "confirm-pressure-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.820299999999861,
+      "heapUsedBefore": 32393672,
+      "heapUsedAfter": 35403640,
+      "rssBefore": 102699008,
+      "rssAfter": 103092224
+    },
+    {
+      "caseId": "confirm-pressure-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.622199999999793,
+      "heapUsedBefore": 35411680,
+      "heapUsedAfter": 39006888,
+      "rssBefore": 103092224,
+      "rssAfter": 103714816
+    },
+    {
+      "caseId": "confirm-rotation-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 9.07950000000028,
+      "heapUsedBefore": 39173136,
+      "heapUsedAfter": 28628440,
+      "rssBefore": 103714816,
+      "rssAfter": 102064128
+    },
+    {
+      "caseId": "confirm-rotation-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.287600000000111,
+      "heapUsedBefore": 28647448,
+      "heapUsedAfter": 36576816,
+      "rssBefore": 102068224,
+      "rssAfter": 102334464
+    },
+    {
+      "caseId": "confirm-rotation-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.788100000000213,
+      "heapUsedBefore": 36589224,
+      "heapUsedAfter": 29203664,
+      "rssBefore": 102334464,
+      "rssAfter": 103038976
+    },
+    {
+      "caseId": "confirm-rotation-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.209000000000287,
+      "heapUsedBefore": 29374328,
+      "heapUsedAfter": 35276032,
+      "rssBefore": 103038976,
+      "rssAfter": 104198144
+    },
+    {
+      "caseId": "confirm-rotation-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.235599999999977,
+      "heapUsedBefore": 35288744,
+      "heapUsedAfter": 41914072,
+      "rssBefore": 104198144,
+      "rssAfter": 102617088
+    },
+    {
+      "caseId": "confirm-rotation-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.11830000000009,
+      "heapUsedBefore": 41926520,
+      "heapUsedAfter": 34235152,
+      "rssBefore": 102617088,
+      "rssAfter": 103370752
+    },
+    {
+      "caseId": "confirm-rotation-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.215500000000247,
+      "heapUsedBefore": 34397024,
+      "heapUsedAfter": 38899576,
+      "rssBefore": 103370752,
+      "rssAfter": 103612416
+    },
+    {
+      "caseId": "confirm-rotation-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 11.465499999999793,
+      "heapUsedBefore": 38915576,
+      "heapUsedAfter": 44354976,
+      "rssBefore": 103620608,
+      "rssAfter": 104443904
+    },
+    {
+      "caseId": "confirm-rotation-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.827999999999975,
+      "heapUsedBefore": 44365048,
+      "heapUsedAfter": 34093840,
+      "rssBefore": 104443904,
+      "rssAfter": 104828928
+    },
+    {
+      "caseId": "confirm-rotation-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.382399999999961,
+      "heapUsedBefore": 34254984,
+      "heapUsedAfter": 37915400,
+      "rssBefore": 104828928,
+      "rssAfter": 103956480
+    },
+    {
+      "caseId": "confirm-rotation-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.88189999999986,
+      "heapUsedBefore": 37925456,
+      "heapUsedAfter": 42508976,
+      "rssBefore": 103956480,
+      "rssAfter": 104947712
+    },
+    {
+      "caseId": "confirm-rotation-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.92009999999982,
+      "heapUsedBefore": 42519904,
+      "heapUsedAfter": 31967304,
+      "rssBefore": 104947712,
+      "rssAfter": 103788544
+    },
+    {
+      "caseId": "confirm-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.296200000000226,
+      "heapUsedBefore": 32152680,
+      "heapUsedAfter": 39666032,
+      "rssBefore": 103788544,
+      "rssAfter": 103854080
+    },
+    {
+      "caseId": "confirm-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.88189999999986,
+      "heapUsedBefore": 39676984,
+      "heapUsedAfter": 34234376,
+      "rssBefore": 103854080,
+      "rssAfter": 103960576
+    },
+    {
+      "caseId": "confirm-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.464499999999589,
+      "heapUsedBefore": 34246680,
+      "heapUsedAfter": 42832648,
+      "rssBefore": 103964672,
+      "rssAfter": 104415232
+    },
+    {
+      "caseId": "confirm-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.453300000000127,
+      "heapUsedBefore": 43017864,
+      "heapUsedAfter": 34011944,
+      "rssBefore": 104415232,
+      "rssAfter": 103100416
+    },
+    {
+      "caseId": "confirm-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.198100000000068,
+      "heapUsedBefore": 34027520,
+      "heapUsedAfter": 41012768,
+      "rssBefore": 103100416,
+      "rssAfter": 103424000
+    },
+    {
+      "caseId": "confirm-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.741599999999835,
+      "heapUsedBefore": 41028080,
+      "heapUsedAfter": 34682664,
+      "rssBefore": 103424000,
+      "rssAfter": 103628800
+    },
+    {
+      "caseId": "confirm-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.398000000000138,
+      "heapUsedBefore": 34868224,
+      "heapUsedAfter": 39232808,
+      "rssBefore": 103628800,
+      "rssAfter": 103895040
+    },
+    {
+      "caseId": "confirm-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.314499999999953,
+      "heapUsedBefore": 39244680,
+      "heapUsedAfter": 44565424,
+      "rssBefore": 103899136,
+      "rssAfter": 104595456
+    },
+    {
+      "caseId": "confirm-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 12.002199999999903,
+      "heapUsedBefore": 44574808,
+      "heapUsedAfter": 34619736,
+      "rssBefore": 104595456,
+      "rssAfter": 105259008
+    },
+    {
+      "caseId": "confirm-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.922499999999673,
+      "heapUsedBefore": 34798368,
+      "heapUsedAfter": 39229080,
+      "rssBefore": 105259008,
+      "rssAfter": 105496576
+    },
+    {
+      "caseId": "confirm-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.916900000000169,
+      "heapUsedBefore": 39239488,
+      "heapUsedAfter": 44502592,
+      "rssBefore": 105496576,
+      "rssAfter": 106143744
+    },
+    {
+      "caseId": "confirm-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 16.191400000000158,
+      "heapUsedBefore": 44512736,
+      "heapUsedAfter": 33237848,
+      "rssBefore": 106143744,
+      "rssAfter": 104652800
+    },
+    {
+      "caseId": "confirm-unknown-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.024499999999989,
+      "heapUsedBefore": 33396720,
+      "heapUsedAfter": 36548840,
+      "rssBefore": 104652800,
+      "rssAfter": 104656896
+    },
+    {
+      "caseId": "confirm-unknown-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.879699999999957,
+      "heapUsedBefore": 36557024,
+      "heapUsedAfter": 40104024,
+      "rssBefore": 104656896,
+      "rssAfter": 104656896
+    },
+    {
+      "caseId": "confirm-unknown-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.327500000000327,
+      "heapUsedBefore": 40112848,
+      "heapUsedAfter": 44048112,
+      "rssBefore": 104656896,
+      "rssAfter": 103464960
+    },
+    {
+      "caseId": "confirm-unknown-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.803999999999633,
+      "heapUsedBefore": 44205248,
+      "heapUsedAfter": 31263936,
+      "rssBefore": 103464960,
+      "rssAfter": 103096320
+    },
+    {
+      "caseId": "confirm-unknown-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.645899999999983,
+      "heapUsedBefore": 31271608,
+      "heapUsedAfter": 34871832,
+      "rssBefore": 103096320,
+      "rssAfter": 103153664
+    },
+    {
+      "caseId": "confirm-unknown-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.815700000000106,
+      "heapUsedBefore": 34879240,
+      "heapUsedAfter": 38782672,
+      "rssBefore": 103153664,
+      "rssAfter": 103632896
+    },
+    {
+      "caseId": "confirm-unknown-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.457800000000134,
+      "heapUsedBefore": 39015696,
+      "heapUsedAfter": 41488048,
+      "rssBefore": 103632896,
+      "rssAfter": 103636992
+    },
+    {
+      "caseId": "confirm-unknown-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.771200000000135,
+      "heapUsedBefore": 41496120,
+      "heapUsedAfter": 30724264,
+      "rssBefore": 103636992,
+      "rssAfter": 103432192
+    },
+    {
+      "caseId": "confirm-unknown-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.145100000000184,
+      "heapUsedBefore": 30732912,
+      "heapUsedAfter": 34244680,
+      "rssBefore": 103432192,
+      "rssAfter": 104427520
+    },
+    {
+      "caseId": "confirm-unknown-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 3.6664999999998145,
+      "heapUsedBefore": 34496208,
+      "heapUsedAfter": 36684040,
+      "rssBefore": 104427520,
+      "rssAfter": 104431616
+    },
+    {
+      "caseId": "confirm-unknown-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.318699999999808,
+      "heapUsedBefore": 36691848,
+      "heapUsedAfter": 39444128,
+      "rssBefore": 104431616,
+      "rssAfter": 104660992
+    },
+    {
+      "caseId": "confirm-unknown-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.045500000000175,
+      "heapUsedBefore": 39451672,
+      "heapUsedAfter": 42703928,
+      "rssBefore": 104660992,
+      "rssAfter": 105091072
+    },
+    {
+      "caseId": "confirm-wal-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.475599999999758,
+      "heapUsedBefore": 42998464,
+      "heapUsedAfter": 33833704,
+      "rssBefore": 105091072,
+      "rssAfter": 104042496
+    },
+    {
+      "caseId": "confirm-wal-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.73030000000017,
+      "heapUsedBefore": 33845920,
+      "heapUsedAfter": 40157776,
+      "rssBefore": 104046592,
+      "rssAfter": 104206336
+    },
+    {
+      "caseId": "confirm-wal-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.335599999999886,
+      "heapUsedBefore": 40172328,
+      "heapUsedAfter": 33384312,
+      "rssBefore": 104210432,
+      "rssAfter": 104103936
+    },
+    {
+      "caseId": "confirm-wal-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.3849999999997635,
+      "heapUsedBefore": 33676824,
+      "heapUsedAfter": 38519160,
+      "rssBefore": 104103936,
+      "rssAfter": 104103936
+    },
+    {
+      "caseId": "confirm-wal-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.561099999999897,
+      "heapUsedBefore": 38530344,
+      "heapUsedAfter": 43836824,
+      "rssBefore": 104103936,
+      "rssAfter": 104632320
+    },
+    {
+      "caseId": "confirm-wal-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.758000000000266,
+      "heapUsedBefore": 43847744,
+      "heapUsedAfter": 33886920,
+      "rssBefore": 104632320,
+      "rssAfter": 103657472
+    },
+    {
+      "caseId": "confirm-wal-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.992000000000189,
+      "heapUsedBefore": 34170024,
+      "heapUsedAfter": 37361712,
+      "rssBefore": 103657472,
+      "rssAfter": 104042496
+    },
+    {
+      "caseId": "confirm-wal-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.366099999999733,
+      "heapUsedBefore": 37370864,
+      "heapUsedAfter": 41230584,
+      "rssBefore": 104042496,
+      "rssAfter": 104841216
+    },
+    {
+      "caseId": "confirm-wal-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.58829999999989,
+      "heapUsedBefore": 41241896,
+      "heapUsedAfter": 31663288,
+      "rssBefore": 104841216,
+      "rssAfter": 104689664
+    },
+    {
+      "caseId": "confirm-wal-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.479100000000017,
+      "heapUsedBefore": 31938856,
+      "heapUsedAfter": 34869296,
+      "rssBefore": 104689664,
+      "rssAfter": 104845312
+    },
+    {
+      "caseId": "confirm-wal-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.28650000000016,
+      "heapUsedBefore": 34877696,
+      "heapUsedAfter": 38402600,
+      "rssBefore": 104845312,
+      "rssAfter": 105271296
+    },
+    {
+      "caseId": "confirm-wal-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.107199999999921,
+      "heapUsedBefore": 38410736,
+      "heapUsedAfter": 42520456,
+      "rssBefore": 105271296,
+      "rssAfter": 105930752
+    },
+    {
+      "caseId": "confirm-throughput-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 10.54150000000027,
+      "heapUsedBefore": 42795712,
+      "heapUsedAfter": 37144784,
+      "rssBefore": 105930752,
+      "rssAfter": 104579072
+    },
+    {
+      "caseId": "confirm-throughput-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 13.47420000000011,
+      "heapUsedBefore": 37159360,
+      "heapUsedAfter": 31323184,
+      "rssBefore": 104583168,
+      "rssAfter": 106967040
+    },
+    {
+      "caseId": "confirm-throughput-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 15.034500000000207,
+      "heapUsedBefore": 31340448,
+      "heapUsedAfter": 42275568,
+      "rssBefore": 106233856,
+      "rssAfter": 104558592
+    },
+    {
+      "caseId": "confirm-throughput-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 10.598199999999906,
+      "heapUsedBefore": 42559200,
+      "heapUsedAfter": 37431456,
+      "rssBefore": 104558592,
+      "rssAfter": 104357888
+    },
+    {
+      "caseId": "confirm-throughput-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 11.24519999999984,
+      "heapUsedBefore": 37443312,
+      "heapUsedAfter": 30714000,
+      "rssBefore": 104357888,
+      "rssAfter": 104861696
+    },
+    {
+      "caseId": "confirm-throughput-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.376999999999953,
+      "heapUsedBefore": 30725592,
+      "heapUsedAfter": 40367792,
+      "rssBefore": 104861696,
+      "rssAfter": 105594880
+    },
+    {
+      "caseId": "confirm-mean-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.654899999999998,
+      "heapUsedBefore": 40639880,
+      "heapUsedAfter": 45807784,
+      "rssBefore": 105594880,
+      "rssAfter": 105791488
+    },
+    {
+      "caseId": "confirm-mean-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.86120000000028,
+      "heapUsedBefore": 45819312,
+      "heapUsedAfter": 35623304,
+      "rssBefore": 105791488,
+      "rssAfter": 105918464
+    },
+    {
+      "caseId": "confirm-mean-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 14.253799999999956,
+      "heapUsedBefore": 35637080,
+      "heapUsedAfter": 42334216,
+      "rssBefore": 105922560,
+      "rssAfter": 106856448
+    },
+    {
+      "caseId": "confirm-mean-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.887900000000172,
+      "heapUsedBefore": 42604280,
+      "heapUsedAfter": 46888032,
+      "rssBefore": 106856448,
+      "rssAfter": 107040768
+    },
+    {
+      "caseId": "confirm-mean-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.248900000000049,
+      "heapUsedBefore": 46898072,
+      "heapUsedAfter": 34749864,
+      "rssBefore": 107040768,
+      "rssAfter": 106344448
+    },
+    {
+      "caseId": "confirm-mean-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.278600000000097,
+      "heapUsedBefore": 34759640,
+      "heapUsedAfter": 40529088,
+      "rssBefore": 106344448,
+      "rssAfter": 107134976
+    },
+    {
+      "caseId": "confirm-digest-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 10.093499999999949,
+      "heapUsedBefore": 40821272,
+      "heapUsedAfter": 33170760,
+      "rssBefore": 107134976,
+      "rssAfter": 105492480
+    },
+    {
+      "caseId": "confirm-digest-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 11.250800000000254,
+      "heapUsedBefore": 33182704,
+      "heapUsedAfter": 43434216,
+      "rssBefore": 105492480,
+      "rssAfter": 105938944
+    },
+    {
+      "caseId": "confirm-digest-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 13.660200000000259,
+      "heapUsedBefore": 43447624,
+      "heapUsedAfter": 40217184,
+      "rssBefore": 105943040,
+      "rssAfter": 104992768
+    },
+    {
+      "caseId": "confirm-digest-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 9.287200000000212,
+      "heapUsedBefore": 40510152,
+      "heapUsedAfter": 32462896,
+      "rssBefore": 104992768,
+      "rssAfter": 105336832
+    },
+    {
+      "caseId": "confirm-digest-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 12.103000000000065,
+      "heapUsedBefore": 32474504,
+      "heapUsedAfter": 40982560,
+      "rssBefore": 105336832,
+      "rssAfter": 106176512
+    },
+    {
+      "caseId": "confirm-digest-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 12.641000000000076,
+      "heapUsedBefore": 40993904,
+      "heapUsedAfter": 37064680,
+      "rssBefore": 106176512,
+      "rssAfter": 106729472
+    },
+    {
+      "caseId": "confirm-digest-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 15.289600000000064,
+      "heapUsedBefore": 37349560,
+      "heapUsedAfter": 43787704,
+      "rssBefore": 106885120,
+      "rssAfter": 107540480
+    },
+    {
+      "caseId": "confirm-digest-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 23.639700000000175,
+      "heapUsedBefore": 43797792,
+      "heapUsedAfter": 37890416,
+      "rssBefore": 107560960,
+      "rssAfter": 107696128
+    },
+    {
+      "caseId": "confirm-digest-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 14.68730000000005,
+      "heapUsedBefore": 37901936,
+      "heapUsedAfter": 46324440,
+      "rssBefore": 107700224,
+      "rssAfter": 107618304
+    },
+    {
+      "caseId": "confirm-digest-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.345800000000054,
+      "heapUsedBefore": 46609864,
+      "heapUsedAfter": 36278800,
+      "rssBefore": 107618304,
+      "rssAfter": 106999808
+    },
+    {
+      "caseId": "confirm-digest-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.219699999999648,
+      "heapUsedBefore": 36288384,
+      "heapUsedAfter": 42595648,
+      "rssBefore": 106999808,
+      "rssAfter": 108007424
+    },
+    {
+      "caseId": "confirm-digest-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 19.30079999999998,
+      "heapUsedBefore": 42604968,
+      "heapUsedAfter": 35870520,
+      "rssBefore": 108007424,
+      "rssAfter": 107597824
+    }
+  ]
+}

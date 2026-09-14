@@ -1,0 +1,261 @@
+{
+  "rootPid": 46992,
+  "windows": [
+    {
+      "hwnd": 139002404,
+      "pid": 48036,
+      "process": "godot-x86_64-pc-windows-msvc.exe",
+      "title": "NoteConnection Path Renderer (DEBUG)",
+      "visible": false,
+      "minimized": true,
+      "foreground": false,
+      "rect": [
+        -21333,
+        -21333,
+        -21283,
+        -21314
+      ]
+    },
+    {
+      "hwnd": 84738266,
+      "pid": 48036,
+      "process": "godot-x86_64-pc-windows-msvc.exe",
+      "title": "Temp Window",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        1,
+        1
+      ]
+    },
+    {
+      "hwnd": 59387052,
+      "pid": 46992,
+      "process": "npm.exe",
+      "title": "NoteConnection",
+      "visible": true,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        127,
+        167,
+        1422,
+        1104
+      ]
+    },
+    {
+      "hwnd": 59511772,
+      "pid": 20204,
+      "process": "msedgewebview2.exe",
+      "title": "",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "hwnd": 104935174,
+      "pid": 24344,
+      "process": "msedgewebview2.exe",
+      "title": "",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        152,
+        192,
+        2072,
+        1227
+      ]
+    },
+    {
+      "hwnd": 33169606,
+      "pid": 24344,
+      "process": "msedgewebview2.exe",
+      "title": "",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "hwnd": 64293500,
+      "pid": 52724,
+      "process": "msedgewebview2.exe",
+      "title": "",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        136,
+        39
+      ]
+    },
+    {
+      "hwnd": 21770582,
+      "pid": 46992,
+      "process": "npm.exe",
+      "title": "",
+      "visible": true,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        15,
+        15
+      ]
+    },
+    {
+      "hwnd": 38801812,
+      "pid": 48036,
+      "process": "godot-x86_64-pc-windows-msvc.exe",
+      "title": "MSCTFIME UI",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "hwnd": 2621606,
+      "pid": 48036,
+      "process": "godot-x86_64-pc-windows-msvc.exe",
+      "title": "Default IME",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "hwnd": 84935102,
+      "pid": 48036,
+      "process": "godot-x86_64-pc-windows-msvc.exe",
+      "title": "Default IME",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "hwnd": 55450024,
+      "pid": 24344,
+      "process": "msedgewebview2.exe",
+      "title": "MSCTFIME UI",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "hwnd": 17567686,
+      "pid": 24344,
+      "process": "msedgewebview2.exe",
+      "title": "Default IME",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "hwnd": 83177260,
+      "pid": 46992,
+      "process": "npm.exe",
+      "title": "MSCTFIME UI",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "hwnd": 90638640,
+      "pid": 46992,
+      "process": "npm.exe",
+      "title": "Default IME",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "hwnd": 106702032,
+      "pid": 20204,
+      "process": "msedgewebview2.exe",
+      "title": "Default IME",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "hwnd": 18684620,
+      "pid": 52724,
+      "process": "msedgewebview2.exe",
+      "title": "Default IME",
+      "visible": false,
+      "minimized": false,
+      "foreground": false,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "screenshots": []
+}

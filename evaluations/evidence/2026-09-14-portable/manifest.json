@@ -1,0 +1,393 @@
+{
+  "archivedAt": "2026-09-13T22:00:47.865Z",
+  "sourceRevision": "e4cdce27c55dbb19f0ba6b4405358661c12d8821",
+  "sourceTreeHash": "15657ea4ebda7e0eeb7847403d2097abc61b08610431395237a78d2a951b5b94",
+  "tests": [
+    {
+      "runtime": "22.19.0",
+      "suites": 168,
+      "tests": 1708,
+      "failed": 0,
+      "skipped": 0,
+      "startedAt": "2026-09-13T21:17:07.921Z",
+      "artifact": "tests/node22.json"
+    },
+    {
+      "runtime": "24.14.0",
+      "suites": 168,
+      "tests": 1708,
+      "failed": 0,
+      "skipped": 0,
+      "startedAt": "2026-09-13T21:23:08.242Z",
+      "artifact": "tests/node24.json"
+    }
+  ],
+  "runtimeChecks": 8,
+  "browserCases": 5,
+  "foundationReports": {
+    "sqlite": [
+      {
+        "path": "foundation/foundation-sqlite-runtime-report-2026-09-13T21-55-19-900Z.json",
+        "runId": "30a7d693-58c3-4af9-8269-b27d1918114c",
+        "verifiedAt": "2026-09-13T21:55:19.900Z"
+      },
+      {
+        "path": "foundation/foundation-sqlite-runtime-report-2026-09-13T21-56-15-566Z.json",
+        "runId": "c2a6ef9a-52ec-4791-871b-6ab9a09c2379",
+        "verifiedAt": "2026-09-13T21:56:15.566Z"
+      },
+      {
+        "path": "foundation/foundation-sqlite-runtime-report-2026-09-13T21-57-36-881Z.json",
+        "runId": "04146330-45d9-49a2-9929-56bcef8817fd",
+        "verifiedAt": "2026-09-13T21:57:36.881Z"
+      }
+    ],
+    "ann": [
+      {
+        "path": "foundation/foundation-ann-runtime-report-2026-09-13T21-55-44-875Z.json",
+        "runId": "60a7de0b-8adb-4ce6-9416-b2ba25b5d02b",
+        "verifiedAt": "2026-09-13T21:55:44.875Z"
+      },
+      {
+        "path": "foundation/foundation-ann-runtime-report-2026-09-13T21-56-53-378Z.json",
+        "runId": "e1d3555d-d4cb-4f69-b9a3-3090096d8227",
+        "verifiedAt": "2026-09-13T21:56:53.378Z"
+      },
+      {
+        "path": "foundation/foundation-ann-runtime-report-2026-09-13T21-58-03-108Z.json",
+        "runId": "31eb1b64-b520-4b3c-b903-20a5350fc823",
+        "verifiedAt": "2026-09-13T21:58:03.108Z"
+      }
+    ]
+  },
+  "qualification": {
+    "localWindowsFoundationContracts": true,
+    "independentHost": true,
+    "nativeReleaseInstallers": false,
+    "androidDevice": false,
+    "externalProductionAnn": false,
+    "learnerOutcomes": false,
+    "windowsSameArtifactHostCount": 2,
+    "linuxCiHostCount": 1
+  },
+  "files": [
+    {
+      "path": "browser/agent-answer-formula-render-full-adaptive-latest.png",
+      "bytes": 116134,
+      "sha256": "ad6d83433ed27e0522e6a737f8226f37959888164ed8878f435d85ab45f9fba2"
+    },
+    {
+      "path": "browser/agent-answer-formula-render-latest.png",
+      "bytes": 116134,
+      "sha256": "bd8d10160aae305169d79f145b7efea175247f0a3b17b34409759adeccac8850"
+    },
+    {
+      "path": "browser/agent-answer-real-waterglass-full-adaptive-latest.png",
+      "bytes": 100890,
+      "sha256": "90f94e967d7ec8bf6c18a43252e95e596ff381a8cc612ec50a57200c7696901d"
+    },
+    {
+      "path": "browser/agent-answer-real-waterglass-full-unbounded-latest.png",
+      "bytes": 98399,
+      "sha256": "0d4eba9b27e2dbd53b258801614c0c20095df1836e408c07e8052b1aba903b3d"
+    },
+    {
+      "path": "browser/agent-answer-real-waterglass-latest.png",
+      "bytes": 122393,
+      "sha256": "0a5b4089b64fbeb804552c7d92516dbcdb51ed46c980970f2dcbdb7f8381bf49"
+    },
+    {
+      "path": "browser/summary.json",
+      "bytes": 2821,
+      "sha256": "bdc40e2119b6cf6bf8860b505388f83a741f53f3696769eecfb398d978358ea8"
+    },
+    {
+      "path": "ci/adopted-windows-verification.json",
+      "bytes": 5309,
+      "sha256": "d3a5c37fd3184d8c5e9b4bb31617178d530ce96264e0254bd1e78044e4ee3d50"
+    },
+    {
+      "path": "ci/published-artifacts.json",
+      "bytes": 1744,
+      "sha256": "cbb8e1fada975265b6ec5a8d9ea7d95f9382b69734e5892587bca4cf22792bd0"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-ann-runtime-report-2026-09-13T22-21-47-530Z.json",
+      "bytes": 63711,
+      "sha256": "65ba45d4ae5d47bd981b1e4f89633038502d007132c8a0553502abd0bab058d4"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-ann-runtime-report-2026-09-13T22-22-20-121Z.json",
+      "bytes": 63723,
+      "sha256": "c3701acddceef309d746d585b27f28afd43f5ab87cda3093434c7734af7710a8"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-ann-runtime-report-2026-09-13T22-22-52-857Z.json",
+      "bytes": 63694,
+      "sha256": "da0b26f8a3e0d28441c696938f5eb9012662f5bcdcafc1df07c144b18f2ba3c6"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-sqlite-runtime-report-2026-09-13T22-21-31-861Z.json",
+      "bytes": 44615,
+      "sha256": "89bfcbde291aa57432249a5fd786b2e4ac003f8b4fddf1adb67475a22efc2613"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-sqlite-runtime-report-2026-09-13T22-22-04-652Z.json",
+      "bytes": 44623,
+      "sha256": "ef27a35c023623ed05a89f8ed65da62d13194aa6b4ff29301be6085a1764f600"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/foundation/foundation-sqlite-runtime-report-2026-09-13T22-22-37-269Z.json",
+      "bytes": 44610,
+      "sha256": "d008ea78a18a9d8f44967f25281efe73f6f9dfe799f3a006a79c0a6de239f2f6"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/offline-verification.json",
+      "bytes": 5540,
+      "sha256": "8c0fe6ae1a641cb76ae75a6188eee2e5f289b48dbaed696f90a1c7d89c3c232c"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/provenance.json",
+      "bytes": 1628,
+      "sha256": "8419991aa2f95bf377560127c814a53aaef3fa0d3c326ba4d7000c9de5e94a0d"
+    },
+    {
+      "path": "ci/run-34786392248/Linux/sidecar-build-manifest.json",
+      "bytes": 90222,
+      "sha256": "8067bdfddbd634f98298072178962f89200dcd56f327a4351afb19195a83b354"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-ann-runtime-report-2026-09-13T22-23-12-712Z.json",
+      "bytes": 63803,
+      "sha256": "64e49e4056594a9389659efb82d306e7f4593f2cfe3608a11af05cf04822254e"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-ann-runtime-report-2026-09-13T22-23-57-587Z.json",
+      "bytes": 63725,
+      "sha256": "d8b30c27766e5dca544c2f5c363fae9501ba82c840b02a1a6f682a9723e0761e"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-ann-runtime-report-2026-09-13T22-24-42-223Z.json",
+      "bytes": 63806,
+      "sha256": "4caec5a2b3f5e281b8eb2d646dfc8e0d98a444fe2a249c7a13dd5f9a8d2bbda2"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-sqlite-runtime-report-2026-09-13T22-22-51-210Z.json",
+      "bytes": 44596,
+      "sha256": "8414b27f61bc804bc9c2dc3312afa7e93b33bb110df86d0ec0e27d93ea3f6a24"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-sqlite-runtime-report-2026-09-13T22-23-36-213Z.json",
+      "bytes": 44553,
+      "sha256": "191b0e1a8292ba35746334549201342c8aeb8f9d5d27d59fac59a71335ff45c6"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/foundation/foundation-sqlite-runtime-report-2026-09-13T22-24-20-889Z.json",
+      "bytes": 44555,
+      "sha256": "1f08114dfa2e8bc878ffec126bba391a20d38d39f6305976e72f6b2ba419c86a"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/offline-verification.json",
+      "bytes": 5557,
+      "sha256": "a250b626d3cea2587ad578f907d1cff51a98be07c8a8e18d2340972e2e44f199"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/provenance.json",
+      "bytes": 1632,
+      "sha256": "bc18592be6becd80498206afcf777b7603b0d9fbc7312402b911b47ed4e0a8b4"
+    },
+    {
+      "path": "ci/run-34786392248/Windows/sidecar-build-manifest.json",
+      "bytes": 90224,
+      "sha256": "e090ab78a40d16168ae3bca655ba1b2e1bb920f9cf064b6d5d772be4fbbf036e"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-23-12-712Z.json",
+      "bytes": 63803,
+      "sha256": "64e49e4056594a9389659efb82d306e7f4593f2cfe3608a11af05cf04822254e"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-23-57-587Z.json",
+      "bytes": 63725,
+      "sha256": "d8b30c27766e5dca544c2f5c363fae9501ba82c840b02a1a6f682a9723e0761e"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-24-42-223Z.json",
+      "bytes": 63806,
+      "sha256": "4caec5a2b3f5e281b8eb2d646dfc8e0d98a444fe2a249c7a13dd5f9a8d2bbda2"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-46-05-445Z.json",
+      "bytes": 63784,
+      "sha256": "5e5404babebc8015eb991b8665d79e77f0ee0b95a5d8ff8fa6e76f608c74c833"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-46-59-368Z.json",
+      "bytes": 63770,
+      "sha256": "ace3587c556ef8805368f878dd3f4178c6a4a252fc6cdcaab07314516dba2029"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-13T22-47-53-726Z.json",
+      "bytes": 63804,
+      "sha256": "6b62429b3eb1905379822479f0ee5aaf034a302e3ac98bac52f28287c7dbda4a"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-22-51-210Z.json",
+      "bytes": 44596,
+      "sha256": "8414b27f61bc804bc9c2dc3312afa7e93b33bb110df86d0ec0e27d93ea3f6a24"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-23-36-213Z.json",
+      "bytes": 44553,
+      "sha256": "191b0e1a8292ba35746334549201342c8aeb8f9d5d27d59fac59a71335ff45c6"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-24-20-889Z.json",
+      "bytes": 44555,
+      "sha256": "1f08114dfa2e8bc878ffec126bba391a20d38d39f6305976e72f6b2ba419c86a"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-45-40-912Z.json",
+      "bytes": 45073,
+      "sha256": "47fdfc23c34a1b06a20c031caeb3e67170d0d9f8f43aac9f0efd5a88b5189af2"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-46-35-067Z.json",
+      "bytes": 45023,
+      "sha256": "6db6ec99d8efbefe55ae8d4c9a9a001642e429bae9a79ee795045cf893d76936"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-13T22-47-29-066Z.json",
+      "bytes": 45089,
+      "sha256": "220a2c70b161e2301c55b26113cb0d202ae346bf1208e9f945b6aef9813fe385"
+    },
+    {
+      "path": "ci/windows-two-hosts/verification.json",
+      "bytes": 6236,
+      "sha256": "eb5e2fefbe4f0fc7da0b028e6d33eac4f1e5724016acb3c7596051ca75cf437d"
+    },
+    {
+      "path": "convergence-runtime.json",
+      "bytes": 6645,
+      "sha256": "381ec78eaaca5525165bf12884afaa13ecd4381780abec1eb237004725de84db"
+    },
+    {
+      "path": "fingerprint-portability-initial.json",
+      "bytes": 1179,
+      "sha256": "e6d776a0398c3bdcd4562b369ba730ac3810bff3853de50287803a640849fddd"
+    },
+    {
+      "path": "fingerprint-regressions-before.json",
+      "bytes": 15638,
+      "sha256": "dba191ada7293493fcf582c28820638f348d3f33baae731b609f4293c5f10090"
+    },
+    {
+      "path": "foundation/foundation-ann-runtime-report-2026-09-13T21-55-44-875Z.json",
+      "bytes": 63735,
+      "sha256": "967c92d06b09a963f4eb51b6f2041cbebebc6490babef00b1ed33fd77a49458f"
+    },
+    {
+      "path": "foundation/foundation-ann-runtime-report-2026-09-13T21-56-53-378Z.json",
+      "bytes": 63809,
+      "sha256": "d72cbf00b512a9913082702290b58f74226cec5b65ac4c3018dfacab551309de"
+    },
+    {
+      "path": "foundation/foundation-ann-runtime-report-2026-09-13T21-58-03-108Z.json",
+      "bytes": 63756,
+      "sha256": "7c28f276476231462c23cb58d52606e4b64e7273c2eb5d76f995c8e3306837d1"
+    },
+    {
+      "path": "foundation/foundation-sqlite-runtime-report-2026-09-13T21-55-19-900Z.json",
+      "bytes": 45044,
+      "sha256": "2fb4a2f1d49ebb05fec0c66d9e100019a21d663b7014475ecbecc93a06e70ed0"
+    },
+    {
+      "path": "foundation/foundation-sqlite-runtime-report-2026-09-13T21-56-15-566Z.json",
+      "bytes": 45123,
+      "sha256": "bcaf7acc705cd56957c8ac9184df5c189703ca080ff1622e5bd95739879b37f6"
+    },
+    {
+      "path": "foundation/foundation-sqlite-runtime-report-2026-09-13T21-57-36-881Z.json",
+      "bytes": 45089,
+      "sha256": "6077ca44a9ff3e1af827af956dc0a40802c5cdf1d0a286f7702e567c3a6c3fb3"
+    },
+    {
+      "path": "foundation-release-evidence.json",
+      "bytes": 5093,
+      "sha256": "eb4661798315aa93859b6bc4fc83f3fa095c5ae8d6f818f9b41f99a98ca97a3f"
+    },
+    {
+      "path": "mobile-projection-host.json",
+      "bytes": 3474,
+      "sha256": "765fafd30e872d4c630a4f615ac84e3d5407fd25032de135041639954e7338cf"
+    },
+    {
+      "path": "mobile-recovery-host.json",
+      "bytes": 1964,
+      "sha256": "625674bfb3b69594e53ab071606937ce72daac23f3dedfa95ced526de54e544d"
+    },
+    {
+      "path": "quality/answer-quality-v1-regression.json",
+      "bytes": 128091,
+      "sha256": "e0ef4c64c7828e1a7f363c17a378896c46c93476d6349bfa95caeb96e9bd3682"
+    },
+    {
+      "path": "quality/answer-quality-v2-regression.json",
+      "bytes": 127040,
+      "sha256": "7f19772bc4870e6d80df36384028cae646ac410f412cb8065daf1aa46f4a9b63"
+    },
+    {
+      "path": "quality/answer-quality-v3-regression.json",
+      "bytes": 176450,
+      "sha256": "bbdec1732f555964f91efb0cedd584c1b589ea5f9cc23440525d5d877d74f7e1"
+    },
+    {
+      "path": "quality/answer-quality-v4-regression.json",
+      "bytes": 142781,
+      "sha256": "88c080f9a20ce630decc6e29e31b9eb1457f42848c295e48c151536af9eb539a"
+    },
+    {
+      "path": "quality/answer-quality-v5-regression.json",
+      "bytes": 112741,
+      "sha256": "5ddb1b627de35bf7fe70cd2a5fb0c100a9eb704377b74bffb8a754a4e13ea16f"
+    },
+    {
+      "path": "quality/answer-quality-v6-regression.json",
+      "bytes": 96404,
+      "sha256": "6be425e731ba2371df530a0c5b6fb7580342eff250cb0f78ee66c9314ac9379f"
+    },
+    {
+      "path": "quality/regression-summary.json",
+      "bytes": 18011,
+      "sha256": "4501282858c70c4066130fdbcf38876d3106f5c57ec08025da691f6a9e42d8b4"
+    },
+    {
+      "path": "runtime-checks.json",
+      "bytes": 4058,
+      "sha256": "83d110e6ed39fcc3a32d2bbc9c3b435dc3eabddaefeba250c156688a94e9567c"
+    },
+    {
+      "path": "sidecar-build-manifest.json",
+      "bytes": 111835,
+      "sha256": "61c37cba7becc1b2d39d08c76f47b714d9a127640d04a6917d20740a8f82b109"
+    },
+    {
+      "path": "source-reconciliation-v2.json",
+      "bytes": 431,
+      "sha256": "2bc9665d894875be0a514b01b01cbdbb5c228f9f92ed2efb39288fd592912941"
+    },
+    {
+      "path": "tests/node22.json",
+      "bytes": 778227,
+      "sha256": "577852ee2db8bfd793584d572a14e3a430f1b010bf555c057512b889162acf36"
+    },
+    {
+      "path": "tests/node24.json",
+      "bytes": 778082,
+      "sha256": "e53033d11c600bd8a62944ef75379ab76497447f623f9024dde7d0efef5597a0"
+    }
+  ],
+  "publishedArtifacts": "ci/published-artifacts.json",
+  "currentWindowsQualification": "ci/windows-two-hosts/verification.json",
+  "currentLinuxQualification": "ci/run-34786392248/Linux/offline-verification.json"
+}

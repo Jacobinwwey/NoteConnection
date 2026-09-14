@@ -1,0 +1,3897 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/audits/2026-09-12-project-progress/">
+      
+      
+        <link rel="prev" href="../../evaluations/2026-09-12-learning-pilot-protocol/">
+      
+      
+        <link rel="next" href="../../plans/2026-09-12-001-refactor-project-convergence-plan/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Project progress audit and completion boundaries - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#project-progress-audit" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Project progress audit and completion boundaries
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluations/2026-09-13-convergence-results/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Convergence Results (2026-09-13)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluations/2026-09-12-learning-pilot-protocol/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Learning Pilot Protocol
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Project Progress Baseline (2026-09-12)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../plans/2026-09-12-001-refactor-project-convergence-plan/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Project Convergence Plan
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Historical Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluations/2026-09-13-convergence-results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convergence Results (2026-09-13)
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--host-accepted-external-gates-open"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluations/2026-09-12-learning-pilot-protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learning Pilot Protocol
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--awaiting_participants"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Progress Baseline (2026-09-12)
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--baseline-audit"></span>
+  
+
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Progress Baseline (2026-09-12)
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--baseline-audit"></span>
+  
+
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#english" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="English">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision-and-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision and scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fresh-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fresh verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#progress-by-plan-family" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progress by plan family
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#critical-findings-and-implementation-consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical findings and implementation consequences
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Critical findings and implementation consequences">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#f1-p0-ingest-rollback-can-erase-a-concurrent-acknowledged-write" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F1 — P0: ingest rollback can erase a concurrent acknowledged write
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f2-p1-runtime-governor-metadata-overstates-execution-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F2 — P1: runtime governor metadata overstates execution safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f3-p1-transport-limits-are-incomplete-and-happen-after-allocation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F3 — P1: transport limits are incomplete and happen after allocation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f4-p1-indexed-candidate-selection-changes-matching-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F4 — P1: indexed candidate selection changes matching semantics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f5-p1-green-ci-is-weaker-than-the-named-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F5 — P1: green CI is weaker than the named gate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f6-p1-release-evidence-is-stale-or-of-the-wrong-kind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F6 — P1: release evidence is stale or of the wrong kind
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f7-p2-file-extraction-has-not-completed-ownership-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F7 — P2: file extraction has not completed ownership migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strategic-trade-offs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategic trade-offs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#source-plan-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source-plan inventory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="中文">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        结论与范围
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        本轮验证
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        各计划的完成边界
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        关键发现及实施含义
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="关键发现及实施含义">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#f1-p0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F1 — P0：摄入回滚可能抹掉已确认的并发写入
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f2-p1runtime-governor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F2 — P1：runtime governor 元数据超出了实际执行保障
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f3-p1transport-envelope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F3 — P1：transport 限制未覆盖 envelope，且位于分配之后
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f4-p1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F4 — P1：候选索引改变了匹配语义
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f5-p1ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F5 — P1：CI 绿灯弱于门禁名称承诺
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f6-p1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F6 — P1：发布证据过期或类型不符
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f7-p2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F7 — P2：文件拆分未完成责任迁移
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        战略取舍
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        源计划覆盖
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/2026-09-12-001-refactor-project-convergence-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Convergence Plan
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--partial_acceptance"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Historical Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_3" id="__nav_8_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_4" id="__nav_8_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_5" id="__nav_8_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_2" id="__nav_9_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_3" id="__nav_9_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_4" id="__nav_9_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_5" id="__nav_9_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#english" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="English">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision-and-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision and scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fresh-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fresh verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#progress-by-plan-family" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progress by plan family
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#critical-findings-and-implementation-consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical findings and implementation consequences
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Critical findings and implementation consequences">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#f1-p0-ingest-rollback-can-erase-a-concurrent-acknowledged-write" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F1 — P0: ingest rollback can erase a concurrent acknowledged write
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f2-p1-runtime-governor-metadata-overstates-execution-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F2 — P1: runtime governor metadata overstates execution safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f3-p1-transport-limits-are-incomplete-and-happen-after-allocation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F3 — P1: transport limits are incomplete and happen after allocation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f4-p1-indexed-candidate-selection-changes-matching-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F4 — P1: indexed candidate selection changes matching semantics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f5-p1-green-ci-is-weaker-than-the-named-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F5 — P1: green CI is weaker than the named gate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f6-p1-release-evidence-is-stale-or-of-the-wrong-kind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F6 — P1: release evidence is stale or of the wrong kind
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f7-p2-file-extraction-has-not-completed-ownership-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F7 — P2: file extraction has not completed ownership migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strategic-trade-offs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategic trade-offs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#source-plan-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source-plan inventory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="中文">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        结论与范围
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        本轮验证
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        各计划的完成边界
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        关键发现及实施含义
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="关键发现及实施含义">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#f1-p0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F1 — P0：摄入回滚可能抹掉已确认的并发写入
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f2-p1runtime-governor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F2 — P1：runtime governor 元数据超出了实际执行保障
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f3-p1transport-envelope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F3 — P1：transport 限制未覆盖 envelope，且位于分配之后
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f4-p1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F4 — P1：候选索引改变了匹配语义
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f5-p1ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F5 — P1：CI 绿灯弱于门禁名称承诺
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f6-p1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F6 — P1：发布证据过期或类型不符
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f7-p2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F7 — P2：文件拆分未完成责任迁移
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        战略取舍
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        源计划覆盖
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="project-progress-audit">Project Progress Audit / 项目进度审计<a class="headerlink" href="#project-progress-audit" title="Permanent link">&para;</a></h1>
+<h2 id="english">English<a class="headerlink" href="#english" title="Permanent link">&para;</a></h2>
+<p>The findings below preserve the pre-implementation baseline. Current acceptance and remaining work are recorded in the <a href="../../evaluations/2026-09-14-public-evidence-quality-results/">September 14 follow-up</a>.</p>
+<h3 id="decision-and-scope">Decision and scope<a class="headerlink" href="#decision-and-scope" title="Permanent link">&para;</a></h3>
+<p>The project has a substantial working implementation, but <strong>runtime isolation, bounded execution, and release qualification remain open</strong>. The next increment should close those contracts before adding more answer profiles, infrastructure, or platform variants.</p>
+<p>Baseline: local <code>main</code>, commit <code>e84d6ece</code> (2026-09-03), package <code>1.8.0</code>; audited on 2026-09-12. This is a local code/document audit with fresh tests and synthetic probes against production functions. Remote CI, a freshly packaged desktop application, browser/Godot interaction, and Android hardware were not revalidated in this audit. No production implementation was changed.</p>
+<p>This page owns the audit baseline; the <a href="../../evaluations/2026-09-14-public-evidence-quality-results/">results record</a> owns current cross-plan status. The <a href="../../plans/2026-09-12-001-refactor-project-convergence-plan/">convergence plan</a> tracks acceptance. Older unchecked items are not automatically current backlog.</p>
+<p>Status notation:</p>
+<ul>
+<li><strong>D — implemented baseline:</strong> code and relevant tests exist; this does not imply release or user-outcome acceptance.</li>
+<li><strong>P — partial:</strong> a required implementation invariant is incomplete or a reproduced defect reopens it.</li>
+<li><strong>E — evidence open:</strong> implementation/harness exists, but the required fresh runtime, device, scale, or outcome evidence is missing.</li>
+<li><strong>F — deferred:</strong> a deliberate conditional direction, not a delivery commitment.</li>
+<li><strong>H — historical:</strong> absorbed into later work; retained for traceability.</li>
+</ul>
+<p>There is no aggregate completion percentage. Repeated historical checklists, translations, implementation steps, and operational gates have different denominators.</p>
+<h3 id="fresh-verification">Fresh verification<a class="headerlink" href="#fresh-verification" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Observation</th>
+<th>What it establishes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TypeScript</td>
+<td><code>tsc --noEmit --incremental false</code> passed</td>
+<td>Current source type-checks on local Node <code>22.19.0</code></td>
+</tr>
+<tr>
+<td>Full Jest</td>
+<td><strong>159 suites, 1,419 passed, 26 skipped, 0 failed</strong>; 1,445 cases total</td>
+<td>Existing automated baseline passes; approximately 178 seconds</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Final Diataxis check: 18 entries, 36 language paths, 68 canonical references; MkDocs build passed; 140 added links checked</td>
+<td>New pages/anchors and language sections are valid; this does not prove product acceptance</td>
+</tr>
+<tr>
+<td>Serialization probe</td>
+<td>Raw response <strong>1,998 bytes</strong>, completed-event JSON <strong>2,094 bytes</strong>, synthetic budget <strong>2,000 bytes</strong>, <code>truncated=false</code></td>
+<td>SSE envelope accounting defect reproduced</td>
+</tr>
+<tr>
+<td>Matching probe</td>
+<td><code>fuzzy</code>: <code>cat</code> in <code>concatenate</code>, and <code>知识</code> in <code>知识图谱</code>, both accepted by <code>checkMatch</code>; sequential candidate filtering emits no edge</td>
+<td>Sequential matching is not semantically equivalent to the worker matcher</td>
+</tr>
+<tr>
+<td>Ingest isolation probe</td>
+<td>State exposes 2 documents before failed commit; concurrent memory returns <code>added=true</code>; rollback leaves 1 document and <strong>0 memory entries</strong></td>
+<td>Dirty state visibility and loss of an acknowledged concurrent write reproduced</td>
+</tr>
+<tr>
+<td>Foundation release evaluator</td>
+<td><code>ok=false</code> at explicit audit time <code>2026-09-12T00:00:00Z</code></td>
+<td>Current local reports do not qualify for release</td>
+</tr>
+</tbody>
+</table>
+<p>The ingest probe uses the real <code>KnowledgeLearningPlatform</code> and an injected in-memory store that serializes saves and fails one ingest write. It proves a platform-level concurrency defect, not a device/filesystem failure. The SSE probe uses a deliberately small internal test budget; it establishes the boundary-accounting error, not a measured production memory incident.</p>
+<p>The skipped cases are concentrated: 13 in <code>src/server.migration.test.ts</code> and 13 in <code>src/agent_workspace.contract.parity.test.ts</code>. Some parity cases skip when a source-string marker disappears. A green run therefore does not prove those request, build, clipboard, scope, or capability contracts.</p>
+<p>Local reproducible evidence:</p>
+<ul>
+<li><code>output/project-audit-2026-09-12/jest-results.json</code> and <code>jest.log</code>.</li>
+<li><code>output/project-audit-2026-09-12/boundary-probes.cjs</code> / <code>boundary-probes.json</code>.</li>
+<li><code>output/project-audit-2026-09-12/ingest-isolation-probe.cjs</code> / <code>ingest-isolation-probe.json</code>.</li>
+<li><code>output/project-audit-2026-09-12/foundation-release-evidence.json</code>.</li>
+<li>Checked-in compact record: <a href="../2026-09-12-project-progress-evidence.json">audit evidence</a>.</li>
+</ul>
+<p>The local files above are ignored diagnostic artifacts, not durable release attestations. From the repository root, reproduce the two probes with <code>rtk proxy node output/project-audit-2026-09-12/boundary-probes.cjs</code> and <code>rtk proxy node output/project-audit-2026-09-12/ingest-isolation-probe.cjs</code>.</p>
+<h3 id="progress-by-plan-family">Progress by plan family<a class="headerlink" href="#progress-by-plan-family" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Plan family</th>
+<th>Reconciled status</th>
+<th>Remaining completion boundary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M01</td>
+<td>Knowledge-mastery evolution, L0–L5 / Phases 1–3</td>
+<td><strong>P/E</strong>: atom/evidence, retrieval, mastery, tutor and memory mechanisms exist</td>
+<td>Learning gains, misconception recurrence, and path superiority are not demonstrated by API tests</td>
+</tr>
+<tr>
+<td>M02</td>
+<td>April Agent Workspace alignment / v1–v6 contract plans</td>
+<td><strong>D/P</strong>: scoped actions, diagnostics, contracts and runtime paths exist</td>
+<td>Domain ownership and meaningful parity coverage remain partial</td>
+</tr>
+<tr>
+<td>M03</td>
+<td>Markdown Reader / NoteMD upgrade</td>
+<td><strong>D/E</strong>: shared rich rendering, Mermaid repair and NoteMD operations exist</td>
+<td>Current browser/Tauri/Godot acceptance remains a separate runtime check</td>
+</tr>
+<tr>
+<td>M04</td>
+<td>May cross-platform refinement / decomposition / Phase 4</td>
+<td><strong>P</strong>: registry, domain files and ES modules exist</td>
+<td>Legacy route copies and reverse domain delegation still concentrate behavior</td>
+</tr>
+<tr>
+<td>M05</td>
+<td>May 25 lightweight RAG / agent Phases 0–6</td>
+<td><strong>P</strong>: scope, multilingual retrieval work, RAG and memory integration advanced materially</td>
+<td>Turn resource safety and separation of runtime ownership remain open</td>
+</tr>
+<tr>
+<td>M06</td>
+<td>May 26 Deep Student Program A–F</td>
+<td><strong>D/P</strong>: resource, projection, indexing, workspace, session, memory and export modules exist</td>
+<td>The cross-owner commit/isolation defect prevents a blanket durability-complete claim</td>
+</tr>
+<tr>
+<td>M07</td>
+<td>June 6 architecture alignment</td>
+<td><strong>H</strong> as a scheduling baseline</td>
+<td>Its remaining obligations are represented by M01, M04, M10, M15 and this plan</td>
+</tr>
+<tr>
+<td>M08</td>
+<td>June 10/17 workspace and DAG-answer contracts</td>
+<td><strong>D</strong> baseline</td>
+<td>Graph-conditioned context is implemented; it is no longer a missing layer</td>
+</tr>
+<tr>
+<td>M09</td>
+<td>June 18 final-review / June 20 workspace closure</td>
+<td><strong>D/E</strong>: release review, graph preview and shared interaction paths exist</td>
+<td>Broader held-out answer quality and fresh native runtime acceptance remain open</td>
+</tr>
+<tr>
+<td>M10</td>
+<td>July 5 RSE document-augmented RAG</td>
+<td><strong>D</strong> units 1–7; <strong>E</strong> unit 8</td>
+<td>Composer, trace and evidence ledger are implemented; representative corpus and runtime qualification remain open</td>
+</tr>
+<tr>
+<td>M11</td>
+<td>July 11 coverage-driven graph-answer planning</td>
+<td><strong>D</strong> scoped plan</td>
+<td>Keep the completed contract; broader quality calibration is a separate obligation</td>
+</tr>
+<tr>
+<td>M12</td>
+<td>August 16 hardening and forward compatibility</td>
+<td><strong>D/P</strong>: auth unification, identity guards and file-write hardening landed</td>
+<td>Ingest-only rollback is not whole-platform isolation; reopened by this audit</td>
+</tr>
+<tr>
+<td>M13</td>
+<td>August 21 graph-conditioned context</td>
+<td><strong>D</strong></td>
+<td>Preserve deterministic ordering, provenance and evidence bounds</td>
+</tr>
+<tr>
+<td>M14</td>
+<td>September 3 adaptive full-response budget</td>
+<td><strong>P</strong>: tiers, UI, report/RAG caps and serialization code exist</td>
+<td>Deadline execution, source admission, SSE envelope and backpressure are not closed</td>
+</tr>
+<tr>
+<td>M15</td>
+<td>Mobile Phase 13 and subsequent host/identity phases</td>
+<td><strong>D/E/F</strong>: compact projection, recovery journal, identity replay and release harness exist</td>
+<td>Signed arm64 SAF/restart/RSS acceptance open; canonical public-ID cutover and mobile SQLite/WASM remain gated</td>
+</tr>
+<tr>
+<td>M16</td>
+<td>Tauri migration / single window / mobile release routing</td>
+<td><strong>D/E</strong>: Tauri-first runtime and Tauri Android release owner exist</td>
+<td>Fresh per-host packaging/interaction evidence; Capacitor retirement requires a consumer audit</td>
+</tr>
+<tr>
+<td>M17</td>
+<td>Startup Plan B / WASM parity</td>
+<td><strong>D/E</strong>: warm snapshot, worker delta, parity and performance harnesses exist</td>
+<td>Historical Windows and simulated cohorts do not establish current cross-device performance</td>
+</tr>
+<tr>
+<td>M18</td>
+<td>Git LFS migration / sidecar supply</td>
+<td><strong>P</strong>: generated graph payload removal, bootstrap, build lock and content fingerprint exist</td>
+<td>Five sidecar paths remain tracked; strict no-LFS delivery and clean bootstrap qualification remain incomplete</td>
+</tr>
+<tr>
+<td>M19</td>
+<td>Fixrisk / foundation / release governance</td>
+<td><strong>E</strong></td>
+<td>FR-009 device evidence absent locally; fresh release-grade SQLite/ANN reports fail qualification</td>
+</tr>
+<tr>
+<td>M20</td>
+<td>Task/TODO/implementation/walkthrough and bilingual navigation</td>
+<td><strong>P</strong>, reconciled by this audit</td>
+<td>One status owner and paired updates are needed to stop completion drift; historical logs are not active task counts</td>
+</tr>
+</tbody>
+</table>
+<p>Important reclassifications:</p>
+<ol>
+<li>RSE units 6 and 7 are no longer treated as missing implementation. Their broader corpus/runtime follow-up stays open in unit 8 and U8.</li>
+<li>Adaptive budget checklists are synchronized across languages, but end-to-end safety is explicitly <strong>partial</strong>.</li>
+<li>Bridge v2 is already declared: <code>PATH_BRIDGE_PROTOCOL_VERSION = '2.0'</code>, capability announcements and envelope validation exist. “Introduce Bridge v2” is obsolete; interoperability evidence is the remaining question.</li>
+<li>Sequential graph matching already has a token candidate index. “Everything is still pairwise” is inaccurate; its <code>fuzzy</code> false negatives and the worker path's pairwise work need separate treatment.</li>
+<li>Resource identity dual-read, move aliases and the versioned G4 corpus exist. Changing public IDs is still blocked; adding the gate is not completing the migration.</li>
+<li>SQLite is a real desktop backend with explicit fallback. ANN connector execution and release thresholds exist. Neither should be described as mere scaffolding, nor as currently release-qualified.</li>
+<li>There are 24 English/Chinese file pairs in <code>docs/en</code> and <code>docs/zh</code>, with no unmatched files. Pair presence alone does not prove semantic synchronization.</li>
+</ol>
+<h3 id="critical-findings-and-implementation-consequences">Critical findings and implementation consequences<a class="headerlink" href="#critical-findings-and-implementation-consequences" title="Permanent link">&para;</a></h3>
+<h4 id="f1-p0-ingest-rollback-can-erase-a-concurrent-acknowledged-write">F1 — P0: ingest rollback can erase a concurrent acknowledged write<a class="headerlink" href="#f1-p0-ingest-rollback-can-erase-a-concurrent-acknowledged-write" title="Permanent link">&para;</a></h4>
+<p><code>src/learning/KnowledgeLearningPlatform.ts:858</code> queues only ingestion. It captures a whole-platform pre-image, mutates shared state, then awaits persistence; on failure it restores the whole pre-image. <code>addConversationMemory</code> and other snapshot-affecting writes do not participate in that queue. The probe confirms both uncommitted state visibility and acknowledged memory loss.</p>
+<p><strong>Required direction:</strong> put committed-state publication and all writes that share its rollback domain under one complete operation boundary. File-save serialization alone cannot establish isolation. Avoid a generic manager/facade around the same mutable maps. Inventory nested write calls first to avoid a reentrant queue deadlock. See U1.</p>
+<h4 id="f2-p1-runtime-governor-metadata-overstates-execution-safety">F2 — P1: runtime governor metadata overstates execution safety<a class="headerlink" href="#f2-p1-runtime-governor-metadata-overstates-execution-safety" title="Permanent link">&para;</a></h4>
+<p><code>src/learning/agentResponseBudget.ts:213</code> exports <code>applyRuntimeGovernor</code>, but current source references outside its definition are tests. <code>agentConversation</code> selects the budget, then query/RAG work proceeds without consuming its deadline. <code>evidenceContextAssembler.ts:1381</code> reads and expands documents before the final pack budget; <code>KnowledgeLearningPlatform.ts:6931</code> reads the complete source file without a byte-admission limit at that boundary.</p>
+<p>Browser capability hints can select a tier; they are not proof of server memory availability. The report/source character limits do not bound total transient allocation, concurrent turns, or whole-document scanning.</p>
+<p><strong>Required direction:</strong> backend-owned admission, a turn-wide deadline/cancellation contract and bounded scan accounting before allocation. A timeout promise that leaves work running is insufficient. If scanning is incomplete, do not claim full-document conflict coverage. See U2.</p>
+<h4 id="f3-p1-transport-limits-are-incomplete-and-happen-after-allocation">F3 — P1: transport limits are incomplete and happen after allocation<a class="headerlink" href="#f3-p1-transport-limits-are-incomplete-and-happen-after-allocation" title="Permanent link">&para;</a></h4>
+<p><code>agentConversationSerialization.ts:174</code> stringifies the entire response before checking size, and the HTTP path serializes it again. At line 227 the SSE envelope is reconsidered only when the inner response was already truncated; the 1,998 → 2,094 byte probe crosses the limit without truncation. <code>server.ts:12703</code> ignores the return values of <code>res.write</code>.</p>
+<p><strong>Required direction:</strong> account for response, envelope and framing; project oversized diagnostic collections before serialization; enforce bounded drain/close behavior. When compacting, preserve citations for surviving public claims and recompute projected counts. Do not retain “fully evidenced” metadata after dropping all citations. See U3.</p>
+<h4 id="f4-p1-indexed-candidate-selection-changes-matching-semantics">F4 — P1: indexed candidate selection changes matching semantics<a class="headerlink" href="#f4-p1-indexed-candidate-selection-changes-matching-semantics" title="Permanent link">&para;</a></h4>
+<p><code>GraphBuilder.ts:484</code> filters source candidates by complete alphanumeric/CJK tokens before <code>checkMatch</code>. <code>fuzzy</code> is currently case-insensitive substring matching, so a matching term inside a larger token can be discarded before the matcher runs. The worker still invokes <code>checkMatch</code> for every source/target pair.</p>
+<p><strong>Required direction:</strong> candidate selection must be a conservative superset of actual matches. Restore semantic equivalence first; benchmark the indexing choice separately. Keep <code>exact-phrase</code> and <code>fuzzy</code> test cases distinct. See U4.</p>
+<h4 id="f5-p1-green-ci-is-weaker-than-the-named-gate">F5 — P1: green CI is weaker than the named gate<a class="headerlink" href="#f5-p1-green-ci-is-weaker-than-the-named-gate" title="Permanent link">&para;</a></h4>
+<p><code>package.json:104</code> defines <code>test:foundation:rollout-boundary</code> as an <code>echo "SKIP..."</code> command. <code>.github/workflows/migration-gates.yml:20</code> runs it as a suite. The 26 skipped Jest cases include request/error boundaries and capability parity; source-string introspection can silently disable tests after a valid refactor.</p>
+<p><strong>Required direction:</strong> exercise exported behavior and real request contracts; a required job must fail when its fixture or prerequisite is absent. Maintain an explicit, owned skip inventory. Test count growth is not an acceptance metric. See U5.</p>
+<h4 id="f6-p1-release-evidence-is-stale-or-of-the-wrong-kind">F6 — P1: release evidence is stale or of the wrong kind<a class="headerlink" href="#f6-p1-release-evidence-is-stale-or-of-the-wrong-kind" title="Permanent link">&para;</a></h4>
+<p>At the explicit audit time, SQLite's latest local report is <strong>223.3301 hours</strong> old and ANN's is <strong>231.6195 hours</strong> old; policy allows <strong>168 hours</strong>. SQLite's latest report is <code>matrix</code>, while the release verifier requires <code>soak</code>. Older soak reports exist but are also stale; this is not a claim that soak was never implemented. ANN's fixture recall is 6/6 per mode/profile, not representative corpus recall.</p>
+<p><code>docs/mobile-evidence</code> is absent locally. The existing canonical-ID readiness report records <code>nativeDeviceEvidence=false</code> and <code>canonicalPublicIdCutover=blocked</code>.</p>
+<p><strong>Required direction:</strong> qualify the exact artifact and target host using fresh reports; bind source revision, artifact hash, workload and environment. Run device acceptance as an independent workstream. Do not weaken freshness or classify missing evidence as pass. See U7.</p>
+<h4 id="f7-p2-file-extraction-has-not-completed-ownership-migration">F7 — P2: file extraction has not completed ownership migration<a class="headerlink" href="#f7-p2-file-extraction-has-not-completed-ownership-migration" title="Permanent link">&para;</a></h4>
+<p>Measured source sizes, including the terminal line: <code>server.ts</code> 17,042; <code>KnowledgeLearningPlatform.ts</code> 13,241; <code>workspace_panes.js</code> 10,273; <code>answerReleaseReview.ts</code> 6,752; <code>agent_workspace.js</code> 6,012.</p>
+<p>The server constructs all seven domain classes with the same platform instance. Their interfaces still use many <code>any</code> types and return to platform operations. This can be a transitional instrumentation seam, but not a completed domain split. Registry dispatch defaults to <code>registry</code>; <code>STRICT_REGISTRY</code> is opt-in and its inline guards currently address NoteMD. Hard-coded terminal counts do not prove route parity.</p>
+<p><strong>Required direction:</strong> U1/U2 move actual invariants; U6 retires one covered route family at a time. Judge success by removed duplicate decisions and independent behavior tests, not line quotas. Do not blanket-extract the large frontend files or replace the UI framework during this closure.</p>
+<h3 id="strategic-trade-offs">Strategic trade-offs<a class="headerlink" href="#strategic-trade-offs" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Learning outcomes can advance on the local backend.</strong> The original “Phase 2 must wait for production ANN” dependency is too broad. Use the stable local/exact path for an outcome pilot; qualify ANN as an optional acceleration path.</li>
+<li><strong>More answer text is not stronger grounding.</strong> Preserve slim/full product choice, but evaluate factual support, task coverage, omission and latency on held-out bilingual cases. Keep Water Glass as a regression, not the entire quality benchmark.</li>
+<li><strong>Atomic rename is not isolation.</strong> Keep the useful file-store hardening while closing state publication and concurrent-write semantics.</li>
+<li><strong>Mobile parity is a capability contract.</strong> The existing compact projection can be the mobile product. SQLite/WASM, Godot, models and desktop-sized payloads need a measured benefit before adoption.</li>
+<li><strong>Canonical IDs and storage replacement are conditional migrations.</strong> Finish collision/alias/restart evidence before changing public keys. A path-derived URI alone is not rename-stable identity.</li>
+<li><strong>Do not reopen completed feature work as new architecture projects.</strong> Bridge v2, graph conditioning, workspace registries and export already exist. Improve their failed boundary, not their naming or wrapper shape.</li>
+<li><strong>Avoid speculative refactoring.</strong> Prefer a small complete operation with an explicit owner, characterization tests and a reversible commit. Preserve public schema and release support unless a migration is explicitly planned.</li>
+</ul>
+<h3 id="source-plan-inventory">Source-plan inventory<a class="headerlink" href="#source-plan-inventory" title="Permanent link">&para;</a></h3>
+<p>The inventory groups translations and historical trackers without treating them as separate deliverables. The detailed status is in M01–M20 above.</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Reviewed planning sources</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M01</td>
+<td><code>docs/en/knowledge_mastery_evolution_plan.md</code>, its Chinese pair, and both Diataxis <code>knowledge-mastery-evolution-roadmap.md</code> pages</td>
+</tr>
+<tr>
+<td>M02</td>
+<td><code>docs/brainstorms/2026-04-11-evolution-progress-alignment-requirements.md</code>; <code>2026-04-12-agent-workspace-next-direction-requirements.md</code>; <code>2026-04-13-agent-workspace-architecture-progress-and-next-direction-requirements.md</code>; <code>2026-04-14-agent-workspace-contract-closure-next-direction-requirements.md</code> in the same directory</td>
+</tr>
+<tr>
+<td>M03</td>
+<td><code>docs/brainstorms/2026-04-13-markdown-reader-upgrade-alignment-requirements.md</code>; paired <code>agent-conversation-focus-mode-plan.md</code>; paired <code>godot-notemd-markdown-workflows.md</code></td>
+</tr>
+<tr>
+<td>M04</td>
+<td><code>docs/solutions/cross-platform-architecture-refinement-2026-05-02.md</code>; <code>implementation-gap-analysis-2026-05-04.md</code>; <code>implementation-plan-2026-05-08.md</code>; <code>.trellis/workspace/Jacobinwwey/development-plan-2026-04-27.md</code></td>
+</tr>
+<tr>
+<td>M05</td>
+<td><code>docs/brainstorms/2026-05-25-multiplatform-lightweight-rag-agent-architecture-plan.md</code></td>
+</tr>
+<tr>
+<td>M06</td>
+<td><code>docs/brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md</code></td>
+</tr>
+<tr>
+<td>M07–M09</td>
+<td><code>docs/solutions/architecture-progress-alignment-2026-06-06.md</code>; <code>knowledge-workspace-dag-alignment-2026-06-10.md</code>; <code>agent-knowledge-dag-answer-contract-plan-2026-06-17.md</code>; <code>agent-final-reply-review-robustness-plan-2026-06-18.md</code>; <code>agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md</code></td>
+</tr>
+<tr>
+<td>M10–M11</td>
+<td><code>docs/plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md</code>; <code>2026-07-11-coverage-driven-graph-answer-planning.md</code></td>
+</tr>
+<tr>
+<td>M12–M14</td>
+<td><code>docs/solutions/architecture-hardening-forward-compatibility-2026-08-16.md</code>; <code>docs/superpowers/plans/2026-08-16-architecture-hardening-forward-compatibility.md</code>; <code>2026-08-21-graph-conditioned-context.md</code>; <code>2026-09-03-full-response-adaptive-budget-plan.md</code>; <code>docs/superpowers/specs/2026-09-03-full-response-adaptive-budget-design.md</code></td>
+</tr>
+<tr>
+<td>M15</td>
+<td><code>docs/solutions/mobile-cross-host-forward-compatibility-phase13-2026-08-18.md</code>; later identity, recovery and mobile phases in the August hardening note</td>
+</tr>
+<tr>
+<td>M16</td>
+<td>Paired <code>single_window_migration_plan.md</code>, <code>tauri_brainstorming.md</code>, <code>tauri_tasks.md</code>, <code>multi_platform_build_flow_audit.md</code>; <code>docs/tauri_tasks.md</code> and <code>docs/tauri_brainstorming.md</code></td>
+</tr>
+<tr>
+<td>M17</td>
+<td>Paired Diataxis <code>startup-node-update-acceleration-plan.md</code>; WASM sections in <code>implementation_plan.md</code> and its language mirrors</td>
+</tr>
+<tr>
+<td>M18</td>
+<td>Paired <code>lfs_asset_migration_plan.md</code>, <code>sidecar_supply_strategy.md</code>; Diataxis <code>git-lfs-asset-migration.md</code> and <code>sidecar-supply-feasibility.md</code></td>
+</tr>
+<tr>
+<td>M19</td>
+<td>Paired <code>fixrisk_TODO.md</code>; foundation evidence scripts; migration/release/fixrisk workflows</td>
+</tr>
+<tr>
+<td>M20 / history</td>
+<td>Root and paired <code>task.md</code>, <code>TODO.md</code>, <code>implementation_plan.md</code>, <code>walkthrough.md</code>, <code>brainstorming.md</code>; <code>docs/open_goal_audit_2026-05-10.md</code>; <code>docs/archive/TODO.*.md</code></td>
+</tr>
+<tr>
+<td>Reference decisions, not new commitments</td>
+<td>DeepTutor reuse analysis/assessment, MemOS reuse assessment, Electron migration analysis and <code>docs/solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md</code></td>
+</tr>
+</tbody>
+</table>
+<p><a id="chinese"></a></p>
+<h2 id="_1">中文<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>下文保留实施前的审计基线。当前验收与剩余工作见<a href="../../evaluations/2026-09-14-public-evidence-quality-results/#chinese">九月十四日后续结果</a>。</p>
+<h3 id="_2">结论与范围<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<p>项目已具备较完整的功能实现，但<strong>状态隔离、端到端资源约束和发布验收仍未闭环</strong>。下一轮应先关闭这些契约，再扩展回答 profile、基础设施和平台变体。</p>
+<p>审计基线：本地 <code>main</code>，提交 <code>e84d6ece</code>（2026-09-03），版本 <code>1.8.0</code>；审计日期 2026-09-12。本轮检查代码与文档，执行新鲜测试，并对生产函数做合成边界探针。未重新验收远端 CI、新打包桌面应用、浏览器/Godot 交互或 Android 真机；未修改生产实现。</p>
+<p>本页保留审计基线，<a href="../../evaluations/2026-09-14-public-evidence-quality-results/#chinese">实施结果</a>负责当前跨计划状态，<a href="../../plans/2026-09-12-001-refactor-project-convergence-plan/">推进计划</a>跟踪验收。旧记录中的未勾选项不自动成为当前 backlog。</p>
+<p>状态定义：</p>
+<ul>
+<li><strong>D — 实现基线成立</strong>：代码与相关测试存在，不等同于发布或用户成效验收。</li>
+<li><strong>P — 部分完成</strong>：必要实现不变量尚未成立，或已复现缺陷使完成结论重新打开。</li>
+<li><strong>E — 验收证据未闭环</strong>：已有实现/工具，但缺少所需的新鲜运行时、设备、规模或成效证据。</li>
+<li><strong>F — 条件性暂缓</strong>：有明确触发条件的方向，不是交付承诺。</li>
+<li><strong>H — 历史计划</strong>：已由后续工作吸收，保留追溯。</li>
+</ul>
+<p>不计算总完成率。历史重复任务、双语翻译、编码步骤和运维门禁的分母不同，合并百分比会误导决策。</p>
+<h3 id="_3">本轮验证<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>检查</th>
+<th>结果</th>
+<th>证明范围</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TypeScript</td>
+<td><code>tsc --noEmit --incremental false</code> 通过</td>
+<td>本机 Node <code>22.19.0</code> 下当前源码类型检查通过</td>
+</tr>
+<tr>
+<td>全量 Jest</td>
+<td><strong>159 suites，1,419 passed，26 skipped，0 failed</strong>；总计 1,445 cases</td>
+<td>现有自动化基线通过，耗时约 178 秒</td>
+</tr>
+<tr>
+<td>文档验证</td>
+<td>最终 Diataxis：18 entries、36 language paths、68 canonical refs；MkDocs build 通过；检查 140 个新增链接</td>
+<td>新页面、锚点及双语分节有效，不证明产品验收</td>
+</tr>
+<tr>
+<td>序列化探针</td>
+<td>原响应 <strong>1,998 bytes</strong>，completed-event JSON <strong>2,094 bytes</strong>，合成预算 <strong>2,000 bytes</strong>，仍为 <code>truncated=false</code></td>
+<td>复现 SSE envelope 计量缺口</td>
+</tr>
+<tr>
+<td>图匹配探针</td>
+<td><code>fuzzy</code> 下 <code>cat/concatenate</code>、<code>知识/知识图谱</code> 均被 <code>checkMatch</code> 接受，顺序路径却不产出边</td>
+<td>顺序候选过滤与 worker 匹配语义不等价</td>
+</tr>
+<tr>
+<td>摄入隔离探针</td>
+<td>失败提交前可见 2 个文档；并发 memory 返回 <code>added=true</code>；回滚后只剩 1 个文档、<strong>0 条 memory</strong></td>
+<td>复现未提交状态可见，以及已确认并发写入丢失</td>
+</tr>
+<tr>
+<td>Foundation release evaluator</td>
+<td>显式审计时点 <code>2026-09-12T00:00:00Z</code> 返回 <code>ok=false</code></td>
+<td>当前本地报告不满足发布资格</td>
+</tr>
+</tbody>
+</table>
+<p>摄入探针使用真实 <code>KnowledgeLearningPlatform</code> 与注入的串行保存内存 store，并让一次 ingest 写入失败；它证明平台层并发缺陷，不是设备/文件系统故障实测。SSE 探针刻意使用较小的内部测试预算，证明边界计算错误，不代表已经测得生产内存事故。</p>
+<p>26 个跳过用例集中在两处：<code>src/server.migration.test.ts</code> 13 个、<code>src/agent_workspace.contract.parity.test.ts</code> 13 个。部分 parity 用例会在源码字符串 marker 消失时自动 skip，因此绿灯不能证明对应请求、构建、剪贴板、scope 或 capability 契约。</p>
+<p>本地可复现证据：</p>
+<ul>
+<li><code>output/project-audit-2026-09-12/jest-results.json</code>、<code>jest.log</code>。</li>
+<li><code>output/project-audit-2026-09-12/boundary-probes.cjs</code> / <code>boundary-probes.json</code>。</li>
+<li><code>output/project-audit-2026-09-12/ingest-isolation-probe.cjs</code> / <code>ingest-isolation-probe.json</code>。</li>
+<li><code>output/project-audit-2026-09-12/foundation-release-evidence.json</code>。</li>
+<li>入库的简要记录：<a href="../2026-09-12-project-progress-evidence.json">audit evidence</a>。</li>
+</ul>
+<p>上述 <code>output/</code> 文件是被 Git 忽略的本地诊断产物，不是持久的发布证明。在仓库根目录执行 <code>rtk proxy node output/project-audit-2026-09-12/boundary-probes.cjs</code> 与 <code>rtk proxy node output/project-audit-2026-09-12/ingest-isolation-probe.cjs</code> 可重放两个探针。</p>
+<h3 id="_4">各计划的完成边界<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>计划族</th>
+<th>当前重定级</th>
+<th>剩余完成条件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M01</td>
+<td>知识掌握演进，L0–L5 / Phase 1–3</td>
+<td><strong>P/E</strong>：atom/evidence、检索、mastery、tutor、memory 机制存在</td>
+<td>API 测试不能证明学习增益、误区复发下降与路径优越性</td>
+</tr>
+<tr>
+<td>M02</td>
+<td>4 月 Agent Workspace 对齐 / v1–v6 契约</td>
+<td><strong>D/P</strong>：scope action、诊断、契约及运行路径已实现</td>
+<td>domain 所有权和真实 parity 覆盖仍不完整</td>
+</tr>
+<tr>
+<td>M03</td>
+<td>Markdown Reader / NoteMD 升级</td>
+<td><strong>D/E</strong>：共享富渲染、Mermaid 修复、NoteMD 操作已存在</td>
+<td>当前 browser/Tauri/Godot 交互验收需独立验证</td>
+</tr>
+<tr>
+<td>M04</td>
+<td>5 月跨平台优化 / 单体拆分 / Phase 4</td>
+<td><strong>P</strong>：registry、domain 文件、ES module 已存在</td>
+<td>旧路由副本与 domain 反向委托仍集中业务责任</td>
+</tr>
+<tr>
+<td>M05</td>
+<td>5 月 25 日轻量 RAG / agent Phase 0–6</td>
+<td><strong>P</strong>：scope、多语言检索、RAG、memory 集成已有实质进展</td>
+<td>turn 资源安全和 runtime 责任拆分仍未闭环</td>
+</tr>
+<tr>
+<td>M06</td>
+<td>5 月 26 日 Deep Student Program A–F</td>
+<td><strong>D/P</strong>：资源、projection、indexing、workspace、session、memory、export 均有实现</td>
+<td>跨 owner 提交/隔离缺陷使“耐久性整体完成”不成立</td>
+</tr>
+<tr>
+<td>M07</td>
+<td>6 月 6 日主线架构对齐</td>
+<td>排期基线为 <strong>H</strong></td>
+<td>剩余义务已归入 M01、M04、M10、M15 与本计划</td>
+</tr>
+<tr>
+<td>M08</td>
+<td>6 月 10/17 日 workspace 与 DAG 回答契约</td>
+<td><strong>D</strong> 基线</td>
+<td>graph-conditioned context 已实现，不应继续列为缺失层</td>
+</tr>
+<tr>
+<td>M09</td>
+<td>6 月 18 日最终审核 / 6 月 20 日工作区收口</td>
+<td><strong>D/E</strong>：release review、图预览、共享交互路径已存在</td>
+<td>独立留出语料质量与新鲜原生交互验收仍开放</td>
+</tr>
+<tr>
+<td>M10</td>
+<td>7 月 5 日 RSE 文档增强 RAG</td>
+<td>单元 1–7 为 <strong>D</strong>；单元 8 为 <strong>E</strong></td>
+<td>composer、trace、evidence ledger 已实现；代表性语料及 runtime 验收未闭环</td>
+</tr>
+<tr>
+<td>M11</td>
+<td>7 月 11 日 coverage-driven graph-answer plan</td>
+<td>有限范围内 <strong>D</strong></td>
+<td>保留已完成契约，广泛质量校准独立推进</td>
+</tr>
+<tr>
+<td>M12</td>
+<td>8 月 16 日架构加固与向前兼容</td>
+<td><strong>D/P</strong>：认证收敛、identity guard、文件写入加固已落地</td>
+<td>仅 ingest 串行化不足以保证整个平台隔离，本轮重新打开</td>
+</tr>
+<tr>
+<td>M13</td>
+<td>8 月 21 日图条件上下文</td>
+<td><strong>D</strong></td>
+<td>保持确定性排序、provenance 与证据预算</td>
+</tr>
+<tr>
+<td>M14</td>
+<td>9 月 3 日 adaptive full-response budget</td>
+<td><strong>P</strong>：档位、UI、报告/RAG cap、序列化代码存在</td>
+<td>deadline 执行、源读取准入、SSE envelope 与背压未闭环</td>
+</tr>
+<tr>
+<td>M15</td>
+<td>移动 Phase 13 及后续 host/identity 阶段</td>
+<td><strong>D/E/F</strong>：compact projection、恢复 journal、identity replay、release harness 已实现</td>
+<td>signed arm64 SAF/restart/RSS 未验收；canonical public-ID 与移动 SQLite/WASM 继续受门禁约束</td>
+</tr>
+<tr>
+<td>M16</td>
+<td>Tauri 迁移 / 单窗口 / 移动发布归属</td>
+<td><strong>D/E</strong>：Tauri-first runtime 与 Tauri Android 发布主入口成立</td>
+<td>新鲜跨宿主打包/交互证据；移除 Capacitor 前需审计消费者</td>
+</tr>
+<tr>
+<td>M17</td>
+<td>Startup Plan B / WASM parity</td>
+<td><strong>D/E</strong>：warm snapshot、worker delta、parity 与性能工具存在</td>
+<td>历史 Windows 和模拟 cohort 不能证明当前跨设备性能</td>
+</tr>
+<tr>
+<td>M18</td>
+<td>Git LFS 迁移 / sidecar 供给</td>
+<td><strong>P</strong>：默认图 payload 清理、bootstrap、build lock、内容指纹已实现</td>
+<td>仍有 5 个 sidecar 路径被跟踪；严格 no-LFS 与干净环境引导未闭环</td>
+</tr>
+<tr>
+<td>M19</td>
+<td>Fixrisk / foundation / release governance</td>
+<td><strong>E</strong></td>
+<td>本地缺少 FR-009 真机证据；当前 SQLite/ANN release qualification 不通过</td>
+</tr>
+<tr>
+<td>M20</td>
+<td>Task/TODO/implementation/walkthrough 与双语导航</td>
+<td><strong>P</strong>，本轮完成事实对齐</td>
+<td>需维持单一状态入口和双语同步；历史日志不能作为活跃任务计数</td>
+</tr>
+</tbody>
+</table>
+<p>关键纠偏：</p>
+<ol>
+<li>RSE 单元 6/7 不再列为“未实现”；更广语料/runtime 义务保留在单元 8 和 U8。</li>
+<li>Adaptive budget 双语 checklist 同步，但端到端安全明确标为<strong>部分完成</strong>。</li>
+<li>Bridge v2 已有 <code>PATH_BRIDGE_PROTOCOL_VERSION = '2.0'</code>、capability 公告及 envelope 校验；不应重新规划“引入 v2”，应验证互操作。</li>
+<li>顺序图匹配已经建立 token 候选索引；“所有路径仍为两两扫描”不准确。其 fuzzy 漏边与 worker 的两两匹配成本应分别处理。</li>
+<li>identity dual-read、move alias 与版本化 G4 corpus 已存在；公共 ID 切换仍阻断，不能把“门禁已加”写成“迁移已完成”。</li>
+<li>SQLite 已是真实桌面后端并有显式 fallback；ANN connector 执行与发布阈值也存在。不能再称为纯脚手架，也不能称为当前已发布验收。</li>
+<li><code>docs/en</code> 与 <code>docs/zh</code> 均为 24 个文件、24 对、无 unmatched；文件配对不代表语义同步。</li>
+</ol>
+<h3 id="_5">关键发现及实施含义<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<h4 id="f1-p0">F1 — P0：摄入回滚可能抹掉已确认的并发写入<a class="headerlink" href="#f1-p0" title="Permanent link">&para;</a></h4>
+<p><code>KnowledgeLearningPlatform.ts:858</code> 只串行化 ingest。它先捕获整个平台的 pre-image，再修改共享状态并等待持久化；失败后恢复整个 pre-image。<code>addConversationMemory</code> 及其他会改变 snapshot 的写操作不在该队列内。探针已复现提交前可见状态，以及已确认 memory 丢失。</p>
+<p><strong>推进方向：</strong>将 committed-state 发布与共享回滚域的写入收归一个完整操作边界。仅串行化文件保存无法保证隔离。不要在同一组可变 Map 外再套 manager/facade；先盘点嵌套写调用，避免可重入队列死锁。对应 U1。</p>
+<h4 id="f2-p1runtime-governor">F2 — P1：runtime governor 元数据超出了实际执行保障<a class="headerlink" href="#f2-p1runtime-governor" title="Permanent link">&para;</a></h4>
+<p><code>agentResponseBudget.ts:213</code> 的 <code>applyRuntimeGovernor</code> 在当前源码中仅被测试调用。<code>agentConversation</code> 选择预算后，query/RAG 并未消费该 deadline。<code>evidenceContextAssembler.ts:1381</code> 先读文档并扩展片段，再裁剪最终 pack；<code>KnowledgeLearningPlatform.ts:6931</code> 的整文件读取边界没有字节准入限制。</p>
+<p>浏览器 capability hint 可选择档位，但不能证明服务端可用内存；report/source 字符上限也不能约束瞬时分配、并发 turn 总量与全文扫描。</p>
+<p><strong>推进方向：</strong>在分配前执行后端拥有的准入、贯穿 turn 的 deadline/cancellation 与扫描计量。单纯 timeout promise 而后台继续运行不成立；扫描未完成时，不得声称已完成全文冲突检查。对应 U2。</p>
+<h4 id="f3-p1transport-envelope">F3 — P1：transport 限制未覆盖 envelope，且位于分配之后<a class="headerlink" href="#f3-p1transport-envelope" title="Permanent link">&para;</a></h4>
+<p><code>agentConversationSerialization.ts:174</code> 先完整 stringify 再判断大小，HTTP 路径又序列化一次；第 227 行仅在内部 response 已截断时才重新检查 SSE envelope，导致 1,998 → 2,094 字节越界却未标记。<code>server.ts:12703</code> 忽略 <code>res.write</code> 返回值。</p>
+<p><strong>推进方向：</strong>计入 response、envelope 和 framing；序列化前投影过大的诊断集合；限制 drain/close 等待与缓冲。压缩后需保留存活 claim 的引用并重新计算计数，不能清空 citations 后仍保留“完全有证据”的元数据。对应 U3。</p>
+<h4 id="f4-p1">F4 — P1：候选索引改变了匹配语义<a class="headerlink" href="#f4-p1" title="Permanent link">&para;</a></h4>
+<p><code>GraphBuilder.ts:484</code> 以完整 alphanumeric/CJK token 过滤 source，再执行 <code>checkMatch</code>。而 <code>fuzzy</code> 实际是忽略大小写的子串匹配，嵌在更长 token 中的合法匹配会提前被丢弃。worker 仍逐个 source/target 调用 <code>checkMatch</code>。</p>
+<p><strong>推进方向：</strong>候选集必须是实际命中的保守超集。先恢复语义等价，再独立比较索引性能；分别覆盖 <code>exact-phrase</code> 与 <code>fuzzy</code>。对应 U4。</p>
+<h4 id="f5-p1ci">F5 — P1：CI 绿灯弱于门禁名称承诺<a class="headerlink" href="#f5-p1ci" title="Permanent link">&para;</a></h4>
+<p><code>package.json:104</code> 的 <code>test:foundation:rollout-boundary</code> 仅执行 <code>echo "SKIP..."</code>，但 <code>.github/workflows/migration-gates.yml:20</code> 将其作为 suite。26 个跳过项包含请求/异常边界及 capability parity；源码字符串探测可能在正常重构后静默停测。</p>
+<p><strong>推进方向：</strong>验证导出行为与真实请求契约；必要 fixture/前提缺失应使 required job 失败。显式维护有 owner 的 skip 清单，不把测试数量增长当成验收指标。对应 U5。</p>
+<h4 id="f6-p1">F6 — P1：发布证据过期或类型不符<a class="headerlink" href="#f6-p1" title="Permanent link">&para;</a></h4>
+<p>在显式审计时点，SQLite 最新本地报告已 <strong>223.3301 小时</strong>，ANN 为 <strong>231.6195 小时</strong>，超过 <strong>168 小时</strong>策略；SQLite 最新报告是 <code>matrix</code>，发布要求 <code>soak</code>。旧 soak 报告存在，但也已过期，并非从未实现 soak。ANN fixture 每个 mode/profile 的 recall 为 6/6，不能解释为代表性语料召回率。</p>
+<p>本地不存在 <code>docs/mobile-evidence</code>；现有 canonical-ID readiness 报告明确为 <code>nativeDeviceEvidence=false</code>、<code>canonicalPublicIdCutover=blocked</code>。</p>
+<p><strong>推进方向：</strong>针对确定 artifact/host 取得新鲜证据，绑定源码 revision、artifact hash、workload、环境。设备验收单独推进；不降低 freshness，也不把缺证据写成通过。对应 U7。</p>
+<h4 id="f7-p2">F7 — P2：文件拆分未完成责任迁移<a class="headerlink" href="#f7-p2" title="Permanent link">&para;</a></h4>
+<p>源码行数测量包含结尾空行：<code>server.ts</code> 17,042；<code>KnowledgeLearningPlatform.ts</code> 13,241；<code>workspace_panes.js</code> 10,273；<code>answerReleaseReview.ts</code> 6,752；<code>agent_workspace.js</code> 6,012。</p>
+<p>server 用同一个 platform 实例构造 7 个 domain 类；接口仍大量使用 <code>any</code>，业务操作仍回调平台。它可以是过渡性的诊断接缝，但不能称为完成的 domain 拆分。registry dispatch 默认已经是 <code>registry</code>；<code>STRICT_REGISTRY</code> 仍需 opt-in，inline guard 当前针对 NoteMD。硬编码 terminal 数量不能证明路由等价。</p>
+<p><strong>推进方向：</strong>U1/U2 迁移真实不变量，U6 每次收敛一个已覆盖路由族。以重复决策消失和独立行为测试成立验收，不设武断行数指标；本轮收口不开展全量前端拆分或 UI 框架替换。</p>
+<h3 id="_6">战略取舍<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>学习成效可先基于本地后端推进。</strong>原“Phase 2 必须等待生产 ANN”的依赖过宽。稳定 local/exact 路径可开展成效试验，ANN 独立作为可选加速路径验收。</li>
+<li><strong>回答更长不等于 grounding 更好。</strong>保留 slim/full 产品选择，以独立中英留出集评估事实支撑、任务覆盖、遗漏和时延。Water Glass 保留为回归，不承担全部质量基准。</li>
+<li><strong>原子 rename 不等于 isolation。</strong>保留文件 store 加固，同时修复状态发布和并发写语义。</li>
+<li><strong>移动 parity 应落在 capability 契约。</strong>已有 compact projection 可以承担移动产品；SQLite/WASM、Godot、模型和桌面级 payload 必须先证明增益。</li>
+<li><strong>Canonical ID 与存储替换都是条件迁移。</strong>先完成 collision/alias/restart 证据，再改公共 key；路径派生 URI 本身不保证 rename 稳定。</li>
+<li><strong>已完成能力不要重开成新架构工程。</strong>Bridge v2、graph conditioning、workspace registry、export 已存在；修复失败边界，不重复命名或套壳。</li>
+<li><strong>避免推测性重构。</strong>优先完整的小操作、明确 owner、特征测试与可回退提交；公共 schema 和支持范围变更需明确迁移。</li>
+</ul>
+<h3 id="_7">源计划覆盖<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<p>下表将翻译与历史 tracker 合并为计划族，当前状态见 M01–M20。</p>
+<table>
+<thead>
+<tr>
+<th>分组</th>
+<th>已审阅的计划来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M01</td>
+<td><code>docs/en/knowledge_mastery_evolution_plan.md</code> 及中文对应；双语 Diataxis <code>knowledge-mastery-evolution-roadmap.md</code></td>
+</tr>
+<tr>
+<td>M02</td>
+<td><code>docs/brainstorms/2026-04-11-evolution-progress-alignment-requirements.md</code>；同目录 <code>2026-04-12-agent-workspace-next-direction-requirements.md</code>、<code>2026-04-13-agent-workspace-architecture-progress-and-next-direction-requirements.md</code>、<code>2026-04-14-agent-workspace-contract-closure-next-direction-requirements.md</code></td>
+</tr>
+<tr>
+<td>M03</td>
+<td><code>docs/brainstorms/2026-04-13-markdown-reader-upgrade-alignment-requirements.md</code>；双语 <code>agent-conversation-focus-mode-plan.md</code>、<code>godot-notemd-markdown-workflows.md</code></td>
+</tr>
+<tr>
+<td>M04</td>
+<td><code>docs/solutions/cross-platform-architecture-refinement-2026-05-02.md</code>、<code>implementation-gap-analysis-2026-05-04.md</code>、<code>implementation-plan-2026-05-08.md</code>；<code>.trellis/workspace/Jacobinwwey/development-plan-2026-04-27.md</code></td>
+</tr>
+<tr>
+<td>M05</td>
+<td><code>docs/brainstorms/2026-05-25-multiplatform-lightweight-rag-agent-architecture-plan.md</code></td>
+</tr>
+<tr>
+<td>M06</td>
+<td><code>docs/brainstorms/2026-05-26-deep-student-comparison-next-phase-plan.md</code></td>
+</tr>
+<tr>
+<td>M07–M09</td>
+<td><code>docs/solutions/architecture-progress-alignment-2026-06-06.md</code>、<code>knowledge-workspace-dag-alignment-2026-06-10.md</code>、<code>agent-knowledge-dag-answer-contract-plan-2026-06-17.md</code>、<code>agent-final-reply-review-robustness-plan-2026-06-18.md</code>、<code>agent-knowledge-workspace-graph-preview-and-review-closure-2026-06-20.md</code></td>
+</tr>
+<tr>
+<td>M10–M11</td>
+<td><code>docs/plans/2026-07-05-001-feat-rse-document-augmented-rag-plan.md</code>、<code>2026-07-11-coverage-driven-graph-answer-planning.md</code></td>
+</tr>
+<tr>
+<td>M12–M14</td>
+<td><code>docs/solutions/architecture-hardening-forward-compatibility-2026-08-16.md</code>；<code>docs/superpowers/plans/2026-08-16-architecture-hardening-forward-compatibility.md</code>、<code>2026-08-21-graph-conditioned-context.md</code>、<code>2026-09-03-full-response-adaptive-budget-plan.md</code>；<code>docs/superpowers/specs/2026-09-03-full-response-adaptive-budget-design.md</code></td>
+</tr>
+<tr>
+<td>M15</td>
+<td><code>docs/solutions/mobile-cross-host-forward-compatibility-phase13-2026-08-18.md</code>；8 月 hardening 文档中的后续 identity/recovery/mobile 阶段</td>
+</tr>
+<tr>
+<td>M16</td>
+<td>双语 <code>single_window_migration_plan.md</code>、<code>tauri_brainstorming.md</code>、<code>tauri_tasks.md</code>、<code>multi_platform_build_flow_audit.md</code>；<code>docs/tauri_tasks.md</code>、<code>docs/tauri_brainstorming.md</code></td>
+</tr>
+<tr>
+<td>M17</td>
+<td>双语 Diataxis <code>startup-node-update-acceleration-plan.md</code>；根 <code>implementation_plan.md</code> 及镜像中的 WASM 章节</td>
+</tr>
+<tr>
+<td>M18</td>
+<td>双语 <code>lfs_asset_migration_plan.md</code>、<code>sidecar_supply_strategy.md</code>；Diataxis <code>git-lfs-asset-migration.md</code>、<code>sidecar-supply-feasibility.md</code></td>
+</tr>
+<tr>
+<td>M19</td>
+<td>双语 <code>fixrisk_TODO.md</code>；foundation evidence scripts；migration/release/fixrisk workflows</td>
+</tr>
+<tr>
+<td>M20 / 历史</td>
+<td>根目录及双语 <code>task.md</code>、<code>TODO.md</code>、<code>implementation_plan.md</code>、<code>walkthrough.md</code>、<code>brainstorming.md</code>；<code>docs/open_goal_audit_2026-05-10.md</code>；<code>docs/archive/TODO.*.md</code></td>
+</tr>
+<tr>
+<td>参考决策，不生成新承诺</td>
+<td>DeepTutor reuse analysis/assessment、MemOS reuse assessment、Electron migration analysis、<code>docs/solutions/documentation-gaps/learning-platform-api-workbench-contract-gap-2026-04-02.md</code></td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

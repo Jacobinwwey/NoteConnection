@@ -1,0 +1,164 @@
+{
+  "ok": true,
+  "errors": [],
+  "warnings": [],
+  "summary": {
+    "checkedAt": "2026-09-14T00:43:23.442Z",
+    "maxAgeHours": 168,
+    "sqlite": {
+      "reportPath": "output/project-convergence-2026-09-12/native-evidence/ci-foundation-34792256467/Linux/output/verification/foundation-sqlite-runtime/foundation-sqlite-runtime-report-2026-09-14T00-22-02-796Z.json",
+      "evidenceCommand": "npm run verify:foundation:sqlite-runtime:release",
+      "minimumReportCount": 3,
+      "reportCount": 3,
+      "reportPaths": [
+        "output/project-convergence-2026-09-12/native-evidence/ci-foundation-34792256467/Linux/output/verification/foundation-sqlite-runtime/foundation-sqlite-runtime-report-latest.json",
+        "output/project-convergence-2026-09-12/native-evidence/ci-foundation-34792256467/Linux/output/verification/foundation-sqlite-runtime/foundation-sqlite-runtime-report-2026-09-14T00-21-30-021Z.json",
+        "output/project-convergence-2026-09-12/native-evidence/ci-foundation-34792256467/Linux/output/verification/foundation-sqlite-runtime/foundation-sqlite-runtime-report-2026-09-14T00-20-57-614Z.json"
+      ],
+      "minimumHostCount": 1,
+      "hostCount": 1,
+      "hostKeys": [
+        "3e5d74777a5deaf10303079b"
+      ],
+      "verifiedAt": "2026-09-14T00:22:02.796Z",
+      "ageHours": 0.3557,
+      "maxAgeHours": 168,
+      "suiteKind": "soak",
+      "soakCycles": 5,
+      "requiredProfiles": [
+        "heavy"
+      ],
+      "profileRuns": [
+        {
+          "profileId": "heavy",
+          "modes": [
+            {
+              "mode": "dist_node_runtime",
+              "gateCount": 8,
+              "failedGateIds": [],
+              "restartCycleCount": 5,
+              "querySampleCount": 24
+            },
+            {
+              "mode": "packaged_sidecar",
+              "gateCount": 8,
+              "failedGateIds": [],
+              "restartCycleCount": 5,
+              "querySampleCount": 24
+            }
+          ]
+        }
+      ]
+    },
+    "ann": {
+      "reportPath": "output/project-convergence-2026-09-12/native-evidence/ci-foundation-34792256467/Linux/output/verification/foundation-ann-runtime/foundation-ann-runtime-report-2026-09-14T00-22-18-202Z.json",
+      "evidenceCommand": "npm run verify:foundation:ann-runtime:release",
+      "minimumReportCount": 3,
+      "reportCount": 3,
+      "reportPaths": [
+        "output/project-convergence-2026-09-12/native-evidence/ci-foundation-34792256467/Linux/output/verification/foundation-ann-runtime/foundation-ann-runtime-report-latest.json",
+        "output/project-convergence-2026-09-12/native-evidence/ci-foundation-34792256467/Linux/output/verification/foundation-ann-runtime/foundation-ann-runtime-report-2026-09-14T00-21-45-630Z.json",
+        "output/project-convergence-2026-09-12/native-evidence/ci-foundation-34792256467/Linux/output/verification/foundation-ann-runtime/foundation-ann-runtime-report-2026-09-14T00-21-12-961Z.json"
+      ],
+      "minimumHostCount": 1,
+      "hostCount": 1,
+      "hostKeys": [
+        "3e5d74777a5deaf10303079b"
+      ],
+      "verifiedAt": "2026-09-14T00:22:18.202Z",
+      "ageHours": 0.3515,
+      "maxAgeHours": 168,
+      "suiteKind": "matrix",
+      "releaseGatesEnabled": true,
+      "minExpectedRecall": 1,
+      "requiredProfiles": [
+        "smoke",
+        "medium",
+        "heavy"
+      ],
+      "profileRuns": [
+        {
+          "profileId": "smoke",
+          "modes": [
+            {
+              "mode": "dist_node_runtime",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            },
+            {
+              "mode": "packaged_sidecar",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            }
+          ]
+        },
+        {
+          "profileId": "medium",
+          "modes": [
+            {
+              "mode": "dist_node_runtime",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            },
+            {
+              "mode": "packaged_sidecar",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            }
+          ]
+        },
+        {
+          "profileId": "heavy",
+          "modes": [
+            {
+              "mode": "dist_node_runtime",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            },
+            {
+              "mode": "packaged_sidecar",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
