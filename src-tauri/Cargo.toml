@@ -15,6 +15,10 @@ edition = "2021"
 name = "npm_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+# Real Wry windows require an interactive desktop and one event loop per process.
+native-window-tests = []
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 

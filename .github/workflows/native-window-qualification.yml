@@ -1,0 +1,103 @@
+name: Native Window Qualification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master, 'codex/**']
+    paths:
+      - 'src-tauri/src/**'
+      - 'src-tauri/build.rs'
+      - 'src-tauri/Cargo.toml'
+      - 'src-tauri/Cargo.lock'
+      - 'scripts/verify-agent-workspace-tauri*.js'
+      - '.github/workflows/native-window-qualification.yml'
+  pull_request:
+    paths:
+      - 'src-tauri/src/**'
+      - 'src-tauri/build.rs'
+      - 'src-tauri/Cargo.toml'
+      - 'src-tauri/Cargo.lock'
+      - 'scripts/verify-agent-workspace-tauri*.js'
+      - '.github/workflows/native-window-qualification.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-window-qualification-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows-native-window:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    env:
+      CARGO_BUILD_JOBS: '1'
+      CARGO_INCREMENTAL: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+      RUSTFLAGS: '-C codegen-units=1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.14.0'
+          cache: npm
+      - name: Prepare isolated temporary files
+        run: node -e "const fs=require('fs'),path=require('path'); const root=path.join(process.env.GITHUB_WORKSPACE,'.native-window-temp'); fs.mkdirSync(root,{recursive:true}); fs.appendFileSync(process.env.GITHUB_ENV,'TEMP='+root+'\nTMP='+root+'\n');"
+      - run: npm ci
+      - run: npm run build:with-vite
+      - name: Select Rust stable
+        run: |
+          rustup set profile minimal
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustc --version
+          cargo --version
+      - name: Compile native tests before the bounded execution checks
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --lib --features native-window-tests --no-run
+      - name: Execute ordinary Rust window contracts
+        run: node scripts/verify-agent-workspace-tauri-rust.js --strict
+      - name: Execute each real Wry window test in a separate process
+        run: node scripts/verify-agent-workspace-tauri-window-evidence.js --strict --skip-proxy-smoke
+      - name: Bind test executables to the workflow source
+        if: always()
+        shell: pwsh
+        run: |
+          @'
+          const fs = require('fs');
+          const path = require('path');
+          const crypto = require('crypto');
+          const directory = 'src-tauri/target/debug/deps';
+          const artifacts = fs.existsSync(directory) ? fs.readdirSync(directory)
+            .filter(name => /^npm_lib-[a-f0-9]+\.exe$/.test(name)).sort().map(name => {
+              const file = path.join(directory, name);
+              const bytes = fs.readFileSync(file);
+              return { path: file.replace(/\\/g, '/'), bytes: bytes.length, sha256: crypto.createHash('sha256').update(bytes).digest('hex') };
+            }) : [];
+          const report = {
+            generatedAt: new Date().toISOString(),
+            sourceRevision: process.env.GITHUB_SHA,
+            runId: process.env.GITHUB_RUN_ID,
+            runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            runtime: 'tauri-wry-libtest', platform: process.platform, arch: process.arch,
+            scope: 'Native Tauri command and window contracts; release installers and Godot integration require separate qualification.',
+            artifacts
+          };
+          fs.mkdirSync('output/tauri/native-window-provenance', { recursive: true });
+          fs.writeFileSync('output/tauri/native-window-provenance/report.json', JSON.stringify(report, null, 2) + '\n');
+          '@ | node
+      - name: Archive native execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-window-Windows-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            output/tauri/agent-workspace-rust-tests/
+            output/tauri/agent-workspace-window-evidence/
+            output/tauri/native-window-provenance/
+            src-tauri/target/debug/deps/npm_lib-*.exe
+            src-tauri/Cargo.lock

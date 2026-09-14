@@ -1,11 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { stripVTControlCharacters } = require('node:util');
 
 const { verifyAgentWorkspaceTauri } = require('./verify-agent-workspace-tauri');
 const {
     detectMissingSystemDependencies,
+    evaluateRustTestExecution,
 } = require('./verify-agent-workspace-tauri-rust');
 
 const REPO_ROOT = path.join(__dirname, '..');
@@ -73,6 +73,12 @@ function buildWindowEvidencePrerequisites() {
             `missing-system-dependencies:${dependencyCheck.missingDependencies.join(',')}`
         );
     }
+    if (!['win32', 'linux'].includes(process.platform)) {
+        reasons.push(`native-window-tests-unsupported:${process.platform}`);
+    }
+    if (process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
+        reasons.push('native-display-unavailable');
+    }
 
     return {
         cargoProbe: {
@@ -103,22 +109,21 @@ function runRustWindowEvidenceTests(options = {}) {
                 '--manifest-path',
                 'src-tauri/Cargo.toml',
                 pattern,
+                '--lib',
+                '--locked',
+                '--features',
+                'native-window-tests',
                 '--',
+                '--ignored',
                 '--show-output',
             ],
             {
                 timeoutMs,
             }
         );
-        // Cargo exits successfully when a filter matches no tests. Capture the
-        // named libtest verdict, with output shown after it to avoid interleaving.
-        const output = stripVTControlCharacters(result.stdout);
-        const namedTestPassed = new RegExp(`^test (?:[^\\s]+::)?${pattern} \\.\\.\\. ok\\s*$`, 'm').test(output);
         return {
             pattern,
-            ...result,
-            passed: result.exitCode === 0 && namedTestPassed,
-            evidenceFailure: result.exitCode !== 0 ? 'cargo_failed' : namedTestPassed ? null : 'required_test_did_not_pass',
+            ...evaluateRustTestExecution(result, [pattern]),
         };
     });
 }

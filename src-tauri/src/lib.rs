@@ -3516,6 +3516,141 @@ sync_language = true
     }
 
 
+    #[cfg(all(feature = "native-window-tests", any(windows, target_os = "linux")))]
+    mod native_window_tests {
+        use super::*;
+        use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+        use std::sync::{mpsc, Arc};
+        use tauri::{Listener, RunEvent, WebviewUrl, WebviewWindowBuilder, Wry};
+
+        fn run_native_window_assertions(assertions: impl FnOnce(&AppHandle, &Path) + 'static) {
+            let _lock = lock_test_env();
+            let directory = TempDir::new("native_window_evidence");
+            let config_path = directory.child("app_config.toml");
+            let _config = EnvVarGuard::set(
+                "NOTE_CONNECTION_CONFIG_PATH",
+                config_path.to_str().expect("test config path must be UTF-8"),
+            );
+            save_stored_config(&StoredConfig::default()).expect("isolated config must be writable");
+
+            let mut context = tauri::generate_context!();
+            context.config_mut().app.windows.clear();
+            context.config_mut().identifier.push_str(".native-window-evidence");
+            let app = tauri::Builder::<Wry>::default()
+                .any_thread()
+                .build(context)
+                .expect("real Wry application must initialize");
+            let (verdict_sender, verdict_receiver) = mpsc::channel();
+            let mut assertions = Some(assertions);
+            let root = directory.path.clone();
+
+            // Run on the event-loop thread so visibility queries observe the
+            // native dispatch immediately. Unwind only after Tauri has cleaned up.
+            let exit_code = app.run_return(move |app, event| {
+                if let RunEvent::Ready = event {
+                    let verdict = catch_unwind(AssertUnwindSafe(|| {
+                        assertions.take().expect("Ready must occur once")(app, &root);
+                    }));
+                    verdict_sender.send(verdict).expect("test verdict receiver must remain alive");
+                    app.exit(0);
+                }
+            });
+            assert_eq!(exit_code, 0, "native event loop must exit cleanly");
+            if let Err(panic) = verdict_receiver.recv().expect("native assertions must execute") {
+                resume_unwind(panic);
+            }
+        }
+
+        #[test]
+        #[ignore = "run one native test per process using verify-agent-workspace-tauri-window-evidence.js"]
+        fn pathmode_window_real_app_window_requires_main_window() {
+            run_native_window_assertions(|app, directory| {
+                let auxiliary = WebviewWindowBuilder::new(
+                    app,
+                    "auxiliary",
+                    WebviewUrl::External("about:blank".parse().unwrap()),
+                )
+                .title("NoteConnection native window evidence")
+                .visible(false)
+                .data_directory(directory.join("webview"))
+                .build()
+                .expect("real auxiliary WebView must initialize");
+                let events = Arc::new(Mutex::new(Vec::new()));
+                let received = Arc::clone(&events);
+                app.listen("pathmode-window-toggled", move |event| {
+                    received.lock().unwrap().push(event.payload().to_string());
+                });
+
+                assert!(app.get_webview_window("main").is_none());
+                assert!(!auxiliary.is_visible().expect("native visibility must be readable"));
+                for show_godot in [true, false] {
+                    assert_eq!(
+                        toggle_pathmode_window_with_runtime(app.clone(), show_godot),
+                        Err("Main Tauri window not found".to_string())
+                    );
+                }
+                assert!(events.lock().unwrap().is_empty(), "rejected toggles must not emit success");
+            });
+        }
+
+        #[test]
+        #[ignore = "run one native test per process using verify-agent-workspace-tauri-window-evidence.js"]
+        fn pathmode_window_real_app_window_lifecycle_emits_toggle_events() {
+            run_native_window_assertions(|app, directory| {
+                let main = WebviewWindowBuilder::new(
+                    app,
+                    "main",
+                    WebviewUrl::External("about:blank".parse().unwrap()),
+                )
+                .title("NoteConnection native window evidence")
+                .inner_size(320.0, 200.0)
+                .visible(false)
+                .data_directory(directory.join("webview"))
+                .build()
+                .expect("real main WebView must initialize");
+                let events = Arc::new(Mutex::new(Vec::<Value>::new()));
+                let received = Arc::clone(&events);
+                app.listen("pathmode-window-toggled", move |event| {
+                    received.lock().unwrap().push(serde_json::from_str(event.payload()).unwrap());
+                });
+
+                main.show().expect("native main window must show");
+                assert!(main.is_visible().unwrap());
+                toggle_pathmode_window_with_runtime(app.clone(), true).unwrap();
+                assert!(!main.is_visible().unwrap(), "default enter must hide Tauri");
+                toggle_pathmode_window_with_runtime(app.clone(), false).unwrap();
+                assert!(main.is_visible().unwrap(), "default exit must restore Tauri");
+
+                let mut config = StoredConfig::default();
+                config.multi_window.hide_tauri_when_pathmode_opens = false;
+                config.multi_window.restore_tauri_when_pathmode_exits = false;
+                save_stored_config(&config).unwrap();
+                toggle_pathmode_window_with_runtime(app.clone(), true).unwrap();
+                assert!(main.is_visible().unwrap(), "configuration must preserve the visible main window");
+                main.hide().unwrap();
+                toggle_pathmode_window_with_runtime(app.clone(), false).unwrap();
+                assert!(!main.is_visible().unwrap(), "disabled restore must leave the main window hidden");
+
+                let events = events.lock().unwrap();
+                assert_eq!(events.len(), 4, "each successful operation must emit exactly one event");
+                for (index, expected_show) in [true, false, true, false].into_iter().enumerate() {
+                    assert_eq!(events[index]["showGodot"], expected_show);
+                    assert_eq!(events[index]["plan"]["sendPathmodeShow"], expected_show);
+                    assert_eq!(events[index]["plan"]["sendPathmodeHide"], !expected_show);
+                    assert!(events[index]["triggeredAtMs"].as_u64().unwrap() > 0);
+                }
+                assert_eq!(events[0]["plan"]["hideTauriMainWindow"], true);
+                assert_eq!(events[1]["plan"]["showTauriMainWindow"], true);
+                assert_eq!(events[1]["plan"]["focusTauriMainWindow"], true);
+                assert_eq!(events[2]["config"]["hideTauriWhenPathmodeOpens"], false);
+                assert_eq!(events[2]["plan"]["hideTauriMainWindow"], false);
+                assert_eq!(events[3]["config"]["restoreTauriWhenPathmodeExits"], false);
+                assert_eq!(events[3]["plan"]["showTauriMainWindow"], false);
+                assert_eq!(events[3]["plan"]["focusTauriMainWindow"], false);
+            });
+        }
+    }
+
     #[test]
     fn save_stored_config_preserves_unknown_toml_sections() {
         let _lock = lock_test_env();

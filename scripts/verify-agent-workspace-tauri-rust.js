@@ -1,12 +1,22 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { stripVTControlCharacters } = require('node:util');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const DEFAULT_TIMEOUT_MS = 180000;
-const RUST_TEST_PATTERNS = [
-    'pathmode_window_toggle_plan',
-    'pathmode_window_toggled_event_payload',
+const RUST_CONTRACT_TESTS = [
+    {
+        pattern: 'pathmode_window_toggle_plan',
+        names: [
+            'pathmode_window_toggle_plan_decouples_godot_signal_from_tauri_hide_restore_flags',
+            'pathmode_window_toggle_plan_restores_tauri_focus_when_restore_policy_is_enabled',
+        ],
+    },
+    {
+        pattern: 'pathmode_window_toggled_event_payload',
+        names: ['pathmode_window_toggled_event_payload_contains_config_and_execution_plan'],
+    },
 ];
 const REQUIRED_PKG_CONFIG_DEPS = [
     'webkit2gtk-4.1',
@@ -87,12 +97,31 @@ function detectMissingSystemDependencies() {
     };
 }
 
+function evaluateRustTestExecution(execution, requiredTests) {
+    // Cargo accepts an empty selection. A successful process is evidence only
+    // when every required libtest verdict is present, including prefix groups.
+    const output = stripVTControlCharacters(execution.stdout);
+    const missingTests = requiredTests.filter((name) => {
+        const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return !new RegExp(`^test (?:[^\\s]+::)?${escapedName} \\.\\.\\. ok\\s*$`, 'm').test(output);
+    });
+    return {
+        ...execution,
+        requiredTests,
+        missingTests,
+        passed: execution.exitCode === 0 && missingTests.length === 0,
+        evidenceFailure: execution.exitCode !== 0
+            ? 'cargo_failed'
+            : missingTests.length > 0 ? 'required_test_did_not_pass' : null,
+    };
+}
+
 function runRustContractTests(options = {}) {
     const timeoutMs = Number.isFinite(Number(options.timeoutMs))
         ? Math.max(1000, Math.floor(Number(options.timeoutMs)))
         : DEFAULT_TIMEOUT_MS;
 
-    return RUST_TEST_PATTERNS.map((pattern) => {
+    return RUST_CONTRACT_TESTS.map(({ pattern, names }) => {
         const result = runCommand(
             'cargo',
             [
@@ -100,21 +129,17 @@ function runRustContractTests(options = {}) {
                 '--manifest-path',
                 'src-tauri/Cargo.toml',
                 pattern,
+                '--lib',
+                '--locked',
                 '--',
-                '--nocapture',
+                '--show-output',
             ],
             {
                 cwd: REPO_ROOT,
                 timeoutMs,
             }
         );
-        // exit code 101 means no tests matched the pattern (all ignored or absent)
-        // treat this as a skipped/pass rather than a failure
-        if (result.exitCode === 101 && /no tests.*matched|0 tests/.test(result.stderr)) {
-            result.exitCode = 0;
-            result.stdout = (result.stdout || '') + '\n[verify] No active tests matched pattern; treating as skip.\n';
-        }
-        return result;
+        return evaluateRustTestExecution(result, names);
     });
 }
 
@@ -166,7 +191,7 @@ function verifyAgentWorkspaceTauriRust(options = {}) {
     const tests = runRustContractTests({
         timeoutMs: options.timeoutMs,
     });
-    const failedTests = tests.filter((test) => test.exitCode !== 0);
+    const failedTests = tests.filter((test) => !test.passed);
 
     const report = {
         generatedAt,
@@ -230,4 +255,5 @@ module.exports = {
     verifyAgentWorkspaceTauriRust,
     detectMissingSystemDependencies,
     runRustContractTests,
+    evaluateRustTestExecution,
 };
