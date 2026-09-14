@@ -64,8 +64,8 @@ function verifyInstalledRuntime(installDirectory, runDirectory) {
   });
   fs.writeFileSync(`${runDirectory}.log`, `${execution.stdout || ''}\n${execution.stderr || ''}`);
   assert(!execution.error, execution.error?.message);
-  assert.equal(execution.status, 0, `Installed desktop runtime failed; see ${runDirectory}.log`);
   const report = JSON.parse(fs.readFileSync(path.join(runDirectory, 'report.json'), 'utf8'));
+  assert.equal(execution.status, 0, `Installed desktop runtime failed: ${report.error || report.shutdownError || 'no successful verdict'}; see ${runDirectory}.log`);
   assert.equal(report.passed, true, 'A zero process exit without a passed runtime report is not acceptance');
   assert.equal(report.checks.godotLayout, true);
   assert.equal(report.checks.windowTransitions, true);
@@ -138,7 +138,7 @@ async function qualifyMsiInstaller(installer, directory, expectedFiles) {
   return report;
 }
 
-async function main() {
+function createInstallerQualification() {
   assert(process.platform === 'win32' && process.arch === 'x64', 'Windows x64 is required');
   assert(process.env.GITHUB_ACTIONS === 'true' && process.env.RUNNER_ENVIRONMENT === 'github-hosted', 'Installer qualification is restricted to disposable GitHub-hosted runners');
   const directory = path.join(root, 'output/verification/windows-installers', `${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`);
@@ -162,15 +162,32 @@ async function main() {
     sourceFingerprint: computeSidecarSourceFingerprint(root), expectedFiles,
     signingScope: 'Installer behavior only; signing trust is not qualified.',
   };
-  try {
-    report.nsis = await qualifyNsisInstaller(path.join(root, `src-tauri/target/release/bundle/nsis/NoteConnection_${version}_x64-setup.exe`), directory, expectedFiles.nsis);
-    report.msi = await qualifyMsiInstaller(path.join(root, `src-tauri/target/release/bundle/msi/NoteConnection_${version}_x64_en-US.msi`), directory, expectedFiles.msi);
-    report.passed = report.nsis.passed && report.msi.passed;
-  } catch (error) { report.error = error.stack || String(error); report.passed = false; }
+  return { directory, version, expectedFiles, report };
+}
+
+function writeInstallerQualification(directory, report) {
   fs.writeFileSync(path.join(directory, 'report.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(report));
   process.exitCode = report.passed ? 0 : 1;
 }
 
-if (require.main === module) main().catch(error => { console.error(error); process.exitCode = 1; });
-module.exports = { verifyInstalledPayload, fingerprintTauriInstallerExecutable };
+async function qualifyNsisArtifact() {
+  const { directory, version, expectedFiles, report } = createInstallerQualification();
+  try {
+    report.nsis = await qualifyNsisInstaller(path.join(root, `src-tauri/target/release/bundle/nsis/NoteConnection_${version}_x64-setup.exe`), directory, expectedFiles.nsis);
+    report.passed = report.nsis.passed;
+  } catch (error) { report.error = error.stack || String(error); report.passed = false; }
+  writeInstallerQualification(directory, report);
+}
+
+async function qualifyMsiArtifact() {
+  const { directory, version, expectedFiles, report } = createInstallerQualification();
+  try {
+    report.msi = await qualifyMsiInstaller(path.join(root, `src-tauri/target/release/bundle/msi/NoteConnection_${version}_x64_en-US.msi`), directory, expectedFiles.msi);
+    report.passed = report.msi.passed;
+  } catch (error) { report.error = error.stack || String(error); report.passed = false; }
+  writeInstallerQualification(directory, report);
+}
+
+if (require.main === module) throw new Error('Run qualifyNsisArtifact() or qualifyMsiArtifact() on separate disposable runners.');
+module.exports = { verifyInstalledPayload, fingerprintTauriInstallerExecutable, qualifyNsisArtifact, qualifyMsiArtifact };

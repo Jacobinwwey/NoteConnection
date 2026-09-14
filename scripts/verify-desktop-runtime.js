@@ -15,7 +15,7 @@ async function waitFor(label, operation, timeoutMs = 60000) {
     try { const value = await operation(); if (value) return value; } catch (error) { lastError = error; }
     await delay(250);
   } while (Date.now() < deadline);
-  throw new Error(`${label} timed out${lastError ? `: ${lastError.message}` : ''}`);
+  throw new Error(`${label} timed out${lastError ? `: ${lastError.message}${lastError.cause ? ` (${lastError.cause.code || String(lastError.cause)})` : ''}` : ''}`);
 }
 
 async function freeDebuggerPort() {
@@ -39,7 +39,11 @@ async function freeDebuggerPort() {
 async function connectWebView(port, authToken) {
   const page = await waitFor('native WebView debugger', async () => {
     const response = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(2000) });
-    return (await response.json()).find(entry => entry.type === 'page' && entry.webSocketDebuggerUrl);
+    assert(response.ok, `Debugger discovery returned HTTP ${response.status}`);
+    const targets = await response.json();
+    const page = targets.find(entry => entry.type === 'page' && entry.webSocketDebuggerUrl);
+    assert(page, `Debugger has no page target; types=${targets.map(entry => entry.type).join(',')}`);
+    return page;
   });
   const socket = new WebSocket(page.webSocketDebuggerUrl);
   await new Promise((resolve, reject) => {
@@ -108,7 +112,7 @@ async function verifyDesktopRuntime(executablePath, reportDirectory) {
   let spawnError;
   child.on('exit', code => { exitCode = code; });
   child.on('error', error => { spawnError = error; });
-  const report = { generatedAt: new Date().toISOString(), sourceRevision: process.env.GITHUB_SHA || null, run, executable, applicationPid: child.pid, launchRoot, checks: {} };
+  const report = { generatedAt: new Date().toISOString(), sourceRevision: process.env.GITHUB_SHA || null, run, executable, applicationPid: child.pid, debugPort, launchRoot, checks: {} };
   let webview;
   const nativeCommand = (script, args) => {
     const result = spawnSync('powershell.exe', ['-NoProfile', '-File', path.join(__dirname, script), ...args], { env, encoding: 'utf8', windowsHide: true, timeout: 15000 });
@@ -170,6 +174,12 @@ async function verifyDesktopRuntime(executablePath, reportDirectory) {
     await captureWebView('native-restored.png');
   } catch (error) {
     report.error = error.stack || String(error);
+    try {
+      report.failureWindows = windows();
+      if (report.failureWindows.windows.some(window => window.processId === child.pid && window.visible)) {
+        report.failureCapture = nativeCommand('capture-noteconnection-window.ps1', ['-TitleContains', 'NoteConnection', '-ProcessId', String(child.pid), '-OutputPath', path.join(run, 'native-failure.png')]);
+      }
+    } catch (diagnosticError) { report.diagnosticError = diagnosticError.message; }
   } finally {
     webview?.close();
     try {

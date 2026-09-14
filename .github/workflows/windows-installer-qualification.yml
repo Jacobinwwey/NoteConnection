@@ -25,8 +25,17 @@ concurrency:
 
 jobs:
   qualify-installers:
+    name: Qualify ${{ matrix.installer }} installer
     runs-on: windows-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - installer: nsis
+            qualify: qualifyNsisArtifact
+          - installer: msi
+            qualify: qualifyMsiArtifact
     env:
       CARGO_BUILD_JOBS: '1'
       CARGO_INCREMENTAL: '0'
@@ -68,20 +77,26 @@ jobs:
       - run: npm run build:with-vite
       - run: node scripts/build-sidecar.js
       - run: node scripts/prepare-desktop-godot-pack.js
-      - name: Build fresh MSI and NSIS installers
-        run: node node_modules/@tauri-apps/cli/tauri.js build --ci --bundles nsis,msi --config src-tauri/tauri.desktop.conf.json
-      - name: Install, run and uninstall both artifacts
-        run: node scripts/verify-windows-installers.js
-      - name: Archive installer bytes and execution evidence
+      - name: Build a fresh installer
+        run: node node_modules/@tauri-apps/cli/tauri.js build --ci --bundles ${{ matrix.installer }} --config src-tauri/tauri.desktop.conf.json
+      - name: Install, run and uninstall on an independent runner
+        run: node -e "require('./scripts/verify-windows-installers').${{ matrix.qualify }}().catch(error => { console.error(error); process.exitCode = 1; });"
+      - name: Archive installer bytes
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-installers-${{ github.run_id }}-${{ github.run_attempt }}
+          name: windows-installer-binaries-${{ matrix.installer }}-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: error
+          path: src-tauri/target/release/bundle/${{ matrix.installer }}/*
+      - name: Archive execution evidence separately
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer-evidence-${{ matrix.installer }}-${{ github.run_id }}-${{ github.run_attempt }}
           retention-days: 30
           if-no-files-found: error
           path: |
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/msi/*.msi
             output/desktop/godot-pack.json
             output/desktop/godot-import.log
             output/desktop/godot-export.log

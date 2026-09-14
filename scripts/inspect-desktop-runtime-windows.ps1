@@ -32,5 +32,6 @@ $owners = @($ApplicationProcessId) + @($godot | Select-Object -ExpandProperty Pr
     appPid=$ApplicationProcessId
     godotPids=@($godot | Select-Object -ExpandProperty ProcessId)
     childPids=@($children | Select-Object -ExpandProperty ProcessId)
+    children=@($children | Select-Object ProcessId, ParentProcessId, Name, CommandLine)
     windows=[DesktopRuntimeWindows]::Snapshot($owners)
 } | ConvertTo-Json -Depth 5

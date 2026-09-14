@@ -32,6 +32,8 @@ Remote source `031f85f8`: native-window run `34892491842` and Windows/Linux foun
 
 Artifact scope: the local PCK includes five ignored HDR `.exr` files (179,271,168 bytes); clean CI contains tracked runtime sources without those optional backgrounds (311,164 bytes in the initial run). Preserve each input manifest separately. Do not infer byte reproducibility or equivalent optional-background coverage from the same source commit.
 
+Installer run `34904204940` verifies the stamp fix, all NSIS payload hashes and successful silent MSI commands. Acceptance remains failed: NSIS reaches Godot through the runner's D3D12 fallback but the WebView debugger is unavailable; MSI restores the prior NSIS directory from the shared user's remembered install location. Qualify each format on its own fresh runner, collect failed-window/process diagnostics before shutdown and archive evidence separately from binaries. Do not clear shared registry preferences merely to make the combined test pass. The archive retains both failed runs.
+
 ## 中文
 
 W1–W5 窗口契约已经完成，但未执行安装后应用的启动链路。当前 Tauri bundle 只声明 sidecar executable，没有 Godot 项目资源；`resolve_godot_project_path` 回落到 `cwd/path_mode`。此外，Godot 项目声明 4.6，而桌面 release provisioning 固定 4.3。这些是明确的打包风险，尚不是安装包验收证据。
@@ -53,3 +55,5 @@ P4 仍待一次性 Windows runner 上的新 NSIS／MSI 安装、卸载通过。�
 远端源码 `031f85f8`：真实窗口 run `34892491842` 及 Windows／Linux foundation run `34898619256` 通过。首次安装包 run `34892491904` 继续保留为失败；它暴露了校验器的两项假设错误：Tauri 会在打包时临时将 executable 中的 `UNK` 标记改为 `NSS`／`MSI`；msiexec 要求给属性值加引号，而不是给整个 `NAME=value` 参数加引号。后续修复按实际打包标记派生预期哈希，其他字节仍逐一约束。7 项 payload 测试及真实 NSIS／MSI 字节比对通过。使用不存在安装包的探针复现了旧参数写法超时，修正后立即返回预期错误 1619；该探针没有安装任何包。
 
 产物范围：本机 PCK 包含五个被忽略的 HDR `.exr` 文件，大小为 179,271,168 字节；干净 CI 仅含跟踪的运行资源，没有这些可选背景，首次 run 中为 311,164 字节。各自保留输入清单；不能仅凭相同源码提交声称字节可复现或可选背景覆盖等价。
+
+安装包 run `34904204940` 验证了打包标记修复、NSIS 的全部 payload 哈希和 MSI 静默命令成功执行。验收仍为失败：NSIS 在 runner 上通过 D3D12 回退连接到 Godot，但 WebView debugger 不可达；MSI 从共享用户的安装目录记忆中恢复了之前的 NSIS 路径。后续将各格式放到独立干净 runner，关闭应用前采集失败窗口／进程诊断，并将证据与大型二进制分别归档。不通过清除共享注册表偏好来掩盖联合测试的隔离不足。两次失败记录均保留。
