@@ -98,7 +98,11 @@ async function verifyDesktopRuntime(executablePath, reportDirectory) {
   fs.writeFileSync(path.join(knowledge, 'acceptance/Beta.md'), '# Beta\nBeta supports the Alpha learning path.\n');
   const config = path.join(run, 'app_config.toml');
   fs.writeFileSync(config, `knowledge_base_path = '${knowledge}'\nuser_language = 'en'\n\n[multi_window]\nsingle_window_mode = true\nhide_tauri_when_pathmode_opens = true\nrestore_tauri_when_pathmode_exits = true\nconfirm_before_full_shutdown_from_godot = false\nsync_language = true\n`);
-  const debugPort = await freeDebuggerPort();
+  const configuredDebugPort = process.env.NOTE_CONNECTION_DESKTOP_DEBUG_PORT;
+  if (configuredDebugPort !== undefined) {
+    assert(/^\d+$/.test(configuredDebugPort) && Number(configuredDebugPort) >= 49152 && Number(configuredDebugPort) <= 65535, 'Invalid configured desktop debugger port');
+  }
+  const debugPort = configuredDebugPort === undefined ? await freeDebuggerPort() : Number(configuredDebugPort);
   const env = { ...process.env,
     NOTE_CONNECTION_CONFIG_PATH: config, NOTE_CONNECTION_RUNTIME_DATA_DIR: path.join(run, 'runtime'),
     WEBVIEW2_USER_DATA_FOLDER: path.join(run, 'webview'), WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${debugPort} --remote-allow-origins=http://127.0.0.1:${debugPort}`,
@@ -141,6 +145,8 @@ async function verifyDesktopRuntime(executablePath, reportDirectory) {
     report.checks.godotConnected = true;
     webview = await connectWebView(debugPort, manifest.authToken);
     await waitFor('source selector', () => webview.evaluate(`Array.from(document.querySelector('#folder-select')?.options || []).some(option => option.value === 'acceptance') && !document.querySelector('#btn-load-source').disabled`));
+    await webview.evaluate(`document.querySelector('.language-option[data-lang="en"]')?.click(); document.querySelector('#confirm-language-btn')?.click(); true`);
+    await waitFor('first-run language confirmation', () => webview.evaluate(`!document.querySelector('#confirm-language-btn')`));
     await webview.evaluate(`document.querySelector('#folder-select').value='acceptance'; document.querySelector('#btn-load-source').click(); true`);
     await waitFor('native graph build', () => webview.evaluate(`(typeof graphData !== 'undefined' ? graphData : globalThis.graphData)?.nodes?.length === 2`));
     report.checks.graph = await webview.evaluate(`(() => { const graph = typeof graphData !== 'undefined' ? graphData : globalThis.graphData; return { nodes: graph.nodes.map(node => node.id), edges: (graph.edges || graph.links || []).length }; })()`);

@@ -34,6 +34,8 @@ Artifact scope: the local PCK includes five ignored HDR `.exr` files (179,271,16
 
 Installer run `34904204940` verifies the stamp fix, all NSIS payload hashes and successful silent MSI commands. Acceptance remains failed: NSIS reaches Godot through the runner's D3D12 fallback but the WebView debugger is unavailable; MSI restores the prior NSIS directory from the shared user's remembered install location. Qualify each format on its own fresh runner, collect failed-window/process diagnostics before shutdown and archive evidence separately from binaries. Do not clear shared registry preferences merely to make the combined test pass. The archive retains both failed runs.
 
+Run `34907653037` confirms installation, payload verification and removal independently for both formats; both stop at CDP discovery. The recorded WebView2 152 child arguments omit the requested debugging switches. The same CI executable passes the complete runtime probe locally, including paths with spaces. [WebView2's documented elevation hardening](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5640#issuecomment-4923662109) explains the difference: elevated hosts ignore user-writable argument overrides. The CI launcher now sets app-specific HKLM argument policies on disposable GitHub-hosted runners, restores the process environment and removes only its owned values in `finally`. Acceptance requires a policy-cleanup receipt. Nineteen targeted tests pass, and the non-CI guard rejects execution before registry access. Fresh remote acceptance is still required.
+
 ## 中文
 
 W1–W5 窗口契约已经完成，但未执行安装后应用的启动链路。当前 Tauri bundle 只声明 sidecar executable，没有 Godot 项目资源；`resolve_godot_project_path` 回落到 `cwd/path_mode`。此外，Godot 项目声明 4.6，而桌面 release provisioning 固定 4.3。这些是明确的打包风险，尚不是安装包验收证据。
@@ -57,3 +59,5 @@ P4 仍待一次性 Windows runner 上的新 NSIS／MSI 安装、卸载通过。�
 产物范围：本机 PCK 包含五个被忽略的 HDR `.exr` 文件，大小为 179,271,168 字节；干净 CI 仅含跟踪的运行资源，没有这些可选背景，首次 run 中为 311,164 字节。各自保留输入清单；不能仅凭相同源码提交声称字节可复现或可选背景覆盖等价。
 
 安装包 run `34904204940` 验证了打包标记修复、NSIS 的全部 payload 哈希和 MSI 静默命令成功执行。验收仍为失败：NSIS 在 runner 上通过 D3D12 回退连接到 Godot，但 WebView debugger 不可达；MSI 从共享用户的安装目录记忆中恢复了之前的 NSIS 路径。后续将各格式放到独立干净 runner，关闭应用前采集失败窗口／进程诊断，并将证据与大型二进制分别归档。不通过清除共享注册表偏好来掩盖联合测试的隔离不足。两次失败记录均保留。
+
+Run `34907653037` 分别确认了两种格式的安装、payload 校验与卸载，均停在 CDP 发现阶段。记录显示 WebView2 152 子进程没有收到请求的调试参数；相同 CI executable 在本机完成了完整运行探针，也通过了带空格路径检查。[WebView2 明确说明的提权安全策略](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5640#issuecomment-4923662109) 解释了差异：高完整性宿主会忽略用户可写的参数覆盖。CI 启动器现仅在一次性 GitHub-hosted runner 上设置应用专属 HKLM 参数策略，在 `finally` 中恢复进程环境并删除自己创建的值。验收必须包含策略清理成功记录。19 项针对性测试通过，非 CI 执行也确认会在访问注册表前被拒绝；仍需新的远端验收。

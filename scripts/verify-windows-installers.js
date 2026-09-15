@@ -59,16 +59,20 @@ function runInstaller(executable, args, logPath, spawnOptions = {}) {
 }
 
 function verifyInstalledRuntime(installDirectory, runDirectory) {
-  const execution = spawnSync(process.execPath, [path.join(__dirname, 'verify-desktop-runtime.js'), path.join(installDirectory, 'npm.exe'), runDirectory], {
+  const execution = spawnSync('powershell.exe', ['-NoProfile', '-File', path.join(__dirname, 'verify-elevated-desktop-runtime.ps1'), '-ExecutablePath', path.join(installDirectory, 'npm.exe'), '-ReportDirectory', runDirectory, '-NodeExecutablePath', process.execPath], {
     cwd: root, encoding: 'utf8', windowsHide: true, timeout: 300000, maxBuffer: 4 * 1024 * 1024,
   });
   fs.writeFileSync(`${runDirectory}.log`, `${execution.stdout || ''}\n${execution.stderr || ''}`);
   assert(!execution.error, execution.error?.message);
-  const report = JSON.parse(fs.readFileSync(path.join(runDirectory, 'report.json'), 'utf8'));
+  const reportPath = path.join(runDirectory, 'report.json');
+  assert(fs.existsSync(reportPath), `Installed runtime did not produce evidence: ${execution.stderr || execution.stdout}`);
+  const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
   assert.equal(execution.status, 0, `Installed desktop runtime failed: ${report.error || report.shutdownError || 'no successful verdict'}; see ${runDirectory}.log`);
   assert.equal(report.passed, true, 'A zero process exit without a passed runtime report is not acceptance');
   assert.equal(report.checks.godotLayout, true);
   assert.equal(report.checks.windowTransitions, true);
+  const policy = JSON.parse(fs.readFileSync(path.join(runDirectory, 'native-debug-policy.json'), 'utf8').replace(/^\uFEFF/, ''));
+  assert.equal(policy.policyValuesRemoved, true, 'Temporary WebView2 policies must be removed before acceptance');
   return { report: path.relative(root, path.join(runDirectory, 'report.json')).replace(/\\/g, '/'), passed: true };
 }
 
@@ -190,4 +194,4 @@ async function qualifyMsiArtifact() {
 }
 
 if (require.main === module) throw new Error('Run qualifyNsisArtifact() or qualifyMsiArtifact() on separate disposable runners.');
-module.exports = { verifyInstalledPayload, fingerprintTauriInstallerExecutable, qualifyNsisArtifact, qualifyMsiArtifact };
+module.exports = { verifyInstalledPayload, fingerprintTauriInstallerExecutable, verifyInstalledRuntime, qualifyNsisArtifact, qualifyMsiArtifact };
