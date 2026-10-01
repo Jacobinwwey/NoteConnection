@@ -93,6 +93,7 @@ jobs:
         run: node -e "require('./scripts/verify-windows-installers').${{ matrix.qualify }}().catch(error => { console.error(error); process.exitCode = 1; });"
       - name: Archive execution evidence separately
         if: always()
+        timeout-minutes: 5
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer-evidence-${{ matrix.installer }}-${{ github.run_id }}-${{ github.run_attempt }}

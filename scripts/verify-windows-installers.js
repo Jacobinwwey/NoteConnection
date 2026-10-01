@@ -58,6 +58,15 @@ function runInstaller(executable, args, logPath, spawnOptions = {}) {
   return { exitCode: execution.status, rebootRequested: execution.status === 3010 };
 }
 
+function readMsiFailureContext(logPath) {
+  if (!fs.existsSync(logPath)) return `MSI did not create its detailed log: ${logPath}`;
+  const bytes = fs.readFileSync(logPath);
+  // Windows Installer writes UTF-16LE logs. Keep diagnostics in the step output
+  // as well as the artifact, whose upload may fail independently of uninstall.
+  const encoding = bytes[0] === 0xff && bytes[1] === 0xfe ? 'utf16le' : 'utf8';
+  return bytes.toString(encoding).replace(/^\uFEFF/, '').slice(-64 * 1024);
+}
+
 function verifyInstalledRuntime(installDirectory, runDirectory) {
   const execution = spawnSync('powershell.exe', ['-NoProfile', '-File', path.join(__dirname, 'verify-elevated-desktop-runtime.ps1'), '-ExecutablePath', path.join(installDirectory, 'npm.exe'), '-ReportDirectory', runDirectory, '-NodeExecutablePath', process.execPath], {
     cwd: root, encoding: 'utf8', windowsHide: true, timeout: 300000, maxBuffer: 4 * 1024 * 1024,
@@ -127,7 +136,11 @@ async function qualifyMsiInstaller(installer, directory, expectedFiles) {
     report.registrations = installedRegistrations();
     assert.equal(report.registrations.length, 1, 'MSI must register one installed product');
     report.runtime = verifyInstalledRuntime(installDirectory, runtimeDirectory);
-  } catch (error) { report.error = error.stack || String(error); }
+  } catch (error) {
+    report.error = error.stack || String(error);
+    report.installDetail = readMsiFailureContext(path.join(directory, 'msi-install-detail.log'));
+    console.error(report.installDetail);
+  }
   finally {
     try {
       report.uninstall = runInstaller('msiexec.exe', ['/x', `"${installer}"`, '/qn', '/norestart', '/l*v', `"${path.join(directory, 'msi-uninstall-detail.log')}"`], path.join(directory, 'msi-uninstall.log'), { windowsVerbatimArguments: true });
@@ -136,7 +149,11 @@ async function qualifyMsiInstaller(installer, directory, expectedFiles) {
         assert(fs.existsSync(path.join(runtimeDirectory, 'runtime/graph_data.json')), 'Uninstall must preserve external runtime data');
         report.removal.runtimeDataPreserved = true;
       }
-    } catch (error) { report.uninstallError = error.stack || String(error); }
+    } catch (error) {
+      report.uninstallError = error.stack || String(error);
+      report.uninstallDetail = readMsiFailureContext(path.join(directory, 'msi-uninstall-detail.log'));
+      console.error(report.uninstallDetail);
+    }
   }
   report.passed = !report.error && !report.uninstallError;
   return report;
@@ -194,4 +211,4 @@ async function qualifyMsiArtifact() {
 }
 
 if (require.main === module) throw new Error('Run qualifyNsisArtifact() or qualifyMsiArtifact() on separate disposable runners.');
-module.exports = { verifyInstalledPayload, fingerprintTauriInstallerExecutable, verifyInstalledRuntime, qualifyNsisArtifact, qualifyMsiArtifact };
+module.exports = { verifyInstalledPayload, fingerprintTauriInstallerExecutable, verifyInstalledRuntime, readMsiFailureContext, qualifyNsisArtifact, qualifyMsiArtifact };
