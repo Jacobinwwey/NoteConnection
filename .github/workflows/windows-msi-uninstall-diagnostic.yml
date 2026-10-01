@@ -1,0 +1,104 @@
+name: Windows MSI Uninstall Diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/**']
+    paths: ['.github/workflows/windows-msi-uninstall-diagnostic.yml']
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  replay:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      MSI_SHA256: 9caece6092cfd76bf3b24600cb1960c584674084f81d5d747aa13221451d6aa0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.14.0'
+      - name: Download the exact MSI that failed uninstall
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 36828405439
+          name: windows-installer-binaries-msi-36828405439-1
+          path: output/msi-diagnostic/installer
+      - name: Prepare bounded MSI execution
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted') { throw 'Disposable GitHub-hosted runner required' }
+          $root = Join-Path $env:GITHUB_WORKSPACE 'output/msi-diagnostic'
+          $tempRoot = Join-Path $root 'temp'
+          New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "TEMP=$tempRoot`nTMP=$tempRoot"
+          $installer = @(Get-ChildItem -LiteralPath (Join-Path $root 'installer') -Filter '*.msi')
+          if ($installer.Count -ne 1) { throw 'Expected exactly one MSI' }
+          if ((Get-FileHash -LiteralPath $installer[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:MSI_SHA256) { throw 'MSI identity mismatch' }
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "MSI_FILE=$($installer[0].FullName)"
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "MSI_DIAGNOSTIC_ROOT=$root"
+          @{ scope = 'Diagnostic replay only; not fresh installer acceptance'; verifierRevision = $env:GITHUB_SHA; installerSourceRevision = '5b01b24d01742dbc3324ba530395ced41f8549e7'; installerRun = '36828405439'; installerSha256 = $env:MSI_SHA256 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root 'scope.json')
+          @'
+          param([string]$InstallerArguments, [string]$DetailLog)
+          $ErrorActionPreference = 'Stop'
+          Write-Host "Starting msiexec: $InstallerArguments"
+          $installerProcess = Start-Process -FilePath 'msiexec.exe' -ArgumentList $InstallerArguments -WindowStyle Hidden -PassThru
+          $deadline = [DateTime]::UtcNow.AddMinutes(3)
+          while (-not $installerProcess.WaitForExit(5000)) {
+            Write-Host "msiexec PID $($installerProcess.Id) remains active"
+            if (Test-Path -LiteralPath $DetailLog) { Get-Content -LiteralPath $DetailLog -Tail 12 }
+            if ([DateTime]::UtcNow -gt $deadline) {
+              try { $installerProcess.Kill() } catch { Write-Warning "Unable to terminate the owned MSI client: $_" }
+              throw 'msiexec client exceeded three minutes; detailed log retained'
+            }
+          }
+          $installerProcess.Refresh()
+          Write-Host "msiexec exited $($installerProcess.ExitCode)"
+          if (Test-Path -LiteralPath $DetailLog) { Get-Content -LiteralPath $DetailLog -Tail 250 }
+          if ($installerProcess.ExitCode -notin @(0, 3010)) { throw "msiexec failed: $($installerProcess.ExitCode)" }
+          '@ | Set-Content -LiteralPath (Join-Path $root 'Invoke-MsiDiagnostic.ps1') -Encoding utf8
+      - name: Install the recorded MSI
+        id: install
+        timeout-minutes: 4
+        shell: pwsh
+        run: |
+          $registrations = foreach ($key in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')) {
+            if (Test-Path -LiteralPath $key) { Get-ChildItem -LiteralPath $key | Get-ItemProperty | Where-Object { $_.DisplayName -eq 'NoteConnection' } }
+          }
+          if (@($registrations).Count -ne 0) { throw 'Refusing to replace an existing installation' }
+          $installed = Join-Path $env:MSI_DIAGNOSTIC_ROOT 'MSI installed'
+          $detail = Join-Path $env:MSI_DIAGNOSTIC_ROOT 'install-detail.log'
+          & (Join-Path $env:MSI_DIAGNOSTIC_ROOT 'Invoke-MsiDiagnostic.ps1') -InstallerArguments "/i `"$env:MSI_FILE`" /qn /norestart INSTALLDIR=`"$installed`" /l*vx! `"$detail`"" -DetailLog $detail
+      - name: Exercise the existing runtime probe
+        timeout-minutes: 6
+        shell: pwsh
+        run: |
+          $executable = Join-Path $env:MSI_DIAGNOSTIC_ROOT 'MSI installed/npm.exe'
+          $reports = Join-Path $env:MSI_DIAGNOSTIC_ROOT 'runtime'
+          & powershell.exe -NoProfile -File scripts/verify-elevated-desktop-runtime.ps1 -ExecutablePath $executable -ReportDirectory $reports -NodeExecutablePath (Get-Command node.exe).Source
+          if ($LASTEXITCODE -ne 0) { throw "Runtime probe failed: $LASTEXITCODE" }
+      - name: Uninstall with directly observable Windows process lifetime
+        if: always() && steps.install.outcome == 'success'
+        timeout-minutes: 4
+        shell: pwsh
+        run: |
+          $detail = Join-Path $env:MSI_DIAGNOSTIC_ROOT 'uninstall-detail.log'
+          & (Join-Path $env:MSI_DIAGNOSTIC_ROOT 'Invoke-MsiDiagnostic.ps1') -InstallerArguments "/x `"$env:MSI_FILE`" /qn /norestart /l*vx! `"$detail`"" -DetailLog $detail
+      - name: Preserve diagnostic evidence
+        if: always()
+        timeout-minutes: 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-msi-uninstall-diagnostic-${{ github.run_id }}
+          path: |
+            output/msi-diagnostic/*.log
+            output/msi-diagnostic/*.json
+            output/msi-diagnostic/runtime/*.json
+            output/msi-diagnostic/runtime/native*.log
+            output/msi-diagnostic/runtime/native*.png
