@@ -46,6 +46,8 @@ Run `36828405439` accepts NSIS on `5b01b24d`; its downloaded installer hash and 
 
 The following run `36832726016` also passes NSIS but stops reporting MSI progress during qualification, with no intermediate console output even after the configured deadline. A temporary diagnostic workflow replays the exact retained MSI above on a disposable runner, separates install/runtime/uninstall into observable steps, and flushes detailed MSI logs while waiting on the Windows process directly. It does not replace fresh installer acceptance or establish an uninstall root cause by itself.
 
+Diagnostic run `36836448951` passes the exact recorded MSI: install takes four seconds, the runtime probe passes, and uninstall takes two seconds with both MSI engines returning zero. Policy and owned-process cleanup pass; no failing `Return value 3`, file-lock owner or 1603 appears in these successful logs. This does not establish the historical failure's cause and does not provide the complete fresh qualification/removal receipt. The qualifier now sends installer stdout/stderr directly to an owned log descriptor closed in `finally`, preserving partial output and removing dependence on captured-pipe closure. Installer and runtime milestones identify the active phase. Real Node subprocess probes preserve success/nonzero/timeout output, close descriptors on all paths and confirm the timed-out child exited (1,520 ms observed for a 1,500 ms timeout). All 21 focused tests pass. Fresh NSIS/MSI acceptance is still required.
+
 ## 中文
 
 W1–W5 窗口契约已经完成，但未执行安装后应用的启动链路。当前 Tauri bundle 只声明 sidecar executable，没有 Godot 项目资源；`resolve_godot_project_path` 回落到 `cwd/path_mode`。此外，Godot 项目声明 4.6，而桌面 release provisioning 固定 4.3。这些是明确的打包风险，尚不是安装包验收证据。
@@ -81,3 +83,5 @@ Run `36822174805` 已在源码 `18fec427` 上通过 NSIS，包含完整截图（
 Run `36828405439` 在 `5b01b24d` 上通过 NSIS，下载的安装包哈希与三张 PNG 均完成核对。用户复制的 MSI 实时日志确认安装、payload 与运行已通过，但卸载返回 1603；下载的 128,630,784-byte MSI 与报告中的 SHA-256 `9caece6092cfd76bf3b24600cb1960c584674084f81d5d747aa13221451d6aa0` 一致。证据上传选中 17 个文件后，停留在产物初始化阶段超过二十分钟。详细卸载日志仍不可用，不能仅凭 1603 判断根因。MSI 失败时现会将正确解码、长度受限的详细日志末尾直接写入步骤输出，提供另一条诊断通道；证据上传限定五分钟。验收条件不变，P4/P5 继续保持未完成。
 
 随后 run `36832726016` 再次通过 NSIS，但 MSI 在验收过程中停止回报进度，超过配置截止时间仍无中间输出。临时诊断工作流在一次性 runner 上重放上述保留的同字节 MSI，将安装／运行／卸载拆为可观察的步骤，直接等待 Windows 进程，并实时刷新详细 MSI 日志。该诊断不替代新安装包验收，也不能单独证明卸载根因。
+
+诊断 run `36836448951` 已通过同字节 MSI：安装耗时四秒，运行探针通过，卸载耗时两秒且两端 MSI engine 均返回零；策略与所属进程清理通过。成功日志没有失败的 `Return value 3`、占用文件的进程或 1603，不能据此认定历史失败根因，也没有完整的新安装包／卸载验收回执。验收器现将安装器 stdout/stderr 直接写入自有日志描述符，在 `finally` 关闭，保留中途输出并消除对捕获管道关闭的依赖；安装器和运行阶段输出可定位当前步骤。真实 Node 子进程探针确认成功／非零退出／超时输出保留，各路径句柄关闭，超时子进程已退出（1,500 ms 上限下观察到 1,520 ms）。21 项针对性测试全部通过，仍需新的完整 NSIS／MSI 验收。

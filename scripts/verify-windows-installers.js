@@ -51,8 +51,18 @@ function fingerprintTauriInstallerExecutable(executable, bundleCode) {
 }
 
 function runInstaller(executable, args, logPath, spawnOptions = {}) {
-  const execution = spawnSync(executable, args, { encoding: 'utf8', windowsHide: true, timeout: 600000, ...spawnOptions });
-  fs.writeFileSync(logPath, `${execution.stdout || ''}\n${execution.stderr || ''}`);
+  const logDescriptor = fs.openSync(logPath, 'w');
+  const startedAt = Date.now();
+  let execution;
+  try {
+    console.log(`[windows-installers] Installer start: ${path.basename(logPath)} (${path.basename(executable)})`);
+    // Write evidence as it arrives; inherited output handles must not keep a
+    // completed installer waiting for captured pipes to close.
+    execution = spawnSync(executable, args, { encoding: 'utf8', windowsHide: true, timeout: 600000, ...spawnOptions, stdio: ['ignore', logDescriptor, logDescriptor] });
+  } finally {
+    fs.closeSync(logDescriptor);
+  }
+  console.log(`[windows-installers] Installer exit: ${path.basename(logPath)} status=${execution.status} error=${execution.error?.code || 'none'} elapsedMs=${Date.now() - startedAt}`);
   assert(!execution.error, execution.error?.message);
   assert([0, 3010].includes(execution.status), `${path.basename(executable)} exited ${execution.status}; see ${logPath}`);
   return { exitCode: execution.status, rebootRequested: execution.status === 3010 };
@@ -68,9 +78,12 @@ function readMsiFailureContext(logPath) {
 }
 
 function verifyInstalledRuntime(installDirectory, runDirectory) {
+  const startedAt = Date.now();
+  console.log(`[windows-installers] Runtime start: ${path.basename(runDirectory)}`);
   const execution = spawnSync('powershell.exe', ['-NoProfile', '-File', path.join(__dirname, 'verify-elevated-desktop-runtime.ps1'), '-ExecutablePath', path.join(installDirectory, 'npm.exe'), '-ReportDirectory', runDirectory, '-NodeExecutablePath', process.execPath], {
     cwd: root, encoding: 'utf8', windowsHide: true, timeout: 300000, maxBuffer: 4 * 1024 * 1024,
   });
+  console.log(`[windows-installers] Runtime exit: ${path.basename(runDirectory)} status=${execution.status} error=${execution.error?.code || 'none'} elapsedMs=${Date.now() - startedAt}`);
   fs.writeFileSync(`${runDirectory}.log`, `${execution.stdout || ''}\n${execution.stderr || ''}`);
   assert(!execution.error, execution.error?.message);
   const reportPath = path.join(runDirectory, 'report.json');
