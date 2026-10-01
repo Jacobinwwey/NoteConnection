@@ -86,6 +86,17 @@ async function connectWebView(port, authToken) {
   };
 }
 
+async function waitForAcceptanceGraph(webview, previousTimeOrigin) {
+  // SourceManager preloads graphData, then reloads after build success. Only the
+  // replacement document is ready for interaction; inspect and copy it in one CDP call.
+  return waitFor('native graph after build reload', () => webview.evaluate(`(() => {
+    if (performance.timeOrigin === ${JSON.stringify(previousTimeOrigin)}) return false;
+    const graph = typeof graphData !== 'undefined' ? graphData : globalThis.graphData;
+    if (graph?.nodes?.length !== 2) return false;
+    return { nodes: graph.nodes.map(node => node.id), edges: (graph.edges || graph.links || []).length };
+  })()`));
+}
+
 async function verifyDesktopRuntime(executablePath, reportDirectory) {
   assert.equal(process.platform, 'win32', 'Native desktop qualification requires Windows');
   const executable = fs.realpathSync(executablePath);
@@ -148,9 +159,8 @@ async function verifyDesktopRuntime(executablePath, reportDirectory) {
     await waitFor('source selector', () => webview.evaluate(`Array.from(document.querySelector('#folder-select')?.options || []).some(option => option.value === 'acceptance') && !document.querySelector('#btn-load-source').disabled`));
     await webview.evaluate(`document.querySelector('.language-option[data-lang="en"]')?.click(); document.querySelector('#confirm-language-btn')?.click(); true`);
     await waitFor('first-run language confirmation', () => webview.evaluate(`!document.querySelector('#confirm-language-btn')`));
-    await webview.evaluate(`document.querySelector('#folder-select').value='acceptance'; document.querySelector('#btn-load-source').click(); true`);
-    await waitFor('native graph build', () => webview.evaluate(`(typeof graphData !== 'undefined' ? graphData : globalThis.graphData)?.nodes?.length === 2`));
-    report.checks.graph = await webview.evaluate(`(() => { const graph = typeof graphData !== 'undefined' ? graphData : globalThis.graphData; return { nodes: graph.nodes.map(node => node.id), edges: (graph.edges || graph.links || []).length }; })()`);
+    const previousTimeOrigin = await webview.evaluate(`(() => { const timeOrigin = performance.timeOrigin; document.querySelector('#folder-select').value='acceptance'; document.querySelector('#btn-load-source').click(); return timeOrigin; })()`);
+    report.checks.graph = await waitForAcceptanceGraph(webview, previousTimeOrigin);
     assert.deepEqual([...report.checks.graph.nodes].sort(), ['Alpha', 'Beta']);
     assert(report.checks.graph.edges > 0);
     await waitFor('main interface and path listener', () => webview.evaluate(`(() => { const button = document.querySelector('#btn-path-mode'); return document.readyState === 'complete' && button && !button.disabled && !!globalThis.pathApp && (getEventListeners(button).click || []).length > 0 && !document.querySelector('#btn-load-source')?.disabled; })()`));
@@ -215,4 +225,4 @@ if (require.main === module) {
     process.exitCode = report.passed ? 0 : 1;
   }).catch(error => { console.error(error); process.exitCode = 1; });
 }
-module.exports = { verifyDesktopRuntime };
+module.exports = { verifyDesktopRuntime, waitForAcceptanceGraph };

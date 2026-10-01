@@ -38,6 +38,8 @@ Run `34907653037` confirms installation, payload verification and removal indepe
 
 October 1 continuation on `227678d`: run `36817551883` confirms the elevated policy fix on WebView2 153 for both formats, with successful policy cleanup. MSI passes the full acceptance flow. NSIS reaches graph/layout, but the 15-second capture subprocess deadline terminates PNG writing: the archived image is 65,536 bytes with an incomplete IDAT chunk and no IEND. The capture invocation now has a bounded 60-second budget while other native commands retain 15 seconds. Stage timings and stderr are retained for diagnosis; no acceptance assertion is relaxed. A fresh run must still pass NSIS and MSI before P4/P5 close.
 
+Run `36820293638` fails before screenshot capture in both formats: the two-request graph check/read races SourceManager's delayed post-build reload. The pre-verification graph can disappear between CDP requests. Acceptance now waits for the replacement document (`performance.timeOrigin`) and checks/copies its graph in a single evaluation. Two VM-backed regression cases reproduce the old undefined-graph/destroyed-context failures; the corrected operation and existing installer/resource contracts pass 21 tests. Screenshot acceptance still requires the next remote run.
+
 ## 中文
 
 W1–W5 窗口契约已经完成，但未执行安装后应用的启动链路。当前 Tauri bundle 只声明 sidecar executable，没有 Godot 项目资源；`resolve_godot_project_path` 回落到 `cwd/path_mode`。此外，Godot 项目声明 4.6，而桌面 release provisioning 固定 4.3。这些是明确的打包风险，尚不是安装包验收证据。
@@ -65,3 +67,5 @@ P4 仍待一次性 Windows runner 上的新 NSIS／MSI 安装、卸载通过。�
 Run `34907653037` 分别确认了两种格式的安装、payload 校验与卸载，均停在 CDP 发现阶段。记录显示 WebView2 152 子进程没有收到请求的调试参数；相同 CI executable 在本机完成了完整运行探针，也通过了带空格路径检查。[WebView2 明确说明的提权安全策略](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5640#issuecomment-4923662109) 解释了差异：高完整性宿主会忽略用户可写的参数覆盖。CI 启动器现仅在一次性 GitHub-hosted runner 上设置应用专属 HKLM 参数策略，在 `finally` 中恢复进程环境并删除自己创建的值。验收必须包含策略清理成功记录。19 项针对性测试通过，非 CI 执行也确认会在访问注册表前被拒绝；仍需新的远端验收。
 
 10 月 1 日在 `227678d` 上续接：run `36817551883` 确认两种格式的提权策略修复均在 WebView2 153 上生效，策略清理也均成功。MSI 全流程通过；NSIS 完成图／布局后，截图子进程的 15 秒截止时间中断了 PNG 写入：归档图片恰为 65,536 字节，IDAT 不完整且缺少 IEND。截图调用现使用有限的 60 秒预算，其他 native command 仍为 15 秒；保留阶段耗时与 stderr 诊断，不放宽验收断言。P4/P5 仍须等待新一轮 NSIS 和 MSI 全部通过。
+
+Run `36820293638` 的两种格式均在截图之前失败：两次请求分别检查／读取图，与 SourceManager 构建后的延迟刷新发生竞态；预验证时可见的图会在两次 CDP 请求之间消失。验收现等待替换后的文档（`performance.timeOrigin`），并在一次求值中检查和复制图快照。两项 VM 回归复现旧实现的 undefined graph／context destroyed 错误；修正后的操作与既有安装器／资源契约共 21 项测试通过。截图验收仍等待下一轮远端执行。
