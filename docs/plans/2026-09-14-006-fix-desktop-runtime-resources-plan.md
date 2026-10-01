@@ -40,6 +40,8 @@ October 1 continuation on `227678d`: run `36817551883` confirms the elevated pol
 
 Run `36820293638` fails before screenshot capture in both formats: the two-request graph check/read races SourceManager's delayed post-build reload. The pre-verification graph can disappear between CDP requests. Acceptance now waits for the replacement document (`performance.timeOrigin`) and checks/copies its graph in a single evaluation. Two VM-backed regression cases reproduce the old undefined-graph/destroyed-context failures; the corrected operation and existing installer/resource contracts pass 21 tests. Screenshot acceptance still requires the next remote run.
 
+Run `36822174805` accepts NSIS on source `18fec427`, including a complete screenshot (metadata saved at 9,716 ms) and clean removal. MSI remains without a verdict on two runners; the first cancelled job has no retrievable log or MSI artifact. This is an evidence gap, not an accepted installer or a proven application defect. Qualification now archives installer bytes before execution and bounds the execution step to ten minutes, allowing the following `always()` evidence upload to preserve partial installer logs after a step timeout.
+
 ## 中文
 
 W1–W5 窗口契约已经完成，但未执行安装后应用的启动链路。当前 Tauri bundle 只声明 sidecar executable，没有 Godot 项目资源；`resolve_godot_project_path` 回落到 `cwd/path_mode`。此外，Godot 项目声明 4.6，而桌面 release provisioning 固定 4.3。这些是明确的打包风险，尚不是安装包验收证据。
@@ -69,3 +71,5 @@ Run `34907653037` 分别确认了两种格式的安装、payload 校验与卸载
 10 月 1 日在 `227678d` 上续接：run `36817551883` 确认两种格式的提权策略修复均在 WebView2 153 上生效，策略清理也均成功。MSI 全流程通过；NSIS 完成图／布局后，截图子进程的 15 秒截止时间中断了 PNG 写入：归档图片恰为 65,536 字节，IDAT 不完整且缺少 IEND。截图调用现使用有限的 60 秒预算，其他 native command 仍为 15 秒；保留阶段耗时与 stderr 诊断，不放宽验收断言。P4/P5 仍须等待新一轮 NSIS 和 MSI 全部通过。
 
 Run `36820293638` 的两种格式均在截图之前失败：两次请求分别检查／读取图，与 SourceManager 构建后的延迟刷新发生竞态；预验证时可见的图会在两次 CDP 请求之间消失。验收现等待替换后的文档（`performance.timeOrigin`），并在一次求值中检查和复制图快照。两项 VM 回归复现旧实现的 undefined graph／context destroyed 错误；修正后的操作与既有安装器／资源契约共 21 项测试通过。截图验收仍等待下一轮远端执行。
+
+Run `36822174805` 已在源码 `18fec427` 上通过 NSIS，包含完整截图（元数据在 9,716 ms 后保存）和卸载清理。MSI 在两个 runner 上均长时间没有返回结果；首个已取消 job 没有可取回的日志或 MSI 产物。这是证据缺口，尚不能判为安装验收通过，也未证明应用缺陷。验收工作流现先归档安装包，再执行限定十分钟的安装验收步骤，使后续 `always()` 证据上传可在步骤超时后保留安装器的部分日志。

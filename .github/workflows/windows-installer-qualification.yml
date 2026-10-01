@@ -79,8 +79,6 @@ jobs:
       - run: node scripts/prepare-desktop-godot-pack.js
       - name: Build a fresh installer
         run: node node_modules/@tauri-apps/cli/tauri.js build --ci --bundles ${{ matrix.installer }} --config src-tauri/tauri.desktop.conf.json
-      - name: Install, run and uninstall on an independent runner
-        run: node -e "require('./scripts/verify-windows-installers').${{ matrix.qualify }}().catch(error => { console.error(error); process.exitCode = 1; });"
       - name: Archive installer bytes
         if: always()
         uses: actions/upload-artifact@v4
@@ -89,6 +87,10 @@ jobs:
           retention-days: 30
           if-no-files-found: error
           path: src-tauri/target/release/bundle/${{ matrix.installer }}/*
+      - name: Install, run and uninstall on an independent runner
+        # A step timeout leaves the job alive to upload partial installer logs.
+        timeout-minutes: 10
+        run: node -e "require('./scripts/verify-windows-installers').${{ matrix.qualify }}().catch(error => { console.error(error); process.exitCode = 1; });"
       - name: Archive execution evidence separately
         if: always()
         uses: actions/upload-artifact@v4
