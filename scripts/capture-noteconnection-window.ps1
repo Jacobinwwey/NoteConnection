@@ -7,6 +7,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$captureElapsed = [Diagnostics.Stopwatch]::StartNew()
+function Write-CaptureCheckpoint {
+    param([string]$Stage)
+    [Console]::Error.WriteLine("Window capture: $Stage after $($captureElapsed.ElapsedMilliseconds) ms")
+}
+Write-CaptureCheckpoint 'script started'
 
 function Ensure-Directory {
     param([string]$Path)
@@ -124,6 +130,7 @@ public static class NoteConnectionWindowCapture {
     }
 }
 "@
+Write-CaptureCheckpoint 'native bindings compiled'
 
 # PrintWindow copies physical pixels; virtualized window bounds truncate captures on scaled displays.
 [NoteConnectionWindowCapture]::SetProcessDPIAware() | Out-Null
@@ -157,6 +164,7 @@ $usedPrintWindow = $false
 try {
     $hdc = $graphics.GetHdc()
     try {
+        Write-CaptureCheckpoint 'PrintWindow started'
         $usedPrintWindow = [NoteConnectionWindowCapture]::PrintWindow($targetWindow.Handle, $hdc, 2)
         if (-not $usedPrintWindow) {
             $usedPrintWindow = [NoteConnectionWindowCapture]::PrintWindow($targetWindow.Handle, $hdc, 0)
@@ -167,11 +175,14 @@ try {
     if (-not $usedPrintWindow) {
         $graphics.CopyFromScreen($left, $top, 0, 0, $bitmap.Size)
     }
+    Write-CaptureCheckpoint 'pixels captured'
     $bitmap.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
+    Write-CaptureCheckpoint 'PNG saved'
 } finally {
     $graphics.Dispose()
     $bitmap.Dispose()
 }
+Write-CaptureCheckpoint 'graphics disposed'
 
 $processInfo = $null
 try {
@@ -179,6 +190,7 @@ try {
 } catch {
     $processInfo = $null
 }
+Write-CaptureCheckpoint 'process metadata collected'
 
 $metadata = [ordered]@{
     success = $true
@@ -223,4 +235,5 @@ $metadata = [ordered]@{
 }
 
 $metadata | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $metadataPath -Encoding UTF8
+Write-CaptureCheckpoint 'metadata saved'
 $metadata | ConvertTo-Json -Depth 6

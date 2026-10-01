@@ -118,9 +118,10 @@ async function verifyDesktopRuntime(executablePath, reportDirectory) {
   child.on('error', error => { spawnError = error; });
   const report = { generatedAt: new Date().toISOString(), sourceRevision: process.env.GITHUB_SHA || null, run, executable, applicationPid: child.pid, debugPort, launchRoot, checks: {} };
   let webview;
-  const nativeCommand = (script, args) => {
-    const result = spawnSync('powershell.exe', ['-NoProfile', '-File', path.join(__dirname, script), ...args], { env, encoding: 'utf8', windowsHide: true, timeout: 15000 });
-    if (result.error || result.status !== 0) throw new Error(`${script}: ${result.error?.message || result.stderr}`);
+  const nativeCommand = (script, args, timeoutMs = 15000) => {
+    const result = spawnSync('powershell.exe', ['-NoProfile', '-File', path.join(__dirname, script), ...args], { env, encoding: 'utf8', windowsHide: true, timeout: timeoutMs });
+    if (result.stderr) fs.appendFileSync(path.join(run, 'native-commands.log'), `${script}\n${result.stderr}\n`);
+    if (result.error || result.status !== 0) throw new Error(`${script}: ${result.error?.message || `exit ${result.status}`}${result.stderr ? `\n${result.stderr}` : ''}`);
     return JSON.parse(result.stdout.replace(/^\uFEFF/, ''));
   };
   const windows = () => nativeCommand('inspect-desktop-runtime-windows.ps1', ['-ApplicationProcessId', String(child.pid)]);
@@ -166,7 +167,9 @@ async function verifyDesktopRuntime(executablePath, reportDirectory) {
     await waitFor('Godot layout delivery', () => /treeLayout has\s+2\s+nodes/.test(fs.readFileSync(logPath, 'utf8')));
     report.checks.godotLayout = true;
     const godotWindow = report.pathMode.windows.find(window => report.pathMode.godotPids.includes(window.processId) && window.visible);
-    report.capture = nativeCommand('capture-noteconnection-window.ps1', ['-TitleContains', 'NoteConnection Path Renderer', '-ProcessId', String(godotWindow.processId), '-OutputPath', path.join(run, 'native-godot.png')]);
+    // Cold PowerShell/C# startup and PNG encoding share this process deadline.
+    // The former 15-second budget killed a CI capture while its PNG was still being written.
+    report.capture = nativeCommand('capture-noteconnection-window.ps1', ['-TitleContains', 'NoteConnection Path Renderer', '-ProcessId', String(godotWindow.processId), '-OutputPath', path.join(run, 'native-godot.png')], 60000);
     // This exercises the frontend's complete exit operation. A Godot-button
     // acceptance run is recorded separately; an IPC call is not a native click.
     await webview.evaluate('window.pathApp.exitPathMode(); true');
@@ -183,7 +186,7 @@ async function verifyDesktopRuntime(executablePath, reportDirectory) {
     try {
       report.failureWindows = windows();
       if (report.failureWindows.windows.some(window => window.processId === child.pid && window.visible)) {
-        report.failureCapture = nativeCommand('capture-noteconnection-window.ps1', ['-TitleContains', 'NoteConnection', '-ProcessId', String(child.pid), '-OutputPath', path.join(run, 'native-failure.png')]);
+        report.failureCapture = nativeCommand('capture-noteconnection-window.ps1', ['-TitleContains', 'NoteConnection', '-ProcessId', String(child.pid), '-OutputPath', path.join(run, 'native-failure.png')], 60000);
       }
     } catch (diagnosticError) { report.diagnosticError = diagnosticError.message; }
   } finally {

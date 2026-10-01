@@ -105,4 +105,4 @@ jobs:
             output/verification/windows-installers/*/*-runtime/report.json
             output/verification/windows-installers/*/*-runtime/native*.png
             output/verification/windows-installers/*/*-runtime/native*.json
-            output/verification/windows-installers/*/*-runtime/native.log
+            output/verification/windows-installers/*/*-runtime/native*.log
