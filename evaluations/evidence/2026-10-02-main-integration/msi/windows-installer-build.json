@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": "8a7296c99387932e00ce14a7372847017ad26be0",
+  "runId": "36963202337",
+  "buildRunAttempt": "1",
+  "version": "1.8.0",
+  "sourceFingerprint": {
+    "algorithm": "sha256",
+    "version": 2,
+    "digest": "081ab2b7fc4cbbf557df5e82aac3b920f8f6797149a87dfafeb6b48a22cc4d9d",
+    "fileCount": 595
+  },
+  "expectedFiles": {
+    "nsis": [
+      {
+        "name": "npm.exe",
+        "bytes": 17652736,
+        "sha256": "6c1e86553b2ab42ad4c9fd2fa0793964fc8f31cbc0e555c539c559ea8be475c3"
+      },
+      {
+        "name": "server.exe",
+        "bytes": 77901043,
+        "sha256": "24d601c2c47ce2a815bc07684bba58d15161ed4f6d1fb304f794fd99cad06dfe"
+      },
+      {
+        "name": "godot.exe",
+        "bytes": 171924488,
+        "sha256": "63913d01be2c2d1f929b4a626f5347117126b34e9c64cbf350ea9f35a9657ebf"
+      },
+      {
+        "name": "markdown-worker.exe",
+        "bytes": 1878528,
+        "sha256": "ac5891520747e2ddc4184b64a4a5f0ef52bb5f83153cab3dcc36556c7416570c"
+      },
+      {
+        "name": "path_mode.pck",
+        "bytes": 311164,
+        "sha256": "ad4c31a2eba7523e3f4b23add6d8a11c5aed554502ddb04f3f1b544688e2212f"
+      }
+    ],
+    "msi": [
+      {
+        "name": "npm.exe",
+        "bytes": 17652736,
+        "sha256": "4a355afa6eb05d124d472d9f93db8ecb127056d3eb5b6244c5ce16e446d4a14f"
+      },
+      {
+        "name": "server.exe",
+        "bytes": 77901043,
+        "sha256": "24d601c2c47ce2a815bc07684bba58d15161ed4f6d1fb304f794fd99cad06dfe"
+      },
+      {
+        "name": "godot.exe",
+        "bytes": 171924488,
+        "sha256": "63913d01be2c2d1f929b4a626f5347117126b34e9c64cbf350ea9f35a9657ebf"
+      },
+      {
+        "name": "markdown-worker.exe",
+        "bytes": 1878528,
+        "sha256": "ac5891520747e2ddc4184b64a4a5f0ef52bb5f83153cab3dcc36556c7416570c"
+      },
+      {
+        "name": "path_mode.pck",
+        "bytes": 311164,
+        "sha256": "ad4c31a2eba7523e3f4b23add6d8a11c5aed554502ddb04f3f1b544688e2212f"
+      }
+    ]
+  },
+  "installers": {
+    "msi": {
+      "name": "NoteConnection_1.8.0_x64_en-US.msi",
+      "path": "src-tauri/target/release/bundle/msi/NoteConnection_1.8.0_x64_en-US.msi",
+      "bytes": 128638976,
+      "sha256": "7d0e6a133cd89e8f2faa79f1f80dfc8c9ac592cfd05ce8806f0a7b701a7a441a"
+    }
+  }
+}

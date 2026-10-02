@@ -1,0 +1,3574 @@
+{
+  "evaluatedAt": "2026-09-13T08:34:01.183Z",
+  "measurementProtocol": "answer-quality-public-surface-v2.1",
+  "corpusVersion": "5.0",
+  "corpusRole": "confirmation frozen after V4 findings and before heading-polarity and title-noise corrections",
+  "evaluationRole": "confirmation",
+  "corpusSha256": "8061c9b785459c1e84ee4797d38d04f9d08b8105db9a4538a197f0c60be89b00",
+  "sourceRevision": "ba8a7f630b4f2a00e5a1b21cfeb948a0ea8378e9",
+  "sourceTreeHash": "ddc9989c318864d530b109a81b6d2710f25f79bd790a8d0434a15904785da8ee",
+  "executionCompleted": true,
+  "conditions": {
+    "backend": "local-hybrid-v1",
+    "responseModes": [
+      "slim",
+      "full"
+    ],
+    "repeats": 3,
+    "clock": "fixed knowledge timestamp; real monotonic execution timers",
+    "node": "v22.19.0",
+    "platform": "win32",
+    "arch": "x64",
+    "logicalCpus": 16,
+    "totalMemoryBytes": 68494569472,
+    "peakProcessRssBytes": 139735040,
+    "coldDefinition": "First query on a new ingested platform instance; process/JIT is shared.",
+    "hotDefinition": "Subsequent queries on the same platform instance; memory persistence disabled."
+  },
+  "measurementLimits": [
+    "Reference acceptance and fact coverage use pre-authored patterns, not the runtime sufficiency judge.",
+    "Unsupported assertion probes detect labelled counterfactuals only. They are not an exhaustive hallucination rate.",
+    "Conflict and abstention are public-surface signals. Abstention includes a grounded absence of measurements, independently of the runtime release label; paraphrase and negation errors require manual adjudication.",
+    "Correctness denominators count each case/mode once, not its timing repetitions. Bilingual pairs are correlated.",
+    "Memory samples are before/after values; peakProcessRssBytes is a process-wide high-water mark, not per-turn peak heap.",
+    "No learning-outcome data or participant observations were collected."
+  ],
+  "learningOutcomesQualified": false,
+  "groups": [
+    {
+      "split": "calibration",
+      "responseMode": "slim",
+      "quality": {
+        "cases": 6,
+        "referenceAcceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "referenceFactCoverage": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 6,
+        "min": 4.883000000000038,
+        "p50": 8.300999999999988,
+        "p95": 74.6809,
+        "p99": 74.6809,
+        "max": 74.6809
+      },
+      "hotLatencyMs": {
+        "count": 12,
+        "min": 5.809400000000039,
+        "p50": 8.614100000000008,
+        "p95": 12.997000000000014,
+        "p99": 12.997000000000014,
+        "max": 12.997000000000014
+      }
+    },
+    {
+      "split": "calibration",
+      "responseMode": "full",
+      "quality": {
+        "cases": 6,
+        "referenceAcceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "referenceFactCoverage": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 6,
+        "min": 3.545099999999991,
+        "p50": 6.511300000000006,
+        "p95": 8.850899999999967,
+        "p99": 8.850899999999967,
+        "max": 8.850899999999967
+      },
+      "hotLatencyMs": {
+        "count": 12,
+        "min": 4.872800000000041,
+        "p50": 8.514399999999966,
+        "p95": 12.038000000000011,
+        "p99": 12.038000000000011,
+        "max": 12.038000000000011
+      }
+    },
+    {
+      "split": "evaluation",
+      "responseMode": "slim",
+      "quality": {
+        "cases": 16,
+        "referenceAcceptance": {
+          "numerator": 12,
+          "denominator": 16,
+          "rate": 0.75
+        },
+        "referenceFactCoverage": {
+          "numerator": 29,
+          "denominator": 32,
+          "rate": 0.90625
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 1,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 1,
+          "denominator": 14,
+          "rate": 0.07142857142857142
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 2,
+          "denominator": 2,
+          "rate": 1
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 14,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 16,
+        "min": 3.723700000000008,
+        "p50": 4.968900000000019,
+        "p95": 8.993100000000027,
+        "p99": 8.993100000000027,
+        "max": 8.993100000000027
+      },
+      "hotLatencyMs": {
+        "count": 32,
+        "min": 4.8057999999999765,
+        "p50": 6.8134000000000015,
+        "p95": 8.964299999999866,
+        "p99": 8.996399999999994,
+        "max": 8.996399999999994
+      }
+    },
+    {
+      "split": "evaluation",
+      "responseMode": "full",
+      "quality": {
+        "cases": 16,
+        "referenceAcceptance": {
+          "numerator": 15,
+          "denominator": 16,
+          "rate": 0.9375
+        },
+        "referenceFactCoverage": {
+          "numerator": 32,
+          "denominator": 32,
+          "rate": 1
+        },
+        "unsupportedAssertionProbeHitRate": {
+          "numerator": 0,
+          "denominator": 1,
+          "rate": 0
+        },
+        "falseConflictRate": {
+          "numerator": 1,
+          "denominator": 14,
+          "rate": 0.07142857142857142
+        },
+        "missedConflictRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "correctAbstentionRate": {
+          "numerator": 2,
+          "denominator": 2,
+          "rate": 1
+        },
+        "unexpectedAbstentionRate": {
+          "numerator": 0,
+          "denominator": 14,
+          "rate": 0
+        },
+        "unbalancedMathAnswers": 0,
+        "outOfScopeCitations": 0
+      },
+      "coldLatencyMs": {
+        "count": 16,
+        "min": 3.130999999999972,
+        "p50": 5.272000000000048,
+        "p95": 8.499199999999973,
+        "p99": 8.499199999999973,
+        "max": 8.499199999999973
+      },
+      "hotLatencyMs": {
+        "count": 32,
+        "min": 4.562999999999988,
+        "p50": 6.081199999999967,
+        "p95": 11.347999999999956,
+        "p99": 11.572199999999839,
+        "max": 11.572199999999839
+      }
+    }
+  ],
+  "rows": [
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "A directed acyclic graph is a directed graph with no directed cycles.\n\nA topological ordering exists for every finite directed acyclic graph.",
+      "citations": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "snippet": "# Directed Acyclic Graph A directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph.",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Directed Acyclic Graph\nA directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph.",
+      "citations": [
+        {
+          "documentId": "cal-dag-en-doc-1",
+          "snippet": "# Directed Acyclic Graph A directed acyclic graph is a directed graph with no directed cycles. A topological ordering exists for every finite directed acyclic graph.",
+          "sourcePath": "evaluation/cal-dag-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "有向无环图是不含有向环的有向图。\n\n有限有向无环图存在拓扑排序。",
+      "citations": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "snippet": "# 有向无环图 有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 有向无环图\n有向无环图是不含有向环的有向图。 有限有向无环图存在拓扑排序。",
+      "citations": [
+        {
+          "documentId": "cal-dag-zh-doc-1",
+          "snippet": "# 有向无环图 有向无环图是不含有向环的有向图。有限有向无环图存在拓扑排序。",
+          "sourcePath": "evaluation/cal-dag-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Unbounded queuing increases latency because requests wait behind accumulated work.\n\nLimiting admission rejects excess work before it consumes queue memory.",
+      "citations": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "snippet": "# Unbounded Queuing Unbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory.",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Unbounded Queuing\nUnbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory.",
+      "citations": [
+        {
+          "documentId": "cal-overload-en-doc-1",
+          "snippet": "# Unbounded Queuing Unbounded queuing increases latency because requests wait behind accumulated work. Limiting admission rejects excess work before it consumes queue memory.",
+          "sourcePath": "evaluation/cal-overload-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "无界排队会增加延迟，因为请求必须等待前面累积的工作。\n\n限制准入可以在额外请求占用队列内存之前拒绝它们。",
+      "citations": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "snippet": "# 无界排队 无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "causal",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 无界排队\n无界排队会增加延迟，因为请求必须等待前面累积的工作。 限制准入可以在额外请求占用队列内存之前拒绝它们。",
+      "citations": [
+        {
+          "documentId": "cal-overload-zh-doc-1",
+          "snippet": "# 无界排队 无界排队会增加延迟，因为请求必须等待前面累积的工作。限制准入可以在额外请求占用队列内存之前拒绝它们。",
+          "sourcePath": "evaluation/cal-overload-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\nThe Cobalt log retention period is 7 days.\n\nThe Cobalt log retention period is 30 days.",
+      "citations": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "snippet": "# Cobalt Log The Cobalt log retention period is 7 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "snippet": "# Cobalt Log Policy The Cobalt log retention period is 30 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\n# Cobalt Log\nThe Cobalt log retention period is 7 days. This policy is active.\n\n# Cobalt Log Policy\nThe Cobalt log retention period is 30 days. This policy is active.\n\nConflicting source observations:\nCobalt Log: The Cobalt log retention period is 7 days. This policy is active.\nCobalt Log Policy: The Cobalt log retention period is 30 days. This policy is active.",
+      "citations": [
+        {
+          "documentId": "cal-retention-en-doc-1",
+          "snippet": "# Cobalt Log The Cobalt log retention period is 7 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-en-doc-2",
+          "snippet": "# Cobalt Log Policy The Cobalt log retention period is 30 days. This policy is active.",
+          "sourcePath": "evaluation/cal-retention-en/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "来源中的观测存在冲突，现有证据无法确定哪一项正确。\n\n蓝钴日志的保留周期是7天。\n\n该策略当前有效。\n\n蓝钴日志策略 蓝钴日志的保留周期是30天。\n\n来源中的冲突记录： 蓝钴日志: 蓝钴日志的保留周期是7天。当前证据覆盖仍然有限，因此这只能作为基于已命中材料的部分回答。",
+      "citations": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "snippet": "# 蓝钴日志 蓝钴日志的保留周期是7天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "snippet": "# 蓝钴日志策略 蓝钴日志的保留周期是30天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "来源中的观测存在冲突，现有证据无法确定哪一项正确。\n\n# 蓝钴日志\n蓝钴日志的保留周期是7天。 该策略当前有效。\n\n# 蓝钴日志策略\n蓝钴日志的保留周期是30天。 该策略当前有效。\n\n来源中的冲突记录：\n蓝钴日志: 蓝钴日志的保留周期是7天。 该策略当前有效。\n蓝钴日志策略: 蓝钴日志的保留周期是30天。 该策略当前有效。",
+      "citations": [
+        {
+          "documentId": "cal-retention-zh-doc-1",
+          "snippet": "# 蓝钴日志 蓝钴日志的保留周期是7天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-1.md"
+        },
+        {
+          "documentId": "cal-retention-zh-doc-2",
+          "snippet": "# 蓝钴日志策略 蓝钴日志的保留周期是30天。该策略当前有效。",
+          "sourcePath": "evaluation/cal-retention-zh/source-2.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-immutable-cursor-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "An immutable cursor identifies a fixed position in a result stream.\n\nIts position does not change after the cursor is returned.",
+      "citations": [
+        {
+          "documentId": "v5-immutable-cursor-en-0",
+          "snippet": "# Immutable Cursors An immutable cursor identifies a fixed position in a result stream. Its position does not change after the cursor is returned.",
+          "sourcePath": "evaluation-v5/immutable-cursor-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-immutable-cursor-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Immutable Cursors\nAn immutable cursor identifies a fixed position in a result stream. Its position does not change after the cursor is returned.",
+      "citations": [
+        {
+          "documentId": "v5-immutable-cursor-en-0",
+          "snippet": "# Immutable Cursors An immutable cursor identifies a fixed position in a result stream. Its position does not change after the cursor is returned.",
+          "sourcePath": "evaluation-v5/immutable-cursor-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-stable-state-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "A stable state returns toward its equilibrium after a small disturbance.\n\nStability depends on the system dynamics.",
+      "citations": [
+        {
+          "documentId": "v5-stable-state-en-0",
+          "snippet": "# Stable State A stable state returns toward its equilibrium after a small disturbance. Stability depends on the system dynamics.",
+          "sourcePath": "evaluation-v5/stable-state-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-stable-state-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Stable State\nA stable state returns toward its equilibrium after a small disturbance. Stability depends on the system dynamics.",
+      "citations": [
+        {
+          "documentId": "v5-stable-state-en-0",
+          "snippet": "# Stable State A stable state returns toward its equilibrium after a small disturbance. Stability depends on the system dynamics.",
+          "sourcePath": "evaluation-v5/stable-state-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-hash-table-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "A hash table places keys into buckets using a hash function.\n\nCollisions require a resolution strategy.",
+      "citations": [
+        {
+          "documentId": "v5-hash-table-en-0",
+          "snippet": "# Hash Table A hash table places keys into buckets using a hash function. Collisions require a resolution strategy.",
+          "sourcePath": "evaluation-v5/hash-table-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-hash-table-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Hash Table\nA hash table places keys into buckets using a hash function. Collisions require a resolution strategy.",
+      "citations": [
+        {
+          "documentId": "v5-hash-table-en-0",
+          "snippet": "# Hash Table A hash table places keys into buckets using a hash function. Collisions require a resolution strategy.",
+          "sourcePath": "evaluation-v5/hash-table-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-reference-counting-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "Reference counting tracks how many owners retain an object.\n\nA zero count permits releasing the object.",
+      "citations": [
+        {
+          "documentId": "v5-reference-counting-en-0",
+          "snippet": "# Reference Counting Reference counting tracks how many owners retain an object. A zero count permits releasing the object.",
+          "sourcePath": "evaluation-v5/reference-counting-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-reference-counting-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Reference Counting\nReference counting tracks how many owners retain an object. A zero count permits releasing the object.",
+      "citations": [
+        {
+          "documentId": "v5-reference-counting-en-0",
+          "snippet": "# Reference Counting Reference counting tracks how many owners retain an object. A zero count permits releasing the object.",
+          "sourcePath": "evaluation-v5/reference-counting-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-write-cache-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "A write-through cache updates its backing store before acknowledging a write.\n\nA write-back cache does not update its backing store immediately.\n\nPending changes are written back later.",
+      "citations": [
+        {
+          "documentId": "v5-write-cache-en-0",
+          "snippet": "# Write-through Cache A write-through cache updates its backing store before acknowledging a write.",
+          "sourcePath": "evaluation-v5/write-cache-en/source-0.md"
+        },
+        {
+          "documentId": "v5-write-cache-en-1",
+          "snippet": "# Write-back Cache A write-back cache does not update its backing store immediately. Pending changes are written back later.",
+          "sourcePath": "evaluation-v5/write-cache-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-write-cache-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Write-through Cache\nA write-through cache updates its backing store before acknowledging a write.\n\n# Write-back Cache\nA write-back cache does not update its backing store immediately. Pending changes are written back later.",
+      "citations": [
+        {
+          "documentId": "v5-write-cache-en-0",
+          "snippet": "# Write-through Cache A write-through cache updates its backing store before acknowledging a write.",
+          "sourcePath": "evaluation-v5/write-cache-en/source-0.md"
+        },
+        {
+          "documentId": "v5-write-cache-en-1",
+          "snippet": "# Write-back Cache A write-back cache does not update its backing store immediately. Pending changes are written back later.",
+          "sourcePath": "evaluation-v5/write-cache-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-iterator-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [
+        "fact-3"
+      ],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": false,
+      "responseMode": "slim",
+      "answer": "An eager iterator materializes its input elements before iteration starts.\n\nA lazy iterator does not materialize every element in advance.",
+      "citations": [
+        {
+          "documentId": "v5-iterator-en-0",
+          "snippet": "# Eager Iterator An eager iterator materializes its input elements before iteration starts.",
+          "sourcePath": "evaluation-v5/iterator-en/source-0.md"
+        },
+        {
+          "documentId": "v5-iterator-en-1",
+          "snippet": "# Lazy Iterator A lazy iterator does not materialize every element in advance. It produces elements when requested.",
+          "sourcePath": "evaluation-v5/iterator-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-iterator-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "comparison",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# Eager Iterator\nAn eager iterator materializes its input elements before iteration starts.\n\n# Lazy Iterator\nA lazy iterator does not materialize every element in advance. It produces elements when requested.",
+      "citations": [
+        {
+          "documentId": "v5-iterator-en-0",
+          "snippet": "# Eager Iterator An eager iterator materializes its input elements before iteration starts.",
+          "sourcePath": "evaluation-v5/iterator-en/source-0.md"
+        },
+        {
+          "documentId": "v5-iterator-en-1",
+          "snippet": "# Lazy Iterator A lazy iterator does not materialize every element in advance. It produces elements when requested.",
+          "sourcePath": "evaluation-v5/iterator-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-stable-url-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "稳定资源地址在资源移动后仍标识同一逻辑对象。\n\n别名记录把旧位置解析为当前位置。",
+      "citations": [
+        {
+          "documentId": "v5-stable-url-zh-0",
+          "snippet": "# 稳定资源地址 稳定资源地址在资源移动后仍标识同一逻辑对象。别名记录把旧位置解析为当前位置。",
+          "sourcePath": "evaluation-v5/stable-url-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-stable-url-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 稳定资源地址\n稳定资源地址在资源移动后仍标识同一逻辑对象。 别名记录把旧位置解析为当前位置。",
+      "citations": [
+        {
+          "documentId": "v5-stable-url-zh-0",
+          "snippet": "# 稳定资源地址 稳定资源地址在资源移动后仍标识同一逻辑对象。别名记录把旧位置解析为当前位置。",
+          "sourcePath": "evaluation-v5/stable-url-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-immutable-cursor-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "不可变游标标识结果流中的固定位置。\n\n游标返回后，其位置不会发生变化。",
+      "citations": [
+        {
+          "documentId": "v5-immutable-cursor-zh-0",
+          "snippet": "# 不可变游标 不可变游标标识结果流中的固定位置。游标返回后，其位置不会发生变化。",
+          "sourcePath": "evaluation-v5/immutable-cursor-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-immutable-cursor-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 不可变游标\n不可变游标标识结果流中的固定位置。 游标返回后，其位置不会发生变化。",
+      "citations": [
+        {
+          "documentId": "v5-immutable-cursor-zh-0",
+          "snippet": "# 不可变游标 不可变游标标识结果流中的固定位置。游标返回后，其位置不会发生变化。",
+          "sourcePath": "evaluation-v5/immutable-cursor-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-hash-table-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": false,
+      "responseMode": "slim",
+      "answer": "哈希表根据哈希函数把键放入桶中。\n\n键冲突需要额外的消解策略。",
+      "citations": [
+        {
+          "documentId": "v5-hash-table-zh-0",
+          "snippet": "# 哈希表 哈希表根据哈希函数把键放入桶中。键冲突需要额外的消解策略。",
+          "sourcePath": "evaluation-v5/hash-table-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-hash-table-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": false,
+      "responseMode": "full",
+      "answer": "# 哈希表\n哈希表根据哈希函数把键放入桶中。 键冲突需要额外的消解策略。",
+      "citations": [
+        {
+          "documentId": "v5-hash-table-zh-0",
+          "snippet": "# 哈希表 哈希表根据哈希函数把键放入桶中。键冲突需要额外的消解策略。",
+          "sourcePath": "evaluation-v5/hash-table-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-reference-counting-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "引用所有权计数记录持有对象的所有者数量。\n\n计数归零后可以释放对象。",
+      "citations": [
+        {
+          "documentId": "v5-reference-counting-zh-0",
+          "snippet": "# 引用所有权计数 引用所有权计数记录持有对象的所有者数量。计数归零后可以释放对象。",
+          "sourcePath": "evaluation-v5/reference-counting-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-reference-counting-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "definition",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 引用所有权计数\n引用所有权计数记录持有对象的所有者数量。 计数归零后可以释放对象。",
+      "citations": [
+        {
+          "documentId": "v5-reference-counting-zh-0",
+          "snippet": "# 引用所有权计数 引用所有权计数记录持有对象的所有者数量。计数归零后可以释放对象。",
+          "sourcePath": "evaluation-v5/reference-counting-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-reentrant-lock-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [
+        "fact-3"
+      ],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": false,
+      "responseMode": "slim",
+      "answer": "不可重入锁 不可重入锁不允许同一线程再次取得已经持有的锁。可重入锁 可重入锁允许同一线程再次取得已经持有的锁。",
+      "citations": [
+        {
+          "documentId": "v5-reentrant-lock-zh-1",
+          "snippet": "# 不可重入锁 不可重入锁不允许同一线程再次取得已经持有的锁。重复请求可能导致等待。",
+          "sourcePath": "evaluation-v5/reentrant-lock-zh/source-1.md"
+        },
+        {
+          "documentId": "v5-reentrant-lock-zh-0",
+          "snippet": "# 可重入锁 可重入锁允许同一线程再次取得已经持有的锁。",
+          "sourcePath": "evaluation-v5/reentrant-lock-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-reentrant-lock-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 可重入锁\n可重入锁允许同一线程再次取得已经持有的锁。\n\n# 不可重入锁\n不可重入锁不允许同一线程再次取得已经持有的锁。 重复请求可能导致等待。",
+      "citations": [
+        {
+          "documentId": "v5-reentrant-lock-zh-1",
+          "snippet": "# 不可重入锁 不可重入锁不允许同一线程再次取得已经持有的锁。重复请求可能导致等待。",
+          "sourcePath": "evaluation-v5/reentrant-lock-zh/source-1.md"
+        },
+        {
+          "documentId": "v5-reentrant-lock-zh-0",
+          "snippet": "# 可重入锁 可重入锁允许同一线程再次取得已经持有的锁。",
+          "sourcePath": "evaluation-v5/reentrant-lock-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-replication-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [
+        "fact-3"
+      ],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": false,
+      "responseMode": "slim",
+      "answer": "同步复制 同步复制在副本确认接收后才确认写入。异步复制 异步复制不等待副本确认就可以返回写入结果。",
+      "citations": [
+        {
+          "documentId": "v5-replication-zh-0",
+          "snippet": "# 同步复制 同步复制在副本确认接收后才确认写入。",
+          "sourcePath": "evaluation-v5/replication-zh/source-0.md"
+        },
+        {
+          "documentId": "v5-replication-zh-1",
+          "snippet": "# 异步复制 异步复制不等待副本确认就可以返回写入结果。复制传播可能存在延迟。",
+          "sourcePath": "evaluation-v5/replication-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-replication-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "comparison",
+      "referenceFactCount": 3,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2",
+        "fact-3"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 同步复制\n同步复制在副本确认接收后才确认写入。\n\n# 异步复制\n异步复制不等待副本确认就可以返回写入结果。 复制传播可能存在延迟。",
+      "citations": [
+        {
+          "documentId": "v5-replication-zh-0",
+          "snippet": "# 同步复制 同步复制在副本确认接收后才确认写入。",
+          "sourcePath": "evaluation-v5/replication-zh/source-0.md"
+        },
+        {
+          "documentId": "v5-replication-zh-1",
+          "snippet": "# 异步复制 异步复制不等待副本确认就可以返回写入结果。复制传播可能存在延迟。",
+          "sourcePath": "evaluation-v5/replication-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-wrong-entity-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "I could not ground the answer inside the current scope \"v5-wrong-entity-en-0\". I cannot give a grounded answer to \"What is the retention interval for the Vega journal?\" yet. Refine the wording, widen the scope, or add the missing note.",
+      "citations": [
+        {
+          "documentId": "v5-wrong-entity-en-0",
+          "snippet": "# Nova Journal The Nova journal retention interval is 6 days.",
+          "sourcePath": "evaluation-v5/wrong-entity-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "abstain",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-wrong-entity-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 1,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "I could not ground the answer inside the current scope \"v5-wrong-entity-en-0\". I cannot give a grounded answer to \"What is the retention interval for the Vega journal?\" yet. Refine the wording, widen the scope, or add the missing note.",
+      "citations": [
+        {
+          "documentId": "v5-wrong-entity-en-0",
+          "snippet": "# Nova Journal The Nova journal retention interval is 6 days.",
+          "sourcePath": "evaluation-v5/wrong-entity-en/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "abstain",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-unknown-interval-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "青岚记录 现有资料未提供青岚记录保留时长的测量数据。",
+      "citations": [
+        {
+          "documentId": "v5-unknown-interval-zh-0",
+          "snippet": "# 青岚记录 现有资料未提供青岚记录保留时长的测量数据。",
+          "sourcePath": "evaluation-v5/unknown-interval-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-unknown-interval-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "missing_evidence",
+      "referenceFactCount": 0,
+      "coveredFactIds": [],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": false,
+      "conflictSignalled": false,
+      "abstentionExpected": true,
+      "abstentionSignalled": true,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "# 青岚记录\n现有资料未提供青岚记录保留时长的测量数据。",
+      "citations": [
+        {
+          "documentId": "v5-unknown-interval-zh-0",
+          "snippet": "# 青岚记录 现有资料未提供青岚记录保留时长的测量数据。",
+          "sourcePath": "evaluation-v5/unknown-interval-zh/source-0.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\nThe Quartz beacon frequency is 13 Hz.\n\nThe Quartz beacon frequency is 17 Hz.",
+      "citations": [
+        {
+          "documentId": "v5-frequency-en-0",
+          "snippet": "# Quartz Beacon Frequency The Quartz beacon frequency is 13 Hz.",
+          "sourcePath": "evaluation-v5/frequency-en/source-0.md"
+        },
+        {
+          "documentId": "v5-frequency-en-1",
+          "snippet": "# Quartz Beacon Frequency Record The Quartz beacon frequency is 17 Hz.",
+          "sourcePath": "evaluation-v5/frequency-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "The source observations conflict; the available evidence does not establish which is correct.\n\nConflicting source observations:\nQuartz Beacon Frequency: The Quartz beacon frequency is 13 Hz.\nQuartz Beacon Frequency Record: The Quartz beacon frequency is 17 Hz.\n\n# Quartz Beacon Frequency\nThe Quartz beacon frequency is 13 Hz.\n\n# Quartz Beacon Frequency Record\nThe Quartz beacon frequency is 17 Hz.",
+      "citations": [
+        {
+          "documentId": "v5-frequency-en-0",
+          "snippet": "# Quartz Beacon Frequency The Quartz beacon frequency is 13 Hz.",
+          "sourcePath": "evaluation-v5/frequency-en/source-0.md"
+        },
+        {
+          "documentId": "v5-frequency-en-1",
+          "snippet": "# Quartz Beacon Frequency Record The Quartz beacon frequency is 17 Hz.",
+          "sourcePath": "evaluation-v5/frequency-en/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "slim",
+      "answer": "石英信标频率是13赫兹。石英信标频率是17赫兹。Conflicting evidence for 石英信标频率 across documents: 石英信标频率: 石英信标频率是13赫兹。石英信标频率记录: 石英信标频率是17赫兹。",
+      "citations": [
+        {
+          "documentId": "v5-frequency-zh-0",
+          "snippet": "# 石英信标频率 石英信标频率是13赫兹。",
+          "sourcePath": "evaluation-v5/frequency-zh/source-0.md"
+        },
+        {
+          "documentId": "v5-frequency-zh-1",
+          "snippet": "# 石英信标频率记录 石英信标频率是17赫兹。",
+          "sourcePath": "evaluation-v5/frequency-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "revise",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    },
+    {
+      "caseId": "v5-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "category": "conflict",
+      "referenceFactCount": 2,
+      "coveredFactIds": [
+        "fact-1",
+        "fact-2"
+      ],
+      "missingFactIds": [],
+      "unsupportedProbeCount": 0,
+      "unsupportedClaimIds": [],
+      "conflictExpected": true,
+      "conflictSignalled": true,
+      "abstentionExpected": false,
+      "abstentionSignalled": false,
+      "orderedStepsSatisfied": true,
+      "balancedMath": true,
+      "invalidCitationIds": [],
+      "passed": true,
+      "responseMode": "full",
+      "answer": "来源中的观测存在冲突，现有证据无法确定哪一项正确。\n\n来源中的冲突记录：\n石英信标频率: 石英信标频率是13赫兹。\n石英信标频率记录: 石英信标频率是17赫兹。\n\n# 石英信标频率\n石英信标频率是13赫兹。\n\n# 石英信标频率记录\n石英信标频率是17赫兹。",
+      "citations": [
+        {
+          "documentId": "v5-frequency-zh-0",
+          "snippet": "# 石英信标频率 石英信标频率是13赫兹。",
+          "sourcePath": "evaluation-v5/frequency-zh/source-0.md"
+        },
+        {
+          "documentId": "v5-frequency-zh-1",
+          "snippet": "# 石英信标频率记录 石英信标频率是17赫兹。",
+          "sourcePath": "evaluation-v5/frequency-zh/source-1.md"
+        }
+      ],
+      "declaredReleaseDecision": "release",
+      "responseTruncated": false,
+      "releasedAnswerStableAcrossRepeats": true
+    }
+  ],
+  "timings": [
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 74.6809,
+      "heapUsedBefore": 9629824,
+      "heapUsedAfter": 14119512,
+      "rssBefore": 45895680,
+      "rssAfter": 52588544
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 12.997000000000014,
+      "heapUsedBefore": 14256080,
+      "heapUsedAfter": 14462280,
+      "rssBefore": 52523008,
+      "rssAfter": 55435264
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.331299999999999,
+      "heapUsedBefore": 14606680,
+      "heapUsedAfter": 14919232,
+      "rssBefore": 55844864,
+      "rssAfter": 56336384
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.565799999999996,
+      "heapUsedBefore": 15000664,
+      "heapUsedAfter": 14306816,
+      "rssBefore": 56356864,
+      "rssAfter": 56594432
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.761499999999984,
+      "heapUsedBefore": 14316856,
+      "heapUsedAfter": 14876400,
+      "rssBefore": 56594432,
+      "rssAfter": 57307136
+    },
+    {
+      "caseId": "cal-dag-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.103999999999985,
+      "heapUsedBefore": 14886376,
+      "heapUsedAfter": 15078224,
+      "rssBefore": 57307136,
+      "rssAfter": 57372672
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 27.8973,
+      "heapUsedBefore": 15214328,
+      "heapUsedAfter": 15616872,
+      "rssBefore": 57516032,
+      "rssAfter": 59985920
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.366500000000002,
+      "heapUsedBefore": 15814080,
+      "heapUsedAfter": 18711632,
+      "rssBefore": 60022784,
+      "rssAfter": 60661760
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.055900000000008,
+      "heapUsedBefore": 18722512,
+      "heapUsedAfter": 18689544,
+      "rssBefore": 60669952,
+      "rssAfter": 61313024
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.736500000000035,
+      "heapUsedBefore": 18781640,
+      "heapUsedAfter": 17147104,
+      "rssBefore": 61341696,
+      "rssAfter": 61730816
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.703100000000006,
+      "heapUsedBefore": 17156360,
+      "heapUsedAfter": 19671704,
+      "rssBefore": 61734912,
+      "rssAfter": 61874176
+    },
+    {
+      "caseId": "cal-dag-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.387800000000027,
+      "heapUsedBefore": 19680296,
+      "heapUsedAfter": 17597680,
+      "rssBefore": 61874176,
+      "rssAfter": 61992960
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.706900000000019,
+      "heapUsedBefore": 17717720,
+      "heapUsedAfter": 19954904,
+      "rssBefore": 62013440,
+      "rssAfter": 62287872
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.71429999999998,
+      "heapUsedBefore": 19966992,
+      "heapUsedAfter": 22624464,
+      "rssBefore": 62287872,
+      "rssAfter": 64983040
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.75449999999995,
+      "heapUsedBefore": 22638472,
+      "heapUsedAfter": 18760808,
+      "rssBefore": 64995328,
+      "rssAfter": 65560576
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.5615999999999985,
+      "heapUsedBefore": 18881016,
+      "heapUsedAfter": 20973896,
+      "rssBefore": 65613824,
+      "rssAfter": 66416640
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.513899999999978,
+      "heapUsedBefore": 20984024,
+      "heapUsedAfter": 23453512,
+      "rssBefore": 66514944,
+      "rssAfter": 68554752
+    },
+    {
+      "caseId": "cal-overload-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.9605999999999995,
+      "heapUsedBefore": 23463576,
+      "heapUsedAfter": 18656416,
+      "rssBefore": 68562944,
+      "rssAfter": 69332992
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.883000000000038,
+      "heapUsedBefore": 18729592,
+      "heapUsedAfter": 20591640,
+      "rssBefore": 69337088,
+      "rssAfter": 69554176
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.809400000000039,
+      "heapUsedBefore": 20600784,
+      "heapUsedAfter": 23046032,
+      "rssBefore": 69566464,
+      "rssAfter": 69955584
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.144800000000032,
+      "heapUsedBefore": 23057384,
+      "heapUsedAfter": 18561840,
+      "rssBefore": 69959680,
+      "rssAfter": 69931008
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 3.545099999999991,
+      "heapUsedBefore": 18636064,
+      "heapUsedAfter": 20294456,
+      "rssBefore": 69935104,
+      "rssAfter": 70098944
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 4.872800000000041,
+      "heapUsedBefore": 20302720,
+      "heapUsedAfter": 22602808,
+      "rssBefore": 70098944,
+      "rssAfter": 70623232
+    },
+    {
+      "caseId": "cal-overload-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.1001999999999725,
+      "heapUsedBefore": 22610808,
+      "heapUsedAfter": 18133264,
+      "rssBefore": 70623232,
+      "rssAfter": 70090752
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 15.368400000000008,
+      "heapUsedBefore": 18320624,
+      "heapUsedAfter": 24514432,
+      "rssBefore": 70164480,
+      "rssAfter": 70852608
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.602199999999982,
+      "heapUsedBefore": 24525936,
+      "heapUsedAfter": 23186688,
+      "rssBefore": 70864896,
+      "rssAfter": 71041024
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.977100000000007,
+      "heapUsedBefore": 23199200,
+      "heapUsedAfter": 23328120,
+      "rssBefore": 71041024,
+      "rssAfter": 71413760
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.850899999999967,
+      "heapUsedBefore": 23434688,
+      "heapUsedAfter": 22340912,
+      "rssBefore": 71417856,
+      "rssAfter": 71426048
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.805000000000007,
+      "heapUsedBefore": 22356240,
+      "heapUsedAfter": 20756088,
+      "rssBefore": 71426048,
+      "rssAfter": 73236480
+    },
+    {
+      "caseId": "cal-retention-en",
+      "split": "calibration",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 12.038000000000011,
+      "heapUsedBefore": 20771152,
+      "heapUsedAfter": 19934056,
+      "rssBefore": 72454144,
+      "rssAfter": 71995392
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.300999999999988,
+      "heapUsedBefore": 20034960,
+      "heapUsedAfter": 23063328,
+      "rssBefore": 71999488,
+      "rssAfter": 72138752
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.614100000000008,
+      "heapUsedBefore": 23074848,
+      "heapUsedAfter": 18458056,
+      "rssBefore": 72138752,
+      "rssAfter": 72232960
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 10.317299999999989,
+      "heapUsedBefore": 18467056,
+      "heapUsedAfter": 22927688,
+      "rssBefore": 72232960,
+      "rssAfter": 73179136
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.511300000000006,
+      "heapUsedBefore": 23020776,
+      "heapUsedAfter": 25853280,
+      "rssBefore": 73179136,
+      "rssAfter": 73404416
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.514399999999966,
+      "heapUsedBefore": 25863352,
+      "heapUsedAfter": 20936992,
+      "rssBefore": 73404416,
+      "rssAfter": 73486336
+    },
+    {
+      "caseId": "cal-retention-zh",
+      "split": "calibration",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.647400000000005,
+      "heapUsedBefore": 20946800,
+      "heapUsedAfter": 25396992,
+      "rssBefore": 73486336,
+      "rssAfter": 74268672
+    },
+    {
+      "caseId": "v5-immutable-cursor-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.968900000000019,
+      "heapUsedBefore": 25486168,
+      "heapUsedAfter": 28116792,
+      "rssBefore": 74268672,
+      "rssAfter": 75161600
+    },
+    {
+      "caseId": "v5-immutable-cursor-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.349700000000041,
+      "heapUsedBefore": 28127336,
+      "heapUsedAfter": 31211000,
+      "rssBefore": 75186176,
+      "rssAfter": 78123008
+    },
+    {
+      "caseId": "v5-immutable-cursor-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.845199999999977,
+      "heapUsedBefore": 31223056,
+      "heapUsedAfter": 34765288,
+      "rssBefore": 78135296,
+      "rssAfter": 81485824
+    },
+    {
+      "caseId": "v5-immutable-cursor-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.272000000000048,
+      "heapUsedBefore": 34854208,
+      "heapUsedAfter": 20141336,
+      "rssBefore": 81575936,
+      "rssAfter": 80338944
+    },
+    {
+      "caseId": "v5-immutable-cursor-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.602600000000052,
+      "heapUsedBefore": 20151240,
+      "heapUsedAfter": 22860640,
+      "rssBefore": 80338944,
+      "rssAfter": 80478208
+    },
+    {
+      "caseId": "v5-immutable-cursor-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.361400000000003,
+      "heapUsedBefore": 22870280,
+      "heapUsedAfter": 26019112,
+      "rssBefore": 80478208,
+      "rssAfter": 80740352
+    },
+    {
+      "caseId": "v5-stable-state-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 7.121099999999956,
+      "heapUsedBefore": 26107552,
+      "heapUsedAfter": 28505224,
+      "rssBefore": 80740352,
+      "rssAfter": 82657280
+    },
+    {
+      "caseId": "v5-stable-state-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.1965000000000146,
+      "heapUsedBefore": 28515440,
+      "heapUsedAfter": 31316640,
+      "rssBefore": 82669568,
+      "rssAfter": 85254144
+    },
+    {
+      "caseId": "v5-stable-state-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.616199999999935,
+      "heapUsedBefore": 31329048,
+      "heapUsedAfter": 20904696,
+      "rssBefore": 85262336,
+      "rssAfter": 85676032
+    },
+    {
+      "caseId": "v5-stable-state-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 3.7635999999999967,
+      "heapUsedBefore": 20991936,
+      "heapUsedAfter": 23050504,
+      "rssBefore": 85676032,
+      "rssAfter": 85692416
+    },
+    {
+      "caseId": "v5-stable-state-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.468200000000024,
+      "heapUsedBefore": 23059992,
+      "heapUsedAfter": 25555392,
+      "rssBefore": 85692416,
+      "rssAfter": 86077440
+    },
+    {
+      "caseId": "v5-stable-state-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 5.988000000000056,
+      "heapUsedBefore": 25564616,
+      "heapUsedAfter": 28527632,
+      "rssBefore": 86077440,
+      "rssAfter": 86736896
+    },
+    {
+      "caseId": "v5-hash-table-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 3.977100000000064,
+      "heapUsedBefore": 28615216,
+      "heapUsedAfter": 30879480,
+      "rssBefore": 86736896,
+      "rssAfter": 86740992
+    },
+    {
+      "caseId": "v5-hash-table-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.045799999999986,
+      "heapUsedBefore": 30890184,
+      "heapUsedAfter": 33608848,
+      "rssBefore": 86740992,
+      "rssAfter": 86413312
+    },
+    {
+      "caseId": "v5-hash-table-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.044500000000085,
+      "heapUsedBefore": 33621264,
+      "heapUsedAfter": 20805920,
+      "rssBefore": 86417408,
+      "rssAfter": 86429696
+    },
+    {
+      "caseId": "v5-hash-table-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 3.828399999999988,
+      "heapUsedBefore": 20892536,
+      "heapUsedAfter": 22874048,
+      "rssBefore": 86429696,
+      "rssAfter": 86429696
+    },
+    {
+      "caseId": "v5-hash-table-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 4.735500000000002,
+      "heapUsedBefore": 22883368,
+      "heapUsedAfter": 25305144,
+      "rssBefore": 86429696,
+      "rssAfter": 86626304
+    },
+    {
+      "caseId": "v5-hash-table-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 5.481499999999983,
+      "heapUsedBefore": 25314200,
+      "heapUsedAfter": 28177336,
+      "rssBefore": 86626304,
+      "rssAfter": 87506944
+    },
+    {
+      "caseId": "v5-reference-counting-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.423400000000015,
+      "heapUsedBefore": 28285840,
+      "heapUsedAfter": 30498672,
+      "rssBefore": 87506944,
+      "rssAfter": 86515712
+    },
+    {
+      "caseId": "v5-reference-counting-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.531799999999976,
+      "heapUsedBefore": 30508584,
+      "heapUsedAfter": 33151896,
+      "rssBefore": 86532096,
+      "rssAfter": 87617536
+    },
+    {
+      "caseId": "v5-reference-counting-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.41459999999995,
+      "heapUsedBefore": 33163336,
+      "heapUsedAfter": 20759312,
+      "rssBefore": 87629824,
+      "rssAfter": 88776704
+    },
+    {
+      "caseId": "v5-reference-counting-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.025200000000041,
+      "heapUsedBefore": 20871880,
+      "heapUsedAfter": 22881296,
+      "rssBefore": 88780800,
+      "rssAfter": 87748608
+    },
+    {
+      "caseId": "v5-reference-counting-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.118800000000078,
+      "heapUsedBefore": 22890712,
+      "heapUsedAfter": 25787408,
+      "rssBefore": 87748608,
+      "rssAfter": 88276992
+    },
+    {
+      "caseId": "v5-reference-counting-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 5.646799999999985,
+      "heapUsedBefore": 25796560,
+      "heapUsedAfter": 29146864,
+      "rssBefore": 88276992,
+      "rssAfter": 88944640
+    },
+    {
+      "caseId": "v5-write-cache-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.993100000000027,
+      "heapUsedBefore": 29285400,
+      "heapUsedAfter": 33131264,
+      "rssBefore": 88944640,
+      "rssAfter": 88469504
+    },
+    {
+      "caseId": "v5-write-cache-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 8.738999999999919,
+      "heapUsedBefore": 33143368,
+      "heapUsedAfter": 22178720,
+      "rssBefore": 88469504,
+      "rssAfter": 88068096
+    },
+    {
+      "caseId": "v5-write-cache-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.996399999999994,
+      "heapUsedBefore": 22193328,
+      "heapUsedAfter": 27006528,
+      "rssBefore": 88068096,
+      "rssAfter": 88399872
+    },
+    {
+      "caseId": "v5-write-cache-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.836099999999988,
+      "heapUsedBefore": 27146744,
+      "heapUsedAfter": 30515920,
+      "rssBefore": 88399872,
+      "rssAfter": 88412160
+    },
+    {
+      "caseId": "v5-write-cache-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.819600000000037,
+      "heapUsedBefore": 30527056,
+      "heapUsedAfter": 34461232,
+      "rssBefore": 88412160,
+      "rssAfter": 89096192
+    },
+    {
+      "caseId": "v5-write-cache-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.347999999999956,
+      "heapUsedBefore": 34472104,
+      "heapUsedAfter": 22325560,
+      "rssBefore": 89104384,
+      "rssAfter": 89333760
+    },
+    {
+      "caseId": "v5-iterator-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.617399999999975,
+      "heapUsedBefore": 22465488,
+      "heapUsedAfter": 25573328,
+      "rssBefore": 89333760,
+      "rssAfter": 90341376
+    },
+    {
+      "caseId": "v5-iterator-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.417800000000057,
+      "heapUsedBefore": 25585240,
+      "heapUsedAfter": 29147056,
+      "rssBefore": 90353664,
+      "rssAfter": 91590656
+    },
+    {
+      "caseId": "v5-iterator-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.928999999999974,
+      "heapUsedBefore": 29161256,
+      "heapUsedAfter": 33297144,
+      "rssBefore": 91594752,
+      "rssAfter": 89849856
+    },
+    {
+      "caseId": "v5-iterator-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.713799999999992,
+      "heapUsedBefore": 33435784,
+      "heapUsedAfter": 21252024,
+      "rssBefore": 89849856,
+      "rssAfter": 89513984
+    },
+    {
+      "caseId": "v5-iterator-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.203100000000063,
+      "heapUsedBefore": 21262984,
+      "heapUsedAfter": 24780240,
+      "rssBefore": 89513984,
+      "rssAfter": 89735168
+    },
+    {
+      "caseId": "v5-iterator-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.693700000000035,
+      "heapUsedBefore": 24790888,
+      "heapUsedAfter": 28792240,
+      "rssBefore": 89735168,
+      "rssAfter": 90644480
+    },
+    {
+      "caseId": "v5-stable-url-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.372799999999984,
+      "heapUsedBefore": 28898784,
+      "heapUsedAfter": 30865160,
+      "rssBefore": 90644480,
+      "rssAfter": 90791936
+    },
+    {
+      "caseId": "v5-stable-url-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.025500000000079,
+      "heapUsedBefore": 30873872,
+      "heapUsedAfter": 33433936,
+      "rssBefore": 90796032,
+      "rssAfter": 91197440
+    },
+    {
+      "caseId": "v5-stable-url-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.533900000000017,
+      "heapUsedBefore": 33444048,
+      "heapUsedAfter": 20833576,
+      "rssBefore": 91201536,
+      "rssAfter": 89788416
+    },
+    {
+      "caseId": "v5-stable-url-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.069999999999936,
+      "heapUsedBefore": 20936976,
+      "heapUsedAfter": 22780432,
+      "rssBefore": 89788416,
+      "rssAfter": 90644480
+    },
+    {
+      "caseId": "v5-stable-url-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.193399999999997,
+      "heapUsedBefore": 22788584,
+      "heapUsedAfter": 25181584,
+      "rssBefore": 90648576,
+      "rssAfter": 90517504
+    },
+    {
+      "caseId": "v5-stable-url-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.280700000000024,
+      "heapUsedBefore": 25189472,
+      "heapUsedAfter": 28184736,
+      "rssBefore": 90517504,
+      "rssAfter": 90968064
+    },
+    {
+      "caseId": "v5-immutable-cursor-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 3.723700000000008,
+      "heapUsedBefore": 28288488,
+      "heapUsedAfter": 30130880,
+      "rssBefore": 90968064,
+      "rssAfter": 91115520
+    },
+    {
+      "caseId": "v5-immutable-cursor-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.2963000000000875,
+      "heapUsedBefore": 30139544,
+      "heapUsedAfter": 32583216,
+      "rssBefore": 91115520,
+      "rssAfter": 91877376
+    },
+    {
+      "caseId": "v5-immutable-cursor-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.445799999999963,
+      "heapUsedBefore": 32593264,
+      "heapUsedAfter": 20541680,
+      "rssBefore": 91906048,
+      "rssAfter": 89489408
+    },
+    {
+      "caseId": "v5-immutable-cursor-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 3.8238999999999805,
+      "heapUsedBefore": 20645104,
+      "heapUsedAfter": 22421664,
+      "rssBefore": 89489408,
+      "rssAfter": 90005504
+    },
+    {
+      "caseId": "v5-immutable-cursor-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.250800000000027,
+      "heapUsedBefore": 22429800,
+      "heapUsedAfter": 24776544,
+      "rssBefore": 90005504,
+      "rssAfter": 90480640
+    },
+    {
+      "caseId": "v5-immutable-cursor-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.902699999999982,
+      "heapUsedBefore": 24785552,
+      "heapUsedAfter": 27726640,
+      "rssBefore": 90480640,
+      "rssAfter": 91058176
+    },
+    {
+      "caseId": "v5-hash-table-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.078100000000063,
+      "heapUsedBefore": 27830040,
+      "heapUsedAfter": 29785800,
+      "rssBefore": 91058176,
+      "rssAfter": 92102656
+    },
+    {
+      "caseId": "v5-hash-table-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.149599999999964,
+      "heapUsedBefore": 29794360,
+      "heapUsedAfter": 32315992,
+      "rssBefore": 92176384,
+      "rssAfter": 91471872
+    },
+    {
+      "caseId": "v5-hash-table-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.884199999999964,
+      "heapUsedBefore": 32325984,
+      "heapUsedAfter": 35543832,
+      "rssBefore": 91471872,
+      "rssAfter": 92209152
+    },
+    {
+      "caseId": "v5-hash-table-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.458600000000047,
+      "heapUsedBefore": 35646832,
+      "heapUsedAfter": 20312856,
+      "rssBefore": 92209152,
+      "rssAfter": 89600000
+    },
+    {
+      "caseId": "v5-hash-table-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.20780000000002,
+      "heapUsedBefore": 20320920,
+      "heapUsedAfter": 22761424,
+      "rssBefore": 89600000,
+      "rssAfter": 90484736
+    },
+    {
+      "caseId": "v5-hash-table-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.0878999999999905,
+      "heapUsedBefore": 22769224,
+      "heapUsedAfter": 25744200,
+      "rssBefore": 90484736,
+      "rssAfter": 90980352
+    },
+    {
+      "caseId": "v5-reference-counting-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.3011000000000195,
+      "heapUsedBefore": 25849016,
+      "heapUsedAfter": 28092424,
+      "rssBefore": 90980352,
+      "rssAfter": 91131904
+    },
+    {
+      "caseId": "v5-reference-counting-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.757400000000075,
+      "heapUsedBefore": 28113472,
+      "heapUsedAfter": 30950808,
+      "rssBefore": 91131904,
+      "rssAfter": 91684864
+    },
+    {
+      "caseId": "v5-reference-counting-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.572200000000066,
+      "heapUsedBefore": 30960936,
+      "heapUsedAfter": 34403632,
+      "rssBefore": 91688960,
+      "rssAfter": 91811840
+    },
+    {
+      "caseId": "v5-reference-counting-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.136799999999994,
+      "heapUsedBefore": 34506936,
+      "heapUsedAfter": 20558720,
+      "rssBefore": 91811840,
+      "rssAfter": 89640960
+    },
+    {
+      "caseId": "v5-reference-counting-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.195299999999975,
+      "heapUsedBefore": 20566896,
+      "heapUsedAfter": 23156840,
+      "rssBefore": 89640960,
+      "rssAfter": 90537984
+    },
+    {
+      "caseId": "v5-reference-counting-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 5.9003999999999905,
+      "heapUsedBefore": 23164752,
+      "heapUsedAfter": 26356240,
+      "rssBefore": 90537984,
+      "rssAfter": 91049984
+    },
+    {
+      "caseId": "v5-reentrant-lock-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.07669999999996,
+      "heapUsedBefore": 26484592,
+      "heapUsedAfter": 28845744,
+      "rssBefore": 91049984,
+      "rssAfter": 91402240
+    },
+    {
+      "caseId": "v5-reentrant-lock-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.877800000000093,
+      "heapUsedBefore": 28855664,
+      "heapUsedAfter": 31698728,
+      "rssBefore": 91402240,
+      "rssAfter": 91361280
+    },
+    {
+      "caseId": "v5-reentrant-lock-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.8134000000000015,
+      "heapUsedBefore": 31710912,
+      "heapUsedAfter": 35162520,
+      "rssBefore": 91369472,
+      "rssAfter": 92393472
+    },
+    {
+      "caseId": "v5-reentrant-lock-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.469600000000014,
+      "heapUsedBefore": 35291112,
+      "heapUsedAfter": 21054840,
+      "rssBefore": 92393472,
+      "rssAfter": 90304512
+    },
+    {
+      "caseId": "v5-reentrant-lock-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.0996000000000095,
+      "heapUsedBefore": 21063776,
+      "heapUsedAfter": 24000824,
+      "rssBefore": 90304512,
+      "rssAfter": 91181056
+    },
+    {
+      "caseId": "v5-reentrant-lock-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.751899999999978,
+      "heapUsedBefore": 24009496,
+      "heapUsedAfter": 27516768,
+      "rssBefore": 91181056,
+      "rssAfter": 94044160
+    },
+    {
+      "caseId": "v5-replication-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.397600000000011,
+      "heapUsedBefore": 27644088,
+      "heapUsedAfter": 29800344,
+      "rssBefore": 94076928,
+      "rssAfter": 91488256
+    },
+    {
+      "caseId": "v5-replication-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.174199999999928,
+      "heapUsedBefore": 29810088,
+      "heapUsedAfter": 32489488,
+      "rssBefore": 91488256,
+      "rssAfter": 91906048
+    },
+    {
+      "caseId": "v5-replication-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.7760999999999285,
+      "heapUsedBefore": 32501400,
+      "heapUsedAfter": 35711616,
+      "rssBefore": 91906048,
+      "rssAfter": 93147136
+    },
+    {
+      "caseId": "v5-replication-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.419500000000085,
+      "heapUsedBefore": 35839560,
+      "heapUsedAfter": 20929208,
+      "rssBefore": 93147136,
+      "rssAfter": 90902528
+    },
+    {
+      "caseId": "v5-replication-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.457400000000007,
+      "heapUsedBefore": 20938080,
+      "heapUsedAfter": 23669928,
+      "rssBefore": 90902528,
+      "rssAfter": 91328512
+    },
+    {
+      "caseId": "v5-replication-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 7.5353999999999814,
+      "heapUsedBefore": 23678536,
+      "heapUsedAfter": 27036392,
+      "rssBefore": 91328512,
+      "rssAfter": 91000832
+    },
+    {
+      "caseId": "v5-wrong-entity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.722499999999968,
+      "heapUsedBefore": 27149112,
+      "heapUsedAfter": 29099512,
+      "rssBefore": 91004928,
+      "rssAfter": 91185152
+    },
+    {
+      "caseId": "v5-wrong-entity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.00120000000004,
+      "heapUsedBefore": 29107944,
+      "heapUsedAfter": 31422984,
+      "rssBefore": 91185152,
+      "rssAfter": 91238400
+    },
+    {
+      "caseId": "v5-wrong-entity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.212999999999965,
+      "heapUsedBefore": 31431624,
+      "heapUsedAfter": 34103056,
+      "rssBefore": 91238400,
+      "rssAfter": 91713536
+    },
+    {
+      "caseId": "v5-wrong-entity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.178700000000049,
+      "heapUsedBefore": 34208112,
+      "heapUsedAfter": 20753792,
+      "rssBefore": 91713536,
+      "rssAfter": 90292224
+    },
+    {
+      "caseId": "v5-wrong-entity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 4.562999999999988,
+      "heapUsedBefore": 20761456,
+      "heapUsedAfter": 23057992,
+      "rssBefore": 90292224,
+      "rssAfter": 90296320
+    },
+    {
+      "caseId": "v5-wrong-entity-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 6.081199999999967,
+      "heapUsedBefore": 23065392,
+      "heapUsedAfter": 25712744,
+      "rssBefore": 90296320,
+      "rssAfter": 90238976
+    },
+    {
+      "caseId": "v5-unknown-interval-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 4.403800000000047,
+      "heapUsedBefore": 25815576,
+      "heapUsedAfter": 27534192,
+      "rssBefore": 90238976,
+      "rssAfter": 90304512
+    },
+    {
+      "caseId": "v5-unknown-interval-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 4.8057999999999765,
+      "heapUsedBefore": 27541728,
+      "heapUsedAfter": 29756104,
+      "rssBefore": 90304512,
+      "rssAfter": 90759168
+    },
+    {
+      "caseId": "v5-unknown-interval-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 5.896599999999921,
+      "heapUsedBefore": 29763376,
+      "heapUsedAfter": 32505072,
+      "rssBefore": 90759168,
+      "rssAfter": 90996736
+    },
+    {
+      "caseId": "v5-unknown-interval-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 3.130999999999972,
+      "heapUsedBefore": 32607528,
+      "heapUsedAfter": 34052984,
+      "rssBefore": 90996736,
+      "rssAfter": 91041792
+    },
+    {
+      "caseId": "v5-unknown-interval-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 5.127900000000068,
+      "heapUsedBefore": 34060576,
+      "heapUsedAfter": 20593280,
+      "rssBefore": 91041792,
+      "rssAfter": 90120192
+    },
+    {
+      "caseId": "v5-unknown-interval-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 5.873000000000047,
+      "heapUsedBefore": 20600608,
+      "heapUsedAfter": 23081232,
+      "rssBefore": 90120192,
+      "rssAfter": 91279360
+    },
+    {
+      "caseId": "v5-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.736099999999965,
+      "heapUsedBefore": 23252608,
+      "heapUsedAfter": 27179256,
+      "rssBefore": 91279360,
+      "rssAfter": 90533888
+    },
+    {
+      "caseId": "v5-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 7.13819999999987,
+      "heapUsedBefore": 27190440,
+      "heapUsedAfter": 31617256,
+      "rssBefore": 90537984,
+      "rssAfter": 90714112
+    },
+    {
+      "caseId": "v5-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.866700000000037,
+      "heapUsedBefore": 31629808,
+      "heapUsedAfter": 22931184,
+      "rssBefore": 90718208,
+      "rssAfter": 90189824
+    },
+    {
+      "caseId": "v5-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 8.499199999999973,
+      "heapUsedBefore": 23114648,
+      "heapUsedAfter": 26801120,
+      "rssBefore": 90189824,
+      "rssAfter": 91181056
+    },
+    {
+      "caseId": "v5-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 10.294000000000096,
+      "heapUsedBefore": 26814960,
+      "heapUsedAfter": 31116880,
+      "rssBefore": 90595328,
+      "rssAfter": 90734592
+    },
+    {
+      "caseId": "v5-frequency-en",
+      "split": "evaluation",
+      "language": "en",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 9.307900000000018,
+      "heapUsedBefore": 31130456,
+      "heapUsedAfter": 22462712,
+      "rssBefore": 90734592,
+      "rssAfter": 90963968
+    },
+    {
+      "caseId": "v5-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 5.971199999999953,
+      "heapUsedBefore": 22645800,
+      "heapUsedAfter": 25157624,
+      "rssBefore": 90963968,
+      "rssAfter": 90611712
+    },
+    {
+      "caseId": "v5-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 6.440200000000004,
+      "heapUsedBefore": 25167472,
+      "heapUsedAfter": 28344568,
+      "rssBefore": 90611712,
+      "rssAfter": 92164096
+    },
+    {
+      "caseId": "v5-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "slim",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 8.964299999999866,
+      "heapUsedBefore": 28355848,
+      "heapUsedAfter": 32174488,
+      "rssBefore": 92168192,
+      "rssAfter": 92606464
+    },
+    {
+      "caseId": "v5-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 0,
+      "cache": "cold_instance",
+      "elapsedMs": 6.409900000000107,
+      "heapUsedBefore": 32380552,
+      "heapUsedAfter": 34827696,
+      "rssBefore": 91516928,
+      "rssAfter": 92987392
+    },
+    {
+      "caseId": "v5-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 1,
+      "cache": "hot_instance",
+      "elapsedMs": 9.525699999999915,
+      "heapUsedBefore": 34837248,
+      "heapUsedAfter": 21920768,
+      "rssBefore": 92987392,
+      "rssAfter": 90304512
+    },
+    {
+      "caseId": "v5-frequency-zh",
+      "split": "evaluation",
+      "language": "zh",
+      "responseMode": "full",
+      "iteration": 2,
+      "cache": "hot_instance",
+      "elapsedMs": 11.572199999999839,
+      "heapUsedBefore": 21930056,
+      "heapUsedAfter": 26285448,
+      "rssBefore": 90304512,
+      "rssAfter": 91643904
+    }
+  ]
+}

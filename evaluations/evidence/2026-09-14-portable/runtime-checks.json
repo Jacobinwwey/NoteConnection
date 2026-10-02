@@ -1,0 +1,98 @@
+[
+  {
+    "check": "agent-workspace",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-agent-workspace-runtime.js"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 9510,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\portable-source-agent-workspace-1789335434303.log",
+    "logSha256": "d39574c5d1d5d09d956aa1260b74acf8caa92fd40f53f8e8000e90cf721f8465"
+  },
+  {
+    "check": "knowledge-workspace-full",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-knowledge-workspace-runtime.js",
+      "--full"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 344568,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\portable-source-knowledge-workspace-full-1789335443816.log",
+    "logSha256": "8ed50fe0a608b9175cf74fb9c6b9e78c0f8e785742d33b8d20f62b23aa1aae77"
+  },
+  {
+    "check": "cargo-tests",
+    "command": "cargo.exe",
+    "args": [
+      "test",
+      "--manifest-path",
+      "src-tauri/Cargo.toml",
+      "--locked",
+      "--offline",
+      "-j",
+      "1"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 18697,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\portable-source-cargo-tests-1789335788451.log",
+    "logSha256": "3be9ddc50350c349caf1600255fa45c9c708e332c43e090295cc12033de7958e"
+  },
+  {
+    "check": "mobile-projection-host",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-mobile-projection-replay.js"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 1542,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\portable-source-mobile-projection-host-1789335807149.log",
+    "logSha256": "fb6969f48f867f65c06703a15a858e0f6aab068373490a09f9bf52a743b1cf2e"
+  },
+  {
+    "check": "mobile-recovery-host",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-mobile-native-recovery.js"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 200,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\portable-source-mobile-recovery-host-1789335808692.log",
+    "logSha256": "69891e453ed89df4a474d9821a40ddbc1e69d6b939a1064f772fda0ac8bdd9e6"
+  },
+  {
+    "check": "mermaid-fences",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-markdown-mermaid-fence.js",
+      "Knowledge_Base/testconcept"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 233,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\portable-source-mermaid-fences-1789335808894.log",
+    "logSha256": "58fd1913fa94e541f42a1343f45992d1ee8179031f2fde47b66624d2305f3f1e"
+  },
+  {
+    "check": "frontend-runtime-assets",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-frontend-runtime-assets.js"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 125,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\portable-source-frontend-runtime-assets-1789335809129.log",
+    "logSha256": "0f7a9cc7acd1f518b310670b5ce3182d6c8127f4050b0b8b7ae7024b9da0a1c5"
+  },
+  {
+    "check": "route-shadow",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-route-registry-shadow.js"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 12754,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\portable-source-route-shadow-1789335809257.log",
+    "logSha256": "6d958bad093c65181ae8f6789f28197fe5253e6e5c9b34e5ba04d7bfc26ae77e"
+  }
+]

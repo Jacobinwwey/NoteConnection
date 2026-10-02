@@ -1,0 +1,15 @@
+{
+  "label": "desktop-graph-reload-red",
+  "command": "node",
+  "args": [
+    "node_modules/jest/bin/jest.js",
+    "src/desktop.runtime.graph.test.ts",
+    "--runInBand",
+    "--ci"
+  ],
+  "startedAt": "2026-10-01T05:54:19.560Z",
+  "completedAt": "2026-10-01T05:54:23.310Z",
+  "exitCode": 1,
+  "signal": null,
+  "logPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\desktop-graph-reload-red.log"
+}

@@ -1,0 +1,25 @@
+{
+  "capturedAt": "2026-09-13T19:11:00.085Z",
+  "mainVisible": false,
+  "events": [
+    {
+      "config": {
+        "confirmBeforeFullShutdownFromGodot": false,
+        "hideTauriWhenPathmodeOpens": true,
+        "restoreTauriWhenPathmodeExits": true,
+        "singleWindowMode": true,
+        "syncLanguage": true
+      },
+      "plan": {
+        "focusTauriMainWindow": false,
+        "hideTauriMainWindow": true,
+        "sendPathmodeHide": false,
+        "sendPathmodeShow": true,
+        "showTauriMainWindow": false
+      },
+      "showGodot": true,
+      "triggeredAtMs": 1789326659868
+    }
+  ],
+  "bridgeSocket": 1
+}

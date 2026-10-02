@@ -1,0 +1,109 @@
+{
+  "verifiedAt": "2026-09-13T19:24:16.085Z",
+  "sourceRevision": "8564294bc6757e6ea2a18e06ba482f5a618a95ad",
+  "sourceTreeHash": "880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244",
+  "profile": "Windows development executable with packaged sidecar",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "godot": "4.6.stable.official.89cea1439",
+    "renderer": "Vulkan Forward+",
+    "gpu": "AMD Radeon RX 7900 XT"
+  },
+  "artifacts": [
+    {
+      "path": "src-tauri/target/debug/npm.exe",
+      "sha256": "0073f8f3632f38b79840b7ca6a8cc9be4522579d71b716ff245ac1f5ccacb8e3",
+      "bytes": 21306368
+    },
+    {
+      "path": "src-tauri/target/debug/server.exe",
+      "sha256": "931916d2f39b2737edac394bb8ffb5c71f571664c59770ff2438fc94b121cdb8",
+      "bytes": 77917101
+    },
+    {
+      "path": "src-tauri/bin/godot-x86_64-pc-windows-msvc.exe",
+      "sha256": "63913d01be2c2d1f929b4a626f5347117126b34e9c64cbf350ea9f35a9657ebf",
+      "bytes": 171924488
+    }
+  ],
+  "checks": {
+    "customWorkspaceGraph": true,
+    "legacyIdsAndCanonicalPaths": true,
+    "bridgeTreeLayout": true,
+    "nativePathmodeEntry": true,
+    "godotExitRestoresMain": true,
+    "nativeGroundedAnswer": true,
+    "cleanShutdownExitCode": 0,
+    "ownedProcessesStopped": true
+  },
+  "limits": [
+    "Development executable, not a signed production installer.",
+    "One Windows host and a two-document isolated fixture.",
+    "Does not replace the absent named Rust window tests or qualify other OS windows.",
+    "No Android-device or learner-outcome evidence."
+  ],
+  "files": [
+    {
+      "path": "native.log.gz",
+      "sha256": "6b8ed81554d2f10455010b05d1261cb75220a57db1f328cb837022ee3830da79",
+      "bytes": 3488
+    },
+    {
+      "path": "native-graph-pass.json",
+      "sha256": "e53be26b03d198d006a708b588830d5c8c0fd94b153bfb0fc4fe2e8a194df200",
+      "bytes": 643
+    },
+    {
+      "path": "native-pathmode-enter.json",
+      "sha256": "e13017b85754b3ccd5bba9890fd02c205e7c7814bc0fdc5494baab7166c2f5a8",
+      "bytes": 626
+    },
+    {
+      "path": "native-pathmode-exit.json",
+      "sha256": "1113a5d8db1c48049073e7b9dcd8555da19c3de3c1566db197ca2b581893a2e9",
+      "bytes": 1141
+    },
+    {
+      "path": "native-os-windows-open.json",
+      "sha256": "38e86eb7b15c722e7b3d42c90515f54fb6874e0b66753a2641d40eb081d62b89",
+      "bytes": 4686
+    },
+    {
+      "path": "native-os-windows-restored.json",
+      "sha256": "77ab1c79bbaf484eba72210eaf87dc7ca883e59ee383602b94c5abc041d7ecf5",
+      "bytes": 4695
+    },
+    {
+      "path": "native-answer-pass.json",
+      "sha256": "e48ded0e9299444e3ee504fcf75f8471ac56623364f79258275dc69836465a6d",
+      "bytes": 179
+    },
+    {
+      "path": "native-godot-exit-click.json",
+      "sha256": "3d15b65baa69b573d386e78efb296e07d8ab62713116f4e21495b04adc617941",
+      "bytes": 121
+    },
+    {
+      "path": "native-shutdown.json",
+      "sha256": "63191862c5a3df83a5a2f7c496c389a8820a74ccf67ed121270d560d737984b7",
+      "bytes": 32
+    },
+    {
+      "path": "native-godot-window.png",
+      "sha256": "725ba15ea9687fa0d670fb2ec363cbfe2a9e785ea99a3caea792f57f47c4128a",
+      "bytes": 147823
+    },
+    {
+      "path": "native-webview-answer.png",
+      "sha256": "a9fa32c832600a24361ae45e8d0953ee51e56e2a4ba73e0d897795c12961e336",
+      "bytes": 305643
+    },
+    {
+      "path": "native-process-cleanup.json",
+      "sha256": "645ec6f7732a83a6872863bc4bb99b7230a2c7466f91c17069fefb735e0d74e8",
+      "bytes": 128
+    }
+  ],
+  "archiveTextEncoding": "UTF-8, LF; raw native log retained as gzip"
+}

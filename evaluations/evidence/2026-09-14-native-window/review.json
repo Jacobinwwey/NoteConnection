@@ -1,0 +1,19 @@
+{
+  "reviewer": "root-inline",
+  "sourceRevision": "894ec1d0e083e2eab444ccf1f1e465eeb45b4947",
+  "subagentsUsed": false,
+  "checked": [
+    "Missing, ignored, unrelated and partial libtest verdicts cannot qualify a required group.",
+    "A later Cargo failure cannot be overwritten by a successful named verdict.",
+    "Wry tests run in separate processes; ordinary test selection does not create native windows.",
+    "Native assertion panics propagate after Tauri event-loop cleanup.",
+    "Both libtest and application binaries link successfully with the opt-in Windows manifest.",
+    "CI compiles dependencies before bounded test execution to avoid treating cold build time as a window timeout.",
+    "Native tests retain their command/window scope; installer, Godot and device acceptance remain distinct."
+  ],
+  "residualLimits": [
+    "Local native evidence qualifies Windows only.",
+    "Native fixture tests do not execute the production startup plugins or signed installers."
+  ],
+  "findings": []
+}

@@ -1,0 +1,165 @@
+{
+  "total_count": 8,
+  "artifacts": [
+    {
+      "id": 11208675328,
+      "node_id": "MDg6QXJ0aWZhY3QxMTIwODY3NTMyOA==",
+      "name": "windows-installer-evidence-nsis-36960840921-1",
+      "size_in_bytes": 634444,
+      "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208675328",
+      "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208675328/zip",
+      "expired": false,
+      "digest": "sha256:fe5417d06b2744a96c1c723b4b42296ba11ac207ddbbbd3a4cb0983afbf35fa7",
+      "created_at": "2026-10-02T03:50:02Z",
+      "updated_at": "2026-10-02T03:50:02Z",
+      "expires_at": "2026-11-01T03:50:01Z",
+      "workflow_run": {
+        "id": 36960840921,
+        "repository_id": 1118244706,
+        "head_repository_id": 1118244706,
+        "head_branch": "codex/project-convergence-20260912",
+        "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+      }
+    },
+    {
+      "id": 11208575738,
+      "node_id": "MDg6QXJ0aWZhY3QxMTIwODU3NTczOA==",
+      "name": "windows-installer-build-evidence-msi-36960840921-1",
+      "size_in_bytes": 4220,
+      "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208575738",
+      "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208575738/zip",
+      "expired": false,
+      "digest": "sha256:11b9fa222f6f94dc87c3d86184bf326fca74a82f0b07806eef46a0a4c0ec76c4",
+      "created_at": "2026-10-02T03:47:33Z",
+      "updated_at": "2026-10-02T03:47:33Z",
+      "expires_at": "2026-11-01T03:47:33Z",
+      "workflow_run": {
+        "id": 36960840921,
+        "repository_id": 1118244706,
+        "head_repository_id": 1118244706,
+        "head_branch": "codex/project-convergence-20260912",
+        "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+      }
+    },
+    {
+      "id": 11208401006,
+      "node_id": "MDg6QXJ0aWZhY3QxMTIwODQwMTAwNg==",
+      "name": "windows-installer-inputs-msi-36960840921",
+      "size_in_bytes": 128100616,
+      "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208401006",
+      "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208401006/zip",
+      "expired": false,
+      "digest": "sha256:7dafbd8eb7dbeb5c7fb80dd322a81f865fd5c089adb1b05ad66d8129d58063a1",
+      "created_at": "2026-10-02T03:47:33Z",
+      "updated_at": "2026-10-02T03:47:33Z",
+      "expires_at": "2026-11-01T03:47:28Z",
+      "workflow_run": {
+        "id": 36960840921,
+        "repository_id": 1118244706,
+        "head_repository_id": 1118244706,
+        "head_branch": "codex/project-convergence-20260912",
+        "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+      }
+    },
+    {
+      "id": 11208286045,
+      "node_id": "MDg6QXJ0aWZhY3QxMTIwODI4NjA0NQ==",
+      "name": "windows-installer-binaries-msi-36960840921-1",
+      "size_in_bytes": 128099600,
+      "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208286045",
+      "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208286045/zip",
+      "expired": false,
+      "digest": "sha256:4af6bd5c680475791b9ad093984e30801404ee8bb36fdc75ca73f2bfbca7099f",
+      "created_at": "2026-10-02T03:47:27Z",
+      "updated_at": "2026-10-02T03:47:27Z",
+      "expires_at": "2026-11-01T03:47:23Z",
+      "workflow_run": {
+        "id": 36960840921,
+        "repository_id": 1118244706,
+        "head_repository_id": 1118244706,
+        "head_branch": "codex/project-convergence-20260912",
+        "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+      }
+    },
+    {
+      "id": 11207943244,
+      "node_id": "MDg6QXJ0aWZhY3QxMTIwNzk0MzI0NA==",
+      "name": "windows-installer-evidence-msi-36960840921-1",
+      "size_in_bytes": 662434,
+      "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207943244",
+      "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207943244/zip",
+      "expired": false,
+      "digest": "sha256:75c265933d7b8b6526f2f551702422954d456364338cbf60e8fa6fdc1ba861b5",
+      "created_at": "2026-10-02T03:49:48Z",
+      "updated_at": "2026-10-02T03:49:48Z",
+      "expires_at": "2026-11-01T03:49:47Z",
+      "workflow_run": {
+        "id": 36960840921,
+        "repository_id": 1118244706,
+        "head_repository_id": 1118244706,
+        "head_branch": "codex/project-convergence-20260912",
+        "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+      }
+    },
+    {
+      "id": 11207943047,
+      "node_id": "MDg6QXJ0aWZhY3QxMTIwNzk0MzA0Nw==",
+      "name": "windows-installer-build-evidence-nsis-36960840921-1",
+      "size_in_bytes": 4214,
+      "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207943047",
+      "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207943047/zip",
+      "expired": false,
+      "digest": "sha256:b5852228904fe5b784c2bbb50964595d80d49eb2320cbfe2187cffcea7beb6ea",
+      "created_at": "2026-10-02T03:48:19Z",
+      "updated_at": "2026-10-02T03:48:19Z",
+      "expires_at": "2026-11-01T03:48:18Z",
+      "workflow_run": {
+        "id": 36960840921,
+        "repository_id": 1118244706,
+        "head_repository_id": 1118244706,
+        "head_branch": "codex/project-convergence-20260912",
+        "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+      }
+    },
+    {
+      "id": 11207923212,
+      "node_id": "MDg6QXJ0aWZhY3QxMTIwNzkyMzIxMg==",
+      "name": "windows-installer-binaries-nsis-36960840921-1",
+      "size_in_bytes": 105594793,
+      "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207923212",
+      "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207923212/zip",
+      "expired": false,
+      "digest": "sha256:5f2d977288fc4266043ad049eba0b90b5e5b6174af581275b2543c0e42b8fb18",
+      "created_at": "2026-10-02T03:48:14Z",
+      "updated_at": "2026-10-02T03:48:14Z",
+      "expires_at": "2026-11-01T03:48:09Z",
+      "workflow_run": {
+        "id": 36960840921,
+        "repository_id": 1118244706,
+        "head_repository_id": 1118244706,
+        "head_branch": "codex/project-convergence-20260912",
+        "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+      }
+    },
+    {
+      "id": 11207784101,
+      "node_id": "MDg6QXJ0aWZhY3QxMTIwNzc4NDEwMQ==",
+      "name": "windows-installer-inputs-nsis-36960840921",
+      "size_in_bytes": 105595804,
+      "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207784101",
+      "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207784101/zip",
+      "expired": false,
+      "digest": "sha256:92bfc1d5c7b9d0d29e12a86bb04b17d9c77e683a771bd8392b556ae68489316a",
+      "created_at": "2026-10-02T03:48:18Z",
+      "updated_at": "2026-10-02T03:48:18Z",
+      "expires_at": "2026-11-01T03:48:14Z",
+      "workflow_run": {
+        "id": 36960840921,
+        "repository_id": 1118244706,
+        "head_repository_id": 1118244706,
+        "head_branch": "codex/project-convergence-20260912",
+        "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+      }
+    }
+  ]
+}

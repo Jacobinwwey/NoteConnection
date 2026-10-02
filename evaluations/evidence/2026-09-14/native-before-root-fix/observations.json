@@ -1,0 +1,24 @@
+{
+  "observedAt": "2026-09-13T19:04:13.251Z",
+  "productionRevision": "f39e0b7bc2213ba8af64074f96feb829965a5ac0",
+  "nativeExecutable": {
+    "path": "E:\\Knowledge_project\\NoteConnection_app\\src-tauri\\target\\debug\\npm.exe",
+    "sha256": "b0500cb16202aefa7de4f95f6cfb10755cd804d895b079b02d8800eab866075e"
+  },
+  "packagedSidecar": {
+    "path": "src-tauri/target/debug/server.exe",
+    "sha256": "6d4d3189c254a1b8232c44e25271313217c4b68bf930c970976884278a50a147"
+  },
+  "host": {
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "expectedNodes": 2,
+  "observedNodes": 0,
+  "rootFailure": "Graph construction rebuilt the identity root from the application directory instead of the selected workspace.",
+  "regressions": {
+    "failedBeforeFix": 6,
+    "existingPassed": 2
+  },
+  "nativeShutdownExitCode": 0
+}

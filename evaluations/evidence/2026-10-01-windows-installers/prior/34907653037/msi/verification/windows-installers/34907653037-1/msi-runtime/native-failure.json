@@ -1,0 +1,35 @@
+{
+  "success": true,
+  "titleFilter": "NoteConnection",
+  "matchIndex": 0,
+  "activateWindow": false,
+  "screenshotPath": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\msi-runtime\\native-failure.png",
+  "capturedAt": "2026-09-14T23:24:11.1709625+00:00",
+  "window": {
+    "title": "NoteConnection",
+    "processId": 1748,
+    "left": 0,
+    "top": 0,
+    "right": 1044,
+    "bottom": 788,
+    "width": 1044,
+    "height": 788,
+    "usedPrintWindow": true
+  },
+  "process": {
+    "name": "npm.exe",
+    "parentProcessId": 9684,
+    "executablePath": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\MSI installed\\npm.exe",
+    "commandLine": "\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\MSI installed\\npm.exe\""
+  },
+  "matchedWindows": [
+    {
+      "title": "NoteConnection",
+      "processId": 1748,
+      "left": 0,
+      "top": 0,
+      "right": 1044,
+      "bottom": 788
+    }
+  ]
+}

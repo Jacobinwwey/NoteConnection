@@ -1,0 +1,374 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-14T01:04:20.580Z",
+  "sourceRevision": "894ec1d0e083e2eab444ccf1f1e465eeb45b4947",
+  "sourceFingerprint": {
+    "algorithm": "sha256",
+    "version": 2,
+    "digest": "ec3b8b547300109d991ff922eb680e00db3c3efbecb02b16a319e21896c0d1ca",
+    "fileCount": 583
+  },
+  "scope": "Native window command contracts and renewed server qualification; parent U7/U8 remain partial.",
+  "files": [
+    {
+      "path": "ci/adoption.json",
+      "bytes": 1193,
+      "sha256": "c7d95f78021cd506f8601e08a7afda958f5449cd130d93b1f116733324a93b9f"
+    },
+    {
+      "path": "ci/foundation-34792256467/Linux/build-manifest.json",
+      "bytes": 90222,
+      "sha256": "028cd5f5957b187860696efde3ac4bdae457b79b0fccebd6d5c314ed4686189c"
+    },
+    {
+      "path": "ci/foundation-34792256467/Linux/foundation/foundation-ann-runtime-report-2026-09-14T00-21-12-961Z.json",
+      "bytes": 63731,
+      "sha256": "c4db0bd01dc8898402e939cfbbba7258de619f3128f8f41abdf578a6238af0b5"
+    },
+    {
+      "path": "ci/foundation-34792256467/Linux/foundation/foundation-ann-runtime-report-2026-09-14T00-21-45-630Z.json",
+      "bytes": 63697,
+      "sha256": "e41f957cffc957338cee944c253a51e57563ce3f46be496b6e20fa0ba53e7608"
+    },
+    {
+      "path": "ci/foundation-34792256467/Linux/foundation/foundation-ann-runtime-report-2026-09-14T00-22-18-202Z.json",
+      "bytes": 63678,
+      "sha256": "e5198eace9ca7023cf1e45e5a91a95f8e1084a788b23f97552d8c82a5acaef92"
+    },
+    {
+      "path": "ci/foundation-34792256467/Linux/foundation/foundation-sqlite-runtime-report-2026-09-14T00-20-57-614Z.json",
+      "bytes": 44607,
+      "sha256": "ca0717d048d76acd2bc9d3a5ef41e0b70e86a946922507382df3c06bc08505d4"
+    },
+    {
+      "path": "ci/foundation-34792256467/Linux/foundation/foundation-sqlite-runtime-report-2026-09-14T00-21-30-021Z.json",
+      "bytes": 44571,
+      "sha256": "ad74742bcf580c19742927f6fac08902571fb8339a1fe468390770e0ede5e032"
+    },
+    {
+      "path": "ci/foundation-34792256467/Linux/foundation/foundation-sqlite-runtime-report-2026-09-14T00-22-02-796Z.json",
+      "bytes": 44630,
+      "sha256": "edd285a9120f2b0edd2fc05442ca0469672f58cbcc3f8f1ba212432e3be380aa"
+    },
+    {
+      "path": "ci/foundation-34792256467/Linux/verification.json",
+      "bytes": 5645,
+      "sha256": "1ac7d8c364d12fbddce7fc1272023abe116b52b3d47571b837cb44f522d9e2be"
+    },
+    {
+      "path": "ci/foundation-34792256467/Windows/build-manifest.json",
+      "bytes": 90224,
+      "sha256": "b7e8a1a871b453d7c3e8d213477cba59c60968046a9894d51af9513da27e7f84"
+    },
+    {
+      "path": "ci/foundation-34792256467/Windows/foundation/foundation-ann-runtime-report-2026-09-14T00-22-40-971Z.json",
+      "bytes": 63806,
+      "sha256": "f84e9a5321a4440635f68bf242f50cd7061d4cc92c3d1f1ea7831eff3bf66574"
+    },
+    {
+      "path": "ci/foundation-34792256467/Windows/foundation/foundation-ann-runtime-report-2026-09-14T00-23-26-572Z.json",
+      "bytes": 63755,
+      "sha256": "49bba3020f5afdf65cd1807f05696e58d58598a535f61eb8ac9937a6c7bf99b5"
+    },
+    {
+      "path": "ci/foundation-34792256467/Windows/foundation/foundation-ann-runtime-report-2026-09-14T00-24-12-526Z.json",
+      "bytes": 63764,
+      "sha256": "dd461483cf13454258eb9bc4bbe7b17d9cec8042eb59f71a0d075e82ec8b2ed8"
+    },
+    {
+      "path": "ci/foundation-34792256467/Windows/foundation/foundation-sqlite-runtime-report-2026-09-14T00-22-18-738Z.json",
+      "bytes": 44548,
+      "sha256": "b5a75d49769774fd03a8f9950f0b7eb53e7e1e75bf3f49a02e361ecfed257755"
+    },
+    {
+      "path": "ci/foundation-34792256467/Windows/foundation/foundation-sqlite-runtime-report-2026-09-14T00-23-04-720Z.json",
+      "bytes": 44572,
+      "sha256": "f1baf6513f918f9faa2ac0fd7b3573d88e911769c1f5dac896b7108d63de9ba3"
+    },
+    {
+      "path": "ci/foundation-34792256467/Windows/foundation/foundation-sqlite-runtime-report-2026-09-14T00-23-50-309Z.json",
+      "bytes": 44556,
+      "sha256": "7675ffb29215cbf75fcbfd6addfa9f4b5b3d2e7b2f24bac8042c66d9492281a1"
+    },
+    {
+      "path": "ci/foundation-34792256467/Windows/verification.json",
+      "bytes": 5661,
+      "sha256": "364f01b98a89f4d4f2b74081f61613b0720ad9cc64559322c0f77c46b3b11edf"
+    },
+    {
+      "path": "ci/foundation-34792256467/workflow.json",
+      "bytes": 7571,
+      "sha256": "ae03a937ab3912c683b7c62980a228dacd9996b631f38082cc625585693f7fa1"
+    },
+    {
+      "path": "ci/native-34792199163/ordinary-rust.json",
+      "bytes": 3058,
+      "sha256": "6b0e47bdf59253d520a415daedf568256c2c65e17c31e2c75d0c295d902983bb"
+    },
+    {
+      "path": "ci/native-34792199163/pathmode_window_real_app_window_lifecycle_emits_toggle_events.log.gz",
+      "bytes": 503,
+      "sha256": "102d3068b2a1970bd0181d7c15638402ed9f4a99deee4d32a6d60f788904998b"
+    },
+    {
+      "path": "ci/native-34792199163/pathmode_window_real_app_window_requires_main_window.log.gz",
+      "bytes": 438,
+      "sha256": "b0f6911ab9c0face9e7415ec30e94f7e66439cd6154af556c387fa4fe401ac31"
+    },
+    {
+      "path": "ci/native-34792199163/provenance.json",
+      "bytes": 773,
+      "sha256": "0d74f52b7beedf5734ab55368fecd60b750ad125f69b998537375e047694c361"
+    },
+    {
+      "path": "ci/native-34792199163/report.json",
+      "bytes": 2261,
+      "sha256": "fe41e38ef6d46c8d866c91c73a63f883a4dd8ffbcf0f0ece51884d11a032801a"
+    },
+    {
+      "path": "ci/native-34792199163/workflow.json",
+      "bytes": 4372,
+      "sha256": "c62871629c090cafc30a1eb11bf8f90efc985b05f0b514bcba565b77b2e5700c"
+    },
+    {
+      "path": "ci/published-artifacts.json",
+      "bytes": 1871,
+      "sha256": "453dab8c4fe52d4616b8ddc40a339757436596a30d07c459dc4a1cf43ef3fdaf"
+    },
+    {
+      "path": "ci/verified-downloads.json",
+      "bytes": 2406,
+      "sha256": "38f1e58807c585af3ab5d107f75095cdf4a83008f24c2e11a052116120a22601"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-14T00-22-40-971Z.json",
+      "bytes": 63806,
+      "sha256": "f84e9a5321a4440635f68bf242f50cd7061d4cc92c3d1f1ea7831eff3bf66574"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-14T00-23-26-572Z.json",
+      "bytes": 63755,
+      "sha256": "49bba3020f5afdf65cd1807f05696e58d58598a535f61eb8ac9937a6c7bf99b5"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-14T00-24-12-526Z.json",
+      "bytes": 63764,
+      "sha256": "dd461483cf13454258eb9bc4bbe7b17d9cec8042eb59f71a0d075e82ec8b2ed8"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-14T00-49-18-111Z.json",
+      "bytes": 63837,
+      "sha256": "4e20d9c1d5ef8a8ae8ca1bd86bb9afb8a76e0e671e6e8070bdeb85dbabbcba50"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-14T00-50-11-098Z.json",
+      "bytes": 63759,
+      "sha256": "0bf192f1721f31701ebf9fac3483842a9e9760f9a1f8d3c71e08557604bb8acc"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-14T00-51-03-359Z.json",
+      "bytes": 63735,
+      "sha256": "c8ccae9c47456171dc99ccfb9ce53817dfb6b8d98c186e09da24c37fffa55e40"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-14T00-22-18-738Z.json",
+      "bytes": 44548,
+      "sha256": "b5a75d49769774fd03a8f9950f0b7eb53e7e1e75bf3f49a02e361ecfed257755"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-14T00-23-04-720Z.json",
+      "bytes": 44572,
+      "sha256": "f1baf6513f918f9faa2ac0fd7b3573d88e911769c1f5dac896b7108d63de9ba3"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-14T00-23-50-309Z.json",
+      "bytes": 44556,
+      "sha256": "7675ffb29215cbf75fcbfd6addfa9f4b5b3d2e7b2f24bac8042c66d9492281a1"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-14T00-48-53-690Z.json",
+      "bytes": 45346,
+      "sha256": "2519e0702c8e73bd1bffcfe4e44cebf2a76ce011aab975cda63c7d1d7a720d64"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-14T00-49-46-397Z.json",
+      "bytes": 45323,
+      "sha256": "d4d4e558092317cad0d9a6c22739bc779cace8a16424dc4a1b4bec6db8859430"
+    },
+    {
+      "path": "ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-14T00-50-39-174Z.json",
+      "bytes": 45351,
+      "sha256": "89908de840af6283f1a902967485f9f039a5426b35a5814d3b59ceaa3525ad63"
+    },
+    {
+      "path": "ci/windows-two-hosts/local-runs.json",
+      "bytes": 2904,
+      "sha256": "5b8510474d18e26fae09627e5d712bbfdd5352aaf4328dcea75559236fa9e51b"
+    },
+    {
+      "path": "ci/windows-two-hosts/verification.json",
+      "bytes": 6306,
+      "sha256": "54c36ffa041a1371ddde33779d9bb013fe6fd348873df608f2298d7e7da20359"
+    },
+    {
+      "path": "initial/missing-tests/pathmode_window_real_app_window_lifecycle_emits_toggle_events.log.gz",
+      "bytes": 637,
+      "sha256": "57bc47ca05ab49d7623744d669e577546385c2dd066c66b724f820fedb3b9589"
+    },
+    {
+      "path": "initial/missing-tests/pathmode_window_real_app_window_requires_main_window.log.gz",
+      "bytes": 629,
+      "sha256": "0e90f8023a94491d0a3431900ba3c58a71fe1441860201178c6c0b2c6da9ffef"
+    },
+    {
+      "path": "initial/missing-tests/report.json",
+      "bytes": 2357,
+      "sha256": "a494b914be11e69c3960679771bd589393d56e7ecd90fec3822fb75a8b6d19ed"
+    },
+    {
+      "path": "initial/node-regressions.json",
+      "bytes": 26787,
+      "sha256": "9e9c0cc8ca66b015dcb15af5e92f2d1c5874c207203e36030529e06f00450793"
+    },
+    {
+      "path": "initial/windows-loader/pathmode_window_real_app_window_lifecycle_emits_toggle_events.log.gz",
+      "bytes": 538,
+      "sha256": "b8d40195c34a215078fea5cb1e7da3d081aaa75f5fc405104aaade483acb0004"
+    },
+    {
+      "path": "initial/windows-loader/pathmode_window_real_app_window_requires_main_window.log.gz",
+      "bytes": 531,
+      "sha256": "4f134e7e896fadb9ef15e034c226d450a032522fcb9c538d9b33d623d6cf0328"
+    },
+    {
+      "path": "initial/windows-loader/report.json",
+      "bytes": 2439,
+      "sha256": "421349196e5b6fed700d27948327185d4af75ec4ed57e760cf3fc27e6f106f73"
+    },
+    {
+      "path": "local/build-with-vite-corrected.json",
+      "bytes": 420,
+      "sha256": "b0fdeb60b42e7b50413dc4070e924cf6e01e1ceb4fc79a422882773257ca12d9"
+    },
+    {
+      "path": "local/build-with-vite-corrected.log.gz",
+      "bytes": 2758,
+      "sha256": "648f18577480a13063bae362a423b9731c43da7e9895f3b55bb2cb963072aaab"
+    },
+    {
+      "path": "local/ci-artifact/ci-native-cleanup.json",
+      "bytes": 445,
+      "sha256": "28dfdf85e2f063da0650e0e4062707d288d0d6b6e033c88ab4f921a6de5a7647"
+    },
+    {
+      "path": "local/ci-artifact/ci-native-cleanup.log.gz",
+      "bytes": 98,
+      "sha256": "3535ae412af292e6dea09c0d895758aa1c9e2de6be66a88bd9204ccf69d16261"
+    },
+    {
+      "path": "local/ci-artifact/native-ci-binary-lifecycle.json",
+      "bytes": 637,
+      "sha256": "e5aba589d7268de71ab07bae6aa064636c0307a160f4f45caf8068459f228feb"
+    },
+    {
+      "path": "local/ci-artifact/native-ci-binary-lifecycle.log.gz",
+      "bytes": 283,
+      "sha256": "b38423946b8a49545d32a440ef9c899495f53a22a2eeb8fd09d0f3be0529a42f"
+    },
+    {
+      "path": "local/ci-artifact/native-ci-binary-missing-main.json",
+      "bytes": 634,
+      "sha256": "80124471ac922cb95a98286c77f12f75990e55962216c9afc2b19a1ce8b6a4bd"
+    },
+    {
+      "path": "local/ci-artifact/native-ci-binary-missing-main.log.gz",
+      "bytes": 169,
+      "sha256": "4e2a2bb59db3a8771aa27e2dbb7e3cdb12e4813521b27961fc4f7cc4524fc7e5"
+    },
+    {
+      "path": "local/mobile-projection-report.json",
+      "bytes": 3474,
+      "sha256": "bcb60c4641212dfe61b9606aedf8d66224ab1e52de16916440415f3446de757e"
+    },
+    {
+      "path": "local/mobile-projection.json",
+      "bytes": 383,
+      "sha256": "9baef68e74628ca92f82bdf70b9299bc2ffecbf19db635cdae392cbedc0d46fa"
+    },
+    {
+      "path": "local/mobile-projection.log.gz",
+      "bytes": 142,
+      "sha256": "c15407a4d80e1cf6a8462e000fa04c27dc2464bf352e8fa448b6a319d5409ca8"
+    },
+    {
+      "path": "local/native-cleanup.json",
+      "bytes": 439,
+      "sha256": "041971c8db397f8ee6a89d8d0d3d70888462da617ede999650639c8debafeb42"
+    },
+    {
+      "path": "local/native-cleanup.log.gz",
+      "bytes": 98,
+      "sha256": "f68d714b286298290f43ccc05d356b45348569f4fc8ac485891f0881c203330e"
+    },
+    {
+      "path": "local/native-feature-build.json",
+      "bytes": 501,
+      "sha256": "27c2f76ee477f166fb3286e06c4d30e4311add32ba079ff15a909449d5053016"
+    },
+    {
+      "path": "local/native-feature-build.log.gz",
+      "bytes": 353,
+      "sha256": "8eecba807f82208c5031b227c8f17c5f9867a99d1ee3641628dd22bdb08e679c"
+    },
+    {
+      "path": "local/native/pathmode_window_real_app_window_lifecycle_emits_toggle_events.log.gz",
+      "bytes": 554,
+      "sha256": "16fc6e2c2b836f0fdd8960756692fefabd53f9a1b7b918dcfa7f0bee3f3e24a0"
+    },
+    {
+      "path": "local/native/pathmode_window_real_app_window_requires_main_window.log.gz",
+      "bytes": 450,
+      "sha256": "9f77e82076867fb736e23b9d479fab0782a57a6847aae823a94cafec267d9794"
+    },
+    {
+      "path": "local/native/report.json",
+      "bytes": 2281,
+      "sha256": "f31427d9f5acbb8687ece4b3199a2622ebbe11dcfe402b0fbe6ee24ed00cca26"
+    },
+    {
+      "path": "local/node22.json",
+      "bytes": 781211,
+      "sha256": "c53a68fbbebcf4034b63997ab266902f6f0782c26eb0e82937735f3e4a826380"
+    },
+    {
+      "path": "local/node24.json",
+      "bytes": 781039,
+      "sha256": "5c4e7407c520640cf09ee63d725dbfcf0dc67aaac79fad396e105d327fd67856"
+    },
+    {
+      "path": "local/ordinary-rust.json",
+      "bytes": 2998,
+      "sha256": "584a7e6185e3c689839a2669e597c79b3c252d735e2b11746ccbc6f5272ccf0a"
+    },
+    {
+      "path": "local/provenance.json",
+      "bytes": 93519,
+      "sha256": "a58271127152c223897e85adf721627469cc12e8d7fe594eff5c73819cd93673"
+    },
+    {
+      "path": "local/rust-tests.json",
+      "bytes": 435,
+      "sha256": "22a5c6629782c33d048e7e6a22250649e0c77602aa87967ff678496a4c08472e"
+    },
+    {
+      "path": "local/rust-tests.log.gz",
+      "bytes": 1333,
+      "sha256": "8accfebd39238088a73687cce3a0ce52721f30a29fbb19b8f1b80674cb5e157f"
+    },
+    {
+      "path": "review.json",
+      "bytes": 1011,
+      "sha256": "d40f09c630f32970d8cb91368f88440f57298e533f6e446dbf677029e450eba9"
+    }
+  ]
+}

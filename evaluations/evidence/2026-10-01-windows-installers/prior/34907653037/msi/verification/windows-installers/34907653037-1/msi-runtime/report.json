@@ -1,0 +1,112 @@
+{
+  "generatedAt": "2026-09-14T23:22:58.208Z",
+  "sourceRevision": "2ec296e07116daa0460c8fe4a4db732d4eb1d713",
+  "run": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\msi-runtime",
+  "executable": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\MSI installed\\npm.exe",
+  "applicationPid": 1748,
+  "debugPort": 49403,
+  "launchRoot": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\msi-runtime\\unrelated launcher",
+  "checks": {
+    "writableManifest": true,
+    "godotConnected": true
+  },
+  "runtimePorts": {
+    "http": 55752,
+    "bridge": 61608
+  },
+  "error": "Error: native WebView debugger timed out: fetch failed (ECONNREFUSED)\n    at waitFor (D:\\a\\NoteConnection\\NoteConnection\\scripts\\verify-desktop-runtime.js:18:9)\n    at async connectWebView (D:\\a\\NoteConnection\\NoteConnection\\scripts\\verify-desktop-runtime.js:40:16)\n    at async verifyDesktopRuntime (D:\\a\\NoteConnection\\NoteConnection\\scripts\\verify-desktop-runtime.js:142:15)",
+  "failureWindows": {
+    "windows": [
+      {
+        "processId": 1748,
+        "handle": 131422,
+        "title": "NoteConnection",
+        "visible": true
+      },
+      {
+        "processId": 5680,
+        "handle": 66060,
+        "title": "NoteConnection Path Renderer (DEBUG)",
+        "visible": false
+      }
+    ],
+    "appPid": 1748,
+    "childPids": [
+      5016,
+      4168,
+      5680
+    ],
+    "godotPids": [
+      5680
+    ],
+    "children": [
+      {
+        "ProcessId": 5016,
+        "ParentProcessId": 1748,
+        "Name": "msedgewebview2.exe",
+        "CommandLine": "\"C:\\Program Files (x86)\\Microsoft\\EdgeWebView\\Application\\152.0.4191.66\\msedgewebview2.exe\" --embedded-browser-webview=1 --webview-exe-name=npm.exe --webview-exe-version=0.1.0 --user-data-dir=\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\msi-runtime\\webview\\EBWebView\" --noerrdialogs --embedded-browser-webview-dpi-awareness=2 --autoplay-policy=no-user-gesture-required --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --lang=en-US --mojo-named-platform-channel-pipe=1748.6624.3595070376228326642 /pfhostedapp:5ba87904268006b7101d09e990396f75f3540ead"
+      },
+      {
+        "ProcessId": 4168,
+        "ParentProcessId": 1748,
+        "Name": "server.exe",
+        "CommandLine": "\"\\\\?\\D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\MSI installed\\server.exe\""
+      },
+      {
+        "ProcessId": 5680,
+        "ParentProcessId": 1748,
+        "Name": "godot.exe",
+        "CommandLine": "\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\MSI installed\\godot.exe\" --main-pack \"\\\\?\\D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\MSI installed\\path_mode.pck\" --nc-start-hidden --minimized"
+      }
+    ]
+  },
+  "failureCapture": {
+    "success": true,
+    "titleFilter": "NoteConnection",
+    "matchIndex": 0,
+    "activateWindow": false,
+    "screenshotPath": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\msi-runtime\\native-failure.png",
+    "capturedAt": "2026-09-14T23:24:11.1709625+00:00",
+    "window": {
+      "title": "NoteConnection",
+      "processId": 1748,
+      "left": 0,
+      "top": 0,
+      "right": 1044,
+      "bottom": 788,
+      "width": 1044,
+      "height": 788,
+      "usedPrintWindow": true
+    },
+    "process": {
+      "name": "npm.exe",
+      "parentProcessId": 9684,
+      "executablePath": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\MSI installed\\npm.exe",
+      "commandLine": "\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\34907653037-1\\MSI installed\\npm.exe\""
+    },
+    "matchedWindows": [
+      {
+        "title": "NoteConnection",
+        "processId": 1748,
+        "left": 0,
+        "top": 0,
+        "right": 1044,
+        "bottom": 788
+      }
+    ]
+  },
+  "close": {
+    "applicationProcessId": 1748,
+    "closePosted": true
+  },
+  "afterShutdown": {
+    "windows": [],
+    "appPid": 1748,
+    "childPids": [],
+    "godotPids": [],
+    "children": []
+  },
+  "exitCode": 0,
+  "webviewErrors": [],
+  "passed": false
+}

@@ -1,0 +1,15 @@
+{
+  "label": "desktop-recovery-docs",
+  "command": "node",
+  "args": [
+    "scripts/run-mkdocs.js",
+    "build",
+    "--config-file",
+    "mkdocs.yml"
+  ],
+  "startedAt": "2026-10-01T06:15:39.183Z",
+  "completedAt": "2026-10-01T06:15:53.201Z",
+  "exitCode": 0,
+  "signal": null,
+  "logPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\desktop-recovery-docs.log"
+}

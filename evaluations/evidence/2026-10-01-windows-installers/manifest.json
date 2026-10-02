@@ -1,0 +1,1625 @@
+{
+  "generatedAt": "2026-10-02T04:01:40.314Z",
+  "sourceRevision": "129443f361fc42831f0f1371ab3066fbcdac69f5",
+  "runId": "36960840921",
+  "sourceFingerprint": {
+    "algorithm": "sha256",
+    "version": 2,
+    "digest": "081ab2b7fc4cbbf557df5e82aac3b920f8f6797149a87dfafeb6b48a22cc4d9d",
+    "fileCount": 595
+  },
+  "scope": "Windows unsigned installer behavior; signing trust and Android remain unqualified.",
+  "encoding": "JSON is canonical UTF-8/LF; logs are gzip-compressed original bytes; PNG files are unchanged. Imported original hashes are recorded where transformed.",
+  "accepted": [
+    {
+      "format": "nsis",
+      "attempt": 1,
+      "buildAttempt": 1,
+      "installer": "NoteConnection_1.8.0_x64-setup.exe",
+      "bytes": 105581763,
+      "sha256": "222f5ccfbfc563beeb8c8a0175be5ec83482ac5dc56b5bd51824ed7d5c985886",
+      "installerArtifact": {
+        "id": 11207923212,
+        "node_id": "MDg6QXJ0aWZhY3QxMTIwNzkyMzIxMg==",
+        "name": "windows-installer-binaries-nsis-36960840921-1",
+        "size_in_bytes": 105594793,
+        "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207923212",
+        "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207923212/zip",
+        "expired": false,
+        "digest": "sha256:5f2d977288fc4266043ad049eba0b90b5e5b6174af581275b2543c0e42b8fb18",
+        "created_at": "2026-10-02T03:48:14Z",
+        "updated_at": "2026-10-02T03:48:14Z",
+        "expires_at": "2026-11-01T03:48:09Z",
+        "workflow_run": {
+          "id": 36960840921,
+          "repository_id": 1118244706,
+          "head_repository_id": 1118244706,
+          "head_branch": "codex/project-convergence-20260912",
+          "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+        }
+      },
+      "evidenceArtifact": {
+        "id": 11208675328,
+        "node_id": "MDg6QXJ0aWZhY3QxMTIwODY3NTMyOA==",
+        "name": "windows-installer-evidence-nsis-36960840921-1",
+        "size_in_bytes": 634444,
+        "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208675328",
+        "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208675328/zip",
+        "expired": false,
+        "digest": "sha256:fe5417d06b2744a96c1c723b4b42296ba11ac207ddbbbd3a4cb0983afbf35fa7",
+        "created_at": "2026-10-02T03:50:02Z",
+        "updated_at": "2026-10-02T03:50:02Z",
+        "expires_at": "2026-11-01T03:50:01Z",
+        "workflow_run": {
+          "id": 36960840921,
+          "repository_id": 1118244706,
+          "head_repository_id": 1118244706,
+          "head_branch": "codex/project-convergence-20260912",
+          "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+        }
+      }
+    },
+    {
+      "format": "msi",
+      "attempt": 1,
+      "buildAttempt": 1,
+      "installer": "NoteConnection_1.8.0_x64_en-US.msi",
+      "bytes": 128643072,
+      "sha256": "c357ac5755ec27554cd42d230f97794dd55344c202fc52243afc19667969c0af",
+      "installerArtifact": {
+        "id": 11208286045,
+        "node_id": "MDg6QXJ0aWZhY3QxMTIwODI4NjA0NQ==",
+        "name": "windows-installer-binaries-msi-36960840921-1",
+        "size_in_bytes": 128099600,
+        "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208286045",
+        "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11208286045/zip",
+        "expired": false,
+        "digest": "sha256:4af6bd5c680475791b9ad093984e30801404ee8bb36fdc75ca73f2bfbca7099f",
+        "created_at": "2026-10-02T03:47:27Z",
+        "updated_at": "2026-10-02T03:47:27Z",
+        "expires_at": "2026-11-01T03:47:23Z",
+        "workflow_run": {
+          "id": 36960840921,
+          "repository_id": 1118244706,
+          "head_repository_id": 1118244706,
+          "head_branch": "codex/project-convergence-20260912",
+          "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+        }
+      },
+      "evidenceArtifact": {
+        "id": 11207943244,
+        "node_id": "MDg6QXJ0aWZhY3QxMTIwNzk0MzI0NA==",
+        "name": "windows-installer-evidence-msi-36960840921-1",
+        "size_in_bytes": 662434,
+        "url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207943244",
+        "archive_download_url": "https://api.github.com/repos/Jacobinwwey/NoteConnection/actions/artifacts/11207943244/zip",
+        "expired": false,
+        "digest": "sha256:75c265933d7b8b6526f2f551702422954d456364338cbf60e8fa6fdc1ba861b5",
+        "created_at": "2026-10-02T03:49:48Z",
+        "updated_at": "2026-10-02T03:49:48Z",
+        "expires_at": "2026-11-01T03:49:47Z",
+        "workflow_run": {
+          "id": 36960840921,
+          "repository_id": 1118244706,
+          "head_repository_id": 1118244706,
+          "head_branch": "codex/project-convergence-20260912",
+          "head_sha": "129443f361fc42831f0f1371ab3066fbcdac69f5"
+        }
+      }
+    }
+  ],
+  "entries": [
+    {
+      "path": "accepted/nsis/windows-installer-build.json",
+      "bytes": 2300,
+      "sha256": "1d3902c98728755f0de787c27fd8e0115064ff01d0642204d6090bb15ede2659",
+      "originalBytes": 2300,
+      "originalSha256": "1d3902c98728755f0de787c27fd8e0115064ff01d0642204d6090bb15ede2659"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/nsis-install.log.gz",
+      "bytes": 20,
+      "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/nsis-runtime/native-commands.log.gz",
+      "bytes": 204,
+      "sha256": "b2ad5e2ddde65777259ad88884a5b205e3294277b2a1f53631e6ce79893a58da",
+      "originalBytes": 430,
+      "originalSha256": "ab35237e7387641399298912b5611d42f9082c920d724dad06445616361423e4"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/nsis-runtime/native-debug-policy.json",
+      "bytes": 247,
+      "sha256": "d1fcc08c6b14d4d3170556409fa02aa5e48f2207267afd1b849a30d3455f44a1",
+      "originalBytes": 370,
+      "originalSha256": "a6ef3b42f2cfa74c64937ae8494357ce5884210ebf4acb34071c7bafe73cf95e"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/nsis-runtime/native-godot.json",
+      "bytes": 1294,
+      "sha256": "551f9a89de1a86b4b1cb7ef5fae6afba484abd562dfce9c5a40f7c0dea5c367b",
+      "originalBytes": 1821,
+      "originalSha256": "0c1a587869328bf014d27c9fd99fbff2806fa88b8c74d3c5a7c8df5979a16eed"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/nsis-runtime/native-godot.png",
+      "bytes": 129845,
+      "sha256": "c0486147a80a7454bf77abf7eeb8a50cfdc34c2197a896bc9ce8065832fdf9fd"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/nsis-runtime/native-graph.png",
+      "bytes": 462611,
+      "sha256": "abd52b3ddfe8179eb20bad63d4698561b7b8ff9b46b9bb5de7920aa95fc203fd"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/nsis-runtime/native-restored.png",
+      "bytes": 41973,
+      "sha256": "c4fb2753b36c59cf74edad4f25e04cb1120b45aa52413adc2f84f200975e38cd"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/nsis-runtime/native.log.gz",
+      "bytes": 3875,
+      "sha256": "6ff03f61eda75006f8a9d49e93cac8ce8652d41e6666f11dd77b2c7b2e344b87",
+      "originalBytes": 21213,
+      "originalSha256": "9fafe050159009f26be0f5a9ccb33204ff23d06fc6c0e4f6bb56a810ade649db"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/nsis-runtime/report.json",
+      "bytes": 14434,
+      "sha256": "d4a38bc4ccbf0a7d51bcc7dd648f609c8338f099be80383e21e5970e80dd9190",
+      "originalBytes": 14434,
+      "originalSha256": "d4a38bc4ccbf0a7d51bcc7dd648f609c8338f099be80383e21e5970e80dd9190"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/nsis-runtime.log.gz",
+      "bytes": 1869,
+      "sha256": "59e79a054bffa43ab53dfb4709595616bfc70391d31049cd487f443e998de898",
+      "originalBytes": 12815,
+      "originalSha256": "2af8760dc1fa337ffd38e418df084cae1b7a7fea3ea260b2495f9dfa051601d5"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/nsis-uninstall.log.gz",
+      "bytes": 20,
+      "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "accepted/nsis/windows-installers/36960840921-1/report.json",
+      "bytes": 4077,
+      "sha256": "b6ab0f3d2ba308f4b17424fb4f18d079742eb05fc885a827a2f966756202b7c1",
+      "originalBytes": 4077,
+      "originalSha256": "b6ab0f3d2ba308f4b17424fb4f18d079742eb05fc885a827a2f966756202b7c1"
+    },
+    {
+      "path": "accepted/nsis/build/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "accepted/nsis/build/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "accepted/nsis/build/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "507b049b05786803aaec44a94cafa819adda1157e1fd28710fc29f3907e7bb22",
+      "originalBytes": 4149,
+      "originalSha256": "507b049b05786803aaec44a94cafa819adda1157e1fd28710fc29f3907e7bb22"
+    },
+    {
+      "path": "accepted/nsis/build/verification/windows-installer-build.json",
+      "bytes": 2300,
+      "sha256": "1d3902c98728755f0de787c27fd8e0115064ff01d0642204d6090bb15ede2659",
+      "originalBytes": 2300,
+      "originalSha256": "1d3902c98728755f0de787c27fd8e0115064ff01d0642204d6090bb15ede2659"
+    },
+    {
+      "path": "accepted/msi/windows-installer-build.json",
+      "bytes": 2298,
+      "sha256": "b9ef51a67c49c12bea8767dc0bb243e53c0748e834a874387715669dca8cd85f",
+      "originalBytes": 2298,
+      "originalSha256": "b9ef51a67c49c12bea8767dc0bb243e53c0748e834a874387715669dca8cd85f"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-install-detail.log.gz",
+      "bytes": 12627,
+      "sha256": "4ffc0cfd317fc4525339a280cf99011a8c0c890bcca094efb508c1264962b4ae",
+      "originalBytes": 116954,
+      "originalSha256": "f149d53e4a393b9d05cc81e43ff66d45ab7ade095473e43ae6315eb8771097bc"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-install.log.gz",
+      "bytes": 20,
+      "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-runtime/native-commands.log.gz",
+      "bytes": 204,
+      "sha256": "c58727c6edcaa9519bdafab10e1093f4cfa0236c954ebbbdb9dffdb7c4aad875",
+      "originalBytes": 428,
+      "originalSha256": "5843461b01c6ecf696ccd629df316baa71750d5393cf8aabcd5dc368c390d59d"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-runtime/native-debug-policy.json",
+      "bytes": 247,
+      "sha256": "453b5a240dd6e5faa4b20cc72e04236339257d791ce192a73b48851eef1338d3",
+      "originalBytes": 370,
+      "originalSha256": "fe7de074984a0d79a8f76669af2c287daa2f9507544dea3a1db46a1951bd2fa2"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-runtime/native-godot.json",
+      "bytes": 1290,
+      "sha256": "ef47b5ebb84baa96eec040b9f7fe694724fb59bcc5985a33a0844ce1fc82fc33",
+      "originalBytes": 1817,
+      "originalSha256": "bdc3b787f6b09956a77a80a990c33b90c05983ec253c1989a7b85702581dcc0c"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-runtime/native-godot.png",
+      "bytes": 130474,
+      "sha256": "60768661ae99c851ee0a6e5b9e23a97aae778cf1dd2d7ec16e53fb905b00f8e3"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-runtime/native-graph.png",
+      "bytes": 463710,
+      "sha256": "da33ae065f249211b68ef208dbcc462b3f6c129c60efc32d8ee50c69fe51f4fc"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-runtime/native-restored.png",
+      "bytes": 43887,
+      "sha256": "5bfbb5869beb5c23e6c5643e0c1dbefcba0e011548ea19a5a876490565a2f166"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-runtime/native.log.gz",
+      "bytes": 3843,
+      "sha256": "50cc171465f8a734ccfa4155dc169363d6248f54e3a07fd1389846bb8e3d4296",
+      "originalBytes": 21052,
+      "originalSha256": "c6f9ec5a0f05e2d587101441419092ce2fc28ed82871b8e6687acef5a9c3d6a4"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-runtime/report.json",
+      "bytes": 14458,
+      "sha256": "619d8f3c9157122cb8922926af5f8c291c993d172983fedc056e4d3ef578ddb1",
+      "originalBytes": 14458,
+      "originalSha256": "619d8f3c9157122cb8922926af5f8c291c993d172983fedc056e4d3ef578ddb1"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-runtime.log.gz",
+      "bytes": 1860,
+      "sha256": "2ac60ef569958ceee9c47085c4a5d1ad47fa9bfadc7d4d8de45aa5d0884b82a2",
+      "originalBytes": 12839,
+      "originalSha256": "91540940acff2a5de0895a8639bdf7620343fafa0bcbd19559d441cb1399c1be"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-uninstall-detail.log.gz",
+      "bytes": 11441,
+      "sha256": "a4fb1624c481697f1b08051de9e21e1d7ee81fbb0147bcbdfb64ff717e0e1575",
+      "originalBytes": 108062,
+      "originalSha256": "eb1cd3c0747c61b491aa1dada21798278e5969e4289e5ac24a1f570cb061dd90"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/msi-uninstall.log.gz",
+      "bytes": 20,
+      "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "accepted/msi/windows-installers/36960840921-1/report.json",
+      "bytes": 4094,
+      "sha256": "4357cacc933f3de6295d087a8b5448d4b5cebb1da0cb5ba194f7c23e569c99e0",
+      "originalBytes": 4094,
+      "originalSha256": "4357cacc933f3de6295d087a8b5448d4b5cebb1da0cb5ba194f7c23e569c99e0"
+    },
+    {
+      "path": "accepted/msi/build/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "accepted/msi/build/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "accepted/msi/build/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "47efe5d6851a5cd3239d6fa9451366c3cfb3350dc33a6fc82cbd36387dad7665",
+      "originalBytes": 4149,
+      "originalSha256": "47efe5d6851a5cd3239d6fa9451366c3cfb3350dc33a6fc82cbd36387dad7665"
+    },
+    {
+      "path": "accepted/msi/build/verification/windows-installer-build.json",
+      "bytes": 2298,
+      "sha256": "b9ef51a67c49c12bea8767dc0bb243e53c0748e834a874387715669dca8cd85f",
+      "originalBytes": 2298,
+      "originalSha256": "b9ef51a67c49c12bea8767dc0bb243e53c0748e834a874387715669dca8cd85f"
+    },
+    {
+      "path": "prior/34907653037/nsis/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "prior/34907653037/nsis/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "prior/34907653037/nsis/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "52498eec846f7916516687b0b80f129b377db7168f97e3d2a9282cb4d82a66fe",
+      "originalBytes": 4149,
+      "originalSha256": "52498eec846f7916516687b0b80f129b377db7168f97e3d2a9282cb4d82a66fe"
+    },
+    {
+      "path": "prior/34907653037/nsis/verification/windows-installers/34907653037-1/nsis-install.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/34907653037/nsis/verification/windows-installers/34907653037-1/nsis-runtime/native-failure.json",
+      "bytes": 1047,
+      "sha256": "951d2214dbc1b05c3d11330deb5dab750bf7dc19257baa21dbe5ce720f756872",
+      "originalBytes": 1574,
+      "originalSha256": "c7d9dd914d4be9585f082e3a925142e55719bccf280a38f4caa3e25a4014649f"
+    },
+    {
+      "path": "prior/34907653037/nsis/verification/windows-installers/34907653037-1/nsis-runtime/native-failure.png",
+      "bytes": 62437,
+      "sha256": "cc0b7e6272bae479ce1c35b97e3585dae3c9f9a96fbf6329af02fb2fa32f30b8"
+    },
+    {
+      "path": "prior/34907653037/nsis/verification/windows-installers/34907653037-1/nsis-runtime/native.log.gz",
+      "bytes": 1788,
+      "sha256": "41bb409f15e940e65939f86ee29441d4e5c59cf897c92c25e4cce0ab96fc2458",
+      "originalBytes": 5886,
+      "originalSha256": "1f0df26319cbedaad45502b2feb1c3091950d48cad494f8b565e3ceb06d9c70a"
+    },
+    {
+      "path": "prior/34907653037/nsis/verification/windows-installers/34907653037-1/nsis-runtime/report.json",
+      "bytes": 4455,
+      "sha256": "a03944d509b491ea4d076a3b182d83f1196951e5d30e430695058fc7f84ea868",
+      "originalBytes": 4455,
+      "originalSha256": "a03944d509b491ea4d076a3b182d83f1196951e5d30e430695058fc7f84ea868"
+    },
+    {
+      "path": "prior/34907653037/nsis/verification/windows-installers/34907653037-1/nsis-runtime.log.gz",
+      "bytes": 1277,
+      "sha256": "20903f9cb4fb4e01d3e47f0273b934f176f676bb9e3844935da30ea0caf4b2d2",
+      "originalBytes": 3708,
+      "originalSha256": "f95fbe4b01874984369120a1e6fd27c1f0c3271ce1e0ab9a1f383af54a4bd5ba"
+    },
+    {
+      "path": "prior/34907653037/nsis/verification/windows-installers/34907653037-1/nsis-uninstall.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/34907653037/nsis/verification/windows-installers/34907653037-1/report.json",
+      "bytes": 5180,
+      "sha256": "d995a4db6a6e426b37ee47605c49113a04e8e0bc0ee8d3e298ceb95a334430d1",
+      "originalBytes": 5180,
+      "originalSha256": "d995a4db6a6e426b37ee47605c49113a04e8e0bc0ee8d3e298ceb95a334430d1"
+    },
+    {
+      "path": "prior/34907653037/msi/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "prior/34907653037/msi/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "prior/34907653037/msi/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "c56fc0429960d7d2c6fcebeea0fea809e6d7ec2f2278d7f57d87d21614f3d0e1",
+      "originalBytes": 4149,
+      "originalSha256": "c56fc0429960d7d2c6fcebeea0fea809e6d7ec2f2278d7f57d87d21614f3d0e1"
+    },
+    {
+      "path": "prior/34907653037/msi/verification/windows-installers/34907653037-1/msi-install-detail.log.gz",
+      "bytes": 12619,
+      "sha256": "7140365ebba4282185d618c659a95091e72acaf94d915176103fb4dace1bc933",
+      "originalBytes": 117068,
+      "originalSha256": "d2cdb244bbdbdee9c6520c97afac1b2c7b7f99c954fb86510beaa78a0e3c6eef"
+    },
+    {
+      "path": "prior/34907653037/msi/verification/windows-installers/34907653037-1/msi-install.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/34907653037/msi/verification/windows-installers/34907653037-1/msi-runtime/native-failure.json",
+      "bytes": 1044,
+      "sha256": "7427aa5cdd700c6eb0b0945ae795afcb1d37832a2d7b34a57bc0f4498dcb38f5",
+      "originalBytes": 1571,
+      "originalSha256": "24832c221320052c3a0177fe6415d72870c521d4d8bd69688ecbf51645417f01"
+    },
+    {
+      "path": "prior/34907653037/msi/verification/windows-installers/34907653037-1/msi-runtime/native-failure.png",
+      "bytes": 62425,
+      "sha256": "5626b944146c039ca9f1232c1e1a74d43a2fa13268ad8587ea80f9ede6cd1496"
+    },
+    {
+      "path": "prior/34907653037/msi/verification/windows-installers/34907653037-1/msi-runtime/native.log.gz",
+      "bytes": 1825,
+      "sha256": "d886d229a07af2c650ad4edb861ce458bdf6091d9c9a63792e8d206d0c56e864",
+      "originalBytes": 5957,
+      "originalSha256": "c2e177a60f7e0256e085cdf346996fa0a4e6fe96985eb5535d0791cad6c6d54e"
+    },
+    {
+      "path": "prior/34907653037/msi/verification/windows-installers/34907653037-1/msi-runtime/report.json",
+      "bytes": 4447,
+      "sha256": "cb93453e8de6677491e967f1db91ce93655ee98730fedfd0c74a52f7af7e769f",
+      "originalBytes": 4447,
+      "originalSha256": "cb93453e8de6677491e967f1db91ce93655ee98730fedfd0c74a52f7af7e769f"
+    },
+    {
+      "path": "prior/34907653037/msi/verification/windows-installers/34907653037-1/msi-runtime.log.gz",
+      "bytes": 1279,
+      "sha256": "e0bc204ef6f015ecfc7e2172e650f3b40562c8a3e80ebd8a2ead11e72a0064eb",
+      "originalBytes": 3700,
+      "originalSha256": "6d66e2001f5132b4129e5079b2b3f3ff7b98eea2ea0a23042c9784ddc21842e4"
+    },
+    {
+      "path": "prior/34907653037/msi/verification/windows-installers/34907653037-1/msi-uninstall-detail.log.gz",
+      "bytes": 11390,
+      "sha256": "81418ee68dc8efc1501f736200873e426e03731025bb15cc373c739498c4cc88",
+      "originalBytes": 108176,
+      "originalSha256": "76d34186a810063640a154f6cdb1b0f2115588c70cfe1337c641b053d63f4574"
+    },
+    {
+      "path": "prior/34907653037/msi/verification/windows-installers/34907653037-1/msi-uninstall.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/34907653037/msi/verification/windows-installers/34907653037-1/report.json",
+      "bytes": 5196,
+      "sha256": "18a9d388b63984dc225d6f88d795b239fc69c927ea7c07eaa9e6f3a8f37438e7",
+      "originalBytes": 5196,
+      "originalSha256": "18a9d388b63984dc225d6f88d795b239fc69c927ea7c07eaa9e6f3a8f37438e7"
+    },
+    {
+      "path": "prior/36817551883/nsis/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "prior/36817551883/nsis/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "prior/36817551883/nsis/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "6f8a6a61f2193bd79406b11d03370ee23831dd5ec3c7afa51626656ce2dfa82a",
+      "originalBytes": 4149,
+      "originalSha256": "6f8a6a61f2193bd79406b11d03370ee23831dd5ec3c7afa51626656ce2dfa82a"
+    },
+    {
+      "path": "prior/36817551883/nsis/verification/windows-installers/36817551883-1/nsis-install.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36817551883/nsis/verification/windows-installers/36817551883-1/nsis-runtime/native-debug-policy.json",
+      "bytes": 247,
+      "sha256": "49aca70fd95c9b403ee103a7dbbabbdaa040fba4b86a0cdb61caeb2c273a508b",
+      "originalBytes": 370,
+      "originalSha256": "2b576e8b15433e799e9665d9d5ca1f6d1f47e3f2076e0e3b504fb4d8bcdbb899"
+    },
+    {
+      "path": "prior/36817551883/nsis/verification/windows-installers/36817551883-1/nsis-runtime/native-godot.png",
+      "bytes": 65536,
+      "sha256": "2612ca7187ebc6b893fc06e1361bea4dbc3e40cba54116f2491ebc5ef9a02c15"
+    },
+    {
+      "path": "prior/36817551883/nsis/verification/windows-installers/36817551883-1/nsis-runtime/native-graph.png",
+      "bytes": 463002,
+      "sha256": "af83d3c79dba5b8da89324530b9226f77bdd10c7313d8b394af2e6d8ad45a42f"
+    },
+    {
+      "path": "prior/36817551883/nsis/verification/windows-installers/36817551883-1/nsis-runtime/native.log.gz",
+      "bytes": 3786,
+      "sha256": "7a96fa282b0a858357b936dabeebba698106f6f743bfc51718387e781032d5bf",
+      "originalBytes": 20380,
+      "originalSha256": "50723481b2976a451f38e103fa39da71a7244ddf6e39724d256801ea9a7bd40c"
+    },
+    {
+      "path": "prior/36817551883/nsis/verification/windows-installers/36817551883-1/nsis-runtime/report.json",
+      "bytes": 13058,
+      "sha256": "3478ff86b4c9b801b1c2f0369fe3ebe912012ff65903c1e9066cc24b315afc86",
+      "originalBytes": 13058,
+      "originalSha256": "3478ff86b4c9b801b1c2f0369fe3ebe912012ff65903c1e9066cc24b315afc86"
+    },
+    {
+      "path": "prior/36817551883/nsis/verification/windows-installers/36817551883-1/nsis-runtime.log.gz",
+      "bytes": 1740,
+      "sha256": "2f2e959e3d75d0c308b8efd6b30112a11e4e9d29c5a3d5872bc35199e51d2e12",
+      "originalBytes": 11704,
+      "originalSha256": "aab7a1513360069e1fa8b835cc25992af117fda074b065fd34bad465fae3d7da"
+    },
+    {
+      "path": "prior/36817551883/nsis/verification/windows-installers/36817551883-1/nsis-uninstall.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36817551883/nsis/verification/windows-installers/36817551883-1/report.json",
+      "bytes": 5079,
+      "sha256": "127be8a73c4bf45d5473eaf6a0e35aceb56171ed2a8fb8ead8a481b59c62b582",
+      "originalBytes": 5079,
+      "originalSha256": "127be8a73c4bf45d5473eaf6a0e35aceb56171ed2a8fb8ead8a481b59c62b582"
+    },
+    {
+      "path": "prior/36817551883/msi/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "prior/36817551883/msi/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "prior/36817551883/msi/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "dbedc1f46a13cd3e8d621ed2b4905f7b5f9104224d44e52312b19762885ac5df",
+      "originalBytes": 4149,
+      "originalSha256": "dbedc1f46a13cd3e8d621ed2b4905f7b5f9104224d44e52312b19762885ac5df"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-install-detail.log.gz",
+      "bytes": 12577,
+      "sha256": "9e95ee465c7d98ca6ec4bdd8b8b22c381d737bf8240f460661f7667ef2d4a434",
+      "originalBytes": 116950,
+      "originalSha256": "d9b49007ecd642808ff83d2366ffd7e6df0eea18183166b6ac7c4f8829b6ce2e"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-install.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-runtime/native-debug-policy.json",
+      "bytes": 247,
+      "sha256": "7961bd7ec4f1da2c3c5e9ad2d9c45bd13e1d75a757a590c6aa1d6c381f4e8a0c",
+      "originalBytes": 370,
+      "originalSha256": "863403a26d6ee0c6db18db60d47e6825256eeddd6296ad21c9ac949cf9e2cb18"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-runtime/native-godot.json",
+      "bytes": 1290,
+      "sha256": "1a85f19b7051797fc50b44e093f583713626363b81fb8b0417227658538351c8",
+      "originalBytes": 1817,
+      "originalSha256": "7e34a6277c355b518c2b29173614c2c6186e3a9a8bd118eaf30fa9ae49b08917"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-runtime/native-godot.png",
+      "bytes": 125732,
+      "sha256": "a394e74236925236b4bcb5589c43a20007148563452d1134ab61af4cfcc99c4a"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-runtime/native-graph.png",
+      "bytes": 464280,
+      "sha256": "74772d695463c8b2e65dd57e92bbbf4a6eddb0aaf86b31b1900483240bb3155a"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-runtime/native-restored.png",
+      "bytes": 41854,
+      "sha256": "24683a3fffddbb99d225f2379d0a9231220ce07f64a3b94f78f5d03a31eb2c0c"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-runtime/native.log.gz",
+      "bytes": 3860,
+      "sha256": "21abf98cddd177d4c8e19bd1093d75265cdc981e15e45a15b9e35a520a2b996a",
+      "originalBytes": 21572,
+      "originalSha256": "ad22cd8b9433740865f2fc3c0e645dfffad378b5dfdf4bf3385eb53812638234"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-runtime/report.json",
+      "bytes": 14157,
+      "sha256": "da71845fa885a066c95f3f0c1bb6ce1d16e440bf29ca7fd3fd873286a054cad3",
+      "originalBytes": 14157,
+      "originalSha256": "da71845fa885a066c95f3f0c1bb6ce1d16e440bf29ca7fd3fd873286a054cad3"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-runtime.log.gz",
+      "bytes": 1857,
+      "sha256": "29a30114cfc54c2a8b4f92c7b2b61694020656ddfc34cac2fa4465e8fc0acc62",
+      "originalBytes": 12543,
+      "originalSha256": "258c4bb7bbc170ba898de40d2ee41f26b922d0903428bc0a51429706821df540"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-uninstall-detail.log.gz",
+      "bytes": 11391,
+      "sha256": "919260b63d418ddbe6327eba94506c7f967ac992173dd432a43d457504f17fcb",
+      "originalBytes": 108060,
+      "originalSha256": "dfdfbe8f1fc9d32975b97789abf6e6abf68845326124983e5eef09084c563958"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/msi-uninstall.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36817551883/msi/verification/windows-installers/36817551883-1/report.json",
+      "bytes": 4068,
+      "sha256": "876ef04b1a1ea09808ab03c8cfa98cd620d8cd098e92594d7d1a10cc21bb1270",
+      "originalBytes": 4068,
+      "originalSha256": "876ef04b1a1ea09808ab03c8cfa98cd620d8cd098e92594d7d1a10cc21bb1270"
+    },
+    {
+      "path": "prior/36820293638/nsis/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "prior/36820293638/nsis/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "prior/36820293638/nsis/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "b6d4767e8087203e31b6f868d4ad27de22d91514d8fa19e28f5c2cdc4fe59ebc",
+      "originalBytes": 4149,
+      "originalSha256": "b6d4767e8087203e31b6f868d4ad27de22d91514d8fa19e28f5c2cdc4fe59ebc"
+    },
+    {
+      "path": "prior/36820293638/nsis/verification/windows-installers/36820293638-1/nsis-install.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36820293638/nsis/verification/windows-installers/36820293638-1/nsis-runtime/native-commands.log.gz",
+      "bytes": 200,
+      "sha256": "1890d8bf6c17c25b7e9c85d9b9c5fb6c5ef4a36c2c54cc3e4007ce864667af8f",
+      "originalBytes": 426,
+      "originalSha256": "bab2170911ac1465aee8f182ec5679e6798000689b25d1723665a77d6e8ef7eb"
+    },
+    {
+      "path": "prior/36820293638/nsis/verification/windows-installers/36820293638-1/nsis-runtime/native-debug-policy.json",
+      "bytes": 247,
+      "sha256": "04049e1ddc88b0eff30a52ce383c16c119877ec4923ad1a97ef42fde4f7fd779",
+      "originalBytes": 370,
+      "originalSha256": "a84233885137aa2800216ccc797044449d26b3d5cf43dfb862242fcb2d4a1792"
+    },
+    {
+      "path": "prior/36820293638/nsis/verification/windows-installers/36820293638-1/nsis-runtime/native-failure.json",
+      "bytes": 1047,
+      "sha256": "66b44d99277f549f3363f8f37c82ae3e6922b4efadeca64c5ab87fb4c5755ade",
+      "originalBytes": 1574,
+      "originalSha256": "338698c42156108aa1e9557d0133565f34e21dc3306f2d6833518a36a8f36739"
+    },
+    {
+      "path": "prior/36820293638/nsis/verification/windows-installers/36820293638-1/nsis-runtime/native-failure.png",
+      "bytes": 111009,
+      "sha256": "be033dacfa4d9a6b7c6dc3f66c6fe7ffde88eb26c7ed67b9379a811db6e0b9c8"
+    },
+    {
+      "path": "prior/36820293638/nsis/verification/windows-installers/36820293638-1/nsis-runtime/native.log.gz",
+      "bytes": 3716,
+      "sha256": "3f9412aad30ce42fb35042c3900acf0040578a772384cebbd8af07a13acf50bc",
+      "originalBytes": 20287,
+      "originalSha256": "412d721b523e576a8d6a0fd6bf056ab40f4246a261d677790e4b4a004e630d9a"
+    },
+    {
+      "path": "prior/36820293638/nsis/verification/windows-installers/36820293638-1/nsis-runtime/report.json",
+      "bytes": 8318,
+      "sha256": "5f4fe442accede5a39e182daae6b6538758ba26fd4c711b81bcdb085db5c5c67",
+      "originalBytes": 8318,
+      "originalSha256": "5f4fe442accede5a39e182daae6b6538758ba26fd4c711b81bcdb085db5c5c67"
+    },
+    {
+      "path": "prior/36820293638/nsis/verification/windows-installers/36820293638-1/nsis-runtime.log.gz",
+      "bytes": 1750,
+      "sha256": "f19722a59d570c94511a13013a9e3518ca5879183712814c7766e80c49244a25",
+      "originalBytes": 7508,
+      "originalSha256": "4e384f272d8a37e1111e18e760619648df54bc90286dea14fb2458226c7be6c1"
+    },
+    {
+      "path": "prior/36820293638/nsis/verification/windows-installers/36820293638-1/nsis-uninstall.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36820293638/nsis/verification/windows-installers/36820293638-1/report.json",
+      "bytes": 5133,
+      "sha256": "dd95a6e20b3d9012f6085cb000a0abae62942430161a7b1b8412c5a896165034",
+      "originalBytes": 5133,
+      "originalSha256": "dd95a6e20b3d9012f6085cb000a0abae62942430161a7b1b8412c5a896165034"
+    },
+    {
+      "path": "prior/36820293638/msi/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "prior/36820293638/msi/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "prior/36820293638/msi/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "e180e5e92e2daf8526aa72b85d308e668d8842753ce6599b2bc3e55399dad13d",
+      "originalBytes": 4149,
+      "originalSha256": "e180e5e92e2daf8526aa72b85d308e668d8842753ce6599b2bc3e55399dad13d"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/msi-install-detail.log.gz",
+      "bytes": 12606,
+      "sha256": "d8c0a02b704b0eeed6d6b26ddb8c815d2b162482dae35cba102199eb01326310",
+      "originalBytes": 116948,
+      "originalSha256": "a50c90b52fd63c132ae74218f3d0dcdb8f8e0f4ba805dd7c6ecb1ee1b0a5709e"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/msi-install.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/msi-runtime/native-commands.log.gz",
+      "bytes": 195,
+      "sha256": "77a2be964653b65de50457264ec6ed09a35e94122f80afb9878dfa8a0a8398d1",
+      "originalBytes": 423,
+      "originalSha256": "4af8e6e4a3d82f8255b0e888136c3135781313b5c36bd5392c432c3e64fdb08d"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/msi-runtime/native-debug-policy.json",
+      "bytes": 247,
+      "sha256": "aaf33459c0739e01091f9f45d28d1b487028e37d822759a3ceaa5d4be6788956",
+      "originalBytes": 370,
+      "originalSha256": "56bcdee0820521732d97b7ddf87e8188607142faceded88cd177e996d947b6fd"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/msi-runtime/native-failure.json",
+      "bytes": 1044,
+      "sha256": "884d693907702151c6ae9b173645929abff19870ec0bea2348971f2e1eb41dfa",
+      "originalBytes": 1571,
+      "originalSha256": "08bfb453865f185b1e34b0eb0777a1083f7fcf8b7c3f9eeff76b3115f6ff36cf"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/msi-runtime/native-failure.png",
+      "bytes": 112679,
+      "sha256": "f5e6bed595d979957a4a6e79212769281992d521d7272f34ce7a9dd638a3ab5b"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/msi-runtime/native.log.gz",
+      "bytes": 3650,
+      "sha256": "2a3ff66bcac1951a3ac7e822cba83716903b6f26abc22df27f97ffb085a69eca",
+      "originalBytes": 19160,
+      "originalSha256": "369d43a5fc2bf799f9017245bfb3cce8bf68b5ba07706b51caacab3ffbd54faa"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/msi-runtime/report.json",
+      "bytes": 7394,
+      "sha256": "10398e3ef8a219b605b79de868125b7966aaae54f06b7e14a64c7d1aa777569a",
+      "originalBytes": 7394,
+      "originalSha256": "10398e3ef8a219b605b79de868125b7966aaae54f06b7e14a64c7d1aa777569a"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/msi-runtime.log.gz",
+      "bytes": 1658,
+      "sha256": "1870552ab39830103f8c12fe0899be69fba5dd1427a80b3887bab25aa84f06fd",
+      "originalBytes": 6599,
+      "originalSha256": "6d2abcb920d97160fa7b4fd42f37c838e1f03c6613c66fcd074494aac4256313"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/msi-uninstall-detail.log.gz",
+      "bytes": 11390,
+      "sha256": "660d7a0ca9be2d314d2f8e49373e3b157e23d8d902224c6d5ba1755ad22e3362",
+      "originalBytes": 108056,
+      "originalSha256": "fcdba872290253ceeb80b73c9cb87ce7a301bacc398de77be9d603fc62ab128a"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/msi-uninstall.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36820293638/msi/verification/windows-installers/36820293638-1/report.json",
+      "bytes": 5148,
+      "sha256": "9a04563dabaf07506106cc862a0b7bdcd942086919f4b2a8f27a9823cf6974a0",
+      "originalBytes": 5148,
+      "originalSha256": "9a04563dabaf07506106cc862a0b7bdcd942086919f4b2a8f27a9823cf6974a0"
+    },
+    {
+      "path": "prior/36822174805/nsis/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "prior/36822174805/nsis/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "prior/36822174805/nsis/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "b87ae36769630dd0d8543e949d6d5fa79794498bd708c698c678410b1bbbdf0e",
+      "originalBytes": 4149,
+      "originalSha256": "b87ae36769630dd0d8543e949d6d5fa79794498bd708c698c678410b1bbbdf0e"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/nsis-install.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/nsis-runtime/native-commands.log.gz",
+      "bytes": 204,
+      "sha256": "8b8eee694d4d2dc3df601b01d260a7227c9c38d2d294fe6743263eb8637cd8d8",
+      "originalBytes": 428,
+      "originalSha256": "7904b55823dbaf02bef565500412c7b47e4c533a4f4446c4ed6c329fc5152d9b"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/nsis-runtime/native-debug-policy.json",
+      "bytes": 247,
+      "sha256": "cacafff836fa17ee0d0a2efdde6bc1fb91d392c461c8409c0b0097b79d656b51",
+      "originalBytes": 370,
+      "originalSha256": "d88008e0fa3c21ae91fd2b0b5ee9bebd4ad59822f0f67ea574546e79a7b2d1b5"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/nsis-runtime/native-godot.json",
+      "bytes": 1294,
+      "sha256": "29ff3578ab293137f13d3772aabe5545a1e551a89418e5d0f9587f4583a6bceb",
+      "originalBytes": 1821,
+      "originalSha256": "73cf5029fd79970171792cd99ac61c3d1b35f201c41b8908bd6198ab1283b5cb"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/nsis-runtime/native-godot.png",
+      "bytes": 126732,
+      "sha256": "2ee16247a4b5e010dfcad421536b784fd6f800f38c91c0c05dbf513f5e76fa22"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/nsis-runtime/native-graph.png",
+      "bytes": 463056,
+      "sha256": "080f4416dfeb22f9f08ff5389c28fa08c19f38356148bf8e5ab67774dc6ed6fb"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/nsis-runtime/native-restored.png",
+      "bytes": 43858,
+      "sha256": "fd3cc4a006ebe52d53b372e2cb2be1dcd5cf8236eafd920b7ba0e2c95582e8a0"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/nsis-runtime/native.log.gz",
+      "bytes": 3892,
+      "sha256": "754e0d6d85d15a2f917011d824c3e106fb4b57c6b852219bfeafff3bc8a77a54",
+      "originalBytes": 21179,
+      "originalSha256": "5742ce6db32e5041761a4e3ab697abf650fd304b9fd8870696933d6bbe6ec263"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/nsis-runtime/report.json",
+      "bytes": 14177,
+      "sha256": "9331842c82a43a05d115f49773a43ab3216b044b6675a884baa13a2529f44935",
+      "originalBytes": 14177,
+      "originalSha256": "9331842c82a43a05d115f49773a43ab3216b044b6675a884baa13a2529f44935"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/nsis-runtime.log.gz",
+      "bytes": 1855,
+      "sha256": "331beeae788d2f2522d0b31b1f93c365b97656586ed8b701e9eeedfc83b2ed7b",
+      "originalBytes": 12563,
+      "originalSha256": "59dccebea05118f178212434c75ca3f2e533e83b8c3fb4ba4aa75b7fc8029236"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/nsis-uninstall.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36822174805/nsis/verification/windows-installers/36822174805-1/report.json",
+      "bytes": 4051,
+      "sha256": "1d7265db7cb70f05f46dac90f0f9338450f99dd28230a78c4257240972ad7597",
+      "originalBytes": 4051,
+      "originalSha256": "1d7265db7cb70f05f46dac90f0f9338450f99dd28230a78c4257240972ad7597"
+    },
+    {
+      "path": "prior/36828405439/nsis/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "prior/36828405439/nsis/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "prior/36828405439/nsis/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "b0cdafb30e15e6ee4fe8430238c82f4585fc4aff7bfa085ce63f824d161128bd",
+      "originalBytes": 4149,
+      "originalSha256": "b0cdafb30e15e6ee4fe8430238c82f4585fc4aff7bfa085ce63f824d161128bd"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/nsis-install.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/nsis-runtime/native-commands.log.gz",
+      "bytes": 206,
+      "sha256": "029b9f6f4c352265e30cc0decf303cd812062a6b7af0342dee3410cf3ae32610",
+      "originalBytes": 429,
+      "originalSha256": "18490b6c0231b99d840abd80b312816d3e95745924bd72656fdb28f1e49e147e"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/nsis-runtime/native-debug-policy.json",
+      "bytes": 247,
+      "sha256": "0942ea1fdb83c9ae0aeac6fa9b50d5b86794ea6bd9761d7616e9183afd188943",
+      "originalBytes": 370,
+      "originalSha256": "cbabcaf0542bf5c9ff39bfb382f209995006141a0a8394d7b368ec2c6cfb286c"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/nsis-runtime/native-godot.json",
+      "bytes": 1294,
+      "sha256": "34c734a65f473cd61ac9186b599ce556fab33b73c0a0603de9c73f5de42556c1",
+      "originalBytes": 1821,
+      "originalSha256": "a5d29ea1a1f67d314aedd73f1ffb989537c259d014019c13248f17b6a65a80e1"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/nsis-runtime/native-godot.png",
+      "bytes": 127610,
+      "sha256": "7b6f4e2f9875a5bbb8106a502e4a49872fd6649cf7c86330614602021b0ed0c9"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/nsis-runtime/native-graph.png",
+      "bytes": 462652,
+      "sha256": "1ed0a931cbc7d326d6ffc106f775db7e7dd1e1921b2ed777cd3b241f2c243b19"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/nsis-runtime/native-restored.png",
+      "bytes": 42008,
+      "sha256": "ed3224504f44f798974a71ab9bd3d93c1f1ee49dfefd9f1c9e028c6f58a06bb2"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/nsis-runtime/native.log.gz",
+      "bytes": 3838,
+      "sha256": "3f215cca7d871ba2d5e1b6e7653902ee1e2cdb8435ba227325ef06b3bc3c2108",
+      "originalBytes": 21514,
+      "originalSha256": "1d9296bb148fd27b48663e2aa8d0c53b315c321a3af24423cae8867137968b8c"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/nsis-runtime/report.json",
+      "bytes": 14730,
+      "sha256": "48522cfae9ad3a835623a1a83bf71d728a2f9e4a1a60fec3b1580932e0f1f53b",
+      "originalBytes": 14730,
+      "originalSha256": "48522cfae9ad3a835623a1a83bf71d728a2f9e4a1a60fec3b1580932e0f1f53b"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/nsis-runtime.log.gz",
+      "bytes": 1886,
+      "sha256": "f19705694ba48e7add8afc3a52b877574fac9ae3a0cde509cad6a98a4393dde9",
+      "originalBytes": 13106,
+      "originalSha256": "5212c8cfd52cb7788a8137ab401d40c48b97efa2f1b4d421f558b893c1393b8e"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/nsis-uninstall.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36828405439/nsis/verification/windows-installers/36828405439-1/report.json",
+      "bytes": 4051,
+      "sha256": "46bc79b602b0e25b44bedf03889a76f6b9626815e6074f37c310be356ee07d2e",
+      "originalBytes": 4051,
+      "originalSha256": "46bc79b602b0e25b44bedf03889a76f6b9626815e6074f37c310be356ee07d2e"
+    },
+    {
+      "path": "prior/36828405439/msi-user-copied-step-summary.json",
+      "bytes": 1095,
+      "sha256": "0255e0714cd3030506c67d587755b2fe3e6187ee0c3109dfb2a341bf4ebc97f7"
+    },
+    {
+      "path": "prior/36828405439/msi-job-status.json",
+      "bytes": 5503,
+      "sha256": "438f7ce4963c90d157c7529f4eec76d25f8edbb8f0c5219bd9caba65bbf83dec"
+    },
+    {
+      "path": "prior/36832726016/nsis/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "prior/36832726016/nsis/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "prior/36832726016/nsis/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "40469db7c7923fd202a506c1a3bcb3b2f6b4569d1f74234ae822a6d1708f4041",
+      "originalBytes": 4149,
+      "originalSha256": "40469db7c7923fd202a506c1a3bcb3b2f6b4569d1f74234ae822a6d1708f4041"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/nsis-install.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/nsis-runtime/native-commands.log.gz",
+      "bytes": 200,
+      "sha256": "9f8c4e0b9d011ac68fa971d8bbe94af678a86ba5f71bb69e6ad3b8e016e1f4fa",
+      "originalBytes": 427,
+      "originalSha256": "b99daecfaeb2d5504ffd30de05ae042df6be7c5d626c95f2824dd0edd5135175"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/nsis-runtime/native-debug-policy.json",
+      "bytes": 247,
+      "sha256": "34322ce822f11f630df4ab008b7b3d15241457cfb8cad0ce793a1d21f7e07a82",
+      "originalBytes": 370,
+      "originalSha256": "19b67f0d4ec2ccd5dce9fb5e9045fa114d6f7dc2821d158a802445e429c3b3ed"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/nsis-runtime/native-godot.json",
+      "bytes": 1294,
+      "sha256": "3bb77aeb9ceb10789fb4d9b710893d665f972675e5bd6e4d3e08be243ed7e2ec",
+      "originalBytes": 1821,
+      "originalSha256": "272b7d364a1c6f3c77245694d3c8ed11d8d53b67915294518f2e8f1eb91b7a50"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/nsis-runtime/native-godot.png",
+      "bytes": 147679,
+      "sha256": "5057b8f510f48e3575e4c41af4d60f8b565e5075cfd1511938ccea132bf4b33a"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/nsis-runtime/native-graph.png",
+      "bytes": 462533,
+      "sha256": "37dc186a98bcefdd09baffef2ec0d04fe0e133ff6657850b4313638b9ab3c59f"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/nsis-runtime/native-restored.png",
+      "bytes": 44249,
+      "sha256": "a3fb0972b8cf7fb5d0cc1c4442256bdd3c5ba0f7514d0cd99b82a780f0ba9939"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/nsis-runtime/native.log.gz",
+      "bytes": 3805,
+      "sha256": "f2816298b4ae77f2ccc1bacd28747ce555874d24faa9c9806ad3fcf26c4955d0",
+      "originalBytes": 20549,
+      "originalSha256": "5fc0674d2945ec7035e8df48b28c22055acc94dca9fae6ee4c3f6da5810a8b60"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/nsis-runtime/report.json",
+      "bytes": 13329,
+      "sha256": "a4261f90f6403017ab4546af8f608467629bf9b1438830ae6d6c1d49680d71ff",
+      "originalBytes": 13329,
+      "originalSha256": "a4261f90f6403017ab4546af8f608467629bf9b1438830ae6d6c1d49680d71ff"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/nsis-runtime.log.gz",
+      "bytes": 1816,
+      "sha256": "5b16889ac7ec50082d06525a82de00dc931b1f261a25df357238841e87271dc3",
+      "originalBytes": 11730,
+      "originalSha256": "19ee2b0f3eaa88612e83af706946bd74eb35f271ce002e8858bce4135a49b76c"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/nsis-uninstall.log.gz",
+      "bytes": 21,
+      "sha256": "e60279ead20d25e803ed9161ecaf669fda433283e5f53d3fb148a022e92aa86e",
+      "originalBytes": 1,
+      "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "prior/36832726016/nsis/verification/windows-installers/36832726016-1/report.json",
+      "bytes": 4051,
+      "sha256": "8bd79f9cf535131cd73d1589997731742194ac33edf8b098dc892e2a019c8a8f",
+      "originalBytes": 4051,
+      "originalSha256": "8bd79f9cf535131cd73d1589997731742194ac33edf8b098dc892e2a019c8a8f"
+    },
+    {
+      "path": "prior/36832726016/host-failure.json",
+      "bytes": 15489,
+      "sha256": "d34e5218fa171245c6f91d3d833fe9b1f9ea464ac7aacae2198b075796adefe0"
+    },
+    {
+      "path": "prior/36838763881/nsis/desktop/godot-export.log.gz",
+      "bytes": 768,
+      "sha256": "3fecede9003e41f648b005c60074dbd869a26b0a2c1baccec3db7eda1427b0ca",
+      "originalBytes": 3398,
+      "originalSha256": "80a28229341823f56f168eba12b989b90e152848e6679485ea2c41893332a125"
+    },
+    {
+      "path": "prior/36838763881/nsis/desktop/godot-import.log.gz",
+      "bytes": 495,
+      "sha256": "a4c2f406a34318f2c7304eb080f15c0fad39628902219e6493b9a9806011dc7e",
+      "originalBytes": 1498,
+      "originalSha256": "a772f1c4f8f7a611b14c16555def29029009b04264f7883aa3140d1afddaf696"
+    },
+    {
+      "path": "prior/36838763881/nsis/desktop/godot-pack.json",
+      "bytes": 4149,
+      "sha256": "3e1b822bf5f0d86e13644d52918a23f595be8b8bea65e91d5ae800ea028a132a",
+      "originalBytes": 4149,
+      "originalSha256": "3e1b822bf5f0d86e13644d52918a23f595be8b8bea65e91d5ae800ea028a132a"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/nsis-install.log.gz",
+      "bytes": 20,
+      "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/nsis-runtime/native-commands.log.gz",
+      "bytes": 202,
+      "sha256": "ce18c0cedc8d0bce5a984dc57918652908476e6d1ed5ce05c474524bcb7aed54",
+      "originalBytes": 428,
+      "originalSha256": "858a94c96de032cdd5ab2e25b6bd8f03ae41db0c60d69a92a33ed434b847c474"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/nsis-runtime/native-debug-policy.json",
+      "bytes": 247,
+      "sha256": "6d9b673b5a6c10f4d711e2583efa80c7c8a1e4a3442d7dadfd763556c36d4d8c",
+      "originalBytes": 370,
+      "originalSha256": "1933a4fa8bf6ec710f3744af42932bb3e73d3304202d0e52c09d1d758995ebf7"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/nsis-runtime/native-godot.json",
+      "bytes": 1294,
+      "sha256": "4cb9795ff85df97e232c90c750663c762386daf1faa14e52cc1fa53f82c83ee8",
+      "originalBytes": 1821,
+      "originalSha256": "b5794ca037ecc438e5891c7e3d9b2b61e72f913073ab1636be437e351a1dd113"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/nsis-runtime/native-godot.png",
+      "bytes": 154258,
+      "sha256": "5f7b3b5a8d7c29d0065f482f7cbfc54ec60ea9551c9eb10d9f6af322112e703a"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/nsis-runtime/native-graph.png",
+      "bytes": 463479,
+      "sha256": "5056686fffb12150907b9068fe725f68e03b464692c390ec0d90324021c38d15"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/nsis-runtime/native-restored.png",
+      "bytes": 44188,
+      "sha256": "f0fb9426f6d63352efc84c912ea263db1efb5f24684b2994d949022f0e97d600"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/nsis-runtime/native.log.gz",
+      "bytes": 3769,
+      "sha256": "b2851aa7cdf6fc756feba0006d9915ddc7d86b6d4e48daa45d251e7a79ba572d",
+      "originalBytes": 20333,
+      "originalSha256": "50f45441fbf9ef0151a8edcde087b604cf869ee81651f8da7ae202c38d653536"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/nsis-runtime/report.json",
+      "bytes": 12428,
+      "sha256": "4619189cd5430c6d63d66537e6e0db60edbfc00aa7e897ff7b3f3cffa0b68edc",
+      "originalBytes": 12428,
+      "originalSha256": "4619189cd5430c6d63d66537e6e0db60edbfc00aa7e897ff7b3f3cffa0b68edc"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/nsis-runtime.log.gz",
+      "bytes": 1754,
+      "sha256": "bf9ec87e92042e6ac565b740c5edf55109415e0e581296b0823dfcd07052726a",
+      "originalBytes": 10844,
+      "originalSha256": "5ea338b00589345eb5f2c29c267a8ac900a283cf4409e87064bdf562cdbc5f52"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/nsis-uninstall.log.gz",
+      "bytes": 20,
+      "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "prior/36838763881/nsis/verification/windows-installers/36838763881-1/report.json",
+      "bytes": 4051,
+      "sha256": "5d60cd64268a5f209639fe770d80ca26f4b4508e349cd2714eca2ce549abfab4",
+      "originalBytes": 4051,
+      "originalSha256": "5d60cd64268a5f209639fe770d80ca26f4b4508e349cd2714eca2ce549abfab4"
+    },
+    {
+      "path": "prior/36838763881/host-failure.json",
+      "bytes": 15491,
+      "sha256": "c9793d946dc1eaac13df69f6f0972afd7727b36d931e9f67a3623241b792ced8"
+    },
+    {
+      "path": "diagnostic-replay/36836448951/install-detail.log.gz",
+      "bytes": 27878,
+      "sha256": "1c9a2cfecc271c1c52d3112e723f8b454649948375fb5982d47da3a198568c86",
+      "originalBytes": 320576,
+      "originalSha256": "8e910d225df77c2017504dd78b451a447fe9da530bd7bd276231dc647d02297d"
+    },
+    {
+      "path": "diagnostic-replay/36836448951/runtime/native-commands.log.gz",
+      "bytes": 205,
+      "sha256": "a85002a4db645e6cc35f8acf6612407ccb66fdd1f80686fa51e9abfc30f77b40",
+      "originalBytes": 430,
+      "originalSha256": "64d2e21a04e3da4783ab22d6a45c77236bcb6c474e3d7bafc875460d80bb2b78"
+    },
+    {
+      "path": "diagnostic-replay/36836448951/runtime/native-debug-policy.json",
+      "bytes": 247,
+      "sha256": "cf571cd80c882b5428c56d033bcfd4d5aa21df22af374c385fa2192d837293c6",
+      "originalBytes": 370,
+      "originalSha256": "809b4fa13fabe74bb9bbdfd56d41daf89005fac110b07d913af4e5ede82e4d3c"
+    },
+    {
+      "path": "diagnostic-replay/36836448951/runtime/native-godot.json",
+      "bytes": 1153,
+      "sha256": "3da8a6fa897ae8ecf356133fb7ff9a892cb67e213b42b939b40a563bc4d9e70e",
+      "originalBytes": 1680,
+      "originalSha256": "1e5d841136582f6717a518c60ef18a59d8a9ebdd6fac0e919ba95c4dd8cb2d68"
+    },
+    {
+      "path": "diagnostic-replay/36836448951/runtime/native-godot.png",
+      "bytes": 123589,
+      "sha256": "f897d483094f2c5f21496ce43b2129f516a3befe09ec9c83fd9ab08df9df1424"
+    },
+    {
+      "path": "diagnostic-replay/36836448951/runtime/native-graph.png",
+      "bytes": 463170,
+      "sha256": "2ad163b30358a7f884951bef46f33dd82f5921068310326b686b5a3db9a31ad5"
+    },
+    {
+      "path": "diagnostic-replay/36836448951/runtime/native-restored.png",
+      "bytes": 41333,
+      "sha256": "d5c827a4b689d939686188da739c4eefb28fd47da310e5897719fb172df920f1"
+    },
+    {
+      "path": "diagnostic-replay/36836448951/runtime/native.log.gz",
+      "bytes": 3799,
+      "sha256": "e72faa80d48b159626d52786690742fef6d81238a174d30b018f1802ef558915",
+      "originalBytes": 19960,
+      "originalSha256": "64771c9e881b1986bc92ad0d82f2e23116096d29e380338d437ddcd3cb79bca5"
+    },
+    {
+      "path": "diagnostic-replay/36836448951/runtime/report.json",
+      "bytes": 13759,
+      "sha256": "2d87fffd6f0ee19dd3754e6b15983a41e0d53f03c06c1544959196efc6aefde4",
+      "originalBytes": 13759,
+      "originalSha256": "2d87fffd6f0ee19dd3754e6b15983a41e0d53f03c06c1544959196efc6aefde4"
+    },
+    {
+      "path": "diagnostic-replay/36836448951/scope.json",
+      "bytes": 333,
+      "sha256": "008ee1db1bba9e9e83fbef06586033650be8e0ef1a3885076ba989b5f3225109",
+      "originalBytes": 340,
+      "originalSha256": "1d846ba67a144f9a2ce61301c2418a2e43b74103c03391aac2cc0654c15c876c"
+    },
+    {
+      "path": "diagnostic-replay/36836448951/uninstall-detail.log.gz",
+      "bytes": 23704,
+      "sha256": "d903f01513c9392da52741c0132652f4309b0e812f38577218717b30ebfbe2a2",
+      "originalBytes": 279922,
+      "originalSha256": "cb761d7fce2179eaf935d21fa6e4168b4b16a5f5be9c1b7385e0e8468c47d69e"
+    },
+    {
+      "path": "installer-file-log-probe/focused-tests.json",
+      "bytes": 755,
+      "sha256": "f8fc01cca0987daac030253f865f09aecc6d95a6621ba8d700c8dad1e06d6a9a",
+      "originalBytes": 755,
+      "originalSha256": "f8fc01cca0987daac030253f865f09aecc6d95a6621ba8d700c8dad1e06d6a9a"
+    },
+    {
+      "path": "installer-file-log-probe/focused-tests.log.gz",
+      "bytes": 334,
+      "sha256": "139bf4952e5d3fb78abfa79e3723aec868d0047fdc0a0199a7507e6d1e5555bd",
+      "originalBytes": 1418,
+      "originalSha256": "0f8246b32d5843a6c32bdbc717c6c17298e4cba704b745f183f4e948b052e373"
+    },
+    {
+      "path": "installer-file-log-probe/run-1790843955639/error.log.gz",
+      "bytes": 40,
+      "sha256": "691b53d7a557894676bd5faeb8f55622e89ff795e1e61e2ab8139d2278436155",
+      "originalBytes": 26,
+      "originalSha256": "294335d5c08acf4bfeeb3802057cacc0b226196d6241ed11e76c5c72a930dc03"
+    },
+    {
+      "path": "installer-file-log-probe/run-1790843955639/invalid-options.log.gz",
+      "bytes": 20,
+      "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "installer-file-log-probe/run-1790843955639/report.json",
+      "bytes": 962,
+      "sha256": "b43bf8666628a067e17519e792f9b2fc86a64b53edbb63bf3592eb402b3eb0c1",
+      "originalBytes": 962,
+      "originalSha256": "b43bf8666628a067e17519e792f9b2fc86a64b53edbb63bf3592eb402b3eb0c1"
+    },
+    {
+      "path": "installer-file-log-probe/run-1790843955639/success.log.gz",
+      "bytes": 42,
+      "sha256": "2c308defc327ca1478ff5226a393694173636696cbc375f013a42288127054f9",
+      "originalBytes": 30,
+      "originalSha256": "e31402081a7b96073c548e4e1b40145adf685357cf67db6fa3115a817e5fe55a"
+    },
+    {
+      "path": "installer-file-log-probe/run-1790843955639/timeout.log.gz",
+      "bytes": 50,
+      "sha256": "0cc528a5fded5bd25858a67bf04587112aaa2e0d4d2c95fd3f64c5a0ec379aaa",
+      "originalBytes": 102,
+      "originalSha256": "d636d74076d9a06a7398a2ac1cf7671327b8fc402d47c12fc583bcf4db636020"
+    },
+    {
+      "path": "installer-file-log-probe/probe.js",
+      "bytes": 4437,
+      "sha256": "508ecd6b34d3429139172a87943cc05fcc62c7fc00ba711447e7af1e06d157e4"
+    },
+    {
+      "path": "installer-file-log-probe/verify-focused.js",
+      "bytes": 1428,
+      "sha256": "4ef5ea5f5a7fb8c5764b0752e2755d380705b580f9e6293c6b0d871b4bb8ccb1"
+    },
+    {
+      "path": "diagnostic-replay/workflow.yml",
+      "bytes": 5942,
+      "sha256": "ff29d871907c1dd09bd82c2eec1140e902007a8e2a9afd17d99acda4f21e3e1e"
+    },
+    {
+      "path": "contracts/desktop-fresh-runner-contracts.json",
+      "bytes": 639,
+      "sha256": "43dbfe0cc945c5d05e5e8c5e567de565b9c805457bf83e1ebe7705f2cd9345fa"
+    },
+    {
+      "path": "contracts/desktop-fresh-runner-contracts.log.gz",
+      "bytes": 358,
+      "sha256": "bc9e000807d022093010692b7041b6d661440ef0625fdf3beaccab4b7917887e",
+      "originalBytes": 1509,
+      "originalSha256": "87163cf5ae0e8f8b6168f6697e1387e46f263486f4b486e303bd580d32d31883"
+    },
+    {
+      "path": "contracts/desktop-ci-policy-contracts.json",
+      "bytes": 549,
+      "sha256": "06b964ef2420292bf527c8f5fcbef55a02c1441fe29c3eb42c869322afb47719"
+    },
+    {
+      "path": "contracts/desktop-ci-policy-contracts.log.gz",
+      "bytes": 191,
+      "sha256": "67376418997e17861e001db700cc852971a60bd4082a35567f924e232c1a636f",
+      "originalBytes": 381,
+      "originalSha256": "b9257b159d2779fcda52e7bd5d14a1e7554ee08f4315eaf3c672ff3079645332"
+    },
+    {
+      "path": "contracts/desktop-capture-budget-contracts.json",
+      "bytes": 559,
+      "sha256": "d97792c3b198ff338ce7ddf4459222bf0de65e99f4c4b84386e04cbbe8f2cd14"
+    },
+    {
+      "path": "contracts/desktop-capture-budget-contracts.log.gz",
+      "bytes": 195,
+      "sha256": "ea858d2b74f004a3f7cf5fc1534b3f8b9a7668d114af5c76b38cf2cfac53705c",
+      "originalBytes": 376,
+      "originalSha256": "d07fe8d911cea8d67e6339a84e816dc866d053f97411997432d94af2d6719df6"
+    },
+    {
+      "path": "contracts/desktop-graph-reload-red.json",
+      "bytes": 456,
+      "sha256": "d225b1dfe78ff63d8c80ec3fb1b2b1c5998ad68b643d7f58d95883a9ae8bff4d"
+    },
+    {
+      "path": "contracts/desktop-graph-reload-red.log.gz",
+      "bytes": 659,
+      "sha256": "35311acd40ca25788ccacf74fea71e4bab393fdeb2d3af1f4e5115c563a94d73",
+      "originalBytes": 1772,
+      "originalSha256": "e2b60f8eeb9c8f7f9c4d9e90994b9fba6d821b59ba09f923375b6d9e473017c9"
+    },
+    {
+      "path": "contracts/desktop-graph-reload-green.json",
+      "bytes": 588,
+      "sha256": "f323e21f0c380df6b366bbe1915bc556544fe1aeccf31dc32c1fe4d05ad883e1"
+    },
+    {
+      "path": "contracts/desktop-graph-reload-green.log.gz",
+      "bytes": 205,
+      "sha256": "cf8eb5247f514f542e2b23a7aac663c340a872bd0473339edfe9800f08dc7fa5",
+      "originalBytes": 455,
+      "originalSha256": "74ce07c122761a427b1a23d43d53e9e459d5c0b9ff5abd2d9bf10616fcfccfc0"
+    },
+    {
+      "path": "contracts/desktop-reload-runtime-local.json",
+      "bytes": 553,
+      "sha256": "9fb467fc3a624e46a149579fa2b07889706e69e88bb2b8fe857c973b64f02d09"
+    },
+    {
+      "path": "contracts/desktop-reload-runtime-local.log.gz",
+      "bytes": 1708,
+      "sha256": "70e2d9ccf1b4a37b484dbf6d14a98a59f729d286e4312c6cb5b91c2c4d3f7da5",
+      "originalBytes": 11388,
+      "originalSha256": "576d1c2bbb6d807b71980c2815503555265c7028bafb69908d7983142bd82823"
+    },
+    {
+      "path": "contracts/desktop-msi-cancelled-job.json",
+      "bytes": 483,
+      "sha256": "8462f44c543a9244b20757fa3c1793d2fc2d8bb5fe42ded4a99720b18b368d28"
+    },
+    {
+      "path": "contracts/desktop-msi-cancelled-job.log.gz",
+      "bytes": 48,
+      "sha256": "40ae773728b4ef8d6fe8ae99e15d0185923bfdbf3b12c2a07b565881167ca8e9",
+      "originalBytes": 28,
+      "originalSha256": "d1bca22f0b5a362b165a1cb7742b0a7b09ec3f2fb5c23729b5ba1d472248d7de"
+    },
+    {
+      "path": "contracts/desktop-recovery-diataxis.json",
+      "bytes": 387,
+      "sha256": "caeb575b267d8201a75d21cc8eda51d2cda723c5f00d1a8f492e66acf508e17c"
+    },
+    {
+      "path": "contracts/desktop-recovery-diataxis.log.gz",
+      "bytes": 136,
+      "sha256": "082d9f482e421e628980cb5983d402c193a458959d430dbef9677ecc83f29d64",
+      "originalBytes": 131,
+      "originalSha256": "59244da81ad4cdbf4a9e78557ff788af4dfbbe4692a0dc1b56b1e52b981043b6"
+    },
+    {
+      "path": "contracts/desktop-recovery-docs.json",
+      "bytes": 422,
+      "sha256": "57eeee8c262e75665255a1fd7569ccb850ae44ab945451f5d36aa8c333ead45c"
+    },
+    {
+      "path": "contracts/desktop-recovery-docs.log.gz",
+      "bytes": 1801,
+      "sha256": "4e1696036cdd3b381618478e6257d6417d9f449920ef71235f38e31ea766f12c",
+      "originalBytes": 5917,
+      "originalSha256": "f49628602a9cf2da77f21f35965fc5200e12425726abd41e33da03888202be51"
+    },
+    {
+      "path": "local-verifier/report.json",
+      "bytes": 12983,
+      "sha256": "78ed0e650e8913001361473236201fa60ce0db9fe7ee9c01fcbd92150c310777",
+      "originalBytes": 12983,
+      "originalSha256": "78ed0e650e8913001361473236201fa60ce0db9fe7ee9c01fcbd92150c310777"
+    },
+    {
+      "path": "local-verifier/native-godot.json",
+      "bytes": 1291,
+      "sha256": "b67684dabf15ebb44333163cdc9ac07abaee53e78164f0e0ac7c11b951b9d977",
+      "originalBytes": 1818,
+      "originalSha256": "0bf78b02e2ea73b30e3e6d96ca2bc2cac152672a0859a30b64029724a2e469df"
+    },
+    {
+      "path": "local-verifier/native-godot.png",
+      "bytes": 246255,
+      "sha256": "617cdad9247dcf64ced69bd79763fa7d864dec965934a60c10f9d86e971ca5ac"
+    },
+    {
+      "path": "local-verifier/native-graph.png",
+      "bytes": 990299,
+      "sha256": "fa2890a0b1f917d1dc71fc238bff3199f8edee980fbfdc791922fd302af1774a"
+    },
+    {
+      "path": "local-verifier/native-restored.png",
+      "bytes": 996864,
+      "sha256": "c1646cedd4d5e1b250d49b96a4abcb3b74f8b87a382bf30a55684bfd59ef21e8"
+    },
+    {
+      "path": "local-verifier/native-commands.log.gz",
+      "bytes": 198,
+      "sha256": "655be27fcc11d6b91654ea8ed4bcea502a5ce18270bab953e71f15a52d85b067",
+      "originalBytes": 419,
+      "originalSha256": "3a381a2eb32ccef61d287273dccd68782d7151fe39f2938087df2a14e78160b8"
+    },
+    {
+      "path": "local-verifier/scope.json",
+      "bytes": 432,
+      "sha256": "347201fbb73db0c99a4b86235a92e5c237917c3c526f273071192d137a932004"
+    },
+    {
+      "path": "workflow.json",
+      "bytes": 14439,
+      "sha256": "35345ceb0e18f7d81959415f14548703d70d3f8ca73a406dcc9b2073dd32be81"
+    },
+    {
+      "path": "cancelled-msi-attempt.json",
+      "bytes": 15214,
+      "sha256": "f5da999adb284ef4a3f4c81299270bf2169fa3fffe1b4dbbecfa93597a2618a6"
+    },
+    {
+      "path": "cancelled-msi-attempt-2.json",
+      "bytes": 15213,
+      "sha256": "e1f05aa6a2047b265edf0617b1c374640cfbe2e4bfdc14f30615da3b9a3c2a76"
+    },
+    {
+      "path": "artifacts.json",
+      "bytes": 7404,
+      "sha256": "89c620941fdb8f808b1100f82597aeddc6554d7a07ee77f0bfdb0215fe451588"
+    },
+    {
+      "path": "accepted-installers.json",
+      "bytes": 4228,
+      "sha256": "c84bdeb4ec3d2b48e22b4d9132e428e327fbf747f939681e8bb4a33816c6a895"
+    },
+    {
+      "path": "preserved-working-file.json",
+      "bytes": 165,
+      "sha256": "deb5e7f6acaa83f877bc1f0c7bffc1ca881ab72f8ed1e0384c2ccd540de88eb6"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "label": "adopted-sqlite-1",
+    "startedAt": "2026-09-14T00:48:52.852Z",
+    "completedAt": "2026-09-14T00:49:17.302Z",
+    "report": "docs/evaluations/evidence/2026-09-14-native-window/ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-14T00-48-53-690Z.json",
+    "runId": "2cfadab5-50b6-4b46-9519-c0298be90d11",
+    "logPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\adopted-sqlite-1.log"
+  },
+  {
+    "label": "adopted-ann-1",
+    "startedAt": "2026-09-14T00:49:17.304Z",
+    "completedAt": "2026-09-14T00:49:45.573Z",
+    "report": "docs/evaluations/evidence/2026-09-14-native-window/ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-14T00-49-18-111Z.json",
+    "runId": "7af4c8e8-df2f-4464-874d-885eada0bfcc",
+    "logPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\adopted-ann-1.log"
+  },
+  {
+    "label": "adopted-sqlite-2",
+    "startedAt": "2026-09-14T00:49:45.575Z",
+    "completedAt": "2026-09-14T00:50:10.278Z",
+    "report": "docs/evaluations/evidence/2026-09-14-native-window/ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-14T00-49-46-397Z.json",
+    "runId": "d926aa35-1f2e-4cff-a5af-dafbc6a20f09",
+    "logPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\adopted-sqlite-2.log"
+  },
+  {
+    "label": "adopted-ann-2",
+    "startedAt": "2026-09-14T00:50:10.279Z",
+    "completedAt": "2026-09-14T00:50:38.347Z",
+    "report": "docs/evaluations/evidence/2026-09-14-native-window/ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-14T00-50-11-098Z.json",
+    "runId": "3d0e75ec-c688-4c48-bfb7-5dadb923788b",
+    "logPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\adopted-ann-2.log"
+  },
+  {
+    "label": "adopted-sqlite-3",
+    "startedAt": "2026-09-14T00:50:38.348Z",
+    "completedAt": "2026-09-14T00:51:02.506Z",
+    "report": "docs/evaluations/evidence/2026-09-14-native-window/ci/windows-two-hosts/foundation/foundation-sqlite-runtime-report-2026-09-14T00-50-39-174Z.json",
+    "runId": "15fc5aa8-5af1-47c3-a371-752bb667027d",
+    "logPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\adopted-sqlite-3.log"
+  },
+  {
+    "label": "adopted-ann-3",
+    "startedAt": "2026-09-14T00:51:02.507Z",
+    "completedAt": "2026-09-14T00:51:31.276Z",
+    "report": "docs/evaluations/evidence/2026-09-14-native-window/ci/windows-two-hosts/foundation/foundation-ann-runtime-report-2026-09-14T00-51-03-359Z.json",
+    "runId": "114def91-f85d-4b60-a283-2f9e48c65f6a",
+    "logPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\adopted-ann-3.log"
+  }
+]

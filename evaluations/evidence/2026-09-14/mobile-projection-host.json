@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-13T18:08:19.247Z",
+  "maxProjectionBytes": 50331648,
+  "hosts": [
+    {
+      "host": "web",
+      "adapterKind": "web-storage",
+      "evidenceLevel": "host-boundary-contract",
+      "storeKind": "read-through",
+      "metadata": {
+        "schemaVersion": 1,
+        "projectionVersion": 1,
+        "workspaceId": "mobile-replay-fixture",
+        "revision": "sha256:mobile-replay-fixture",
+        "nodeCount": 3,
+        "edgeCount": 2
+      },
+      "searchCount": 1,
+      "neighborCount": 1,
+      "pathLength": 3,
+      "replay": "pass"
+    },
+    {
+      "host": "tauri",
+      "adapterKind": "tauri-atomic-file",
+      "evidenceLevel": "host-boundary-contract",
+      "storeKind": "file-read-through",
+      "metadata": {
+        "schemaVersion": 1,
+        "projectionVersion": 1,
+        "workspaceId": "mobile-replay-fixture",
+        "revision": "sha256:mobile-replay-fixture",
+        "nodeCount": 3,
+        "edgeCount": 2
+      },
+      "searchCount": 1,
+      "neighborCount": 1,
+      "pathLength": 3,
+      "replay": "pass"
+    },
+    {
+      "host": "capacitor",
+      "adapterKind": "capacitor-filesystem-chunked",
+      "evidenceLevel": "host-boundary-contract",
+      "storeKind": "file-read-through",
+      "metadata": {
+        "schemaVersion": 1,
+        "projectionVersion": 1,
+        "workspaceId": "mobile-replay-fixture",
+        "revision": "sha256:mobile-replay-fixture",
+        "nodeCount": 3,
+        "edgeCount": 2
+      },
+      "searchCount": 1,
+      "neighborCount": 1,
+      "pathLength": 3,
+      "replay": "pass"
+    },
+    {
+      "host": "android",
+      "adapterKind": "android-atomic-file",
+      "evidenceLevel": "host-boundary-contract",
+      "storeKind": "file-read-through",
+      "metadata": {
+        "schemaVersion": 1,
+        "projectionVersion": 1,
+        "workspaceId": "mobile-replay-fixture",
+        "revision": "sha256:mobile-replay-fixture",
+        "nodeCount": 3,
+        "edgeCount": 2
+      },
+      "searchCount": 1,
+      "neighborCount": 1,
+      "pathLength": 3,
+      "replay": "pass"
+    }
+  ],
+  "failureModes": {
+    "legacyBasenameCollision": "fail-closed",
+    "truncatedJson": "fail-closed",
+    "unknownSchema": "fail-closed"
+  },
+  "notes": [
+    "Host adapters exercise separate boundary implementations in a deterministic host process.",
+    "Semantic parity uses canonicalId, normalized sourceUri, directed endpoints, edge type, kind, and provenance; host-specific legacy ids are intentionally ignored.",
+    "The Capacitor and Rust builders consume the same nested-path, relative-link, Markdown-link, duplicate-content, and NFC-normalized corpus. The Rust side is executed through an ignored cargo probe.",
+    "This report is not evidence of a signed artifact, Android process death, SAF UI execution, or RSS compliance."
+  ],
+  "semanticParity": {
+    "corpus": [
+      "algebra/index.md",
+      "algebra/intro.md",
+      "shared/base.md",
+      "shared/copy.md",
+      "unicode/Café.md",
+      "unicode/reader.md"
+    ],
+    "evidenceLevel": "host-boundary-contract-plus-rust-probe",
+    "comparison": {
+      "equal": true,
+      "left": {
+        "nodeCount": 6,
+        "edgeCount": 4
+      },
+      "right": {
+        "nodeCount": 6,
+        "edgeCount": 4
+      },
+      "missingNodes": [],
+      "extraNodes": [],
+      "nodeMismatches": [],
+      "missingEdges": [],
+      "extraEdges": []
+    },
+    "replay": "pass"
+  }
+}

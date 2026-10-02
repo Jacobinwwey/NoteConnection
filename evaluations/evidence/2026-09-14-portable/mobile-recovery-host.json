@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "evidenceLevel": "host-recovery-state-machine",
+  "nativeDeviceEvidence": false,
+  "scenarios": [
+    {
+      "name": "staging-target-wins",
+      "action": "target-preserved",
+      "status": "completed",
+      "targetExists": true,
+      "journalExists": false,
+      "backupExists": false
+    },
+    {
+      "name": "backup-restored",
+      "action": "previous-restored",
+      "status": "completed",
+      "targetExists": true,
+      "journalExists": false,
+      "backupExists": false
+    },
+    {
+      "name": "backup-rename-retry",
+      "action": "recovery-pending",
+      "status": "failed",
+      "targetExists": false,
+      "journalExists": true,
+      "backupExists": true
+    },
+    {
+      "name": "activated-target-wins",
+      "action": "target-preserved",
+      "status": "completed",
+      "targetExists": true,
+      "journalExists": false,
+      "backupExists": false
+    },
+    {
+      "name": "orphan-backup-restored",
+      "action": "orphan-backup-restored",
+      "status": "noop",
+      "targetExists": true,
+      "journalExists": false,
+      "backupExists": false
+    },
+    {
+      "name": "orphan-backup-retry",
+      "action": "orphan-recovery-pending",
+      "status": "noop",
+      "targetExists": false,
+      "journalExists": false,
+      "backupExists": true
+    },
+    {
+      "name": "unsafe-journal-rejected",
+      "action": "unsafe_import_journal",
+      "status": "failed",
+      "targetExists": false,
+      "journalExists": false,
+      "backupExists": false
+    },
+    {
+      "name": "unknown-schema-rejected",
+      "action": "invalid_import_journal",
+      "status": "failed",
+      "targetExists": false,
+      "journalExists": false,
+      "backupExists": false
+    }
+  ],
+  "notes": [
+    "The scenarios model the Kotlin journal phases and path checks in a deterministic host process.",
+    "This evidence does not prove Android process death, SAF UI execution, or device RSS."
+  ]
+}

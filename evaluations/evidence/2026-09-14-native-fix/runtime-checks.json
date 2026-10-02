@@ -1,0 +1,98 @@
+[
+  {
+    "check": "agent-workspace",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-agent-workspace-runtime.js"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 9485,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\native-root-agent-workspace-1789328062406.log",
+    "logSha256": "4df84477caac470564b6c8130c22f24da85124a94aaa309e439ff55f24425019"
+  },
+  {
+    "check": "knowledge-workspace-full",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-knowledge-workspace-runtime.js",
+      "--full"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 293424,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\native-root-knowledge-workspace-full-1789328071893.log",
+    "logSha256": "4e8aa04678f5270256080774929307b29b5d79a035adc9333eb09a334c38b39f"
+  },
+  {
+    "check": "cargo-tests",
+    "command": "cargo.exe",
+    "args": [
+      "test",
+      "--manifest-path",
+      "src-tauri/Cargo.toml",
+      "--locked",
+      "--offline",
+      "-j",
+      "1"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 6967,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\native-root-cargo-tests-1789328365389.log",
+    "logSha256": "0823cda2648ba0b52f61f9a981a58c4b6ba2c6794a051c2ae9f7a01cba89bc3f"
+  },
+  {
+    "check": "mobile-projection-host",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-mobile-projection-replay.js"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 1070,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\native-root-mobile-projection-host-1789328372359.log",
+    "logSha256": "fb6969f48f867f65c06703a15a858e0f6aab068373490a09f9bf52a743b1cf2e"
+  },
+  {
+    "check": "mobile-recovery-host",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-mobile-native-recovery.js"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 169,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\native-root-mobile-recovery-host-1789328373430.log",
+    "logSha256": "69891e453ed89df4a474d9821a40ddbc1e69d6b939a1064f772fda0ac8bdd9e6"
+  },
+  {
+    "check": "mermaid-fences",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-markdown-mermaid-fence.js",
+      "Knowledge_Base/testconcept"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 152,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\native-root-mermaid-fences-1789328373600.log",
+    "logSha256": "58fd1913fa94e541f42a1343f45992d1ee8179031f2fde47b66624d2305f3f1e"
+  },
+  {
+    "check": "frontend-runtime-assets",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-frontend-runtime-assets.js"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 91,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\native-root-frontend-runtime-assets-1789328373753.log",
+    "logSha256": "0f7a9cc7acd1f518b310670b5ce3182d6c8127f4050b0b8b7ae7024b9da0a1c5"
+  },
+  {
+    "check": "route-shadow",
+    "command": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\31516_1789174206658\\node.exe",
+    "args": [
+      "scripts/verify-route-registry-shadow.js"
+    ],
+    "exitCode": 0,
+    "elapsedMs": 12027,
+    "log": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\run-logs\\native-root-route-shadow-1789328373845.log",
+    "logSha256": "6d958bad093c65181ae8f6789f28197fe5253e6e5c9b34e5ba04d7bfc26ae77e"
+  }
+]
