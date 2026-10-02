@@ -1,0 +1,11 @@
+﻿{
+    "channel":  "HKLM WebView2 AdditionalBrowserArguments",
+    "applicationPolicyNames":  [
+                                   "com.jacobinwwey.noteconnection",
+                                   "npm.exe"
+                               ],
+    "debuggerPort":  49682,
+    "elevated":  true,
+    "policyValuesRemoved":  true,
+    "runtimeExitCode":  0
+}

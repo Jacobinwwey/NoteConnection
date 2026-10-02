@@ -1,7 +1,7 @@
 ---
 title: "fix: Qualify desktop runtime resources outside the checkout"
 type: fix
-status: in_progress
+status: completed
 date: 2026-09-14
 updated: 2026-10-02
 source_revision: 6bf87b6d11fa01b5b1c8cd21f2ec44cbbc2bbc3a
@@ -18,7 +18,7 @@ The W1–W5 window contracts are complete, but do not execute the installed appl
 - [x] P2: Resolve packaged resources at the desktop shell owner; keep explicit development overrides and avoid dependence on the launcher's working directory.
 - [x] P3: Package the required Godot resources, exclude editor caches and unsupported SVG imports, and verify the engine version used by release provisioning against the project.
 - [x] P4: Build and exercise a fresh desktop bundle/installer in an isolated target, including resource startup, window transitions and shutdown. Keep installer behavior and signing trust as separate evidence.
-- [ ] P5: Run affected and required checks, archive source/artifact provenance, update both languages and integrate verified changes into main.
+- [x] P5: Run affected and required checks, archive source/artifact provenance, update both languages and integrate verified changes into main.
 
 Do not modify unrelated route, learning or identity behavior. Reuse existing runtime/build owners. Unsigned Windows installer behavior can be tested without pretending that signing has been qualified; Android release signing/device and learner evidence remain separate prerequisites. No release tags or release publication are authorized by this unit.
 
@@ -52,6 +52,8 @@ October 2: GitHub annotations for both `36832726016` and `36838763881` explicitl
 
 October 2 acceptance: run `36960840921`, source `129443f361fc42831f0f1371ab3066fbcdac69f5`, passes both build jobs and both independent NSIS/MSI qualification jobs (build and qualification attempt 1). Downloaded installer hashes, source/build receipts, runtime reports, policy/process/removal cleanup, runtime-data preservation and PNG integrity pass offline verification. The archive retains 232 evidence files plus its manifest, including historical failures and the 34-test contract receipt. P4 is complete; P5 awaits verified main integration and its required checks. Signing trust, Android devices/RSS, production ANN and U8 learner evidence remain open. Historical runner loss and MSI 1603 causes remain unproven. [Evidence manifest](../evaluations/evidence/2026-10-01-windows-installers/manifest.json). The temporary MSI diagnostic workflow is retired; its source and replay evidence are retained in the archive.
 
+Final integration: remote main advanced from `6bf87b6d` to `8a7296c99387932e00ce14a7372847017ad26be0`. All seven main workflows pass: Migration Gates, Native Window Qualification, Windows Installer Qualification, Fixrisk Operational Readiness, Mobile E2E Detox Contracts, Docs Diataxis Site and Docs GitHub Pages Publish. Main installer run `36963202337` also passes both formats at build/qualification attempt 1; downloaded bytes, provenance, runtime/removal/policy receipts and PNGs pass independent verification. P5 is complete. The remaining U7/U8 scope is unchanged; no release tag was created. The existing local sidecar remains untouched. [Main evidence](../evaluations/evidence/2026-10-02-main-integration/manifest.json).
+
 ## 中文
 
 W1–W5 窗口契约已经完成，但未执行安装后应用的启动链路。当前 Tauri bundle 只声明 sidecar executable，没有 Godot 项目资源；`resolve_godot_project_path` 回落到 `cwd/path_mode`。此外，Godot 项目声明 4.6，而桌面 release provisioning 固定 4.3。这些是明确的打包风险，尚不是安装包验收证据。
@@ -60,7 +62,7 @@ W1–W5 窗口契约已经完成，但未执行安装后应用的启动链路。
 - [x] P2：由桌面 shell owner 解析打包资源，保留显式 development override，消除对启动器工作目录的依赖。
 - [x] P3：打包必要 Godot 资源，排除编辑器缓存及不支持的 SVG 导入，校验 release provisioning 的引擎版本与项目声明。
 - [x] P4：在隔离目标中构建并运行新的桌面 bundle/installer，覆盖资源启动、窗口切换和退出；分别记录安装行为与签名信任。
-- [ ] P5：执行受影响及必需检查，归档源码/产物证据，同步双语状态，将验证后的变更整合到 main。
+- [x] P5：执行受影响及必需检查，归档源码/产物证据，同步双语状态，将验证后的变更整合到 main。
 
 不修改无关路由、学习或身份行为，复用既有 runtime/build owner。未签名 Windows 安装包也可以验证安装行为，但不能据此声称签名已验收；Android release 签名/真机和学习效果证据仍各自保留。本单元不创建 release tag，也不发布 release。
 
@@ -93,3 +95,5 @@ Run `36828405439` 在 `5b01b24d` 上通过 NSIS，下载的安装包哈希与三
 10 月 2 日：GitHub 对 `36832726016` 与 `36838763881` 的注解均明确记录 MSI hosted runner 失联，MSI 日志不可用；直接文件输出未解决该宿主故障。现将构建和验收放到不同的一次性 runner。构建回执绑定源码提交／指纹、workflow run、构建批次、精确打包标记后的 payload 预期及安装包字节；验收在查询注册项或执行前核对回执和安装包。仅重跑失败验收时，可复用同一 run、同一源码的较早构建批次；历史二进制产物与同次运行内可替换的传输输入分开保存。5 个针对性套件／34 项测试通过，覆盖来源、路径、字节篡改拒绝，以及无构建依赖的验收。宿主失联及先前 1603 的根因仍未证实；该改动隔离构建负载，不放宽完整验收条件。
 
 10 月 2 日验收：run `36960840921`、源码 `129443f361fc42831f0f1371ab3066fbcdac69f5` 的两个构建 job 和两个独立 NSIS／MSI 验收 job 均通过，构建及验收均为 attempt 1。下载的安装包哈希、源码／构建回执、运行报告、策略／进程／卸载清理、运行数据保留及 PNG 完整性均通过离线核验。归档保留 232 个证据文件及其清单，包括历史失败和 34 项测试回执。P4 已完成；P5 仍待验证后的 main 集成及必需检查。签名信任、Android 真机／RSS、生产 ANN 和 U8 学习者证据保持未完成。历史 runner 失联及 MSI 1603 根因仍未证实。 [证据清单](../evaluations/evidence/2026-10-01-windows-installers/manifest.json)。临时 MSI 诊断工作流已退役，其源码与回放证据保留在归档中。
+
+最终集成：远端 main 从 `6bf87b6d` 更新到 `8a7296c99387932e00ce14a7372847017ad26be0`。七项主分支工作流全部通过：Migration Gates、Native Window Qualification、Windows Installer Qualification、Fixrisk Operational Readiness、Mobile E2E Detox Contracts、Docs Diataxis Site 和 Docs GitHub Pages Publish。主分支安装包 run `36963202337` 的两种格式也均在构建／验收 attempt 1 通过；下载字节、来源、运行／卸载／策略回执及 PNG 均通过独立核验。P5 已完成；U7/U8 其余范围保持不变，未创建 release tag，原有本机 sidecar 保持不动。 [主分支证据](../evaluations/evidence/2026-10-02-main-integration/manifest.json)。

@@ -1,7 +1,7 @@
 ---
 title: "Interrupted session recovery and installer CI continuation"
 date: 2026-10-01
-status: in_progress
+status: completed
 source_revision: 227678d349a5d52bbecad51980755f28fb80a09c
 parent: docs/plans/2026-09-14-006-fix-desktop-runtime-resources-plan.md
 ---
@@ -47,6 +47,8 @@ October 2 continuation: run `36838763881` on `453de115` again passes NSIS but lo
 
 October 2 acceptance: run `36960840921`, source `129443f361fc42831f0f1371ab3066fbcdac69f5`, passes both build jobs and both independent NSIS/MSI qualification jobs (build and qualification attempt 1). Downloaded installer hashes, source/build receipts, runtime reports, policy/process/removal cleanup, runtime-data preservation and PNG integrity pass offline verification. The archive retains 232 evidence files plus its manifest, including historical failures and the 34-test contract receipt. P4 is complete; P5 awaits verified main integration and its required checks. Signing trust, Android devices/RSS, production ANN and U8 learner evidence remain open. Historical runner loss and MSI 1603 causes remain unproven. [Evidence manifest](evidence/2026-10-01-windows-installers/manifest.json). The temporary MSI diagnostic workflow is retired; its source and replay evidence are retained in the archive.
 
+Final integration: remote main advanced from `6bf87b6d` to `8a7296c99387932e00ce14a7372847017ad26be0`. All seven main workflows pass: Migration Gates, Native Window Qualification, Windows Installer Qualification, Fixrisk Operational Readiness, Mobile E2E Detox Contracts, Docs Diataxis Site and Docs GitHub Pages Publish. Main installer run `36963202337` also passes both formats at build/qualification attempt 1; downloaded bytes, provenance, runtime/removal/policy receipts and PNGs pass independent verification. P5 is complete. The remaining U7/U8 scope is unchanged; no release tag was created. The existing local sidecar remains untouched. [Main evidence](evidence/2026-10-02-main-integration/manifest.json).
+
 ## 中文
 
 恢复的旧会话：`01a0931a-d813-70d1-9916-b723f5182ee4`。最初目标为审计并执行项目收敛计划，完成测试后更新远端 main；最后的明确要求是修复 origin CI 失败。最后一个非空轮次中断于提权 WebView2 安装验收修复提交之后。
@@ -83,3 +85,5 @@ PowerShell parser／非 CI guard 的成功记录来自旧会话、提交消息�
 10 月 2 日续接：`453de115` 对应 run `36838763881` 再次通过 NSIS，但 MSI hosted runner 失联；该运行与 `36832726016` 的宿主失联注解均已由助手通过 GitHub API 取得。下一项范围受限的改动将安装包构建与干净 runner 上的验收分离，并传递经过校验的构建回执和精确安装包字节。5 个套件／34 项测试通过。Main 未更新，P4/P5 等待新的隔离验收结果。
 
 10 月 2 日验收：run `36960840921`、源码 `129443f361fc42831f0f1371ab3066fbcdac69f5` 的两个构建 job 和两个独立 NSIS／MSI 验收 job 均通过，构建及验收均为 attempt 1。下载的安装包哈希、源码／构建回执、运行报告、策略／进程／卸载清理、运行数据保留及 PNG 完整性均通过离线核验。归档保留 232 个证据文件及其清单，包括历史失败和 34 项测试回执。P4 已完成；P5 仍待验证后的 main 集成及必需检查。签名信任、Android 真机／RSS、生产 ANN 和 U8 学习者证据保持未完成。历史 runner 失联及 MSI 1603 根因仍未证实。 [证据清单](evidence/2026-10-01-windows-installers/manifest.json)。临时 MSI 诊断工作流已退役，其源码与回放证据保留在归档中。
+
+最终集成：远端 main 从 `6bf87b6d` 更新到 `8a7296c99387932e00ce14a7372847017ad26be0`。七项主分支工作流全部通过：Migration Gates、Native Window Qualification、Windows Installer Qualification、Fixrisk Operational Readiness、Mobile E2E Detox Contracts、Docs Diataxis Site 和 Docs GitHub Pages Publish。主分支安装包 run `36963202337` 的两种格式也均在构建／验收 attempt 1 通过；下载字节、来源、运行／卸载／策略回执及 PNG 均通过独立核验。P5 已完成；U7/U8 其余范围保持不变，未创建 release tag，原有本机 sidecar 保持不动。 [主分支证据](evidence/2026-10-02-main-integration/manifest.json)。
