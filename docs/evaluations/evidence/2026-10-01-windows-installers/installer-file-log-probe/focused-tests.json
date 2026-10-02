@@ -1,0 +1,19 @@
+{
+  "startedAt": "2026-10-01T08:40:08.106Z",
+  "completedAt": "2026-10-01T08:40:16.276Z",
+  "executable": "C:\\Users\\jacob\\AppData\\Local\\fnm_multishells\\30824_1790844007769\\node.exe",
+  "args": [
+    "node_modules/jest/bin/jest.js",
+    "src/windows.installer.runtime.test.ts",
+    "src/windows.installer.payload.test.ts",
+    "src/desktop.godot.pack.test.ts",
+    "src/desktop.runtime.graph.test.ts",
+    "--runInBand",
+    "--ci",
+    "--cacheDirectory",
+    "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\installer-file-log-probe\\jest-cache"
+  ],
+  "temp": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\installer-file-log-probe\\temp",
+  "status": 0,
+  "passed": true
+}

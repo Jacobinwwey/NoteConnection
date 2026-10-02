@@ -1,0 +1,6 @@
+{
+  "matchingVerifierRevision": "129443f361fc42831f0f1371ab3066fbcdac69f5",
+  "recordedSourceRevision": null,
+  "scope": "Supporting verifier regression using the prior CI executable; not a fresh installer acceptance. The local run did not record a commit; matchingVerifierRevision identifies unchanged verifier contents at archival time.",
+  "executableSha256": "9881e5abcc2d96281005223409a5ca34923ddb4d8c44eb6ffaa9e9cd0709def2"
+}

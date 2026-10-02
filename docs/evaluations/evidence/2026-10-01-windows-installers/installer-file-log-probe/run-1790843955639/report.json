@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "output": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\installer-file-log-probe\\run-1790843955639",
+  "node": "v22.19.0",
+  "platform": "win32",
+  "successAndErrorOutputRetained": true,
+  "timeoutOutputRetained": true,
+  "timeoutElapsedMs": 1520,
+  "timedOutChildStopped": true,
+  "descriptorsClosedOnReturnAndThrow": true,
+  "messages": [
+    "[windows-installers] Installer start: success.log (node.exe)",
+    "[windows-installers] Installer exit: success.log status=0 error=none elapsedMs=186",
+    "[windows-installers] Installer start: error.log (node.exe)",
+    "[windows-installers] Installer exit: error.log status=7 error=none elapsedMs=150",
+    "[windows-installers] Installer start: timeout.log (node.exe)",
+    "[windows-installers] Installer exit: timeout.log status=null error=ETIMEDOUT elapsedMs=1520",
+    "[windows-installers] Installer start: invalid-options.log (node.exe)"
+  ]
+}

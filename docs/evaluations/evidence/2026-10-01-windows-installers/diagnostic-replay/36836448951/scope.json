@@ -1,0 +1,7 @@
+{
+  "installerSha256": "9caece6092cfd76bf3b24600cb1960c584674084f81d5d747aa13221451d6aa0",
+  "installerSourceRevision": "5b01b24d01742dbc3324ba530395ced41f8549e7",
+  "scope": "Diagnostic replay only; not fresh installer acceptance",
+  "verifierRevision": "87524992e5c71a837892811fa9a0c8548b611f3e",
+  "installerRun": "36828405439"
+}

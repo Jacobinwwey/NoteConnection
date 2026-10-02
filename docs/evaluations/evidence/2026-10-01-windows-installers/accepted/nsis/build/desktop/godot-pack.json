@@ -1,0 +1,116 @@
+{
+  "generatedAt": "2026-10-02T03:40:39.091Z",
+  "engineVersion": "4.6.stable.official.89cea1439",
+  "engineSha256": "63913d01be2c2d1f929b4a626f5347117126b34e9c64cbf350ea9f35a9657ebf",
+  "files": [
+    {
+      "path": "project.godot",
+      "sha256": "010154a66287a925225b2543769349493440af71e9403f111c499f1b53ff6acd"
+    },
+    {
+      "path": "export_presets.cfg",
+      "sha256": "a6630ee0e7c00411fe367f26b3f61164b726253e6dd550ca8df91859d4a706ac"
+    },
+    {
+      "path": "scenes/main.tscn",
+      "sha256": "47c9489adc5b2b9bac3fa1f1453805487ea410b12758a11cd452f7ec5e4005f7"
+    },
+    {
+      "path": "scenes/settings_panel.tscn",
+      "sha256": "9f47731a7379b7bea576c6d8d9059c631537274bb3191dac5d8fe97378ba09c0"
+    },
+    {
+      "path": "scenes/tree_view_panel.tscn",
+      "sha256": "6932744497a1070f87586bff4725c203d0740909bfc76e2066b0857ace0ad27a"
+    },
+    {
+      "path": "scripts/draggable_panel.gd",
+      "sha256": "1e6b56247c278dfb096729e549bbae16d56cdcc02aefac9189eda31ee3769684"
+    },
+    {
+      "path": "scripts/learning_state_machine.gd",
+      "sha256": "60ee081a888d2bafced7b15068f7aa00ce17c0676a6ca5ef2adb23f403ed8594"
+    },
+    {
+      "path": "scripts/notemd_embed_panel.gd",
+      "sha256": "7fa99221415e2af9a0a974e2a717700858db758d065b385e37b3a4035ac7abf8"
+    },
+    {
+      "path": "scripts/orbital_camera.gd",
+      "sha256": "7918fd8fb85d794a6fb9b12851e56f77375ae2c6d3e12cf980244030954d4011"
+    },
+    {
+      "path": "scripts/path_mode_ui.gd",
+      "sha256": "1aae60fd3ff03529549c02a6ecc527a4d15b967a3a94909d187c00d5c27cbe59"
+    },
+    {
+      "path": "scripts/path_renderer.gd",
+      "sha256": "e71d629dc090f3eea9fcbf79e1d81a2ab653fa99a7642fdce18a4a8489d5410e"
+    },
+    {
+      "path": "scripts/reader_image_canvas.gd",
+      "sha256": "9264c01d3670ff56cceafb82166e309fa594c9d59619921822593c2fdd713c65"
+    },
+    {
+      "path": "scripts/reader_render_client.gd",
+      "sha256": "d6a2927e2ec5a7979869f648ea26f436bf37be233281273ea252eb00481e0272"
+    },
+    {
+      "path": "scripts/settings_panel.gd",
+      "sha256": "09381abb341652f49b738899f8bf70e306b5c4b35b7f2da9000e6a9d983a9016"
+    },
+    {
+      "path": "scripts/tree_renderer.gd",
+      "sha256": "dc1293366e4064e9c935f1950109de6d45c113a50de6b9cf43ec991dd3fa57c6"
+    },
+    {
+      "path": "scripts/tree_styles.gd",
+      "sha256": "9e02353d8acdc483cb5276a675d870d63be20278bc26b532d04eb9a638e143dc"
+    },
+    {
+      "path": "scripts/tree_view_panel.gd",
+      "sha256": "2d5453f66fcb05e955f95f1104a8367af0f6c099328cb7620d82d2844092131a"
+    },
+    {
+      "path": "scripts/ws_client.gd",
+      "sha256": "d558006a04a57914410178db5fc38bc21abe2066ba6e4e489c5da6dfe107e38a"
+    },
+    {
+      "path": "shaders/bubble_material.gdshader",
+      "sha256": "d58ed619fdda952a820f5e38ced7496fad7342d53b00898163b9f5ba9767e9c3"
+    },
+    {
+      "path": "shaders/frosted_glass.gdshader",
+      "sha256": "c2434171dd62d7db6f12646d7aea715b7eedde2c07c8d60a0015b6ac5308e85c"
+    },
+    {
+      "path": "assets/backgrounds/BACKGROUND_SYSTEM.md",
+      "sha256": "97bb78460c33f400a595a969b06a4bdc978ef9ef769f99f8e94f2826b1d2c3f3"
+    },
+    {
+      "path": "assets/backgrounds/belfast_sunset_puresky_4k.exr.import",
+      "sha256": "dd01bff0d3409ca902922311b1a720d0f0cb6461f2f9f925d80028a28f4d7a10"
+    },
+    {
+      "path": "assets/backgrounds/citrus_orchard_puresky_4k.exr.import",
+      "sha256": "71761261189f12afe41fcc91b98e1825f12ce6c5d7ae8b41ba5affa0227584d1"
+    },
+    {
+      "path": "assets/backgrounds/qwantani_dusk_2_puresky_4k.exr.import",
+      "sha256": "0415676b21b056577137b06b3ad151107592da009cd432d941c069e2ba8dde41"
+    },
+    {
+      "path": "assets/backgrounds/qwantani_moonrise_puresky_4k.exr.import",
+      "sha256": "ea009f6b9749074def9478429d023dcea7d3e21d71783b55c17b7d6a7b1edb4b"
+    },
+    {
+      "path": "assets/backgrounds/qwantani_sunset_puresky_4k.exr.import",
+      "sha256": "dccdbf2580fec69803a75a81b895fcfae3a4e9f1951b3835283fa60c961b9056"
+    }
+  ],
+  "pack": {
+    "path": "output/desktop/path_mode.pck",
+    "bytes": 311164,
+    "sha256": "9ab1a9e23afda3d4820afc07f2765cd9460193a2f7352490d7a8cd852ce46cb3"
+  }
+}

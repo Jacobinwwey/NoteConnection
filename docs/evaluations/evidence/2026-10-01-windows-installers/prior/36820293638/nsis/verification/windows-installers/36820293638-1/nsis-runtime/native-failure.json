@@ -1,0 +1,35 @@
+{
+  "success": true,
+  "titleFilter": "NoteConnection",
+  "matchIndex": 0,
+  "activateWindow": false,
+  "screenshotPath": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36820293638-1\\nsis-runtime\\native-failure.png",
+  "capturedAt": "2026-10-01T05:47:05.9280543+00:00",
+  "window": {
+    "title": "NoteConnection",
+    "processId": 6368,
+    "left": 0,
+    "top": 0,
+    "right": 1044,
+    "bottom": 788,
+    "width": 1044,
+    "height": 788,
+    "usedPrintWindow": true
+  },
+  "process": {
+    "name": "npm.exe",
+    "parentProcessId": 6812,
+    "executablePath": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36820293638-1\\NSIS installed\\npm.exe",
+    "commandLine": "\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36820293638-1\\NSIS installed\\npm.exe\""
+  },
+  "matchedWindows": [
+    {
+      "title": "NoteConnection",
+      "processId": 6368,
+      "left": 0,
+      "top": 0,
+      "right": 1044,
+      "bottom": 788
+    }
+  ]
+}

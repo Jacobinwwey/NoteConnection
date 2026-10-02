@@ -1,0 +1,35 @@
+{
+  "success": true,
+  "titleFilter": "NoteConnection Path Renderer",
+  "matchIndex": 0,
+  "activateWindow": false,
+  "screenshotPath": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36828405439-1\\nsis-runtime\\native-godot.png",
+  "capturedAt": "2026-10-01T07:26:35.5210079+00:00",
+  "window": {
+    "title": "NoteConnection Path Renderer (DEBUG)",
+    "processId": 6728,
+    "left": -8,
+    "top": -31,
+    "right": 1032,
+    "bottom": 753,
+    "width": 1040,
+    "height": 784,
+    "usedPrintWindow": true
+  },
+  "process": {
+    "name": "godot.exe",
+    "parentProcessId": 6596,
+    "executablePath": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36828405439-1\\NSIS installed\\godot.exe",
+    "commandLine": "\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36828405439-1\\NSIS installed\\godot.exe\" --main-pack \"\\\\?\\D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36828405439-1\\NSIS installed\\path_mode.pck\" --nc-start-hidden --minimized"
+  },
+  "matchedWindows": [
+    {
+      "title": "NoteConnection Path Renderer (DEBUG)",
+      "processId": 6728,
+      "left": -8,
+      "top": -31,
+      "right": 1032,
+      "bottom": 753
+    }
+  ]
+}

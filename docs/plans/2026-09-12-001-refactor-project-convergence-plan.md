@@ -3,7 +3,7 @@ title: "refactor: Close state, runtime, and release contracts"
 type: refactor
 status: partial_acceptance
 date: 2026-09-12
-updated: 2026-09-14
+updated: 2026-10-02
 origin: docs/audits/2026-09-12-project-progress.md
 source_revision: e84d6ece9cce5b82902d4b9335ac096a136a8d2a
 implementation_revision: 894ec1d0e083e2eab444ccf1f1e465eeb45b4947
@@ -176,6 +176,7 @@ Do not execute mutating requests twice against production for “shadow” verif
 - [x] U7 tooling, Windows SQLite and reference connector qualification.
 - [x] U7 independent Windows/Linux server artifacts and two-host qualification of the same Windows artifact.
 - [x] U7 named real Wry window tests, with the same test executable verified on two Windows hosts (run `34792199163`); renewed server qualification in run `34792256467`.
+- [x] Unsigned Windows NSIS/MSI installer behavior: run `36960840921`, source `129443f3`, passes full independent qualification and downloaded evidence verification; [manifest](../evaluations/evidence/2026-10-01-windows-installers/manifest.json). Signing trust, other unqualified installer targets, Android devices/RSS and production ANN remain open; U7 remains partially accepted.
 - [ ] U7 native release installers, Android devices and production optional backends with their own artifacts and measurements.
 
 - [ ] **U7 / P1 — close evidence obligations, not feature scope; R7**
@@ -392,6 +393,7 @@ A/B 需要多个工程迭代，不承诺“两周清理完成”；U1 的范围�
 - [x] U7 工具、Windows SQLite 与参考连接器资格验证。
 - [x] U7 独立 Windows/Linux server 产物及 Windows 同一产物的两宿主资格验证。
 - [x] U7 真实 Wry 命名窗口测试，同一测试 executable 在两个 Windows 宿主验证（run `34792199163`）；server 更新资格见 run `34792256467`。
+- [x] 未签名 Windows NSIS／MSI 安装行为：run `36960840921`、源码 `129443f3` 通过完整独立验收及下载证据核验；[证据清单](../evaluations/evidence/2026-10-01-windows-installers/manifest.json)。签名信任、其他未验收安装目标、Android 真机／RSS 和生产 ANN 继续未完成，U7 整体保持部分验收。
 - [ ] U7 原生发布安装包、Android 真机及生产可选 backend 的对应产物/测量资格。
 
 - [ ] **U7 / P1 — 关闭证据义务；R7**
