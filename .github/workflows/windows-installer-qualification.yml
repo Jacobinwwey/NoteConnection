@@ -24,18 +24,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  qualify-installers:
-    name: Qualify ${{ matrix.installer }} installer
+  build-installers:
+    name: Build ${{ matrix.installer }} installer
     runs-on: windows-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - installer: nsis
-            qualify: qualifyNsisArtifact
-          - installer: msi
-            qualify: qualifyMsiArtifact
+        installer: [nsis, msi]
     env:
       CARGO_BUILD_JOBS: '1'
       CARGO_INCREMENTAL: '0'
@@ -79,14 +75,73 @@ jobs:
       - run: node scripts/prepare-desktop-godot-pack.js
       - name: Build a fresh installer
         run: node node_modules/@tauri-apps/cli/tauri.js build --ci --bundles ${{ matrix.installer }} --config src-tauri/tauri.desktop.conf.json
+      - name: Record installer build provenance
+        run: node -e "require('./scripts/verify-windows-installers').recordInstallerBuild();"
       - name: Archive installer bytes
         if: always()
+        timeout-minutes: 5
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer-binaries-${{ matrix.installer }}-${{ github.run_id }}-${{ github.run_attempt }}
           retention-days: 30
           if-no-files-found: error
           path: src-tauri/target/release/bundle/${{ matrix.installer }}/*
+      - name: Publish qualification inputs
+        timeout-minutes: 5
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer-inputs-${{ matrix.installer }}-${{ github.run_id }}
+          overwrite: true
+          retention-days: 30
+          if-no-files-found: error
+          # The common ancestor is the repository root; downloads preserve both paths.
+          path: |
+            output/verification/windows-installer-build.json
+            src-tauri/target/release/bundle/${{ matrix.installer }}/*
+      - name: Archive Godot build evidence
+        if: always()
+        timeout-minutes: 5
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer-build-evidence-${{ matrix.installer }}-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 30
+          path: |
+            output/desktop/godot-pack.json
+            output/desktop/godot-import.log
+            output/desktop/godot-export.log
+            output/verification/windows-installer-build.json
+
+  qualify-installers:
+    name: Qualify ${{ matrix.installer }} installer
+    needs: build-installers
+    runs-on: windows-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - installer: nsis
+            qualify: qualifyNsisArtifact
+          - installer: msi
+            qualify: qualifyMsiArtifact
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.14.0'
+      - name: Isolate qualification temporary files
+        shell: pwsh
+        run: |
+          $tempRoot = Join-Path $env:GITHUB_WORKSPACE '.installer-temp'
+          New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "TEMP=$tempRoot`nTMP=$tempRoot"
+      - name: Download installer and build receipt
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer-inputs-${{ matrix.installer }}-${{ github.run_id }}
+          path: .
       - name: Install, run and uninstall on an independent runner
         # A step timeout leaves the job alive to upload partial installer logs.
         timeout-minutes: 10
@@ -100,9 +155,7 @@ jobs:
           retention-days: 30
           if-no-files-found: error
           path: |
-            output/desktop/godot-pack.json
-            output/desktop/godot-import.log
-            output/desktop/godot-export.log
+            output/verification/windows-installer-build.json
             output/verification/windows-installers/*/*.json
             output/verification/windows-installers/*/*.log
             output/verification/windows-installers/*/*-runtime/report.json

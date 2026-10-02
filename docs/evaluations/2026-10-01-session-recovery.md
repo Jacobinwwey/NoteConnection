@@ -41,6 +41,8 @@ Constraints: keep separate English/Chinese documentation; avoid C: writes; prese
 
 Subsequent diagnostic checkpoint: commit `0652cf91` adds direct MSI failure-log output and bounds evidence upload. Run `36832726016` passes NSIS (105,582,559 bytes, SHA-256 `e977c29973f777c05e9b6551c7973c724311ba51235fc0cb1d07c181106c7a89`) but MSI stops reporting during qualification. Commit `87524992` adds a temporary diagnostic workflow; run `36836448951` replays the earlier MSI with the same bytes and passes install/runtime/uninstall, preserving detailed logs. This is diagnostic evidence, not fresh qualification. The next change routes installer output directly to files and emits stage/exit timings; actual subprocess probes and the existing 21 tests pass. No historical pipe-hang or 1603 root cause is asserted. From this point onward, the assistant obtains evidence and performs verification independently; no further requests for the user to retrieve page information.
 
+October 2 continuation: run `36838763881` on `453de115` again passes NSIS but loses the MSI hosted runner. Both this run and `36832726016` have independently retrieved GitHub host-loss annotations. The next scoped change separates installer build jobs from fresh qualification jobs and transports validated build receipts plus exact installer bytes. Five suites / 34 tests pass. Main remains unchanged; P4/P5 await the new isolated qualification result.
+
 <a id="chinese"></a>
 
 ## 中文
@@ -75,3 +77,5 @@ PowerShell parser／非 CI guard 的成功记录来自旧会话、提交消息�
 约束：同步且分开维护中英文文档；尽量避免 C 盘写入；保留原有二进制、ignored HDR 输入和失败证据；不弱化 payload 断言，不清除共享安装偏好来掩盖问题。HKLM 策略仅限一次性 GitHub-hosted 提权 runner，必须清理。本机与干净 CI 的 PCK 可选 HDR 输入不同。签名发布信任、Android 真机／RSS、生产 ANN 与独立学习观察继续作为 U7/U8 的独立义务。本次不创建 release tag，也不发布 release。
 
 后续诊断检查点：提交 `0652cf91` 增加 MSI 详细错误日志直出并限定证据上传时间。Run `36832726016` 通过 NSIS（105,582,559 bytes，SHA-256 `e977c29973f777c05e9b6551c7973c724311ba51235fc0cb1d07c181106c7a89`），但 MSI 在验收中停止回报状态。提交 `87524992` 增加临时诊断工作流；run `36836448951` 重放此前同字节 MSI，安装／运行／卸载均通过并保留详细日志。这是诊断证据，不是新构建验收。随后将安装器输出直接写入文件，并记录阶段／退出耗时；真实子进程探针与既有 21 项测试均通过。尚不声称历史管道停滞或 1603 根因已查明。此后由助手自行取得证据并验证，不再要求用户前往页面取信息。
+
+10 月 2 日续接：`453de115` 对应 run `36838763881` 再次通过 NSIS，但 MSI hosted runner 失联；该运行与 `36832726016` 的宿主失联注解均已由助手通过 GitHub API 取得。下一项范围受限的改动将安装包构建与干净 runner 上的验收分离，并传递经过校验的构建回执和精确安装包字节。5 个套件／34 项测试通过。Main 未更新，P4/P5 等待新的隔离验收结果。

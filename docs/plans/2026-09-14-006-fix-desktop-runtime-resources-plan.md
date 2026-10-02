@@ -3,7 +3,7 @@ title: "fix: Qualify desktop runtime resources outside the checkout"
 type: fix
 status: in_progress
 date: 2026-09-14
-updated: 2026-10-01
+updated: 2026-10-02
 source_revision: 6bf87b6d11fa01b5b1c8cd21f2ec44cbbc2bbc3a
 parent: docs/plans/2026-09-12-001-refactor-project-convergence-plan.md
 ---
@@ -48,6 +48,8 @@ The following run `36832726016` also passes NSIS but stops reporting MSI progres
 
 Diagnostic run `36836448951` passes the exact recorded MSI: install takes four seconds, the runtime probe passes, and uninstall takes two seconds with both MSI engines returning zero. Policy and owned-process cleanup pass; no failing `Return value 3`, file-lock owner or 1603 appears in these successful logs. This does not establish the historical failure's cause and does not provide the complete fresh qualification/removal receipt. The qualifier now sends installer stdout/stderr directly to an owned log descriptor closed in `finally`, preserving partial output and removing dependence on captured-pipe closure. Installer and runtime milestones identify the active phase. Real Node subprocess probes preserve success/nonzero/timeout output, close descriptors on all paths and confirm the timed-out child exited (1,520 ms observed for a 1,500 ms timeout). All 21 focused tests pass. Fresh NSIS/MSI acceptance is still required.
 
+October 2: GitHub annotations for both `36832726016` and `36838763881` explicitly report that the hosted MSI runner lost communication; their MSI logs are unavailable. The file-output change did not resolve that host failure. Build and qualification now run on separate disposable runners. Build receipts bind source revision/fingerprint, workflow run, build attempt, exact stamped payload expectations and installer bytes; qualification validates the receipt and installer before any registration query or execution. Failed-only reruns may reuse an earlier build attempt from the same run and revision. Historical binary artifacts remain separate from replaceable same-run transport inputs. Five focused suites / 34 tests pass, including source/provenance/path/byte rejection and qualification without build dependencies. The cause of the host loss and earlier 1603 remains unproven; this isolates build workload from the full acceptance run without relaxing its checks.
+
 ## 中文
 
 W1–W5 窗口契约已经完成，但未执行安装后应用的启动链路。当前 Tauri bundle 只声明 sidecar executable，没有 Godot 项目资源；`resolve_godot_project_path` 回落到 `cwd/path_mode`。此外，Godot 项目声明 4.6，而桌面 release provisioning 固定 4.3。这些是明确的打包风险，尚不是安装包验收证据。
@@ -85,3 +87,5 @@ Run `36828405439` 在 `5b01b24d` 上通过 NSIS，下载的安装包哈希与三
 随后 run `36832726016` 再次通过 NSIS，但 MSI 在验收过程中停止回报进度，超过配置截止时间仍无中间输出。临时诊断工作流在一次性 runner 上重放上述保留的同字节 MSI，将安装／运行／卸载拆为可观察的步骤，直接等待 Windows 进程，并实时刷新详细 MSI 日志。该诊断不替代新安装包验收，也不能单独证明卸载根因。
 
 诊断 run `36836448951` 已通过同字节 MSI：安装耗时四秒，运行探针通过，卸载耗时两秒且两端 MSI engine 均返回零；策略与所属进程清理通过。成功日志没有失败的 `Return value 3`、占用文件的进程或 1603，不能据此认定历史失败根因，也没有完整的新安装包／卸载验收回执。验收器现将安装器 stdout/stderr 直接写入自有日志描述符，在 `finally` 关闭，保留中途输出并消除对捕获管道关闭的依赖；安装器和运行阶段输出可定位当前步骤。真实 Node 子进程探针确认成功／非零退出／超时输出保留，各路径句柄关闭，超时子进程已退出（1,500 ms 上限下观察到 1,520 ms）。21 项针对性测试全部通过，仍需新的完整 NSIS／MSI 验收。
+
+10 月 2 日：GitHub 对 `36832726016` 与 `36838763881` 的注解均明确记录 MSI hosted runner 失联，MSI 日志不可用；直接文件输出未解决该宿主故障。现将构建和验收放到不同的一次性 runner。构建回执绑定源码提交／指纹、workflow run、构建批次、精确打包标记后的 payload 预期及安装包字节；验收在查询注册项或执行前核对回执和安装包。仅重跑失败验收时，可复用同一 run、同一源码的较早构建批次；历史二进制产物与同次运行内可替换的传输输入分开保存。5 个针对性套件／34 项测试通过，覆盖来源、路径、字节篡改拒绝，以及无构建依赖的验收。宿主失联及先前 1603 的根因仍未证实；该改动隔离构建负载，不放宽完整验收条件。
