@@ -52,6 +52,7 @@
     "dev:vite": "vite --config vite.config.ts",
     "prepare:godot:bin": "node scripts/ensure-godot-sidecar.js",
     "verify:tauri:bin": "node scripts/validate-tauri-sidecars.js",
+    "verify:appimage": "node scripts/verify-appimage.js",
     "build:sidecar": "node scripts/copy-reader-runtime-assets.js && tsc && node scripts/build-sidecar.js && npm run prepare:godot:bin && npm run verify:tauri:bin",
     "build:sidecar:all": "node scripts/copy-reader-runtime-assets.js && tsc && node scripts/build-sidecar.js --all && npm run prepare:godot:bin && node scripts/validate-tauri-sidecars.js --all",
     "ensure:sidecar:dev": "node scripts/ensure-sidecar-ready.js",
@@ -187,7 +188,7 @@
   "license": "GPL-3.0-only",
   "type": "commonjs",
   "devDependencies": {
-    "@tauri-apps/cli": "^2.10.0",
+    "@tauri-apps/cli": "^2.12.1",
     "@types/jest": "^30.0.0",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^25.0.3",

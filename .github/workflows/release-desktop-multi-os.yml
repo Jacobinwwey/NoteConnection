@@ -178,7 +178,8 @@ jobs:
             files: |
               src-tauri/target/release/bundle/**/*.exe
               src-tauri/target/release/bundle/**/*.msi
-          - runner: ubuntu-latest
+          # The AppImage catalog runs Ubuntu 22.04 (glibc 2.35); build against that baseline.
+          - runner: ubuntu-22.04
             platform_label: linux
             files: |
               src-tauri/target/release/bundle/**/*.AppImage
@@ -226,6 +227,9 @@ jobs:
             libgtk-3-dev \
             librsvg2-dev \
             patchelf \
+            desktop-file-utils \
+            libgdk-pixbuf2.0-bin \
+            squashfs-tools \
             "${APPINDICATOR_PKG}"
           echo "Installed Linux native dependencies with ${WEBKIT_PKG} and ${APPINDICATOR_PKG}."
 
@@ -339,6 +343,20 @@ jobs:
 
       - name: Build desktop bundle
         run: npm run tauri:build:mini
+
+      - name: Verify portable AppImage desktop integration
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' artifacts < <(find src-tauri/target/release/bundle -type f -name '*.AppImage' -print0)
+          if [ "${#artifacts[@]}" -eq 0 ]; then
+            echo "No AppImage artifacts were produced." >&2
+            exit 1
+          fi
+          for artifact in "${artifacts[@]}"; do
+            npm run verify:appimage -- "${artifact}" src-tauri/bin/server-x86_64-unknown-linux-gnu
+          done
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
