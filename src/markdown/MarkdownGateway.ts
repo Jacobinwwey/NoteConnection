@@ -949,6 +949,10 @@ export class MarkdownGateway {
             candidates.push(path.join(path.dirname(process.execPath), binaryName));
             candidates.push(path.join(path.dirname(process.execPath), '..', 'Resources', binaryName));
         }
+        // Tauri removes the target triple from installed external binary names.
+        const installedBinaryName = process.platform === 'win32' ? 'markdown-worker.exe' : 'markdown-worker';
+        candidates.push(path.join(path.dirname(process.execPath), installedBinaryName));
+        candidates.push(path.join(path.dirname(process.execPath), '..', 'Resources', installedBinaryName));
 
         for (const candidate of candidates) {
             try {
