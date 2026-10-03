@@ -98,6 +98,8 @@ The final verifier rejects inaccessible stored SquashFS modes, invalid integrati
 
 Run the portability and patchelf behavioral suites. Verify the final image on the baseline OS and a newer host, retaining its SHA-256, logs, and screenshots. The installed Markdown worker must be discovered under Tauri's suffixless name and report `engine: pulldown` without a missing-worker fallback.
 
+Run the offline simulation worker suite and load a graph with external networking disabled, keeping loopback available for the sidecar. Graph layout dependencies must be bundled; an initial window and successful graph API do not establish that worker-produced node positions render.
+
 ### Wrong and correct evidence
 
 An extracted directory with manually repaired links is diagnostic evidence. A fresh image produced by the corrected build, checked outside the build directory and exercised through the catalog worker and native runtime, establishes release acceptance. Use `unsquashfs` for stored-mode checks: runtime `--appimage-extract` can alter directory permissions.

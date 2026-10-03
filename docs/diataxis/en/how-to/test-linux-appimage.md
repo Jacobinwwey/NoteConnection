@@ -21,7 +21,7 @@ The verifier rejects absolute, escaping, dangling, or cyclic integration links, 
 Run the regression suite with:
 
 ```bash
-npm test -- --runInBand src/appimage.portability.test.ts src/appimage.patchelf.test.ts
+npm test -- --runInBand src/appimage.portability.test.ts src/appimage.patchelf.test.ts src/simulation.worker.offline.test.ts
 ```
 
 ## Verify application behavior
@@ -29,6 +29,8 @@ npm test -- --runInBand src/appimage.portability.test.ts src/appimage.patchelf.t
 The artifact gate checks packaging. Also launch the actual final AppImage on Ubuntu 22.04 from a directory outside the repository as a normal user. Use isolated XDG config/data directories, `NOTE_CONNECTION_CONFIG_PATH`, and disposable Markdown notes; keep the operating-system home and toolchain caches in their normal locations. Confirm a real visible window, successful graph loading, note reading, switching into and out of Path mode, and clean shutdown of the server and Godot sidecars. Retain the exact artifact SHA-256, source commit, installed Tauri CLI version, command output, and screenshots with the test report.
 
 For catalog acceptance, repeat launch as a different user from the packaged file owner under the catalog's Xvfb/firejail environment. A launch as the build owner can hide mode 0770 defects. A process remaining alive does not establish that a window rendered. Classify missing FUSE, display, or firejail support separately from failures in the artifact.
+
+Load a graph with external network access disabled while preserving loopback access to the local backend. Confirm separated node positions in force and DAG layouts. The simulation worker uses the existing bundled D3 library; a CDN import can leave all nodes at their initial positions even though graph APIs and the initial catalog screenshot pass. The offline worker test loads the real packaged scripts, rejects external origins, and verifies simulation output.
 
 ## Keep the glibc build baseline compatible
 
