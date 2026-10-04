@@ -1,103 +1,210 @@
-name: Native Window Qualification
+name: macOS Godot Launch Diagnosis
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main, master, 'codex/**']
-    paths:
-      - 'src-tauri/src/**'
-      - 'src-tauri/build.rs'
-      - 'src-tauri/Cargo.toml'
-      - 'src-tauri/Cargo.lock'
-      - 'scripts/verify-agent-workspace-tauri*.js'
-      - '.github/workflows/native-window-qualification.yml'
-  pull_request:
-    paths:
-      - 'src-tauri/src/**'
-      - 'src-tauri/build.rs'
-      - 'src-tauri/Cargo.toml'
-      - 'src-tauri/Cargo.lock'
-      - 'scripts/verify-agent-workspace-tauri*.js'
-      - '.github/workflows/native-window-qualification.yml'
 
 permissions:
   contents: read
 
-concurrency:
-  group: native-window-qualification-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
-  windows-native-window:
-    runs-on: windows-latest
-    timeout-minutes: 35
-    env:
-      CARGO_BUILD_JOBS: '1'
-      CARGO_INCREMENTAL: '0'
-      CARGO_PROFILE_TEST_DEBUG: '0'
-      RUSTFLAGS: '-C codegen-units=1'
+  diagnose-godot-launch:
+    runs-on: macos-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: false
       - uses: actions/setup-node@v4
         with:
-          node-version: '24.14.0'
-          cache: npm
-      - name: Prepare isolated temporary files
-        run: node -e "const fs=require('fs'),path=require('path'); const root=path.join(process.env.GITHUB_WORKSPACE,'.native-window-temp'); fs.mkdirSync(root,{recursive:true}); fs.appendFileSync(process.env.GITHUB_ENV,'TEMP='+root+'\nTMP='+root+'\n');"
-      - run: npm ci
-      - run: npm run build:with-vite
-      - name: Select Rust stable
+          node-version: '24'
+      - name: Compare original, copied, overwritten and signed Godot binaries
+        shell: bash
         run: |
-          rustup set profile minimal
-          rustup toolchain install stable --profile minimal --no-self-update
-          rustup default stable
-          rustc --version
-          cargo --version
-      - name: Compile native tests before the bounded execution checks
-        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --lib --features native-window-tests --no-run
-      - name: Execute ordinary Rust window contracts
-        run: node scripts/verify-agent-workspace-tauri-rust.js --strict
-      - name: Execute each real Wry window test in a separate process
-        run: node scripts/verify-agent-workspace-tauri-window-evidence.js --strict --skip-proxy-smoke
-      - name: Bind test executables to the workflow source
-        if: always()
-        shell: pwsh
-        run: |
-          @'
-          const fs = require('fs');
-          const path = require('path');
-          const crypto = require('crypto');
-          const directory = 'src-tauri/target/debug/deps';
-          const artifacts = fs.existsSync(directory) ? fs.readdirSync(directory)
-            .filter(name => /^npm_lib-[a-f0-9]+\.exe$/.test(name)).sort().map(name => {
-              const file = path.join(directory, name);
-              const bytes = fs.readFileSync(file);
-              return { path: file.replace(/\\/g, '/'), bytes: bytes.length, sha256: crypto.createHash('sha256').update(bytes).digest('hex') };
-            }) : [];
-          const report = {
-            generatedAt: new Date().toISOString(),
-            sourceRevision: process.env.GITHUB_SHA,
-            runId: process.env.GITHUB_RUN_ID,
-            runAttempt: process.env.GITHUB_RUN_ATTEMPT,
-            runtime: 'tauri-wry-libtest', platform: process.platform, arch: process.arch,
-            scope: 'Native Tauri command and window contracts; release installers and Godot integration require separate qualification.',
-            artifacts
-          };
-          fs.mkdirSync('output/tauri/native-window-provenance', { recursive: true });
-          fs.writeFileSync('output/tauri/native-window-provenance/report.json', JSON.stringify(report, null, 2) + '\n');
-          '@ | node
-      - name: Archive native execution evidence
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import platform
+          import signal
+          import subprocess
+          import time
+
+          root = Path.cwd()
+          evidence = root / 'output' / 'macos-godot-diagnosis'
+          evidence.mkdir(parents=True)
+          observations = []
+
+          def capture_command(label, arguments):
+              arguments = [str(argument) for argument in arguments]
+              started = time.monotonic()
+              observation = {'label': label, 'arguments': arguments}
+              try:
+                  execution = subprocess.run(arguments, cwd=root, capture_output=True, text=True, timeout=135)
+                  observation.update(returncode=execution.returncode,
+                      exitCode=execution.returncode if execution.returncode >= 0 else None,
+                      signal=signal.Signals(-execution.returncode).name if execution.returncode < 0 else None,
+                      stdout=execution.stdout, stderr=execution.stderr)
+              except subprocess.TimeoutExpired as error:
+                  observation.update(exitCode=None, signal=None, timeoutSeconds=135,
+                      stdout=str(error.stdout or ''), stderr=str(error.stderr or ''))
+              except OSError as error:
+                  observation.update(exitCode=None, signal=None, spawnError=str(error))
+              observation['elapsedSeconds'] = time.monotonic() - started
+              observations.append(observation)
+              (evidence / 'commands.json').write_text(json.dumps(observations, indent=2) + '\n')
+              print(json.dumps(observation), flush=True)
+              return observation
+
+          def require_command(label, arguments):
+              execution = capture_command(label, arguments)
+              if execution.get('exitCode') != 0:
+                  raise RuntimeError(f'Diagnostic setup command failed: {label}')
+              return execution
+
+          def binary_identity(executable):
+              stat = executable.stat()
+              return {'path': str(executable), 'bytes': stat.st_size,
+                  'sha256': hashlib.sha256(executable.read_bytes()).hexdigest(),
+                  'inode': stat.st_ino, 'device': stat.st_dev, 'mode': oct(stat.st_mode & 0o777)}
+
+          def inspect_binary(label, executable):
+              print(json.dumps({'label': label, 'identity': binary_identity(executable)}), flush=True)
+              capture_command(label + '-file', ['file', executable])
+              capture_command(label + '-architectures', ['lipo', '-info', executable])
+              capture_command(label + '-libraries', ['otool', '-L', executable])
+              capture_command(label + '-signature-display', ['codesign', '-d', '--verbose=4', executable])
+              capture_command(label + '-signature-verify', ['codesign', '--verify', '--strict', '--verbose=4', executable])
+              capture_command(label + '-xattr-names', ['xattr', executable])
+              capture_command(label + '-quarantine', ['xattr', '-p', 'com.apple.quarantine', executable])
+
+          node_probe = r'''
+          const { spawnSync } = require('node:child_process');
+          const start = performance.now();
+          const execution = spawnSync(process.argv[1], ['--version'], {
+            cwd: process.cwd(), env: process.env, windowsHide: true,
+            encoding: 'utf8', timeout: 120000, maxBuffer: 8 * 1024 * 1024
+          });
+          console.log(JSON.stringify({ status: execution.status, signal: execution.signal,
+            error: execution.error ? { code: execution.error.code, message: execution.error.message } : null,
+            stdout: execution.stdout, stderr: execution.stderr, elapsedMs: performance.now() - start }));
+          '''
+          probes = []
+
+          def probe_version(label, executable):
+              identity = binary_identity(executable)
+              python_execution = capture_command(label + '-python-version', [executable, '--version'])
+              node_execution = require_command(label + '-node-version', ['node', '-e', node_probe, executable])
+              node_child = json.loads(node_execution['stdout'])
+              observation = {'label': label, 'identity': identity, 'python': python_execution,
+                  'nodeChild': node_child,
+                  'passed': python_execution.get('exitCode') == 0 and node_child['status'] == 0
+                      and '4.6.stable.' in python_execution.get('stdout', '')
+                      and '4.6.stable.' in (node_child.get('stdout') or '')}
+              probes.append(observation)
+              (evidence / 'version-probes.json').write_text(json.dumps(probes, indent=2) + '\n')
+              return observation
+
+          runtime = json.loads((root / 'config/godot-desktop-runtime.json').read_text())
+          archive_contract = runtime['archives']['macos']
+          archive = evidence / archive_contract['name']
+          archive_url = f"https://github.com/Jacobinwwey/NoteConnection/releases/download/{runtime['mirrorTag']}/{archive_contract['name']}"
+          require_command('download-pinned-project-mirror', ['curl', '-fsSL', archive_url, '-o', archive])
+          archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+          if archive_sha != archive_contract['sha256']:
+              raise RuntimeError(f'Godot archive hash mismatch: {archive_sha}')
+          (evidence / 'provenance.json').write_text(json.dumps({
+              'sourceRevision': os.environ['GITHUB_SHA'], 'runId': os.environ['GITHUB_RUN_ID'],
+              'archiveUrl': archive_url, 'archiveSha256': archive_sha,
+              'system': platform.platform(), 'machine': platform.machine(),
+              'scope': 'Diagnostic launch comparisons only; no release publication or production acceptance.'
+          }, indent=2) + '\n')
+          require_command('extract-pinned-archive', ['unzip', '-q', '-o', archive, '-d', evidence / 'extract'])
+          originals = list((evidence / 'extract').glob('**/Godot.app/Contents/MacOS/Godot'))
+          if len(originals) != 1:
+              raise RuntimeError(f'Expected one Godot executable, found {len(originals)}')
+          original = originals[0]
+          target_name = 'godot-aarch64-apple-darwin' if platform.machine() == 'arm64' else 'godot-x86_64-apple-darwin'
+          checkout_target = root / 'src-tauri' / 'bin' / target_name
+          checkout_existed = checkout_target.exists()
+          require_command('system-version', ['sw_vers'])
+          require_command('node-version', ['node', '--version'])
+          capture_command('original-app-signature', ['codesign', '--verify', '--deep', '--strict', '--verbose=4', original.parents[2]])
+          inspect_binary('original-in-app', original)
+          probe_version('original-in-app', original)
+
+          fresh = evidence / 'fresh' / target_name
+          fresh.parent.mkdir()
+          require_command('copy-fresh-target', ['cp', original, fresh])
+          fresh.chmod(0o755)
+          inspect_binary('fresh-target-name', fresh)
+          probe_version('fresh-target-name', fresh)
+
+          checkout_target.parent.mkdir(parents=True, exist_ok=True)
+          before_checkout = binary_identity(checkout_target) if checkout_existed else None
+          require_command('copy-release-target', ['cp', original, checkout_target])
+          checkout_target.chmod(0o755)
+          inspect_binary('release-target-path', checkout_target)
+          probe_version('release-target-path', checkout_target)
+          capture_command('existing-sidecar-ready-check', ['node', 'scripts/ensure-godot-sidecar.js'])
+
+          tracked_stub_path = 'src-tauri/bin/server-aarch64-apple-darwin'
+          tracked_stub = subprocess.check_output(['git', 'show', 'HEAD:' + tracked_stub_path], cwd=root)
+          overwritten = evidence / 'overwrite-tracked-stub' / target_name
+          overwritten.parent.mkdir()
+          overwritten.write_bytes(tracked_stub)
+          overwritten.chmod(0o755)
+          stub_identity = binary_identity(overwritten)
+          capture_command('tracked-stub-file', ['file', overwritten])
+          require_command('copy-over-tracked-stub', ['cp', original, overwritten])
+          overwritten.chmod(0o755)
+          inspect_binary('overwritten-tracked-stub', overwritten)
+          probe_version('overwritten-tracked-stub', overwritten)
+
+          cached = evidence / 'overwrite-executed-mach-o' / target_name
+          cached.parent.mkdir()
+          require_command('prepare-signed-mach-o-control', ['cp', '/bin/echo', cached])
+          require_command('execute-signed-mach-o-control', [cached, 'warm-code-signature-cache'])
+          cached_before = binary_identity(cached)
+          require_command('copy-over-executed-mach-o', ['cp', original, cached])
+          cached.chmod(0o755)
+          inspect_binary('overwritten-executed-mach-o', cached)
+          probe_version('overwritten-executed-mach-o', cached)
+          cached.unlink()
+          require_command('copy-after-unlink', ['cp', original, cached])
+          cached.chmod(0o755)
+          inspect_binary('new-inode-after-unlink', cached)
+          probe_version('new-inode-after-unlink', cached)
+
+          original_failures = [probe for probe in probes if not probe['passed']]
+          for index, failed in enumerate(original_failures):
+              signed = evidence / f'adhoc-control-{index}' / target_name
+              signed.parent.mkdir()
+              require_command(f'copy-signing-control-{index}', ['cp', failed['identity']['path'], signed])
+              signed.chmod(0o755)
+              probe_version(f'adhoc-control-{index}-before-signing', signed)
+              require_command(f'adhoc-sign-copy-{index}', ['codesign', '--force', '--sign', '-', signed])
+              inspect_binary(f'adhoc-control-{index}-after-signing', signed)
+              probe_version(f'adhoc-control-{index}-after-signing', signed)
+
+          (evidence / 'summary.json').write_text(json.dumps({
+              'checkoutTargetExisted': checkout_existed, 'checkoutTargetBefore': before_checkout,
+              'trackedStubSource': tracked_stub_path, 'trackedStubIdentity': stub_identity,
+              'executedMachOControlBefore': cached_before,
+              'untouchedOriginalAfter': binary_identity(original),
+              'probes': [{'label': probe['label'], 'passed': probe['passed'],
+                  'sha256': probe['identity']['sha256'], 'inode': probe['identity']['inode'],
+                  'pythonExitCode': probe['python'].get('exitCode'), 'pythonSignal': probe['python'].get('signal'),
+                  'nodeStatus': probe['nodeChild']['status'], 'nodeSignal': probe['nodeChild']['signal']} for probe in probes],
+              'diagnosticFailuresObserved': len(original_failures)
+          }, indent=2) + '\n')
+          print((evidence / 'summary.json').read_text(), flush=True)
+          PY
+      - name: Retain macOS diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: native-window-Windows-${{ github.run_id }}-${{ github.run_attempt }}
-          retention-days: 30
+          name: macos-godot-launch-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 14
           if-no-files-found: error
-          path: |
-            output/tauri/agent-workspace-rust-tests/
-            output/tauri/agent-workspace-window-evidence/
-            output/tauri/native-window-provenance/
-            src-tauri/target/debug/deps/npm_lib-*.exe
-            src-tauri/Cargo.lock
+          path: output/macos-godot-diagnosis/*.json
