@@ -237,11 +237,17 @@ function requestBinary(
               parsed = text;
             }
           }
-          resolve({
+          const response = {
             status: res.statusCode || 0,
             body: parsed,
             headers: res.headers
-          });
+          };
+          // A 413 response can precede upload completion; teardown must wait until the request finishes writing.
+          if (req.writableFinished) {
+            resolve(response);
+          } else {
+            req.once('finish', () => resolve(response));
+          }
         });
       }
     );
