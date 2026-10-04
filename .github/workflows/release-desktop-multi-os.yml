@@ -46,6 +46,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_ref != '' && github.event.inputs.source_ref || github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
           fetch-depth: 0
 
       - name: Resolve tag name
@@ -70,10 +71,14 @@ jobs:
         shell: bash
         run: |
           TAG_NAME="${{ steps.tag.outputs.tag_name }}"
-          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Release already exists for $TAG_NAME."
+          if RELEASE_IS_DRAFT="$(gh release view "$TAG_NAME" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
+            if [ "$RELEASE_IS_DRAFT" != "true" ]; then
+              echo "::error::Release $TAG_NAME is already public; refusing to replace published assets."
+              exit 1
+            fi
+            echo "Draft release already exists for $TAG_NAME."
           else
-            gh release create "$TAG_NAME" --title "$TAG_NAME" --notes "Automated desktop multi-OS release assets."
+            gh release create "$TAG_NAME" --draft --target "$(git rev-parse HEAD)" --title "$TAG_NAME" --notes-file "docs/release_notes_${TAG_NAME}.md"
           fi
 
   ensure-godot-mirror-assets:
@@ -102,6 +107,7 @@ jobs:
             gh release create "$GODOT_MIRROR_TAG" \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
+              --latest=false \
               --title "$GODOT_MIRROR_TAG" \
               --notes "Project-controlled mirror for Godot desktop bootstrap archives."
           fi
@@ -358,6 +364,14 @@ jobs:
             npm run verify:appimage -- "${artifact}" src-tauri/bin/server-x86_64-unknown-linux-gnu
           done
 
+      - name: Upload Linux AppImage verification input
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ needs.ensure-release.outputs.tag_name }}-linux-verification-inputs
+          if-no-files-found: error
+          path: src-tauri/bin/server-x86_64-unknown-linux-gnu
+
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -369,6 +383,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.ensure-release.outputs.tag_name }}
+          draft: true
           files: ${{ matrix.files }}
           fail_on_unmatched_files: true
         env:
@@ -377,6 +392,7 @@ jobs:
   build-and-upload-android:
     name: Build and Upload (android-apk)
     needs: ensure-release
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_android_device_evidence == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -607,6 +623,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.ensure-release.outputs.tag_name }}
+          draft: true
           files: build/release/mobile/*
           fail_on_unmatched_files: true
         env:

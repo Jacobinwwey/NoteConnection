@@ -3,9 +3,6 @@ name: Publish to npm
 on:
   release:
     types: [published]
-  push:
-    tags:
-      - "v*"
 
 concurrency:
   group: npm-publish-${{ github.event.release.tag_name || github.ref_name }}
@@ -28,6 +25,7 @@ env:
 
 jobs:
   publish:
+    if: ${{ startsWith(github.event.release.tag_name, 'v') }}
     runs-on: ubuntu-latest
 
     steps:
